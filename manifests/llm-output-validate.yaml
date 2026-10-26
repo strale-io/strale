@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: llm-output-validate
-name: LLM Output Validate
-description: >-
-  Validate and auto-repair LLM output. Parse JSON, validate against schema, attempt fixes for common LLM mistakes.
-  Algorithmic — no LLM needed.
+name: "LLM Output Validation"
+description: "Check an LLM's output against a schema and repair common mistakes, without calling another model."
 category: agent-tooling
 cost_class: free_unlimited
 quota_window: none
@@ -109,3 +107,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Combine with domain-specific validation (e.g., schema checks, reference lookups) for factual verification
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

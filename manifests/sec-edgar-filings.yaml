@@ -1,8 +1,6 @@
 slug: sec-edgar-filings
-name: SEC EDGAR Filings
-description: >-
-  List a US public company's recent SEC filings by ticker or CIK, with form type filter, dates, accession
-  numbers, document links, SIC code and business address.
+name: "SEC EDGAR Filings"
+description: "List a US listed company's recent SEC filings by ticker or CIK, with form type, dates, accession numbers, document links, SIC code and business address."
 category: company-data
 cost_class: free_quota
 quota_window: daily
@@ -151,3 +149,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Find the CIK on edgar_url's company search and pass cik instead.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

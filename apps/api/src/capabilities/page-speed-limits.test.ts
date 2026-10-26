@@ -72,6 +72,13 @@ function psiReport(bytes: number): Buffer {
   return buf;
 }
 
+// robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
+// the robots request does not consume the stubbed PSI response.
+vi.mock("../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
+
 const fetchMock = vi.fn();
 
 beforeEach(() => {

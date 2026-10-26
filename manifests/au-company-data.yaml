@@ -1,8 +1,6 @@
 slug: au-company-data
-name: Australian Company Data (ABR)
-description: >-
-  Look up Australian company data from the Australian Business Register (ABR). Accepts an ABN (11 digits). Returns
-  entity name, status, type, GST registration, and address details. Free government API — fast and reliable.
+name: "Australian Company Data"
+description: "Look up an Australian business in the Australian Business Register by its 11-digit ABN. Returns name, status, entity type, GST registration and address."
 category: company-data
 cost_class: free_quota
 quota_window: daily
@@ -154,3 +152,8 @@ limitations:
     text: The lookup returns current entity status. Historical name changes and status changes are not included.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

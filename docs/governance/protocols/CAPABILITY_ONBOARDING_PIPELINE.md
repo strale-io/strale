@@ -26,6 +26,8 @@ source_heading: "Adding New Capabilities (MANDATORY PIPELINE)"
 
 **All new capabilities MUST go through the manifest-driven pipeline.** (The historical seed.ts file was deleted in PR #79; it duplicated manifest content and only generated 2 of 5 required test types via its onboarding hook. The canonical pipeline is `apps/api/scripts/onboard.ts` — it generates all 5 test types and is the only sanctioned path for capability creation.)
 
+The `/onboard-capability` skill (`.claude/skills/onboard-capability/SKILL.md`) walks this pipeline and the Capability Onboarding Protocol step by step.
+
 #### Recommended workflow (--discover):
 
 1. **Write the executor** at `apps/api/src/capabilities/{slug}.ts`

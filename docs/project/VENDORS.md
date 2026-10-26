@@ -62,7 +62,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | hn-algolia | Hacker News (Algolia) | active | 2026-09-10 | unknown | unknown |
 | insee | INSEE | active | 2026-09-10 | unknown | unknown |
 | ipid | iPiD | rejected | 2026-09-11 | unknown | unknown |
-| jina-reader | Jina Reader | active | 2026-09-10 | unknown | unknown |
+| jina-reader | Jina Reader | retired | 2026-10-24 | unknown | unknown |
 | justizonline | JustizOnline / BRZ | active | 2026-09-10 | unknown | unknown |
 | kadaster | Kadaster (Dutch BAG) | active | 2026-09-10 | unknown | unknown |
 | krs | KRS | active | 2026-09-10 | unknown | unknown |

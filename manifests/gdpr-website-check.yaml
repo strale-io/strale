@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: gdpr-website-check
-name: GDPR Website Check
-description: >-
-  Scan a website for GDPR compliance indicators: cookie consent, privacy policy, tracking scripts, security headers.
-  Returns score A-F.
+name: "GDPR Website Check"
+description: "Scan a website for signs of GDPR compliance (cookie consent, privacy policy, tracking scripts and security headers) and grade it from A to F."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -103,3 +101,9 @@ limitations:
       charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

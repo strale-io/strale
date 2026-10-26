@@ -262,7 +262,8 @@ fields generally — see CLAUDE.md for both.
 **Code-review gate:** if any code was modified this session, run the `go`
 skill (`.agents/skills/go/SKILL.md`) before ending the session — never end a
 session over unreviewed code. Docs-only / AGENTS.md / Notion-only sessions
-are exempt.
+are exempt. Every reviewer reads the root `REVIEW.md` first (tiers, tier-2
+surfaces, always-check lines; DEC-20261024-A).
 
 ## Active Decisions
 
@@ -272,15 +273,19 @@ exactly the kind of thing that drifts; read CLAUDE.md (or the linked Notion
 Decisions DB entry) for the actual text before acting on any of these. The
 IDs every session should know exist, topic only, no numbers:
 
-- **DEC-20260905-A** — Benefit-first brand positioning, marketing terminology and Quiet Material refinement scope; see CLAUDE.md and the linked adoption record.
+- **DEC-20261024-A** — Way of working: WoW-Core consumer, T7 re-scoped, codex:check to be retired, daily run by exception (items 2, 4, 5 for Petter to confirm); see CLAUDE.md.
+- **DEC-20261024-B** — Website structure/messaging, Open Flow design system and the portfolio plan adopted; see CLAUDE.md.
+- **DEC-20261023-A** — One risk-based data-access rule replaces the three-tier scraping doctrine; see CLAUDE.md.
+- **DEC-20261023-B** — Positioning: global per-call tool library for agents, official-source company/compliance data as flagship; amends DEC-20260905-A. See CLAUDE.md and the linked adoption record.
+- **DEC-20260905-A** — Benefit-first brand positioning, marketing terminology and Quiet Material refinement scope; see CLAUDE.md and the linked adoption record. Lead message amended by DEC-20261023-B; Open Flow replaces Quiet Material (DEC-20261024-B).
 - **DEC-20260902-A** — Website redesign is built as `apps/web` in this
   repository (monorepo); `strale-frontend` preserved, not extended.
 - **DEC-20260812-A** — Readiness program / operating strategy.
-- **DEC-20260813-A** — Scraping-doctrine interpretation (per-call registry
+- **DEC-20260813-A** (superseded 2026-10-24 by DEC-20261023-A) — Scraping-doctrine interpretation (per-call registry
   parsing).
 - **DEC-20260815-A** — Operating charter. Division of authority kept inline
   below (the one Decision this file restates, deliberately).
-- **DEC-20260428-A** — Third-party scraping doctrine (three-tier).
+- **DEC-20260428-A** (superseded 2026-10-24 by DEC-20261023-A) — Third-party scraping doctrine (three-tier).
 - **DEC-20260428-B** — Engineering bar for Strale-built regulatory-grade
   data services.
 
@@ -350,7 +355,8 @@ Full new-capability pipeline (write executor → manifest → `onboard.ts
 --discover` → review field reliability → `smoke-test.ts`), flags, and the
 manifest template: CLAUDE.md → "Adding New Capabilities (MANDATORY
 PIPELINE)". The pipeline (`apps/api/scripts/onboard.ts`) is the only
-sanctioned path for capability creation.
+sanctioned path for capability creation; the `onboard-capability` skill
+(`.agents/skills/onboard-capability/SKILL.md`) walks it step by step.
 
 ## Drift-Prevention Surfaces
 

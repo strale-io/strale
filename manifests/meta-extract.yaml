@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: meta-extract
-name: Meta Extract
-description: >-
-  Extract all metadata from a URL: Open Graph, Twitter cards, JSON-LD, favicon, canonical URL, RSS feeds, robots
-  directives.
+name: "Metadata Extraction"
+description: "Get a page's metadata: Open Graph, Twitter Card tags, JSON-LD, favicon, canonical URL, RSS feeds and robots directives."
 category: web-scraping
 cost_class: free_unlimited
 quota_window: none
@@ -149,3 +147,9 @@ limitations:
       charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

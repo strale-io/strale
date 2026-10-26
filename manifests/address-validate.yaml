@@ -1,8 +1,6 @@
 slug: address-validate
-name: Address Validate
-description: >-
-  Validate and standardize a postal address. Returns structured components, validity confidence,
-  and suggested corrections. Works for 200+ countries via OpenStreetMap Nominatim.
+name: "Address Validation"
+description: "Validate and standardise a postal address in 200+ countries. Returns structured components, a confidence level and suggested corrections, from OpenStreetMap."
 category: validation
 cost_class: free_quota
 quota_window: daily
@@ -88,3 +86,10 @@ limitations:
     text: Nominatim uses best-match geocoding — results may not always reflect the exact address
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: osm-nominatim
+  checks: pending

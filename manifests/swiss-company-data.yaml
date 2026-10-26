@@ -1,8 +1,6 @@
 slug: swiss-company-data
-name: Swiss Company Data
-description: >-
-  Look up Swiss company data from the Zefix PublicREST API (Federal Office of Justice). Accepts UID
-  (e.g. CHE-101.602.521), EHRAID, or fuzzy company name.
+name: "Swiss Company Data"
+description: "Look up a Swiss company in Zefix, the Federal Office of Justice register, by UID, EHRA ID or name."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -147,3 +145,8 @@ limitations:
       separate lookups.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

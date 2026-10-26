@@ -1,9 +1,6 @@
 slug: xrp-address-validate
-name: XRP Address Validation
-description: >-
-  Validate an XRP Ledger address. Supports classic addresses (r-prefix) and X-addresses (X/T-prefix, with embedded
-  destination tag and network flag). Verifies XRPL base58 alphabet and 4-byte checksum. Pure algorithmic — fast and
-  cheap, no on-chain lookup.
+name: "XRP Address Validation"
+description: "Check an XRP Ledger address, classic or X-address with its destination tag and network, against the XRPL alphabet and checksum. No on-chain lookup."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -129,3 +126,8 @@ limitations:
       for classic addresses even if the user's intent was to include one.
     category: scope
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

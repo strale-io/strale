@@ -1,8 +1,6 @@
 slug: nl-energy-label
-name: NL Energy Label
-description: >-
-  Look up Dutch energy performance labels (energielabel) from EP-Online REST API v5. Returns energy class (A–G), energy
-  index, CO2 emissions, building details, and validity.
+name: "Dutch Energy Label"
+description: "Look up a Dutch building's energy label in EP-Online: class A to G, energy index, CO2 emissions, building details and validity."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -164,3 +162,8 @@ limitations:
       at ~60-70% of Dutch housing stock.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

@@ -47,121 +47,16 @@ const EXPLAINERS: Record<string, ExplainerSpec> = {
     evidence_keys: ["is_match", "matched_lists", "match_classification"],
     severity: CRITICAL,
     why: () =>
-      "Counterparty matched against an OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions list. Transacting with sanctioned entities is prohibited under the caller's regulatory regime.",
-  },
-  WALLET_MALICIOUS: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["is_malicious", "risk_labels", "risk_level"],
-    severity: CRITICAL,
-    why: () =>
-      "GoPlus address-security flagged this wallet as malicious based on transaction-pattern analysis across known-bad clusters.",
-  },
-  WALLET_PHISHING: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: CRITICAL,
-    why: () =>
-      "Wallet linked to phishing activity. Sending funds to phishing wallets is unrecoverable; recipient typically sweeps within minutes.",
-  },
-  WALLET_MONEY_LAUNDERING: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: CRITICAL,
-    why: () =>
-      "Wallet associated with money-laundering patterns. Receiving funds via this wallet may trigger AML reporting obligations on the caller side.",
-  },
-  WALLET_FINANCIAL_CRIME: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: CRITICAL,
-    why: () => "Wallet associated with documented financial-crime activity.",
-  },
-  WALLET_CYBERCRIME: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: CRITICAL,
-    why: () => "Wallet associated with cybercrime activity.",
-  },
-  WALLET_DARKWEB: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: CRITICAL,
-    why: () => "Wallet associated with darkweb-marketplace transactions.",
-  },
-  WALLET_BLACKLIST: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: REVIEW,
-    why: () => "Wallet present on a third-party blacklist. Investigate origin of the flag before transacting.",
-  },
-  WALLET_FAKE_KYC: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: REVIEW,
-    why: () => "Wallet associated with fake-KYC patterns commonly used to bypass exchange controls.",
-  },
-  WALLET_MALICIOUS_MINING: {
-    source_evaluator: "wallet-history-risk",
-    evidence_keys: ["risk_labels"],
-    severity: REVIEW,
-    why: () => "Wallet associated with malicious-mining (cryptojacking) activity.",
+      "Counterparty matched against an OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions list. Transacting with sanctioned entities is prohibited under the caller's regulatory regime.",
   },
 
-  TOKEN_HONEYPOT: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["is_honeypot", "sell_tax", "buy_tax"],
-    severity: CRITICAL,
-    why: () =>
-      "Token contract is a honeypot — buyers can purchase but cannot sell. Funds entering this contract become unrecoverable.",
-  },
-  TOKEN_SELL_TAX_EXTREME: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["sell_tax", "buy_tax"],
-    severity: CRITICAL,
-    why: (e) =>
-      `Sell tax of ${e.sell_tax ?? "unknown"} (>50%) confiscates the majority of any sell-side proceeds. Effectively unsellable.`,
-  },
-  TOKEN_SELL_TAX_HIGH: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["sell_tax", "buy_tax"],
-    severity: REVIEW,
-    why: (e) =>
-      `Sell tax of ${e.sell_tax ?? "unknown"} (10-50%) materially reduces realisable value on exit. Verify tax is intentional and not a soft-rug pattern.`,
-  },
-  TOKEN_HIDDEN_OWNER: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["hidden_owner", "owner_address"],
-    severity: REVIEW,
-    why: () =>
-      "Token has a hidden owner who can modify contract behaviour (mint, blacklist, fee changes). Owner can rug at any time.",
-  },
-  TOKEN_RECLAIMABLE_OWNERSHIP: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["can_take_back_ownership"],
-    severity: REVIEW,
-    why: () =>
-      "Token allows the original deployer to reclaim ownership even after a transferOwnership call. Renounced ownership claims can't be trusted.",
-  },
-  TOKEN_BLACKLISTED: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["is_blacklisted"],
-    severity: REVIEW,
-    why: () => "Token is on a security blacklist. Investigate provenance before transacting.",
-  },
-  TOKEN_CLOSED_SOURCE: {
-    source_evaluator: "token-safety",
-    evidence_keys: ["is_open_source"],
-    severity: REVIEW,
-    why: () =>
-      "Token contract source is not verified or open. Behaviour cannot be audited; rug-vector exposure is opaque.",
-  },
 
   CONTRACT_UNVERIFIED: {
     source_evaluator: "contract-verification",
     evidence_keys: ["is_verified", "contract_name"],
     severity: REVIEW,
     why: () =>
-      "Contract source code is not verified on Etherscan or Sourcify. Bytecode-only contracts cannot be audited; behaviour is opaque.",
+      "Contract source code is not verified on Sourcify. Bytecode-only contracts cannot be audited; behaviour is opaque.",
   },
   CONTRACT_PROXY_NO_IMPL: {
     source_evaluator: "contract-verification",
@@ -171,13 +66,6 @@ const EXPLAINERS: Record<string, ExplainerSpec> = {
       "Contract is a proxy with no resolvable implementation address. Implementation can be swapped silently; current logic is unknowable.",
   },
 
-  APPROVALS_RISKY: {
-    source_evaluator: "approval-inventory",
-    evidence_keys: ["risky_approvals", "total_approvals"],
-    severity: REVIEW,
-    why: (e) =>
-      `Wallet has ${e.risky_approvals ?? "≥1"} risky token approvals (unlimited or to suspicious spenders). Drainer attacks exploit these even after the original approval flow ended.`,
-  },
 
   PROTOCOL_RECENT_EXPLOIT_30D: {
     source_evaluator: "protocol-risk",

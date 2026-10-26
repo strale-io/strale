@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: invoice-extract
-name: Invoice / Receipt Extraction
-description: >-
-  Extract structured data from an invoice or receipt image/PDF. Returns line items, totals, dates, vendor info, VAT
-  amounts.
+name: "Invoice and Receipt Extraction"
+description: "Read an invoice or receipt from an image or PDF. Returns line items, totals, dates, supplier details and VAT amounts."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -161,3 +159,9 @@ limitations:
       no charge is taken. Shrink or split the document before submitting.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

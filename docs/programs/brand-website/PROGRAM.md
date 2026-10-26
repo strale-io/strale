@@ -13,6 +13,14 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
+**23 October 2026 — visual direction changed by the founder.** Petter chose the pink BrandKit Lab direction, `strale-reference-kit-06` (9 September), as the website's visual direction ("yes, I think it's the one that you brought out... we need to elaborate on the design system and build it so that we have a complete design system that works for our website"). It replaces Quiet Material as the visual direction. This is a visual choice, not a positioning change: DEC-20260905-A stands, and the homepage story is being redone from first principles in a separate session.
+
+**Next: the founder reviews the [Open Flow design system](../../../design/brand-kit/open-flow/README.md), candidate 0.1.** It has tokens with light and dark themes and a generated WCAG proof, components with all states, section-pattern shells, imagery rules and a [rendered specimen](../../../design/brand-kit/open-flow/specimen/index.html) with [screenshots](../../../design/brand-kit/open-flow/screenshots/). It is not adopted; production tokens are unchanged. The flowing-S logo stays; the kit's STRALE wordmark is a candidate only. The hero and homepage copy follow the positioning session.
+
+### Before 23 October 2026 (history)
+
+The paragraphs below describe the Quiet Material period. They are kept as history. Where they say to retain Quiet Material or not to restart visual exploration, the founder's 23 October choice supersedes them.
+
 **Review the [proposed homepage narrative](HOMEPAGE-NARRATIVE.md) with the founder before further section or asset work.** One connected argument and its exact copy/illustration briefs are ready for review: useful work, other jobs, shared integration, account-call inspection, first call. This proposal is not adopted. The [reset handoff](../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md) remains the history of rejected work; [the new checkpoint](../../../handoff/_general/from-code/2026-09-06-brand-homepage-narrative.md) records this batch. Preserve selected B and the accepted kit; DEC-20260905-A remains active.
 
 **Retained visual choice:** the founder selected B in [the paired original-hero surface study](../../../design/brand-kit/quiet-material/hero-comparison/index.html) on 6 September ("i prefer b"). B's frame inset, off-white panel and inner padding are accepted for continued design, not production token adoption. The subsequent hero copy and two-section composition are set aside as unsuccessful creative explorations. The exact screenshot still controls the original character; historical artifacts remain unchanged.

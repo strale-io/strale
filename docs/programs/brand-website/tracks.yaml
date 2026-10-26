@@ -1,7 +1,7 @@
 schema_version: 1
 program: brand-website
 program_status: active
-updated: "2026-09-06"
+updated: "2026-10-23"
 tracks:
   - id: T1
     title: Product and brand discovery
@@ -47,17 +47,21 @@ tracks:
       - docs/programs/brand-website/LAUNCH-PROOF.md
       - docs/programs/brand-website/PROOF-QUALIFICATION.md
   - id: T4
-    title: Existing Quiet Material system audit and cohesion
+    title: Website design system — Open Flow (kit-06), replacing Quiet Material
     status: active
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Review HOMEPAGE-NARRATIVE.md with the founder — useful work, other jobs, shared integration, account-call inspection, first call. Copy and illustration objectives are proposed; no further sections or assets before this review. Preserve hero B and the accepted kit. Positioning, proof, rights and production gates retain their existing status.
-    resume_file: docs/programs/brand-website/HOMEPAGE-NARRATIVE.md
+    next_action: "Open Flow adopted by Petter on 2026-10-24 (DEC-20261024-B), together with SITE-STRUCTURE.md and MESSAGING-LEVELS.md. Next: build the site in apps/web (T6) and promote the open-flow tokens into design/tokens/active.json as part of that build. The kit-06 STRALE wordmark stays a candidate; the flowing-S logo stays until Petter decides."
+    resume_file: design/brand-kit/open-flow/README.md
     exit:
-      - Current logo, atmosphere and light/dark variants visually audited with provenance.
-      - Existing direction retained and required gradient/image/surface recipes verified in relevant contexts before brand-kit adoption.
+      - Founder-chosen kit-06 direction built out as a complete website system (tokens, contrast proof, components with states, section patterns, imagery rules) with lineage to the kit.
+      - Founder review recorded; adoption, if approved, by decision record and the design/README.md promotion swap.
     evidence:
+      - design/brand-kit/open-flow/README.md
+      - design/tokens/candidates/open-flow.json
+      - design/brand-kit/open-flow/CONTRAST.md
+      - design/brand-kit/open-flow/specimen/index.html
       - docs/programs/brand-website/SYSTEM-COMPLETION.md
       - design/brand-kit/quiet-material/README.md
       - design/brand-kit/quiet-material/registry.json

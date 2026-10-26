@@ -580,7 +580,7 @@
     - .env
     - workflow
 - name: GEMI_API_KEY
-  purpose: Greek GEMI company-registry key for greek-company-data — the per-call parsing path opened by DEC-20260813-A.
+  purpose: Greek GEMI company-registry key for greek-company-data — the per-call parsing path opened by DEC-20260813-A (now the per-call lane of DEC-20261023-A).
   provider: GEMI (Greece)
   holder: railway
   cost_class: free
@@ -599,7 +599,7 @@
   set_in:
     - workflow
 - name: GITHUB_TOKEN
-  purpose: Optional GitHub token used by the github-repo-compare capability to raise the unauthenticated GitHub API rate limit. Capability works without it, at the lower anonymous rate limit.
+  purpose: Optional GitHub token used by the github-repo-compare and social-profile-check capabilities to raise the unauthenticated GitHub API rate limit. Both work without it, at the lower anonymous rate limit.
   provider: GitHub
   holder: railway
   cost_class: free
@@ -709,15 +709,6 @@
     - local
   set_in:
     - .env
-- name: JINA_API_KEY
-  purpose: Jina AI Reader API key, an alternate readability/markdown extraction backend (lib/jina-reader.ts).
-  provider: Jina AI
-  holder: unknown
-  cost_class: metered
-  required_in: []
-  set_in:
-    - none
-  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: JUSTIZONLINE_API_KEY
   purpose: JustizOnline IWG token for austrian-company-data (Firmenbuch HVD API). Passed as X-API-KEY; the WSDL 401s without it.
   provider: JustizOnline / BRZ (Austria)

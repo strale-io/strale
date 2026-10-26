@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: image-resize
-name: Image Resize
-description: Resize, crop, and convert images. Supports PNG, JPEG, WebP. Configurable dimensions, quality, fit mode. Uses Sharp.
+name: "Image Resize"
+description: "Resize, crop and convert PNG, JPEG and WebP images, with the size, quality and fit you set."
 category: file-conversion
 cost_class: free_unlimited
 quota_window: none
@@ -112,3 +112,9 @@ limitations:
     workaround: >-
       Convert unsupported formats to PNG before resizing, or use a dedicated image processing library for animated
       content
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

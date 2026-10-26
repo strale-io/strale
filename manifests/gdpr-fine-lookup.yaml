@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: gdpr-fine-lookup
-name: GDPR Fine Lookup
-description: Look up GDPR enforcement fines by company name or country. Returns fine amounts, authorities, articles violated.
+name: "GDPR Fine Lookup"
+description: "Look up GDPR fines by company or country: amounts, authorities and the articles breached."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -78,3 +78,9 @@ limitations:
     category: coverage
     severity: info
     workaround: Narrow the search (specific company or country) so fewer fines are returned per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: public_page_read
+  checks: pending

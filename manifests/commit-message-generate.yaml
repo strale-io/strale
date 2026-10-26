@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: commit-message-generate
-name: Commit Message Generate
-description: Generate conventional commit messages from git diffs or change descriptions. Returns subject, body, type, scope.
+name: "Commit Message Generator"
+description: "Write a conventional commit message from a diff or a description of the change: type, scope, subject and body."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -92,3 +92,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Include a brief description of the intent in the input alongside the diff for more meaningful commit messages
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

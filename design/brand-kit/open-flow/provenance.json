@@ -1,0 +1,205 @@
+{
+  "kit": {
+    "id": "strale-reference-kit-06",
+    "source": "C:/Users/pette/Projects/brandkit-lab/jobs/brand-development/strale-reference-kit-06",
+    "registered_at": "2026-09-09T07:55:23.956Z",
+    "kit_status": "proposed-development",
+    "asset_library_approval": "not-granted",
+    "zip_sha256": "edac5fa56804e64612538abdb363d1808b718f31a83a52c76aa2243e331e6e30",
+    "tokens_sha256": "d7779674546dc41411d33d6f61d4f89f02f63cd9022587f53647b9368e26b268",
+    "rules_sha256": "6e9783ce7b2e8634d9e00faf13c8e56b07ebc9bc48fc831b9d08e018bbcb2567",
+    "asset_library_sha256": "2b7219aa83ed0b9411dc110bbf43e5dd38e2d1ccbf0bfb51540a491eb4532e8e",
+    "chosen_by_founder": "2026-10-23"
+  },
+  "imagery": [
+    {
+      "id": "wide",
+      "file": "assets/imagery/wide.png",
+      "sha256": "cbeba88715e0d54d9dbe068d9e1985bbb2f99dffc622b4023d0c2446e37fb55d",
+      "from": "brandkit.proposed.zip:assets/wide.png",
+      "kit_entry": "left-opening",
+      "ratio": "16:9",
+      "size_px": [
+        1672,
+        941
+      ],
+      "kit_check": "checks-pending",
+      "region": {
+        "x": 0.06,
+        "y": 0.08,
+        "width": 0.53,
+        "height": 0.54,
+        "min_contrast_source": 15.49
+      },
+      "role": "Hero shell at every width: text in its reading region from 1024px, stacked above it below 1024px."
+    },
+    {
+      "id": "centre-field",
+      "file": "assets/imagery/centre-field.png",
+      "sha256": "3e7858b8a5e13abfb9c6d7e46227b38d42cc0641a6e76644100b0ef14122d3bd",
+      "from": "brandkit.proposed.zip:assets/centre-field.png",
+      "kit_entry": "centre-field",
+      "ratio": "16:9",
+      "size_px": [
+        1672,
+        941
+      ],
+      "kit_check": "checks-pending",
+      "region": {
+        "x": 0.16,
+        "y": 0.12,
+        "width": 0.68,
+        "height": 0.48
+      },
+      "role": "Centred section opening or CTA band on light canvas, 1024px and up."
+    },
+    {
+      "id": "card-field",
+      "file": "assets/imagery/card-field.png",
+      "sha256": "d768d11c1c9f4c99d1c43098e9104cb1e4c9f6a077e1d8063694effc3717ee9f",
+      "from": "brandkit.proposed.zip:assets/card-field.png",
+      "kit_entry": "card-field",
+      "ratio": "4:3",
+      "size_px": [
+        1448,
+        1086
+      ],
+      "kit_check": "checks-pending",
+      "region": {
+        "x": 0.08,
+        "y": 0.08,
+        "width": 0.76,
+        "height": 0.49
+      },
+      "role": "Large feature card or media half of a feature split."
+    },
+    {
+      "id": "portrait-field",
+      "file": "assets/imagery/portrait-field.png",
+      "sha256": "fe3d52911d3882be282d0c87d6e0a32e426b6449f3fb8d9e0937ca51c66cec5c",
+      "from": "brandkit.proposed.zip:assets/portrait-field.png",
+      "kit_entry": "portrait-field",
+      "ratio": "4:5",
+      "size_px": [
+        1122,
+        1402
+      ],
+      "kit_check": "checks-pending",
+      "region": {
+        "x": 0.08,
+        "y": 0.07,
+        "width": 0.84,
+        "height": 0.49
+      },
+      "role": "Portrait formats (social, editorial). Not the mobile hero: its reading region is the top half, so stacked under copy it leaves a tall empty block."
+    },
+    {
+      "id": "field",
+      "file": "assets/imagery/field.png",
+      "sha256": "3d9707b7f2496d75c004f9738bbc44f2c662b7708196f579875e4864cd62edb9",
+      "from": "brandkit.proposed.zip:assets/field.png",
+      "kit_entry": null,
+      "ratio": "3:2",
+      "size_px": [
+        1536,
+        1024
+      ],
+      "kit_check": "not-in-kit-library",
+      "region": null,
+      "role": "Decorative colour environment only. No text over it; use beside text or behind a solid surface."
+    },
+    {
+      "id": "light",
+      "file": "assets/imagery/light.png",
+      "sha256": "7f177398b2ebf444dd85e3c55b2ac81240ca6bcd8284007115a12729fbf321c6",
+      "from": "brandkit.proposed.zip:assets/light.png",
+      "kit_entry": null,
+      "ratio": "3:2",
+      "size_px": [
+        1536,
+        1024
+      ],
+      "kit_check": "not-in-kit-library",
+      "region": null,
+      "role": "The glow image. Atmosphere for a contained media panel or behind a solid reading surface; never text directly on it. The one raster that reads well on the dark canvas."
+    },
+    {
+      "id": "bands",
+      "file": "assets/imagery/bands.svg",
+      "sha256": "f2eb514469c7f9afde187ac87392dcad164c71d70eeb5e6742911ccf8d6f09fa",
+      "from": "brandkit.proposed.zip:assets/bands.svg",
+      "kit_entry": null,
+      "ratio": "40:19",
+      "size_px": [
+        800,
+        380
+      ],
+      "kit_check": "not-in-kit-library (endpoints unresolved)",
+      "region": null,
+      "role": "Vector supporting graphic. Transparent, so it is the dark-theme partner for the raster fields and the motion-reveal subject."
+    }
+  ],
+  "candidate_identity": [
+    {
+      "id": "logo-refinement",
+      "file": "assets/candidate/logo-refinement.png",
+      "sha256": "0f47edf96793bd01fad928d7740f7cd882857eff9c6c27ec1d02ca0b48c26da9",
+      "from": "brandkit.proposed.zip:assets/logo-refinement.png",
+      "status": "candidate only — raster study, no vector master; not for use until the founder decides"
+    }
+  ],
+  "logo": [
+    {
+      "id": "lockup-ink",
+      "file": "assets/logo/lockup-ink.svg",
+      "sha256": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
+      "from": "design/brand-kit/quiet-material/foundations/exports/lockup-ink.svg",
+      "status": "current flowing-S logo, retained"
+    },
+    {
+      "id": "lockup-inverse",
+      "file": "assets/logo/lockup-inverse.svg",
+      "sha256": "fcbd4e1461d1341bee85e0630c03ede040164be0157bf658d6b2ce498ba73b60",
+      "from": "design/brand-kit/quiet-material/foundations/exports/lockup-inverse.svg",
+      "status": "current flowing-S logo, retained"
+    }
+  ],
+  "fonts": [
+    {
+      "file": "fonts/SpaceGrotesk.ttf",
+      "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72",
+      "from": "brandkit.proposed.zip:fonts/display.ttf",
+      "licence": "fonts/SpaceGrotesk-OFL.txt",
+      "axes": "wght 300–700"
+    },
+    {
+      "file": "fonts/InstrumentSans.ttf",
+      "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "from": "brandkit.proposed.zip:fonts/body.ttf",
+      "licence": "fonts/InstrumentSans-OFL.txt",
+      "axes": "wdth 75–100, wght 400–700"
+    },
+    {
+      "file": "fonts/IBMPlexMono-Regular.ttf",
+      "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+      "from": "design/brand-kit/quiet-material/fonts/IBMPlexMono-Regular.ttf",
+      "licence": "fonts/IBMPlexMono-OFL.txt",
+      "axes": "static regular; kit-06 has no mono family"
+    },
+    {
+      "file": "fonts/SpaceGrotesk-OFL.txt",
+      "sha256": "564ce565c371c5e5bbf286006565a7c9aa55a9f56e7ca58d56e05d649dd61a72",
+      "from": "brandkit.proposed.zip:fonts/display-LICENSE.txt"
+    },
+    {
+      "file": "fonts/InstrumentSans-OFL.txt",
+      "sha256": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+      "from": "brandkit.proposed.zip:fonts/body-LICENSE.txt"
+    },
+    {
+      "file": "fonts/IBMPlexMono-OFL.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "from": "design/brand-kit/quiet-material/fonts/IBMPlexMono-OFL.txt"
+    }
+  ]
+}

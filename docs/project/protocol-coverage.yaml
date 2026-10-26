@@ -242,9 +242,14 @@ protocols:
       Recorded only in CLAUDE.md's Active Decisions section and the Notion
       Decisions DB. The same CLAUDE.md section also carries the 2026-09-07
       founder review policy and DEC-20260910-A, which amend it without a
-      separate decision record file either.
-    enforced_by:
-      - scripts/check-codex-backlog.mjs
+      separate decision record file either, and DEC-20261024-A (2026-10-24),
+      which retires the clause keeping codex:check.
+    enforced_by: []
+    enforced_by_note: >-
+      No mechanical check. The codex:check CI step and its scripts were
+      retired under DEC-20261024-A item 3; the waived register
+      docs/programs/codex-review-backlog.yaml stays as history, immutable
+      in git. The independent review itself is a PR-review requirement.
 
   - id: program-register
     name: "Program register — where multi-batch work resumes"

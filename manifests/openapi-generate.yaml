@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: openapi-generate
-name: OpenAPI Generate
-description: Generate a complete OpenAPI 3.1 specification from a natural language API description.
+name: "OpenAPI Generator"
+description: "Write a complete OpenAPI 3.1 specification from a plain-language description of an API."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -176,3 +176,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Describe fewer endpoints per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

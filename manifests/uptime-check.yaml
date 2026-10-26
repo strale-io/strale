@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: uptime-check
-name: Uptime Check
-description: Check if a URL is up or down. Returns status code, latency, redirect info, TLS status, and server headers.
+name: "Uptime Check"
+description: "Check whether a URL is up: status code, latency, redirects, TLS and server headers."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none
@@ -96,3 +96,9 @@ limitations:
     category: coverage
     severity: info
     workaround: Use page-exists to check whether a specific page still resolves to real content.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

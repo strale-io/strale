@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: json-to-zod
-name: JSON to Zod
-description: Convert JSON to Zod validation schemas. Auto-detects emails, URLs, UUIDs, dates for refined validators. Algorithmic.
+name: "JSON to Zod"
+description: "Turn JSON into Zod validation schemas, with refined checks for emails, URLs, UUIDs and dates."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none
@@ -89,3 +89,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Add .email(), .url(), or .datetime() refinements manually for fields that require format validation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

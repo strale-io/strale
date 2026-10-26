@@ -2,7 +2,8 @@
 
 **Last reviewed:** 2026-04-30
 **Owner:** Strale (controller for Strale-side processing; processor for customer-supplied search inputs)
-**Re-review trigger:** vendor change away from Dilisense (DEC-20260429-A supersession), addition of an AI-synthesis step, change to the Art. 22 classification, change to DEC-20260428-A scraping doctrine
+**Re-review trigger:** vendor change away from Dilisense (DEC-20260429-A supersession), addition of an AI-synthesis step, change to the Art. 22 classification, change to the data-access rule (DEC-20261023-A, which superseded the DEC-20260428-A scraping doctrine)
+**Re-review note (2026-10-24, engineering, not legal):** triggered by DEC-20261023-A. Processing is unchanged. Under the new rule, sanctions and PEP screening for AML/KYB stays allowed (its never lane excepts it), and the rule's vendor condition (terms that permit resale) is met by the documented Dilisense redistribution licence named in section 4. That licence is not yet entered in the terms records in `apps/api/src/lib/vendor-terms.ts`, which hold the vendors checked on 2026-10-24. The section 4 mitigation that names DEC-20260428-A Tier 2 describes why Dilisense was chosen and remains true. **Correction (2026-10-24, same day):** as of 2026-04-29, the reseller service agreement with Dilisense was not signed; Strale used Dilisense's starter tier on an informal, vendor-granted arrangement (docs/research/2026-04-28-payee-assurance-build-vs-buy.md). Section 4's "documented redistribution licence" overstates that, so the rule's vendor condition is not recorded as met; the two capabilities' manifests mark their checks pending.
 
 These two capabilities share substantively-identical processing
 description, vendor wrap, risk profile, and mitigations. Combining
@@ -18,7 +19,7 @@ from upstream lists / databases.
 
 | Capability | What it returns | Upstream |
 |---|---|---|
-| `sanctions-check` | Matches against 130+ international sanctions, debarment, and restrictive-measure lists (OFAC SDN, EU Consolidated, UN SC, HM Treasury OFSI, SECO, BIS, World Bank, EBRD, ADB, plus 125 national lists) | Dilisense Consolidated Sanctions database |
+| `sanctions-check` | Matches against 130+ international sanctions, debarment, and restrictive-measure lists (OFAC SDN, EU Consolidated, UN SC, the UK Sanctions List, SECO, BIS, World Bank, EBRD, ADB, plus 125 national lists) | Dilisense Consolidated Sanctions database |
 | `pep-check` | Matches against the consolidated PEP database covering 230+ territories per EU Commission Implementing Decision (EU) 2023/724, including Relatives and Close Associates (RCAs) | Dilisense Consolidated PEP database |
 
 **Output (both)**: `match_count`, `total_results`, structured `matches`
@@ -51,7 +52,7 @@ manifest with `source_count` and `source_catalog_url`.
   applicable sanctions regimes. EU operators must screen against the
   EU consolidated list under Council Regulations (e.g. 833/2014,
   269/2014); US persons must screen against OFAC SDN under 31 CFR;
-  UK persons against OFSI under the Sanctions and Anti-Money
+  UK persons against the UK Sanctions List under the Sanctions and Anti-Money
   Laundering Act 2018.
 - **PEP screening**: Art. 6(1)(c) for AML-regulated entities (EU
   AMLD6, US BSA/AMLA, UK MLR 2017 §17), supplemented by Art. 9(2)(g)

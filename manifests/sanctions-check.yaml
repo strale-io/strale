@@ -1,9 +1,6 @@
 slug: sanctions-check
-name: Sanctions Check
-description: >-
-  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, Swiss SECO, BIS, World
-  Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade
-  evidence: match results with named source attribution and country attribution.
+name: "Sanctions Check"
+description: "Check a person or company against sanctions lists: EU, US OFAC, UN, UK, Swiss SECO, BIS, World Bank, EBRD, ADB and 125 national lists. Returns each match with the list and country it comes from."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none
@@ -134,7 +131,7 @@ output_schema:
         - dilisense
     queried_at:
       type: string
-data_source: Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)
+data_source: Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -193,3 +190,11 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Provide birth_date for individuals and an ISO country code for companies.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: dilisense
+  checks: pending
+  checks_note: "Pending: Dilisense is used on an informal starter arrangement with vendor-granted grace (2026-04-29); the reseller service agreement is not signed (docs/research/2026-04-28-payee-assurance-build-vs-buy.md)."

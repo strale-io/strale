@@ -1,6 +1,6 @@
 slug: incoterms-explain
-name: Incoterms Explain
-description: Explain any Incoterms 2020 rule. Returns seller/buyer obligations, risk/cost transfer points, suitability.
+name: "Incoterms Explainer"
+description: "Explain any Incoterms 2020 rule: what the seller and buyer each do, where risk and cost pass, and when to use it."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -110,3 +110,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Verify specific obligations against the ICC Incoterms 2020 publication and your actual contract terms
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

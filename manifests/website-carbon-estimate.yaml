@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: website-carbon-estimate
-name: Website Carbon Estimate
-description: Estimate CO2 emissions per page view using the Website Carbon methodology. Returns rating A-F, annual estimate.
+name: "Website Carbon Estimate"
+description: "Estimate the CO2 per page view of a website using the Website Carbon method, with an A to F rating and a yearly figure."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -106,3 +106,9 @@ limitations:
       caller_input refusal rather than a measurement. No charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: superseded
 supersedes: null
-superseded_by: null
+superseded_by: 2026-10-23-open-flow-kit-06
 ---
 
 # Quiet Material v0.7

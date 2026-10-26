@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: json-repair
-name: JSON Repair
-description: >-
-  Repair broken JSON: trailing commas, single quotes, unquoted keys, truncated, comments, mixed with markdown. Returns
-  valid JSON.
+name: "JSON Repair"
+description: "Fix broken JSON: trailing commas, single quotes, unquoted keys, comments, truncation and stray Markdown. Returns valid JSON."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none
@@ -98,3 +96,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If repair fails, extract the valid JSON segments manually or use an LLM to reconstruct the intended structure
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

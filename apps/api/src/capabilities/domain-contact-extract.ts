@@ -1,7 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
+import { assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { looksLikeJsChallenge } from "./lib/web-provider.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { ROLE_PREFIXES } from "./email-validate.js";
 
 /**
@@ -20,9 +24,12 @@ import { ROLE_PREFIXES } from "./email-validate.js";
  *     permuted. Only addresses literally present in the fetched HTML
  *     are ever returned.
  *   - No employee enumeration is attempted.
- *   - Personal-looking addresses (firstname.lastname@) that the company
- *     itself published are reported ONLY in `published_personal_addresses`,
- *     never ranked, expanded, or used to infer a pattern.
+ *   - Personal-looking addresses (firstname.lastname@) are NOT returned,
+ *     even when the company itself published them — only their count, in
+ *     `personal_addresses_withheld`. Until 2026-10-24 they were returned in
+ *     `published_personal_addresses`; DEC-20261023-A puts reselling contact
+ *     details about identifiable people in the never lane (item 3), and its
+ *     exception covers officer facts published by statute, not contact pages.
  *
  * Zero external API cost — plain HTTP fetch + regex/JSON-LD parsing, no
  * vendor, no LLM. Every fetch goes through `safeFetch` (F-0-006 SSRF guard)
@@ -56,11 +63,44 @@ const FETCH_TIMEOUT_MS = 10_000;
 // part, 63-char labels).
 export const EMAIL_RE = /[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.){1,8}[a-zA-Z]{2,24}/g;
 const CONTACT_LINK_RE = /contact-us|get-in-touch|contact|kontakt/i;
-// firstname.lastname / firstname_lastname / firstname-lastname style local part.
-const PERSONAL_NAME_LOCAL_PART_RE = /^[a-z]{2,}[._-][a-z]{2,}$/i;
+
+/**
+ * Organisational words a local part may be built from. An address is
+ * returned only when EVERY token of its local part (split on ".", "-", "_")
+ * is one of these or a role prefix from email-validate — `orders@`,
+ * `press-team@`, `customer.service@`. Everything else is treated as a
+ * person's address and withheld (DEC-20261023-A never lane, item 3).
+ *
+ * An allowlist, not a name detector: a first-pass version withheld only
+ * `first.last@` shapes, which let `petter@`, `jdoe@`, `j.doe@` and
+ * `anna-karin.svensson@` through as "role" addresses (independent review,
+ * 2026-10-24). A person's address must never be the default outcome.
+ */
+const ORGANISATIONAL_TOKENS = new Set([
+  "orders", "order", "shop", "store", "bookings", "booking", "reservations",
+  "service", "services", "customer", "customers", "care", "client", "clients",
+  "partners", "partner", "partnerships", "investor", "investors", "ir",
+  "accounts", "accounting", "invoice", "invoices", "finance", "payments",
+  "procurement", "purchasing", "privacy", "dpo", "gdpr", "data", "protection",
+  "returns", "shipping", "delivery", "events", "pr", "news",
+  "communications", "comms", "reception", "general", "mail", "email",
+  "kontakt", "kundtjanst", "kundservice", "faktura", "ekonomi",
+  "group", "desk", "line", "inbox", "requests", "request", "questions",
+  "editor", "editorial", "redaktion", "recruitment", "recruiting", "talent",
+  "vendors", "suppliers", "tenders", "licensing", "trust", "safety",
+]);
+
+function isOrganisationalLocalPart(localPart: string): boolean {
+  const base = localPart.split("+")[0];
+  if (ROLE_PREFIXES.has(base)) return true;
+  const tokens = base.split(/[._-]+/).filter(Boolean);
+  return tokens.length > 0 && tokens.every((t) => ROLE_PREFIXES.has(t) || ORGANISATIONAL_TOKENS.has(t));
+}
 
 const SOCIAL_PATTERNS: Record<string, RegExp> = {
-  linkedin: /https?:\/\/(?:www\.)?linkedin\.com\/[^\s"'<>)]+/i,
+  // Company and school pages only: a team page's linkedin.com/in/<person>
+  // link is a personal profile (DEC-20261023-A never lane, item 3).
+  linkedin: /https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/(?:company|school|showcase)\/[^\s"'<>)]+/i,
   twitter: /https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\s"'<>)]+/i,
   facebook: /https?:\/\/(?:www\.)?facebook\.com\/[^\s"'<>)]+/i,
   instagram: /https?:\/\/(?:www\.)?instagram\.com\/[^\s"'<>)]+/i,
@@ -305,6 +345,11 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
   assertTargetAllowed(homepageUrl);
 
   try {
+    // DEC-20261023-A: robots.txt before the request, and a block (401/403/
+    // 407/429) is a refusal rather than an error. The user agent above is
+    // already an honest StraleBot one; its product token is what robots.txt
+    // groups are matched on.
+    await assertRobotsAllowed(homepageUrl);
     // F-0-006: user-supplied domain → safeFetch guards SSRF (validates URL,
     // re-checks resolved IP at connect time, re-validates every redirect hop).
     const resp = await safeFetch(homepageUrl, {
@@ -312,13 +357,22 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
       timeoutMs: FETCH_TIMEOUT_MS,
     });
     if (!resp.ok) {
+      assertNotBlockStatus(homepageUrl, resp.status);
       throw new Error(`domain-contact-extract: ${hostname} returned HTTP ${resp.status}`);
     }
     // Decode at the boundary so every extractor below sees one canonical
     // form, whichever variant the origin served this region.
+    try {
+      await assertRedirectAllowed(homepageUrl, resp.url);
+    } catch (err) {
+      await discardBody(resp, "domain-contact-extract: redirect target disallowed by robots.txt");
+      throw err;
+    }
     homepageHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
+    if (looksLikeJsChallenge(homepageHtml)) throw siteAccessRefusal(homepageUrl, { kind: "challenge" });
     fetchedUrls.push(homepageUrl);
   } catch (err) {
+    if (isCapabilityRefusal(err)) throw err;
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Could not fetch ${hostname}: ${message}`);
   }
@@ -343,6 +397,9 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
 
   if (contactPageUrl) {
     try {
+      // Same origin, so this reads the verdict cached a moment ago. A
+      // disallowed contact page is skipped like any other failed fetch.
+      await assertRobotsAllowed(contactPageUrl);
       const resp = await safeFetch(contactPageUrl, {
         headers: { "User-Agent": USER_AGENT },
         timeoutMs: FETCH_TIMEOUT_MS,
@@ -368,21 +425,14 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
   );
 
   const roleEmails: string[] = [];
-  const publishedPersonalAddresses: string[] = [];
+  let personalAddressesWithheld = 0;
   for (const email of foundEmails) {
-    const localPart = email.split("@")[0];
-    const basePrefix = localPart.split("+")[0];
-    if (ROLE_PREFIXES.has(basePrefix)) {
+    if (isOrganisationalLocalPart(email.split("@")[0])) {
       roleEmails.push(email);
-    } else if (PERSONAL_NAME_LOCAL_PART_RE.test(localPart)) {
-      // Published by the site owner, reported as-is. Never ranked, expanded,
-      // or used to infer a pattern — see SCOPE BOUNDARY above.
-      publishedPersonalAddresses.push(email);
     } else {
-      // Not a recognised role prefix and not a name-shaped local part
-      // (e.g. a department alias like "orders@" or "press-team@") — treat
-      // as an organisational address rather than a personal one.
-      roleEmails.push(email);
+      // Anything not built from organisational words is treated as a
+      // person's address: counted, never returned — see SCOPE BOUNDARY.
+      personalAddressesWithheld++;
     }
   }
 
@@ -401,7 +451,7 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
       domain: hostname,
       fetched_urls: fetchedUrls,
       role_emails: roleEmails.slice(0, 20),
-      published_personal_addresses: publishedPersonalAddresses.slice(0, 20),
+      personal_addresses_withheld: personalAddressesWithheld,
       phones,
       social_links: socialLinks,
       contact_page_url: contactPageUrl,

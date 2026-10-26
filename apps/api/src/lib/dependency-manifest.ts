@@ -98,13 +98,12 @@ export const PROVIDERS: DependencyProvider[] = [
     // listing a cap here means "test fails when Browserless is down."
     //
     // Capabilities that go through web-provider.ts / browserless-extract.ts
-    // have a 3-tier fallback (plain HTTP → Jina Reader → Browserless) and
+    // have a 2-tier fallback (plain HTTP → Browserless) and
     // continue to work even when Browserless is down. Those caps are NOT
     // listed here — they should still be tested when Browserless is unhealthy.
     capabilities: [
       "annual-report-extract",   // direct Browserless call for PDF retrieval
       "company-enrich",          // direct Browserless call
-      "estonian-company-data",   // direct Browserless call (EU IP proxy)
       "html-to-pdf",             // requires real Chromium PDF rendering
       "landing-page-roast",      // direct Browserless screenshot
       "screenshot-url",          // requires real Chromium screenshots
@@ -356,7 +355,10 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/taxation_customs/vies/rest-api/check-status",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 5000,
+      // No shorter than vat-validate's own VIES call (15s). A probe that gives
+      // up before the tool does reports a slow-but-working source as down;
+      // see PROBE_TIMEOUT_MATCHES_TOOL in dependency-manifest-probes.test.ts.
+      timeoutMs: 15000,
     },
     capabilities: ["vat-validate"],
     tier: "free",
@@ -403,7 +405,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/sudovi",
       method: "GET",
       healthyStatuses: [200, 401],
-      timeoutMs: 5000,
+      timeoutMs: 15000, // no shorter than croatian-company-data's data call (15s; its token call is 10s)
       skipAuth: true,
     },
     capabilities: ["croatian-company-data"],
@@ -511,13 +513,24 @@ export const PROVIDERS: DependencyProvider[] = [
     description: "Open catalogue of scholarly works, authors and venues (OurResearch).",
     baseUrl: "https://api.openalex.org",
     authType: "none",
+    // OpenAlex meters every call against a daily budget: without an API key,
+    // $0.10/day shared by everyone on the caller's IP. A search costs $0.001
+    // (`X-RateLimit-Cost-USD`), a filtered list $0.0001, and a single-record
+    // lookup $0 (all checked 2026-10-23). The probe used to be a search; at
+    // ~1,000 probes a day it spent the whole budget by ~02:15 UTC, after which
+    // OpenAlex answered 429 to everything — the probe and every customer call
+    // to the capabilities below — for the rest of the day. A singleton lookup
+    // still reaches the live works database and costs nothing (Principle A).
+    // Blind spot: if the budget is ever spent by real traffic, this free probe
+    // may stay green while searches get 429; the capabilities' own failures
+    // surface that, not the probe.
     healthProbe: {
-      path: "/works?search=test&per-page=1&select=id&mailto=support@strale.io",
+      path: "/works/W2144093431?select=id&mailto=support@strale.io",
       method: "GET",
       healthyStatuses: [200],
       timeoutMs: 6000,
     },
-    capabilities: ["academic-paper-search", "paper-details"],
+    capabilities: ["academic-paper-search", "paper-details", "citation-graph"],
     tier: "free",
   },
   {
@@ -530,7 +543,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/api/query?search_query=all:test&max_results=1",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 8000,
+      timeoutMs: 15000, // no shorter than arxiv-search's own call (15s)
     },
     capabilities: ["arxiv-search"],
     tier: "free",
@@ -560,7 +573,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/api/v1/search?query=test&hitsPerPage=1",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 5000,
+      timeoutMs: 8000, // no shorter than hacker-news-search's own call (8s)
     },
     capabilities: ["hacker-news-search"],
     tier: "free",
@@ -625,7 +638,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/fdsnws/event/1/query?format=geojson&limit=1&minmagnitude=6",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 6000,
+      timeoutMs: 12000, // no shorter than usgs-earthquake-search's own call (12s)
     },
     capabilities: ["usgs-earthquake-search"],
     tier: "free",
@@ -651,6 +664,31 @@ export const PROVIDERS: DependencyProvider[] = [
     tier: "free",
     retired: true,
     migratedAt: "2026-04-17",
+  },
+  // ─── Jina Reader (retired 2026-10-24) ──────────────────────────────────────
+  // Was tier 2 of web-provider.ts and layer 2 of url-to-markdown. Removed under
+  // DEC-20261023-A: the hosted reader retries a non-200 fetch through its own
+  // rotating proxy pool unless told not to, and does not report the target's
+  // status, so a block on that route could be neither seen nor honoured. It
+  // also ran keyless (JINA_API_KEY was never set in production), i.e. on the
+  // anonymous free tier, whose commercial-use terms were never recorded.
+  {
+    name: "jina-reader",
+    displayName: "Jina Reader (retired)",
+    description: "Retired 2026-10-24 under DEC-20261023-A — no capability fetches through r.jina.ai.",
+    baseUrl: "https://r.jina.ai",
+    authType: "none",
+    healthProbe: {
+      path: "/https://example.com",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 10000,
+      skipAuth: true,
+    },
+    capabilities: [],
+    tier: "free",
+    retired: true,
+    migratedAt: "2026-10-24",
   },
   {
     // Alchemy Ethereum mainnet — authenticated RPC with known CU quota.
@@ -707,24 +745,6 @@ export const PROVIDERS: DependencyProvider[] = [
       timeoutMs: 5000,
     },
     capabilities: ["contract-verify-check"],
-    tier: "free",
-  },
-
-  // ─── Jina Reader (free markdown extraction for url-to-markdown) ────────────
-  {
-    name: "jina-reader",
-    displayName: "Jina Reader",
-    description: "Free URL-to-markdown extraction via r.jina.ai. Handles JS rendering. 20 RPM free, 200 RPM with key.",
-    baseUrl: "https://r.jina.ai",
-    authType: "none",
-    healthProbe: {
-      path: "/https://example.com",
-      method: "GET",
-      healthyStatuses: [200],
-      timeoutMs: 10000,
-      skipAuth: true,
-    },
-    capabilities: ["url-to-markdown"],
     tier: "free",
   },
 

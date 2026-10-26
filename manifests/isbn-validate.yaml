@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: isbn-validate
-name: ISBN Validation
-description: >-
-  Validate an ISBN-10 or ISBN-13 number. Checks format, length, and checksum. Converts ISBN-10 to ISBN-13. Pure
-  algorithmic — instant.
+name: "ISBN Validation"
+description: "Check an ISBN-10 or ISBN-13 and its checksum, and convert ISBN-10 to ISBN-13."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -83,3 +81,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use the validated ISBN with Open Library API or Google Books to verify the publication exists
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

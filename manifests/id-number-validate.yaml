@@ -1,9 +1,6 @@
 slug: id-number-validate
-name: ID Number Validate
-description: >-
-  Validate national identification number formats. Supports Swedish personnummer, Finnish
-  henkilötunnus, Norwegian fødselsnummer, Danish CPR, UK National Insurance, US SSN format,
-  and German Steuer-ID. Checks format and checksum where applicable. Does NOT verify identity.
+name: "ID Number Validation"
+description: "Check the format and checksum of national ID numbers: Swedish personnummer, Finnish henkilötunnus, Norwegian fødselsnummer, Danish CPR, UK National Insurance, US SSN and German Steuer-ID. Does not verify identity."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -88,3 +85,8 @@ limitations:
     text: "Supports SE, FI, NO, DK, GB, US, DE — other countries return unsupported error"
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: ens-resolve
-name: ENS Resolve
-description: >-
-  Resolve an ENS name to its Ethereum address. Supports all ENS names including .eth, DNS names on ENS, and subdomains.
-  Also returns avatar URL and resolver contract.
+name: "ENS Resolver"
+description: "Resolve an ENS name, including .eth names, DNS names on ENS and subdomains, to its Ethereum address, avatar and resolver."
 category: web3
 cost_class: free_unlimited
 quota_window: none
@@ -72,3 +70,11 @@ limitations:
     category: availability
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: alchemy
+  checks: pending
+  checks_note: "Pending: Alchemy's terms (quoted in capabilities/lib/alchemy-client.ts and the 2026-09-10 audit) permit use as a product backend integrated with additional functionality; that judgement is not recorded per tool in vendor-terms.ts."

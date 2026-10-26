@@ -185,7 +185,7 @@ registerCapability("email-auth-check", async (input: CapabilityInput) => {
     provenance: {
       source: "dns",
       fetched_at: new Date().toISOString(),
-      acquisition_method: "direct_api" as const,
+      acquisition_method: "primary_source" as const,
     },
   };
 });

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: polish-company-data
-name: Polish Company Data
-description: >-
-  Look up Polish company data from KRS (Krajowy Rejestr Sądowy). Accepts KRS number (10 digits) or fuzzy company name.
-  Returns company name, legal form, address, registration date.
+name: "Polish Company Data"
+description: "Look up a Polish company in KRS, the National Court Register, by its 10-digit KRS number or name. Returns name, legal form, address and registration date."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -137,3 +135,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For sole traders, query the CEIDG register directly at prod.ceidg.gov.pl using the NIP or PESEL
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

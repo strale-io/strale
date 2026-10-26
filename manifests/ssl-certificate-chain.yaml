@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: ssl-certificate-chain
-name: SSL Certificate Chain
-description: >-
-  Inspect the full SSL/TLS certificate chain for a domain. Returns cert details, expiry, issuer, TLS version, cipher
-  suite, and security issues.
+name: "SSL Certificate Chain"
+description: "Inspect a domain's full SSL/TLS certificate chain: each certificate, expiry, issuer, TLS version, cipher and any problems."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none
@@ -249,3 +247,9 @@ limitations:
     category: coverage
     severity: info
     workaround: If you use a private CA, compare the returned issuer fingerprint against your internal CA's known fingerprint
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: ens-reverse-lookup
-name: ENS Reverse Lookup
-description: >-
-  Look up the primary ENS name for a wallet address. Includes forward verification to confirm the name actually points
-  back to the address. Returns null if no ENS name is set.
+name: "ENS Reverse Lookup"
+description: "Find the primary ENS name for a wallet address, and confirm the name points back to it. Returns nothing when no name is set."
 category: web3
 cost_class: free_unlimited
 quota_window: none
@@ -71,3 +69,11 @@ limitations:
     category: availability
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: alchemy
+  checks: pending
+  checks_note: "Pending: Alchemy's terms (quoted in capabilities/lib/alchemy-client.ts and the 2026-09-10 audit) permit use as a product backend integrated with additional functionality; that judgement is not recorded per tool in vendor-terms.ts."

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: whois-lookup
-name: WHOIS Lookup
-description: >-
-  Perform a WHOIS lookup for a domain. Returns registrar, creation date, expiry date, name servers, registrant info, and
-  raw WHOIS data.
+name: "WHOIS Lookup"
+description: "Look up a domain's WHOIS record: registrar, creation and expiry dates, name servers, registrant details and the raw record."
 category: web-intelligence
 cost_class: free_unlimited
 quota_window: none
@@ -93,3 +91,8 @@ limitations:
     workaround: >-
       Use the abuse contact email from the WHOIS response to request registrant details through the registrar's
       disclosure process
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

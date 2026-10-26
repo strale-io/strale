@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: vasp-non-compliant-check
-name: VASP Non-Compliant Check
-description: >-
-  Check if a crypto-asset service provider is on ESMA's non-compliant entities list under MiCA regulation. Flags
-  entities that have been identified for regulatory infringement.
+name: "VASP Non-Compliant Check"
+description: "Check whether a crypto-asset service provider is on ESMA's list of non-compliant entities under MiCA."
 category: web3
 cost_class: free_unlimited
 quota_window: none
@@ -76,3 +74,8 @@ limitations:
     category: availability
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

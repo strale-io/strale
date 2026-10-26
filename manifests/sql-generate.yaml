@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: sql-generate
-name: SQL Generate
-description: >-
-  Generate SQL queries from natural language descriptions. Provide table schema for best results. Supports PostgreSQL,
-  MySQL, SQLite, MSSQL.
+name: "SQL Generator"
+description: "Write SQL from a plain-language request. Give it your table schema for best results. Supports PostgreSQL, MySQL, SQLite and SQL Server."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -102,3 +100,8 @@ limitations:
     workaround: >-
       Test generated queries against a staging database with representative data volume to verify correctness and
       performance
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

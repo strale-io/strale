@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: url-to-text
-name: URL to Text
-description: >-
-  Lightweight text extraction from URL. No JS rendering — just HTTP GET + HTML parse. Fast and cheap for most content
-  sites.
+name: "URL to Text"
+description: "Get the text of a web page quickly, without rendering JavaScript. Suits most content sites."
 category: web-scraping
 cost_class: free_unlimited
 quota_window: none
@@ -103,3 +101,9 @@ limitations:
       charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

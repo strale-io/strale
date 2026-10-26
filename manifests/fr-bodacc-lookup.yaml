@@ -1,9 +1,6 @@
 slug: fr-bodacc-lookup
-name: BODACC Lookup (FR)
-description: >-
-  Lookup of French commercial-registry announcements (BODACC) by SIREN. Returns insolvency proceedings (procédures
-  collectives), modifications, sales, strikeoffs, and incorporations from the official Bulletin Officiel des Annonces
-  Civiles et Commerciales. Elevates insolvency signal for risk decisions.
+name: "French BODACC Announcements"
+description: "Get a French company's announcements in BODACC, the official commercial gazette, by SIREN: insolvency proceedings, changes, sales, strike-offs and incorporations."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -135,3 +132,8 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Read most_recent_insolvency.judgment_nature and judgment_date to determine current status.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

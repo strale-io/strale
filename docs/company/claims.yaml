@@ -171,28 +171,29 @@
   is_regex: true
   status: forbidden
   surfaces: [homepage, README, methodology page]
-  decided_by: DEC-20260428-A
+  decided_by: DEC-20261023-A
   note: >
-    Tier 1 of the third-party scraping doctrine is absolute — Strale
-    itself never operates scrapers. Per-call registry parsing under
-    DEC-20260813-A's constraints is not "scraping" in the customer-facing
-    sense and should be described as direct/per-call registry access, not
-    as Strale running scrapers.
+    Originally DEC-20260428-A Tier 1. Under DEC-20261023-A Strale reads
+    single public pages per call (a page the customer names, or a public
+    source Strale chose), honouring blocks and robots.txt with an honest
+    user agent. That is not "scraping" in the customer-facing sense and is
+    described as per-call reading of public pages, never as Strale running
+    scrapers.
 
 - id: bulk-crawling-claim
   claim: /\bbulk (crawl(ing)?|scrap(e|ing))\b/
   is_regex: true
   status: forbidden
   surfaces: [homepage, README, methodology page]
-  decided_by: DEC-20260428-A
-  note: Bulk crawling stays absolutely prohibited even under the DEC-20260813-A per-call carve-out.
+  decided_by: DEC-20261023-A
+  note: Bulk crawling, pre-fetching and mirroring stay prohibited under DEC-20261023-A (formerly DEC-20260428-A and the DEC-20260813-A per-call carve-out).
 
 - id: captcha-bypass-claim
   claim: /\b(captcha|CAPTCHA)\s*(solving|bypass(ing)?)\b/
   is_regex: true
   status: forbidden
   surfaces: [homepage, README, methodology page]
-  decided_by: DEC-20260428-A
+  decided_by: DEC-20261023-A
   note: CAPTCHA solving is on the absolute-prohibition list alongside robots.txt evasion and login-wall circumvention.
 
 - id: framework-native-integration

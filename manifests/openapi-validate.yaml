@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: openapi-validate
-name: OpenAPI Validate
-description: Validate an OpenAPI 3.x specification. Checks required fields, endpoint definitions, schema references. Algorithmic.
+name: "OpenAPI Validation"
+description: "Validate an OpenAPI 3.x specification: required fields, endpoint definitions and schema references."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none
@@ -103,3 +103,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For vendor extensions (x- prefixed), add your own validation rules in a post-processing step
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

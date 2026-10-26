@@ -3,9 +3,11 @@
 // apps/api/src/lib/startup-migrations.ts. Fails on: a ledgered block whose
 // content hash has changed (edited in place — migration blocks are
 // append-only, an edit needs a new block), a block in the source with no
-// ledger row, a ledger row whose block no longer exists, and two blocks
+// ledger row, a ledger row whose block no longer exists, two blocks
 // writing the same table.column that isn't in known_overlaps (the
-// 2026-08-21 incident class).
+// 2026-08-21 incident class), and a `// migration-data: <path>` file a block
+// declares but that does not exist. A declared data file is part of its
+// block's hash, so editing it is a BLOCK_HASH_MISMATCH like editing the block.
 //
 // Usage:
 //   node apps/api/scripts/check-migration-ledger.mjs [--json]

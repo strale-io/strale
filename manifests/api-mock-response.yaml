@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: api-mock-response
-name: API Mock Response
-description: Generate a realistic mock API response with proper headers, status codes, and schema-matching body data.
+name: "API Mock Responses"
+description: "Generate a realistic mock API response with headers, status code and a body that matches the schema."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -114,3 +114,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide example responses in the input to guide mock generation for fields with specific value constraints
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

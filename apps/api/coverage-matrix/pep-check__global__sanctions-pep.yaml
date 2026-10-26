@@ -15,7 +15,7 @@ products:
 vendor_roster_url: null
 provider_tos_notes: >-
   Reseller-tier SA with embedded-in-bundles use governed by Basic+ pricing tier. Starter informal
-  grace acknowledged as non-binding. DPA + indemnification per Tier-2 doctrine (DEC-20260428-A).
+  grace acknowledged as non-binding. DPA + indemnification per Tier-2 doctrine (DEC-20260428-A; DEC-20261023-A dropped the indemnity condition but this contract keeps it).
 doctrine_reference: DEC-20260427-A + DEC-20260429-A
 notes: >-
   Single-vendor PEP screening for v1 per DEC-20260427-A. Dilisense PEP database: 230 sources

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: prompt-compress
-name: Prompt Compress
-description: Compress a prompt to be shorter while preserving semantic meaning. Specify target reduction percentage (10-70%).
+name: "Prompt Compression"
+description: "Shorten a prompt by 10 to 70 percent while keeping its meaning."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -98,3 +98,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Test compressed prompts against your original to verify output quality is maintained before switching
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: country-trade-data
-name: Country Trade Data
-description: "Get trade data for a country: top exports/imports, trade balance, trading partners. World Bank API + embedded data."
+name: "Country Trade Data"
+description: "Get a country's top exports and imports, trade balance and main trading partners, from the World Bank."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -153,3 +153,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Cross-reference with UN Comtrade or national customs statistics for the most current trade figures
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

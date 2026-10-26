@@ -144,7 +144,7 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
       scan_depth_requested: depth,
       competitors_above: competitorsAbove,
     },
-    provenance: { source: "google.com", fetched_at: new Date().toISOString() },
+    provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
   };
 });
 

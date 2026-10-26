@@ -1,8 +1,6 @@
 slug: email-reputation-score
-name: Email Reputation Score
-description: >-
-  Calculate a trust score for an email address. Assesses domain age, MX configuration,
-  disposable domain detection, and email provider reputation. Returns a 0-100 risk score.
+name: "Email Reputation Score"
+description: "Score an email address from 0 to 100 for risk, from domain age, mail server setup, disposable domains and the provider's reputation."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -73,3 +71,8 @@ limitations:
     text: DNS MX lookup can fail due to network issues — score adjusts accordingly
     category: dependency
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

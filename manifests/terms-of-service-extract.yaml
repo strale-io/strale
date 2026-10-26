@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: terms-of-service-extract
-name: Terms of Service Extract
-description: "Extract key clauses from a company's Terms of Service: governing law, arbitration, termination, liability limitations."
+name: "Terms of Service Extraction"
+description: "Pull the key clauses out of a company's terms of service: governing law, arbitration, termination and limits of liability."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -97,3 +97,10 @@ limitations:
     category: coverage
     severity: info
     workaround: This ToS page produced more content than fits in one call — no direct workaround
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

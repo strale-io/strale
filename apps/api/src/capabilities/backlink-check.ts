@@ -91,7 +91,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
         }, 1, safeFetch);
 
         if (resp.ok) {
-          source = "google.com";
+          source = "google-serper";
           const data = await readJsonWithLimit<Record<string, unknown>>(
             resp,
             MAX_FETCHED_API_RESPONSE_BYTES,
@@ -146,7 +146,14 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
       dofollow_estimate: null,
       nofollow_estimate: null,
     },
-    provenance: { source, fetched_at: new Date().toISOString() },
+    provenance: {
+      source,
+      fetched_at: new Date().toISOString(),
+      // The manifest default names CommonCrawl; the Serper fallback says so per call.
+      ...(source === "google-serper"
+        ? { acquisition_method: "vendor_api" as const, upstream_vendor: "serper" }
+        : {}),
+    },
   };
 });
 

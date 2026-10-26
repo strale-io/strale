@@ -51,6 +51,12 @@ import {
   CAPABILITY_OUTPUT_CONTRACTS,
   CORRECTED_SLUGS,
 } from "./capability-output-contracts.js";
+import {
+  CATALOGUE_COPY_0123_CAPABILITIES,
+  CATALOGUE_COPY_0123_SOLUTIONS,
+  type CatalogueCopyCapabilityRow,
+  type CatalogueCopySolutionRow,
+} from "./catalogue-copy-0123.js";
 
 /**
  * Minimal executor surface — matches what `getDb().execute()` returns
@@ -4017,6 +4023,9 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0118_clearDanishFalseBreakerSuccess,
   runMigration0119_resyncGermanCompanyDataDependencyHealth,
   runMigration0120_declareFearGreedAttribution,
+  runMigration0121_phase0CatalogueRepairs,
+  runMigration0122_correctSanctionsSourceCopy,
+  runMigration0123_catalogueCopy,
 ];
 
 /**
@@ -6163,6 +6172,490 @@ export async function runMigration0120_declareFearGreedAttribution(
         ? "no change (fear-greed-index already declares attribution, or has no output_schema.properties)"
         : "fear-greed-index now declares attribution (guaranteed)",
     rows_affected: updated.length,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// Block 0121 (2026-10-23): Phase 0 catalogue repairs from the portfolio plan
+// (docs/strategy/2026-10-23-portfolio-plan.md; Petter in session 2026-10-23:
+// "start the Phase 0 repairs"). Four repairs, each verified in production
+// read-only on 2026-10-23 before this block was written:
+//
+// 1. Delist the four Danish bundles. kyb-essentials-dk, kyb-complete-dk,
+//    invoice-verify-dk and kyc-denmark (the last on x402) are active, and each
+//    has danish-company-data as step 1. That lookup has been quarantined since
+//    2026-08-12 (cvrapi.dk free tier exhausted) and completed none of its
+//    calls in the last 90 days (197 failed, 0 completed). None of the four had
+//    an external customer call in 90 days, so none is a revenue earner.
+//    Delisting a bundle that cannot complete follows the quality-floor policy
+//    (DEC-20260812-A). Reactivate when the official CVR feed restores Denmark.
+//
+// 2. Repair kyb-complete-se. Inactive because step 13, credit-report-summary,
+//    has been in the DEACTIVATED map since 2026-04-21 (no compliant source).
+//    The step row survived the April cleanup (kyb-wiring-audit S-5, 2026-08-12)
+//    and the long description still advertises "credit report summary". Remove
+//    the step, close the step_order gap (risk-narrative-generate 14 -> 13; the
+//    executor sorts by step_order and resolves $steps[N] by position, every SE
+//    step refers only to $steps[0] or $input, and the narrative reads
+//    $all_results) and correct the copy (as scripts/seed-kyb-solutions.ts now
+//    generates it). The bundle is NOT relisted: activation belongs to the shared
+//    mayAutoActivateSolution() predicate, which needs a recent passing result
+//    for every step, and the paid steps (sanctions, PEP, adverse media, risk
+//    narrative) are never scheduled, so they have none. That gap is recorded
+//    as a follow-up rather than bypassed here. Every remaining component passes the capability gate
+//    with a 100% harness record over the last 7 days.
+//
+// 3. Put live bundles and tools on the x402 rail. New rows default to
+//    x402_enabled = false and these were never switched on: the kyb-essentials,
+//    kyb-complete and invoice-verify bundles for AT, GR, HR, IE and SG, and the
+//    capabilities cz-unreliable-vat-payer, no-bankruptcy-check and
+//    fr-bodacc-lookup. No deliberate exclusion is recorded for any of them, and
+//    every component passes the capability gate (is_active, marketplace
+//    eligible, lifecycle active, breaker closed) at 100% over the last 7 days.
+//
+// 4. Narrow over-promising descriptions. The Alchemy app behind the wallet and
+//    gas tools serves Ethereum mainnet only (requests for Base failed 3 of 3 as
+//    late as 2026-10-18), and job-board-search's France and US keys are not
+//    set, so it serves Sweden only. Narrowing public copy to what is served is
+//    delegated (DEC-20260822-A); a wider claim returns with the networks/keys.
+//
+// Every write is guarded on the row's current state, and the block records
+// itself in startup_migration_ledger and runs once, so a later operator change
+// to any of these flags is never reverted on boot (the block 0092 pattern).
+// About 30 rows; not a bulk-operation resumption (DEC-20260504-B).
+// Authority: DEC-20260815-A and DEC-20260822-A.
+
+export const PHASE0_DK_BUNDLE_SLUGS = [
+  "kyb-essentials-dk",
+  "kyb-complete-dk",
+  "invoice-verify-dk",
+  "kyc-denmark",
+] as const;
+
+export const PHASE0_DK_DELIST_REASON =
+  "delisted 2026-10-23 (block 0121): step 1 danish-company-data is quarantined (cvrapi.dk free tier exhausted, 0 completed calls in 90 days); reactivate when the official CVR feed restores Denmark";
+
+export const PHASE0_X402_BUNDLE_SLUGS: readonly string[] = ["kyb-essentials", "kyb-complete", "invoice-verify"].flatMap(
+  (family) => ["at", "gr", "hr", "ie", "sg"].map((cc) => `${family}-${cc}`),
+);
+
+export const PHASE0_X402_CAPABILITY_SLUGS = [
+  "cz-unreliable-vat-payer",
+  "no-bankruptcy-check",
+  "fr-bodacc-lookup",
+] as const;
+
+export const KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION =
+  "Performs 13 automated checks for Sweden companies: official registry lookup, VAT validation (registry-derived or caller-provided), LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation plus credit report summary. Produces a dual-output response with structured checks and a human-readable risk narrative.";
+export const KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION =
+  "Performs 12 automated checks for Sweden companies: official registry lookup, VAT validation (registry-derived or caller-provided), LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation. Produces a dual-output response with structured checks and a human-readable risk narrative.";
+
+/** slug -> [prefix the current description must start with, narrowed description]. */
+export const PHASE0_NARROWED_DESCRIPTIONS: Readonly<Record<string, readonly [string, string]>> = {
+  "wallet-balance-lookup": [
+    "Get a wallet's native balance and the ERC-20 tokens it most recently sent or received, on Ethereum, Base,",
+    "Get a wallet's ETH balance and the ERC-20 tokens it most recently sent or received, on Ethereum mainnet.",
+  ],
+  "wallet-transactions-lookup": [
+    "Get recent native-coin transfers to and from a wallet on Ethereum, Base,",
+    "Get recent ETH transfers to and from a wallet on Ethereum mainnet: up to 50 with hash, value, counterparty, timestamp and direction.",
+  ],
+  "wallet-age-check": [
+    "Check when a wallet was first active on Ethereum, Base,",
+    "Check when a wallet was first active on Ethereum mainnet: the earliest transfer to or from it, and its age in days. A new wallet moving large amounts is a red flag.",
+  ],
+  "gas-price-check": [
+    "Current gas fees on Ethereum, Polygon or BNB Chain:",
+    "Current gas fees on Ethereum mainnet: safe, proposed and fast prices in Gwei plus the base fee, computed from the priority fees actually paid over the last 20 blocks.",
+  ],
+  "job-board-search": [
+    "Search job listings from national public employment services — Sweden (Arbetsförmedlingen), France (France Travail), US federal jobs (USAJOBS).",
+    "Search job listings from Sweden's public employment service (Arbetsförmedlingen). Returns title, company, location, salary and URL.",
+  ],
+};
+
+// A parameterised IN-list. Never `ANY(${array})`: drizzle expands a JS array
+// into a row-value tuple that Postgres rejects, which crash-loops boot (see
+// block 0092 and lib/internal-accounts.ts).
+const phase0InList = (values: readonly string[]) => sql.join(values.map((v) => sql`${v}`), sql`, `);
+
+export async function runMigration0121_phase0CatalogueRepairs(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  const BLOCK = "0121_phase0CatalogueRepairs";
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS startup_migration_ledger (
+      block text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now(),
+      rows_affected integer NOT NULL DEFAULT 0
+    )`);
+
+  const prior = (await tx.execute(sql`
+    SELECT block FROM startup_migration_ledger WHERE block = ${BLOCK}
+  `)) as unknown as Array<{ block: string }>;
+
+  if (prior.length > 0) {
+    return {
+      block: BLOCK,
+      outcome: "no change (already applied once — operator intent is not overwritten)",
+      rows_affected: 0,
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  // 1. Delist the Danish bundles.
+  const delisted = (await tx.execute(sql`
+    UPDATE solutions
+       SET is_active = false,
+           x402_enabled = false,
+           deactivation_reason = ${PHASE0_DK_DELIST_REASON},
+           updated_at = now()
+     WHERE slug IN (${phase0InList(PHASE0_DK_BUNDLE_SLUGS)})
+       AND is_active = true
+     RETURNING slug
+  `)) as unknown as Array<{ slug: string }>;
+
+  // 2. Repair kyb-complete-se: drop the dead step, close the order gap, fix the copy, relist.
+  const removedSteps = (await tx.execute(sql`
+    DELETE FROM solution_steps
+     WHERE capability_slug = 'credit-report-summary'
+       AND solution_id = (SELECT id FROM solutions WHERE slug = 'kyb-complete-se')
+     RETURNING id
+  `)) as unknown as Array<{ id: string }>;
+  // Not conditional on the DELETE: blocks are not one transaction, so after a
+  // boot that failed between the two statements the retry's DELETE matches
+  // nothing and the renumber must still run. Guarded on slot 13 being free so
+  // it can never collide with the unique (solution_id, step_order) index.
+  await tx.execute(sql`
+    UPDATE solution_steps
+       SET step_order = 13
+     WHERE capability_slug = 'risk-narrative-generate'
+       AND step_order = 14
+       AND solution_id = (SELECT id FROM solutions WHERE slug = 'kyb-complete-se')
+       AND NOT EXISTS (
+         SELECT 1 FROM solution_steps s2
+          WHERE s2.solution_id = solution_steps.solution_id AND s2.step_order = 13)
+  `);
+  // Copy only. The bundle is NOT switched on here: activation belongs to the
+  // shared mayAutoActivateSolution() predicate (solution-activation.test.ts
+  // fails the build on any other activator).
+  const recopied = (await tx.execute(sql`
+    UPDATE solutions
+       SET long_description = ${KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION},
+           updated_at = now()
+     WHERE slug = 'kyb-complete-se'
+       AND long_description = ${KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION}
+     RETURNING slug
+  `)) as unknown as Array<{ slug: string }>;
+
+  // 3. Put live bundles and capabilities on the x402 rail.
+  const bundlesOnRail = (await tx.execute(sql`
+    UPDATE solutions
+       SET x402_enabled = true,
+           updated_at = now()
+     WHERE slug IN (${phase0InList(PHASE0_X402_BUNDLE_SLUGS)})
+       AND is_active = true
+       AND x402_enabled = false
+     RETURNING slug
+  `)) as unknown as Array<{ slug: string }>;
+  const capsOnRail = (await tx.execute(sql`
+    UPDATE capabilities
+       SET x402_enabled = true,
+           updated_at = now()
+     WHERE slug IN (${phase0InList(PHASE0_X402_CAPABILITY_SLUGS)})
+       AND is_active = true
+       AND visible = true
+       AND x402_enabled = false
+       AND deactivation_reason IS NULL
+     RETURNING slug
+  `)) as unknown as Array<{ slug: string }>;
+
+  // 4. Narrow descriptions, only where the row still carries the over-promising copy.
+  let narrowed = 0;
+  for (const [slug, [oldPrefix, next]] of Object.entries(PHASE0_NARROWED_DESCRIPTIONS)) {
+    const res = (await tx.execute(sql`
+      UPDATE capabilities
+         SET description = ${next},
+             updated_at = now()
+       WHERE slug = ${slug}
+         AND starts_with(description, ${oldPrefix})
+       RETURNING slug
+    `)) as unknown as Array<{ slug: string }>;
+    narrowed += res.length;
+  }
+
+  const total =
+    delisted.length + removedSteps.length + recopied.length + bundlesOnRail.length + capsOnRail.length + narrowed;
+
+  // Written last: if anything above throws, boot aborts with nothing recorded and the next boot retries.
+  await tx.execute(sql`
+    INSERT INTO startup_migration_ledger (block, rows_affected)
+    VALUES (${BLOCK}, ${total})
+    ON CONFLICT (block) DO NOTHING
+  `);
+
+  return {
+    block: BLOCK,
+    outcome:
+      `${delisted.length} Danish bundle(s) delisted; kyb-complete-se: ${removedSteps.length} dead step removed, ` +
+      `${recopied.length} description corrected (bundle stays inactive); ${bundlesOnRail.length} bundle(s) and ${capsOnRail.length} capability(ies) ` +
+      `put on x402; ${narrowed} description(s) narrowed`,
+    rows_affected: total,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// Block 0122 (2026-10-23): correct sanctions-check's public source copy (DQ-36).
+//
+// The UK's OFSI Consolidated List closed on 2026-01-28; the UK Sanctions List
+// replaced it (gov.uk). sanctions-check's description and data_source still
+// named "UK OFSI". Petter approved the corrected wording in session on
+// 2026-10-23 ("I approve DQ-36 as drafted"); compliance and methodology claims
+// are his to publish (CHARTER.md). The manifest carries the same text.
+//
+// Verified in production read-only on 2026-10-23: these two columns of the one
+// sanctions-check row are the only places a capability or solution row names
+// OFSI as our claim (output_schema's example also mentions it, but that is
+// Dilisense's own source label in sample data, not a claim of ours).
+//
+// Each UPDATE is guarded on the exact old text, so a later edit is never
+// reverted, and the block records itself and runs once. One row.
+// Authority: DQ-36 (founder approval) under DEC-20260815-A.
+
+export const DQ36_OLD_SANCTIONS_DESCRIPTION =
+  "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match results with named source attribution and country attribution.";
+export const DQ36_NEW_SANCTIONS_DESCRIPTION =
+  "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match results with named source attribution and country attribution.";
+export const DQ36_OLD_SANCTIONS_DATA_SOURCE =
+  "Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)";
+export const DQ36_NEW_SANCTIONS_DATA_SOURCE =
+  "Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)";
+
+export async function runMigration0122_correctSanctionsSourceCopy(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  const BLOCK = "0122_correctSanctionsSourceCopy";
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS startup_migration_ledger (
+      block text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now(),
+      rows_affected integer NOT NULL DEFAULT 0
+    )`);
+
+  const prior = (await tx.execute(sql`
+    SELECT block FROM startup_migration_ledger WHERE block = ${BLOCK}
+  `)) as unknown as Array<{ block: string }>;
+
+  if (prior.length > 0) {
+    return {
+      block: BLOCK,
+      outcome: "no change (already applied once)",
+      rows_affected: 0,
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  const description = (await tx.execute(sql`
+    UPDATE capabilities
+       SET description = ${DQ36_NEW_SANCTIONS_DESCRIPTION},
+           updated_at = now()
+     WHERE slug = 'sanctions-check'
+       AND description = ${DQ36_OLD_SANCTIONS_DESCRIPTION}
+     RETURNING slug
+  `)) as unknown as Array<{ slug: string }>;
+
+  const dataSource = (await tx.execute(sql`
+    UPDATE capabilities
+       SET data_source = ${DQ36_NEW_SANCTIONS_DATA_SOURCE},
+           updated_at = now()
+     WHERE slug = 'sanctions-check'
+       AND data_source = ${DQ36_OLD_SANCTIONS_DATA_SOURCE}
+     RETURNING slug
+  `)) as unknown as Array<{ slug: string }>;
+
+  const total = description.length + dataSource.length;
+
+  await tx.execute(sql`
+    INSERT INTO startup_migration_ledger (block, rows_affected)
+    VALUES (${BLOCK}, ${total})
+    ON CONFLICT (block) DO NOTHING
+  `);
+
+  return {
+    block: BLOCK,
+    outcome:
+      total === 0
+        ? "no change (sanctions-check copy already differs from the OFSI wording)"
+        : `sanctions-check now names the UK Sanctions List (${description.length} description, ${dataSource.length} data_source)`,
+    rows_affected: total,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// Block 0123 (2026-10-26): the catalogue copy rewrite.
+//
+// Rewrites the public name and description of 296 tools (capabilities) to the
+// final catalogue copy the manifests now carry, and corrects three
+// bundled-check (solution) copy problems: web-extract-clean's claim that it
+// gets past blocked pages ("even behind anti-bot walls" in description, "pages
+// that block direct requests" in long_description, "page blocked need content"
+// and "web scraping with anti-bot" in agent_description; false under
+// DEC-20261023-A: the fetch path stops at blocks), ai-act-assess's stale
+// "before the August 2026 deadline", and the kyb-essentials/kyb-complete/
+// invoice-verify families' "... for United Kingdom" template in description and
+// long_description. Copy only: no price, step or flag moves.
+//
+// The per-row data lives in ./catalogue-copy-0123.ts (old and new value per
+// slug). The `// migration-data:` line inside the block makes the migration
+// ledger hash that file together with this block, so editing the data is
+// caught exactly like editing the block.
+//
+// Every write is guarded on the exact value production held in the
+// 2026-10-26 snapshot (GET /v1/capabilities, GET /v1/solutions, and
+// GET /v1/solutions/:slug for long_description and agent_description): a
+// value someone changed since is never overwritten. Every column is its own
+// UPDATE, so a tool whose name was edited still gets its new description and
+// vice versa. Each UPDATE joins a VALUES list built with
+// sql.join, never ANY(${array}) (that crash-loops boot; see block 0092). The
+// block records itself and runs once. Rows chained from 0121 and 0122 (the
+// five narrowed descriptions and sanctions-check) are guarded on those
+// blocks' targets, so on a fresh database they apply in order.
+// Authority: Petter's catalogue copy brief, 2026-10-26; the solution fixes are
+// narrowing only (DEC-20260822-A part 2).
+// `data` exists for the real-database test, which runs the block on synthetic
+// slugs; boot calls the block with the executor alone, so production always
+// applies the frozen rows in ./catalogue-copy-0123.ts.
+export async function runMigration0123_catalogueCopy(
+  tx: MigrationExecutor,
+  data: {
+    capabilities: readonly CatalogueCopyCapabilityRow[];
+    solutions: readonly CatalogueCopySolutionRow[];
+  } = { capabilities: CATALOGUE_COPY_0123_CAPABILITIES, solutions: CATALOGUE_COPY_0123_SOLUTIONS },
+): Promise<BlockResult> {
+  // migration-data: apps/api/src/lib/catalogue-copy-0123.ts
+  const startedAt = Date.now();
+  const BLOCK = "0123_catalogueCopy";
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS startup_migration_ledger (
+      block text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now(),
+      rows_affected integer NOT NULL DEFAULT 0
+    )`);
+
+  const prior = (await tx.execute(sql`
+    SELECT block FROM startup_migration_ledger WHERE block = ${BLOCK}
+  `)) as unknown as Array<{ block: string }>;
+
+  if (prior.length > 0) {
+    return {
+      block: BLOCK,
+      outcome: "no change (already applied once)",
+      rows_affected: 0,
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  // (slug, old_value, new_value) rows, one bound text parameter per cell.
+  type Change = readonly [slug: string, oldValue: string, newValue: string];
+  const values = (rows: readonly Change[]) =>
+    sql.join(
+      rows.map(([slug, oldValue, newValue]) => sql`(${slug}::text, ${oldValue}::text, ${newValue}::text)`),
+      sql`, `,
+    );
+
+  const nameChanges: Change[] = data.capabilities
+    .filter((r) => r.old_name !== r.name)
+    .map((r) => [r.slug, r.old_name, r.name] as const);
+  const descriptionChanges: Change[] = data.capabilities
+    .filter((r) => r.old_description !== r.description)
+    .map((r) => [r.slug, r.old_description, r.description] as const);
+  const solutionChanges = (column: CatalogueCopySolutionRow["column"]): Change[] =>
+    data.solutions
+      .filter((r) => r.column === column && r.old_value !== r.value)
+      .map((r) => [r.slug, r.old_value, r.value] as const);
+  const solutionDescriptionChanges = solutionChanges("description");
+  const solutionLongChanges = solutionChanges("long_description");
+  const solutionAgentChanges = solutionChanges("agent_description");
+
+  // No UPDATE here touches updated_at, deliberately. capabilities.updated_at is
+  // read as "the capability itself changed": invariant-checker.ts flags an
+  // auto-generated known_answer test as stale ground truth when
+  // c.updated_at > ts.generation_capability_updated_at (check 5), and measures
+  // how long a suspended tool has been suspended from updated_at. A copy-only
+  // rewrite of 296 tools must move neither signal. Solutions follow the same
+  // rule: this block changes words, not the bundle.
+
+  const names = nameChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE capabilities AS c
+       SET name = v.new_value
+      FROM (VALUES ${values(nameChanges)}) AS v (slug, old_value, new_value)
+     WHERE c.slug = v.slug
+       AND c.name = v.old_value
+     RETURNING c.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const descriptions = descriptionChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE capabilities AS c
+       SET description = v.new_value
+      FROM (VALUES ${values(descriptionChanges)}) AS v (slug, old_value, new_value)
+     WHERE c.slug = v.slug
+       AND c.description = v.old_value
+     RETURNING c.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const solutionDescriptions = solutionDescriptionChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE solutions AS s
+       SET description = v.new_value
+      FROM (VALUES ${values(solutionDescriptionChanges)}) AS v (slug, old_value, new_value)
+     WHERE s.slug = v.slug
+       AND s.description = v.old_value
+     RETURNING s.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const solutionLongDescriptions = solutionLongChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE solutions AS s
+       SET long_description = v.new_value
+      FROM (VALUES ${values(solutionLongChanges)}) AS v (slug, old_value, new_value)
+     WHERE s.slug = v.slug
+       AND s.long_description = v.old_value
+     RETURNING s.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const solutionAgentDescriptions = solutionAgentChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE solutions AS s
+       SET agent_description = v.new_value
+      FROM (VALUES ${values(solutionAgentChanges)}) AS v (slug, old_value, new_value)
+     WHERE s.slug = v.slug
+       AND s.agent_description = v.old_value
+     RETURNING s.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const total =
+    names.length + descriptions.length +
+    solutionDescriptions.length + solutionLongDescriptions.length + solutionAgentDescriptions.length;
+
+  // Written last: if anything above throws, boot aborts with nothing recorded and the next boot retries.
+  await tx.execute(sql`
+    INSERT INTO startup_migration_ledger (block, rows_affected)
+    VALUES (${BLOCK}, ${total})
+    ON CONFLICT (block) DO NOTHING
+  `);
+
+  const left = (done: number, planned: number) => (done < planned ? ` (${planned - done} left alone: changed since the snapshot or absent)` : "");
+  return {
+    block: BLOCK,
+    outcome:
+      `capabilities: ${names.length}/${nameChanges.length} name(s)${left(names.length, nameChanges.length)}, ` +
+      `${descriptions.length}/${descriptionChanges.length} description(s)${left(descriptions.length, descriptionChanges.length)}; ` +
+      `solutions: ${solutionDescriptions.length}/${solutionDescriptionChanges.length} description(s)${left(solutionDescriptions.length, solutionDescriptionChanges.length)}, ` +
+      `${solutionLongDescriptions.length}/${solutionLongChanges.length} long_description(s)${left(solutionLongDescriptions.length, solutionLongChanges.length)}, ` +
+      `${solutionAgentDescriptions.length}/${solutionAgentChanges.length} agent_description(s)${left(solutionAgentDescriptions.length, solutionAgentChanges.length)}`,
+    rows_affected: total,
     duration_ms: Date.now() - startedAt,
   };
 }

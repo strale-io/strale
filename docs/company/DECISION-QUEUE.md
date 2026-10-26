@@ -14,6 +14,234 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · no deadline (a two-week window is recommended below) — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
+
+Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
+vendor's data only when the vendor's terms permit resale, checked and written
+down. Eight live tools run on Serper.dev: google-search, serp-analyze,
+brand-mention-search, google-news-search, keyword-rank-check,
+serp-related-questions, backlink-check, and the backup search in
+adverse-media-check. The
+first three alone earned about €138 in the 90 days to 23 October.
+
+*What is established:*
+- I could not open serper.dev/terms from this session: its network
+  policy blocks the site.
+- What I could read is a web-search tool's summary of, and excerpts from, a
+  cached copy about two and a half years old (the tool's estimate, not a
+  date stamped on the page). The quotations are the tool's excerpts, not
+  checked word-for-word against the page. In that copy:
+  - there is no permission to resell;
+  - it forbids "mirror[ing] the materials on any other server as-is with
+    no-value-added", which is close to what our plain google-search tool
+    does;
+  - Serper calls its data "web-scraped data collected from public domain
+    sources".
+- So on what I can see, the rule's condition is not met. The current terms may
+  differ, and I have not seen them.
+
+*Options:*
+1. **Ask Serper in writing** whether reselling search results per call
+   inside our tools is permitted. No cost and no commitment, but it is
+   vendor contact on behalf of Moonlighter AB, so it is yours.
+2. **Move the eight tools to a per-call search vendor whose terms
+   explicitly permit resale.** No subscription, in line with "no fixed
+   costs before revenue". Candidates to check first: DataForSEO
+   (pay-as-you-go) and Brave Search API (its own index rather than
+   Google's). SerpApi is out: it is a defendant in the Reddit and Google
+   cases, and the rule excludes a vendor sued over how it collects.
+3. **Stop using Serper** until 1 or 2 resolves: switch off the seven tools
+   that depend on it entirely, and remove the backup search from
+   adverse-media-check, which runs on Dilisense first and keeps working
+   without it.
+
+*What each option costs:*
+- *Option 1:* nothing, and a wait of days to weeks.
+- *Option 2:* engineering time, plus a per-call price that may differ from
+  Serper's. Results may differ where the new vendor is not Google-based.
+- *Option 3:* at least €46 a month in revenue (google-search, serp-analyze
+  and brand-mention-search alone earned €138 in 90 days). Agents calling
+  those tools get errors until a replacement exists.
+
+*My recommendation:*
+- **Today:** do option 1, ask Serper.
+- **Meanwhile:** strictly, the rule says unverified vendor data should not be
+  resold. Keeping the eight tools running while we wait is therefore an
+  exception only you can grant. I recommend granting it, time-boxed to two
+  weeks. Option 3 has a real cost, the tools have run this way for months,
+  and no claim, complaint or demand has arrived (the rule acts at once on
+  a site owner's demand, and revisits the vendor lane if a claim reaches us
+  as a vendor's customer). If you'd rather apply the rule strictly, choose
+  option 3 now.
+- **If Serper says no or doesn't answer within two weeks:** do option 2, and
+  switch off only the tools with no replacement.
+- **Option 2 groundwork:** I can prepare it in the meantime without
+  contacting anyone, since that part is technical.
+
+*Why it is yours:* contacting a vendor and relying on its permission binds
+Moonlighter AB. Switching off revenue earners is also your call
+(DEC-20260812-A).
+
+*If you do nothing:* the eight tools keep using Serper data whose terms we have
+not confirmed. Under the rule you adopted, that is the "never" lane
+(reselling against vendor terms) if the terms turn out to forbid it.
+
+*How you'd reverse it:* a vendor change is per tool and reversible; a
+switch-off is one line in the deactivation list.
+
+**DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
+The independent review of DQ-37 found claims in the public web3 methodology
+(`/v1/web3-assurance/methodology`) that are false, and they are more serious
+than the source names fixed so far: they describe regulatory capabilities we
+do not have. Nothing is changed yet.
+*What was established (code read, 2026-10-24):*
+- The sanctions evaluator runs only for protocol and domain targets, by name,
+  via Dilisense. Its own comment says the OFAC crypto-address list is "not yet
+  wired into Strale". No wallet address is screened against OFAC's listed
+  addresses.
+- No Travel Rule code exists. `caller_jurisdiction` is read only to grade
+  mixer exposure.
+- The glossary still lists codes that only the switched-off GoPlus tools could
+  produce: eight `WALLET_*` codes, seven `TOKEN_*` codes and `APPROVALS_RISKY`.
+- `contract-verification` now runs on Sourcify alone, so the published
+  "Sourcify vs Etherscan" disagreement compares Sourcify with itself, while
+  still labelling one side Etherscan.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| `regulatory_posture.ofac` | "OFAC SDN + crypto-specific addresses screened. Tornado Cash treated as graded …" | "Protocol and domain counterparties are screened by name against consolidated sanctions lists (Dilisense). Screening wallet addresses against OFAC's listed crypto addresses is not currently offered. Tornado Cash is treated as graded (delisted March 2025), not binary-blocked." |
+| `regulatory_posture.mica` | "… Counterparty wallet screening + Travel Rule transmission supported via reverse-call mode." | "EU MiCA full enforcement July 1 2026. Counterparty wallet checks (age, mixer exposure, known scam clusters) are available; Travel Rule transmission is not offered." |
+| `regulatory_posture.fatf` | "FATF Travel Rule jurisdiction-aware verdict surface available via caller_jurisdiction parameter." | "caller_jurisdiction adjusts how mixer exposure is graded. Strale does not provide Travel Rule support." |
+| Reason-code glossary and explanations | `WALLET_PHISHING`, `WALLET_MONEY_LAUNDERING`, `WALLET_FINANCIAL_CRIME`, `WALLET_CYBERCRIME`, `WALLET_DARKWEB`, `WALLET_BLACKLIST`, `WALLET_FAKE_KYC`, `WALLET_MALICIOUS_MINING`, the seven `TOKEN_*` codes, `APPROVALS_RISKY` | Remove while no source can produce them |
+| Source of `contract-verification` | "Sourcify + Alchemy (Ethereum mainnet)" (approved in DQ-37; Alchemy is only used to check the address format) | "Sourcify" (licence "Apache 2.0 (Sourcify)") |
+| The `contract_verification_mismatch` disagreement | "Sourcify says … Etherscan says …" (sources sourcify.dev, etherscan.io) | Remove until a second, independent verification source exists |
+
+Code hygiene that goes with it (technical, mine to do): `verdict.ts` still adds
+`WALLET_HISTORY_CLEAN` and `TOKEN_SAFETY_OK` when the GoPlus evaluators succeed.
+They cannot succeed today; the two lines go too, so the codes cannot come back
+without their glossary entries.
+
+*Why it is yours:* these are regulatory and methodology claims a customer or
+regulator could rely on.
+*If you approve:* I make exactly these edits and verify them in production.
+*If you do nothing:* the methodology keeps claiming OFAC wallet screening and
+Travel Rule support that do not exist.
+**Answered 2026-10-24 by Petter, in session:** "go with your recommendations on all quick decisions under #2". Done the same day in `methodology.ts`, `explanation.ts`, `disagreement.ts` and `verdict.ts`; production verification pending deploy. Two narrowings of inaccurate copy were added after review (delegated, DEC-20260822-A): CONTRACT_UNVERIFIED now says Sourcify only, and the fatf line and the caller_jurisdiction API description say it only adds a note to mixer findings.
+
+**DQ-37** · `answered` · owner Petter · raised 2026-10-23 19:30 CEST · answered 2026-10-23 — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
+The independent review of DQ-36 found more lines in the public web3 methodology
+(`/v1/web3-assurance/methodology`, plus the explanation text) that credit
+sources we no longer use. They were outside the table you approved, so nothing
+is changed yet.
+*What was established (2026-10-23):*
+- GoPlus: both GoPlus tools have been switched off since 2026-09-10 over its
+  licence terms.
+- Etherscan: wallet data and contract checks moved to Alchemy and Sourcify on
+  2026-09-11. The remaining Etherscan calls refuse unless a commercial plan is
+  configured, which it is not.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| Source of `wallet-identity` | "Etherscan API" | "Alchemy (Ethereum mainnet)" |
+| Source of `wallet-history-risk` | "GoPlus address-security API" | "not currently offered (no licensed source)" |
+| Source of `contract-verification` | "Etherscan getsourcecode + Sourcify" | "Sourcify + Alchemy (Ethereum mainnet)" |
+| Sources of `sister-rug`, `wallet-velocity`, `stablecoin-issuer` | Etherscan | "not currently offered (needs a commercial Etherscan plan)" |
+| Reason code `WALLET_MALICIOUS` (methodology and explanation) | "GoPlus address-security flagged the wallet as malicious" | Remove the code from the published glossary while no source can produce it |
+| Reason codes `WALLET_HISTORY_CLEAN`, `TOKEN_SAFETY_OK` | credit GoPlus | Remove while no source can produce them |
+
+*Why it is yours:* methodology claims are yours to publish.
+*If you approve:* I make exactly these edits and verify them in production.
+*If you do nothing:* the methodology keeps crediting checks we cannot run.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-37 as drafted: correct the remaining web3 methodology claims and verify in production." Done the same day in `methodology.ts` and `explanation.ts`. Still naming Etherscan, outside the approved table: `CONTRACT_UNVERIFIED` ("not verified on Etherscan or Sourcify") and an illustrative example in the disagreements field description.
+
+**DQ-36** · `answered` · owner Petter · raised 2026-10-23 17:40 CEST · answered 2026-10-23 — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
+Several public descriptions of how our sanctions and web3 checks work name
+sources that are out of date. Compliance and methodology claims are yours to
+publish, so here is the corrected wording for approval. Nothing below is changed
+yet.
+*What was established (2026-10-23):*
+- The UK's OFSI Consolidated List closed on 28 January 2026; the UK Sanctions
+  List replaced it (gov.uk).
+- Dilisense's public source page still lists two "HMT - OFSI" sources, and also
+  "The UK Sanctions List" (UK Government). So "UK OFSI" is not the operative UK
+  list any more.
+- The web3 methodology (served at `/v1/web3-assurance/methodology`) says:
+  - sanctions come from "Dilisense + direct OFAC/UN/EU/OFSI lists". No code
+    fetches those lists directly; everything comes from Dilisense.
+  - wallet data comes from Etherscan. The wallet tools moved to Alchemy on
+    2026-09-11, when Etherscan's free terms turned out to forbid commercial use.
+  - token-safety and approval data come from GoPlus. Both GoPlus tools were
+    switched off on 2026-09-10 over GoPlus's licence terms.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| `sanctions-check` description (manifest, catalogue, npm package) | "(EU, US OFAC, UN, UK OFSI, Swiss SECO, …)" | "(EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, …)" |
+| `sanctions-check` data source | "OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, …" | "OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, …" |
+| Limitation shown to customers (`seed-limitations.ts`) | "from OFAC, EU, UN, UK OFSI, and 120+ other sources via dilisense" | "from OFAC, EU, UN, the UK Sanctions List and 120+ other sources via Dilisense" |
+| Web3 reason code `SANCTIONS_MATCH` (methodology and explanation) | "OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions lists" | "OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists" |
+| Web3 methodology, sanctions source | "Dilisense (consolidated) + direct OFAC/UN/EU/OFSI lists" | "Dilisense consolidated sanctions database" |
+| Web3 methodology, wallet transactions and balance sources | "Etherscan API" (licence "Etherscan ToS") | "Alchemy (Ethereum mainnet)" (licence "Alchemy terms") |
+| Web3 methodology, token safety and approvals | "GoPlus … API" | Remove the entries, or mark them "not currently offered" until a licensed source exists |
+| DPIA for sanctions and PEP (internal record) | "HM Treasury OFSI"; "UK persons against OFSI under … SAMLA" | "the UK Sanctions List"; "UK persons against the UK Sanctions List under … SAMLA" |
+
+The internal source mirror (`dilisense-sources.ts`) already lists "UK Government —
+Sanctions List" and keeps Dilisense's own "HMT OFSI" labels. It mirrors their
+page and is not a claim of ours, so it stays as is.
+
+*Why it is yours:* these are compliance and methodology statements a regulator or
+customer could rely on. The charter makes them mine to detect, measure and draft,
+and yours to publish.
+*If you approve:* I make exactly these edits in one PR and verify the served
+catalogue and methodology afterwards.
+*If you do nothing:* the copy keeps naming a closed list and three sources we
+stopped using.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-36 as drafted: correct the sanctions and web3 methodology copy and verify it in production." Done the same day: the code, manifest, package and DPIA edits, plus startup block 0122 for the production `sanctions-check` row.
+
+**DQ-35** · `answered` · owner Petter · raised 2026-10-23 14:50 CEST · answered 2026-10-24 — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
+You asked whether our scraping rules are too strict compared with other
+players. They are in places, and the catalogue also doesn't follow them. The
+written rule says Strale never runs a scraper and only resells
+vendor-collected data when it is a public record by law. Yet our Google-search
+tools resell vendor-collected Google results, our page-reading tools fetch any
+page a customer names, and when a site blocks them they try again through
+another route. Meanwhile the rule switched off public sources with no known
+terms problem, such as the EU court-case search.
+*What was established (research on 2026-10-23, not legal advice):* reading
+public pages while logged out is low risk in the US. The places where
+companies have actually been sued or fined are getting around anti-bot
+measures, using logins or fake accounts, and reselling data about identifiable
+people, the last especially in the EU.
+*The proposal:* one rule built on those risk factors, in three lanes:
+- *never:* logins, getting around blocks, harvesting people data, the
+  platforms that enforce their bans, commercial aggregators such as
+  allabolag, and resale against vendor terms;
+- *allowed with checks:* single public reads and vendor data with resale
+  rights;
+- *preferred:* official and licensed sources.
+Compliance screening (sanctions, PEP, adverse media) stays allowed. Social
+content and people-profile data stay off. One live tool that checks whether a
+username exists on social sites would need to be cut back or switched off.
+Adopting it also means fixing our page-reading tools so they stop when a site
+says no.
+Full text, with the tools it unlocks, keeps off and needs decided:
+[the proposal](../strategy/2026-10-23-data-access-risk-rule-proposal.md).
+*Why it is yours:* it sets legal risk for Moonlighter AB. A short review by an
+EU or Swedish technology lawyer before adopting is recommended, and that spend
+is also yours.
+*If you do nothing:* the current rule stays in force, and the gap between it
+and what the tools do stays open. The retry-around-a-block behaviour is a gap
+under either rule; I can close that one now if you want, without deciding the
+rest.
+*How you'd reverse it:* a later decision restores the stricter rule. Any tool
+reopened under it is switched off again through the same deactivation list.
+**Answered 2026-10-24 by Petter, in session:** "go with your recommendations on all quick decisions under #2". Recorded as DEC-20261023-A (active) in CLAUDE.md; the adoption work listed in the proposal follows.
+
 **DQ-34** · `answered` · owner Petter · raised 2026-09-17T19:30Z · answered 2026-10-02 — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
 Once a week an automated sweep checks seven things that can quietly drift apart
 — among them whether what our records say about each service matches what the
