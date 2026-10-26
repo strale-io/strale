@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: test-case-generate
-name: Test Case Generate
-description: >-
-  Generate test cases from a function description or signature. Includes happy path, edge cases, boundary tests, and
-  error cases.
+name: "Test Case Generator"
+description: "Write test cases from a function's description or signature: the happy path, edge cases, boundaries and errors."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -135,3 +133,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Request fewer test cases per call, or set include_edge_cases to false
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

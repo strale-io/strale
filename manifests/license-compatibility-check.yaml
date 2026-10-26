@@ -1,6 +1,6 @@
 slug: license-compatibility-check
-name: License Compatibility Check
-description: Check software license compatibility for a given use case
+name: "Licence Compatibility Check"
+description: "Check whether software licences are compatible for a given use."
 category: security
 cost_class: free_unlimited
 quota_window: none
@@ -88,3 +88,8 @@ limitations:
     text: Unknown SPDX identifiers are flagged as 'unknown' and treated conservatively.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: licensed_bulk

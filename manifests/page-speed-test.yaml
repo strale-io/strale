@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: page-speed-test
-name: Page Speed Test
-description: >-
-  Test page speed using Google PageSpeed Insights API. Returns performance score, Core Web Vitals, optimization
-  opportunities.
+name: "Page Speed Test"
+description: "Test a page with Google PageSpeed Insights. Returns the performance score, Core Web Vitals and what to fix first."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -121,3 +119,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Check the URL loads in a browser from a clean session, and that it is reachable without a login
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: google-pagespeed-insights
+  checks: pending
+  checks_note: "Pending: the answer is Google's PageSpeed Insights report, and Google's fetch identifies as Chrome-Lighthouse; Google's terms on reselling it are not recorded."

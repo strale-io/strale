@@ -1,8 +1,6 @@
 slug: company-id-detect
-name: Company ID Detection
-description: >-
-  Identify the type and country of a company registration number. Detects Swedish org numbers, Finnish business IDs,
-  German HRB numbers, LEIs, DUNS, and 20+ other formats. Pure algorithmic.
+name: "Company ID Detection"
+description: "Work out the type and country of a company registration number: Swedish organisation numbers, Finnish business IDs, German HRB numbers, LEIs, DUNS and 20+ other formats."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -86,3 +84,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide the expected country or ID type to disambiguate when the input matches multiple format patterns
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

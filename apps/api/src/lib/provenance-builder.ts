@@ -15,18 +15,14 @@
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { ACQUISITION_METHODS, DATA_ACCESS_CHECKS, DATA_ACCESS_LANES, type AcquisitionMethod, type DataAccessChecks, type DataAccessLane } from "./data-access.js";
 import { getStraleJurisdiction } from "./processing-location.js";
 import { logError, logWarn } from "./log.js";
 
-// Acquisition method per DEC-20260428-A (third-party scraping doctrine).
-// Identifies how the upstream vendor obtained the data, so customers can
-// reason about provenance under EU AMLR / US BSA enhanced-due-diligence.
-export type AcquisitionMethod =
-  | "direct_api"        // direct call to authoritative API (e.g. SEC EDGAR, GLEIF, VIES)
-  | "licensed_bulk"     // bulk feed under licence (e.g. FL Sunbiz download, vendor-licensed snapshot)
-  | "vendor_aggregation" // multi-source aggregator with mixed methods
-  | "vendor_scraping"   // vendor scrapes public-records portal (permitted under DEC-20260428-A Tier 2)
-  | "primary_source";    // direct primary-source document retrieval (e.g. court filing, registry doc)
+// Acquisition method: how the data reached Strale (introduced under
+// DEC-20260428-A; DEC-20261023-A requires it, with the rule's lane, on every
+// answer). The list and its meanings live in ./data-access.ts.
+export type { AcquisitionMethod, DataAccessChecks, DataAccessLane };
 
 export interface RichProvenance {
   source: string;
@@ -44,11 +40,15 @@ export interface RichProvenance {
   license_url?: string;
   source_note?: string;
 
-  // Upstream sourcing disclosure (DEC-20260428-A Tier 2(c)(d)).
+  // Upstream sourcing disclosure (DEC-20260428-A Tier 2(c)(d); DEC-20261023-A
+  // keeps the vendor and acquisition method, and dropped the per-fact
+  // primary-source requirement, which this module still checks as a warning).
   // Set when data passes through a third-party vendor before reaching Strale.
   // Required for vendor_scraping; recommended for licensed_bulk and vendor_aggregation.
   upstream_vendor?: string;            // e.g. "cobalt-intelligence", "govlink", "brightquery"
   acquisition_method?: AcquisitionMethod;
+  data_access_lane?: DataAccessLane;
+  data_access_checks?: DataAccessChecks;
   primary_source_reference?: string;   // URL, filing ID, screenshot handle, document hash
 
   // AI-specific fields
@@ -87,7 +87,9 @@ export function buildProvenance(
 //
 // Pre-fix: RichProvenance had an open index signature and was never
 // validated at runtime. A capability that returned provenance: null,
-// provenance: {}, or provenance lacking DEC-20260428-A Tier-2 fields
+// provenance: {}, or provenance lacking the DEC-20260428-A Tier-2 disclosure
+// fields (DEC-20261023-A keeps the vendor and method; the per-fact
+// primary-source field is Strale's own disclosure)
 // (upstream_vendor / acquisition_method / primary_source_reference)
 // silently produced a "compliance-grade" audit with no provenance. With
 // 290+ capabilities including Tier-2 vendor-mediated sources, this was
@@ -110,13 +112,9 @@ export function buildProvenance(
 // looking at audit_trail.provenance need to see what's missing instead of
 // finding silently empty fields.
 
-const acquisitionMethodSchema = z.enum([
-  "direct_api",
-  "licensed_bulk",
-  "vendor_aggregation",
-  "vendor_scraping",
-  "primary_source",
-]);
+const acquisitionMethodSchema = z.enum(ACQUISITION_METHODS);
+const dataAccessLaneSchema = z.enum(DATA_ACCESS_LANES);
+const dataAccessChecksSchema = z.enum(DATA_ACCESS_CHECKS);
 
 const richProvenanceSchema = z
   .object({
@@ -129,6 +127,8 @@ const richProvenanceSchema = z
     source_note: z.string().optional(),
     upstream_vendor: z.string().optional(),
     acquisition_method: acquisitionMethodSchema.optional(),
+    data_access_lane: dataAccessLaneSchema.optional(),
+    data_access_checks: dataAccessChecksSchema.optional(),
     primary_source_reference: z.string().optional(),
     ai_model: z.string().optional(),
     ai_prompt_hash: z.string().optional(),
@@ -149,14 +149,14 @@ const _shapeWarnedSlugs = new Set<string>();
 export interface ProvenanceValidationContext {
   /** Capability slug. Used to deduplicate "shape warning" logs per-slug. */
   slug: string;
-  /** From capabilities.data_source_type — "scrape" requires DEC-20260428-A Tier-2 fields. */
+  /** From capabilities.data_source_type — "scrape" requires the vendor sourcing disclosure fields. */
   dataSourceType: string | null;
 }
 
 export interface ProvenanceValidationResult {
   /** True when provenance is structurally valid. False = log-and-accept (warn). */
   ok: boolean;
-  /** True when one or more DEC-20260428-A Tier-2 fields were expected but missing. */
+  /** True when one or more vendor-lane disclosure fields were expected but missing. */
   tier2Incomplete: boolean;
   /** Provenance object as-passed (for use after validation). */
   provenance: unknown;
@@ -198,7 +198,9 @@ export function validateProvenanceAtBoundary(
     return { ok: false, tier2Incomplete: false, provenance };
   }
 
-  // DEC-20260428-A Tier-2 completeness check.
+  // Vendor sourcing disclosure completeness check (introduced under
+  // DEC-20260428-A Tier 2). DEC-20261023-A requires the vendor and method;
+  // primary_source_reference is Strale's own disclosure, kept as a warning.
   const p = parsed.data;
   let tier2Incomplete = false;
   if (p.acquisition_method === "vendor_scraping") {
@@ -206,7 +208,7 @@ export function validateProvenanceAtBoundary(
       tier2Incomplete = true;
       logWarn(
         "provenance-tier2-incomplete",
-        `Capability ${ctx.slug}: vendor_scraping requires upstream_vendor + primary_source_reference per DEC-20260428-A`,
+        `Capability ${ctx.slug}: vendor_scraping requires upstream_vendor + primary_source_reference (vendor sourcing disclosure)`,
         { slug: ctx.slug, has_upstream_vendor: !!p.upstream_vendor, has_primary_source_reference: !!p.primary_source_reference },
       );
     }
@@ -217,7 +219,7 @@ export function validateProvenanceAtBoundary(
     tier2Incomplete = true;
     logWarn(
       "provenance-tier2-acquisition-method-missing",
-      `Capability ${ctx.slug}: data_source_type=scrape but provenance lacks acquisition_method per DEC-20260428-A`,
+      `Capability ${ctx.slug}: data_source_type=scrape but provenance lacks acquisition_method (DEC-20261023-A)`,
       { slug: ctx.slug, dataSourceType: ctx.dataSourceType },
     );
   }

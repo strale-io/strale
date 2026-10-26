@@ -16,10 +16,8 @@
 # manifest's metadata + the DB row will be updated together properly.
 
 slug: vat-validate
-name: EU VAT Validation + VIES Enrichment
-description: >-
-  Validate a European VAT number against the VIES database. Returns company name, address, and validity. Caches results
-  for 24 hours for instant responses on repeated lookups. Serves cached data when VIES is down.
+name: "EU VAT Validation"
+description: "Check a European VAT number in VIES and get the registered company name, address and validity. Repeat lookups within 48 hours come from cache, and cached data is served while VIES is down."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -108,3 +106,8 @@ limitations:
     category: availability
     severity: info
     workaround: Use vat-format-validate for GB structural validation while HMRC credentials are pending.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

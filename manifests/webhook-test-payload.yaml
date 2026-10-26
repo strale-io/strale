@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: webhook-test-payload
-name: Webhook Test Payload
-description: >-
-  Generate realistic test webhook payloads for Stripe, GitHub, Slack, Twilio, SendGrid, Shopify. Includes proper headers
-  and schema-accurate data.
+name: "Webhook Test Payloads"
+description: "Generate realistic test webhook payloads for Stripe, GitHub, Slack, Twilio, SendGrid and Shopify, with the right headers and schema."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -118,3 +116,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Compare generated payloads against the provider's webhook documentation and adjust field names as needed
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

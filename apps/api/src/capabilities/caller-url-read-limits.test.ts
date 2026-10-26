@@ -14,15 +14,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { safeFetchMock, fetchViaJina, fetchRenderedHtml } = vi.hoisted(() => ({
+const { safeFetchMock, fetchRenderedHtml } = vi.hoisted(() => ({
   safeFetchMock: vi.fn(),
-  fetchViaJina: vi.fn(),
   fetchRenderedHtml: vi.fn(),
 }));
 
 // url-to-markdown's tiers 2 and 3. Mocked so "layer 1 refused and stopped" is
 // observable — see the cascade test below.
-vi.mock("./lib/jina-reader.js", () => ({ fetchViaJina }));
 vi.mock("./lib/browserless-extract.js", () => ({ fetchRenderedHtml }));
 
 vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
@@ -32,6 +30,12 @@ vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
   safeFetch: safeFetchMock,
 }));
 
+// robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
+// the robots request does not consume this suite's queued fetch responses.
+vi.mock("../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
 vi.mock("../lib/url-validator.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/url-validator.js")>()),
   validateUrl: vi.fn().mockResolvedValue(undefined),
@@ -77,9 +81,7 @@ const HTML = (bytes: number) =>
 
 beforeEach(() => {
   safeFetchMock.mockReset();
-  fetchViaJina.mockReset();
   fetchRenderedHtml.mockReset();
-  fetchViaJina.mockResolvedValue(null);
   fetchRenderedHtml.mockResolvedValue(HTML(20_000).toString());
   process.env.ANTHROPIC_API_KEY = "test-key";
 });
@@ -249,7 +251,8 @@ describe("url-to-markdown — the priority path", () => {
   /**
    * The reason this capability was named first in the work package: it is
    * free-tier and anonymous-reachable, and after #428 its Jina and Browserless
-   * legs were bounded while its own layer-1 read was not. Same request, same
+   * legs were bounded while its own layer-1 read was not. (Jina has since left
+   * the chain, DEC-20261023-A.) Same request, same
    * page, opposite postures depending on which tier answered.
    */
   it("bounds the layer-1 static read", async () => {
@@ -261,7 +264,7 @@ describe("url-to-markdown — the priority path", () => {
     );
   });
 
-  it("does not re-fetch the refused page through Jina or Browserless", async () => {
+  it("does not re-fetch the refused page through Browserless", async () => {
     // Oversize is TERMINAL. Without the re-throw in tryPlainFetch's catch, the
     // refusal is swallowed as "layer 1 found nothing" and the same oversized
     // page is fetched twice more — and the final error message is identical,
@@ -271,7 +274,6 @@ describe("url-to-markdown — the priority path", () => {
     );
     await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" }).catch(() => undefined);
     expect(safeFetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchViaJina).not.toHaveBeenCalled();
     expect(fetchRenderedHtml).not.toHaveBeenCalled();
   });
 
@@ -284,7 +286,7 @@ describe("url-to-markdown — the priority path", () => {
       }).response,
     );
     await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" }).catch(() => undefined);
-    expect(fetchViaJina).toHaveBeenCalled();
+    expect(fetchRenderedHtml).toHaveBeenCalled();
   });
 });
 

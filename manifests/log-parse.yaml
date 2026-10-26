@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: log-parse
-name: Log Parse
-description: >-
-  Parse log files — auto-detects format (JSON, syslog, ISO, logfmt, Laravel). Extracts timestamps, levels, messages.
-  Returns error/warning summary. Algorithmic.
+name: "Log Parser"
+description: "Parse log files in JSON, syslog, ISO, logfmt or Laravel format into timestamps, levels and messages, with a summary of errors and warnings."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none
@@ -103,3 +101,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Include a sample log line description or format string in the input for non-standard log formats
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

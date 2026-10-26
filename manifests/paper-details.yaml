@@ -1,8 +1,6 @@
 slug: paper-details
-name: Paper Details
-description: >-
-  Look up one scholarly work by DOI or OpenAlex id: full author list with institutions, venue, open-access
-  status and PDF, citations, topics and abstract.
+name: "Paper Details"
+description: "Look up one scholarly work by DOI or OpenAlex id: authors and institutions, venue, open-access status and PDF, citations, topics and abstract."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -126,3 +124,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Follow landing_page_url or pdf_url for the full record.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

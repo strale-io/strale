@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: dns-lookup
-name: DNS Lookup
-description: >-
-  Perform a comprehensive DNS lookup for a domain. Returns A, AAAA, MX, NS, TXT, CNAME records plus SPF and DMARC
-  detection.
+name: "DNS Lookup"
+description: "Look up a domain's DNS records (A, AAAA, MX, NS, TXT and CNAME), with SPF and DMARC picked out."
 category: web-intelligence
 cost_class: free_unlimited
 quota_window: none
@@ -98,3 +96,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Query the authoritative nameserver directly (returned in the NS records) to see changes before full propagation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

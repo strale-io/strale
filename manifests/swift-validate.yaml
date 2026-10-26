@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: swift-validate
-name: SWIFT/BIC Validation
-description: >-
-  Validate a SWIFT/BIC code. Checks format, length, and country code. Extracts bank code, location, and branch. Pure
-  algorithmic — instant and cheap.
+name: "SWIFT/BIC Validation"
+description: "Check a SWIFT/BIC code's format, length and country, and split out the bank code, location and branch."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -97,3 +95,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Cross-reference validated codes against SWIFT's online directory at swift.com for active status confirmation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

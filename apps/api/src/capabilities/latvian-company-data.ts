@@ -11,7 +11,8 @@ import { logWarn } from "../lib/log.js";
  * and historical entities (~480k records).
  *
  * Replaces the prior Browserless+Claude scrape of info.ur.gov.lv which was
- * a Tier 1 violation per DEC-20260428-A. This implementation is
+ * a Tier 1 violation per DEC-20260428-A (superseded 2026-10-24 by
+ * DEC-20261023-A; this direct API path is its preferred lane). This implementation is
  * `acquisition_method: direct_api`.
  */
 

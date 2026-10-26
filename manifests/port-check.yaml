@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: port-check
-name: Port Check
-description: >-
-  Check if TCP ports are open on a host. Scans up to 20 ports with configurable timeout. Returns open/closed status with
-  latency.
+name: "Port Check"
+description: "Check whether TCP ports are open on a host. Scans up to 20 ports with a set timeout and returns each port's status and latency."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none
@@ -114,3 +112,9 @@ limitations:
     category: coverage
     severity: info
     workaround: If a port shows as closed, verify from your own network before concluding the service is down
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

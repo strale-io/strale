@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: accessibility-audit
-name: Accessibility Audit
-description: >-
-  WCAG 2.1 accessibility audit of a URL. Checks color contrast, alt text, form labels, ARIA roles, heading hierarchy,
-  link text, language. Mostly deterministic.
+name: "Accessibility Audit"
+description: "Audit a page against WCAG 2.1: colour contrast, alt text, form labels, ARIA roles, heading order, link text and page language."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -120,3 +118,10 @@ limitations:
     workaround: >-
       Use as a first pass and follow up with manual testing using a screen reader (NVDA, VoiceOver) for full WCAG
       compliance
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

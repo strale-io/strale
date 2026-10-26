@@ -1,8 +1,6 @@
 slug: academic-paper-search
-name: Academic Paper Search
-description: >-
-  Search 250M+ scholarly works via OpenAlex: title, DOI, authors, venue, citation count, open-access PDF link
-  and abstract. Filter by year and open access.
+name: "Academic Paper Search"
+description: "Search 250M+ scholarly works in OpenAlex: title, DOI, authors, venue, citations, open-access PDF and abstract. Filter by year and open access."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -122,3 +120,8 @@ limitations:
     category: freshness
     severity: info
     workaround: For preprints of the last few days, use arxiv-search.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

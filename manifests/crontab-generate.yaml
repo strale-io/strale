@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: crontab-generate
-name: Crontab Generate
-description: Convert natural language schedule to cron expression, or explain an existing cron expression. Returns next run times.
+name: "Crontab Generator"
+description: "Turn a plain-language schedule into a cron expression, or explain an existing one, with the next run times."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -82,3 +82,8 @@ limitations:
     workaround: >-
       Verify the generated expression against your specific cron implementation (e.g., systemd vs crontab vs cloud
       scheduler)
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -1,8 +1,6 @@
 slug: usgs-earthquake-search
-name: USGS Earthquake Search
-description: >-
-  Query the USGS earthquake catalogue by magnitude, date range and location radius: magnitude, place, time,
-  coordinates, depth, tsunami flag, alert level and event page.
+name: "Earthquake Search"
+description: "Search the USGS earthquake catalogue by magnitude, dates and distance from a place: magnitude, location, time, depth, tsunami flag, alert level and event page."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -122,3 +120,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Keep min_magnitude at 4.5 or above for global comparisons.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: date-parse
-name: Date Parse
-description: >-
-  Parse ambiguous date strings into ISO 8601. Handles '3/4/25', 'March 4th', '4. mars 2025', '2025-W14'. Detects
-  ambiguity.
+name: "Date Parser"
+description: "Turn ambiguous dates such as '3/4/25', 'March 4th', '4. mars 2025' or '2025-W14' into ISO 8601, and flag the ambiguous ones."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none
@@ -99,3 +97,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Pass the expected date format or locale in the input to eliminate ambiguity for MM/DD vs DD/MM formats
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

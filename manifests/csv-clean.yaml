@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: csv-clean
-name: CSV Clean
-description: >-
-  Clean messy CSV: fix inconsistent delimiters, mixed encodings, BOM, trailing commas, quoted fields. Returns clean CSV
-  with issues report.
+name: "CSV Cleaner"
+description: "Fix messy CSV: mixed delimiters and encodings, byte-order marks, trailing commas and broken quoting. Returns clean CSV and what was fixed."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none
@@ -102,3 +100,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If cleaning fails, specify the exact delimiter and encoding in the input parameters
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

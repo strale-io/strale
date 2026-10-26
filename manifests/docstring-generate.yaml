@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: docstring-generate
-name: Docstring Generate
-description: Add Python docstrings to functions and classes. Supports Google, NumPy, and Sphinx styles.
+name: "Docstring Generator"
+description: "Add docstrings to Python functions and classes, in Google, NumPy or Sphinx style."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -81,3 +81,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Review generated docstrings for accuracy and add implementation-specific warnings or notes manually
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

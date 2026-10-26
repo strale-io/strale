@@ -1,10 +1,6 @@
 slug: domain-contact-extract
-name: Domain Contact Extract
-description: >-
-  Find a company's contact info — email address, phone number, and mailing address — by extracting it from the
-  company's own website given its domain. Returns role emails (info@, sales@, support@), phone numbers, postal
-  address, contact-page URL, and social links. Organisation-level contacts only, not a specific person's email
-  address (see email-finder) and not employee discovery.
+name: "Domain Contact Extraction"
+description: "Find a company's public contact details on its own website: role email addresses such as info@ and sales@, phone numbers, postal address, contact page and social links. Company contacts only, never a named person's."
 category: web-intelligence
 search_tags:
   - contact info
@@ -48,8 +44,8 @@ output_schema:
       type: array
     role_emails:
       type: array
-    published_personal_addresses:
-      type: array
+    personal_addresses_withheld:
+      type: number
     phones:
       type: array
     social_links:
@@ -80,7 +76,8 @@ test_fixtures:
     expected_fields:
       # Only guaranteed fields get asserted (CLAUDE.md field-reliability rule).
       # role_emails / phones / social_links / contact_page_url / postal_address
-      # / published_personal_addresses are hand-corrected below to common/rare —
+      # are hand-corrected below to common/rare (personal_addresses_withheld is a
+      # count, always present) —
       # --discover marked them "guaranteed" from a single stripe.com run, which
       # is not honest: most sites publish none, some, or a different subset of
       # these fields.
@@ -103,7 +100,7 @@ output_field_reliability:
   role_emails: common
   social_links: common
   phones: rare
-  published_personal_addresses: rare
+  personal_addresses_withheld: guaranteed
   contact_page_url: rare
   postal_address: rare
 limitations:
@@ -111,10 +108,10 @@ limitations:
     text: >-
       This capability extracts contact channels a company publishes about itself (info@, sales@, support@, phone,
       address, social links). It does not accept a person's name as input, does not generate or guess candidate personal
-      email addresses, and does not enumerate employees. Any personal-looking address (firstname.lastname@) is returned
-      only if literally published on the company's own site, in the separate `published_personal_addresses` field, and
-      is never expanded or used to infer a pattern. See email-pattern-discover (currently suspended) for the boundary
-      this capability stays inside of.
+      email addresses, and does not enumerate employees. Personal-looking addresses (firstname.lastname@) are never
+      returned, even when the company published them: only their count, in `personal_addresses_withheld`. Strale's
+      data-access rule (DEC-20261023-A) rules out reselling contact details about identifiable people. See
+      email-pattern-discover (currently suspended) for the boundary this capability stays inside of.
     category: coverage
     severity: info
   - title: No JavaScript rendering — client-rendered content is invisible
@@ -157,3 +154,10 @@ limitations:
       only in the tail of a very long page will not be found.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

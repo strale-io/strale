@@ -1,8 +1,6 @@
 slug: risk-narrative-generate
-name: Risk Narrative Generator
-description: >-
-  Generates a plain-language risk narrative from structured check results. Designed for non-technical users reviewing AI
-  agent output. Supports KYB and invoice fraud contexts.
+name: "Risk Summary Writer"
+description: "Write a plain-language risk summary from the results of company or invoice checks, for a reviewer who is not technical."
 category: agent-tooling
 cost_class: paid_prepaid
 quota_window: none
@@ -147,3 +145,8 @@ limitations:
       produce less useful narratives.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

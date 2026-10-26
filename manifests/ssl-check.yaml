@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: ssl-check
-name: SSL Certificate Check
-description: >-
-  Check a domain's SSL/TLS certificate. Returns issuer, validity dates, days until expiry, protocol version, cipher, and
-  SAN entries.
+name: "SSL Certificate Check"
+description: "Check a domain's SSL/TLS certificate: issuer, validity dates, days to expiry, protocol, cipher and the names it covers."
 category: web-intelligence
 cost_class: free_unlimited
 quota_window: none
@@ -219,3 +217,9 @@ limitations:
     category: coverage
     severity: info
     workaround: For services on non-standard ports, use ssl-certificate-chain with the specific hostname:port combination
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

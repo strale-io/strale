@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: us-company-data
-name: US Company Data
-description: >-
-  Look up US company data from SEC EDGAR. Accepts CIK number, ticker symbol, or fuzzy company name. Returns company
-  name, CIK, SIC code, state, filings summary.
+name: "US Company Data"
+description: "Look up a US listed company in SEC EDGAR by CIK, ticker or name. Returns name, CIK, SIC code, state and a summary of filings."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -170,3 +168,8 @@ limitations:
     category: freshness
     severity: info
     workaround: For time-critical checks, compare the filing_date in the response against SEC EDGAR for publicly traded companies
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

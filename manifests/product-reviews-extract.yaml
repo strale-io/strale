@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: product-reviews-extract
-name: Product Reviews Extract
-description: >-
-  Extract product reviews from a product or review page. Returns rating distribution, pros/cons,
-  sentiment. Trustpilot is not supported (their ToS forbids automated access).
+name: "Product Reviews Extraction"
+description: "Read the reviews on a product or review page: rating distribution, pros and cons, and sentiment. Trustpilot is not supported, as its terms forbid automated access."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -133,3 +131,10 @@ limitations:
     category: coverage
     severity: info
     workaround: Try a page with fewer reviews — this capability extracts up to ~10 recent reviews per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

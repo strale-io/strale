@@ -1,8 +1,6 @@
 slug: cz-unreliable-vat-payer
-name: Czech Unreliable VAT Payer Check
-description: >-
-  Check whether a Czech DIČ is flagged as unreliable VAT payer (nespolehlivý plátce) and return the payer's list of
-  published bank accounts. Critical for §109 CZ VAT Act joint-liability protection.
+name: "Czech Unreliable VAT Payer Check"
+description: "Check whether a Czech VAT number (DIČ) is flagged as an unreliable VAT payer, and get the bank accounts the payer has published. Protects against joint VAT liability."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -129,3 +127,8 @@ output_field_reliability:
   response_generated_at: guaranteed
   joint_liability_risk: guaranteed
 geography: eu
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

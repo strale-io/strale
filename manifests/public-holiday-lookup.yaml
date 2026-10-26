@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: public-holiday-lookup
-name: Public Holiday Lookup
-description: Get public holidays by country and year for the 200+ countries covered by Nager.Date. Returns holiday dates, names, and next upcoming.
+name: "Public Holiday Lookup"
+description: "Get a country's public holidays for a year, for 200+ countries, with the next one coming up."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -182,3 +182,10 @@ limitations:
       coverage list: https://date.nager.at/api/v3/AvailableCountries
     category: coverage
     severity: warning
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: nager-date
+  checks: pending

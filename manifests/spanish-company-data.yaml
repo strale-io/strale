@@ -1,9 +1,6 @@
 slug: spanish-company-data
-name: Spanish Company Data
-description: >-
-  Look up Spanish company data from the BORME-derived OpenMercantil register. Accepts CIF/NIF or company
-  name. Returns identity, status, legal form, current officers (cargos) with roles, and BORME activity
-  history for 2.8M+ Spanish companies.
+name: "Spanish Company Data"
+description: "Look up a Spanish company by CIF/NIF or name in the BORME-based register. Returns identity, status, legal form, current officers and BORME history, across 2.8M+ companies."
 category: company-data
 # OpenMercantil free tier: 200 requests/day without auth. Each lookup costs
 # 2 upstream calls (search + company), so ~100 lookups/day headroom.
@@ -228,3 +225,10 @@ limitations:
     category: throughput
     severity: info
     workaround: Vendor's Profesional tier (5,000/day, €57/mo) is the upgrade path if ES volume materializes
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: OpenMercantil.es
+  checks: pending

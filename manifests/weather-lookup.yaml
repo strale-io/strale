@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: weather-lookup
-name: Weather Lookup
-description: Get current weather and 7-day forecast for any location. Uses Open-Meteo API. Search by city name or coordinates.
+name: "Weather Lookup"
+description: "Get the current weather and a 7-day forecast for a place or coordinates, from Open-Meteo."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -130,3 +130,10 @@ limitations:
     category: accuracy
     severity: info
     workaround: For critical operations, cross-reference with national meteorological services for severe weather warnings
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: open-meteo
+  checks: pending

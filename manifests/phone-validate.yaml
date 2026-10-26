@@ -1,8 +1,6 @@
 slug: phone-validate
-name: Phone Validate
-description: >-
-  Validate a phone number and classify its type. Returns E.164 format, country, carrier name,
-  and whether it is mobile, landline, or VOIP. Covers 200+ countries.
+name: "Phone Validation"
+description: "Validate a phone number in 200+ countries. Returns the E.164 form, country, and whether it is mobile, landline or VoIP."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -85,3 +83,8 @@ limitations:
     text: Numbers without international prefix need a country_code hint for accurate parsing
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

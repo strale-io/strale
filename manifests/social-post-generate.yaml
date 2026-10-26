@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: social-post-generate
-name: Social Post Generate
-description: >-
-  Generate platform-optimized social media posts. Supports Twitter, LinkedIn, Instagram. Returns post text, hashtags,
-  thread version for Twitter.
+name: "Social Post Generator"
+description: "Write social posts for X, LinkedIn or Instagram, with hashtags and a thread version for X."
 category: content-writing
 cost_class: paid_prepaid
 quota_window: none
@@ -112,3 +110,9 @@ limitations:
       charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

@@ -17,7 +17,7 @@ provider_tos_notes: >-
   data.gov.lv terms: CC0 1.0. Public domain. Unrestricted commercial use. Daily snapshot from the
   official Uznēmumu reģistrs. Better licensing than IE (CC0 vs CC-BY) — no attribution requirement,
   though we attribute anyway as good practice.
-doctrine_reference: DEC-20260428-A Tier 2 (statutory public records, direct API path)
+doctrine_reference: DEC-20261023-A preferred lane (statutory public records, direct API path; formerly DEC-20260428-A Tier 2)
 notes: >-
   2026-05-15 identity audit Batch 3 confirmed LV functional via data.gov.lv CKAN. PR #120 (merged
   2026-05-16 at fd59571) covered LV schema cleanup including VAT derivation for 40NNN prefixes. Tier

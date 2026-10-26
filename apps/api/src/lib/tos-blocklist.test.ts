@@ -86,6 +86,37 @@ describe("findProhibitedTarget", () => {
   });
 });
 
+describe("Reddit (DEC-20261023-A never lane, item 4)", () => {
+  it("REGRESSION: blocks the commercial registry aggregators the rule names (never lane item 5)", () => {
+    for (const url of ["https://www.allabolag.se/5560125790", "https://www.northdata.com/Acme", "https://www.northdata.de/Acme"]) {
+      expect(() => assertTargetAllowed(url), url).toThrow(TOS_REFUSAL_MARKER);
+    }
+  });
+
+  it("REGRESSION: blocks reddit.com, its subdomains and redd.it", () => {
+    for (const url of [
+      "https://www.reddit.com/user/acme/",
+      "https://old.reddit.com/r/programming/",
+      "reddit.com/r/x",
+      "https://redd.it/abc123",
+      "https://i.redd.it/x.png",
+      "https://external-preview.redditmedia.com/x.jpg",
+      "https://www.redditstatic.com/x.js",
+    ]) {
+      expect(findProhibitedTarget(url)?.site, url).toBe("Reddit");
+    }
+  });
+
+  it("does not block lookalikes", () => {
+    expect(findProhibitedTarget("https://notreddit.com/")).toBeNull();
+    expect(findProhibitedTarget("https://reddit.com.example.org/")).toBeNull();
+  });
+
+  it("refuses through safeFetch's gate with the ToS marker", () => {
+    expect(() => assertTargetAllowed("https://www.reddit.com/r/x")).toThrow(TOS_REFUSAL_MARKER);
+  });
+});
+
 describe("assertTargetAllowed", () => {
   it("passes an allowed target through silently", () => {
     expect(() => assertTargetAllowed("https://www.consumerlab.com/primaforce/")).not.toThrow();

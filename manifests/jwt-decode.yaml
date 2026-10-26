@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: jwt-decode
-name: JWT Decode
-description: >-
-  Decode a JWT token without verification. Returns header, payload, claims, expiry status, and time until expiry.
-  Algorithmic.
+name: "JWT Decoder"
+description: "Decode a JWT without verifying it: header, payload, claims, and whether and when it expires."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none
@@ -104,3 +102,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Always verify JWT signatures using the issuer's public key or JWKS endpoint before trusting claims
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: flatten-json
-name: Flatten JSON
-description: >-
-  Flatten nested JSON to dot-notation keys. E.g. {a:{b:[1,2]}} → {'a.b.0':1,'a.b.1':2}. Configurable delimiter and array
-  handling. Algorithmic.
+name: "JSON Flattener"
+description: "Flatten nested JSON into dot-notation keys, e.g. {a:{b:[1,2]}} becomes {'a.b.0':1,'a.b.1':2}. Choose the delimiter and how arrays are handled."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none
@@ -103,3 +101,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Pre-process input to remove circular references and limit nesting depth before flattening
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

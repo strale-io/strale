@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: npm-package-info
-name: npm Package Info
-description: "Fetch npm package metadata: version, dependencies, downloads, repository, license. Includes weekly download count."
+name: "npm Package Info"
+description: "Get an npm package's details: version, dependencies, weekly downloads, repository and licence."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -116,3 +116,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For private packages, query your organization's registry endpoint directly
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

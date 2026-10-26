@@ -1,9 +1,6 @@
 slug: diff-review
-name: Diff Review
-description: >-
-  Analyze a unified diff (git diff output) for bugs, security issues, missing error handling, test gaps, and code
-  quality. Returns structured findings with severity, file paths, and an approval recommendation. Built for CI/CD
-  pre-merge checks.
+name: "Diff Review"
+description: "Review a git diff for bugs, security issues, missing error handling, test gaps and code quality. Returns findings with severity and file, and whether to approve."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -130,3 +127,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Provide a smaller diff (fewer files or lines) per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

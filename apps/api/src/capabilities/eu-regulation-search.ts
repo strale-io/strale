@@ -8,7 +8,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * zero lifetime successes (results-region anchor drifted, then EUR-Lex
  * started answering the search URL with HTTP 400) and was quarantined.
  * CELLAR is the official machine interface to the same corpus — no auth, no
- * browser render, no LLM, ~300ms observed latency (DEC-20260813-A preference
+ * browser render, no LLM, ~300ms observed latency (DEC-20261023-A preferred lane;
+ * formerly the DEC-20260813-A preference
  * order: official API > per-call parsing).
  *
  * Search semantics: query text is tokenized to lowercase alphanumeric words;

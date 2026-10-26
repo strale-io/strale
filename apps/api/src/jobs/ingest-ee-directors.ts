@@ -7,7 +7,8 @@
  * (`capabilities/estonian-company-data.ts`) queries this table at
  * request time to populate `legal_representatives[]` for tier-2
  * KYB coverage. Implements DEC-20260518-E exhaustive-enumeration outcome
- * for EE and DEC-20260518-F attribution requirements.
+ * for EE and the attribution requirements of DEC-20260518-F (carried into
+ * DEC-20261023-A).
  *
  * Upstream:
  *   URL:    https://avaandmed.ariregister.rik.ee/sites/default/files/

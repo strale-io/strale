@@ -1,8 +1,6 @@
 slug: keyword-rank-check
-name: Keyword Rank Check
-description: >-
-  Check where a domain ranks in Google search results for a keyword. Returns the position, page, matching
-  result, and the competitors ranking above it within the scanned depth.
+name: "Keyword Rank Check"
+description: "Find where a domain ranks on Google for a keyword: position, page, the matching result, and the competitors ranking above it. Scans the top 10 results by default (up to 100), so a domain not found may still rank lower."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -139,3 +137,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Increase the depth parameter (up to 100) if the domain is expected to rank beyond position 10.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: serper
+  checks: pending
+  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: pii-redact
-name: PII Redaction
-description: >-
-  Detect and redact personally identifiable information (PII) from text. Identifies names, emails, phone numbers,
-  national ID numbers (Swedish personnummer, Finnish henkilötunnus, etc.), addresses, and more.
+name: "PII Redaction"
+description: "Find and remove personal data in text: names, email addresses, phone numbers, national ID numbers such as Swedish personnummer, addresses and more."
 category: data-processing
 cost_class: paid_prepaid
 quota_window: none
@@ -102,3 +100,8 @@ limitations:
     workaround: >-
       Submit the smallest span that needs redacting rather than a whole document, or run redaction in your own
       environment where the input is never transmitted.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

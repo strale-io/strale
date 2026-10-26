@@ -723,11 +723,11 @@ export const SOLUTIONS: SolutionDef[] = [
     name: "Web Extract & Clean",
     marketingName: "Web Extract & Clean",
     description:
-      "Fetch any web page — even behind anti-bot walls — convert to clean markdown, and strip PII automatically. Ready for your RAG pipeline.",
+      "Fetch a web page, convert it to clean markdown, and strip PII automatically. Ready for your RAG pipeline.",
     longDescription:
-      "Uses a headless browser to fetch JavaScript-rendered pages that block direct requests, converts the content to clean markdown, then automatically detects and redacts PII (names, emails, phone numbers, addresses) before returning. Ready to drop into your RAG pipeline, knowledge base, or agent context window.",
+      "Uses a headless browser to fetch JavaScript-rendered pages, converts the content to clean markdown, then automatically detects and redacts PII (names, emails, phone numbers, addresses) before returning. Ready to drop into your RAG pipeline, knowledge base, or agent context window.",
     agentDescription:
-      "scrape this page, get content from URL, extract web page for RAG, page blocked need content, convert URL to markdown, fetch website content, web scraping with anti-bot",
+      "scrape this page, get content from URL, extract web page for RAG, convert URL to markdown, fetch website content",
     category: "data-research",
     priceCents: 30,
     componentSumCents: 20,
@@ -887,7 +887,7 @@ export const SOLUTIONS: SolutionDef[] = [
     name: "EU AI Act Risk Assessment",
     marketingName: "EU AI Act Risk Assessment",
     description:
-      "Classify your AI system's risk level under the EU AI Act before the August 2026 deadline. Risk classification, obligations, and supervisory authority.",
+      "Classify your AI system's risk level under the EU AI Act. Risk classification, obligations, and supervisory authority.",
     longDescription:
       "Analyzes your AI system description against EU AI Act risk categories, identifies matched articles and specific obligations, looks up the relevant national supervisory authority, and checks for prior enforcement actions in your sector. Use before deploying any AI system in the EU.",
     agentDescription:

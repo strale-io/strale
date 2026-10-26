@@ -19,7 +19,7 @@ provider_tos_notes: >-
   perpetual). Audit-retention written confirmation received 2026-05-08 and accepted as known
   constraint until Enterprise upgrade keyed to revenue. Shipped to production 2026-05-07 via PR #59
   commit 3d62a4b.
-doctrine_reference: DEC-20260428-A; DEC-20260505-D
+doctrine_reference: DEC-20261023-A (formerly DEC-20260428-A); DEC-20260505-D
 notes: >-
   2026-05-15 identity audit Batch 1 confirmed DE functional via OpenRegister wrapper. OPERATIONAL
   ISSUE: 50/month OpenRegister free-tier exhausted by Strale's internal test scheduler

@@ -169,3 +169,8 @@ limitations:
       false means the work genuinely has no edges of that kind.
     category: availability
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

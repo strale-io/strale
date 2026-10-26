@@ -1,8 +1,6 @@
 slug: nl-bag-address
-name: NL BAG Address Lookup
-description: >-
-  Look up Dutch address and building data from the BAG (Basisregistratie Adressen en Gebouwen) via Kadaster API.
-  Returns street, city, construction year, floor area, usage purposes, and RD coordinates (EPSG:28992).
+name: "Dutch Address and Building Lookup"
+description: "Look up a Dutch address in the Kadaster BAG register: street, city, construction year, floor area, use, and national grid coordinates."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -122,3 +120,8 @@ limitations:
     text: Only covers addresses registered in the Dutch BAG (Netherlands).
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

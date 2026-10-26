@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: invoice-validate
-name: Invoice Validate
-description: "Validate invoice data: VAT number format, line item math, tax calculations, EU compliance requirements."
+name: "Invoice Validation"
+description: "Check an invoice's data: VAT number format, line item arithmetic, tax calculations and EU invoice requirements."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -174,3 +174,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use as a structural pre-check before manual review of business terms and delivery confirmation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

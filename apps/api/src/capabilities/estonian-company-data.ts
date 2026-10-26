@@ -2,17 +2,15 @@ import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { extractJsonObject } from "./lib/llm-json.js";
 import { firstString } from "./lib/input-aliases.js";
-import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
-import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import {
   MAX_FETCHED_API_RESPONSE_BYTES,
   readJsonWithLimit,
-  readPageHtml,
 } from "../lib/resource-limits.js";
+import { discardBody } from "../lib/safe-fetch.js";
+import { STRALE_USER_AGENT, assertNotBlockStatus } from "../lib/site-access.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";
@@ -126,58 +124,32 @@ async function extractCompanyName(text: string): Promise<string> {
   return name;
 }
 
-/** Fetch the Estonian API through Browserless EU West to bypass IP restrictions. */
-async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
-  const { url, key } = getBrowserlessConfig();
-  // Browserless v2 cloud uses ?token= query auth — Bearer is rejected at edge.
-  // buildBrowserlessRequestUrl also appends ?launch= per-request, required by
-  // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
-  const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
-  // unguarded-fetch-ok: our Browserless EU proxy; target is the fixed ariregister API host
-  const resp = await browserlessFetch(buildBrowserlessRequestUrl(url, "/content", key), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      url: apiUrl,
-      gotoOptions: { waitUntil: "networkidle0", timeout: 10000 },
-    }),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!resp.ok) throw new Error(`Proxy fetch failed: HTTP ${resp.status}`);
-  // #428 round-1 review: direct Browserless /content POST, so the shared
-  // web-provider bound never applied here. The target is the fixed ariregister
-  // host rather than a caller URL, but an unbounded remote read is unbounded
-  // either way.
-  const html = await readPageHtml(resp, "registry_code");
-  // Chrome renders JSON APIs in a <pre> tag; extract and parse
-  const text = htmlToText(html);
-  const parsedResponse = extractJsonObject(text);
-  if (!parsedResponse) throw new Error("Could not extract API response via proxy.");
-  return parsedResponse;
-}
-
-/** Try direct fetch first (works from EU IPs), fall back to Browserless proxy. */
+/**
+ * Fetch the Äriregister API directly.
+ *
+ * Until 2026-10-24 any failure here — including the registry's own 403 to a
+ * non-EU IP — was retried through Browserless "to bypass geo-restriction".
+ * DEC-20261023-A puts retrying a blocked request through another route in the
+ * never lane, so a block (401/403/407/429) is now a site-access refusal and
+ * every other failure surfaces as itself. If the registry refuses Strale's
+ * egress region, the compliant routes are an EU-hosted deployment or RIK's
+ * open-data files, not a proxy.
+ */
 async function fetchApi(path: string): Promise<unknown> {
   const url = `${API}${path}`;
-  try {
-    // unguarded-fetch-ok: fixed ariregister.rik.ee API host, not a caller URL
-    const resp = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (resp.ok) {
-      // Was `return resp.json()` — awaitless, and therefore invisible to
-      // #428's regex guard (#432).
-      return await readJsonWithLimit(resp, MAX_FETCHED_API_RESPONSE_BYTES, "query");
-    }
-    if (resp.status === 403) throw new Error("IP blocked");
-    throw new Error(`HTTP ${resp.status}`);
-  } catch {
-    // Route through Browserless EU West (Amsterdam) to bypass geo-restriction
-    return fetchApiViaProxy(url);
+  // unguarded-fetch-ok: fixed ariregister.rik.ee API host, not a caller URL
+  const resp = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": STRALE_USER_AGENT },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (resp.ok) {
+    // Was `return resp.json()` — awaitless, and therefore invisible to
+    // #428's regex guard (#432).
+    return await readJsonWithLimit(resp, MAX_FETCHED_API_RESPONSE_BYTES, "query");
   }
+  await discardBody(resp, `ariregister HTTP ${resp.status}`);
+  assertNotBlockStatus(url, resp.status);
+  throw new Error(`Äriregister API returned HTTP ${resp.status}.`);
 }
 
 /**

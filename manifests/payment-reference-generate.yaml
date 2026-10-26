@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: payment-reference-generate
-name: Payment Reference Generate
-description: >-
-  Generate valid payment reference numbers with check digits: Swedish OCR, Norwegian KID, Finnish reference, ISO 11649
-  RF.
+name: "Payment Reference Generator"
+description: "Generate payment references with valid check digits: Swedish OCR, Norwegian KID, Finnish reference and ISO 11649 RF."
 category: utility
 cost_class: free_unlimited
 quota_window: none
@@ -94,3 +92,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Validate generated references against the receiving bank's format requirements before issuing payment instructions
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

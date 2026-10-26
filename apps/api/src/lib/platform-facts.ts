@@ -42,8 +42,9 @@ import { logWarn } from "./log.js";
 
 export const STATIC_FACTS = {
   /**
-   * Per DEC-20260428-A + DEC-20260429-A, the canonical vendor for each
-   * compliance capability category. When a vendor is switched, update
+   * The canonical vendor for each compliance capability category
+   * (DEC-20260429-A; vendor data allowed under DEC-20261023-A, which
+   * superseded DEC-20260428-A). When a vendor is switched, update
    * THIS map and re-run `node strale-frontend/scripts/check-platform-facts-drift.mjs`
    * to find every marketing surface that still references the old vendor.
    */

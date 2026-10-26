@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: sql-explain
-name: SQL Explain
-description: >-
-  Explain a SQL query in plain language. Identifies tables, joins, filters, aggregations, and potential performance
-  issues.
+name: "SQL Explainer"
+description: "Explain a SQL query in plain English: tables, joins, filters, aggregations and likely performance problems."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -86,3 +84,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Run EXPLAIN ANALYZE on your actual database to see the real execution plan alongside the AI explanation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

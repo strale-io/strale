@@ -113,3 +113,10 @@ limitations:
     category: freshness
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: sourcify
+  checks: pending

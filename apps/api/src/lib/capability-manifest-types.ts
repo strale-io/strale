@@ -207,6 +207,8 @@ export interface Manifest {
   // to read this field. See ManifestKnownRateLimit's doc comment for the
   // full context.
   known_rate_limit?: ManifestKnownRateLimit | ManifestKnownRateLimit[] | null;
+  /** Data-access lane and acquisition method (DEC-20261023-A); see lib/data-access.ts. */
+  data_access?: unknown;
 }
 
 /**

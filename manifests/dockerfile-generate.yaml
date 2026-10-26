@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: dockerfile-generate
-name: Dockerfile Generate
-description: >-
-  Generate optimized, production-ready Dockerfiles. Multi-stage builds, Alpine base, non-root user, layer caching.
-  Supports Node, Python, Go, Rust, Java.
+name: "Dockerfile Generator"
+description: "Generate a production-ready Dockerfile with multi-stage builds, an Alpine base, a non-root user and layer caching, for Node, Python, Go, Rust or Java."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -196,3 +194,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Test the generated Dockerfile in a CI pipeline and adjust base images, build args, and secrets as needed
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

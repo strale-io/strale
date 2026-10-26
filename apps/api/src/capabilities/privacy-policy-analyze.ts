@@ -1,4 +1,5 @@
 import { MODELS } from "../lib/models.js";
+import { isSiteWideBlock } from "../lib/site-access.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
@@ -55,7 +56,9 @@ async function findPrivacyPage(baseUrl: string): Promise<{ url: string; text: st
       if (text.length > 500) {
         return { url: fullUrl, text };
       }
-    } catch {
+    } catch (err) {
+      // DEC-20261023-A: a site-wide block ends the visit; see isSiteWideBlock.
+      if (isSiteWideBlock(err)) throw err;
       // Try next link
     }
   }
@@ -71,7 +74,9 @@ async function findPrivacyPage(baseUrl: string): Promise<{ url: string; text: st
       if (text.length > 500) {
         return { url: tryUrl, text };
       }
-    } catch {
+    } catch (err) {
+      // DEC-20261023-A: a site-wide block ends the visit; see isSiteWideBlock.
+      if (isSiteWideBlock(err)) throw err;
       // Try next path
     }
   }

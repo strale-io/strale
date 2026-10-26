@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: changelog-generate
-name: Changelog Generate
-description: >-
-  Generate a user-facing changelog from git commits. Groups by type, writes human-readable descriptions. Supports Keep a
-  Changelog, semantic, and bullet formats.
+name: "Changelog Generator"
+description: "Write a user-facing changelog from git commits, grouped by type, in Keep a Changelog, semantic or bullet format."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -103,3 +101,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use conventional commit prefixes (feat:, fix:, chore:) in your commits for more accurate categorization
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

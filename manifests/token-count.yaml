@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: token-count
-name: Token Count
-description: >-
-  Estimate token count and cost for text across LLM models (GPT-4o, Claude, Gemini, Mistral, Llama). Algorithmic — no
-  API calls.
+name: "Token Count"
+description: "Estimate the token count and cost of a text for GPT-4o, Claude, Gemini, Mistral and Llama models, without calling any model."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none
@@ -102,3 +100,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: For exact counts, use the model provider's official tokenizer (tiktoken for OpenAI, Anthropic's token counter)
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -1,9 +1,6 @@
 slug: slovak-company-data
-name: Slovak Company Data
-description: >-
-  Look up Slovak company data from RPO (Register právnických osôb), the Slovak Statistical Office's authoritative
-  legal-persons register. Returns name, address, legal form, registration details, and statutory representatives. Free,
-  CC-BY 4.0.
+name: "Slovak Company Data"
+description: "Look up a Slovak company in RPO, the Statistical Office's register of legal persons. Returns name, address, legal form, registration details and statutory representatives."
 category: company-data
 price_cents: 5
 is_free_tier: false
@@ -203,3 +200,8 @@ output_field_reliability:
   primary_registration_id: common
   registered_address: guaranteed
   date_incorporated: common
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

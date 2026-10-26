@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: privacy-policy-analyze
-name: Privacy Policy Analyze
-description: >-
-  Analyze a company's privacy policy. Extracts data collected, purposes, third parties, user rights, GDPR/CCPA
-  compliance signals.
+name: "Privacy Policy Analysis"
+description: "Read a company's privacy policy and pull out the data collected, purposes, third parties, user rights and GDPR and CCPA signals."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -108,3 +106,10 @@ limitations:
     category: coverage
     severity: info
     workaround: This privacy policy produced more content than fits in one call — no direct workaround
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

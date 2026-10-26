@@ -1,8 +1,6 @@
 slug: solana-address-validate
-name: Solana Address Validation
-description: >-
-  Validate a Solana address. Checks base58 alphabet and 32-byte ed25519 public-key length. Solana addresses have no
-  checksum — validity is purely structural. Pure algorithmic — fast and cheap, no on-chain lookup.
+name: "Solana Address Validation"
+description: "Check a Solana address: the base58 alphabet and the 32-byte key length. Solana addresses carry no checksum, so this checks the structure only."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -99,3 +97,8 @@ limitations:
       (PDAs), or program accounts. This validator confirms the shape but does not classify.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

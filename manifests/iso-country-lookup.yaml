@@ -1,8 +1,6 @@
 slug: iso-country-lookup
-name: ISO Country Lookup
-description: >-
-  Look up any country by name, ISO code (alpha-2/3/numeric). Returns region, capital, currency, EU/Schengen/Eurozone
-  membership.
+name: "Country Lookup"
+description: "Look up a country by name or ISO code: region, capital, currency, and EU, Schengen and euro membership."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -70,3 +68,8 @@ limitations:
     category: freshness
     severity: info
     workaround: For edge cases, cross-reference with the ISO Online Browsing Platform at iso.org/obp
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

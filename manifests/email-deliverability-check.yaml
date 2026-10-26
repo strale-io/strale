@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: email-deliverability-check
-name: Email Deliverability Check
-description: "Check email deliverability for a domain: SPF, DKIM, DMARC, MX records, blacklist status. Returns 0-100 score."
+name: "Email Deliverability Check"
+description: "Score a domain's email deliverability from 0 to 100 from its SPF, DKIM, DMARC, mail servers and blocklist status."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -97,3 +97,11 @@ limitations:
     workaround: >-
       Treat SMTP-verified results as 'likely deliverable' and implement bounce handling in your email pipeline for
       definitive status
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: spamhaus
+  checks: pending
+  checks_note: "Pending: queries the Spamhaus ZEN, SpamCop and Barracuda DNS blocklists; their terms for commercial use are not recorded."

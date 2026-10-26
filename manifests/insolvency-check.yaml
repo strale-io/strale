@@ -1,8 +1,6 @@
 slug: insolvency-check
-name: Insolvency Check
-description: >-
-  Check if a company has any insolvency, bankruptcy, or winding-up proceedings. Currently
-  covers UK (via Companies House). Returns status and key dates.
+name: "Insolvency Check"
+description: "Check a UK company for insolvency, bankruptcy or winding-up proceedings at Companies House. Returns the status and key dates."
 category: compliance
 cost_class: free_quota
 quota_window: daily
@@ -112,3 +110,8 @@ limitations:
     text: UK insolvency checks require COMPANIES_HOUSE_API_KEY environment variable
     category: dependency
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api
