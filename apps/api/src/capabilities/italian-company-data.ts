@@ -3,7 +3,8 @@
 //
 // Phase 2c Openapi resolver replication — the final EU30 country to
 // reach code-side parity. REPLACES the prior registroimprese.it
-// Browserless scraping path (Tier 1 violation per DEC-20260428-A,
+// Browserless scraping path (Tier 1 violation per DEC-20260428-A, superseded
+// 2026-10-24 by DEC-20261023-A, whose vendor lane this Openapi path is;
 // deactivated 2026-04-28). Openapi is the licensed multi-country
 // aggregator path per DEC-20260507-C.
 //

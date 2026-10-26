@@ -18,10 +18,11 @@
  * own curated caller-attributable list; upstream/timeout checks run BEFORE
  * the generic caller patterns.
  *
- * Pure string classification, no imports beyond the ToS marker constant.
+ * Pure string classification, no imports beyond the access-policy marker
+ * predicate and the refusal authority.
  * Ordering matters and is pinned by tests both directions.
  */
-import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
+import { isAccessPolicyRefusal } from "./tos-blocklist.js";
 import {
   CALLER_FIELD_REFUSAL_SOURCE,
   isRefusalMessage,
@@ -29,7 +30,9 @@ import {
 
 export type TransactionFailureClass =
   | "caller_input"   // bad/missing input, wrong identifier, unresolvable name
-  | "tos_policy"     // per-source ToS refusal — a policy answer, not a defect
+  | "tos_policy"     // access-policy refusal — the ToS blocklist, or the target site's own
+                     // block (HTTP 401/403/407/429, challenge page, robots.txt; DEC-20261023-A).
+                     // A policy answer, not a defect
   | "config"         // missing key/credential/env on our side
   | "timeout"        // execution or upstream deadline exceeded
   | "upstream"       // vendor/upstream failure: 5xx, quota, unavailability
@@ -362,7 +365,7 @@ export function classifyTransactionFailure(error: string | null | undefined): Tr
   // matched. It is the emptiest possible input and the clearest case for the
   // shortfall class.
   if (!msg) return "unclassified";
-  if (msg.includes(TOS_REFUSAL_MARKER)) return "tos_policy";
+  if (isAccessPolicyRefusal(msg)) return "tos_policy";
   // Our own harness marker, claimed before every other pattern: the message
   // embeds suite metadata and timestamps that must never be pattern-matched
   // as though they were a capability's error text.

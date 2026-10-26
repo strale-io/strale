@@ -109,3 +109,8 @@ limitations:
     workaround: >-
       Verify requirements with the destination country's immigration authority or a qualified immigration lawyer before
       filing
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

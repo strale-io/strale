@@ -98,3 +98,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Query the authoritative nameserver directly (returned in the NS records) to see changes before full propagation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

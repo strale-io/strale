@@ -72,3 +72,8 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Use as a preliminary screen and confirm the UN number and packing group with your certified DG advisor
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

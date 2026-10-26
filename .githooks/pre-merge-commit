@@ -1,0 +1,8 @@
+#!/bin/sh
+# A merge that completes without conflicts skips pre-commit, so a merge of main
+# that brings in another PR's handoff or archive file would leave the index
+# stale. Git commits the merge from the tree it had before this hook, so when
+# the index needs regenerating the script stages it and stops the merge;
+# `git commit --no-edit` completes it. A conflicted merge finishes with
+# `git commit`, which runs pre-commit.
+exec node scripts/handoff/regenerate-indexes.mjs --merge

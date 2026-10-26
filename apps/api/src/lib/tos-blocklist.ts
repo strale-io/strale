@@ -20,10 +20,13 @@
  * platform was serving, for money, the precise automated access that
  * `linkedin-url-validate` had been deactivated for performing.
  *
- * Per DEC-20260428-A Tier 1 ("Strale itself never operates scrapers" — stated
- * as absolute) and DEC-20260420-H (direct connections, full ToS compliance),
- * the check belongs on the fetch path, not on the capability name. This module
- * is that single source of truth.
+ * The check belongs on the fetch path, not on the capability name. This module
+ * is that single source of truth. It was written under DEC-20260428-A Tier 1
+ * and DEC-20260420-H; since 2026-10-24 it implements DEC-20261023-A, the
+ * risk-based data-access rule that superseded the three-tier doctrine. These
+ * hosts are that rule's never lane, items 4 (platforms that forbid automated
+ * access and actively enforce it) and 5 (commercial aggregators), and the
+ * rule keeps this list as the only terms gate for customer-named pages.
  *
  * ## What it is not
  *
@@ -133,6 +136,56 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
     decision: "DEC-20260420-H",
     alternatives: "Use the organisation's own website instead.",
   },
+  // DEC-20261023-A never lane, item 4: Reddit forbids automated access and is
+  // litigating it (Reddit v. SerpApi / Perplexity, S.D.N.Y., 2026). Added once
+  // social-profile-check stopped probing reddit.com, so this refusal cannot
+  // be read there as "profile does not exist". redd.it, redditmedia.com and
+  // redditstatic.com are Reddit's link, media and asset hosts.
+  {
+    host: "reddit.com",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  {
+    host: "redd.it",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  {
+    host: "redditmedia.com",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  {
+    host: "redditstatic.com",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  // DEC-20261023-A never lane, item 5: commercial aggregators of registry
+  // data, "even per call". Strale stopped calling both itself under
+  // DEC-20260427-I; this closes the customer-URL route to them too.
+  {
+    host: "allabolag.se",
+    site: "Allabolag",
+    decision: "DEC-20261023-A",
+    alternatives: "Use swedish-company-data, which reads Bolagsverket's official register.",
+  },
+  {
+    host: "northdata.com",
+    site: "North Data",
+    decision: "DEC-20261023-A",
+    alternatives: "Use the company-data capability for the company's country, which reads its official register.",
+  },
+  {
+    host: "northdata.de",
+    site: "North Data",
+    decision: "DEC-20261023-A",
+    alternatives: "Use the company-data capability for the company's country, which reads its official register.",
+  },
 ];
 
 /**
@@ -144,6 +197,32 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
  * the breaker and take the capability down for everyone.
  */
 export const TOS_REFUSAL_MARKER = "Terms of Service prohibit automated access";
+
+/**
+ * Stable substring of every refusal `lib/site-access.ts` issues when a site
+ * itself refuses the fetch: HTTP 401/403/407/429, an anti-bot challenge page,
+ * or robots.txt. DEC-20261023-A ("allowed with checks" lane) requires the fetch
+ * path to stop there rather than retry through another route.
+ *
+ * Lives here, beside {@link TOS_REFUSAL_MARKER}, because this module imports
+ * nothing: `capability-refusal.ts` and the failure taxonomy can read both
+ * markers without an import cycle.
+ */
+export const SITE_BLOCK_MARKER = "Strale stops at a site's block";
+
+/**
+ * Is this message an access-policy refusal — the blocklist declining a host,
+ * or the target site declining Strale? Either way the executor worked and the
+ * answer is a policy answer, not a capability fault.
+ *
+ * Substring rather than prefix match, like {@link TOS_REFUSAL_MARKER} always
+ * was: several executors wrap fetch errors in their own sentence, and both
+ * markers are Strale's own wording, which no caller-quoted text produces by
+ * accident.
+ */
+export function isAccessPolicyRefusal(message: string): boolean {
+  return message.includes(TOS_REFUSAL_MARKER) || message.includes(SITE_BLOCK_MARKER);
+}
 
 /** Normalize a possibly scheme-less input the way the executors do. */
 function toUrl(rawUrl: string): URL | null {

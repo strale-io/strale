@@ -196,3 +196,10 @@ limitations:
     workaround: >-
       Prefer 'company_id' (OpenRegister canonical, e.g. "DE-HRB-F1103-267645") when
       known — it skips the autocomplete step and consumes one fewer Free-tier credit.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: openregister
+  checks: pending

@@ -96,6 +96,7 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
   let certificates: Record<string, unknown>[] = [];
   let nameLists: string[][] = [];
   let source = "Cert Spotter (SSLMate) Certificate Transparency API";
+  let upstreamVendor = "sslmate";
 
   const params = new URLSearchParams({ domain, expand: "dns_names" });
   if (includeSubdomains) params.set("include_subdomains", "true");
@@ -143,6 +144,7 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
       throw new Error("crt.sh returned an unexpected response shape.");
     }
     source = "crt.sh Certificate Transparency search (Sectigo)";
+    upstreamVendor = "crt.sh";
     nameLists = rows.map((r) => (r.name_value ?? "").split("\n"));
     certificates = rows.map((r) => ({
       id: r.id ?? null,
@@ -188,6 +190,11 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
       latest_certificate: befores[befores.length - 1] ?? null,
       certificates: page,
     },
-    provenance: { source, fetched_at: new Date().toISOString() },
+    provenance: {
+      source,
+      fetched_at: new Date().toISOString(),
+      acquisition_method: "vendor_api",
+      upstream_vendor: upstreamVendor,
+    },
   };
 });

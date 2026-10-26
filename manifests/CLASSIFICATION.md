@@ -67,9 +67,10 @@ Set false if the upstream vendor's terms of service prohibit resale,
 embedding, or third-party redistribution of the data **and** Strale
 has not negotiated a clean redistribution license.
 
-This dovetails with DEC-20260428-A (third-party scraping doctrine,
-three tiers): Tier-2 vendor consumption requires documented
-redistribution rights. If those rights are absent for a specific
+This dovetails with DEC-20261023-A (the data-access rule, which on
+2026-10-24 superseded DEC-20260428-A, the three-tier scraping doctrine):
+reselling a vendor's data requires terms that permit resale, verified and
+recorded. If those rights are absent for a specific
 vendor, the capability can still execute for an authenticated customer
 with their own contractual posture (internal-only callers), but it
 should not appear on the marketplace surfacing the data to anyone.
@@ -154,7 +155,7 @@ on a live row.
 ## See also
 
 - DEC-20260503-A — marketplace surfacing decision (Notion Decisions DB)
-- DEC-20260428-A — third-party scraping doctrine (three-tier framework)
+- DEC-20260428-A — third-party scraping doctrine (three-tier framework); superseded 2026-10-24 by DEC-20261023-A, the risk-based data-access rule
 - `apps/api/src/lib/capability-field-authority.ts` — `hybrid` category
 - `apps/api/src/lib/onboarding-gates.ts` — `validateManifest` /
   `validateCapabilityStructure` cross-field gate

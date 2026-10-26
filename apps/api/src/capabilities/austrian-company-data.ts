@@ -6,7 +6,7 @@
 // grant to Moonlighter AB (token issued by BRZ/JustizOnline 2026-08-27,
 // terms CC BY 4.0) is the exact reactivation trigger named in
 // DEC-20260427-I-6: "licensed contract with the Austrian Justizministerium
-// for direct Firmenbuch API access". Preference-order top per DEC-20260813-A.
+// for direct Firmenbuch API access". Preferred lane under DEC-20261023-A (official API; formerly the top of DEC-20260813-A's preference order).
 //
 // API: SOAP 1.2, X-API-KEY header auth. The WSDL itself requires the key
 // (401 without). Spring-WS validates requests strictly: every element of a

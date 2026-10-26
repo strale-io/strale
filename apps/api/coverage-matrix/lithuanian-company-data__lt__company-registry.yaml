@@ -17,7 +17,7 @@ provider_tos_notes: >-
   data.gov.lt terms: CC-BY 4.0 (Creative Commons Attribution 4.0 International). Commercial reuse
   permitted with attribution. Required attribution: 'VĮ Registrų centras / data.gov.lt, CC-BY 4.0'
   with link to license text. Same envelope pattern as Bolagsverket SE (commit 4bbe8c4) and IE CRO.
-doctrine_reference: DEC-20260428-A Tier 2 (statutory public records, direct API path)
+doctrine_reference: DEC-20261023-A preferred lane (statutory public records, direct API path; formerly DEC-20260428-A Tier 2)
 notes: >-
   2026-05-15 identity audit Batch 3 confirmed LT functional via data.gov.lt Spinta API. Outage
   during audit self-resolved per triage doc. Classifier cache cold-miss fragility under load (v1.1+

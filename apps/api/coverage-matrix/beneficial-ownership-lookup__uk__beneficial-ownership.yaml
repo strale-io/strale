@@ -14,7 +14,7 @@ products:
   - Counterparty Assurance
 vendor_roster_url: null
 provider_tos_notes: null
-doctrine_reference: DEC-20260428-A Tier 2
+doctrine_reference: DEC-20261023-A preferred lane (official register API; formerly DEC-20260428-A Tier 2)
 notes: >-
   CORRECTED 2026-09-11 (stale-provider fix): the row previously named "OpenOwnership", but
   apps/api/src/capabilities/beneficial-ownership-lookup.ts calls only the UK Companies House API

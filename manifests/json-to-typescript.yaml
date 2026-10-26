@@ -91,3 +91,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide multiple JSON samples with varying shapes to produce more accurate optional and union type inference
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

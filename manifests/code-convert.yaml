@@ -104,3 +104,8 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Run the converted code through the target language's linter and test suite before using in production
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

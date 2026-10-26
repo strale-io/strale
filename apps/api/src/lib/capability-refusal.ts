@@ -32,10 +32,18 @@
  *      against success rate. Not the floor: an earlier version of this comment
  *      claimed it was, which is what hid (2) until the wiring was traced.
  *
+ * Site-access refusals (DEC-20261023-A) join this module through
+ * `isRefusalMessage`: when a target site answers 401/403/407/429, serves an
+ * anti-bot challenge, or disallows the path in robots.txt, the fetch path stops
+ * (`site-access.ts`). That is the capability obeying the data-access rule, so
+ * it must not open the breaker or count against the floor.
+ *
  * Nothing here changes what the caller sees. A refusal is still an error, still
  * names the disambiguator, and is still unbilled per DEC-14. Only the health
  * accounting changes.
  */
+
+import { isAccessPolicyRefusal } from "./tos-blocklist.js";
 
 /**
  * Thrown by a capability when the request cannot be answered as asked and the
@@ -166,5 +174,10 @@ export function isCapabilityRefusal(err: unknown): boolean {
  */
 export function isRefusalMessage(message: string): boolean {
   if (CALLER_FIELD_REFUSAL_RE.test(message)) return true;
+  // 3. An access-policy refusal: the ToS blocklist, or the target site's own
+  //    block (DEC-20261023-A). Matched anywhere in the message, because
+  //    executors wrap fetch errors in their own sentence; see
+  //    `isAccessPolicyRefusal` for why that is safe for these two markers.
+  if (isAccessPolicyRefusal(message)) return true;
   return REFUSAL_MESSAGE_PATTERNS.some((p) => message.startsWith(p));
 }

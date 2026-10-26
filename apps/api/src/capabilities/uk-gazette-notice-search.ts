@@ -124,7 +124,7 @@ registerCapability("uk-gazette-notice-search", async (input: CapabilityInput) =>
       source: "thegazette.co.uk",
       fetched_at: new Date().toISOString(),
       upstream_vendor: "The Gazette (His Majesty's Stationery Office / TSO)",
-      acquisition_method: "official_api",
+      acquisition_method: "direct_api",
       primary_source_reference: "https://www.thegazette.co.uk/insolvency",
     },
   };

@@ -89,3 +89,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Add .email(), .url(), or .datetime() refinements manually for fields that require format validation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

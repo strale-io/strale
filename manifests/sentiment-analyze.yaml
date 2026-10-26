@@ -99,3 +99,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use the confidence score in the response and flag low-confidence results for human review in critical applications
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

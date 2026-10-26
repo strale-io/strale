@@ -99,7 +99,7 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
       serp_features: serpFeatures,
       top_domains: topDomains,
     },
-    provenance: { source: "google.com", fetched_at: new Date().toISOString() },
+    provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
   };
 });
 

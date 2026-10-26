@@ -93,3 +93,8 @@ limitations:
     workaround: >-
       Use the abuse contact email from the WHOIS response to request registrant details through the registrar's
       disclosure process
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

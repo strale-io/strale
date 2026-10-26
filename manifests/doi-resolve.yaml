@@ -141,3 +141,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Call citation-graph for the OpenAlex figure and the citing works themselves.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

@@ -10,7 +10,8 @@ import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
  * both currently registered and historical entities.
  *
  * Replaces the prior Browserless+LLM scrape of core.cro.ie which was
- * a Tier 1 violation per DEC-20260428-A. This implementation is
+ * a Tier 1 violation per DEC-20260428-A (superseded 2026-10-24 by
+ * DEC-20261023-A; this direct API path is its preferred lane). This implementation is
  * `acquisition_method: direct_api`.
  */
 

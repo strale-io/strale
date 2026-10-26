@@ -105,7 +105,7 @@ async function queryDilisense(
   apiKey: string,
 ): Promise<{
   output: Record<string, unknown>;
-  provenance: { source: string; fetched_at: string };
+  provenance: { source: string; fetched_at: string; acquisition_method: "vendor_api"; upstream_vendor: string };
 } | null> {
   const endpoint = isCompany ? "checkEntity" : "checkIndividual";
   const oneYearAgo = new Date();
@@ -165,7 +165,7 @@ async function queryDilisense(
       period: "last 12 months",
       source: "dilisense",
     },
-    provenance: { source: "dilisense.com", fetched_at: now },
+    provenance: { source: "dilisense.com", fetched_at: now, acquisition_method: "vendor_api", upstream_vendor: "dilisense" },
   };
 }
 
@@ -177,7 +177,7 @@ async function querySerper(
   fallbackReason: string,
 ): Promise<{
   output: Record<string, unknown>;
-  provenance: { source: string; fetched_at: string };
+  provenance: { source: string; fetched_at: string; acquisition_method: "vendor_api"; upstream_vendor: string };
 }> {
   // Search for adverse media: company name + risk keywords
   const query = `"${name}" (fraud OR sanctions OR investigation OR lawsuit OR regulatory OR penalty)`;
@@ -233,7 +233,7 @@ async function querySerper(
       source: "serper",
       fallback_reason: fallbackReason,
     },
-    provenance: { source: "google-serper", fetched_at: now },
+    provenance: { source: "google-serper", fetched_at: now, acquisition_method: "vendor_api", upstream_vendor: "serper" },
   };
 }
 

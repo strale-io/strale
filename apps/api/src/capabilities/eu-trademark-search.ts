@@ -15,7 +15,7 @@ registerCapability("eu-trademark-search", async (input: CapabilityInput) => {
   let searchUrl = `https://euipo.europa.eu/eSearch/#basic/${encodeURIComponent(query)}`;
   if (niceClass) searchUrl += `/class/${niceClass}`;
 
-  const html = await fetchRenderedHtml(searchUrl);
+  const html = await fetchRenderedHtml(searchUrl, { source: "strale" });
   const text = htmlToText(html);
 
   if (text.length < 200) {
