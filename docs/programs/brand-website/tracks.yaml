@@ -89,7 +89,7 @@ tracks:
     gate: none
     depends_on: [T5]
     owner: session
-    next_action: "apps/web is being built in stacked PRs held open for Petter's review (no merge publishes it; strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Slice 1 (tokens, app, homepage) is PR #725 on claude/loving-newton-mxoo9l; slice 2 (tools catalogue, tool and bundle pages) is PR #726; slice 3 (company-data hub and country pages) is on claude/loving-newton-mxoo9l-company-data. Next slices, in SITE-STRUCTURE order: use cases, pricing, docs, security, about; machine-readable surfaces. Live-data screenshots come from the CI web job's web-review artifact; the cloud sandbox can only build preview data."
+    next_action: "apps/web is built in stacked PRs #725 <- #726 <- #727 <- #736 (design/site-polish), main merged up the stack on 2026-10-26, nothing merged or published (strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Homepage (seven sections, approved by Petter) and the /tools catalogue redesign are on #736; the catalogue copy pass ships separately on branch content/catalogue-copy as a ledgered startup migration. Next: show Petter the catalogue, then company-data tidy, detail bugs, missing pages, and an independent review of #736. Full state: handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md."
     resume_file: apps/web/README.md
     exit:
       - Responsive, accessible and performant benefit-first website with truthful demonstrations.

@@ -390,6 +390,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
+        "handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -555,7 +556,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "7510bfc296b21b06d566913dd31a0e527269f595fb489bc19bd293229be82ea9",
+      "sha256": "6c5592d45d9a44104d218ecab607fc73d24c76ab9d932c1448f65519cef72e07",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -679,6 +680,7 @@
         "handoff/_general/from-code/2026-10-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
+        "handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -821,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "9a13057e9ea4310ad2f6f4f92d9d9a4258e97d6189fed9107722349ab78ddc74",
+      "sha256": "638773a8d3f55f6ac2c7573b94cb2cd82bf8ea85e71289f17cae517fc662886e",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -977,6 +979,7 @@
         "docs/programs/brand-website/PROOF-QUALIFICATION.md",
         "docs/programs/brand-website/SYSTEM-COMPLETION.md",
         "docs/programs/brand-website/system-completion.json",
+        "docs/programs/brand-website/tracks.yaml",
         "docs/programs/codex-review-backlog.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",

@@ -223,7 +223,7 @@ const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.
   .cat-count { color: var(--text-muted); font-size: var(--type-small-size); }
   .cat-clear { font-size: var(--type-small-size); background: none; border: 0; padding: 0; cursor: pointer; }
   .group { display: grid; gap: var(--space-16); }
-  .group[hidden] { display: none; }
+  .group[hidden], .empty-state[hidden] { display: none; }
   .group-head { display: grid; gap: var(--space-4); }
   .group-head .t-compact { max-width: var(--measure-body); }
   .group-more { justify-self: start; }
@@ -247,7 +247,7 @@ const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.
   .families { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 1024px) { .families { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .family { display: grid; gap: var(--space-12); align-content: start; padding: var(--space-24); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); }
-  .family-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-12); }
+  .family-head { display: grid; gap: var(--space-4); }
   .family-price { white-space: nowrap; }
   .family-price .unit { margin-left: var(--space-4); color: var(--text-muted); font-size: var(--type-small-size); }
   .family-meta { color: var(--text-muted); font-size: var(--type-small-size); }

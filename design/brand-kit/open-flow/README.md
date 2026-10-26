@@ -137,6 +137,18 @@ All flow artwork shares one family: blue, violet and teal ribbons on a near-whit
 
 Dark-native raster variants have not been commissioned. That is listed as a gap below.
 
+**Spot illustrations (Open Flow 0.2, Daylight, set v2, 2026-10-26).** The site's spot art in
+`apps/web/src/assets/illustrations/` is one matched set: the same camera (a gentle
+three-quarter view from slightly above), the same light (soft key from the upper left, one
+contact shadow), satin ribbons in blue, violet and teal with pink-lilac highlights, and matte
+white objects. Every image is a transparent PNG converted to WebP with alpha, so it stands on
+light and dark surfaces with no plate behind it. Each image's full brief and hash are in that
+folder's `provenance.json`. To add one, reuse the shared brief from an existing entry, change
+only the subject sentence, generate with ChatGPT image generation through the Codex CLI on the
+founder subscription (`codex exec --skip-git-repo-check -s workspace-write "<brief>" < /dev/null`;
+stdin must be closed), check it on white and on deep violet side by side, then convert
+(1024px wide, WebP quality 86, alpha kept) and record it in `provenance.json`.
+
 ## Components
 
 Every component is in the specimen with its states. State classes (`is-hover`, `is-focus`, `is-active`) exist only so the specimen can show states side by side. A real page gets state from `:hover`, `:focus-visible`, `:active`, `disabled`, `aria-*` and data.
