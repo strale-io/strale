@@ -214,7 +214,7 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
       for (const [start, end] of spans.sort((a, b) => b[0] - a[0])) code = code.slice(0, start) + '""' + code.slice(end);
       withoutMetadata.set(original, code);
     }
-    return record.hosts.some(host => code.includes(host)) ||
+    return (record.url_prefixes ?? record.hosts).some(host => code.includes(host)) ||
       code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
   };
   // Follow literal imports and re-exports into capability helpers and reachable
@@ -280,6 +280,18 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
   function exactCallers(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
     return candidates.filter(f => f.slug && callsVendor(f, record)).map(f => f.slug as string).sort();
   }
+  it("scopes service-specific terms to URL prefixes on a shared host", () => {
+    const eurostat = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Eurostat")!;
+    expect(directlyCallsVendor('fetch("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/test")', eurostat)).toBe(true);
+    expect(directlyCallsVendor('fetch("https://ec.europa.eu/taxation_customs/vies/services/checkVatService")', eurostat)).toBe(false);
+    for (const entry of VENDOR_TERMS_RECORDS) {
+      for (const prefix of entry.url_prefixes ?? []) {
+        expect(entry.hosts).toContain(new URL(prefix).hostname);
+        expect(prefix.endsWith("/")).toBe(true);
+      }
+    }
+  });
+
   function assertExactCallers(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
     expect([...record.capabilities].sort()).toEqual(exactCallers(record, candidates));
   }
