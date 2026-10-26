@@ -133,30 +133,30 @@
   {
     "id": "NO-deleted",
     "registry_slug": "norwegian-company-data",
-    "label": "deleted limited company, 2026-10-15 (excluded country)",
+    "label": "deleted limited company, 2026-10-15",
     "executor_input": {
       "org_number": "994387057"
     },
-    "captured_at": "2026-10-26T11:31:34.850Z",
+    "captured_at": "2026-10-26T14:16:18.650Z",
     "executor_output": {
-      "status": "active",
+      "status": "deleted",
       "company_name": "[company name omitted from this fixture]",
       "legal_name": "[company name omitted from this fixture]",
       "org_number": "994387057",
       "registration_date": null
     },
-    "note": "A deleted limited company (AS); name omitted. Registry: deleted 2026-10-15; the executor on main before the status fix reported active."
+    "note": "Deleted limited company (AS); name omitted. Current executor output captured live after PR #746."
   },
   {
     "id": "PL-struck-off",
     "registry_slug": "polish-company-data",
-    "label": "Grupa Lotos, struck off 2022 (excluded country)",
+    "label": "Grupa Lotos, struck off 2022",
     "executor_input": {
       "krs_number": "0000106150"
     },
-    "captured_at": "2026-10-26T11:31:36.770Z",
+    "captured_at": "2026-10-26T14:16:21.554Z",
     "executor_output": {
-      "status": "active",
+      "status": "deregistered",
       "company_name": "GRUPA LOTOS SPÓŁKA AKCYJNA",
       "legal_name": "GRUPA LOTOS SPÓŁKA AKCYJNA",
       "krs_number": "0000106150",
@@ -166,13 +166,13 @@
   {
     "id": "CZ-v-likvidaci",
     "registry_slug": "cz-company-data",
-    "label": "v likvidaci (excluded country)",
+    "label": "v likvidaci",
     "executor_input": {
       "ico": "01485377"
     },
-    "captured_at": "2026-10-26T11:31:37.466Z",
+    "captured_at": "2026-10-26T14:16:23.958Z",
     "executor_output": {
-      "status": "active",
+      "status": "liquidation",
       "company_name": "TIKA stavby s.r.o. v likvidaci",
       "legal_name": "TIKA stavby s.r.o. v likvidaci",
       "ico": "01485377",

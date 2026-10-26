@@ -19,6 +19,8 @@
  * LLM-backed name-resolution path.
  */
 
+import { normalizeIco, isValidIcoChecksum } from "../cz-validation.js";
+
 export interface InsolvencySource {
   /**
    * `separate`: a second executor is called. `same_record`: the registry
@@ -82,6 +84,15 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
     normalise_identifier: exactDigits(11),
   },
   {
+    iso: "CZ",
+    registry: { slug: "cz-company-data", name: "ARES (Czech Ministry of Finance)", input_field: "ico" },
+    identifier_help: "an 8-digit IČO with a valid mod-11 checksum, e.g. 00177041",
+    normalise_identifier: (raw) => {
+      const ico = normalizeIco(raw);
+      return ico && isValidIcoChecksum(ico) ? ico : null;
+    },
+  },
+  {
     iso: "EE",
     registry: { slug: "estonian-company-data", name: "Äriregister (Estonian Business Register)", input_field: "registry_code" },
     identifier_help: "an 8-digit registry code",
@@ -136,6 +147,27 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
     normalise_identifier: exactDigits(11),
   },
   {
+    iso: "NO",
+    registry: { slug: "norwegian-company-data", name: "Brønnøysundregistrene Enhetsregisteret", input_field: "org_number" },
+    identifier_help: "a 9-digit Norwegian organisation number, e.g. 923609016",
+    numeric_ok: true, // Brreg organisation numbers begin with 8 or 9.
+    normalise_identifier: (raw) => {
+      // Mirror brreg-fetch.ts normalizeOrgNumber / BRREG_ORG_NUMBER_RE without importing its HTTP client.
+      const org = raw.replace(/[\s.-]/g, "").trim();
+      return /^\d{9}$/.test(org) ? org : null;
+    },
+    insolvency: { kind: "separate", slug: "no-bankruptcy-check", name: "Brønnøysundregistrene Enhetsregisteret" },
+  },
+  {
+    iso: "PL",
+    registry: { slug: "polish-company-data", name: "KRS (Polish Ministry of Justice)", input_field: "krs_number" },
+    identifier_help: "a 10-digit KRS number, e.g. 0000028860 (keep leading zeros)",
+    normalise_identifier: (raw) => {
+      const krs = raw.replace(/[\s.-]/g, "");
+      return /^\d{10}$/.test(krs) ? krs : null;
+    },
+  },
+  {
     iso: "SE",
     registry: { slug: "swedish-company-data", name: "Bolagsverket (Swedish Companies Registration Office)", input_field: "org_number" },
     identifier_help: "a 10-digit organisationsnummer whose third digit is 2 or higher, e.g. 556703-7485; personal identity numbers are not accepted",
@@ -170,10 +202,7 @@ export const EXCLUDED_COUNTRIES: Readonly<Record<string, string>> = {
   DE: "data-access checks for the German source (OpenRegister, a vendor register API) are recorded as pending, and its free tier is a small monthly quota that a composite call would spend",
   ES: "data-access checks for the Spanish source (a vendor aggregation of BORME) are recorded as pending",
   JP: "the Japanese source is a page scrape with checks recorded as pending",
-  CZ: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
-  NO: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
   GR: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities (deriveStatus tests the Greek word for active before the one for inactive, so an inactive company is reported active); fix tracked separately",
-  PL: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
   SI: "the Slovenian open dataset carries no status column",
   SK: "the Slovak register publishes no status flag; the executor infers one from validity dates",
   US: "the US executor reads SEC EDGAR, which is a filer index and has no company status; it sets \"active\" for any match",

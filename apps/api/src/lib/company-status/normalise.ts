@@ -80,12 +80,12 @@ export const STATUS_MAP_ROWS: readonly StatusMapRow[] = [
   { slug: AU, raw: "Active", status: "active", source: "ABR entityStatusCode; manifest au-company-data.yaml fixture" },
   { slug: AU, raw: "Cancelled", status: "inactive", source: "ABR entityStatusCode (ABN cancelled); not re-fetched in-session" },
 
-  // Czechia. deriveStatus() in cz-company-data.ts: stavZdrojeRos AKTIVNI -> "active",
-  // ZANIKLY -> "dissolved" (zanikly = ceased to exist), no ROS block -> "unknown".
-  // Any other stavZdrojeRos is returned lower-cased by the executor and is left unmapped.
-  { slug: CZ, raw: "active", status: "active", source: "executor: cz-company-data.ts deriveStatus (AKTIVNI)" },
-  { slug: CZ, raw: "dissolved", status: "dissolved", source: "executor: cz-company-data.ts deriveStatus (ZANIKLY)" },
-  { slug: CZ, raw: "unknown", status: "unknown", source: "executor: cz-company-data.ts deriveStatus (no ROS registration)" },
+  // Czechia: lifecycle precedence in cz-company-data.ts:207-223 (deriveStatus).
+  { slug: CZ, raw: "active", status: "active", source: "executor: cz-company-data.ts:223 (ROS AKTIVNI, VR available when required)" },
+  { slug: CZ, raw: "dissolved", status: "dissolved", source: "executor: cz-company-data.ts:210-211 (cessation date or ZANIKLY)" },
+  { slug: CZ, raw: "insolvency", status: "in_insolvency", source: "executor: cz-company-data.ts:218 (IR AKTIVNI)" },
+  { slug: CZ, raw: "liquidation", status: "in_liquidation", source: "executor: cz-company-data.ts:214-219 (current liquidator appointment)" },
+  { slug: CZ, raw: "unknown", status: "unknown", source: "executor: cz-company-data.ts:222-223 (missing VR or ROS status)" },
 
   // Estonia. statusMap in estonian-company-data.ts over the Business Register
   // (RIK) status codes: R registered, L in liquidation, K deleted, N bankrupt.
@@ -159,16 +159,16 @@ export const STATUS_MAP_ROWS: readonly StatusMapRow[] = [
   { slug: LV, raw: "Slēgts", status: "inactive", source: "executor: latvian-company-data.ts deriveStatus (closed date set)" },
   { slug: LV, raw: "Likvidēts", status: "dissolved", source: "executor: latvian-company-data.ts deriveStatus (terminated: liquidation completed)" },
 
-  // Norway. norwegian-company-data.ts: konkurs -> "bankrupt", underAvvikling -> "dissolving",
-  // else "active" (Brreg Enhetsregisteret flags).
-  { slug: NO, raw: "active", status: "active", source: "executor: norwegian-company-data.ts (no konkurs/underAvvikling flag)" },
-  { slug: NO, raw: "bankrupt", status: "in_insolvency", source: "executor: norwegian-company-data.ts (konkurs)" },
-  { slug: NO, raw: "dissolving", status: "in_liquidation", source: "executor: norwegian-company-data.ts (underAvvikling)" },
+  // Norway: deleted tombstones take precedence over live-unit flags.
+  { slug: NO, raw: "deleted", status: "struck_off", source: "executor: norwegian-company-data.ts:120-121 (SlettetEnhet or slettedato)" },
+  { slug: NO, raw: "bankrupt", status: "in_insolvency", source: "executor: norwegian-company-data.ts:122 (konkurs)" },
+  { slug: NO, raw: "compulsory_dissolution", status: "in_liquidation", source: "executor: norwegian-company-data.ts:123 (underTvangsavviklingEllerTvangsopplosning)" },
+  { slug: NO, raw: "dissolving", status: "in_liquidation", source: "executor: norwegian-company-data.ts:124 (underAvvikling)" },
+  { slug: NO, raw: "active", status: "active", source: "executor: norwegian-company-data.ts:124 (no deletion or distress flag)" },
 
-  // Poland. polish-company-data.ts: a deregistration entry (czyWykreslony) -> "deregistered"
-  // (wykreslony = struck from the KRS), else "active".
-  { slug: PL, raw: "active", status: "active", source: "executor: polish-company-data.ts" },
-  { slug: PL, raw: "deregistered", status: "struck_off", source: "executor: polish-company-data.ts (czyWykreslony)" },
+  // Poland: latest registration/deletion event in the full KRS history.
+  { slug: PL, raw: "active", status: "active", source: "executor: polish-company-data.ts:118-119 (latest event is registration)" },
+  { slug: PL, raw: "deregistered", status: "struck_off", source: "executor: polish-company-data.ts:118-119 (latest event is registry deletion)" },
 
   // Sweden. deriveStatus() in swedish-company-data.ts: Bolagsverket avregistrering date or
   // verksam = NEJ -> "deregistered"; verksam = JA -> "active"; neither -> "unknown".

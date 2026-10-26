@@ -1,13 +1,21 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CapabilityExecutor, CapabilityResult } from "../../capabilities/index.js";
 import { CapabilityRefusalError, isCapabilityRefusal } from "../capability-refusal.js";
 import { isUserInputError } from "../circuit-breaker.js";
 import { classifyUpstreamMessage, runCompanyStatusCheck, type ComposeDeps } from "./compose.js";
 import { normaliseRegistryOutput } from "./normalise.js";
 import { COUNTRY_ROUTES, EXCLUDED_COUNTRIES, SUPPORTED_COUNTRIES } from "./routing.js";
+
+import { getDirectExecutor } from "../../capabilities/index.js";
+import "../../capabilities/norwegian-company-data.js";
+import "../../capabilities/no-bankruptcy-check.js";
+import "../../capabilities/polish-company-data.js";
+import "../../capabilities/cz-company-data.js";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const NOW = new Date("2026-10-26T10:00:00.000Z");
 const ok = (output: Record<string, unknown>, extra: Record<string, unknown> = {}): CapabilityResult => ({
@@ -27,6 +35,9 @@ const run = (d: ComposeDeps, input: Record<string, unknown>) => runCompanyStatus
 const REAL_NOT_FOUND: Array<[string, string]> = [
   ["AU", "ABN not found or invalid."],
   ["AT", "Firmenbuch returned no current registration data for FN 93363 z. The company may be struck off (gelöscht); historical extracts are not part of this capability."],
+  ["NO", "Norwegian company with org number 994387057 not found."],
+  ["PL", "Polish entity with KRS 0000106150 not found in either P or S register."],
+  ["CZ", "Czech company with IČO 00177041 not found in ARES."],
   ["EE", 'No Estonian company found for registry code "10137025". The code is well-formed but is not in the Business Register — it may belong to a deregistered entity, or be a typo.'],
   ["FI", "Finnish company with business ID 0112038-9 not found."],
   ["FR", 'No French company found matching "542051180".'],
@@ -38,6 +49,9 @@ const REAL_NOT_FOUND: Array<[string, string]> = [
   ["SG", "No Singapore entity found for UEN 197200078R."],
 ];
 const REAL_INVALID: Array<[string, string]> = [
+  ["NO", 'Invalid org_number: "123". Norwegian org numbers must be exactly 9 digits.'],
+  ["PL", "Polish company name search is unavailable: the only compliant data path is the KRS API by registration number. Provide a 10-digit KRS number (e.g. '0000028860' for ORLEN S.A.). Look up KRS numbers at https://wyszukiwarka-krs.ms.gov.pl/."],
+  ["CZ", "'00177042' is not a valid IČO (checksum failed). Czech IČO is 8 digits with mod-11 check."],
   ["HR", "Sudreg rejected OIB '81793146560': invalid identifier"],
   ["SE", "Bolagsverket rejected org number 5567037485 as invalid."],
   ["AT", "'FN 1' is not a valid Austrian Firmenbuchnummer. Expected up to 6 digits plus a check letter."],
@@ -64,13 +78,14 @@ describe("not-found and invalid-identifier answers are refusals", () => {
 
   it.each(REAL_NOT_FOUND)("%s: %j", async (iso, message) => {
     const route = COUNTRY_ROUTES.find((r) => r.iso === iso)!;
-    const identifier = { AT: "FN 93363 z", AU: "51824753556", EE: "10137025", FI: "0112038-9", FR: "542051180", GB: "00445790", HR: "81793146560", IE: "513174", LV: "40003245752", SE: "556703-7485", SG: "197200078R" }[iso]!;
+    const identifier = { NO: "923609016", PL: "0000028860", CZ: "00177041", AT: "FN 93363 z", AU: "51824753556", EE: "10137025", FI: "0112038-9", FR: "542051180", GB: "00445790", HR: "81793146560", IE: "513174", LV: "40003245752", SE: "556703-7485", SG: "197200078R" }[iso]!;
     // The Austrian executor throws this one as a CapabilityRefusalError; the others throw a plain Error.
     const thrown = () => (iso === "AT" ? new CapabilityRefusalError(message) : new Error(message));
     const d = deps({
       [route.registry.slug]: async () => { throw thrown(); },
       "fr-bodacc-lookup": async () => ok({}),
       "insolvency-check": async () => ok({}),
+      "no-bankruptcy-check": async () => ok({}),
     });
     const err = await run(d, { country: iso, identifier }).catch((e) => e);
     expect(err).toBeInstanceOf(CapabilityRefusalError);
@@ -82,8 +97,8 @@ describe("not-found and invalid-identifier answers are refusals", () => {
 
   it.each(REAL_INVALID)("%s: %j", async (iso, message) => {
     const route = COUNTRY_ROUTES.find((r) => r.iso === iso)!;
-    const identifier = { AT: "FN 93363 z", AU: "51824753556", HR: "81793146560", SE: "556703-7485" }[iso]!;
-    const d = deps({ [route.registry.slug]: async () => { throw new Error(message); } });
+    const identifier = { NO: "923609016", PL: "0000028860", CZ: "00177041", AT: "FN 93363 z", AU: "51824753556", HR: "81793146560", SE: "556703-7485" }[iso]!;
+    const d = deps({ "no-bankruptcy-check": async () => ok({}), [route.registry.slug]: async () => { throw new Error(message); } });
     const err = await run(d, { country: iso, identifier }).catch((e) => e);
     expect(err).toBeInstanceOf(CapabilityRefusalError);
     expect(err.message).toMatch(/^'identifier' must be a valid /);
@@ -227,8 +242,8 @@ describe("GB notices carry the proceeding status; numeric identifiers are accept
     }
   });
 
-  it("only AU opts in, and its identifier is fixed-length with no leading zero", () => {
-    expect(COUNTRY_ROUTES.filter((r) => r.numeric_ok).map((r) => r.iso)).toEqual(["AU"]);
+  it("only AU and NO opt in, and their identifiers are fixed-length with no leading zero", () => {
+    expect(COUNTRY_ROUTES.filter((r) => r.numeric_ok).map((r) => r.iso)).toEqual(["AU", "NO"]);
   });
 });
 
@@ -276,25 +291,77 @@ describe("recorded real executor responses give the expected composite status", 
   });
 });
 
-describe("dead entities in the excluded countries (NO, PL, CZ)", () => {
-  // The underlying executors still report these as "active" (their defect, tracked separately), so the
-  // countries are not routed. When the executors are fixed and the countries re-added, these fixtures
-  // are the cases to flip: NO deleted limited company (2026-10-15), PL struck off 2022, CZ "v likvidaci".
-  const DEAD: Array<[string, string, string]> = [
-    ["NO-deleted", "NO", "994387057"],
-    ["PL-struck-off", "PL", "0000106150"],
-    ["CZ-v-likvidaci", "CZ", "01485377"],
-  ];
+describe("restored registry routes use the real executors and #746 responses", () => {
+  const upstream = (name: string) => JSON.parse(readFileSync(resolve(import.meta.dirname,
+    "../../capabilities/__fixtures__/registry-status", `${name}.json`), "utf8")).response;
 
-  it.each(DEAD)("%s: the executor still says active, and the country is excluded rather than routed", async (id, country, identifier) => {
+  it.each([
+    ["NO", "994387057", "no-deleted", "", "struck_off", "deleted"],
+    ["NO", "923609016", "no-active", "", "active", "active"],
+    ["PL", "0000106150", "pl-deleted", "", "struck_off", "deregistered"],
+    ["PL", "0000028860", "pl-orlen", "", "active", "active"],
+    ["CZ", "01485377", "cz-liquidation", "cz-vr-liquidation", "in_liquidation", "liquidation"],
+    ["CZ", "00177041", "cz-active", "cz-vr-active", "active", "active"],
+  ])("%s %s → %s", async (country, identifier, basic, vr, status, raw) => {
+    const responses: Record<string, unknown> = country === "NO"
+      ? { [`/enheter/${identifier}/roller`]: { rollegrupper: [] }, [`/enheter/${identifier}`]: upstream(basic) }
+      : country === "PL" ? { [`/OdpisPelny/${identifier}`]: upstream(basic) }
+      : { [`/ekonomicke-subjekty/${identifier}`]: upstream(basic), [`/ekonomicke-subjekty-vr/${identifier}`]: upstream(vr) };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL) => {
+      const entry = Object.entries(responses).find(([part]) => String(url).includes(part));
+      if (!entry) throw new Error(`Unexpected registry request: ${url}`);
+      return Response.json(entry[1]);
+    }));
+    expect(EXCLUDED_COUNTRIES[country]).toBeUndefined();
+    const result = await run({ getExecutor: getDirectExecutor, isCircuitOpen: async () => false, now: () => NOW }, { country, identifier });
+    expect(result.output).toMatchObject({ status, registry_status_raw: raw, country, identifier });
+    expect(result.output.insolvency).toMatchObject({ checked: country === "NO" });
+    if (country === "NO") expect(result.output.insolvency).toMatchObject({ notices_found: 0, notices: [] });
+  });
+
+  it.each([
+    ["NO-deleted", "NO", "994387057", "struck_off", "deleted"],
+    ["PL-struck-off", "PL", "0000106150", "struck_off", "deregistered"],
+    ["CZ-v-likvidaci", "CZ", "01485377", "in_liquidation", "liquidation"],
+  ])("%s live executor snapshot", async (id, country, identifier, status, raw) => {
     const f = fixture(id);
-    expect(f.executor_output.status).toBe("active");
-    expect(SUPPORTED_COUNTRIES).not.toContain(country);
-    expect(EXCLUDED_COUNTRIES[country]).toMatch(/does not report deleted \/ deregistered \/ liquidating entities/);
-    const spy: CapabilityExecutor = async () => ok(f.executor_output);
-    const err = await run(deps({ [f.registry_slug]: spy }), { country, identifier }).catch((e) => e);
-    expect(err).toBeInstanceOf(CapabilityRefusalError);
-    expect(err.message).toContain(`'${country}' is not`);
+    const table = { [f.registry_slug]: async () => ok(f.executor_output), "no-bankruptcy-check": async () => ok({}) };
+    expect((await run(deps(table), { country, identifier })).output).toMatchObject({ status, registry_status_raw: raw });
+  });
+
+  it("NO accepts a JSON number and passes the identifier to both executors", async () => {
+    const registry = vi.fn(async () => ok({ status: "active" }));
+    const bankruptcy = vi.fn(async () => ok({ has_bankruptcy_filing: true, bankruptcy_date: "2026-10-01",
+      is_under_dissolution: true, is_under_compulsory_dissolution: true }, { source_url: "https://example.test/registry/923609016" }));
+    const r = await run(deps({ "norwegian-company-data": registry, "no-bankruptcy-check": bankruptcy }),
+      { country: "NO", identifier: 923609016 });
+    expect(registry).toHaveBeenCalledWith({ org_number: "923609016" });
+    expect(bankruptcy).toHaveBeenCalledWith({ org_number: "923609016" });
+    expect(r.output.insolvency).toMatchObject({ checked: true, notices_found: 3, notices: [
+      { type: "bankruptcy", date: "2026-10-01", source_url: "https://example.test/registry/923609016" },
+      { type: "compulsory_dissolution", date: null },
+      { type: "dissolution", date: null },
+    ] });
+  });
+
+  it.each(["00177042", "12345678", "company name"])("CZ refuses %s before lookup or breaker access", async identifier => {
+    const lookup = vi.fn();
+    const breaker = vi.fn();
+    await expect(run({ getExecutor: lookup, isCircuitOpen: breaker, now: () => NOW },
+      { country: "CZ", identifier })).rejects.toBeInstanceOf(CapabilityRefusalError);
+    expect(lookup).not.toHaveBeenCalled();
+    expect(breaker).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["NO", "bankrupt", "in_insolvency"], ["NO", "compulsory_dissolution", "in_liquidation"],
+    ["NO", "dissolving", "in_liquidation"], ["CZ", "insolvency", "in_insolvency"],
+    ["CZ", "dissolved", "dissolved"], ["PL", "new registry value", "unknown"],
+  ])("%s %s maps to %s through compose", async (country, raw, status) => {
+    const route = COUNTRY_ROUTES.find(r => r.iso === country)!;
+    const identifier = { NO: "923609016", CZ: "00177041", PL: "0000028860" }[country]!;
+    const d = deps({ [route.registry.slug]: async () => ok({ status: raw }), "no-bankruptcy-check": async () => ok({}) });
+    expect((await run(d, { country, identifier })).output).toMatchObject({ status, registry_status_raw: raw });
   });
 
   it("GR is excluded for the same reason: its executor reports an inactive company as active", async () => {

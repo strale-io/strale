@@ -126,6 +126,21 @@ function frNotices(out: Record<string, unknown>): { notices: InsolvencyNotice[];
   return { notices, truncated: total > BODACC_WINDOW };
 }
 
+/** Brreg structured current distress flags; deletion alone is not an insolvency notice. */
+function noNotices(out: Record<string, unknown>, source_url: string | null): InsolvencyNotice[] {
+  const notices: InsolvencyNotice[] = [];
+  if (out.has_bankruptcy_filing === true) {
+    notices.push({ date: str(out.bankruptcy_date), type: "bankruptcy", source_url });
+  }
+  if (out.is_under_compulsory_dissolution === true) {
+    notices.push({ date: null, type: "compulsory_dissolution", source_url });
+  }
+  if (out.is_under_dissolution === true) {
+    notices.push({ date: null, type: "dissolution", source_url });
+  }
+  return notices;
+}
+
 /** Bolagsverket pending proceedings, read from the registry output itself (SE). */
 function seNotices(registryOut: Record<string, unknown>): InsolvencyNotice[] {
   const seen = new Set<string>();
@@ -175,6 +190,11 @@ const NOT_FOUND_PATTERNS: readonly RegExp[] = [
   /^No Latvian company found /, // latvian-company-data
   /^No Swedish organisation found /, // swedish-company-data
   /^No Singapore entity found /, // singapore-company-data
+  /^Norwegian company with org number \d{9} not found\.$/, // brreg-fetch.ts (both NO executors)
+  /^No Norwegian company found matching ".+"\.$/,
+  /^Polish entity with KRS \d{10} not found in either P or S register\.$/, // polish-company-data
+  /^Czech company with IČO \d{8} not found in ARES\.$/, // cz-company-data
+  /^No Czech company found matching ".+"\.$/,
   /^No BODACC announcement found /, // fr-bodacc-lookup
 ];
 const INVALID_IDENTIFIER_PATTERNS: readonly RegExp[] = [
@@ -184,6 +204,9 @@ const INVALID_IDENTIFIER_PATTERNS: readonly RegExp[] = [
   /^'.+' is not a valid Croatian OIB/,
   /^Bolagsverket rejected org number .+ as invalid\.$/, // swedish-company-data
   /^'.+' is not a valid Swedish organisationsnummer/,
+  /^Invalid org_number: ".+"\. Norwegian org numbers must be exactly 9 digits\.$/, // no-bankruptcy-check
+  /^Polish company name search is unavailable: the only compliant data path is the KRS API by registration number\. Provide a 10-digit KRS number \(e\.g\. '0000028860' for ORLEN S\.A\.\)\. Look up KRS numbers at https:\/\/wyszukiwarka-krs\.ms\.gov\.pl\/\.$/,
+  /^'.+' is not a valid IČO \(checksum failed\)\. Czech IČO is 8 digits with mod-11 check\.$/, // cz-company-data
   /^Invalid SIREN: /, // fr-bodacc-lookup
 ];
 
@@ -309,6 +332,8 @@ export async function runCompanyStatusCheck(input: CapabilityInput, deps: Compos
         throw new Error(`Insolvency lookup failed for GB: ${slug} could not resolve company ${identifier}. No status is returned.`);
       }
       notices = gbNotices(out, identifier);
+    } else if (route.iso === "NO") {
+      notices = noNotices(out, str(r.provenance.source_url));
     } else {
       ({ notices, truncated } = frNotices(out));
     }
@@ -365,6 +390,7 @@ function insolvencyInput(
   if (slug === "insolvency-check") {
     return { country_code: "GB", company_number: identifier, company_name: registryName(registryOut) ?? identifier };
   }
+  if (slug === "no-bankruptcy-check") return { org_number: identifier };
   if (slug === "fr-bodacc-lookup") return { siren: identifier, limit: BODACC_WINDOW };
   throw new Error(`No input mapping for insolvency source ${slug} (${route.iso}).`);
 }
