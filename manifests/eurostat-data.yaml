@@ -1,0 +1,199 @@
+slug: eurostat-data
+name: Eurostat Data
+description: "Get statistics from a curated Eurostat dataset list, with EU/EFTA/candidate geo filters, numeric observations and source labels."
+category: finance
+cost_class: free_unlimited
+quota_window: none
+price_cents: 3
+external_cost_cents: 0
+is_free_tier: false
+avg_latency_ms: 600
+input_schema:
+  type: object
+  required: [dataset, filters]
+  properties:
+    dataset:
+      type: string
+      pattern: '^[a-z0-9_]{3,40}$'
+      description: Curated dataset code, for example nama_10_gdp or une_rt_a. Other datasets return dataset_not_supported with the supported list and instructions to request additions.
+    filters:
+      type: object
+      required: [geo]
+      minProperties: 1
+      maxProperties: 10
+      propertyNames:
+        pattern: '^[A-Za-z0-9_.-]{1,40}$'
+      additionalProperties:
+        oneOf:
+          - type: string
+            pattern: '^[A-Za-z0-9_.-]{1,40}$'
+          - type: array
+            minItems: 1
+            maxItems: 50
+            items:
+              type: string
+              pattern: '^[A-Za-z0-9_.-]{1,40}$'
+      description: >-
+        Dimension codes to one value or an array; at most 50 values total. Keys are case-insensitive;
+        duplicate key variants and reserved options are refused. geo is required and uppercased.
+        Only geo is country-checked, restricted to EU/EFTA/official candidate countries, their
+        NUTS regions and supported EU/EFTA/euro-area aggregates. Curated datasets have no other
+        geographic dimensions; other dimensions pass unchanged to Eurostat.
+        Example: {geo: [SE, DE], unit: CP_MEUR, na_item: B1GQ}.
+    since_period:
+      type: string
+      pattern: '^\d{4}(-Q[1-4]|-(0[1-9]|1[0-2]))?$'
+      description: Inclusive lower bound, YYYY, YYYY-Q1, YYYY-S1 or YYYY-MM.
+    until_period:
+      type: string
+      pattern: '^\d{4}(-Q[1-4]|-(0[1-9]|1[0-2]))?$'
+      description: Inclusive upper bound, YYYY, YYYY-Q1, YYYY-S1 or YYYY-MM.
+output_schema:
+  type: object
+  properties:
+    dataset: {type: string}
+    label: {type: string}
+    updated: {type: [string, 'null'], description: Upstream update timestamp in ISO 8601 when exposed; null otherwise.}
+    unit: {type: string, description: Unit category code when exactly one unit is present.}
+    dimensions:
+      type: array
+      items:
+        type: object
+        properties:
+          id: {type: string}
+          label: {type: string}
+          categories:
+            type: array
+            items:
+              type: object
+              properties:
+                code: {type: string}
+                label: {type: string}
+    observations:
+      type: array
+      description: >-
+        One row per permitted Cartesian cell, with dimension ids mapped to category codes,
+        time also exposed as period, numeric/null value and optional Eurostat status flag.
+      items:
+        type: object
+        properties:
+          period: {type: string}
+          value: {type: [number, 'null']}
+          status: {type: string}
+        additionalProperties: true
+    observation_count: {type: integer}
+    dropped_observation_count: {type: integer, description: Cells removed because geo is outside the permitted geography.}
+    dropped_observation_count_by_dimension:
+      type: object
+      additionalProperties: {type: integer}
+      description: Restricted cells by dimension; only geo is filtered.
+    source: {type: string}
+    licence_note: {type: string}
+    metadata_limitations: {type: string}
+    source_url: {type: string}
+    dataset_doi: {type: string, description: Dataset DOI in the form 10.2908/CODE.}
+    accessed_at: {type: string, format: date, description: Access date in ISO 8601.}
+    as_of: {type: string}
+data_source: Eurostat dissemination statistics API (JSON-stat 2.0)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: europe
+data_access:
+  lane: preferred
+  acquisition_method: direct_api
+  upstream_vendor: Eurostat
+test_fixtures:
+  known_answer:
+    input:
+      dataset: nama_10_gdp
+      filters: {geo: [SE, DE], unit: CP_MEUR, na_item: B1GQ}
+      since_period: '2020'
+    expected_fields:
+      - {field: dataset, operator: equals, value: nama_10_gdp, reliability: guaranteed}
+      - {field: source, operator: equals, value: Eurostat, reliability: guaranteed}
+      - {field: observations, operator: type, value: array, reliability: guaranteed}
+      - {field: observation_count, operator: type, value: number, reliability: guaranteed}
+      - {field: licence_note, operator: not_null, reliability: guaranteed}
+  health_check_input:
+    dataset: nama_10_gdp
+    filters: {geo: SE, unit: CP_MEUR, na_item: B1GQ}
+    since_period: '2020'
+    until_period: '2020'
+output_field_reliability:
+  dataset: guaranteed
+  label: guaranteed
+  updated: common
+  unit: common
+  dimensions: guaranteed
+  observations: guaranteed
+  observation_count: guaranteed
+  dropped_observation_count: guaranteed
+  dropped_observation_count_by_dimension: guaranteed
+  source: guaranteed
+  licence_note: guaranteed
+  metadata_limitations: guaranteed
+  source_url: guaranteed
+  dataset_doi: guaranteed
+  accessed_at: guaranteed
+  as_of: guaranteed
+limitations:
+  - title: Historical observations can be revised
+    text: Eurostat revises statistics. updated is the upstream timestamp when available; as_of is retrieval time. Status flags are preserved without interpretation.
+    category: accuracy
+    severity: info
+  - title: Requests must fit within 5,000 cells
+    text: The full dimension-size product, including missing cells, must not exceed 5,000. Sparse datasets may need narrower filters even if few values are reported. Empty or entirely null results raise an unbilled no_observations refusal.
+    category: coverage
+    severity: warning
+  - title: Dataset and dimension codes must be known
+    text: This tool supports only EUROSTAT_ALLOWED_DATASETS, curated against live metadata recorded on 2026-10-26. Unsupported datasets return dataset_not_supported with the supported list. Request additions through Strale support with the code and intended filters; each addition requires a source, geographic-dimension and terms review.
+    category: coverage
+    severity: info
+  - title: Commercial reuse is restricted by geography and dataset
+    text: >-
+      https://ec.europa.eu/eurostat/help/copyright-notice permits commercial reuse under Commission
+      Decision 2011/833/EU with DOI, access date, attribution and modification/non-responsibility notices.
+      Only curated Eurostat-sourced datasets whose sole geographic dimension is geo are supported.
+      Partner, citizenship, birthplace, residence, load/unload, origin/destination, control,
+      counterpart and vessel-nationality tables are excluded. The recorded metadata audit rejects a
+      dataset when any dimension other than geo has a geographic id, a category whose label names
+      the country its ISO code denotes, or five or more ISO country codes whatever their labels.
+      Codes that merely look like country codes (unit NR "Number", s_adj SA "Seasonally adjusted")
+      do not exclude a dataset. The audit read the latest period only. The dataset list is
+      intentionally narrower than the Eurostat catalogue; non-geo values are not country-checked
+      at runtime.
+      geo is required and restricted to EU27, EFTA and official candidates, checked on 2026-10-26 at
+      https://enlargement.ec.europa.eu/enlargement-policy/candidate-countries-and-potential-candidates_en.
+      Kosovo is a potential candidate and excluded. Exact country codes, the regional codes of
+      those countries recorded in the allowlisted datasets on 2026-10-26 (EUROSTAT_ALLOWED_REGIONS:
+      NUTS 1-3 and "not regionalised" buckets) and EUROSTAT_ALLOWED_AGGREGATES (including EA11–EA21)
+      pass. EA14 is accepted by policy but absent from the checked codelist. All other geo codes,
+      including region-shaped non-territories such as MEL (Melanesia) or NOECD, are refused before
+      fetch or dropped after fetch. Eurostat codes Greece EL; GR is refused with that hint.
+      Dropped geo cells are counted and their labels omitted. These restrictions enforce Eurostat's
+      commercial-reuse country exception without guessing whether non-geo category codes are countries.
+      Returned third-party source declarations and unrecognised rights notices are refused as defence
+      in depth. DISSEMINATION_SOURCE_DATASET is lineage, not a source declaration.
+      No logos or third-party documents are returned.
+    category: coverage
+    severity: warning
+  - title: Metadata may not expose every dataset-specific restriction
+    text: >-
+      The curated list excludes international trade; as defence in depth, such datasets are refused by case-insensitive code prefixes ext_, ds-, comext,
+      itgs_, trade_, tet, teiet, tipsex, cult_trd_, sprt_trd_, enpe_ext_, bop_its, for_trop and ei_etea;
+      by the words trade, import/imports or export/exports (case-insensitive, word boundaries) in returned
+      dataset titles or theme/category labels, except domestic retail trade, wholesale trade, distributive
+      trade and trade sector phrases (international/foreign/extra-EU/intra-EU trade remains refused);
+      by a stk_flow dimension (this conservatively also refuses nrg_stk_gas); and by DISSEMINATION_SOURCE_DATASET annotation titles
+      starting with ext_, ds- or comext (case-insensitive). This covers Swiss/Liechtenstein post-1995
+      commodity and Austrian CN8 restrictions. The executor checks source/rights anchors including
+      SOURCE_INSTITUTIONS in returned JSON-stat source, extension and annotations, never dimension ids
+      or category codes (owner is a valid dimension). Separately linked
+      ESMS documents and catalogue notices are not inspected; absent source declarations are reported
+      in metadata_limitations. No blanket rights clearance of every catalogue dataset is implied.
+    category: coverage
+    severity: warning

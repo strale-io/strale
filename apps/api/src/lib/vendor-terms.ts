@@ -70,6 +70,8 @@ export function prohibitedHostsIn(text: string): string[] {
 export interface VendorTermsRecord {
   vendor: string;
   hosts: readonly string[];
+  /** Restrict a host-wide record to these service URL prefixes, if set. */
+  url_prefixes?: readonly string[];
   /** Vendor id passed to meteredVendorFetch, when calls go through it. */
   metered_id?: string;
   /** Executors that call one of `hosts`. */
@@ -86,6 +88,24 @@ export interface VendorTermsRecord {
 }
 
 export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
+  {
+    vendor: "Eurostat",
+    hosts: ["ec.europa.eu"],
+    url_prefixes: ["https://ec.europa.eu/eurostat/"],
+    capabilities: ["eurostat-data"],
+    resale: "permitted",
+    terms_url: "https://ec.europa.eu/eurostat/help/copyright-notice",
+    accessed: "2026-10-26",
+    how_read: "Official copyright notice fetched via web open, including General principles and Exceptions; candidate list checked on the EU enlargement page.",
+    findings: [
+      "Commission Decision 2011/833/EU authorises commercial reuse with source acknowledgement, subject to individual notices and these exceptions; this record covers only the restricted eurostat-data executor.",
+      "(a) Data identified as belonging to sources other than Eurostat and third-party copyrighted material are excluded: refuse non-Eurostat source declarations and unrecognised rights notices in returned JSON-stat source/extension/annotations. SOURCE_INSTITUTIONS and other explicit source anchors are checked; DISSEMINATION_SOURCE_DATASET annotations identify lineage, not ownership. Separately linked ESMS documents and catalogue notices are not inspected; missing declarations are reported as an output limitation. No third-party documents are returned.",
+      "(b) Data for countries outside EU/EFTA/official acceding and candidate countries are excluded. Round 5 uses EUROSTAT_ALLOWED_DATASETS: a curated Eurostat-sourced dataset list audited against live JSON-stat metadata on 2026-10-26 (recorded in __fixtures__/eurostat/dataset-audit-2026-10-26.json). The sole geographic dimension must be geo; partner/citizen/birth/residence/load/unload/origin/destination/control/counterpart/vessel-nationality tables are excluded. The audit conservatively rejects every non-geo/time code matching ISO alpha-2 or a country-prefix NUTS shape, including non-geographic collisions; this necessarily narrows coverage of requested families. There is no runtime country-content detection outside geo. Require geo and accept only exact EU/EFTA/official candidate countries, their NUTS regions (country prefix plus 1–3 letters/digits), and supported EU/EFTA/euro-area aggregates. Potential candidate Kosovo is excluded. Retain post-fetch geo dropping/counting and label-aware defence in depth only for geo. Omit excluded labels. Other datasets return dataset_not_supported with the supported list and instructions to request an addition through Strale support; additions require metadata and terms review. This implements the country restriction without trying to infer geographic meaning in arbitrary codelists.",
+      "(c) Liechtenstein and Switzerland declaring-country trade data from 1995 under HS, SITC, BEC, NSTR and national classifications are excluded. Austria declaring-country CN8 trade data are also excluded: the curated list excludes international trade; retain defence-in-depth refusal through the executor's dataset-prefix, title/theme/category and trade-lineage rules. Domestic retail trade, wholesale trade, distributive trade and trade sector phrases are exempt; international/foreign/extra-EU/intra-EU trade remains refused. A stk_flow dimension also triggers refusal (including nrg_stk_gas). Source-key rules inspect dataset metadata, not data.dimension ids/categories such as owner.",
+      "Logos and trademarks are excluded; the executor returns statistical codes, labels and observations only, with no logos or publications. Modifications must be declared with a non-responsibility disclaimer: every output includes the dataset DOI (10.2908/CODE), access date, acknowledges Eurostat and the Commission Decision and states Strale flattened the data and Eurostat is not responsible for the rendering.",
+    ],
+    decision_ref: "DEC-20261023-A; orchestrator approval 2026-10-26 scoped to commercial-permitted Eurostat data",
+  },
   {
     vendor: "Brønnøysundregistrene",
     hosts: ["data.brreg.no"],
