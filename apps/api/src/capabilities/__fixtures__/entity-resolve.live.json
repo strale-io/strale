@@ -1,0 +1,281 @@
+[
+  {
+    "input": {
+      "identifier": "HWUPKR0MPOU8FGXBT394",
+      "type": "lei"
+    },
+    "output": {
+      "resolved": true,
+      "match_method": "lei_direct",
+      "confidence": "exact",
+      "entity": {
+        "legal_name": "Apple Inc.",
+        "lei": "HWUPKR0MPOU8FGXBT394",
+        "lei_status": "ISSUED",
+        "jurisdiction": "US-CA",
+        "legal_form": "H1UM",
+        "registration_authority_id": "RA000598",
+        "registry_number": "806592",
+        "entity_status": "ACTIVE",
+        "headquarters_country": "US",
+        "legal_address": {
+          "language": "en",
+          "addressLines": [
+            "C/O C T Corporation System",
+            "330 N. Brand Blvd",
+            "Suite 700"
+          ],
+          "addressNumber": null,
+          "addressNumberWithinBuilding": null,
+          "mailRouting": null,
+          "city": "Glendale",
+          "region": "US-CA",
+          "country": "US",
+          "postalCode": "91203"
+        }
+      },
+      "identifiers": {
+        "lei": "HWUPKR0MPOU8FGXBT394",
+        "bic": [
+          "APLEUS66XXX"
+        ],
+        "isin_count": 949,
+        "registry_number": "806592"
+      },
+      "as_of": "2026-10-26T00:00:00Z"
+    },
+    "provenance": {
+      "source": "GLEIF",
+      "fetched_at": "2026-10-26T10:57:54.640Z",
+      "acquisition_method": "direct_api",
+      "data_access_lane": "preferred",
+      "upstream_vendor": "gleif"
+    }
+  },
+  {
+    "input": {
+      "identifier": "US0378331005",
+      "type": "isin"
+    },
+    "output": {
+      "resolved": true,
+      "match_method": "isin_mapping",
+      "confidence": "exact",
+      "entity": {
+        "legal_name": "Apple Inc.",
+        "lei": "HWUPKR0MPOU8FGXBT394",
+        "lei_status": "ISSUED",
+        "jurisdiction": "US-CA",
+        "legal_form": "H1UM",
+        "registration_authority_id": "RA000598",
+        "registry_number": "806592",
+        "entity_status": "ACTIVE",
+        "headquarters_country": "US",
+        "legal_address": {
+          "language": "en",
+          "addressLines": [
+            "C/O C T Corporation System",
+            "330 N. Brand Blvd",
+            "Suite 700"
+          ],
+          "addressNumber": null,
+          "addressNumberWithinBuilding": null,
+          "mailRouting": null,
+          "city": "Glendale",
+          "region": "US-CA",
+          "country": "US",
+          "postalCode": "91203"
+        }
+      },
+      "identifiers": {
+        "lei": "HWUPKR0MPOU8FGXBT394",
+        "bic": [
+          "APLEUS66XXX"
+        ],
+        "isin_count": 949,
+        "registry_number": "806592"
+      },
+      "as_of": "2026-10-26T00:00:00Z"
+    },
+    "provenance": {
+      "source": "GLEIF",
+      "fetched_at": "2026-10-26T10:57:55.876Z",
+      "acquisition_method": "direct_api",
+      "data_access_lane": "preferred",
+      "upstream_vendor": "gleif"
+    }
+  },
+  {
+    "input": {
+      "identifier": "DEUTDEFF",
+      "type": "bic"
+    },
+    "output": {
+      "resolved": true,
+      "match_method": "bic_mapping",
+      "confidence": "exact",
+      "entity": {
+        "legal_name": "DEUTSCHE BANK AKTIENGESELLSCHAFT",
+        "lei": "7LTWFZYICNSX8D621K86",
+        "lei_status": "ISSUED",
+        "jurisdiction": "DE",
+        "legal_form": "6QQB",
+        "registration_authority_id": "RA000242",
+        "registry_number": "HRB 30000",
+        "entity_status": "ACTIVE",
+        "headquarters_country": "DE",
+        "legal_address": {
+          "language": "de",
+          "addressLines": [
+            "Taunusanlage 12"
+          ],
+          "addressNumber": null,
+          "addressNumberWithinBuilding": null,
+          "mailRouting": null,
+          "city": "Frankfurt am Main",
+          "region": "DE-HE",
+          "country": "DE",
+          "postalCode": "60325"
+        }
+      },
+      "identifiers": {
+        "lei": "7LTWFZYICNSX8D621K86",
+        "bic": [
+          "DBSCESMMXXX",
+          "DEUTAEAAXXX",
+          "DEUTATWWXXX",
+          "DEUTAU2SXXX",
+          "DEUTBEBEXXX",
+          "DEUTCATTXXX",
+          "DEUTCHZZXXX",
+          "DEUTCZPXXXX",
+          "DEUTDEFFXXX",
+          "DEUTGB22CLS",
+          "DEUTGB22COM",
+          "DEUTGB22CTA",
+          "DEUTGB22DCC",
+          "DEUTGB22EEQ",
+          "DEUTGB22EMC",
+          "DEUTGB22EMK",
+          "DEUTGB22GED",
+          "DEUTGB22GEF",
+          "DEUTGB22GFI",
+          "DEUTGB22PBR",
+          "DEUTGB22STA",
+          "DEUTGB22STD",
+          "DEUTGB22STF",
+          "DEUTGB22STG",
+          "DEUTGB22STJ",
+          "DEUTGB22STM",
+          "DEUTGB22STN",
+          "DEUTGB22STT",
+          "DEUTGB22TRL",
+          "DEUTGB22XXX",
+          "DEUTGB22ZEQ",
+          "DEUTGB2LASL",
+          "DEUTGB2LASP",
+          "DEUTGB2LASR",
+          "DEUTGB2LASW",
+          "DEUTGB2LBUL",
+          "DEUTGB2LCCO",
+          "DEUTGB2LCML",
+          "DEUTGB2LCOL",
+          "DEUTGB2LCUS",
+          "DEUTGB2LDBC",
+          "DEUTGB2LF4C",
+          "DEUTGB2LF4R",
+          "DEUTGB2LF4S",
+          "DEUTGB2LFEX",
+          "DEUTGB2LGLO",
+          "DEUTGB2LGME",
+          "DEUTGB2LMMO",
+          "DEUTGB2LRTN",
+          "DEUTGB2LSRV",
+          "DEUTGB2LTRS",
+          "DEUTGB2LXXX",
+          "DEUTGB3LCLS",
+          "DEUTGB3LRTN",
+          "DEUTGB3LXXX",
+          "DEUTHKHHXXX",
+          "DEUTHU2BXXX",
+          "DEUTIDJAXXX",
+          "DEUTINBBXXX",
+          "DEUTJPJTXXX",
+          "DEUTKRSEXXX",
+          "DEUTKYKXXXX",
+          "DEUTLKLXXXX",
+          "DEUTLULBXXX",
+          "DEUTNL2AXXX",
+          "DEUTPHMMXXX",
+          "DEUTPKKAXXX",
+          "DEUTPTPLXXX",
+          "DEUTSGSGXXX",
+          "DEUTTHBKXXX",
+          "DEUTUS33XXX",
+          "DEUTVNVXXXX",
+          "DEUTZAJXXXX"
+        ],
+        "isin_count": 23008,
+        "registry_number": "HRB 30000"
+      },
+      "as_of": "2026-10-26T00:00:00Z"
+    },
+    "provenance": {
+      "source": "GLEIF",
+      "fetched_at": "2026-10-26T10:57:56.293Z",
+      "acquisition_method": "direct_api",
+      "data_access_lane": "preferred",
+      "upstream_vendor": "gleif"
+    }
+  },
+  {
+    "input": {
+      "identifier": "00048839",
+      "type": "registry",
+      "country": "GB"
+    },
+    "output": {
+      "resolved": true,
+      "match_method": "registry_id",
+      "confidence": "exact",
+      "entity": {
+        "legal_name": "BARCLAYS PLC",
+        "lei": "213800LBQA1Y9L22JB70",
+        "lei_status": "ISSUED",
+        "jurisdiction": "GB",
+        "legal_form": "B6ES",
+        "registration_authority_id": "RA000585",
+        "registry_number": "00048839",
+        "entity_status": "ACTIVE",
+        "headquarters_country": "GB",
+        "legal_address": {
+          "language": "en",
+          "addressLines": [
+            "1 CHURCHILL PLACE"
+          ],
+          "addressNumber": null,
+          "addressNumberWithinBuilding": null,
+          "mailRouting": null,
+          "city": "LONDON",
+          "region": "GB-LND",
+          "country": "GB",
+          "postalCode": "E14 5HP"
+        }
+      },
+      "identifiers": {
+        "lei": "213800LBQA1Y9L22JB70",
+        "bic": [],
+        "isin_count": 71,
+        "registry_number": "00048839"
+      },
+      "as_of": "2026-10-26T00:00:00Z"
+    },
+    "provenance": {
+      "source": "GLEIF",
+      "fetched_at": "2026-10-26T10:57:56.741Z",
+      "acquisition_method": "direct_api",
+      "data_access_lane": "preferred",
+      "upstream_vendor": "gleif"
+    }
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "source": {
+    "note": "Synthetic lifecycle input, not a live company capture."
+  },
+  "response": {
+    "companies": [
+      {
+        "status": "2",
+        "companySituations": [
+          {
+            "type": "SELTILA"
+          }
+        ]
+      }
+    ]
+  }
+}

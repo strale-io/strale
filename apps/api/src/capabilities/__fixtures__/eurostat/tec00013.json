@@ -1,0 +1,175 @@
+{
+  "version": "2.0",
+  "class": "dataset",
+  "label": "Compensation of employees",
+  "source": "ESTAT",
+  "updated": "2026-10-22T23:00:00+0200",
+  "value": {
+    "0": 281090.0,
+    "1": 46.8
+  },
+  "id": [
+    "freq",
+    "na_item",
+    "unit",
+    "geo",
+    "time"
+  ],
+  "size": [
+    1,
+    1,
+    2,
+    1,
+    1
+  ],
+  "dimension": {
+    "freq": {
+      "label": "Time frequency",
+      "category": {
+        "index": {
+          "A": 0
+        },
+        "label": {
+          "A": "Annual"
+        }
+      }
+    },
+    "na_item": {
+      "label": "National accounts indicator (ESA 2010)",
+      "category": {
+        "index": {
+          "D1": 0
+        },
+        "label": {
+          "D1": "Compensation of employees"
+        }
+      }
+    },
+    "unit": {
+      "label": "Unit of measure",
+      "category": {
+        "index": {
+          "CP_MEUR": 0,
+          "PC_GDP": 1
+        },
+        "label": {
+          "CP_MEUR": "Current prices, million euro",
+          "PC_GDP": "Percentage of gross domestic product (GDP)"
+        }
+      }
+    },
+    "geo": {
+      "label": "Geopolitical entity (reporting)",
+      "category": {
+        "index": {
+          "SE": 0
+        },
+        "label": {
+          "SE": "Sweden"
+        }
+      }
+    },
+    "time": {
+      "label": "Time",
+      "category": {
+        "index": {
+          "2025": 0
+        },
+        "label": {
+          "2025": "2025"
+        }
+      }
+    }
+  },
+  "extension": {
+    "lang": "EN",
+    "description": "<p>The total remuneration, in cash or in kind, payable by an employer to an employee in return for work done by the latter. Includes social contributions paid by the employer. Expressed in million euro (current prices) and as a percentage of the gross domestic product (GDP).</p>",
+    "id": "TEC00013",
+    "agencyId": "ESTAT",
+    "version": "1.0",
+    "datastructure": {
+      "id": "TEC00013",
+      "agencyId": "ESTAT",
+      "version": "127.0"
+    },
+    "annotation": [
+      {
+        "type": "CREATED",
+        "date": "2008-10-30T14:24:14+0100"
+      },
+      {
+        "type": "DISSEMINATION_DOI_XML",
+        "title": "<adms:identifier xmlns:adms=\"http://www.w3.org/ns/adms#\" xmlns:skos=\"http://www.w3.org/2004/02/skos/core.html\" xmlns:dct=\"http://purl.org/dc/terms/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><adms:Identifier rdf:about=\"https://doi.org/10.2908/TEC00013\"><skos:notation rdf:datatype=\"http://purl.org/spar/datacite/doi\">10.2908/TEC00013</skos:notation><dct:creator rdf:resource=\"http://publications.europa.eu/resource/authority/corporate-body/ESTAT\"/><dct:issued rdf:datatype=\"http://www.w3.org/2001/XMLSchema#date\">2023-01-19</dct:issued></adms:Identifier></adms:identifier>"
+      },
+      {
+        "type": "DISSEMINATION_OBJECT_TYPE",
+        "title": "DATASET"
+      },
+      {
+        "type": "DISSEMINATION_PRESENTATIONS",
+        "title": "[{\"names\":{\"de\":{\"locale\":\"de\",\"value\":\"Standardpr\u00e4sentation\",\"html\":false},\"en\":{\"locale\":\"en\",\"value\":\"Default presentation\",\"html\":false},\"fr\":{\"locale\":\"fr\",\"value\":\"Pr\u00e9sentation par d\u00e9faut\",\"html\":false}},\"descriptions\":{},\"code\":\"default\",\"useAsDefault\":true,\"order\":0,\"defaultView\":\"view.table\",\"jsonFormat\":null,\"preselection\":[{\"code\":\"freq\",\"multipleSelection\":null,\"singleSelection\":\"A\"},{\"code\":\"na_item\",\"multipleSelection\":null,\"singleSelection\":\"D1\"},{\"code\":\"unit\",\"multipleSelection\":null,\"singleSelection\":null},{\"code\":\"geo\",\"multipleSelection\":null,\"singleSelection\":null}],\"preselectionTimeFilter\":{\"code\":\"time\",\"multipleSelection\":null,\"singleSelection\":null,\"mode\":\"ALL\",\"from\":null,\"to\":null,\"fixed\":null},\"layoutFormat\":{\"layoutAxes\":{\"y1\":\"time\",\"x1\":\"geo\"},\"fixedMinMax\":false,\"mapProjection\":null,\"mapShowAllGeo\":true,\"mapNumberOfColors\":0,\"rankingMode\":false,\"highlightMode\":false,\"labelOption\":null,\"labelByDimension\":null,\"businessRulesStrategy\":null,\"mapClassificartionMethode\":null}}]"
+      },
+      {
+        "type": "DISSEMINATION_PRESENTATIONS_VERSION",
+        "title": "v0_4_X"
+      },
+      {
+        "type": "DISSEMINATION_SOURCE_DATASET",
+        "title": "NAMA_10_GDP"
+      },
+      {
+        "type": "DISSEMINATION_TIMESTAMP_DATA",
+        "date": "2026-10-22T23:00:00+0200"
+      },
+      {
+        "type": "DISSEMINATION_TIMESTAMP_GLOBAL",
+        "date": "2026-10-22T23:00:00+0200"
+      },
+      {
+        "type": "DISSEMINATION_TIMESTAMP_PLANNED",
+        "date": "2026-10-22T23:00:00+0200"
+      },
+      {
+        "type": "ESMS_HTML",
+        "title": "Explanatory texts (metadata)",
+        "href": "https://ec.europa.eu/eurostat/cache/metadata/en/nama10_esms.htm"
+      },
+      {
+        "type": "ESMS_SDMX",
+        "title": "Explanatory texts (metadata)",
+        "href": "https://ec.europa.eu/eurostat/api/dissemination/files?file=metadata/nama10_esms.sdmx.zip"
+      },
+      {
+        "type": "OBS_COUNT",
+        "title": "1032"
+      },
+      {
+        "type": "OBS_PERIOD_OVERALL_LATEST",
+        "title": "2025"
+      },
+      {
+        "type": "OBS_PERIOD_OVERALL_OLDEST",
+        "title": "2014"
+      },
+      {
+        "type": "SOURCE_INSTITUTIONS",
+        "text": "Eurostat"
+      },
+      {
+        "type": "UPDATE_DATA",
+        "date": "2026-10-22T23:00:00+0200"
+      },
+      {
+        "type": "UPDATE_STRUCTURE",
+        "date": "2026-10-20T23:00:00+0200"
+      }
+    ],
+    "positions-with-no-data": {
+      "freq": [],
+      "na_item": [],
+      "unit": [],
+      "geo": [],
+      "time": []
+    }
+  }
+}

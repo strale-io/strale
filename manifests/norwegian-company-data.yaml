@@ -69,6 +69,7 @@ output_schema:
       type: string
     status:
       type: string
+      enum: ["active", "bankrupt", "dissolving", "compulsory_dissolution", "deleted"]
     address:
       type: string
     org_number:
@@ -157,13 +158,14 @@ test_fixtures:
     org_number: "923609016"
 output_field_reliability:
   status: guaranteed
-  address: guaranteed
+  address: common
   org_number: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
-  industry_code: guaranteed
-  employee_count: guaranteed
-  registration_date: guaranteed
+  business_type: common
+  industry_code: common
+  industry_description: common
+  employee_count: common
+  registration_date: common
   # Active roles exist for the overwhelming majority of registered AS/ASA/SA entities;
   # rare exceptions (newly-registered shells, mid-restructuring records) can return
   # an empty array. Marked common so the schema gate doesn't trip on the empty case.
@@ -174,6 +176,14 @@ output_field_reliability:
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
 limitations:
+  - title: Official registry data access
+    text: "Data comes from the official registry's public API under its open-data terms (https://www.brreg.no/en/use-of-data-from-the-bronnoysund-register-centre/datasets-and-api/); results carry the registry as their source."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Status uses deleted-unit tombstones before bankruptcy, compulsory dissolution and voluntary dissolution flags. Deleted records may lack live-unit details."
+    category: coverage
+    severity: info
   - title: Does not cover sole proprietorships — about 15% of Norwegian businesses
     text: Does not cover sole proprietorships (enkeltpersonforetak)
     category: coverage
@@ -189,3 +199,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: Brønnøysundregistrene

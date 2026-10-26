@@ -63,12 +63,11 @@ export const MODELS = {
     purpose: "Higher-reasoning model for structured-findings-to-narrative synthesis (risk-narrative-generate). Alias, not a dated snapshot — see comment above.",
   },
 
-  /** Voyage AI embeddings for capability-search (POST /v1/suggest). */
-  embeddings: {
-    id: "voyage-3.5-lite",
-    pinned_at: "2026-03-03",
-    decision: "DEC-20260303-E",
-    purpose: "Embeddings for capability-search semantic matching (paired with Haiku re-ranking, itself capability_default).",
+  search_rank: {
+    id: "claude-haiku-5-5",
+    pinned_at: "2026-10-26",
+    decision: "DEC-20261026-A",
+    purpose: "Ranks catalogue items against a natural-language search query for POST /v1/suggest.",
   },
 
   /** Model used by the daily CEO/ops digest's synthesis step. */

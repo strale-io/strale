@@ -9,13 +9,26 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-343 files (316 with a recorded intent, 27 without).
+357 files (330 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | make live registry lookups report deleted, deregistered and liquidating companies correctly (NO, PL, CZ, FI, GR), and... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-search-rebuild.md`](_general/from-code/2026-10-26-feat-search-rebuild.md) | Rebuilt catalogue search locally on feat/search-rebuild from origin/main 42e71dcc; orchestrator reviews, pushes, open... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-invoice-counterparty-check.md`](_general/from-code/2026-10-26-feat-invoice-counterparty-check.md) | Build the approved invoice-counterparty-check evidence composite for portfolio 1C.3; production onboarding, authentic... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-entity-resolve.md`](_general/from-code/2026-10-26-feat-entity-resolve.md) | Built entity-resolve on the assigned isolated clone/branch, tested public GLEIF lookups, and prepared files for a loc... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md`](_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md) | Retire API agent-facing trust/score framing and serve live-facts SKILL.md; build, verify and commit locally for orche... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-eurostat-data.md`](_general/from-code/2026-10-26-eurostat-data.md) | Finish eurostat-data on feat/eurostat-data with a dataset allowlist (round 5) and a label-aware screen for which data... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-dq40-swiss-register-terms.md`](_general/from-code/2026-10-26-dq40-swiss-register-terms.md) | build the Swiss UID / VAT check (portfolio plan 1.12). Stopped at the data-access terms gate before any code; raised... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md`](_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md) | close the documentation follow-ups from the 2026-10-26 independent reviews of PR #728 and PR #705. |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-company-status-readd-no-pl-cz.md`](_general/from-code/2026-10-26-company-status-readd-no-pl-cz.md) | Restore NO, PL and CZ to company-status-check after the registry lifecycle fixes in PR #746; keep GR excluded. |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-company-status-check.md`](_general/from-code/2026-10-26-company-status-check.md) | build `company-status-check` ("Is this company still alive?", portfolio plan item 1C.1, DEC-20261024-B) as a draft PR... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-checkin-morning.md`](_general/from-code/2026-10-26-checkin-morning.md) | run the 2026-10-26 operating session under DAILY-RUN.md — close week |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-catalogue-copy.md`](_general/from-code/2026-10-26-catalogue-copy.md) | Rewrite the public names and descriptions of the catalogue's tools, fix the bundled-check copy problems, and make pro... |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step4-review-md.md`](_general/from-code/2026-10-24-wow-step4-review-md.md) | Apply step 4 of the way-of-working review (DEC-20261024-A): one reviewer brief and a capability-onboarding skill. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md`](_general/from-code/2026-10-24-wow-step1-quick-wins.md) | Apply step 1 of the way-of-working review (DEC-20261024-A): fewer paperwork failures in CI, same product checks. |
+| 2026-10-24 | [`handoff/_general/from-code/2026-10-24-straleio-readmes.md`](_general/from-code/2026-10-24-straleio-readmes.md) | make the straleio SDK READMEs match the clients, as Petter asked in session on 2026-10-24. |
+| 2026-10-24 | [`handoff/_general/from-code/2026-10-24-platform-facts-country-count.md`](_general/from-code/2026-10-24-platform-facts-country-count.md) | fix the platform-facts country undercount, as Petter asked in session on 2026-10-24. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md`](_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md) | Carry out DQ-38 — remove false web3 regulatory claims from the public methodology. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md`](_general/from-code/2026-10-24-data-access-vendor-terms.md) | DEC-20261023-A adoption, work item 3. Record Serper.dev's and Jina |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-provenance.md`](_general/from-code/2026-10-24-data-access-provenance.md) | DEC-20261023-A adoption, item 2: acquisition method and the rule's lane on every answer. |
@@ -35,6 +48,7 @@
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-flaky-source-probes.md`](_general/from-code/2026-10-23-flaky-source-probes.md) | find why USGS, sudreg, VIES, HN search, NVD and arXiv flap in the Health Monitor, and fix what is ours. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-dq37-web3-methodology.md`](_general/from-code/2026-10-23-dq37-web3-methodology.md) | Carry out DQ-37 as approved by Petter — correct the remaining web3 methodology source claims and verify them in produ... |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-dq36-sanctions-copy.md`](_general/from-code/2026-10-23-dq36-sanctions-copy.md) | Carry out DQ-36 as approved by Petter — correct the sanctions and web3 methodology source copy, and verify it in prod... |
+| 2026-10-23 | [`handoff/_general/from-code/2026-10-23-delegate-competitive-analysis.md`](_general/from-code/2026-10-23-delegate-competitive-analysis.md) | give the positioning session and Petter a detailed, public-sources-only |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md`](_general/from-code/2026-10-23-data-access-rule-proposal.md) | Draft a risk-based replacement for the scraping doctrine for Petter's decision. |
 | 2026-10-19 | [`handoff/_general/from-code/2026-10-19-checkin-morning.md`](_general/from-code/2026-10-19-checkin-morning.md) | run the 2026-10-19 operating session under DAILY-RUN.md — close week |
 | 2026-10-18 | [`handoff/_general/from-code/2026-10-18-checkin-morning.md`](_general/from-code/2026-10-18-checkin-morning.md) | run the 2026-10-18 operating session under DAILY-RUN.md — on schedule |

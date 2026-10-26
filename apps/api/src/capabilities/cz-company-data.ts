@@ -19,6 +19,7 @@ type AresResponse = {
   pravniForma?: string;
   pravniFormaRos?: string;
   datumVzniku?: string;
+  datumZaniku?: string;
   datumAktualizace?: string;
   dic?: string;
   czNace2008?: string[];
@@ -45,11 +46,15 @@ interface AresVrClen {
   pravnickaOsoba?: { obchodniJmeno?: string; ico?: string };
 }
 interface AresVrOrgan {
+  typOrganu?: string;
+  datumVymazu?: string;
   nazevOrganu?: string;
   clenoveOrganu?: AresVrClen[];
 }
 interface AresVrZaznam {
   primarniZaznam?: boolean;
+  stavSubjektu?: string;
+  datumVymazu?: string;
   statutarniOrgany?: AresVrOrgan[];
   zpusobJednani?: Array<{ datumVymazu?: string; zpusobJednani?: string }>;
 }
@@ -77,7 +82,7 @@ type AresSearchResponse = {
 async function resolveNameToIco(name: string): Promise<string> {
   const resp = await fetch(`${ARES_API}/vyhledat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", Accept: "application/json" },
+    headers: { "Content-Type": "application/json; charset=utf-8", Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     body: JSON.stringify({ obchodniJmeno: name, start: 0, pocet: 1 }),
     signal: AbortSignal.timeout(10000),
   });
@@ -117,7 +122,7 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
 
 async function fetchByIco(ico: string): Promise<AresResponse> {
   const resp = await fetch(`${ARES_API}/${ico}`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(10000),
   });
   if (resp.status === 404) {
@@ -137,7 +142,7 @@ async function fetchByIco(ico: string): Promise<AresResponse> {
 async function fetchVrByIco(ico: string): Promise<AresVrResponse | null> {
   try {
     const resp = await fetch(`${ARES_VR_API}/${ico}`, {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
       signal: AbortSignal.timeout(10000),
     });
     if (resp.status === 404) return null;
@@ -199,13 +204,23 @@ function shapeRepresentatives(vr: AresVrResponse | null): {
   };
 }
 
-function deriveStatus(reg: Record<string, string> | undefined): string {
-  if (!reg) return "unknown";
-  const ros = reg.stavZdrojeRos;
-  if (!ros) return "unknown";
-  if (ros === "AKTIVNI") return "active";
-  if (ros === "ZANIKLY") return "dissolved";
-  return ros.toLowerCase();
+function deriveStatus(data: AresResponse, vr: AresVrResponse | null): string {
+  const reg = data.seznamRegistraci;
+  const primary = vr?.zaznamy?.find((z) => z.primarniZaznam) ?? vr?.zaznamy?.[0];
+  if (data.datumZaniku || reg?.stavZdrojeRos === "ZANIKLY" ||
+      reg?.stavZdrojeVr === "ZANIKLY" || primary?.stavSubjektu === "ZANIKLY") return "dissolved";
+  // Registry membership alone does not show liquidation. The VR view's
+  // current liquidator appointment does; company names are not evidence.
+  const liquidator = primary?.statutarniOrgany?.some((o) =>
+    o.typOrganu === "LIKVIDATOR" && !o.datumVymazu &&
+    o.clenoveOrganu?.some((c) => !c.datumVymazu && !c.clenstvi?.clenstvi?.zanikClenstvi),
+  );
+  if (reg?.stavZdrojeIr === "AKTIVNI") return "insolvency";
+  if (liquidator) return "liquidation";
+  // If the entity is in VR but that view failed, liquidation cannot be
+  // excluded. Do not silently promote the ROS existence flag to active.
+  if (reg?.stavZdrojeVr === "AKTIVNI" && !primary) return "unknown";
+  return reg?.stavZdrojeRos === "AKTIVNI" ? "active" : "unknown";
 }
 
 registerCapability("cz-company-data", async (input: CapabilityInput) => {
@@ -240,7 +255,7 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
       nace_codes: data.czNace2008 ?? [],
       registration_date: data.datumVzniku ?? null,
       last_updated: data.datumAktualizace ?? null,
-      status: deriveStatus(data.seznamRegistraci),
+      status: deriveStatus(data, vr),
       primary_source: data.primarniZdroj ?? null,
       jurisdiction: "CZ",
       // Evidence Tier 1 canonical aliases (DEC-20260518-A)

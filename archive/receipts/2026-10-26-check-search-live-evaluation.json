@@ -1,0 +1,54 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "41ba81b81125d0be5c6c4038b322d7de4aedc14d"
+  },
+  "at": "2026-10-26T19:57:38.690Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "golden_top1": "90/90",
+    "holdout_top1": "40/40",
+    "typeahead_golden_top1": "81/87"
+  },
+  "topic": "search-live-evaluation",
+  "raw": {
+    "run_at": "2026-10-26T19:55:00Z",
+    "target": "https://api.strale.io",
+    "deployed_commit": "41ba81b81125",
+    "method": "POST /v1/suggest paced at one query per 7 s (under the 10/min per-IP model limit); GET /v1/suggest/typeahead via apps/api/scripts/search-eval.ts --engine live-typeahead",
+    "smart_search": {
+      "model_role": "search_rank",
+      "golden": {
+        "queries": 90,
+        "top1": 90,
+        "top3": 90,
+        "model_ranked": 87,
+        "empty_for_out_of_catalogue": 3,
+        "latency_p50_ms": 2320,
+        "latency_p90_ms": 2866
+      },
+      "holdout": {
+        "queries": 40,
+        "top1": 40,
+        "top3": 40,
+        "model_ranked": 38,
+        "empty_for_out_of_catalogue": 2,
+        "latency_p50_ms": 2234,
+        "latency_p90_ms": 2861,
+        "note": "held-out set written after the build and never shown to the builder"
+      }
+    },
+    "typeahead": {
+      "golden_scored": 87,
+      "top1": 81,
+      "top3": 86
+    },
+    "before_change": {
+      "typeahead_golden_top1": "29/87",
+      "suggest_golden_top1": "39/90"
+    }
+  }
+}

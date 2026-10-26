@@ -1,0 +1,33 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "42e71dccceff2c94dbae8161832d4b6391cc6663"
+  },
+  "at": "2026-10-26T18:09:28.462Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "golden_top1": "81/87",
+    "golden_top3": "86/87",
+    "holdout_top1": "29/38",
+    "holdout_top3": "34/38",
+    "legacy_holdout_top1": "12/38"
+  },
+  "topic": "search-evaluation",
+  "raw": {
+    "golden": {
+      "set": "apps/api/src/lib/search/__fixtures__/golden-queries.json",
+      "catalogue": "catalog-2026-10-26",
+      "new_keyword": "natural      37  31/37 (83.8%)   36/37 (97.3%)   0.9054\ntypo          5  5/5 (100.0%)    5/5 (100.0%)    1.0000\nworkflow      6  6/6 (100.0%)    6/6 (100.0%)    1.0000\noverall      87  81/87 (93.1%)   86/87 (98.9%)   0.9598\n\nTop-1 misses:\n{\"q\":\"verify a VAT number\",\"expect\":[\"vat-validate\"],\"actual\":[\"vat-format-validate\",\"vat-validate\",\"invoice-validate\",\"id-number-validate\",\"invoice-process\"]}\n{\"q\":\"negative news about a company\",\"expect\":[\"adverse-media-check\"],\"actual\":[\"company-news\",\"adverse-media-check\",\"hacker-news-search\"]}\n{\"q\":\"turn a webpage into markdown\",\"expect\":[\"url-to-markdown\"],\"actual\":[\"markdown-to-html\",\"url-to-markdown\",\"api-docs-generate\",\"web-extract-clean\",\"json-repair\"]}\n{\"q\":\"track a parcel\",\"expect\":[\"shipping-track\"],\"actual\":[\"container-track\",\"shipping-track\",\"cookie-scan\",\"gdpr-website-check\"]}\n{\"q\":\"is this website up\",\"expect\":[\"uptime-check\",\"url-health-check\",\"page-exists\"],\"actual\":[\"website-carbon-estimate\",\"website-health\",\"gdpr-website-check\",\"website-security-audit\",\"gdpr-audit\"]}\n{\"q\":\"who are the directors of a UK company\",\"expect\":[\"uk-companies-house-officers\"],\"actual\":[\"uk-disqualified-director-check\",\"uk-companies-house-officers\"]}\n",
+      "legacy_keyword": "top-1 26/87, top-3 46/87, MRR@5 0.4261",
+      "production_before": "typeahead top-1 29/87, top-3 48/87; suggest top-1 39/90, top-3 55/90"
+    },
+    "holdout": {
+      "note": "40 queries written by the orchestrator and never shown to the builder; kept outside the repository so it stays held out",
+      "new_keyword": "== new\nkind         n   top-1           top-3           MRR@5\ncountry       7  5/7 (71.4%)     6/7 (85.7%)     0.8143\nkeyword      12  10/12 (83.3%)   11/12 (91.7%)   0.8750\nnatural      15  10/15 (66.7%)   13/15 (86.7%)   0.7611\ntypo          3  3/3 (100.0%)    3/3 (100.0%)    1.0000\nworkflow      1  1/1 (100.0%)    1/1 (100.0%)    1.0000\noverall      38  29/38 (76.3%)   34/38 (89.5%)   0.8320\n",
+      "legacy_keyword": "top-1 12/38, top-3 21/38, MRR@5 0.4298"
+    }
+  }
+}
