@@ -1,3 +1,4 @@
+import { withDatabase } from "../src/db/index.js";
 /** CLI adapter for the shared onboarding pipeline. */
 import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
@@ -113,13 +114,13 @@ async function processSingleManifest(
   const db = openOperatorWriteDrizzle(
     autonomousAuthority("capability_onboarding", "DEC-20260812-A")
   );
-  const result = await runOnboarding(db, {
+  const result = await withDatabase(db, () => runOnboarding(db, {
     manifestYaml: readFileSync(manifestPath, "utf-8"),
     mode: isBackfill ? "backfill" : "onboard",
     dryRun,
     ...flags,
     onMessage: (...values) => console.log(...values),
-  });
+  }));
   if (result.updatedManifestYaml)
     writeFileSync(manifestPath, result.updatedManifestYaml, "utf-8");
   return { ...result, error: result.errors.map((e) => e.message).join("; ") };

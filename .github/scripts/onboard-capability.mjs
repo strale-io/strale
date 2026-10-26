@@ -131,11 +131,15 @@ export async function runWorkflow(
       if (
         run.busy ||
         response.http === 409 ||
+        response.http === 401 ||
+        response.http === 503 ||
+        run.error?.code === "not_configured" ||
+        run.error_code === "not_configured" ||
         run.status === "running" ||
         run.status === "timeout"
       ) {
         summary(
-          "Batch stopped. Wait for active work to drain and inspect API logs before retrying remaining slugs."
+          "Batch stopped. Check authentication, configuration and API logs before retrying remaining slugs."
         );
         break;
       }

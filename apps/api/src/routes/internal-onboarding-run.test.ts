@@ -108,6 +108,14 @@ describe("dedicated onboarding runner", () => {
       expect(pipeline).not.toHaveBeenCalled();
     }
   );
+  it("fails closed when the onboarding secret equals ADMIN_SECRET", async () => {
+    const app = router({ secret: () => process.env.ADMIN_SECRET });
+    for (const res of [await post(app), await app.request("/run/unknown", { headers })]) {
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ error: { code: "misconfigured" } });
+    }
+    expect(database).not.toHaveBeenCalled();
+  });
   it("does not accept the admin secret", async () => {
     expect(
       (
@@ -247,7 +255,7 @@ describe("dedicated onboarding runner", () => {
     await settle();
     expect((await post(app)).status).toBe(202);
   });
-  it("reports timeout, aborts work and retains the lock until in-flight work drains", async () => {
+  it("reports timeout and accepts a following run even when the pipeline never settles", async () => {
     vi.useFakeTimers();
     let finish!: (result: OnboardingResult) => void;
     pipeline.mockImplementationOnce(
@@ -263,12 +271,18 @@ describe("dedicated onboarding runner", () => {
       await (await app.request(`/run/${started.id}`, { headers })).json()
     ).toMatchObject({
       status: "timeout",
-      busy: true,
+      busy: false,
       errors: [{ code: "timeout" }],
     });
     expect(pipeline.mock.calls[0][1].signal.aborted).toBe(true);
-    expect((await post(app)).status).toBe(409);
+    let finishSecond!: (result: OnboardingResult) => void;
+    pipeline.mockImplementationOnce(() => new Promise((r) => { finishSecond = r; }));
+    const second = await (await post(app)).json();
+    expect(second.status).toBe("running");
     finish(success());
+    await settle();
+    expect((await post(app)).status).toBe(409);
+    finishSecond(success());
     await settle();
     expect(
       await (await app.request(`/run/${started.id}`, { headers })).json()
@@ -393,21 +407,5 @@ describe("dedicated onboarding runner", () => {
         })
       ).status
     ).toBe(503);
-  });
-  it("mounts dedicated auth before the admin wall and keeps it off public ops", () => {
-    const app = readFileSync(
-      resolve(import.meta.dirname, "../app.ts"),
-      "utf-8"
-    );
-    const mount = app.indexOf(
-      'app.route("/v1/internal/onboarding", onboardingRunRoute)'
-    );
-    expect(mount).toBeGreaterThan(0);
-    expect(mount).toBeLessThan(
-      app.indexOf('app.use("/v1/internal/*", adminOnly)')
-    );
-    expect(app).not.toMatch(
-      /app\.route\("\/v1\/public[^\n]*onboardingRunRoute/
-    );
   });
 });

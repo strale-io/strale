@@ -1,3 +1,4 @@
+import { withinOnboardingBudget } from "./onboarding-budget.js";
 import { suitesAreSchedulable } from "./onboard-scheduling.js";
 import { dependencyHealthChecks } from "./onboard-dependency-health.js";
 import { expectedFieldsToChecks } from "./known-answer-checks.js";
@@ -44,7 +45,7 @@ import {
 import { checkGuaranteedFieldsPresent } from "./guaranteed-fields-sentinel.js";
 
 /** Shared single-manifest pipeline. No credentials, process exits, or filesystem writes. */
-import { withDatabase, getDb, type Database } from "../db/index.js";
+import { boundDatabase, type Database } from "../db/index.js";
 import {
   checkReadiness,
   clearReadinessCache,
@@ -141,10 +142,8 @@ export async function runOnboarding(
   handle: Database,
   options: OnboardingOptions
 ): Promise<OnboardingResult> {
-  return withDatabase(
-    handle,
-    async () => {
-      const db = getDb();
+  const db = boundDatabase(handle, options.signal);
+  const run = async () => {
       const start = Date.now();
       let stage = "validation";
       const report = options.onMessage ?? (() => {});
@@ -289,16 +288,16 @@ export async function runOnboarding(
               suiteId: "onboard-script",
               reason: "manual",
             },
-            "onboarding"
+            "onboarding",
+            { db, signal: options.signal }
           );
           let timer: ReturnType<typeof setTimeout> | undefined;
           let result;
           try {
-            // API runs retain their lock until the executor drains. The run budget
-            // reports timeout separately and prevents subsequent calls and queries.
-            // The standalone CLI keeps its historical 30-second execution deadline.
+            // API execution must release the lock even if an executor never
+            // settles. The CLI keeps its historical 30-second deadline.
             result = options.signal
-              ? await execution
+              ? await withinOnboardingBudget(execution, options.signal)
               : await Promise.race([
                   execution,
                   new Promise<never>((_, reject) => {
@@ -1066,6 +1065,7 @@ export async function runOnboarding(
 
         // Discover fixtures from live execution (Enhancement 3)
         if (flags.discover) {
+          options.signal?.throwIfAborted();
           stage = "discovery";
           const disc = await discoverFixtures(manifest, manifestPath);
           manifest = disc.manifest;
@@ -1127,6 +1127,7 @@ export async function runOnboarding(
 
         // Execute-and-verify (Enhancement 1) — skip in dry-run
         if (!dryRun) {
+          options.signal?.throwIfAborted();
           stage = "verification";
           const { passed, manifest: updated } = await verifyFixtures(
             manifest,
@@ -1158,6 +1159,7 @@ export async function runOnboarding(
         // normalizeManifestToRow (C2) does the Manifest→DB-row mapping that was
         // previously inline here.
         testSuiteRecords = buildTestSuites(manifest);
+        options.signal?.throwIfAborted();
         stage = "persistence";
         const persistResult = await persistCapability(
           {
@@ -1172,7 +1174,7 @@ export async function runOnboarding(
               sortOrder: i,
             })),
           },
-          { mode: "create", onLimitationsChanged: observeLimitations }
+          { mode: "create", onLimitationsChanged: observeLimitations, db, signal: options.signal }
         );
 
         result.rows.created.push({
@@ -1185,7 +1187,10 @@ export async function runOnboarding(
           count: testSuiteRecords.length,
           names: testSuiteRecords.map((s) => s.testName),
         });
-        if (persistResult.hookFailed) {
+        if (persistResult.hookFailed && !options.signal) {
+          report("  ⚠ Rows were committed, but the onboarding hook failed. Review logs before retrying.");
+        }
+        if (persistResult.hookFailed && options.signal) {
           throw new OnboardingError(
             "hook_failed",
             "Rows were committed, but the onboarding hook failed. Review API logs before retrying."
@@ -1407,6 +1412,7 @@ export async function runOnboarding(
 
         // Discover fixtures from live execution (Enhancement 3)
         if (flags.discover) {
+          options.signal?.throwIfAborted();
           stage = "discovery";
           const disc = await discoverFixtures(manifest, manifestPath);
           manifest = disc.manifest;
@@ -1415,6 +1421,7 @@ export async function runOnboarding(
 
         // Execute-and-verify (Enhancement 1)
         if (!dryRun) {
+          options.signal?.throwIfAborted();
           stage = "verification";
           const { passed, manifest: updated } = await verifyFixtures(
             manifest,
@@ -1525,6 +1532,7 @@ export async function runOnboarding(
           return;
         }
 
+        options.signal?.throwIfAborted();
         stage = "persistence";
         // Insert missing test suites
         for (const ts of missing) {
@@ -1668,6 +1676,7 @@ export async function runOnboarding(
         const hasReliabilityUpdate = fields.length > 0;
         const hasPiiUpdate = manifest.processes_personal_data !== undefined;
         let backfillHookFailed = false;
+        let backfillHookReason: string | undefined;
         if (hasReliabilityUpdate || hasPiiUpdate) {
           // Phase 4a: pass existing DB row for authority decisions (hybrid
           // fill-null, manifest-canonical drift-throw) and the bypass flag for
@@ -1681,9 +1690,10 @@ export async function runOnboarding(
                 bypassAuthority: flags.bypassAuthority === true,
               }),
             },
-            { mode: "update" }
+            { mode: "update", backfill: true, db, signal: options.signal }
           );
           backfillHookFailed = persisted.hookFailed;
+          backfillHookReason = persisted.hookFailureReason;
           result.rows.updated.push({
             table: "capabilities",
             count: 1,
@@ -1732,7 +1742,7 @@ export async function runOnboarding(
         if (backfillHookFailed)
           throw new OnboardingError(
             "hook_failed",
-            "Backfill rows were committed, but the onboarding hook failed. Review API logs before retrying."
+            `Backfill rows were committed, but the onboarding hook failed (${backfillHookReason ?? "hook_error"}). Serving settings were preserved. Review API logs before retrying.`
           );
         report(`  ✅ Backfill complete for '${manifest.slug}'`);
       }
@@ -1783,7 +1793,7 @@ export async function runOnboarding(
           options.signal?.throwIfAborted();
           clearReadinessCache();
           stage = "readiness";
-          result.readiness = await checkReadiness(manifest.slug);
+          result.readiness = await checkReadiness(manifest.slug, db);
         }
       } catch (error) {
         // Error messages from drivers/vendors can embed credentials or SQL values.
@@ -1832,7 +1842,6 @@ export async function runOnboarding(
           : null;
       result.timeMs = Date.now() - start;
       return result;
-    },
-    options.signal
-  );
+  };
+  return run();
 }

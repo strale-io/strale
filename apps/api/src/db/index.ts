@@ -4,17 +4,20 @@ import * as schema from "./schema.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export type Database = PostgresJsDatabase<typeof schema>;
-const scopedDatabase = new AsyncLocalStorage<Database>();
+let scopedDatabase: AsyncLocalStorage<Database> | undefined;
 
-/** Keep the entire onboarding call graph, including post-commit hooks, on the
- * injected handle. AsyncLocalStorage keeps concurrent API requests isolated.
- * The signal stops new queries after the budget; in-flight queries still drain.
+/** CLI only: deep calls must use the operator-authorized handle. Lazily
+ * allocate the scope so API onboarding never enables a process-wide async hook.
  */
-export function withDatabase<T>(
-  db: Database,
-  run: () => T,
-  signal?: AbortSignal
-): T {
+export function withDatabase<T>(db: Database, run: () => T, signal?: AbortSignal): T {
+  scopedDatabase ??= new AsyncLocalStorage<Database>();
+  return scopedDatabase.run(boundDatabase(db, signal), run);
+}
+
+/** Fence new queries (including lazy builders and transaction handles) after
+ * abort, without installing async hooks. Already-issued queries can still drain.
+ */
+export function boundDatabase(db: Database, signal?: AbortSignal): Database {
   const cache = new WeakMap<object, object>();
   function bounded<T extends object>(target: T): T {
     if (!signal) return target;
@@ -46,14 +49,14 @@ export function withDatabase<T>(
     cache.set(target, proxy);
     return proxy;
   }
-  return scopedDatabase.run(bounded(db), () => run());
+  return bounded(db);
 }
 
 let _db: PostgresJsDatabase<typeof schema> | null = null;
 let _client: Sql | null = null;
 
 export function getDb(): PostgresJsDatabase<typeof schema> {
-  const scoped = scopedDatabase.getStore();
+  const scoped = scopedDatabase?.getStore();
   if (scoped) return scoped;
   if (!_db) {
     const connectionString = process.env.DATABASE_URL;

@@ -31,7 +31,7 @@
  */
 
 import { sql } from "drizzle-orm";
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import { log, logError, logWarn } from "../lib/log.js";
 import { alertOnce } from "../lib/alert-once.js";
 import {
@@ -269,12 +269,12 @@ export function seedCostMetaForOnboarding(meta: CapabilityCostMeta): void {
   });
 }
 
-export async function getCapabilityCostMeta(slug: string): Promise<CapabilityCostMeta> {
+export async function getCapabilityCostMeta(slug: string, handle?: Database): Promise<CapabilityCostMeta> {
   const now = Date.now();
   const cached = metaCache.get(slug);
   if (cached && cached.expiresAt > now) return cached.value;
 
-  const db = getDb();
+  const db = handle ?? getDb();
   const rows = await db.execute(sql`
     SELECT slug, cost_class, quota_window, quota_cap, quota_reset_dom
       FROM capabilities
@@ -355,6 +355,9 @@ export function computeBudgetCap(meta: CapabilityCostMeta): number {
   return Math.max(1, Math.floor(meta.quota_cap * pct));
 }
 
+/** Explicit context for bounded onboarding; other rails retain their defaults. */
+interface ExecutionScope { db?: Database; signal?: AbortSignal }
+
 // ─── Budget assertion (atomic increment) ────────────────────────────────────
 
 interface BudgetRow {
@@ -381,7 +384,9 @@ export async function assertBudgetAvailable(
   slug: string,
   meta: CapabilityCostMeta,
   ctx: InvocationContext,
+  scope: ExecutionScope = {},
 ): Promise<void> {
+  scope.signal?.throwIfAborted();
   if (meta.quota_window === null || meta.quota_window === "none") {
     throw new Error(
       `assertBudgetAvailable: ${slug} has window=${meta.quota_window} — should not budget-check`,
@@ -396,7 +401,7 @@ export async function assertBudgetAvailable(
   const windowStart = computeWindowStart(meta.quota_window, meta.quota_reset_dom).toISOString();
   const windowKind = meta.quota_window;
 
-  const db = getDb();
+  const db = scope.db ?? getDb();
   const result = await db.execute(sql`
     INSERT INTO capability_budget_counters (capability_slug, window_start, window_kind, test_count, budget_cap)
     VALUES (${slug}, ${windowStart}, ${windowKind}, 1, ${budgetCap})
@@ -411,6 +416,7 @@ export async function assertBudgetAvailable(
     throw new Error(`assertBudgetAvailable: no row returned for ${slug}`);
   }
 
+  scope.signal?.throwIfAborted();
   if (row.test_count > row.budget_cap) {
     // Over budget — decrement to keep the counter honest, then refuse.
     await db.execute(sql`
@@ -422,9 +428,11 @@ export async function assertBudgetAvailable(
     `);
     // Fire hard-stop alert at most once per window.
     if (!row.hard_stop_fired_at) {
-      void fireBudgetHardStopAlert(slug, meta, budgetCap, ctx).catch((err) =>
+      const alert = fireBudgetHardStopAlert(slug, meta, budgetCap, ctx, scope).catch((err) =>
         logError("budget-hard-stop-alert-failed", err, { slug }),
       );
+      if (scope.signal) await alert;
+      scope.signal?.throwIfAborted();
       await db.execute(sql`
         UPDATE capability_budget_counters
            SET hard_stop_fired_at = NOW()
@@ -438,9 +446,12 @@ export async function assertBudgetAvailable(
   }
 
   // Fire threshold alerts (fire-and-forget, atomic single-fire via NULL check).
-  void maybeFireThresholdAlerts(row, slug, meta, budgetCap, windowStart, windowKind).catch((err) =>
+  const alerts = maybeFireThresholdAlerts(row, slug, meta, budgetCap, windowStart, windowKind, scope).catch((err) =>
     logError("budget-threshold-alert-failed", err, { slug }),
   );
+  // A bounded onboarding run owns all its writes, including alert bookkeeping.
+  if (scope.signal) await alerts;
+  scope.signal?.throwIfAborted();
 }
 
 /**
@@ -511,14 +522,16 @@ async function maybeFireThresholdAlerts(
   budgetCap: number,
   windowStart: string, // ISO string — see the bind-encoder note in assertBudgetAvailable
   windowKind: "daily" | "monthly",
+  scope: ExecutionScope,
 ): Promise<void> {
   const pct = row.test_count / budgetCap;
-  const db = getDb();
+  const db = scope.db ?? getDb();
   const tryFire = async (
     threshold: 30 | 50 | 80,
     column: "alert_30_fired_at" | "alert_50_fired_at" | "alert_80_fired_at",
     alreadyFired: Date | null,
   ): Promise<void> => {
+    scope.signal?.throwIfAborted();
     if (alreadyFired) return;
     if (pct < threshold / 100) return;
     // A daily budget window resets every day, so a harness that reliably
@@ -545,8 +558,10 @@ async function maybeFireThresholdAlerts(
           `by our testing, and it is working. Repeats within ${ALERT_COOLDOWN_DAYS} days are logged\n` +
           `but not emailed.`,
         severity: threshold === 80 ? "warning" : "info",
+        db, signal: scope.signal,
       },
     );
+    scope.signal?.throwIfAborted();
     // Mark fired so subsequent calls don't re-alert. Composite-PK UPDATE
     // is atomic; if two callers race, only the first NULL→NOW() wins.
     if (column === "alert_30_fired_at") {
@@ -582,7 +597,9 @@ async function fireBudgetHardStopAlert(
   meta: CapabilityCostMeta,
   budgetCap: number,
   ctx: InvocationContext,
+  scope: ExecutionScope,
 ): Promise<void> {
+  scope.signal?.throwIfAborted();
   // Rate-limited for the same reason as the thresholds, and more so: a
   // capability whose harness exhausts a daily budget does it again tomorrow.
   // `swedish-company-data` hit its cap on three consecutive days in August.
@@ -603,6 +620,7 @@ async function fireBudgetHardStopAlert(
       `Repeats within ${ALERT_COOLDOWN_DAYS} days are logged but not emailed — the refusal ` +
       `still happens every time.`,
     severity: "critical",
+    db: scope.db, signal: scope.signal,
     },
   );
 }
@@ -623,8 +641,11 @@ export async function guardedExecute(
   input: CapabilityInput,
   ctx: InvocationContext,
   rail: InvocationRail,
+  scope: ExecutionScope = {},
 ): Promise<CapabilityResult> {
-  await assertGuardedAllow(slug, ctx);
+  scope.signal?.throwIfAborted();
+  await assertGuardedAllow(slug, ctx, scope);
+  scope.signal?.throwIfAborted();
   const executor: CapabilityExecutor | undefined = getExecutor(slug);
   if (!executor) {
     throw new Error(`Executor not registered for ${slug}`);
@@ -641,6 +662,7 @@ export async function guardedExecute(
   const startedAt = Date.now();
   try {
     const result = await executor(input);
+    scope.signal?.throwIfAborted();
     await recordInvocation({
       capabilitySlug: slug,
       rail,
@@ -649,9 +671,10 @@ export async function guardedExecute(
       transactionId: ctx.kind === "customer_paid" ? ctx.transactionId : null,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromOutput(slug, result.output),
-    });
+    }, scope);
     return result;
   } catch (err) {
+    scope.signal?.throwIfAborted();
     await recordInvocation({
       capabilitySlug: slug,
       rail,
@@ -660,7 +683,7 @@ export async function guardedExecute(
       transactionId: ctx.kind === "customer_paid" ? ctx.transactionId : null,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromError(err),
-    });
+    }, scope);
     throw err;
   }
 }
@@ -676,8 +699,11 @@ export async function guardedExecute(
 export async function assertGuardedAllow(
   slug: string,
   ctx: InvocationContext,
+  scope: ExecutionScope = {},
 ): Promise<void> {
-  const meta = await getCapabilityCostMeta(slug);
+  scope.signal?.throwIfAborted();
+  const meta = await getCapabilityCostMeta(slug, scope.db);
+  scope.signal?.throwIfAborted();
   const decision: Decision = meta.cost_class === null
     ? NULL_DECISIONS[ctx.kind]
     : ALLOW_MATRIX[meta.cost_class][ctx.kind];
@@ -703,6 +729,6 @@ export async function assertGuardedAllow(
   }
 
   if (decision === "budget_check") {
-    await assertBudgetAvailable(slug, meta, ctx);
+    await assertBudgetAvailable(slug, meta, ctx, scope);
   }
 }

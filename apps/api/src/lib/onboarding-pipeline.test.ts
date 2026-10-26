@@ -1,3 +1,8 @@
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+import { createOnboardingRunRoute } from "../routes/internal-onboarding.js";
+import { AsyncLocalStorage, createHook } from "node:async_hooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as yaml from "js-yaml";
 import { runOnboarding } from "./onboarding-pipeline.js";
@@ -108,8 +113,8 @@ beforeEach(() => {
 describe("shared onboarding pipeline", () => {
   it("creates all five suites with the injected handle and retains dark launch", async () => {
     const db = database();
-    vi.mocked(persistCapability).mockImplementationOnce(async () => {
-      expect(getDb()).toBe(db);
+    vi.mocked(persistCapability).mockImplementationOnce(async (_input, opts) => {
+      expect(opts.db).toBe(db);
       return { slug: "sample-tool", mode: "create", hookFailed: false };
     });
     const result = await runOnboarding(db, {
@@ -217,6 +222,7 @@ describe("shared onboarding pipeline", () => {
     const result = await runOnboarding(database(), {
       manifestYaml: yaml.dump(manifest()),
       mode: "onboard",
+      signal: new AbortController().signal,
     });
     expect(result).toMatchObject({
       status: "failed",
@@ -343,6 +349,57 @@ describe("shared onboarding pipeline", () => {
     });
     expect(guardedExecute).toHaveBeenCalledTimes(1);
     expect(persistCapability).not.toHaveBeenCalled();
+  });
+  it("API pipeline never enters ALS or enables an async hook", async () => {
+    const run = vi.spyOn(AsyncLocalStorage.prototype, "run");
+    const hookPrototype = Object.getPrototypeOf(createHook({}));
+    const enable = vi.spyOn(hookPrototype, "enable");
+    try {
+      const directory = mkdtempSync(resolve(tmpdir(), "onboarding-als-test-"));
+      try {
+        writeFileSync(resolve(directory, "sample-tool.yaml"), yaml.dump(manifest()));
+        const secret = "onboarding-only-test-secret-32-characters";
+        const app = createOnboardingRunRoute({
+          database: () => database(), pipeline: runOnboarding,
+          manifestDirectory: directory, secret: () => secret,
+        });
+        const headers = { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" };
+        const response = await app.request("/run", { method: "POST", headers, body: JSON.stringify({ slug: "sample-tool", mode: "onboard" }) });
+        expect(response.status).toBe(202);
+        const { id } = await response.json();
+        let state;
+        // Flush the actual route → pipeline → result chain without test timers.
+        for (let i = 0; i < 30; i++) {
+          state = await (await app.request(`/run/${id}`, { headers })).json();
+          if (!state.busy) break;
+        }
+        expect(state.status).toBe("success");
+        expect(persistCapability).toHaveBeenCalled();
+      } finally { rmSync(directory, { recursive: true, force: true }); }
+      expect(run).not.toHaveBeenCalled();
+      expect(enable).not.toHaveBeenCalled();
+    } finally { run.mockRestore(); enable.mockRestore(); }
+  });
+  it("times out a never-settling executor without persisting", async () => {
+    const controller = new AbortController();
+    vi.mocked(guardedExecute).mockImplementationOnce(() => new Promise(() => {}));
+    const pending = runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()), mode: "onboard", signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(guardedExecute).toHaveBeenCalled());
+    controller.abort();
+    const result = await pending;
+    expect(result).toMatchObject({ status: "failed", errors: [{ code: "timeout" }] });
+    expect(persistCapability).not.toHaveBeenCalled();
+  });
+  it("CLI create warns and succeeds when its committed hook fails", async () => {
+    vi.mocked(persistCapability).mockResolvedValueOnce({ slug: "sample-tool", mode: "create", hookFailed: true });
+    const report = vi.fn();
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()), mode: "onboard", onMessage: report,
+    });
+    expect(result.status).toBe("success");
+    expect(report).toHaveBeenCalledWith(expect.stringContaining("hook failed"));
   });
   it("keeps concurrent injected DB contexts isolated", async () => {
     const a = database(),

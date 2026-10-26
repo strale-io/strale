@@ -830,7 +830,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "3561ea1b18c7c47dfa02a21bd66f2a1b649c805df96255e930e857453123ac03",
+      "sha256": "3e0dfc6450a9f225faa7a46b3101a4e3bd9e593b1a7b6d3efba7d5ef1a22fbff",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -890,6 +890,7 @@
         "archive/receipts/2026-09-06-check-brand-editorial-readiness.json",
         "archive/receipts/2026-09-11-audit-browserless-credential-outage.json",
         "archive/receipts/2026-10-26-check-onboarding-run-endpoint.json",
+        "archive/receipts/2026-10-26-check-onboarding-run-round2.json",
         "archive/receipts/2026-10-26-test-run-invoice-counterparty-check-round-2.json",
         "archive/receipts/2026-10-26-test-run-invoice-counterparty-check-verification.json",
         "archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json",

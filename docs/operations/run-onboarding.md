@@ -8,7 +8,8 @@ database password. GitHub holds only a secret that can trigger this operation.
 
 1. In your password manager, open its password generator. Generate a random
    password of at least 32 characters (64 letters and digits works well).
-   Save it as “Strale onboarding trigger”. Keep it private.
+   Save it as “Strale onboarding trigger”. Use a different password from
+   `ADMIN_SECRET`. Keep it private.
 2. Open Railway → the Strale project → the **API service** → **Variables**.
    Add `ONBOARDING_RUN_SECRET` and paste the password as its value. Apply the
    change and wait for deployment to finish.
@@ -64,7 +65,7 @@ and discover unchecked.
   default. The existing hook generates/checks tests and warns about visibility;
   it does not publish the capability. The first green week remains the gate
   for later promotion under DEC-20260812-A. Backfill preserves existing
-  visibility and x402 settings.
+  visibility, x402, activity and lifecycle settings, including when its hook fails.
 - **Known-answer not verified or failed:** the existing CLI permits some
   execution refusals, transient errors and mismatches without strict mode.
   This runner preserves that behavior and reports it honestly, even if
@@ -73,14 +74,18 @@ and discover unchecked.
   ask the maintainer if needed. A failed hook or readiness check can follow
   committed rows; inspect the result before retrying. If creation already
   happened, use backfill rather than onboard.
-- **Secret not configured / does not match:** check the one-time setup. Never
+- **Secret not configured / misconfigured / does not match:** check the one-time
+  setup. A secret shared with `ADMIN_SECRET` is refused. The batch stops on
+  authentication or configuration failure. Never
   paste the secret into a workflow input, issue or message.
 - **Manifest missing:** wait for the deployment containing the merged manifest.
 - **Busy:** one run is already active. Wait for it to finish. The workflow also
   queues batches, and runs slugs sequentially.
 - **Timeout:** a run has a five-minute budget. The batch stops, new database
-  queries are refused, and already-issued queries drain while the lock remains
-  held. Some rows may have committed. Ask the maintainer to inspect the run
+  queries are refused, and the lock releases even if an executor never settles.
+  Route runs skip detached fixture validation. Late executor results cannot start
+  further onboarding writes, but already-issued database queries may still drain.
+  Some rows may have committed. Ask the maintainer to inspect the run
   status and API logs before trying again.
 - **Run not found:** results live in the API process and disappear on restart,
   redeploy or after 100 newer runs. A different API replica also cannot see

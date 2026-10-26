@@ -51,6 +51,15 @@ async function loadApp() {
 }
 
 describe("F-0-003: /v1/internal/* rejects requests without admin auth", () => {
+  it.each([
+    ["/v1/internal/onboarding/readiness", "GET", [401]],
+    ["/v1/internal/onboarding/fix-latency", "POST", [401]],
+    ["/v1/internal/onboarding/run", "POST", [401, 503]],
+  ])("real app protects %s without credentials", async (path, method, statuses) => {
+    const app = await loadApp();
+    const res = await app.request(path, { method });
+    expect(statuses).toContain(res.status);
+  });
   it("returns 401 for a GET without Authorization header", async () => {
     const app = await loadApp();
     const res = await app.request("/v1/internal/tests/capabilities/email-validate");

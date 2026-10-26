@@ -1,3 +1,4 @@
+import { withinOnboardingBudget } from "../lib/onboarding-budget.js";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { readFileSync, realpathSync } from "node:fs";
@@ -201,6 +202,9 @@ export function createOnboardingRunRoute(
         503
       );
     }
+    if (secret === ADMIN_SECRET) {
+      return c.json({ error: { code: "misconfigured", message: "ONBOARDING_RUN_SECRET must differ from ADMIN_SECRET." } }, 503);
+    }
     const expected = Buffer.from(`Bearer ${secret}`, "utf-8");
     const provided = Buffer.from(c.req.header("Authorization") ?? "", "utf-8");
     if (
@@ -342,7 +346,8 @@ export function createOnboardingRunRoute(
         },
       ];
       controller.abort();
-      // Keep the lock until in-flight work settles; no concurrent late writes.
+      // The abort race releases the lock. Bounded handles refuse new writes;
+      // already-issued database queries may still drain.
     }, deps.budgetMs ?? 300_000);
     const authority = describeAuthority(
       autonomousAuthority("capability_onboarding", "DEC-20260812-A")
@@ -359,7 +364,7 @@ export function createOnboardingRunRoute(
     );
     void Promise.resolve()
       .then(async () => {
-        const result = await pipeline((deps.database ?? getDb)(), {
+        const result = await withinOnboardingBudget(pipeline((deps.database ?? getDb)(), {
           manifestYaml,
           mode: input.mode,
           discover: input.discover,
@@ -368,7 +373,7 @@ export function createOnboardingRunRoute(
           // authority and manifest gates remain enforced, with no bypass exposed.
           force: true,
           signal: controller.signal,
-        });
+        }), controller.signal);
         run.result = result;
         if (run.status !== "timeout") {
           const ready = result.readiness?.ready === true;
@@ -414,7 +419,7 @@ export function createOnboardingRunRoute(
       .finally(() => {
         clearTimeout(timer);
         run.finished_at ??= new Date().toISOString();
-        activeId = undefined;
+        if (activeId === id) activeId = undefined;
         log.info(
           {
             label: "onboarding-run-finish",

@@ -110,6 +110,27 @@ describe("onboarding workflow client", () => {
       ).toBe(http);
     }
   );
+  it.each([
+    { http: 401, code: "unauthorized" },
+    { http: 503, code: "misconfigured" },
+    { http: 200, code: "not_configured" },
+  ])("stops all slugs on $http / $code, including a later slug or poll", async ({ http, code }) => {
+    const failure = { http, body: { error: { code, message: "Fix configuration" } } };
+    const request = vi.fn().mockResolvedValueOnce(complete("first-tool")).mockResolvedValue(failure);
+    expect(await runWorkflow({ ...env(), INPUT_SLUGS: "first-tool,second-tool,third-tool" }, request)).toBe(1);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(readFileSync("onboarding-results/second-tool.json", "utf8")).toContain(code);
+    const polling = vi.fn().mockResolvedValueOnce({ http: 202, body: { status: "running", id: "12345678-1234-1234-1234-123456789abc" } }).mockResolvedValue(failure);
+    expect(await runWorkflow(env(), polling, async () => {})).toBe(1);
+    expect(polling).toHaveBeenCalledTimes(2);
+  });
+  it("pins workflow actions to commit SHAs", () => {
+    const workflow = readFileSync(resolve(import.meta.dirname, "../../../../.github/workflows/onboard-capability.yml"), "utf8");
+    const actions = [...workflow.matchAll(/uses: (actions\/[^\s]+)/g)].map(m => m[1]);
+    expect(actions).toHaveLength(2);
+    for (const action of actions) expect(action).toMatch(/@[a-f0-9]{40}$/);
+    expect(workflow.match(/# v4/g)).toHaveLength(2);
+  });
   it("keeps the accepted run id when polling fails", async () => {
     const id = "12345678-1234-1234-1234-123456789abc";
     const request = vi

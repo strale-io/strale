@@ -19,6 +19,7 @@ import {
 } from "./onboarding-pipeline.js";
 import { openOperatorWriteDrizzle } from "./operator-db.js";
 import { describeAuthority } from "./production-authority.js";
+import { getDb } from "../db/index.js";
 import { main } from "../../scripts/onboard.js";
 const originalArgv = process.argv;
 afterEach(() => {
@@ -30,13 +31,17 @@ it("CLI uses the shared pipeline, retains operator authority, and writes returne
   const path = resolve(directory, "sample-tool.yaml");
   try {
     writeFileSync(path, "slug: sample-tool\n");
-    vi.mocked(runOnboarding).mockResolvedValue({
+    vi.mocked(runOnboarding).mockImplementation(async () => {
+      await Promise.resolve();
+      expect(getDb()).toEqual({ operator: true });
+      return {
       status: "success",
       slug: "sample-tool",
       errors: [],
       updatedManifestYaml: "slug: sample-tool\nname: Discovered\n",
       timeMs: 3,
-    } as any);
+    } as any;
+    });
     process.argv = [
       "node",
       "onboard.ts",

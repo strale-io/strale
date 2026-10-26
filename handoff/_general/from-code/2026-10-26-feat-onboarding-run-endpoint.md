@@ -173,3 +173,37 @@ red mutation, and green restoration from the recorded commit. The final route
 suite also passed after strengthening its admin-token rejection fixture to use
 the actual configured admin token captured at import. Production implementation
 files are unchanged from implementation commit `b063dd60`.
+
+**Round 2:** Supersedes the timeout and CLI hook behavior described above.
+API runs pass a bounded database handle explicitly and never enter ALS; lazy
+ALS remains only in the CLI so deep writes retain its operator handle. Backfill
+cannot change visibility, x402, activity or lifecycle, including on hook/gate
+failure, which is returned with a reason. Abort races release the lock for hung
+executors and fence subsequent pipeline, budget, alert and invocation writes;
+already-issued queries may still drain. Route runs skip detached fixture
+validation. Batches stop on authentication/configuration failure, shared
+admin/onboarding secrets return 503 `misconfigured`, real-app tests exercise
+legacy auth, CLI create-hook failures again warn and succeed, and workflow
+actions are pinned by SHA. Technical and product reviews returned GO, with
+the technical review confirming the repaired deep-write fence.
+
+Round 2 verification: focused tests passed (180); full API tests passed
+(5,746 passed, 321 skipped). All root check-job commands, standalone typecheck
+and the production-write-access guard passed. Against `59a44d2f`, 21 tests
+failed (19 behavioral regressions and two adapter-contract assertions), 83
+passed and one new bounded-handle probe was excluded because its helper does
+not exist at that revision. Source bytes were restored and verified before the
+final green runs. Exact commands, counts and failing test names are in the
+[Round 2 receipt](../../../archive/receipts/2026-10-26-check-onboarding-run-round2.json).
+
+The working changes remain uncommitted because Git metadata is read-only;
+the orchestrator commits, pushes and ships. The session handoff gate reports
+`dirty`, `branch` (it treats the isolated clone as a shared trunk), and an
+unrelated `merged-branch`; the current instructions forbid the suggested
+worktree/branch/remote changes. The normal context generator has the same
+shared-trunk assumption; its existing `writeGeneratedFiles` function was used
+in this explicitly isolated clone instead. The CLI dry-run remains refused
+without the operator credential. Unauthenticated readiness, fix-latency and
+run probes all returned 401 from the deployed admin wall; these do not verify
+the undeployed repair. Production setup and post-deploy commands remain the
+ones listed above. No production writes or settings changes were attempted.
