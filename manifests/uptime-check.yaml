@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: uptime-check
-name: Uptime Check
-description: Check if a URL is up or down. Returns status code, latency, redirect info, TLS status, and server headers.
+name: "Uptime Check"
+description: "Check whether a URL is up: status code, latency, redirects, TLS and server headers."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none

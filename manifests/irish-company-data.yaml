@@ -1,9 +1,6 @@
 slug: irish-company-data
-name: Irish Company Data
-description: >-
-  Look up Irish company data from the Companies Registration Office (CRO) Open Data Portal. Accepts CRO number (5-6
-  digits) or fuzzy company name. Returns name, status, type, address, registration date, annual return dates, NACE
-  code, and Eircode.
+name: "Irish Company Data"
+description: "Look up an Irish company at the Companies Registration Office by CRO number or name. Returns name, status, type, address, registration date, annual return dates, NACE code and Eircode."
 category: company-data
 cost_class: free_unlimited
 quota_window: none

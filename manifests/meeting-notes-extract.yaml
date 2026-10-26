@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: meeting-notes-extract
-name: Meeting Notes Extract
-description: >-
-  Extract structured meeting notes from a transcript. Returns summary, decisions, action items with owners, key
-  discussion points, follow-ups.
+name: "Meeting Notes Extraction"
+description: "Turn a meeting transcript into notes: summary, decisions, action items with owners, key points and follow-ups."
 category: document-extraction
 cost_class: paid_prepaid
 quota_window: none

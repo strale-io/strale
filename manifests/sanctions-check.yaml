@@ -1,7 +1,6 @@
 slug: sanctions-check
-name: Sanctions Check
-description: >-
-  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match results with named source attribution and country attribution.
+name: "Sanctions Check"
+description: "Check a person or company against sanctions lists: EU, US OFAC, UN, UK, Swiss SECO, BIS, World Bank, EBRD, ADB and 125 national lists. Returns each match with the list and country it comes from."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

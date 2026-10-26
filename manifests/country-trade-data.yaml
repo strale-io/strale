@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: country-trade-data
-name: Country Trade Data
-description: "Get trade data for a country: top exports/imports, trade balance, trading partners. World Bank API + embedded data."
+name: "Country Trade Data"
+description: "Get a country's top exports and imports, trade balance and main trading partners, from the World Bank."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

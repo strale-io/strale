@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: prompt-optimize
-name: Prompt Optimize
-description: >-
-  Analyze and improve a prompt. Returns improved version with changes and reasoning, clarity score comparison, and
-  techniques applied.
+name: "Prompt Optimiser"
+description: "Improve a prompt and see what changed and why, with a before-and-after clarity score and the techniques used."
 category: agent-tooling
 cost_class: paid_prepaid
 quota_window: none

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: phone-normalize
-name: Phone Normalize
-description: >-
-  Parse and normalize phone numbers to E.164 format. Detects country, carrier type, validates format. Uses
-  libphonenumber.
+name: "Phone Number Normaliser"
+description: "Normalise a phone number to E.164, detect its country and line type, and check its format."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

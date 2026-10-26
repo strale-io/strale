@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: fake-data-generate
-name: Fake Data Generate
-description: >-
-  Generate realistic fake data matching a schema. Locale-aware: Swedish names for 'sv', Japanese for 'ja'. Up to 1000
-  records.
+name: "Fake Data Generator"
+description: "Generate up to 1,000 realistic fake records for a schema, in the right locale, such as Swedish or Japanese names."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

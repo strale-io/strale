@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: price-compare
-name: Price Compare
-description: Compare prices across merchants via PriceRunner (Nordic) and Google Shopping. Returns lowest/highest/average prices.
+name: "Price Comparison"
+description: "Compare a product's price across shops on PriceRunner (Nordics) and Google Shopping. Returns the lowest, highest and average price."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

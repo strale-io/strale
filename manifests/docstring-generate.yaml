@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: docstring-generate
-name: Docstring Generate
-description: Add Python docstrings to functions and classes. Supports Google, NumPy, and Sphinx styles.
+name: "Docstring Generator"
+description: "Add docstrings to Python functions and classes, in Google, NumPy or Sphinx style."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

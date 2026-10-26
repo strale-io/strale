@@ -1,8 +1,6 @@
 slug: uk-disqualified-director-check
-name: UK Disqualified Director Check
-description: >-
-  Search the UK Companies House Disqualified Officers register by name, or fetch full disqualification detail
-  by officer_id. Returns disqualification dates, court, reason, and companies involved.
+name: "UK Disqualified Director Check"
+description: "Search the UK register of disqualified directors by name, or fetch one record in full: dates, court, reason and the companies involved."
 category: compliance
 cost_class: free_quota
 quota_window: daily

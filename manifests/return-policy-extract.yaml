@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: return-policy-extract
-name: Return Policy Extract
-description: Extract return/refund policy from a retailer website. Returns window, conditions, exclusions, process steps.
+name: "Return Policy Extraction"
+description: "Read a shop's return policy: the return window, conditions, exclusions and how to return."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

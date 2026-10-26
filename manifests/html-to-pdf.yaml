@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: html-to-pdf
-name: HTML to PDF
-description: >-
-  Convert HTML string or URL to PDF via headless browser. Configurable paper size, margins, landscape mode. Returns
-  base64 PDF.
+name: "HTML to PDF"
+description: "Turn HTML or a web page into a PDF, with the paper size, margins and orientation you choose."
 category: file-conversion
 cost_class: free_unlimited
 quota_window: none

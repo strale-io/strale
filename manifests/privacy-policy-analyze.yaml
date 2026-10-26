@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: privacy-policy-analyze
-name: Privacy Policy Analyze
-description: >-
-  Analyze a company's privacy policy. Extracts data collected, purposes, third parties, user rights, GDPR/CCPA
-  compliance signals.
+name: "Privacy Policy Analysis"
+description: "Read a company's privacy policy and pull out the data collected, purposes, third parties, user rights and GDPR and CCPA signals."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

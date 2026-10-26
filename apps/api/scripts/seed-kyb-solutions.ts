@@ -36,6 +36,8 @@ import { wasDeactivatedDeliberately } from "../src/lib/solution-activation.js";
 interface Country {
   code: string;
   name: string;
+  /** Adjective for public copy ("a Swedish company", "a UK company"). */
+  adjective: string;
   companyDataSlug: string;
   isEU: boolean;
   geography: string;
@@ -45,30 +47,36 @@ interface Country {
 }
 
 const COUNTRIES: Country[] = [
-  { code: "se", name: "Sweden", companyDataSlug: "swedish-company-data", isEU: true, geography: "nordic", inputField: "org_number", inputLabel: "Swedish organization number", exampleId: "556703-7485" },
-  { code: "no", name: "Norway", companyDataSlug: "norwegian-company-data", isEU: true, geography: "nordic", inputField: "org_number", inputLabel: "Norwegian org number (9 digits)", exampleId: "984851006" },
-  { code: "dk", name: "Denmark", companyDataSlug: "danish-company-data", isEU: true, geography: "nordic", inputField: "cvr_number", inputLabel: "Danish CVR number", exampleId: "10150817" },
-  { code: "fi", name: "Finland", companyDataSlug: "finnish-company-data", isEU: true, geography: "nordic", inputField: "business_id", inputLabel: "Finnish business ID", exampleId: "0112038-9" },
-  { code: "uk", name: "United Kingdom", companyDataSlug: "uk-company-data", isEU: true, geography: "eu", inputField: "company_number", inputLabel: "UK Companies House number", exampleId: "00445790" },
-  { code: "de", name: "Germany", companyDataSlug: "german-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "German company name or registration number", exampleId: "Siemens AG" },
-  { code: "fr", name: "France", companyDataSlug: "french-company-data", isEU: true, geography: "eu", inputField: "siren", inputLabel: "French SIREN/SIRET number", exampleId: "542051180" },
-  { code: "nl", name: "Netherlands", companyDataSlug: "dutch-company-data", isEU: true, geography: "eu", inputField: "kvk_number", inputLabel: "Dutch KVK number", exampleId: "34186284" },
-  { code: "be", name: "Belgium", companyDataSlug: "belgian-company-data", isEU: true, geography: "eu", inputField: "enterprise_number", inputLabel: "Belgian enterprise number", exampleId: "0403.170.701" },
-  { code: "at", name: "Austria", companyDataSlug: "austrian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Austrian company name or register number", exampleId: "OMV Aktiengesellschaft" },
-  { code: "ie", name: "Ireland", companyDataSlug: "irish-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Irish company name or CRO number", exampleId: "Ryanair Holdings plc" },
-  { code: "es", name: "Spain", companyDataSlug: "spanish-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Spanish company name or CIF", exampleId: "Banco Santander" },
-  { code: "it", name: "Italy", companyDataSlug: "italian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Italian company name or codice fiscale", exampleId: "Ferrari" },
-  { code: "ch", name: "Switzerland", companyDataSlug: "swiss-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Swiss company name or UID", exampleId: "Nestlé SA" },
-  { code: "pl", name: "Poland", companyDataSlug: "polish-company-data", isEU: true, geography: "eu", inputField: "krs_number", inputLabel: "Polish KRS number", exampleId: "0000019193" },
-  { code: "pt", name: "Portugal", companyDataSlug: "portuguese-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Portuguese company name or NIPC", exampleId: "EDP" },
-  { code: "hr", name: "Croatia", companyDataSlug: "croatian-company-data", isEU: true, geography: "eu", inputField: "oib", inputLabel: "Croatian OIB (11 digits), MBS, or company name", exampleId: "81793146560" },
-  { code: "gr", name: "Greece", companyDataSlug: "greek-company-data", isEU: true, geography: "eu", inputField: "gemi_number", inputLabel: "Greek GEMI registry number", exampleId: "000237954001" },
-  { code: "us", name: "United States", companyDataSlug: "us-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "US company name or EIN", exampleId: "Apple Inc" },
-  { code: "ca", name: "Canada", companyDataSlug: "canadian-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "Canadian company name or corporation number", exampleId: "Shopify Inc" },
-  { code: "au", name: "Australia", companyDataSlug: "au-company-data", isEU: false, geography: "us-global", inputField: "abn", inputLabel: "Australian Business Number (11 digits)", exampleId: "51824753556" },
+  { code: "se", name: "Sweden", adjective: "Swedish", companyDataSlug: "swedish-company-data", isEU: true, geography: "nordic", inputField: "org_number", inputLabel: "Swedish organization number", exampleId: "556703-7485" },
+  { code: "no", name: "Norway", adjective: "Norwegian", companyDataSlug: "norwegian-company-data", isEU: true, geography: "nordic", inputField: "org_number", inputLabel: "Norwegian org number (9 digits)", exampleId: "984851006" },
+  { code: "dk", name: "Denmark", adjective: "Danish", companyDataSlug: "danish-company-data", isEU: true, geography: "nordic", inputField: "cvr_number", inputLabel: "Danish CVR number", exampleId: "10150817" },
+  { code: "fi", name: "Finland", adjective: "Finnish", companyDataSlug: "finnish-company-data", isEU: true, geography: "nordic", inputField: "business_id", inputLabel: "Finnish business ID", exampleId: "0112038-9" },
+  { code: "uk", name: "United Kingdom", adjective: "UK", companyDataSlug: "uk-company-data", isEU: true, geography: "eu", inputField: "company_number", inputLabel: "UK Companies House number", exampleId: "00445790" },
+  { code: "de", name: "Germany", adjective: "German", companyDataSlug: "german-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "German company name or registration number", exampleId: "Siemens AG" },
+  { code: "fr", name: "France", adjective: "French", companyDataSlug: "french-company-data", isEU: true, geography: "eu", inputField: "siren", inputLabel: "French SIREN/SIRET number", exampleId: "542051180" },
+  { code: "nl", name: "Netherlands", adjective: "Dutch", companyDataSlug: "dutch-company-data", isEU: true, geography: "eu", inputField: "kvk_number", inputLabel: "Dutch KVK number", exampleId: "34186284" },
+  { code: "be", name: "Belgium", adjective: "Belgian", companyDataSlug: "belgian-company-data", isEU: true, geography: "eu", inputField: "enterprise_number", inputLabel: "Belgian enterprise number", exampleId: "0403.170.701" },
+  { code: "at", name: "Austria", adjective: "Austrian", companyDataSlug: "austrian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Austrian company name or register number", exampleId: "OMV Aktiengesellschaft" },
+  { code: "ie", name: "Ireland", adjective: "Irish", companyDataSlug: "irish-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Irish company name or CRO number", exampleId: "Ryanair Holdings plc" },
+  { code: "es", name: "Spain", adjective: "Spanish", companyDataSlug: "spanish-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Spanish company name or CIF", exampleId: "Banco Santander" },
+  { code: "it", name: "Italy", adjective: "Italian", companyDataSlug: "italian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Italian company name or codice fiscale", exampleId: "Ferrari" },
+  { code: "ch", name: "Switzerland", adjective: "Swiss", companyDataSlug: "swiss-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Swiss company name or UID", exampleId: "Nestlé SA" },
+  { code: "pl", name: "Poland", adjective: "Polish", companyDataSlug: "polish-company-data", isEU: true, geography: "eu", inputField: "krs_number", inputLabel: "Polish KRS number", exampleId: "0000019193" },
+  { code: "pt", name: "Portugal", adjective: "Portuguese", companyDataSlug: "portuguese-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Portuguese company name or NIPC", exampleId: "EDP" },
+  { code: "hr", name: "Croatia", adjective: "Croatian", companyDataSlug: "croatian-company-data", isEU: true, geography: "eu", inputField: "oib", inputLabel: "Croatian OIB (11 digits), MBS, or company name", exampleId: "81793146560" },
+  { code: "gr", name: "Greece", adjective: "Greek", companyDataSlug: "greek-company-data", isEU: true, geography: "eu", inputField: "gemi_number", inputLabel: "Greek GEMI registry number", exampleId: "000237954001" },
+  { code: "us", name: "United States", adjective: "US", companyDataSlug: "us-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "US company name or EIN", exampleId: "Apple Inc" },
+  { code: "ca", name: "Canada", adjective: "Canadian", companyDataSlug: "canadian-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "Canadian company name or corporation number", exampleId: "Shopify Inc" },
+  { code: "au", name: "Australia", adjective: "Australian", companyDataSlug: "au-company-data", isEU: false, geography: "us-global", inputField: "abn", inputLabel: "Australian Business Number (11 digits)", exampleId: "51824753556" },
   // Singapore retired 2026-04-21 (DEC-20260421-I). Country count now 19.
   // See archive/sessions/audit-reports/2026-04-21-singapore-kyb-investigation.md.
 ];
+
+// "a Swedish company", "an Austrian company", "a UK company": public copy names the
+// company, not the country dropped into a template ("verification for United Kingdom").
+function companyPhrase(c: Country): string {
+  return `${/^[AEIO]/.test(c.adjective) ? "an" : "a"} ${c.adjective} company`;
+}
 
 // ─── Disclaimer (reused across solutions) ──────────────────────────────────
 
@@ -165,7 +173,7 @@ function buildKybEssentials(c: Country): SolutionDef {
     slug: `kyb-essentials-${c.code}`,
     name: `KYB Essentials — ${c.name}`,
     marketingName: `KYB Essentials — ${c.name}`,
-    description: `Quick company verification for ${c.name}. Confirms the company exists in the official registry, ${c.isEU ? "validates VAT registration (from registry data or a VAT number you provide), " : ""}screens against international sanctions lists, and checks LEI status.`,
+    description: `Quick verification of ${companyPhrase(c)}. Confirms the company exists in the official registry, ${c.isEU ? "validates VAT registration (from registry data or a VAT number you provide), " : ""}screens against international sanctions lists, and checks LEI status.`,
     longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup via ${c.companyDataSlug}, ${c.isEU ? "EU VAT validation via VIES (using the registry's VAT number where the registry publishes one — some registries, e.g. the Austrian Firmenbuch and Slovak RPO, do not — otherwise the optional vat_number input; the step is skipped when neither is available), " : ""}sanctions screening against OFAC/EU/UN lists, and LEI (Legal Entity Identifier) lookup. Returns structured check results with a disclaimer.`,
     agentDescription: `verify ${c.name.toLowerCase()} company, kyb ${c.code}, check ${c.name.toLowerCase()} business, ${c.code} company verification, onboard ${c.name.toLowerCase()} customer`,
     category: "compliance-verification",
@@ -362,7 +370,7 @@ function buildKybComplete(c: Country): SolutionDef {
     slug: `kyb-complete-${c.code}`,
     name: `KYB Complete — ${c.name}`,
     marketingName: `KYB Complete — ${c.name}`,
-    description: `Comprehensive company verification for ${c.name}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
+    description: `Comprehensive verification of ${companyPhrase(c)}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
     longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation (registry-derived or caller-provided), " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
       c.code === "fr" ? " plus BODACC commercial-registry and insolvency events" :
       c.code === "no" ? " plus Brreg bankruptcy / dissolution detail" :
@@ -550,7 +558,7 @@ function buildInvoiceVerify(c: Country): SolutionDef {
     slug: `invoice-verify-${c.code}`,
     name: `Invoice Verify — ${c.name}`,
     marketingName: `Invoice Verify — ${c.name}`,
-    description: `Invoice fraud detection for ${c.name}. Verifies the invoicing company exists, validates payment details (IBAN, BIC${c.isEU ? ", VAT" : ""}), screens for sanctions and adverse media, analyzes sender domain trustworthiness, and produces a plain-language fraud assessment.`,
+    description: `Fraud detection for invoices from ${c.adjective} companies. Verifies the invoicing company exists, validates payment details (IBAN, BIC${c.isEU ? ", VAT" : ""}), screens for sanctions and adverse media, analyzes sender domain trustworthiness, and produces a plain-language fraud assessment.`,
     longDescription: `Performs ${checkCount} automated checks for invoices from ${c.name}: company registry verification, ${c.isEU ? "VAT validation, " : ""}IBAN and BIC validation, sanctions screening, adverse media search, invoice format validation, domain reputation, WHOIS, email validation, DNS check, and redirect tracing. Returns a dual-output response with structured checks and a human-readable fraud assessment.`,
     agentDescription: `verify ${c.name.toLowerCase()} invoice, invoice fraud check ${c.code}, is this ${c.name.toLowerCase()} invoice legitimate, validate ${c.name.toLowerCase()} payment, ${c.code} invoice verification`,
     category: "compliance-verification",

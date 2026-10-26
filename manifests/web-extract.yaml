@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: web-extract
-name: Web Page Data Extraction
-description: >-
-  Extract structured data from any web page with full JavaScript rendering. Handles SPAs, dynamic content, and pages
-  that require JS to load.
+name: "Web Page Data Extraction"
+description: "Pull structured data from a web page, rendering JavaScript first, so single-page apps and dynamic content work."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

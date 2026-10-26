@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: competitor-compare
-name: Competitor Compare
-description: >-
-  Compare two company websites. Analyzes positioning, pricing model, features, target audience, trust signals, content
-  strategy. Returns structured comparison + strategic analysis.
+name: "Competitor Comparison"
+description: "Compare two companies' websites: positioning, pricing model, features, audience, trust signals and content, with a strategic read."
 category: competitive-intelligence
 cost_class: paid_prepaid
 quota_window: none

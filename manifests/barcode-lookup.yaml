@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: barcode-lookup
-name: Barcode Lookup
-description: >-
-  Look up product information by UPC/EAN barcode. Uses Open Food Facts and UPC ItemDB. Returns product name, brand,
-  nutrition, images.
+name: "Barcode Lookup"
+description: "Look up a product by UPC or EAN barcode: name, brand, nutrition and images, from Open Food Facts and UPC ItemDB."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

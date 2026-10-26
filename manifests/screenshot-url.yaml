@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: screenshot-url
-name: Screenshot URL
-description: Take a full-page or viewport screenshot of any URL. Handles cookie banners, lazy loading, SPAs. Returns base64 PNG.
+name: "Web Page Screenshot"
+description: "Take a full-page or visible-area screenshot of a URL as a PNG. Handles cookie banners, lazy loading and single-page apps."
 category: web-scraping
 cost_class: free_unlimited
 quota_window: none

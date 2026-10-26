@@ -1,8 +1,6 @@
 slug: eu-regulation-search
-name: EU Regulation Search
-description: >-
-  Search EU regulations, directives, and decisions by topic. Official Publications Office data with titles, CELEX
-  numbers, dates, in-force status, and EUR-Lex links.
+name: "EU Regulation Search"
+description: "Search EU regulations, directives and decisions by topic, from the Publications Office: titles, CELEX numbers, dates, whether in force, and EUR-Lex links."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

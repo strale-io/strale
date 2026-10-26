@@ -1,8 +1,6 @@
 slug: email-validate-bulk
-name: Bulk Email Validation
-description: >-
-  Validate up to 100 email addresses in one call. Checks format, MX records, disposable domain detection, and role-based
-  address detection per address, plus an aggregate summary. No email is sent.
+name: "Bulk Email Validation"
+description: "Validate up to 100 email addresses in one call: format, mail servers, disposable domains and role addresses for each, plus a summary. No email is sent."
 category: validation
 cost_class: free_unlimited
 quota_window: none

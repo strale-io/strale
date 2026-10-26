@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: exchange-rate
-name: Exchange Rate
-description: >-
-  Get current exchange rate between two currencies using ECB data. Supports all major currencies. Returns rate, inverse
-  rate, and date.
+name: "Exchange Rate"
+description: "Get the current exchange rate between two currencies from the European Central Bank, with the inverse rate and the date."
 category: financial
 cost_class: free_unlimited
 quota_window: none

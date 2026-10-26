@@ -1,10 +1,6 @@
 slug: pep-check
-name: PEP Check
-description: >-
-  Screens an individual against the Politically Exposed Persons (PEP) database via Dilisense.
-  Coverage spans 230+ geopolitical territories aligned with EU C/2023/724 PEP function definitions
-  and includes Relatives and Close Associates (RCAs). Returns audit-grade evidence: match results
-  with classification, position history, jurisdictions, and named source attribution.
+name: "PEP Check"
+description: "Screen a person against politically exposed persons in 230+ territories, aligned with the EU PEP function list and including relatives and close associates. Returns matches with positions held, jurisdictions and sources."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

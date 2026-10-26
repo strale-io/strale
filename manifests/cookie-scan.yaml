@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: cookie-scan
-name: Cookie Scan
-description: >-
-  Scan a website for cookies, tracking scripts, and consent banners. Categorizes cookies as
-  necessary/analytics/marketing.
+name: "Cookie Scan"
+description: "Scan a website for cookies, tracking scripts and consent banners, and sort cookies into necessary, analytics and marketing."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

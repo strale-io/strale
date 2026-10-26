@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: github-repo-compare
-name: GitHub Repo Compare
-description: >-
-  Compare two GitHub repositories side-by-side: stars, forks, activity, language, topics, license. Returns detailed
-  comparison.
+name: "GitHub Repo Comparison"
+description: "Compare two GitHub repositories side by side: stars, forks, activity, language, topics and licence."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

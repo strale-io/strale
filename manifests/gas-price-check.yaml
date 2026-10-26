@@ -5,8 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: gas-price-check
-name: Gas Price Check
-description: "Current gas fees on Ethereum mainnet: safe, proposed and fast prices in Gwei plus the base fee, computed from the priority fees actually paid over the last 20 blocks."
+name: "Gas Price Check"
+description: "Get current Ethereum gas fees: safe, standard and fast prices in Gwei plus the base fee, from the priority fees paid over the last 20 blocks."
 category: web3
 cost_class: free_quota
 quota_window: daily

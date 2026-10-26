@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: context-window-optimize
-name: Context Window Optimize
-description: >-
-  Rank and select document chunks by relevance to fit within a token budget. Returns selected/excluded chunks with
-  scores.
+name: "Context Window Optimiser"
+description: "Rank document chunks by relevance and choose the ones that fit your token budget, with a score for each."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

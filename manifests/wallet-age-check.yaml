@@ -5,8 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: wallet-age-check
-name: Wallet Age Check
-description: "Check when a wallet was first active on Ethereum mainnet: the earliest transfer to or from it, and its age in days. A new wallet moving large amounts is a red flag."
+name: "Wallet Age Check"
+description: "Find when a wallet first became active on Ethereum mainnet and its age in days. A new wallet moving large sums is a warning sign."
 category: web3
 cost_class: free_quota
 quota_window: daily

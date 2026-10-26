@@ -80,6 +80,7 @@ import {
   runMigration0120_declareFearGreedAttribution,
   runMigration0121_phase0CatalogueRepairs,
   runMigration0122_correctSanctionsSourceCopy,
+  runMigration0123_catalogueCopy,
   DQ36_OLD_SANCTIONS_DESCRIPTION,
   DQ36_NEW_SANCTIONS_DESCRIPTION,
   DQ36_OLD_SANCTIONS_DATA_SOURCE,
@@ -93,6 +94,10 @@ import {
   type MigrationExecutor,
 } from "./startup-migrations.js";
 import { BLOCK_0064_SLUGS } from "./llm-capability-costs.js";
+import {
+  CATALOGUE_COPY_0123_CAPABILITIES,
+  CATALOGUE_COPY_0123_SOLUTIONS,
+} from "./catalogue-copy-0123.js";
 
 const dialect = new PgDialect();
 
@@ -1453,6 +1458,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0120_declareFearGreedAttribution",
       "runMigration0121_phase0CatalogueRepairs",
       "runMigration0122_correctSanctionsSourceCopy",
+      "runMigration0123_catalogueCopy",
     ]);
   });
 });
@@ -2336,7 +2342,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(122);
+    expect(Math.max(...numbers)).toBe(123);
   });
 });
 
@@ -3168,13 +3174,19 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     }
   });
 
-  it("the new copy is exactly what the manifest declares (the guard would otherwise match no row)", async () => {
+  it("the manifest carries 0122's data_source, and block 0123's description, which is guarded on 0122's", async () => {
+    // The description pin moved on 2026-10-26: block 0123 (catalogue copy)
+    // rewrites sanctions-check's description, guarded on exactly the text 0122
+    // wrote, so the manifest now matches 0123's target. data_source is
+    // untouched by 0123 and still pinned to 0122.
     const { readFileSync } = await import("node:fs");
     const yaml = (await import("js-yaml")).default;
     const manifest = yaml.load(
       readFileSync(new URL("../../../../manifests/sanctions-check.yaml", import.meta.url), "utf8"),
     ) as { description: string; data_source: string };
-    expect(manifest.description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
+    const row0123 = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.slug === "sanctions-check")!;
+    expect(row0123.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
+    expect(manifest.description).toBe(row0123.description);
     expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
   });
 
@@ -3183,5 +3195,153 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     expect(DQ36_NEW_SANCTIONS_DATA_SOURCE).not.toMatch(/OFSI/);
     expect(DQ36_NEW_SANCTIONS_DESCRIPTION.replace("the UK Sanctions List", "UK OFSI")).toBe(DQ36_OLD_SANCTIONS_DESCRIPTION);
     expect(DQ36_NEW_SANCTIONS_DATA_SOURCE.replace("UK Sanctions List", "UK OFSI")).toBe(DQ36_OLD_SANCTIONS_DATA_SOURCE);
+  });
+});
+
+describe("startup-migrations: block 0123 (catalogue copy)", () => {
+  const nameRows = CATALOGUE_COPY_0123_CAPABILITIES.filter((r) => r.old_name !== r.name);
+  const descriptionRows = CATALOGUE_COPY_0123_CAPABILITIES.filter((r) => r.old_description !== r.description);
+  const solutionRows = CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => r.old_description !== r.description);
+  const slugs = (n: number) => Array.from({ length: n }, (_, i) => ({ slug: `s${i}` })) as unknown[];
+  // CREATE, ledger SELECT, name UPDATE, description UPDATE, solution UPDATE, ledger INSERT.
+  const fullQueue = (names = nameRows.length, descriptions = descriptionRows.length, solutions = solutionRows.length) => [
+    {}, [], slugs(names), slugs(descriptions), slugs(solutions), {},
+  ];
+  const updates = (stub: ReturnType<typeof makeStub>) =>
+    stub.captured
+      .map((q) => dialect.sqlToQuery(q))
+      .filter((q) => /^\s*update/i.test(q.sql))
+      .map((q) => ({ ...q, flat: q.sql.toLowerCase().replace(/\s+/g, " ") }));
+
+  it("runs once: a ledgered block makes no writes on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0123_catalogueCopy" }]] });
+    const result = await runMigration0123_catalogueCopy(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("already applied once");
+    expect(stub.renderedSql.some((q) => /^\s*(update|delete|insert)/i.test(q))).toBe(false);
+  });
+
+  it("rewrites names, descriptions and solution descriptions, reports each count, and records itself last", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    const result = await runMigration0123_catalogueCopy(stub);
+    expect(result.rows_affected).toBe(nameRows.length + descriptionRows.length + solutionRows.length);
+    expect(result.outcome).toBe(
+      `capabilities: ${nameRows.length}/${nameRows.length} name(s), ` +
+        `${descriptionRows.length}/${descriptionRows.length} description(s); ` +
+        `solutions: ${solutionRows.length}/${solutionRows.length} description(s)`,
+    );
+    expect(updates(stub)).toHaveLength(3);
+    expect(stub.renderedSql[stub.renderedSql.length - 1]).toMatch(/insert into startup_migration_ledger/i);
+  });
+
+  it("only updates rows still holding the snapshot value: each UPDATE is guarded on its own column's exact prior value", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0123_catalogueCopy(stub);
+    const [names, descriptions, solutions] = updates(stub);
+
+    expect(names.flat).toContain("update capabilities as c set name = v.new_value, updated_at = now() from (values");
+    expect(names.flat).toContain("where c.slug = v.slug and c.name = v.old_value");
+    expect(names.flat).not.toContain("description");
+    expect(descriptions.flat).toContain("update capabilities as c set description = v.new_value, updated_at = now() from (values");
+    expect(descriptions.flat).toContain("where c.slug = v.slug and c.description = v.old_value");
+    expect(descriptions.flat).not.toMatch(/\bname\b/);
+    expect(solutions.flat).toContain("update solutions as s set description = v.new_value, updated_at = now() from (values");
+    expect(solutions.flat).toContain("where s.slug = v.slug and s.description = v.old_value");
+    // Copy only: no price, step or flag column is ever written.
+    for (const u of [names, descriptions, solutions]) {
+      expect(u.flat.slice(0, u.flat.indexOf(" from "))).not.toMatch(/price|is_active|x402|visible|step/);
+    }
+
+    // The bound rows are exactly (slug, snapshot value, new value) triples from the data module.
+    expect(names.params).toEqual(nameRows.flatMap((r) => [r.slug, r.old_name, r.name]));
+    expect(descriptions.params).toEqual(descriptionRows.flatMap((r) => [r.slug, r.old_description, r.description]));
+    expect(solutions.params).toEqual(solutionRows.flatMap((r) => [r.slug, r.old_description, r.description]));
+    // A tool whose name is not changing is not in the name UPDATE at all.
+    const unchanged = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.old_name === r.name)!;
+    expect(names.params).not.toContain(unchanged.slug);
+  });
+
+  it("reports rows the guard left alone instead of claiming them", async () => {
+    const stub = makeStub({ queue: fullQueue(nameRows.length - 2, descriptionRows.length, solutionRows.length - 13) });
+    const result = await runMigration0123_catalogueCopy(stub);
+    expect(result.rows_affected).toBe(nameRows.length - 2 + descriptionRows.length + solutionRows.length - 13);
+    expect(result.outcome).toContain(`${nameRows.length - 2}/${nameRows.length} name(s) (2 left alone`);
+    expect(result.outcome).toContain(`solutions: ${solutionRows.length - 13}/${solutionRows.length} description(s) (13 left alone`);
+  });
+
+  it("binds no array, Date or Buffer parameter and never uses ANY() (the boot crash-loop class)", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0123_catalogueCopy(stub);
+    for (const q of stub.captured) {
+      const chunks = (q as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(Array.isArray(p)).toBe(false);
+        expect(p instanceof Date).toBe(false);
+        expect(Buffer.isBuffer(p)).toBe(false);
+        expect(typeof p === "string" || typeof p === "number").toBe(true);
+      }
+    }
+    expect(stub.renderedSql.some((q) => /\bany\s*\(/i.test(q))).toBe(false);
+  });
+
+  it("chains after blocks 0121 and 0122: it is guarded on their targets and never re-matches their guards", () => {
+    const bySlug = new Map(CATALOGUE_COPY_0123_CAPABILITIES.map((r) => [r.slug, r]));
+    for (const [slug, [oldPrefix, next]] of Object.entries(PHASE0_NARROWED_DESCRIPTIONS)) {
+      const row = bySlug.get(slug)!;
+      expect(row, slug).toBeDefined();
+      expect(row.old_description, slug).toBe(next);
+      expect(row.description.startsWith(oldPrefix), slug).toBe(false);
+    }
+    const sanctions = bySlug.get("sanctions-check")!;
+    expect(sanctions.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
+    expect(sanctions.description).not.toBe(DQ36_OLD_SANCTIONS_DESCRIPTION);
+    expect(sanctions.description).not.toMatch(/OFSI/);
+  });
+
+  it("every manifest carries the block's target name and description; refused and excluded tools are absent", async () => {
+    const { readFileSync } = await import("node:fs");
+    const yaml = (await import("js-yaml")).default;
+    const slugsSeen = new Set<string>();
+    for (const r of CATALOGUE_COPY_0123_CAPABILITIES) {
+      expect(slugsSeen.has(r.slug), `duplicate ${r.slug}`).toBe(false);
+      slugsSeen.add(r.slug);
+      const manifest = yaml.load(
+        readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8"),
+      ) as { name: string; description: string };
+      expect(manifest.name, r.slug).toBe(r.name);
+      expect(manifest.description, r.slug).toBe(r.description);
+    }
+    expect(CATALOGUE_COPY_0123_CAPABILITIES.length).toBe(296);
+    // password-strength's offered copy says the password is never stored; inputs are kept 90 days.
+    expect(slugsSeen.has("password-strength")).toBe(false);
+    expect(slugsSeen.has("social-profile-check")).toBe(false);
+  });
+
+  it("the solution copy drops the anti-bot claim, the stale deadline and the 'for <Country>' template, and matches its sources", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { SOLUTIONS } = await import("../db/solution-catalogue.js");
+    const bySlug = new Map(CATALOGUE_COPY_0123_SOLUTIONS.map((r) => [r.slug, r]));
+    for (const slug of ["web-extract-clean", "ai-act-assess"]) {
+      const source = SOLUTIONS.find((s) => s.slug === slug)!;
+      expect(source.description, slug).toBe(bySlug.get(slug)!.description);
+    }
+    expect(bySlug.get("web-extract-clean")!.old_description).toMatch(/anti-bot/);
+    expect(bySlug.get("ai-act-assess")!.old_description).toMatch(/August 2026 deadline/);
+    for (const r of CATALOGUE_COPY_0123_SOLUTIONS) {
+      expect(r.description, r.slug).not.toMatch(/anti-bot|deadline|\bfor (the )?[A-Z][a-z]+( [A-Z][a-z]+)?\./);
+    }
+    const families = CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => /^(kyb-essentials|kyb-complete|invoice-verify)-[a-z]{2}$/.test(r.slug));
+    expect(families).toHaveLength(66);
+    for (const r of families) {
+      expect(r.old_description, r.slug).toMatch(/^(Quick company verification|Comprehensive company verification|Invoice fraud detection) for [A-Z]/);
+      expect(r.description, r.slug).toMatch(/^(Quick verification of an? |Comprehensive verification of an? |Fraud detection for invoices from )[A-Z][A-Za-z]+ compan(y|ies)\. /);
+    }
+    expect(bySlug.get("kyb-essentials-uk")!.description).toMatch(/^Quick verification of a UK company\. /);
+    expect(bySlug.get("kyb-complete-at")!.description).toMatch(/^Comprehensive verification of an Austrian company\. /);
+    expect(bySlug.get("invoice-verify-us")!.description).toMatch(/^Fraud detection for invoices from US companies\. /);
+    // The seed generator no longer produces the old template either.
+    const seed = readFileSync(new URL("../../scripts/seed-kyb-solutions.ts", import.meta.url), "utf8");
+    expect(seed).not.toMatch(/verification for \$\{c\.name\}|fraud detection for \$\{c\.name\}/);
   });
 });
