@@ -378,4 +378,5 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 /* ---------- site additions ---------- */
 .preview-banner { background: var(--warning-bg); color: var(--text); border-bottom: var(--border-width) solid var(--warning); padding-block: var(--space-8); font-size: var(--type-small-size); line-height: var(--type-small-line); }
 .price-list { list-style: none; margin: 0; padding: 0; }
-.table td, .table th, .small, .t-compact { overflow-wrap: anywhere; }
+.table td, .small, .t-compact { overflow-wrap: anywhere; }
+.table th[scope="row"] code { white-space: nowrap; }

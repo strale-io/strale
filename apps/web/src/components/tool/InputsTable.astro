@@ -1,0 +1,17 @@
+---
+// A tool's or bundle's input fields, from its JSON schema.
+import type { JsonSchema } from "../../lib/types.ts";
+import { schemaType } from "../../lib/describe.ts";
+interface Props { schema: JsonSchema | null | undefined; label?: string }
+const { schema, label = "Input fields table" } = Astro.props;
+const props = Object.entries(schema?.properties ?? {});
+const required = new Set(schema?.required ?? []);
+---
+{props.length ? (
+  <div class="table-wrap" tabindex="0" role="region" aria-label={label}>
+    <table class="table">
+      <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">What it is</th></tr></thead>
+      <tbody>{props.map(([name, p]) => <tr><th scope="row"><code>{name}</code></th><td>{schemaType(p)}</td><td>{required.has(name) ? "Yes" : "No"}</td><td>{p.description ?? "—"}</td></tr>)}</tbody>
+    </table>
+  </div>
+) : <p class="muted">No inputs.</p>}

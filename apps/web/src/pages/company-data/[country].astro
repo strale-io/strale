@@ -1,0 +1,126 @@
+---
+// Country page (SITE-STRUCTURE.md page 6): can my agent check a company in this
+// country, with what input, and what comes back? One page per country with a
+// live register tool. The intro is generated from the tool's own source and
+// description, so it never states more than the catalogue does.
+import Base from "../../layouts/Base.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import InputsTable from "../../components/tool/InputsTable.astro";
+import OutputsTable from "../../components/tool/OutputsTable.astro";
+import Limitations from "../../components/tool/Limitations.astro";
+import { getSiteData } from "../../lib/site-data.ts";
+import { countryRows, returns, screeningTools, SCREENING, BUNDLE_LABEL } from "../../lib/company-data.ts";
+import { formatEur, formatUsd, formatDate, json } from "../../lib/format.ts";
+import { toolSnippets } from "../../lib/snippets.ts";
+import { TRANSPARENCY } from "../../lib/describe.ts";
+
+export async function getStaticPaths() {
+  const data = await getSiteData();
+  return countryRows(data).map((c) => ({ params: { country: c.path }, props: { iso: c.iso } }));
+}
+
+const { iso } = Astro.props as { iso: string };
+const data = await getSiteData();
+const country = countryRows(data).find((c) => c.iso === iso)!;
+const screening = screeningTools(data).filter((t) => SCREENING.includes(t.slug));
+const testOf = (slug: string) => {
+  const t = data.trust.get(slug);
+  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of recent runs passed` : ""}` : null;
+};
+---
+<Base title={`Company records in ${country.inSentence}`} current="company-data" description={`How an AI agent looks up a company in ${country.inSentence}: accepted input, the fields that come back, the source, the price and how to call it.`}>
+  <header class="page-head">
+    <div class="container stack">
+      <nav aria-label="Breadcrumb" class="small"><a class="link" href="/company-data">Company and compliance data</a></nav>
+      <h1 class="t-campaign">Company records in {country.inSentence}</h1>
+      <p class="t-lead">
+        {country.tools.length === 1
+          ? <>Your agent looks up companies in {country.inSentence} through <a class="link" href={`/tools/${country.tools[0].slug}`}>{country.tools[0].name}</a>.{country.tools[0].data_source && ` The data comes from ${country.tools[0].data_source}.`}</>
+          : <>{country.tools.length} tools look up companies in {country.inSentence}{new Set(country.tools.map((t) => t.data_source)).size === country.tools.length && ", each from a different source"}: {country.tools.map((t, i) => <>{i > 0 && (i === country.tools.length - 1 ? " and " : ", ")}<a class="link" href={`/tools/${t.slug}`}>{t.name}</a></>)}.</>}
+      </p>
+    </div>
+  </header>
+
+  {country.tools.map((t) => {
+    const extras = data.manifests.get(t.slug);
+    const example = t.output_schema?.example;
+    const transparency = t.transparency_tag ? TRANSPARENCY[t.transparency_tag] : undefined;
+    const tested = testOf(t.slug);
+    return (
+      <section class="tool-block" aria-labelledby={`t-${t.slug}`}>
+        <div class="container stack-loose">
+          <div class="block-head">
+            <div class="stack-tight">
+              <h2 id={`t-${t.slug}`} class="t-section">{t.name}</h2>
+              <p class="t-compact muted">{t.description}</p>
+            </div>
+            <dl class="facts">
+              <div><dt>Source</dt><dd>{t.data_source ?? "Not stated"}</dd></div>
+              <div><dt>Price per call</dt><dd class="num">{formatEur(t.price_cents)}{t.x402 && <span class="muted"> · x402 {formatUsd(t.x402.price_usd)}</span>}</dd></div>
+              <div><dt>Returns</dt><dd>{returns(t, extras?.output_field_reliability ?? {}).join(", ")}</dd></div>
+              <div><dt>Last recorded test</dt><dd>{tested ?? <span class="muted">{data.mode === "live" ? "No test recorded" : "Not in this preview build"}</span>}</dd></div>
+              {transparency && <div><dt>Method</dt><dd>{transparency}</dd></div>}
+            </dl>
+          </div>
+
+          <div class="stack">
+            <h3 class="t-subhead">What your agent sends</h3>
+            <InputsTable schema={t.input_schema} label={`Inputs for ${t.name}`} />
+          </div>
+
+          <div class="stack">
+            <h3 class="t-subhead">Example answer</h3>
+            {example ? <CodeBlock id={`ex-${t.slug}`} title="Example output (published, not live)" wrap panels={[{ label: "Output", lang: "json", code: json(example) }]} /> : <p class="muted">No published example.</p>}
+          </div>
+
+          <div class="stack">
+            <h3 class="t-subhead">Fields that come back</h3>
+            <OutputsTable schema={t.output_schema} reliability={extras?.output_field_reliability ?? {}} label={`Output fields for ${t.name}`} />
+          </div>
+
+          <div class="stack">
+            <h3 class="t-subhead">How to call it</h3>
+            <CodeBlock id={`call-${t.slug}`} title={`How to call ${t.name}`} panels={toolSnippets({ slug: t.slug, inputs: extras?.example_input ?? {}, priceCents: t.price_cents, free: t.free, x402: t.x402 })} />
+          </div>
+
+          <div class="stack">
+            <h3 class="t-subhead">Limitations</h3>
+            <Limitations items={data.limitations.get(t.slug) ?? []} empty="No limitations are recorded for this tool." />
+          </div>
+        </div>
+      </section>
+    );
+  })}
+
+  <section class="section section-sunken" aria-labelledby="more-title">
+    <div class="container grid-2">
+      <div class="stack">
+        <h2 id="more-title" class="t-subhead">Bundled checks for {country.inSentence}</h2>
+        {country.bundles.length ? (
+          <ul class="plain-list stack-tight">{country.bundles.map((b) => <li><a class="link" href={`/solutions/${b.solution.slug}`}>{BUNDLE_LABEL[b.kind]}</a> <span class="num">{formatEur(b.solution.price_cents)}</span>{!b.hasRegistryStep && <span class="small muted"> · has no registry step</span>}</li>)}</ul>
+        ) : <p class="muted">No bundled check for {country.inSentence}{data.mode !== "live" ? " in this preview build" : ""}.</p>}
+      </div>
+      <div class="stack">
+        <h2 class="t-subhead">Screen the company or its people</h2>
+        <p class="t-compact muted">Results are matches for a person to review, not a verdict.</p>
+        <ul class="plain-list stack-tight">{screening.map((t) => <li><a class="link" href={`/tools/${t.slug}`}>{t.name}</a> <span class="num">{formatEur(t.price_cents)}</span></li>)}</ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-48) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
+  .page-head .t-lead { max-width: var(--measure-body); }
+  .tool-block { padding-block: var(--space-64); }
+  .tool-block + .tool-block { border-top: var(--border-width) solid var(--border); }
+  .block-head { display: grid; gap: var(--space-24); }
+  @media (min-width: 1024px) { .block-head { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; } }
+  .block-head .t-compact { max-width: var(--measure-body); }
+  .facts { display: grid; gap: var(--space-12); margin: 0; padding: var(--space-20); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); }
+  .facts div { display: grid; gap: var(--space-2); }
+  .facts dt { font-family: var(--type-label-family); font-size: var(--type-label-size); font-weight: var(--type-label-weight); letter-spacing: var(--type-label-tracking); color: var(--text-muted); }
+  .facts dd { margin: 0; font-size: var(--type-compact-size); overflow-wrap: anywhere; }
+  .section { padding-block: var(--space-64); }
+  .section-sunken { background: var(--surface-sunken); }
+</style>
