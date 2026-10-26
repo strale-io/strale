@@ -21,3 +21,5 @@ scope excludes external application writes; this handoff supplies the Journal
 backfill without contacting anyone or updating Notion.
 
 The orchestrator pushed the branch and opened the pull request.
+
+Round 2: bounded typeahead/keyword query cost, indexed typo candidates, registry and pasted-ID fallback, grouped keyword recommendations, A2A client IP forwarding, model-text sanitization, stricter country/agent-noun handling and corrected API/Voyage documentation. Golden top-1/top-3 remains 81/87 and 86/87; none coverage scores 2/3 and is report-only. Verification, every changed golden result, live read-only outputs and local Git limitations are in [the Round 2 report](../../../archive/sessions/2026-10-26-search-rebuild/round2.md). No golden query was edited; the orchestrator owns review and shipping.

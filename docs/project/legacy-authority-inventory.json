@@ -826,7 +826,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "163d0c51e2c070869c1527f4d2261915358fa75510c62570ef6aca7d160bfbad",
+      "sha256": "340b1c3d06a05f9852bee5bc812aff26a01635112671902ec25a6a4c188c4fa0",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -935,6 +935,8 @@
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/2026-10-26-agent-surfaces-messaging-review.md",
         "archive/sessions/2026-10-26-search-rebuild/report.md",
+        "archive/sessions/2026-10-26-search-rebuild/round2-checks.json",
+        "archive/sessions/2026-10-26-search-rebuild/round2.md",
         "archive/sessions/2026-10-26-search-rebuild/verification.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",

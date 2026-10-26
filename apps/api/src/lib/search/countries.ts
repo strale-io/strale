@@ -1,8 +1,8 @@
 /** ISO codes follow catalogue spelling (UK, rather than GB). */
 const COUNTRIES: Record<string, string[]> = {
-  SE: ["sweden", "swedish", "bolagsverket"],
-  NO: ["norway", "norwegian", "brønnøysund", "bronnoysund"],
-  DK: ["denmark", "danish"],
+  SE: ["sweden", "swedish", "swedsih", "bolagsverket", "orgnr", "organisationsnummer"],
+  NO: ["norway", "norwegian", "brønnøysund", "bronnoysund", "brreg"],
+  DK: ["denmark", "danish", "cvr"],
   FI: ["finland", "finnish", "prh"],
   DE: ["germany", "german", "handelsregister"],
   FR: ["france", "french", "siren", "siret", "sirene"],
@@ -43,6 +43,12 @@ export const countryLexicon = new Map(
   )
 );
 export const countryCodes = new Set(Object.keys(COUNTRIES));
+const REGISTRY_TERMS = new Set([
+  "abn", "kvk", "siren", "siret", "sirene", "cro", "krs", "ico", "ičo",
+  "ares", "cvr", "orgnr", "organisationsnummer", "brreg", "brønnøysund",
+  "bronnoysund", "companies house", "handelsregister", "bolagsverket", "prh",
+  "firmenbuch", "kbo", "bce", "cnpj", "zefix", "borme", "gemi", "oib", "acra", "uen",
+]);
 export function words(text: string): string[] {
   return (
     text
@@ -53,20 +59,32 @@ export function words(text: string): string[] {
 }
 export function extractCountries(text: string): {
   codes: Set<string>;
+  registryCodes: Set<string>;
   words: string[];
 } {
   const tokens = words(text);
+  const rawTokens = text.normalize("NFKC").match(/[\p{L}\p{N}]+/gu) ?? [];
   const codes = new Set<string>();
+  const registryCodes = new Set<string>();
   const remaining: string[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const pair = countryLexicon.get(`${tokens[i]} ${tokens[i + 1]}`);
-    const code = pair ?? countryLexicon.get(tokens[i]);
+    let code = pair ?? countryLexicon.get(tokens[i]);
+    // Lowercase pronoun "us" is common in contact/email queries. Require a
+    // country cue; uppercase US, "the us" and "united states" stay explicit.
+    if (tokens[i] === "us" && rawTokens[i] !== "US" &&
+        tokens[i - 1] !== "the" &&
+        ![tokens[i - 1], tokens[i + 1]].some((t) =>
+          /^(company|companies|registry|business|corporate|incorporation|sec|edgar|filings)$/.test(t ?? "")))
+      code = undefined;
     if (code) {
       codes.add(code);
+      if (REGISTRY_TERMS.has(pair ? `${tokens[i]} ${tokens[i + 1]}` : tokens[i]))
+        registryCodes.add(code);
       if (pair) i++;
     } else remaining.push(tokens[i]);
   }
-  return { codes, words: remaining };
+  return { codes, registryCodes, words: remaining };
 }
 /** Trust explicit single-country geography; recover broad/mistagged scope from
  * the identity only. Descriptions mention other countries as data sources. */

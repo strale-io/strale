@@ -78,6 +78,61 @@ describe("keyword relevance constraints", () => {
     expect(stem("valid")).toBe(stem("validate"));
     expect(stem("tracking")).toBe(stem("track"));
     expect(stem("gdp")).not.toBe(stem("gdpr"));
+    for (const [noun, verb] of [["validator", "validate"], ["converter", "convert"], ["extractor", "extract"], ["generator", "generate"], ["parser", "parse"]])
+      expect(stem(noun)).toBe(stem(verb));
+    expect(createKeywordIndex([item("email-validate", "Email Validation")]).search("email validator")[0].coverage).toBe(1);
+  });
+  it("demotes another single-country registry even when its lexical score is stronger", () => {
+    const index = createKeywordIndex([
+      item("swedish-company-data", "Swedish Company Data", "", [], "nordic"),
+      item("german-company-data", "German Company Data", "Company", ["company"], "eu"),
+    ]);
+    const base = index.search("company");
+    expect(base[0].item.slug).toBe("german-company-data");
+    const swedish = index.search("swedish company");
+    expect(swedish[0].item.slug).toBe("swedish-company-data");
+    const wrong = swedish.find((r) => r.item.slug === "german-company-data");
+    if (wrong) expect(wrong.score).toBeCloseTo(base[0].score * 0.15);
+  });
+  it("never infers a country by edit distance", () => {
+    const index = createKeywordIndex([item("mt-company-data", "Malta Company Data", "", [], "MT")]);
+    expect(index.search("malt", { prefix: false })).toEqual([]);
+    expect(extractCountries("malt").codes.size).toBe(0);
+    expect(index.search("malta")[0].item.slug).toBe("mt-company-data");
+  });
+  it("recognizes US only with explicit case or country context", () => {
+    for (const query of ["contact us", "send us an email", "us"])
+      expect([...extractCountries(query).codes]).toEqual([]);
+    for (const query of ["US", "us company", "company us", "the us", "united states"])
+      expect([...extractCountries(query).codes]).toEqual(["US"]);
+    const index = createKeywordIndex([
+      item("us-company-data", "US Company Data", "Email contact", [], "US"),
+      item("swedish-company-data", "Swedish Company Data", "Email contact", [], "SE"),
+    ]);
+    const score = (query: string) => index.search(query).map((r) => [r.item.slug, r.score]);
+    expect(score("contact us")).toEqual(score("contact"));
+    expect(score("send us an email")).toEqual(score("send an email"));
+  });
+  it("ignores pasted long numbers without diluting coverage or scores", () => {
+    const index = createKeywordIndex([item("swedish-company-data", "Swedish Company Data", "", [], "SE")]);
+    expect(index.search("orgnr 1234567890")).toEqual(index.search("orgnr"));
+    expect(index.search("company 1234567890")).toEqual(index.search("company"));
+  });
+  it.each([["cvr", "DK"], ["organisationsnummer", "SE"]])("recognizes the explicit registry alias %s", (alias, code) => {
+    const index = createKeywordIndex([item("registry-identity", "Company Registry Identity", "", [], code)]);
+    expect(index.search(`${alias} lookup`)[0]?.item.slug).toBe("registry-identity");
+    expect([...extractCountries(alias).registryCodes]).toEqual([code]);
+  });
+  it("limits distinct content tokens and typo-eligible tokens independently", () => {
+    const index = createKeywordIndex([
+      item("gold", "Gold"), item("alpha", "Alpha"), item("bravo", "Bravo"),
+      item("charlie", "Charlie"), item("delta", "Delta"), item("echo", "Echo"), item("foxtrot", "Foxtrot"),
+    ]);
+    const twelve = "alpha bravo charlie delta echo foxtrot one two three four five six";
+    expect(index.search(`${twelve} gold`, { prefix: false })).toEqual(index.search(twelve, { prefix: false }));
+    const typos = "alpa brav charli delt echox foxtro";
+    expect(index.search(`${typos} golx`, { prefix: false }).some((r) => r.item.slug === "gold")).toBe(false);
+    expect(index.search("golx", { prefix: false })[0]?.item.slug).toBe("gold");
   });
   it("treats aliases as weaker than a direct hit", () => {
     const index = createKeywordIndex([

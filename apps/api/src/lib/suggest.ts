@@ -2,7 +2,9 @@ import { eq, and, asc, inArray, sql } from "drizzle-orm";
 import { SERVABLE_LIFECYCLE_STATES } from "./x402-eligibility.js";
 import { getDb } from "../db/index.js";
 import { solutions, solutionSteps, capabilities } from "../db/schema.js";
-import { createKeywordIndex, type SearchItem } from "./search/keyword.js";
+import { createKeywordIndex, MAX_KEYWORD_QUERY_CHARS, type SearchItem } from "./search/keyword.js";
+import { extractCountries } from "./search/countries.js";
+import { sanitizeSearchText } from "./search/smart.js";
 import { groupSolutionVariants } from "./search/ranking.js";
 import { createSearchRanker, buildCatalogPrompt } from "./search/smart.js";
 export {
@@ -104,10 +106,10 @@ const FILLER_PREFIXES = [
 ];
 
 function normalizeQuery(raw: string): string {
-  let q = raw.toLowerCase().trim();
+  let q = raw.trim();
 
   for (const prefix of FILLER_PREFIXES) {
-    if (q.startsWith(prefix)) {
+    if (q.toLowerCase().startsWith(prefix)) {
       q = q.slice(prefix.length);
       break;
     }
@@ -611,10 +613,10 @@ export async function suggest(req: {
   );
   // Load first so a catalogue refresh invalidates query-cache entries too.
   const items = await loadCatalog();
-  const cacheKey = `${limit}:${normalized}`;
+  const cacheKey = `${limit}:${normalized.toLowerCase()}:${[...extractCountries(normalized).codes].sort().join(",")}`;
   const cached = getQueryCached(cacheKey);
   if (cached) return cached;
-  const scored = keywordIndex!.search(normalized, { prefix: false });
+  const scored = keywordIndex!.search(normalized.slice(0, MAX_KEYWORD_QUERY_CHARS), { prefix: false });
   const ranking = await rankWithModel({
     prompt: catalogPrompt,
     query: req.query,
@@ -647,6 +649,7 @@ export function keywordResponse(
   limit: number,
   items: CatalogItem[] = scored.map((s) => s.item)
 ): SuggestResponse {
+  scored = groupSolutionVariants(scored, items);
   const result = responseFromPicks(
     query,
     scored.map(({ item }) => ({
@@ -690,7 +693,7 @@ export function responseFromPicks(
       recommendation: null,
       alternatives: [],
       total_matches: 0,
-      query_understood_as: query.trim(),
+      query_understood_as: sanitizeSearchText(query, 120),
     };
   const excluded = new Set(
     best.item.type === "solution"
@@ -705,7 +708,7 @@ export function responseFromPicks(
     recommendation: buildRecommendation(best.item, best.reason),
     alternatives,
     total_matches: total,
-    query_understood_as: query.trim(),
+    query_understood_as: sanitizeSearchText(query, 120),
   };
 }
 
@@ -720,7 +723,7 @@ function buildRecommendation(
     slug: item.slug,
     name: item.name,
     description: item.description,
-    match_reason: matchReason,
+    match_reason: sanitizeSearchText(matchReason, 240),
     price_cents: item.priceCents,
   };
 

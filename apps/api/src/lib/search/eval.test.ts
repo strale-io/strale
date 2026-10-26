@@ -1,6 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { acceptable, evaluate } from "./eval.js";
 describe("search evaluation contract", () => {
+  it("reports low-coverage none queries separately without weakening the positive gate", () => {
+    const metrics = evaluate([
+      { query: { q: "flight", kind: "none", expect: [] }, slugs: ["unrelated"], topCoverage: 0.3 },
+      { query: { q: "send sms", kind: "none", expect: [] }, slugs: ["phone-type-detect"], topCoverage: 1 },
+      { query: { q: "email", kind: "keyword", expect: ["email-validate"] }, slugs: ["email-validate"], topCoverage: 1 },
+    ], "typeahead");
+    expect(metrics.find((m) => m.kind === "none")).toMatchObject({ count: 2, top1: 1 });
+    expect(metrics.at(-1)).toMatchObject({ count: 1, top1: 1 });
+  });
   it("matches whole slugs and only two-letter family suffixes", () => {
     expect(acceptable("kyb-complete-de", ["kyb-complete-{cc}"])).toBe(true);
     for (const slug of [

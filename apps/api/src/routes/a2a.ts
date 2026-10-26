@@ -20,6 +20,7 @@ import { capabilities, solutions, transactions, users } from "../db/schema.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import { getClientIp } from "../lib/middleware.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import type { AppEnv } from "../types.js";
@@ -420,8 +421,8 @@ export const a2aRoute = new Hono<AppEnv>();
 // IP rate limiting — 60 requests/minute per IP, matching the MCP endpoint.
 // Both are unauthenticated protocol surfaces reaching the same catalog engine,
 // and this one had no limiter at all: a single caller could drive unbounded
-// catalog scans, and billed embedding + re-rank calls whenever embeddings are
-// active. The 256 KB body limit in app.ts bounds one request, not the rate.
+// catalog scans and billed model ranking. The 256 KB body limit in app.ts
+// bounds one request, not the rate.
 a2aRoute.use("*", rateLimitByIp(60, 60_000));
 
 a2aRoute.post("/", async (c) => {
@@ -530,7 +531,7 @@ async function handleMessageSend(
   // If no skillId provided, use the suggest engine to match natural language
   if (!skillId && task) {
     try {
-      const suggestion = await suggest({ query: task, limit: 1 });
+      const suggestion = await suggest({ query: task, limit: 1, clientIp: getClientIp(c) });
       if (suggestion.recommendation) {
         skillId = suggestion.recommendation.slug;
       }
@@ -573,8 +574,8 @@ async function handleMessageSend(
   // request into a repeatable charge.
   //
   // ONLY when the caller named the skill. Review finding: when skillId is
-  // absent this handler resolves one from free text via suggest() — embeddings
-  // plus an LLM re-rank — and the fingerprint is computed downstream from the
+  // absent this handler resolves one from free text via suggest() — keyword
+  // retrieval plus model ranking — and the fingerprint is computed downstream from the
   // RESOLVED slug. A byte-identical retry that re-ranks differently would then
   // be told it "reused a key for a different request", which is both false and
   // unactionable, since the client never chose the slug. Forwarding only the

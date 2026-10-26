@@ -7,7 +7,10 @@ export interface GoldenQuery {
 export interface SearchObservation {
   query: GoldenQuery;
   slugs: string[];
+  topCoverage?: number;
 }
+/** Reporting threshold for keyword abstention; none queries do not gate releases. */
+export const KEYWORD_COVERAGE_THRESHOLD = 0.6;
 export interface Metrics {
   kind: string;
   count: number;
@@ -34,10 +37,10 @@ export function evaluate(
     let top1 = 0,
       top3 = 0,
       mrr5 = 0;
-    for (const { query, slugs } of group) {
+    for (const { query, slugs, topCoverage } of group) {
       const rank =
         query.kind === "none"
-          ? slugs.length === 0
+          ? slugs.length === 0 || (mode === "typeahead" && (topCoverage ?? 1) < KEYWORD_COVERAGE_THRESHOLD)
             ? 0
             : -1
           : slugs.slice(0, 5).findIndex((s) => acceptable(s, query.expect));
@@ -53,15 +56,17 @@ export function evaluate(
       mrr5: group.length ? mrr5 / group.length : 0,
     };
   };
-  return [...new Set(scored.map((r) => r.query.kind))]
+  const metrics = [...new Set(scored.map((r) => r.query.kind))]
     .sort()
     .map((kind) =>
       metric(
         kind,
         scored.filter((r) => r.query.kind === kind)
       )
-    )
-    .concat(metric("overall", scored));
+    );
+  if (mode === "typeahead" && rows.some((r) => r.query.kind === "none"))
+    metrics.push(metric("none", rows.filter((r) => r.query.kind === "none")));
+  return metrics.concat(metric("overall", scored));
 }
 export function formatMetrics(metrics: Metrics[]): string {
   return [

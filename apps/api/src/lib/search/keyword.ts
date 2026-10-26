@@ -42,10 +42,16 @@ const SEARCH_STOP_WORDS = new Set([
   "new",
   "before",
   "this",
+  "us",
 ]);
 /** Conservative shared morphology, not substring matching (GDP never becomes GDPR). */
 export function stem(word: string): string {
-  if (/^(valid|validity|validate|validation)$/.test(word)) return "valid";
+  if (/^(valid|validity|validate|validation|validator|validators)$/.test(word)) return "valid";
+  // Only known verb families: broad -er/-or stripping damages nouns such as
+  // "number", "supplier" and "director".
+  const agent = word.match(/^(convert|detect|generat|extract|translat|pars|formatt)(?:er|or)s?$/);
+  if (agent) return stem(agent[1] === "formatt" ? "format" :
+    /^(generat|translat|pars)$/.test(agent[1]) ? agent[1] + "e" : agent[1]);
   if (word.length > 7 && word.endsWith("ship")) return word.slice(0, -4);
   if (word.length > 5 && word.endsWith("ies")) return word.slice(0, -3) + "y";
   if (word.length > 5 && word.endsWith("ing")) {
@@ -91,6 +97,13 @@ export function editDistance(a: string, b: string, max: number): number {
 const typoLimit = (t: string) => (t.length >= 8 ? 2 : t.length >= 4 ? 1 : 0);
 const WEIGHTS = [3, 2, 1, 0.5];
 export const RELEVANCE_RATIO = 0.25;
+/** Bound work for every caller, including direct engine users. */
+export const MAX_KEYWORD_QUERY_CHARS = 200;
+const MAX_CONTENT_TOKENS = 12;
+const MAX_TYPO_TOKENS = 6;
+const MAX_TYPO_TOKEN_CHARS = 32;
+const GENERIC_REGISTRY_WORDS = new Set(["lookup", "check", "verify", "search", "get", "number", "id", "identifier", "valid", "company", "data", "registry", "registrate"]);
+const GENERIC_ID_SLUGS = new Set(["company-id-detect", "id-number-validate"]);
 export interface KeywordHit<T> {
   item: T;
   score: number;
@@ -136,7 +149,17 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
     for (const t of [...doc.fields[0].keys(), ...doc.fields[1].keys()])
       primaryVocab.add(t);
   }
-  const vocabulary = [...df.keys()];
+  // Typo work visits only plausible length/initial buckets. Country terms are
+  // exact aliases, never edit-distance candidates ("malt" must not mean Malta).
+  const typoBuckets = new Map<number, Map<string, string[]>>();
+  for (const term of df.keys()) {
+    if (countryLexicon.has(term) || term.length > MAX_TYPO_TOKEN_CHARS) continue;
+    const initials = typoBuckets.get(term.length) ?? new Map<string, string[]>();
+    const bucket = initials.get(term[0]) ?? [];
+    bucket.push(term);
+    initials.set(term[0], bucket);
+    typoBuckets.set(term.length, initials);
+  }
   const idf = (term: string) =>
     Math.log(
       1 +
@@ -160,22 +183,11 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
     query: string,
     options: { geo?: string; type?: T["type"]; prefix?: boolean } = {}
   ): KeywordHit<T>[] {
+    query = query.slice(0, MAX_KEYWORD_QUERY_CHARS);
     const extracted = extractCountries(query);
     const countries = extracted.codes;
-    let rawTokens = extracted.words;
-    // A misspelled demonym is still a geography, not a content word.
-    rawTokens = rawTokens.filter((t) => {
-      if (countries.size || df.has(stem(t)) || typoLimit(t) === 0) return true;
-      for (const [term, code] of countryLexicon)
-        if (
-          !term.includes(" ") &&
-          editDistance(t, term, typoLimit(t)) <= typoLimit(t)
-        ) {
-          countries.add(code);
-          return false;
-        }
-      return true;
-    });
+    const hasIdentifier = extracted.words.some((t) => /^\d{6,}$/.test(t));
+    const rawTokens = extracted.words.filter((t) => !/^\d{6,}$/.test(t));
     const geoValue = options.geo?.toLowerCase();
     const geo = options.geo
       ? extractCountries(options.geo).codes
@@ -186,13 +198,18 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
     // Region hints retain the old catalogue-geography boost without being
     // mistaken for an ISO country and demoting every country-specific item.
     const regionHint = geoValue && !geo.size ? geoValue : undefined;
-    let tokens = [...new Set(content(rawTokens))];
+    let tokens = [...new Set(content(rawTokens))].slice(0, MAX_CONTENT_TOKENS);
+    const registryIntent = extracted.registryCodes.size > 0 &&
+      tokens.every((t) => GENERIC_REGISTRY_WORDS.has(t));
+    const bareIdentifier = hasIdentifier && !tokens.length && !countries.size;
     // Registry names and bare countries mean a registry/company lookup. Country
     // words never accrue lexical points, even in this country-only case.
-    if (!tokens.length && countries.size) tokens = ["company", "data"];
+    if ((!tokens.length && countries.size) || registryIntent) tokens = ["company", "data"];
+    if (bareIdentifier) tokens = ["company", "id"];
     if (!tokens.length) return [];
     const rawLast = words(query).at(-1);
     const last = rawLast && stem(rawLast);
+    let typoTokens = 0;
     const expansions = tokens.map((token) => {
       const alternatives: Array<{
         term: string;
@@ -220,8 +237,9 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
                 alias: false,
               });
         const tolerance = typoLimit(token);
-        if (tolerance)
-          for (const term of vocabulary)
+        if (tolerance && token.length <= MAX_TYPO_TOKEN_CHARS && typoTokens++ < MAX_TYPO_TOKENS)
+          for (let length = token.length - tolerance; length <= token.length + tolerance; length++)
+          for (const term of typoBuckets.get(length)?.get(token[0]) ?? [])
             if (editDistance(token, term, tolerance) <= tolerance)
               alternatives.push({
                 term,
@@ -241,6 +259,14 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
     const scored: KeywordHit<T>[] = [];
     for (const doc of docs) {
       if (options.type && doc.item.type !== options.type) continue;
+      const genericId = GENERIC_ID_SLUGS.has(doc.item.slug);
+      const registryIdentity = /(?:company-data|registry-identity)$/.test(doc.item.slug);
+      const sameCountry = [...countries].some((c) => doc.countries.has(c));
+      // A missing registry is a catalogue gap, not permission to suggest local
+      // housing or transport data. Generic ID tools remain useful in that case.
+      if (bareIdentifier && !genericId) continue;
+      if (registryIntent && !genericId && !(sameCountry &&
+          (registryIdentity || /^(kyb-|kyc-)/.test(doc.item.slug)))) continue;
       const matches = expansions.map((variants) =>
         Math.max(
           ...variants.map((v) => {
@@ -277,6 +303,7 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
       if (rejected) continue;
       let score = matches.reduce((a, b) => a + b, 0);
       let matched = matches.filter((s) => s > 0).length;
+      if (genericId && (bareIdentifier || registryIntent)) score = Math.max(score, 10);
       for (const h of hyphens)
         if (doc.fields.some((f) => f.has(stem(h.replace(/-/g, ""))))) {
           score += termScore(doc, stem(h.replace(/-/g, "")));
@@ -296,7 +323,8 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
       else if (identity.length > 1 && identity.every((t) => tokens.includes(t)))
         score += 8;
       if (countries.size && doc.countries.size)
-        score *= [...countries].some((c) => doc.countries.has(c)) ? 1.8 : 0.15;
+        score *= sameCountry ? 1.8 : 0.15;
+      if (registryIntent && sameCountry && registryIdentity) score += 25;
       if (regionHint && doc.item.geography?.toLowerCase().includes(regionHint))
         score *= 1.25;
       const snippet =

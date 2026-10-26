@@ -135,6 +135,23 @@ describe("smart search request and guarded ranking", () => {
     const result = await createSearchRanker()(args());
     expect(result?.results).toEqual([{ slug: cap.slug, reason: "good" }]);
   });
+  it("bounds and sanitizes model labels and reasons, including none_relevant", async () => {
+    const text = "\u0000\u001bhttp://bad.example/x https://bad.example/y www.bad.example/z \u007f\u0085\u202e";
+    const { suggest } = await import("../suggest.js");
+    mockCatalogueDb();
+    mocks.create.mockResolvedValue(reply({
+      understood_as: text + "u".repeat(200), none_relevant: false,
+      results: [{ slug: cap.slug, reason: text + "r".repeat(400) }],
+    }));
+    const ranking = await createSearchRanker()(args());
+    expect(ranking?.understood_as).toBe("u".repeat(120));
+    expect(ranking?.results[0].reason).toBe("r".repeat(240));
+    const response = await suggest({ query: "sanitizer email" });
+    expect(response.query_understood_as).toBe("u".repeat(120));
+    expect(response.recommendation?.match_reason).toBe("r".repeat(240));
+    mocks.create.mockResolvedValue(reply({ understood_as: text + "none", none_relevant: true, results: [] }));
+    expect((await createSearchRanker()(args()))?.understood_as).toBe("none");
+  });
   it("honours none_relevant even with a confident keyword candidate", async () => {
     mocks.create.mockResolvedValue(reply(body(undefined, true)));
     expect((await createSearchRanker()(args()))?.results).toEqual([]);
@@ -268,6 +285,42 @@ describe("suggest wire mapping and engine fallback", () => {
     vi.resetModules();
     mockCatalogueDb();
   });
+  it("does not cache keyword fallback results after a transient model error", async () => {
+    const { suggest } = await import("../suggest.js");
+    mocks.create.mockRejectedValueOnce(new Error("transient"));
+    const fallback = await suggest({ query: "email validate", clientIp: "first" });
+    expect(fallback.recommendation?.match_reason).toContain("Matches");
+    const recovered = await suggest({ query: "email validate", clientIp: "second" });
+    expect(mocks.create).toHaveBeenCalledTimes(2);
+    expect(recovered.recommendation?.match_reason).toBe(body().results[0].reason);
+  });
+  it("caps the text passed to keyword retrieval even for a valid 500-character suggest query", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    const { suggest } = await import("../suggest.js");
+    const response = await suggest({ query: "x".repeat(200) + " email validate" });
+    expect(response.recommendation).toBeNull();
+  });
+  it("passes clientIp through suggest into the actual ranker's separate IP budgets", async () => {
+    const { suggest } = await import("../suggest.js");
+    for (let i = 0; i < 10; i++)
+      await suggest({ query: `email validate ${i}`, clientIp: "first" });
+    const limited = await suggest({ query: "email validate first exhausted", clientIp: "first" });
+    expect(limited.recommendation?.match_reason).toContain("Matches");
+    expect(mocks.create).toHaveBeenCalledTimes(10);
+    const independent = await suggest({ query: "email validate second caller", clientIp: "second" });
+    expect(mocks.create).toHaveBeenCalledTimes(11);
+    expect(independent.recommendation?.match_reason).toBe(body().results[0].reason);
+  });
+  it("groups keyword fallback country variants and reports the grouped count", async () => {
+    const { keywordResponse } = await import("../suggest.js");
+    const variants = ["au", "ca", "sg", "us"].map((country) => ({
+      ...sol, slug: `kyb-essentials-${country}`, name: `KYB Essentials — ${country}`,
+    }));
+    const response = keywordResponse("kyb check on a company", [...variants, other].map((item) => ({ item })), 3);
+    expect(response.recommendation?.slug).toBe(variants[0].slug);
+    expect(response.alternatives.map((a) => a.slug)).toEqual([other.slug]);
+    expect(response.total_matches).toBe(2);
+  });
   it.each(["", " ", "a"])(
     "never loads the catalogue or calls the model for invalid short input %j",
     async (query) => {
@@ -395,6 +448,12 @@ describe("suggest wire mapping and engine fallback", () => {
     vi.advanceTimersByTime(600_001);
     await suggest({ query: "email validate" });
     expect(mocks.create).toHaveBeenCalledTimes(3);
+  });
+  it("keeps uppercase US distinct from the pronoun in the model result cache", async () => {
+    const { suggest } = await import("../suggest.js");
+    await suggest({ query: "US" });
+    await suggest({ query: "us" });
+    expect(mocks.create).toHaveBeenCalledTimes(2);
   });
   it("typeahead preserves field types, grouping, total, geo and type fallback", async () => {
     const { typeaheadFromCatalog } = await import("../suggest.js");

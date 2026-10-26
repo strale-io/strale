@@ -46,13 +46,16 @@ const index =
 const indexBuildMs = performance.now() - indexStarted;
 for (const query of queries) {
   let slugs: string[];
+  let topCoverage: number | undefined;
   if (engine === "legacy-keyword")
     slugs = legacyTypeahead(oldItems, query.q, 5).results.map((i) => i.slug);
-  else if (index)
-    slugs = groupSolutionVariants(index.search(query.q))
+  else if (index) {
+    const hits = index.search(query.q);
+    topCoverage = hits[0]?.coverage ?? 0;
+    slugs = groupSolutionVariants(hits)
       .slice(0, 5)
       .map((r) => r.item.slug);
-  else {
+  } else {
     const isTypeahead = engine === "live-typeahead";
     const response = await fetch(
       isTypeahead
@@ -87,7 +90,7 @@ for (const query of queries) {
       : [];
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  rows.push({ query, slugs });
+  rows.push({ query, slugs, ...(topCoverage !== undefined ? { topCoverage } : {}) });
 }
 const mode = engine === "live-suggest" ? "suggest" : "typeahead";
 const metrics = evaluate(rows, mode);
