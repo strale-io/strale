@@ -322,7 +322,7 @@ export function build402Response(capability: {
 } {
   const priceUsd = eurCentsToUsdString(capability.priceCents);
   const atomic = eurCentsToUsdcAtomic(capability.priceCents);
-  const description = `${capability.name}. Strale: the trust layer for AI agents.`;
+  const description = `${capability.name}. Strale: tools for AI agents, paid per call.`;
   const error = `Payment required. ${capability.name} costs ${priceUsd} USDC per call.`;
 
   const v1Requirement = {

@@ -47,6 +47,7 @@ import {
   isSolutionScopedPath,
 } from "./lib/public-ops-visibility.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
+import { skillRoute } from "./routes/skill.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
 import { recordDiscoveryHit } from "./lib/attribution.js";
 import { platformFactsRoute } from "./routes/platform-facts.js";
@@ -305,11 +306,13 @@ app.use("/v1/internal/*", restrictedCors);
 app.use("/v1/internal/*", rateLimitByIp(120, 60_000));
 app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
+app.use("/SKILL.md", publicCors);
 app.use("/llms.txt", publicCors);
 app.use("/llms-full.txt", publicCors);
 // Discovery endpoints now do a (fire-and-forget) attribution INSERT per hit —
 // rate-limit like their /v1/public neighbors so an unauthenticated crawl
 // burst can't queue writes against the shared pool (review M-1).
+app.use("/SKILL.md", rateLimitByIp(120, 60_000));
 app.use("/llms.txt", rateLimitByIp(120, 60_000));
 app.use("/llms-full.txt", rateLimitByIp(120, 60_000));
 app.use("/.well-known/*", rateLimitByIp(120, 60_000));
@@ -676,6 +679,7 @@ app.route("/", welcomeRoute);
 app.route("/.well-known/mcp.json", mcpServerCardRoute);
 app.route("/.well-known/ai-catalog.json", aiCatalogRoute);
 app.route("/", llmsTxtRoute);
+app.route("/", skillRoute);
 
 // Log x402 configuration
 const _x402Wallet = process.env.X402_WALLET_ADDRESS;

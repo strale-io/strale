@@ -27,7 +27,7 @@ const WELCOME_TEMPLATE = {
   "@context": "https://schema.org",
   "@type": "WebAPI",
   name: "Strale API",
-  tagline: "The trust layer for AI agents",
+  tagline: "Give your agent a new tool without opening another provider account.",
   description: "", // filled by buildWelcome()
   version: "1.0.0",
 
@@ -62,6 +62,7 @@ const WELCOME_TEMPLATE = {
     agent_card: "https://api.strale.io/.well-known/agent-card.json",
     ai_catalog: "https://api.strale.io/.well-known/ai-catalog.json",
     llms_txt: "https://api.strale.io/llms.txt",
+    skill: "https://api.strale.io/SKILL.md",
     health: "https://api.strale.io/health",
   },
 
@@ -200,13 +201,13 @@ async function buildWelcome(): Promise<{ body: typeof WELCOME_TEMPLATE; md: stri
     const facts = await computePlatformFacts();
     const cap = facts.capability_counts.active_visible;
     const cn = facts.countries.company_data_active_iso.length;
-    const description = `${cap}+ independently tested and scored data capabilities across ${cn} countries. Business data, compliance checks, web scraping, and more — accessible via REST API, MCP, and A2A protocols.`;
+    const description = `${cap} tools for AI agents, paid per call. Search and read the web, read documents, check details and look up company data across ${cn} countries via REST API, MCP and A2A.`;
     const body = {
       ...WELCOME_TEMPLATE,
       description,
       structured_data: {
         ...WELCOME_TEMPLATE.structured_data,
-        description: `The trust layer for AI agents — ${cap}+ independently tested data capabilities across ${cn} countries`,
+        description: `Give your agent a new tool without opening another provider account. ${cap} tools for AI agents; company data across ${cn} countries`,
       },
     };
     const md = renderWelcomeMd(cap, cn);
@@ -226,9 +227,9 @@ async function buildWelcome(): Promise<{ body: typeof WELCOME_TEMPLATE; md: stri
 function renderWelcomeMd(capCount: number, countryCount: number): string {
   return `# Strale API
 
-> The trust layer for AI agents
+> Give your agent a new tool without opening another provider account.
 
-${capCount}+ independently tested and scored data capabilities across ${countryCount} countries.
+${capCount} tools for AI agents, paid per call. Company data across ${countryCount} countries.
 
 ## Quick Start
 

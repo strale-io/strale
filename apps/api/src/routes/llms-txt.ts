@@ -29,57 +29,18 @@ function renderLlmsTxt(facts: Awaited<ReturnType<typeof computePlatformFacts>>):
   const countryCount = facts.countries.company_data_active_iso.length;
   return `# Strale
 
-> One API call. Verified data your agent can trust. ${capCount}+ independently tested data capabilities across ${countryCount} countries.
+> Give your agent a new tool without opening another provider account.
 
-Strale provides business data capabilities that AI agents can use at runtime via MCP, A2A, REST API, or x402 micropayments. Free capabilities are continuously canary-tested; paid capabilities are observed via production traffic and piggyback test suites. Every call returns an audit record.
+Strale is a library of ${capCount} tools for AI agents, paid per call with no subscription or contract. Company-data tools cover ${countryCount} countries. Add tools through the connection you already have, using MCP, A2A or the REST API. On eligible tools, an x402 wallet pays per request without signup.
 
 ## Use Strale When Your Agent Needs To:
 
-- Validate IBANs, VAT numbers, LEI codes, or BIC/SWIFT codes
-- Look up company data across ${countryCount} countries (live catalogue)
-- Check sanctions lists and adverse media
-- Verify SSL certificates, DNS records, or domain availability
-- Validate EU addresses and postal codes
-- Convert currencies with real-time exchange rates
-- Run compliance checks (KYB, AML, GDPR)
-- Extract data from invoices, receipts, contracts, or web pages
-- Assess wallet risk, token contract safety, or DeFi protocol health
-- Resolve ENS names, check VASP licensing, detect phishing dApps
-
-## Web3 and DeFi Agent Capabilities
-
-17 Web3-specific capabilities and 9 solutions for on-chain agents. All payable via x402 (USDC on Base) or standard API key.
-
-Wallet security: wallet-risk-score, approval-security-check, wallet-age-check, wallet-balance-lookup, wallet-transactions-lookup.
-Token and contract safety: token-security-check, contract-verify-check, phishing-site-check.
-DeFi intelligence: protocol-tvl-lookup, protocol-fees-lookup, stablecoin-flow-check, fear-greed-index, gas-price-check.
-Identity and compliance: ens-resolve, ens-reverse-lookup, vasp-verify, vasp-non-compliant-check.
-
-Pre-built solutions (single-call multi-step workflows):
-- web3-counterparty-dd: wallet risk + age + ENS + sanctions + PEP + adverse media ($0.12)
-- web3-token-safety: contract security + verification + deployer risk + domain ($0.05)
-- web3-pre-tx-gate: go/no-go middleware for DeFi agents ($0.12)
-- web3-dapp-trust: phishing detection + domain intelligence ($0.05)
-- web3-protocol-health: TVL + fees + stablecoins + domain trust ($0.05)
-- web3-pre-trade: price + security + TVL + sentiment + gas ($0.08)
-- web3-wallet-snapshot: balance + transactions + age + ENS + price ($0.05)
-- web3-vasp-check: EU MiCA VASP verification + sanctions ($0.08)
-- web3-wallet-identity: ENS reverse + risk + age + balance ($0.08)
-
-## Web3 Assurance (decision-ready on-chain counterparty answer)
-
-For agents that transact on-chain (send value, swap, stake, mint, bridge, or call a contract), Strale ships Web3 Assurance — a single call that returns a verdict (proceed / review / block / insufficient_evidence) plus machine-parsable reason_codes, critical_flags, suggested_action, evidence map, and a sidecar audit_url. Sister product to Payee Assurance (off-chain KYB).
-
-Two modes:
-- outbound: agent vetting recipient pre-payment. Full evaluator set, 8s budget. Default.
-- reverse-call: x402 service publisher gating an inbound buyer in real-time. Critical evaluators only, sub-second SLA.
-
-20 evaluators behind one call: sanctions (multi-jurisdiction), mixer-graded scoring (Tornado-Cash-graded per OFAC March 2025 precedent — graded, not binary), scam-cluster cross-reference (ScamSniffer), wallet-history risk (GoPlus address security), token safety (GoPlus token security), contract verification (Etherscan + Sourcify), approval inventory (drainer cross-reference), protocol risk (DefiLlama TVL + hacks DB + governance), bridge legitimacy (DefiLlama + L2Beat), audit-firm cross-reference (Certik/OZ/Trail of Bits/Cyfrin/Sherlock/Code4rena), pre-trade simulation (Tenderly), EAS attestations, ERC-8004 reputation, sister-rug detector, REKT Database, Web3 Antivirus.
-
-Endpoint: POST https://api.strale.io/v1/web3-assurance
-MCP tool: strale_web3_assurance
-Drop-in middleware: Hono, Express, FastAPI, LangGraph, Coinbase AgentKit
-Pricing: $0.03 USDC/call standard via x402 + Stripe annual commits
+- Search and read the web
+- Extract text and fields from images, invoices, receipts and PDFs
+- Check email addresses, phone numbers, IBAN format and EU VAT numbers
+- Handle DNS, SSL, domain checks, translation, wallet and ENS lookups
+- Look up company information; fields vary by source
+- Screen sanctions and politically exposed person lists, adverse media, and ownership where it is published
 
 ## Quick Start
 
@@ -95,7 +56,7 @@ Task endpoint: https://api.strale.io/a2a
 
 ### REST API
 POST https://api.strale.io/v1/do
-Body: { "capability": "iban-validate", "input": { "iban": "DE89370400440532013000" } }
+Body: { "capability_slug": "iban-validate", "inputs": { "iban": "DE89370400440532013000" }, "max_price_cents": 10 }
 
 ### x402 (pay-per-request, no API key needed)
 GET https://api.strale.io/x402/iban-validate?iban=DE89370400440532013000
@@ -103,16 +64,18 @@ Pay with USDC on Base
 
 ## Free Tier
 
-The iban-validate capability is free. Use it to test the integration without an API key via MCP (strale_search to discover, then call iban-validate).
+${facts.capability_counts.free_tier_slugs.length} free tools: ${facts.capability_counts.free_tier_slugs.join(", ") || "none currently listed"}.
+Use POST /v1/do without an API key for eligible free tools, subject to the per-IP daily limit.
 
-## Trust & Quality
+## Discovery
 
-Free capabilities are tested hourly with canary inputs that don't consume vendor quota; paid capabilities are observed via production traffic, piggyback test suites, and any zero-cost auth-less probes the vendor permits. Every call to /v1/do produces an audit record retrievable at /v1/audit/{transactionId}.
+Browse inputs, output fields, prices and limitations at /v1/capabilities. Search with POST /v1/suggest using a query field. Check /x402/catalog for eligible wallet-paid tools and current quotes.
 
 ## Links
 
 - Homepage: https://strale.dev
 - Docs: https://strale.dev/docs
+- Agent skill: https://api.strale.io/SKILL.md
 - MCP Server Card: https://api.strale.io/.well-known/mcp.json
 - AI Catalog: https://api.strale.io/.well-known/ai-catalog.json
 - GitHub: https://github.com/petterlindstrom79/strale

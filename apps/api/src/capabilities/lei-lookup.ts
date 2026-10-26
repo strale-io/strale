@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { gleifFetch } from "./lib/gleif.js";
 
 /**
  * LEI (Legal Entity Identifier) lookup via GLEIF API.
@@ -8,15 +9,10 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * exact name match, jurisdiction match, and entity status (ACTIVE preferred).
  */
 
-const GLEIF_API = "https://api.gleif.org/api/v1";
 const LEI_RE = /^[A-Z0-9]{20}$/;
 
 async function lookupByLei(lei: string): Promise<Record<string, unknown>> {
-  const url = `${GLEIF_API}/lei-records/${lei}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/vnd.api+json" },
-    signal: AbortSignal.timeout(10000),
-  });
+  const response = await gleifFetch(`/lei-records/${lei}`);
 
   if (response.status === 404) {
     throw new Error(`LEI ${lei} not found in GLEIF database.`);
@@ -74,14 +70,11 @@ function expandLegalForm(name: string): string | null {
 }
 
 async function gleifSearch(name: string, jurisdiction?: string): Promise<any[]> {
-  let url = `${GLEIF_API}/lei-records?filter[entity.legalName]=${encodeURIComponent(name)}&page[size]=10`;
+  let url = `/lei-records?filter[entity.legalName]=${encodeURIComponent(name)}&page[size]=10`;
   if (jurisdiction) {
     url += `&filter[entity.legalAddress.country]=${encodeURIComponent(jurisdiction)}`;
   }
-  const response = await fetch(url, {
-    headers: { Accept: "application/vnd.api+json" },
-    signal: AbortSignal.timeout(10000),
-  });
+  const response = await gleifFetch(url);
   if (!response.ok) throw new Error(`GLEIF API search returned HTTP ${response.status}`);
   const data = (await response.json()) as any;
   return data?.data ?? [];
