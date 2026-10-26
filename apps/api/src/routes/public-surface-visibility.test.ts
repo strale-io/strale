@@ -37,6 +37,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 
 /** Predicates captured from `db.select().from().where(...)`, newest last. */
 const captured: unknown[] = [];
+const executed: unknown[] = [];
 
 /** Render a captured predicate to the SQL Postgres would receive. */
 function rendered(clause: unknown): string {
@@ -82,12 +83,16 @@ function makeDbStub(rows: unknown[] = []) {
   });
   return {
     select: () => ({ from: () => chain() }),
-    execute: () => Promise.resolve([]),
+    execute: (clause: unknown) => {
+      executed.push(clause);
+      return Promise.resolve([]);
+    },
   };
 }
 
 beforeEach(() => {
   captured.length = 0;
+  executed.length = 0;
   vi.resetModules();
 });
 
@@ -96,7 +101,7 @@ describe("GET /.well-known/agent-card.json", () => {
     vi.doMock("../db/index.js", () => ({ getDb: () => makeDbStub([]) }));
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
-        capability_counts: { active_visible: 0 },
+        capability_counts: { active_visible: 0, free_tier_slugs: [] },
         countries: { company_data_active: [], company_data_active_iso: [] },
       }),
     }));
@@ -119,7 +124,7 @@ describe("GET /llms-full.txt", () => {
     vi.doMock("../db/index.js", () => ({ getDb: () => makeDbStub([]) }));
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
-        capability_counts: { active_visible: 0 },
+        capability_counts: { active_visible: 0, free_tier_slugs: [] },
         countries: { company_data_active: [], company_data_active_iso: [] },
         free_tier_slugs: [],
       }),
@@ -135,10 +140,12 @@ describe("GET /llms-full.txt", () => {
 });
 
 describe("GET /.well-known/mcp.json", () => {
-  it("counts visible capabilities only", async () => {
+  it("counts visible, marketplace-listed capabilities only", async () => {
+    vi.doUnmock("../lib/platform-facts.js");
     vi.doMock("../db/index.js", () => ({ getDb: () => makeDbStub([]) }));
     const { mcpServerCardRoute } = await import("./mcp-server-card.js");
-    await mcpServerCardRoute.request("/");
+    const response = await mcpServerCardRoute.request("/");
+    expect(response.status).toBe(200);
 
     const capabilityQuery = captured.map(rendered).find((p) => p.includes("marketplace_eligible"));
     expect(capabilityQuery, `no capability query captured: ${JSON.stringify(captured.map(rendered))}`).toBeDefined();
