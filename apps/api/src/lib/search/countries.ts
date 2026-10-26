@@ -81,8 +81,16 @@ function withinOneEdit(a: string, b: string): boolean {
 // never read as countries on their own.
 const COMPANY_CUE = /^(company|companies|business|businesses|registry|register|kyb|firm|firms|corporation|corporate|incorporation|supplier|vendor|vat)$/;
 const US_PREV = /^(company|companies|business|registry|register|corporate|incorporation|sec|edgar|filings|data|lookup|search|check|info|information)$/;
+// Ordinary English words one edit from a country term. Even next to a cue
+// ("finish company setup", "inland shipping company") they mean themselves.
+const NOT_COUNTRY_TYPOS = new Set([
+  "finish", "inland", "vanish", "banish", "trench", "wrench", "drench", "trance",
+  "prance", "hungry", "brutish", "germane", "merman", "maltase",
+]);
 function fuzzyCountry(token: string, isKnownWord?: (t: string) => boolean): string | undefined {
-  if (token.length < 6 || !/^[a-z]+$/.test(token) || isKnownWord?.(token)) return undefined;
+  if (token.length < 6 || !/^[a-z]+$/.test(token) || NOT_COUNTRY_TYPOS.has(token) || isKnownWord?.(token)) {
+    return undefined;
+  }
   const hits = new Set(FUZZY_COUNTRY_TERMS.filter((t) => withinOneEdit(token, t)).map((t) => countryLexicon.get(t)!));
   return hits.size === 1 ? [...hits][0] : undefined;
 }
@@ -98,9 +106,10 @@ export function extractCountries(text: string, isKnownWord?: (t: string) => bool
   const codes = new Set<string>();
   const registryCodes = new Set<string>();
   const remaining: string[] = [];
+  const cueCount = tokens.filter((t) => COMPANY_CUE.test(t)).length;
   for (let i = 0; i < tokens.length; i++) {
     const pair = countryLexicon.get(`${tokens[i]} ${tokens[i + 1]}`);
-    const hasCompanyCue = tokens.some((t, j) => j !== i && COMPANY_CUE.test(t));
+    const hasCompanyCue = cueCount - (COMPANY_CUE.test(tokens[i]) ? 1 : 0) > 0;
     let code = pair ?? countryLexicon.get(tokens[i]) ??
       (isKnownWord && hasCompanyCue ? fuzzyCountry(tokens[i], isKnownWord) : undefined);
     // Lowercase pronoun "us" is common in contact/email queries. Require a

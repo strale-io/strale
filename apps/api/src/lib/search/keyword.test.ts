@@ -237,6 +237,10 @@ describe("misspelt country names and trailing us", () => {
     "does not read the English word in %s as a country", (q) => {
       expect(extractCountries(q, () => false).codes.size).toBe(0);
     });
+  it.each(["finish company setup", "trench company", "hungry business", "vanish business", "inland shipping company"])(
+    "does not read the English word in %s as a country even next to a cue", (q) => {
+      expect(extractCountries(q, () => false).codes.size).toBe(0);
+    });
   it.each(["business card for us", "corporate gifts for us", "tell the company about us"])(
     "keeps us a pronoun in %s", (q) => {
       expect(extractCountries(q, () => false).codes.has("US")).toBe(false);
