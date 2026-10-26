@@ -3,7 +3,7 @@
 
 slug: price-compare
 name: "Price Comparison"
-description: "Compare a product's price across shops on PriceRunner (Nordics) and Google Shopping. Returns the lowest, highest and average price."
+description: "Compare a product's price across shops on PriceRunner in Sweden, Norway, Denmark and Finland. Returns the lowest, highest and average price."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

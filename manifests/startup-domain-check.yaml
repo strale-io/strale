@@ -3,7 +3,7 @@
 
 slug: startup-domain-check
 name: "Startup Name Availability"
-description: "Check whether a startup name is free as a .com, .io, .ai, .co or .dev domain and as a handle on X, GitHub, npm and PyPI."
+description: "Check whether a startup name is free as a .com, .io, .ai, .co or .dev domain, as a GitHub account name, and as an npm or PyPI package name."
 category: utility
 cost_class: free_unlimited
 quota_window: none

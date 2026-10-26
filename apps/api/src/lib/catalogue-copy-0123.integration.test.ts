@@ -48,8 +48,8 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
     ]) {
       await client`
         INSERT INTO capabilities
-          (slug, name, description, category, input_schema, output_schema, price_cents, lifecycle_state, visible, x402_enabled)
-        VALUES (${s}, ${name}, ${description}, 'validation', '{}'::jsonb, '{}'::jsonb, 7, 'active', true, false)`;
+          (slug, name, description, category, input_schema, output_schema, price_cents, lifecycle_state, visible, x402_enabled, updated_at)
+        VALUES (${s}, ${name}, ${description}, 'validation', '{}'::jsonb, '{}'::jsonb, 7, 'active', true, false, '2020-01-01T00:00:00Z')`;
     }
     for (const [s, description, agent] of [
       [slug("bundle-fresh"), "Quick company verification for United Kingdom. Rest.", "fetch page, page blocked need content"],
@@ -57,9 +57,9 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
     ]) {
       await client`
         INSERT INTO solutions
-          (slug, name, description, long_description, agent_description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, input_schema, is_active)
+          (slug, name, description, long_description, agent_description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, input_schema, is_active, updated_at)
         VALUES (${s}, ${s}, ${description}, 'Performs 4 automated checks for United Kingdom companies: rest.', ${agent},
-                'compliance-verification', 150, 100, 'standard', 'low', 'eu', '{}'::jsonb, false)`;
+                'compliance-verification', 150, 100, 'standard', 'low', 'eu', '{}'::jsonb, false, '2020-01-01T00:00:00Z')`;
     }
   });
 
@@ -108,8 +108,8 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
   });
 
   async function capability(name: string) {
-    const [row] = await client<{ name: string; description: string; price_cents: number; x402_enabled: boolean }[]>`
-      SELECT name, description, price_cents, x402_enabled FROM capabilities WHERE slug = ${slug(name)}`;
+    const [row] = await client<{ name: string; description: string; price_cents: number; x402_enabled: boolean; updated: string }[]>`
+      SELECT name, description, price_cents, x402_enabled, to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS updated FROM capabilities WHERE slug = ${slug(name)}`;
     return row;
   }
 
@@ -121,7 +121,11 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
     expect(await capability("renamed")).toMatchObject({ name: "Someone renamed it", description: "New description." });
     expect(await capability("redescribed")).toMatchObject({ name: "New Name", description: "Someone rewrote this." });
     expect(await capability("same-name")).toMatchObject({ name: "Kept Name", description: "New description." });
-    // Copy only: price and flags untouched.
+    // Copy only: price, flags and updated_at untouched (invariant-checker reads updated_at as "the tool changed").
+    for (const n of ["fresh", "renamed", "redescribed", "same-name"]) expect((await capability(n)).updated, n).toBe("2020-01-01");
+    const [solTouched] = await client<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM solutions WHERE slug LIKE ${`${run}-%`} AND updated_at <> '2020-01-01T00:00:00Z'`;
+    expect(solTouched.n).toBe(0);
     expect(await capability("fresh")).toMatchObject({ price_cents: 7, x402_enabled: false });
 
     const solutions = await client<{

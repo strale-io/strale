@@ -1,6 +1,6 @@
 slug: c2pa-inspect
 name: "C2PA Content Credentials"
-description: "Read the C2PA Content Credentials in a media file: verify the signature and show the tool that made it, the signer, edits, and whether AI generated it."
+description: "Read the C2PA Content Credentials in a media file: verify the signature and show the tool that made it, the signer, edits, and any AI-generation flags."
 category: media
 cost_class: free_unlimited
 quota_window: none

@@ -3256,17 +3256,17 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     await runMigration0123_catalogueCopy(stub);
     const [names, descriptions, solutions, longs, agents] = updates(stub);
 
-    expect(names.flat).toContain("update capabilities as c set name = v.new_value, updated_at = now() from (values");
+    expect(names.flat).toContain("update capabilities as c set name = v.new_value from (values");
     expect(names.flat).toContain("where c.slug = v.slug and c.name = v.old_value");
     expect(names.flat).not.toContain("description");
-    expect(descriptions.flat).toContain("update capabilities as c set description = v.new_value, updated_at = now() from (values");
+    expect(descriptions.flat).toContain("update capabilities as c set description = v.new_value from (values");
     expect(descriptions.flat).toContain("where c.slug = v.slug and c.description = v.old_value");
     expect(descriptions.flat).not.toMatch(/\bname\b/);
-    expect(solutions.flat).toContain("update solutions as s set description = v.new_value, updated_at = now() from (values");
+    expect(solutions.flat).toContain("update solutions as s set description = v.new_value from (values");
     expect(solutions.flat).toContain("where s.slug = v.slug and s.description = v.old_value");
-    expect(longs.flat).toContain("update solutions as s set long_description = v.new_value, updated_at = now() from (values");
+    expect(longs.flat).toContain("update solutions as s set long_description = v.new_value from (values");
     expect(longs.flat).toContain("where s.slug = v.slug and s.long_description = v.old_value");
-    expect(agents.flat).toContain("update solutions as s set agent_description = v.new_value, updated_at = now() from (values");
+    expect(agents.flat).toContain("update solutions as s set agent_description = v.new_value from (values");
     expect(agents.flat).toContain("where s.slug = v.slug and s.agent_description = v.old_value");
     // Copy only: no price, step or flag column is ever written.
     for (const u of [names, descriptions, solutions, longs, agents]) {
@@ -3282,6 +3282,38 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     // A tool whose name is not changing is not in the name UPDATE at all.
     const unchanged = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.old_name === r.name)!;
     expect(names.params).not.toContain(unchanged.slug);
+  });
+
+  it("the copy states only what the executors do (independent review of PR #738)", () => {
+    const target = (slug: string) => CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.slug === slug)!.description;
+    // price-compare.ts: the Google Shopping fallback was removed; PriceRunner SE/NO/DK/FI only.
+    expect(target("price-compare")).not.toMatch(/Google/);
+    expect(target("price-compare")).toMatch(/PriceRunner in Sweden, Norway, Denmark and Finland/);
+    // startup-domain-check.ts: the X handle is reported unchecked.
+    expect(target("startup-domain-check")).not.toMatch(/\bX\b|Twitter/);
+    // phone-validate.ts: carrier is always null.
+    expect(target("phone-validate")).not.toMatch(/carrier/i);
+    // c2pa-inspect.ts: AI-generation labels only (training-mining is consent, not generation).
+    expect(target("c2pa-inspect")).toMatch(/any AI-generation flags/);
+    expect(target("c2pa-inspect")).not.toMatch(/whether AI generated it/);
+    // keyword-rank-check.ts: depth 10 by default, capped at 100.
+    expect(target("keyword-rank-check")).toMatch(/top 10 results by default \(up to 100\)/);
+    expect(target("uk-disqualified-director-check")).toMatch(/by officer ID/);
+    expect(target("html-to-pdf")).toMatch(/base64/);
+    expect(target("screenshot-url")).toMatch(/base64 PNG/);
+    // charity-lookup-uk.ts calls findthatcharity.uk (England and Wales, then Scotland).
+    expect(target("charity-lookup-uk")).toMatch(/Find that Charity/);
+    expect(target("charity-lookup-uk")).not.toMatch(/Charity Commission/);
+  });
+
+  it("never sets updated_at: a copy-only change must not look like the tool changed", async () => {
+    // invariant-checker.ts reads capabilities.updated_at as "the capability changed"
+    // (stale auto-generated known_answer ground truth, and the suspended-tool clock).
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0123_catalogueCopy(stub);
+    const writes = stub.renderedSql.filter((q) => /^\s*(update|insert)/i.test(q));
+    expect(writes).toHaveLength(6); // five UPDATEs and the ledger INSERT
+    for (const q of writes) expect(q).not.toMatch(/updated_at/i);
   });
 
   it("reports rows the guard left alone instead of claiming them", async () => {

@@ -14,6 +14,11 @@
 //
 // password-strength is deliberately absent (its copy claims the password is never stored,
 // but capability inputs are persisted for 90 days), as is social-profile-check.
+//
+// Nine tools carry wording corrected after the copy was checked against the executors: eight from
+// the independent review of PR #738 (price-compare, startup-domain-check, phone-validate,
+// c2pa-inspect, keyword-rank-check, uk-disqualified-director-check, html-to-pdf, screenshot-url)
+// and charity-lookup-uk (its executor calls findthatcharity.uk, not the Charity Commission).
 
 export interface CatalogueCopyCapabilityRow {
   slug: string;
@@ -237,7 +242,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "C2PA Content Credentials Inspect",
     old_description: "Inspect a media URL for C2PA Content Credentials. Parses the embedded manifest, verifies the cryptographic signature, and extracts claim generator, signer, edit assertions, and AI-generation flags. Pure parsing — no external API.",
     name: "C2PA Content Credentials",
-    description: "Read the C2PA Content Credentials in a media file: verify the signature and show the tool that made it, the signer, edits, and whether AI generated it.",
+    description: "Read the C2PA Content Credentials in a media file: verify the signature and show the tool that made it, the signer, edits, and any AI-generation flags.",
   },
   {
     slug: "canadian-company-data",
@@ -258,7 +263,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "Charity Lookup UK",
     old_description: "Look up UK charities via the Charity Commission API. Search by registration number or name. Returns status, income, activities.",
     name: "UK Charity Lookup",
-    description: "Look up a charity in England and Wales at the Charity Commission by number or name: status, income and activities.",
+    description: "Look up a charity in England and Wales or Scotland by registration number, or search by name, from Find that Charity. A number lookup returns status, registration dates, income, spending and description.",
   },
   {
     slug: "classify-text",
@@ -937,7 +942,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "HTML to PDF",
     old_description: "Convert HTML string or URL to PDF via headless browser. Configurable paper size, margins, landscape mode. Returns base64 PDF.",
     name: "HTML to PDF",
-    description: "Turn HTML or a web page into a PDF, with the paper size, margins and orientation you choose.",
+    description: "Turn HTML or a web page into a PDF, with the paper size, margins and orientation you choose. Returns the PDF as base64.",
   },
   {
     slug: "http-to-curl",
@@ -1112,7 +1117,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "Keyword Rank Check",
     old_description: "Check where a domain ranks in Google search results for a keyword. Returns the position, page, matching result, and the competitors ranking above it within the scanned depth.",
     name: "Keyword Rank Check",
-    description: "Find where a domain ranks on Google for a keyword: position, page, the matching result, and the competitors ranking above it.",
+    description: "Find where a domain ranks on Google for a keyword: position, page, the matching result, and the competitors ranking above it. Scans the top 10 results by default (up to 100), so a domain not found may still rank lower.",
   },
   {
     slug: "landing-page-roast",
@@ -1378,7 +1383,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "Phone Validate",
     old_description: "Validate a phone number and classify its type. Returns E.164 format, country, carrier name, and whether it is mobile, landline, or VOIP. Covers 200+ countries.",
     name: "Phone Validation",
-    description: "Validate a phone number in 200+ countries. Returns the E.164 form, country, carrier, and whether it is mobile, landline or VoIP.",
+    description: "Validate a phone number in 200+ countries. Returns the E.164 form, country, and whether it is mobile, landline or VoIP.",
   },
   {
     slug: "pii-redact",
@@ -1427,7 +1432,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "Price Compare",
     old_description: "Compare prices across merchants via PriceRunner (Nordic) and Google Shopping. Returns lowest/highest/average prices.",
     name: "Price Comparison",
-    description: "Compare a product's price across shops on PriceRunner (Nordics) and Google Shopping. Returns the lowest, highest and average price.",
+    description: "Compare a product's price across shops on PriceRunner in Sweden, Norway, Denmark and Finland. Returns the lowest, highest and average price.",
   },
   {
     slug: "pricing-page-extract",
@@ -1595,7 +1600,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "Screenshot URL",
     old_description: "Take a full-page or viewport screenshot of any URL. Handles cookie banners, lazy loading, SPAs. Returns base64 PNG.",
     name: "Web Page Screenshot",
-    description: "Take a full-page or visible-area screenshot of a URL as a PNG. Handles cookie banners, lazy loading and single-page apps.",
+    description: "Take a full-page or visible-area screenshot of a URL. Handles cookie banners, lazy loading and single-page apps. Returns a base64 PNG.",
   },
   {
     slug: "sec-edgar-filings",
@@ -1770,7 +1775,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "Startup Domain Check",
     old_description: "Check domain and handle availability for a startup name. Checks .com/.io/.ai/.co/.dev domains, Twitter, GitHub, npm, PyPI.",
     name: "Startup Name Availability",
-    description: "Check whether a startup name is free as a .com, .io, .ai, .co or .dev domain and as a handle on X, GitHub, npm and PyPI.",
+    description: "Check whether a startup name is free as a .com, .io, .ai, .co or .dev domain, as a GitHub account name, and as an npm or PyPI package name.",
   },
   {
     slug: "stock-quote",
@@ -1931,7 +1936,7 @@ export const CATALOGUE_COPY_0123_CAPABILITIES: readonly CatalogueCopyCapabilityR
     old_name: "UK Disqualified Director Check",
     old_description: "Search the UK Companies House Disqualified Officers register by name, or fetch full disqualification detail by officer_id. Returns disqualification dates, court, reason, and companies involved.",
     name: "UK Disqualified Director Check",
-    description: "Search the UK register of disqualified directors by name, or fetch one record in full: dates, court, reason and the companies involved.",
+    description: "Search the UK register of disqualified directors by name, or fetch one full record by officer ID: dates, court, reason and the companies involved.",
   },
   {
     slug: "uk-filing-events",

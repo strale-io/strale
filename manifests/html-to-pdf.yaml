@@ -3,7 +3,7 @@
 
 slug: html-to-pdf
 name: "HTML to PDF"
-description: "Turn HTML or a web page into a PDF, with the paper size, margins and orientation you choose."
+description: "Turn HTML or a web page into a PDF, with the paper size, margins and orientation you choose. Returns the PDF as base64."
 category: file-conversion
 cost_class: free_unlimited
 quota_window: none

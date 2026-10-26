@@ -3,7 +3,7 @@
 
 slug: screenshot-url
 name: "Web Page Screenshot"
-description: "Take a full-page or visible-area screenshot of a URL as a PNG. Handles cookie banners, lazy loading and single-page apps."
+description: "Take a full-page or visible-area screenshot of a URL. Handles cookie banners, lazy loading and single-page apps. Returns a base64 PNG."
 category: web-scraping
 cost_class: free_unlimited
 quota_window: none

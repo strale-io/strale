@@ -6582,10 +6582,17 @@ export async function runMigration0123_catalogueCopy(
   const solutionLongChanges = solutionChanges("long_description");
   const solutionAgentChanges = solutionChanges("agent_description");
 
+  // No UPDATE here touches updated_at, deliberately. capabilities.updated_at is
+  // read as "the capability itself changed": invariant-checker.ts flags an
+  // auto-generated known_answer test as stale ground truth when
+  // c.updated_at > ts.generation_capability_updated_at (check 5), and measures
+  // how long a suspended tool has been suspended from updated_at. A copy-only
+  // rewrite of 296 tools must move neither signal. Solutions follow the same
+  // rule: this block changes words, not the bundle.
+
   const names = nameChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE capabilities AS c
-       SET name = v.new_value,
-           updated_at = now()
+       SET name = v.new_value
       FROM (VALUES ${values(nameChanges)}) AS v (slug, old_value, new_value)
      WHERE c.slug = v.slug
        AND c.name = v.old_value
@@ -6594,8 +6601,7 @@ export async function runMigration0123_catalogueCopy(
 
   const descriptions = descriptionChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE capabilities AS c
-       SET description = v.new_value,
-           updated_at = now()
+       SET description = v.new_value
       FROM (VALUES ${values(descriptionChanges)}) AS v (slug, old_value, new_value)
      WHERE c.slug = v.slug
        AND c.description = v.old_value
@@ -6604,8 +6610,7 @@ export async function runMigration0123_catalogueCopy(
 
   const solutionDescriptions = solutionDescriptionChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE solutions AS s
-       SET description = v.new_value,
-           updated_at = now()
+       SET description = v.new_value
       FROM (VALUES ${values(solutionDescriptionChanges)}) AS v (slug, old_value, new_value)
      WHERE s.slug = v.slug
        AND s.description = v.old_value
@@ -6614,8 +6619,7 @@ export async function runMigration0123_catalogueCopy(
 
   const solutionLongDescriptions = solutionLongChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE solutions AS s
-       SET long_description = v.new_value,
-           updated_at = now()
+       SET long_description = v.new_value
       FROM (VALUES ${values(solutionLongChanges)}) AS v (slug, old_value, new_value)
      WHERE s.slug = v.slug
        AND s.long_description = v.old_value
@@ -6624,8 +6628,7 @@ export async function runMigration0123_catalogueCopy(
 
   const solutionAgentDescriptions = solutionAgentChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE solutions AS s
-       SET agent_description = v.new_value,
-           updated_at = now()
+       SET agent_description = v.new_value
       FROM (VALUES ${values(solutionAgentChanges)}) AS v (slug, old_value, new_value)
      WHERE s.slug = v.slug
        AND s.agent_description = v.old_value
