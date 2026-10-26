@@ -96,7 +96,7 @@ Each page answers one reader question and has one primary call to action (CTA).
   8. **Start:** CTA **Get an API key**; secondary **Try a free tool**.
 - **Primary CTA:** Browse tools.
 - **Level:** L1 in sections 1–2; L2 in sections 3 and 5; L3 in sections 6–7.
-- **Data:** the library count from facts (`capability_counts.active_visible`), rendered and never typed; example tools from `/v1/capabilities/:slug`; coverage strip from `/v1/platform/facts` (`countries.company_data_active`) and `/v1/capabilities`; free tools from facts `free_tier_slugs`; x402 eligibility from `/x402/catalog`.
+- **Data:** the library count from facts (`capability_counts.active_visible`), rendered and never typed; example tools from `/v1/capabilities/:slug`; coverage strip from `/v1/platform/facts` (`countries.company_data_active_iso`, one code per country; the prefix lists can carry two names for one country) and `/v1/capabilities`; free tools from facts `free_tier_slugs`; x402 eligibility from `/x402/catalog`.
 
 ### 2. Tools catalogue `/tools`
 

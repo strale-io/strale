@@ -15,7 +15,6 @@ sources:
   - https://www.npmjs.com/package/@dlgt-io/cli
   - https://pypi.org/project/dlgt-io/
   - https://nubela.co/blog/goodbye-proxycurl/
-  - https://www.socialmediatoday.com/news/linkedin-wins-legal-case-data-scrapers-proxycurl/756101/
   - manifests/job-board-search.yaml
   - manifests/image-to-text.yaml
   - manifests/price-compare.yaml
@@ -34,9 +33,11 @@ sources:
 
 # Delegate (dlgt.io): competitive analysis
 
+Note added 2026-10-26: The cited DEC-20260428-A and DEC-20260813-A were superseded on 2026-10-24 by [DEC-20261023-A](../strategy/2026-10-23-data-access-risk-rule-proposal.md). The SERP-vendor question in "Doctrine caveat on SERP-vendor routes" and side observation S3 is now governed by its vendor-data lane and [DQ-39](../company/DECISION-QUEUE.md); social-platform data stays out under its never lane. The original findings below remain a dated record. The unsupported customer-status assertions were removed from the introduction and the broker-channel row; the file does not attribute that status to the commissioning brief. The unused socialmediatoday.com source entry was also removed.
+
 This is research for the founder and for the parallel positioning session. It is evidence, not a decision. It changes no positioning document, decision record or code. Times are Swedish local time (CEST on 23 October 2026).
 
-Delegate is a Strale customer. This analysis used public material only. It used no Strale transaction or telemetry data about Delegate, involved no account, sign-up, payment or contact, and includes no outreach.
+This analysis used public material only. It used no Strale transaction or telemetry data about Delegate, involved no account, sign-up, payment or contact, and includes no outreach.
 
 ## Evidence limits (read first)
 
@@ -136,7 +137,7 @@ Effort assumes the current monorepo. "Impact" is expected effect on agent activa
 | 3 | **"Works with" row plus one-line setup per client** (Claude Code `claude mcp add --transport http …`, Cursor, Codex, ChatGPT) | Low | Medium to high | Delegate's README makes setup feel like one paste. Strale already serves remote MCP at `/mcp`. |
 | 4 | **Developer READMEs with two diagrams** ("how it works", "what a call goes through") and zero-dependency SDKs | Low | Medium | npm, PyPI and GitHub READMEs are where agent builders actually land. Delegate's are short, diagrammed and consistent across three packages that share one version. |
 | 5 | **A short benefit-first line** in the style of "Give your agent superpowers" | Low | Medium | Plain promise first, mechanism second. Matches DEC-20260905-A. **Guardrail:** the wording stays inside `claims.yaml` and VOICE.md, with no "most popular" or "trusted by N". |
-| 6 | **Treat agent marketplaces and brokers as a distribution channel** | Low (analysis), founder-gated (action) | Unknown | Delegate is a broker that lists services, and is a Strale customer. Brokers can carry Strale tools to agents Strale never reaches directly. Any listing or contact is vendor contact, so it is Petter's decision (DEC-20260815-A). |
+| 6 | **Treat agent marketplaces and brokers as a distribution channel** | Low (analysis), founder-gated (action) | Unknown | Delegate is a broker that lists services. Brokers can carry Strale tools to agents Strale never reaches directly. Any listing or contact is vendor contact, so it is Petter's decision (DEC-20260815-A). |
 | 7 | **Catalogue size as a headline number** | Low | Low | Only if the number is served from `/v1/platform/facts` (drift-prevention rule). Strale's honest framing is depth of first-party sources, not count. |
 
 ## What not to copy
