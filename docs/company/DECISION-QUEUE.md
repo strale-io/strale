@@ -39,6 +39,15 @@ first three alone earned about €138 in the 90 days to 23 October.
     sources".
 - So on what I can see, the rule's condition is not met. The current terms may
   differ, and I have not seen them.
+- **Update 2026-10-26 (morning run): the current terms were read directly.**
+  serper.dev/terms, "Updated on May 29, 2024", fetched 2026-10-26. It contains
+  no clause permitting resale, redistribution or sublicensing, and none
+  forbidding it either; it still bars mirroring the materials "as-is with
+  no-value-added", and describes Serper as business-to-business. Silence is
+  not permission, so the rule's condition ("terms permit resale") is still
+  not met, and the options and recommendation below are unchanged. Serper's
+  prepaid allowance expires 2026-11-08, which lines up with the two-week
+  window recommended below.
 
 *Options:*
 1. **Ask Serper in writing** whether reselling search results per call

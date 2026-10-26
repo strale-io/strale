@@ -702,11 +702,22 @@ production row, not from a reconstruction.
 
 > Something we tell the world that is no longer true, or was never quite true.
 
-**Count: 4.** A methodology page naming a vendor we had left three days earlier;
+**Count: 5.** A methodology page naming a vendor we had left three days earlier;
 listing copy selling compliance to a customer base buying growth tooling;
 hardcoded capability lists advertising services we had withdrawn — and, still
 open, "tamper-evident" on six pages, which holds for alteration of one record
 and not for ordering or deletion across a 3.5-month window.
+
+**Incident 5 (found 2026-10-26, morning run).** `password-strength`'s live
+description says "Password is NOT stored", while every input is kept 90 days.
+The falsehood was found and narrowed on 2026-09-05 — **in the manifest only**;
+nothing carried it to production, and seven weeks later the catalogue-copy
+block of 2026-10-26 deliberately skipped the tool because its offered copy was
+false too. Two paid wallet calls sent a password in the 30 days to 10-26
+(`who-called`). Same arm as F7 incident 11 (a manifest correction is not a
+production correction). The repair that needs no claim change is to make the
+claim true: stop persisting that input. Owner: next session (see the
+2026-10-26 operating record).
 **State: INVESTIGATION DUE.** Two of the four were caught by drift guards;
 the other two were caught by a human reading the page. A fourth guard is cheaper
 than a fifth incident: the investigation to open is "which public claims have no
