@@ -17,7 +17,7 @@
 
 import type { CapabilityExecutor, CapabilityInput, CapabilityResult } from "../../capabilities/index.js";
 import { CapabilityRefusalError } from "../capability-refusal.js";
-import { normaliseStatus, type CompanyStatus } from "./normalise.js";
+import { normaliseRegistryOutput, type CompanyStatus } from "./normalise.js";
 import {
   SUPPORTED_COUNTRIES,
   canonicalCountry,
@@ -36,6 +36,8 @@ export interface InsolvencyNotice {
   date: string | null;
   type: string;
   source_url: string | null;
+  /** The source's own status for the proceeding (GB), so a closed one does not look current. */
+  status?: string;
 }
 
 interface Signal {
@@ -102,7 +104,8 @@ function gbNotices(out: Record<string, unknown>, companyNumber: string): Insolve
   const url = `https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(companyNumber)}/insolvency`;
   return asArray(out.proceedings).map((p) => {
     const r = asRecord(p);
-    return { date: str(r.date_started), type: str(r.type) ?? "insolvency proceeding", source_url: url };
+    const status = str(r.status);
+    return { date: str(r.date_started), type: str(r.type) ?? "insolvency proceeding", source_url: url, ...(status ? { status } : {}) };
   });
 }
 
@@ -121,16 +124,6 @@ function frNotices(out: Record<string, unknown>): { notices: InsolvencyNotice[];
     }));
   const total = typeof out.total_announcements === "number" ? out.total_announcements : 0;
   return { notices, truncated: total > BODACC_WINDOW };
-}
-
-/** Brønnøysund flags (no-bankruptcy-check, NO). */
-function noNotices(out: Record<string, unknown>, orgNumber: string): InsolvencyNotice[] {
-  const url = `https://data.brreg.no/enhetsregisteret/api/enheter/${encodeURIComponent(orgNumber)}`;
-  const notices: InsolvencyNotice[] = [];
-  if (out.has_bankruptcy_filing === true) notices.push({ date: str(out.bankruptcy_date), type: "bankruptcy", source_url: url });
-  if (out.is_under_compulsory_dissolution === true) notices.push({ date: null, type: "compulsory dissolution", source_url: url });
-  if (out.is_under_dissolution === true) notices.push({ date: null, type: "dissolution", source_url: url });
-  return notices;
 }
 
 /** Bolagsverket pending proceedings, read from the registry output itself (SE). */
@@ -158,12 +151,43 @@ function registryName(out: Record<string, unknown>): string | null {
 
 const shorten = (s: string): string => s.replace(/\s+/g, " ").slice(0, 200);
 
+/**
+ * The breaker and the quality floor are keyed on the slug the caller invoked, so
+ * every failure here counts against company-status-check for ALL countries. An
+ * executor's "this company does not exist" or "this identifier is invalid" is the
+ * caller's answer, not ill health, and must not count. The wording below is the
+ * real not-found / invalid text of each routed executor (company-status-errors.test.ts
+ * holds one string per executor); anything else stays a plain error.
+ */
+const NOT_FOUND_RE = /not found|^No .* found|no current registration data/i;
+const INVALID_RE = /not a valid|checksum|invalid/i;
+// "Invalid ABR response: no <response> element" is the upstream breaking, not the caller's input.
+const UPSTREAM_FAULT_RE = /invalid .*response|HTTP [45]\d\d/i;
+
+export function classifyUpstreamMessage(msg: string): "not_found" | "invalid_identifier" | "failure" {
+  if (UPSTREAM_FAULT_RE.test(msg)) return "failure";
+  if (NOT_FOUND_RE.test(msg)) return "not_found";
+  if (INVALID_RE.test(msg)) return "invalid_identifier";
+  return "failure";
+}
+
 function upstreamError(route: CountryRoute, slug: string, label: string, err: unknown): Error {
   const msg = err instanceof Error ? err.message : String(err);
-  // A registry that says the entity does not exist, or refuses the ask, is a
-  // caller-attributable answer: keep it a refusal so it does not open the breaker.
+  // The wording of these two refusals is what recordFailure and the failure taxonomy recognise
+  // from the message alone ("not found" substring; "'field' ... must be" house style).
   if (err instanceof CapabilityRefusalError) {
     return new CapabilityRefusalError(`${label} lookup for ${route.iso} (${slug}) was refused: ${shorten(msg)}`);
+  }
+  const kind = classifyUpstreamMessage(msg);
+  if (kind === "not_found") {
+    return new CapabilityRefusalError(
+      `${route.registry.name} has no record that was found for this ${route.iso} identifier (not found): ${shorten(msg)}`,
+    );
+  }
+  if (kind === "invalid_identifier") {
+    return new CapabilityRefusalError(
+      `'identifier' must be a valid ${route.iso} identifier; ${route.registry.name} rejected it: ${shorten(msg)}`,
+    );
   }
   return new Error(`${label} lookup failed for ${route.iso}: ${route.registry.name} via ${slug} did not answer (${shorten(msg)}). No status is returned.`);
 }
@@ -183,7 +207,13 @@ export async function runCompanyStatusCheck(input: CapabilityInput, deps: Compos
       `'country' must be one of the supported countries; '${country}' is not. Supported: ${SUPPORTED_COUNTRIES.join(", ")}.`,
     );
   }
-  const rawIdentifier = typeof input.identifier === "string" ? input.identifier.trim() : "";
+  // A JSON number is a plausible way to send a numeric identifier; leading zeros are lost, which the strict validators then refuse.
+  const rawIdentifier =
+    typeof input.identifier === "string"
+      ? input.identifier.trim()
+      : typeof input.identifier === "number" && Number.isSafeInteger(input.identifier) && input.identifier >= 0
+        ? String(input.identifier)
+        : "";
   const identifier = rawIdentifier === "" ? null : route.normalise_identifier(rawIdentifier);
   if (identifier === null) {
     throw new CapabilityRefusalError(`'identifier' must be ${route.identifier_help} for ${route.iso}.`);
@@ -212,7 +242,7 @@ export async function runCompanyStatusCheck(input: CapabilityInput, deps: Compos
     throw upstreamError(route, route.registry.slug, "Registry", err);
   }
   const registryOut = asRecord(registryResult?.output);
-  const normalised = normaliseStatus(route.registry.slug, registryOut.status);
+  const normalised = normaliseRegistryOutput(route.registry.slug, registryOut);
 
   const signals: Signal[] = [signalFrom("registry", route.registry.slug, registryResult)];
 
@@ -223,13 +253,17 @@ export async function runCompanyStatusCheck(input: CapabilityInput, deps: Compos
       reason: `No official insolvency source is connected for ${route.iso}.`,
     };
   } else if (route.insolvency.kind === "same_record") {
+    // swedish-company-data keeps only the proceedings list and drops Bolagsverket's per-block
+    // `fel` (failed to load) marker, so an empty list cannot be told from a block that failed.
+    // Notices found are reported; an empty list is not claimed as "none".
     const notices = seNotices(registryOut);
-    insolvency = {
-      checked: true,
-      source: route.insolvency.name,
-      notices_found: notices.length,
-      notices,
-    };
+    insolvency =
+      notices.length > 0
+        ? { checked: true, source: route.insolvency.name, notices_found: notices.length, notices }
+        : {
+            checked: false,
+            reason: "Bolagsverket lists no pending proceedings in this answer, but the answer cannot show whether that part of the record loaded, so no \"none found\" is claimed.",
+          };
   } else {
     const slug = route.insolvency.slug as string;
     let r: CapabilityResult;
@@ -247,10 +281,8 @@ export async function runCompanyStatusCheck(input: CapabilityInput, deps: Compos
         throw new Error(`Insolvency lookup failed for GB: ${slug} could not resolve company ${identifier}. No status is returned.`);
       }
       notices = gbNotices(out, identifier);
-    } else if (route.iso === "FR") {
-      ({ notices, truncated } = frNotices(out));
     } else {
-      notices = noNotices(out, identifier);
+      ({ notices, truncated } = frNotices(out));
     }
     signals.push(signalFrom("insolvency", slug, r));
     insolvency = {
@@ -306,6 +338,5 @@ function insolvencyInput(
     return { country_code: "GB", company_number: identifier, company_name: registryName(registryOut) ?? identifier };
   }
   if (slug === "fr-bodacc-lookup") return { siren: identifier, limit: BODACC_WINDOW };
-  if (slug === "no-bankruptcy-check") return { org_number: identifier };
   throw new Error(`No input mapping for insolvency source ${slug} (${route.iso}).`);
 }

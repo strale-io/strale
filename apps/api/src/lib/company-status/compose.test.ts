@@ -35,7 +35,7 @@ function deps(table: Record<string, CapabilityExecutor>, open: string[] = []): C
 const run = (d: ComposeDeps, input: Record<string, unknown>) => runCompanyStatusCheck(input, d);
 
 describe("success paths", () => {
-  it("SE: active, with pending proceedings read from the same record (no second call)", async () => {
+  it("SE: an open konkurs sets in_insolvency, read from the same record (no second call)", async () => {
     const d = deps({
       "swedish-company-data": async () =>
         ok({
@@ -50,7 +50,7 @@ describe("success paths", () => {
     const r = await run(d, { country: "se", identifier: "5567037485" });
     expect(d.calls).toEqual([["swedish-company-data", { org_number: "556703-7485" }]]);
     expect(r.output).toMatchObject({
-      status: "active",
+      status: "in_insolvency", // an open Konkurs overrides verksam = JA ("active")
       registry_status_raw: "active",
       company_name: "Spotify AB",
       registry: { slug: "swedish-company-data" },
@@ -116,21 +116,10 @@ describe("success paths", () => {
     expect((r.output.insolvency as any).window_note).toMatch(/100 most recent/);
   });
 
-  it("NO: bankruptcy and dissolution flags become notices", async () => {
-    const d = deps({
-      "norwegian-company-data": async () => ok({ company_name: "X AS", status: "bankrupt" }),
-      "no-bankruptcy-check": async () =>
-        ok({ has_bankruptcy_filing: true, bankruptcy_date: "2024-02-02", is_under_dissolution: false, is_under_compulsory_dissolution: true }),
-    });
-    const r = await run(d, { country: "NO", identifier: "923609016" });
-    expect(r.output.status).toBe("in_insolvency");
-    expect((r.output.insolvency as any).notices.map((n: any) => n.type)).toEqual(["bankruptcy", "compulsory dissolution"]);
-  });
-
   it("a country with no insolvency source says checked:false with a reason and lists no notices", async () => {
-    const d = deps({ "cz-company-data": async () => ok({ company_name: "ŠKODA AUTO a.s.", status: "active" }) });
-    const r = await run(d, { country: "CZ", identifier: "00177041" });
-    expect(r.output.insolvency).toEqual({ checked: false, reason: "No official insolvency source is connected for CZ." });
+    const d = deps({ "irish-company-data": async () => ok({ company_name: "STRIPE PAYMENTS EUROPE, LIMITED", status: "Normal" }) });
+    const r = await run(d, { country: "IE", identifier: "513174" });
+    expect(r.output.insolvency).toEqual({ checked: false, reason: "No official insolvency source is connected for IE." });
     expect(d.calls).toHaveLength(1);
   });
 });
@@ -144,11 +133,11 @@ describe("output fields", () => {
 
   it("lists a source once when registry and insolvency source share it", async () => {
     const d = deps({
-      "norwegian-company-data": async () => ok({ company_name: "EQUINOR ASA", status: "active" }, { source: "data.brreg.no" }),
-      "no-bankruptcy-check": async () => ok({ has_bankruptcy_filing: false }, { source: "data.brreg.no" }),
+      "uk-company-data": async () => ok({ company_name: "TESCO PLC", status: "active" }, { source: "companieshouse.gov.uk" }),
+      "insolvency-check": async () => ok({ proceedings: [] }, { source: "companieshouse.gov.uk" }),
     });
-    const r = await run(d, { country: "NO", identifier: "923609016" });
-    expect(r.provenance.source).toBe("data.brreg.no");
+    const r = await run(d, { country: "GB", identifier: "00445790" });
+    expect(r.provenance.source).toBe("companieshouse.gov.uk");
   });
 });
 
@@ -160,8 +149,8 @@ describe("status handling", () => {
   });
 
   it("a registry answer with no status at all is unknown, never active", async () => {
-    const d = deps({ "polish-company-data": async () => ok({ company_name: "X SA" }) });
-    const r = await run(d, { country: "PL", identifier: "0000033945" });
+    const d = deps({ "croatian-company-data": async () => ok({ company_name: "X d.o.o." }) });
+    const r = await run(d, { country: "HR", identifier: "81793146560" });
     expect(r.output).toMatchObject({ status: "unknown", registry_status_raw: null });
   });
 
@@ -263,17 +252,14 @@ describe("input validation happens before any upstream call", () => {
   const CASES: Array<[string, string, string, string]> = [
     ["AT", "fn 93363z", "FN 93363 z", "Red Bull"],
     ["AU", "51 824 753 556", "51824753556", "5182475355"],
-    ["CZ", "00177041", "00177041", "Skoda"],
     ["EE", "17449106", "17449106", "1744910"],
     ["FI", "01120389", "0112038-9", "Nokia Oyj"],
     ["FR", "542051180", "542051180", "54205118"],
     ["GB", "SC123456", "SC123456", "Tesco"],
-    ["GR", "296601000", "296601000", "12345"],
+    ["GR", "123456789012", "123456789012", "296601000"],  // a 9-digit value is an AFM (tax ID), refused
     ["HR", "81793146560", "81793146560", "8179314656"],
     ["IE", "513174", "513174", "1234"],
     ["LV", "40003245752", "40003245752", "4000324575"],
-    ["NO", "923609016", "923609016", "92360901"],
-    ["PL", "0000033945", "0000033945", "33945"],
     ["SE", "556703-7485", "556703-7485", "55670374"],
     ["SG", "197200078R", "197200078R", "1972"],
   ];

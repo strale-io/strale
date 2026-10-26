@@ -67,8 +67,13 @@ export const STATUS_MAP_ROWS: readonly StatusMapRow[] = [
   // Austria. The Firmenbuch has no status field; the executor derives one from
   // legal facts: dissolution fact present -> "dissolved", else "active"
   // (austrian-company-data.ts, "const status = dissolution ? \"dissolved\" : \"active\"").
+  // The executor's own comment says such a company "can be dissolved yet still
+  // registered while winding up": an Auflösung opens the liquidation, it does not
+  // end the entity, so "dissolved" here maps to in_liquidation, not dissolved.
+  // A gelöscht (deleted) entity does not reach this table: the executor refuses it
+  // ("may be struck off"), and that wording is a guess, so it is not mapped.
   { slug: AT, raw: "active", status: "active", source: "executor: austrian-company-data.ts status derivation" },
-  { slug: AT, raw: "dissolved", status: "dissolved", source: "executor: austrian-company-data.ts status derivation" },
+  { slug: AT, raw: "dissolved", status: "in_liquidation", source: "executor: austrian-company-data.ts status derivation (Auflösung fact; entity still registered while winding up)" },
 
   // Australia. ABR entityStatusCode, passed through (au-company-data.ts `status: statusCode`).
   // ABN Lookup web services define two codes: Active and Cancelled. Fixture: status "Active".
@@ -89,11 +94,13 @@ export const STATUS_MAP_ROWS: readonly StatusMapRow[] = [
   { slug: EE, raw: "deleted", status: "struck_off", source: "executor: estonian-company-data.ts statusMap K (kustutatud, deleted from register)" },
   { slug: EE, raw: "in_bankruptcy", status: "in_insolvency", source: "executor: estonian-company-data.ts statusMap N (pankrotis)" },
 
-  // Finland. finnish-company-data.ts: liquidation situation present -> "liquidation";
-  // PRH tradeRegisterStatus "1" -> "active"; any other value -> "inactive".
-  { slug: FI, raw: "active", status: "active", source: "executor: finnish-company-data.ts (tradeRegisterStatus 1)" },
-  { slug: FI, raw: "liquidation", status: "in_liquidation", source: "executor: finnish-company-data.ts (companySituations liquidation)" },
-  { slug: FI, raw: "inactive", status: "inactive", source: "executor: finnish-company-data.ts (tradeRegisterStatus other than 1)" },
+  // Finland. finnish-company-data.ts returns "liquidation" when ANY companySituation has no
+  // endDate (it does not say which situation: liquidation, bankruptcy, restructuring ...),
+  // "active" when PRH tradeRegisterStatus is "1", and "inactive" for every other value, which
+  // includes live entities that are not in the trade register at all (association FC Honka ry,
+  // 0101279-1, fixture dead-entities.json). Only "active" is therefore mapped; "liquidation" and
+  // "inactive" stay unmapped and come back as unknown with the raw value.
+  { slug: FI, raw: "active", status: "active", source: "executor: finnish-company-data.ts (tradeRegisterStatus 1, no open companySituation)" },
 
   // France. french-company-data.ts maps INSEE etat_administratif: A -> "active", C -> "closed"
   // (cessee); any other code is returned as is and stays unmapped.
@@ -114,9 +121,12 @@ export const STATUS_MAP_ROWS: readonly StatusMapRow[] = [
   // Greece. deriveStatus() in greek-company-data.ts over GEMI status.descr:
   // contains "ενεργ" -> "active"; "διαγραφ"/"λυσ" -> "dissolved"; "εκκαθ" -> "liquidation";
   // otherwise the Greek description itself is returned and stays unmapped.
+  // Known executor defect, left for its own PR: "ενεργ" is tested first and is a substring of
+  // "ανενεργ" (inactive), so an inactive entity is reported "active".
   { slug: GR, raw: "active", status: "active", source: "executor: greek-company-data.ts deriveStatus" },
   { slug: GR, raw: "dissolved", status: "dissolved", source: "executor: greek-company-data.ts deriveStatus" },
   { slug: GR, raw: "liquidation", status: "in_liquidation", source: "executor: greek-company-data.ts deriveStatus" },
+  { slug: GR, raw: "bankrupt", status: "in_insolvency", source: "executor: greek-company-data.ts deriveStatus (πτωχ, Πτώχευση)" },
 
   // Croatia. croatian-company-data.ts: Sudski registar status code 1 -> "active",
   // null -> "unknown", any other code -> "inactive".
@@ -203,4 +213,59 @@ export function normaliseStatus(slug: string, rawValue: unknown): NormalisedStat
   const hit = INDEX.get(`${slug}\u0000${key(raw)}`);
   if (hit === undefined) return { status: "unknown", registry_status_raw: raw, mapped: false };
   return { status: hit, registry_status_raw: raw, mapped: true };
+}
+
+// ─── Registry-specific refinement ───────────────────────────────────────────────
+
+interface Procedure {
+  code: string;
+  description: string;
+}
+
+function openProcedures(output: Record<string, unknown>): Procedure[] {
+  const list = Array.isArray(output.ongoing_procedures) ? output.ongoing_procedures : [];
+  return list.map((p) => {
+    const r = p !== null && typeof p === "object" ? (p as Record<string, unknown>) : {};
+    return {
+      code: typeof r.code === "string" ? r.code.trim().toUpperCase() : "",
+      description: typeof r.description === "string" ? r.description.trim().toLowerCase() : "",
+    };
+  });
+}
+
+/**
+ * Bolagsverket procedure codes seen in its published examples (docs/research/bolagsverket-hvd-swagger.json):
+ * KK = Konkurs (bankruptcy), LI = Likvidation. Matched on code or on the Swedish text.
+ */
+function procedureStatus(p: Procedure): CompanyStatus | null {
+  if (p.code === "KK" || /konkurs|rekonstruktion/.test(p.description)) return "in_insolvency";
+  if (p.code === "LI" || /likvidation|avveckling/.test(p.description)) return "in_liquidation";
+  return null;
+}
+
+/**
+ * Status for a registry executor's whole output. Starts from the per-slug row
+ * for `output.status`, then applies the rules that need more than that string:
+ *
+ * Sweden (swedish-company-data.ts): `verksam = JA` is "active" even while a
+ * konkurs or likvidation is open, so an open proceeding overrides it (a proceeding the table
+ * cannot classify makes the status unknown rather than active). "deregistered" is also what the
+ * executor emits for `verksam = NEJ` with no avregistreringsdatum; without a deregistration
+ * date that is inactive, not struck_off.
+ */
+export function normaliseRegistryOutput(slug: string, output: Record<string, unknown>): NormalisedStatus {
+  const base = normaliseStatus(slug, output.status);
+  if (slug !== SE) return base;
+  if (base.mapped && base.status === "active") {
+    const procedures = openProcedures(output);
+    const statuses = procedures.map(procedureStatus);
+    if (statuses.includes("in_insolvency")) return { ...base, status: "in_insolvency" };
+    if (statuses.includes("in_liquidation")) return { ...base, status: "in_liquidation" };
+    if (procedures.length > 0) return { ...base, status: "unknown", mapped: false };
+  }
+  if (base.mapped && base.status === "struck_off") {
+    const date = output.deregistered_date;
+    if (typeof date !== "string" || date.trim() === "") return { ...base, status: "inactive" };
+  }
+  return base;
 }

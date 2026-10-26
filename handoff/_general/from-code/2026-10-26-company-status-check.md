@@ -13,18 +13,24 @@ Branch `feat/company-status-check` from `origin/main` `beafcb6`. Draft PR only; 
 
 ## Decisions worth knowing
 
-- 15 countries routed: AT AU CZ EE FI FR GB GR HR IE LV NO PL SE SG. The other ten in production's `company_data_active_iso` are excluded with a stated reason in `EXCLUDED_COUNTRIES` (checks pending: BE BR DE ES JP; no usable status: US SI SK; vocabulary not verifiable here: CA CH).
+- 12 countries routed: AT AU EE FI FR GB GR HR IE LV SE SG. The other thirteen in production's `company_data_active_iso` are excluded with a stated reason in `EXCLUDED_COUNTRIES` (NO PL CZ: the executors' status does not report deleted / struck-off / liquidating entities, fix in a separate PR then re-add; checks pending: BE BR DE ES JP; no usable status: US SI SK; vocabulary not verifiable here: CA CH).
 - `getExecutor`, not `getDirectExecutor`: keeps provider chains (FI, NO, CH) and the data-access stamp. Billing and the breaker record live above it. Underlying breakers are read-only peeked, never written.
 - External cost is 0 cents on every routed path (identifier lookups only; no executor name-resolution/LLM step reachable). `external_cost_cents` is a DB column, not a manifest field, so the PR states 0.
 
+## After the independent review (NO-GO on 27ea39e9, fixed on this branch)
+
+NO PL CZ excluded; not-found / invalid-identifier answers become refusals (no per-country breaker marker exists, so a manifest limitation says one registry outage can pause all countries); SE status from open proceedings and `checked:false` when none listed; FI only "active" mapped; GR bankrupt and GEMI-only identifiers; AT dissolved is in_liquidation; composite is `screening_signal` with financial and sensitive_special data; recorded live fixtures in `apps/api/src/lib/company-status/__fixtures__/dead-entities.json`.
+
 ## Found on the way (not fixed here)
+
+- Executors for the separate PR: norwegian-company-data (ignores SlettetEnhet/slettedato), polish-company-data (reads czyWykreslony, absent in KRS JSON), cz-company-data (reads only stavZdrojeRos), greek-company-data (tests "ενεργ" before "ανενεργ"), finnish-company-data (any open companySituation is reported as "liquidation"; non-trade-register entities as "inactive"), swedish-company-data (drops Bolagsverket's `fel` marker on the proceedings block).
 
 - `fr-bodacc-lookup` clamps `limit` to 200 but the BODACC API rejects anything over 100 with HTTP 400. The composite uses 100.
 - `singapore-company-data` returns the name as `entity_name`; `company_name` is null. The composite falls back to `entity_name`.
 
 ## Not verified
 
-- SE, GB, AT, AU, GR, HR live runs: the container has no Bolagsverket, Companies House, JustizOnline, ABR, GEMI or SUDREG credentials. NO, FR, IE, SG, CZ, PL, LV, EE and FI ran live (see the PR).
+- SE, GB, AT, AU, GR, HR live runs: the container has no Bolagsverket, Companies House, JustizOnline, ABR, GEMI or SUDREG credentials. FR, IE, SG, LV, EE and FI ran live (see the PR).
 - `onboard.ts --dry-run` stops at the production-write guard; `validate-capability.ts` needs `DATABASE_URL`. Manifest validation inside onboard passed.
 
 next_action: orchestrator review of the draft PR; then the production onboarding commands listed in the PR under "Production steps left".

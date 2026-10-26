@@ -15,7 +15,10 @@ quota_cap: 500
 price_cents: 8
 is_free_tier: false
 avg_latency_ms: 1200
-gdpr_art_22_classification: data_lookup
+# Classification and personal-data fields follow the most sensitive routed input: insolvency-check
+# (GB) is screening_signal / sensitive_special, and sole-trader insolvency notices (BODACC natural
+# persons) are personal financial data. The lookup itself returns what the registry says and no verdict.
+gdpr_art_22_classification: screening_signal
 input_schema:
   type: object
   required:
@@ -83,6 +86,8 @@ processes_personal_data: true
 personal_data_categories:
   - name
   - professional
+  - financial
+  - sensitive_special
 geography: global
 test_fixtures:
   known_answer:
@@ -144,11 +149,12 @@ limitations:
     workaround: Read registry_status_raw when status is "unknown".
   - title: Countries covered
     text: >-
-      Austria, Australia, Czechia, Estonia, Finland, France, United Kingdom, Greece, Croatia, Ireland, Latvia, Norway,
-      Poland, Sweden and Singapore. The error for any other country names the supported list. Registries whose
-      data-access checks are still pending (Belgium, Brazil, Germany, Spain, Japan) and those that publish no usable
-      status (United States, Slovakia, Slovenia), or whose status vocabulary could not be checked (Canada,
-      Switzerland), are left out for now.
+      Austria, Australia, Estonia, Finland, France, United Kingdom, Greece, Croatia, Ireland, Latvia, Sweden and
+      Singapore. The error for any other country names the supported list. Left out for now: Norway, Poland and
+      Czechia, whose underlying registry lookups do not report deleted, struck-off or liquidating entities (a fix is
+      tracked separately); Belgium, Brazil, Germany, Spain and Japan, whose data-access checks are still pending;
+      the United States, Slovakia and Slovenia, which publish no usable status; and Canada and Switzerland, whose
+      status vocabulary could not be checked.
     category: coverage
     severity: warning
     workaround: Use the per-country company-data capability for a country not listed.
@@ -162,12 +168,23 @@ limitations:
     workaround: Resolve the identifier first with the country's company-data capability or VAT validation.
   - title: Insolvency notices only where an official source is connected
     text: >-
-      Insolvency notices come from Companies House (GB), BODACC (FR), Brønnøysund (NO) and Bolagsverket's pending
-      proceedings (SE). For every other country the insolvency block says checked false. An empty notices list
-      means the connected source lists none for this company, not that none exist elsewhere.
+      Insolvency notices come from Companies House (GB), BODACC (FR) and Bolagsverket's pending proceedings (SE).
+      For every other country the insolvency block says checked false. For Sweden, notices are reported when
+      Bolagsverket lists a pending proceeding and an open konkurs or likvidation sets the status; when none is
+      listed the block says checked false, because the answer cannot show whether that part of the record loaded.
+      An empty notices list for GB or FR means the source lists none for this company, not that none exist elsewhere.
+      Sole-trader notices can be personal financial data.
     category: coverage
     severity: warning
     workaround: Check the national insolvency register directly for countries marked checked false.
+  - title: A failing registry can pause the check for every country
+    text: >-
+      The health checks that suspend a capability after repeated failures are keyed on this capability, not on
+      each country. A sustained outage or authentication failure at one registry can temporarily pause the check
+      for all countries. Unknown identifiers and malformed identifiers do not count towards that.
+    category: reliability
+    severity: warning
+    workaround: Retry after a few minutes; the error names the registry that did not answer.
   - title: Freshness follows each registry
     text: >-
       Answers are fetched live, but registries update at their own pace: a closure or filing can appear days after it

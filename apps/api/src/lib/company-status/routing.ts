@@ -75,12 +75,6 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
     normalise_identifier: exactDigits(11),
   },
   {
-    iso: "CZ",
-    registry: { slug: "cz-company-data", name: "ARES (Czech Ministry of Finance)", input_field: "ico" },
-    identifier_help: "an 8-digit IČO",
-    normalise_identifier: exactDigits(8),
-  },
-  {
     iso: "EE",
     registry: { slug: "estonian-company-data", name: "Äriregister (Estonian Business Register)", input_field: "registry_code" },
     identifier_help: "an 8-digit registry code",
@@ -116,10 +110,11 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
   {
     iso: "GR",
     registry: { slug: "greek-company-data", name: "GEMI (Greek General Commercial Registry)", input_field: "gemi_number" },
-    identifier_help: "a GEMI number (6 to 14 digits); a 9-digit tax ID (AFM) is not accepted",
+    identifier_help: "a GEMI number (6 to 14 digits, but not exactly 9); a 9-digit tax ID (AFM) is not accepted",
     normalise_identifier: (raw) => {
       const d = digits(raw);
-      return /^\d{6,14}$/.test(d) ? d : null;
+      // greek-company-data reads a 9-digit value as an AFM (tax ID) and a longer one as a GEMI number.
+      return /^\d{6,14}$/.test(d) && d.length !== 9 ? d : null;
     },
   },
   {
@@ -142,19 +137,6 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
     registry: { slug: "latvian-company-data", name: "Latvian Enterprise Register (Uzņēmumu reģistrs)", input_field: "reg_number" },
     identifier_help: "an 11-digit registration number",
     normalise_identifier: exactDigits(11),
-  },
-  {
-    iso: "NO",
-    registry: { slug: "norwegian-company-data", name: "Brønnøysund Register Centre (Enhetsregisteret)", input_field: "org_number" },
-    identifier_help: "a 9-digit organisasjonsnummer",
-    normalise_identifier: exactDigits(9),
-    insolvency: { kind: "separate", slug: "no-bankruptcy-check", name: "Brønnøysund Register Centre" },
-  },
-  {
-    iso: "PL",
-    registry: { slug: "polish-company-data", name: "KRS (Krajowy Rejestr Sądowy)", input_field: "krs_number" },
-    identifier_help: "a 10-digit KRS number",
-    normalise_identifier: exactDigits(10),
   },
   {
     iso: "SE",
@@ -191,6 +173,9 @@ export const EXCLUDED_COUNTRIES: Readonly<Record<string, string>> = {
   DE: "data-access checks for the German source (OpenRegister, a vendor register API) are recorded as pending, and its free tier is a small monthly quota that a composite call would spend",
   ES: "data-access checks for the Spanish source (a vendor aggregation of BORME) are recorded as pending",
   JP: "the Japanese source is a page scrape with checks recorded as pending",
+  CZ: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
+  NO: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
+  PL: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
   SI: "the Slovenian open dataset carries no status column",
   SK: "the Slovak register publishes no status flag; the executor infers one from validity dates",
   US: "the US executor reads SEC EDGAR, which is a filer index and has no company status; it sets \"active\" for any match",
