@@ -91,9 +91,9 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
   }
 
   const query = body.query.trim();
-  if (query.length === 0) {
+  if (query.length < 2) {
     return c.json(
-      apiError("invalid_request", "'query' must not be empty."),
+      apiError("invalid_request", "'query' must be at least 2 characters."),
       400,
     );
   }
@@ -110,7 +110,7 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 10);
 
   try {
-    const result = await suggest({ query, limit });
+    const result = await suggest({ query, limit, clientIp: getClientIp(c) });
     const clientIp = getClientIp(c);
     const resultCount =
       (result?.recommendation ? 1 : 0) + (Array.isArray(result?.alternatives) ? result.alternatives.length : 0);
@@ -129,9 +129,7 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     if (
-      message.includes("VOYAGE_API_KEY") ||
       message.includes("ANTHROPIC_API_KEY") ||
-      message.includes("voyageai") ||
       message.includes("anthropic")
     ) {
       c.get("log").error({ label: "suggest-service-error", message }, "suggest-service-error");

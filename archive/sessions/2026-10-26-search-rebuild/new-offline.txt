@@ -1,0 +1,18 @@
+Engine: keyword
+kind         n   top-1           top-3           MRR@5
+country       9  9/9 (100.0%)    9/9 (100.0%)    1.0000
+keyword      30  30/30 (100.0%)  30/30 (100.0%)  1.0000
+natural      37  31/37 (83.8%)   36/37 (97.3%)   0.9054
+typo          5  5/5 (100.0%)    5/5 (100.0%)    1.0000
+workflow      6  6/6 (100.0%)    6/6 (100.0%)    1.0000
+overall      87  81/87 (93.1%)   86/87 (98.9%)   0.9598
+
+Top-1 misses:
+{"q":"verify a VAT number","expect":["vat-validate"],"actual":["vat-format-validate","vat-validate","invoice-validate","id-number-validate","invoice-process"]}
+{"q":"negative news about a company","expect":["adverse-media-check"],"actual":["company-news","adverse-media-check","hacker-news-search"]}
+{"q":"turn a webpage into markdown","expect":["url-to-markdown"],"actual":["markdown-to-html","url-to-markdown","api-docs-generate","web-extract-clean","json-repair"]}
+{"q":"track a parcel","expect":["shipping-track"],"actual":["container-track","shipping-track","cookie-scan","gdpr-website-check"]}
+{"q":"is this website up","expect":["uptime-check","url-health-check","page-exists"],"actual":["website-carbon-estimate","website-health","gdpr-website-check","website-security-audit","gdpr-audit"]}
+{"q":"who are the directors of a UK company","expect":["uk-companies-house-officers"],"actual":["uk-disqualified-director-check","uk-companies-house-officers"]}
+
+Benchmark: {"queries":1000,"index_build_ms":47.84256300000001,"total_ms":844.419877,"mean_ms":0.8444198770000001,"p95_ms":2.0777010000000473,"max_ms":3.3618359999999257}

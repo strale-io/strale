@@ -48,7 +48,7 @@ describe("platform-facts STATIC_FACTS", () => {
       pep: expect.any(String),
       adverse_media_primary: expect.any(String),
       adverse_media_fallback: expect.any(String),
-      embeddings: expect.any(String),
+      embeddings: "Anthropic Claude (search ranking; no embeddings)",
       risk_narrative: expect.any(String),
       headless_browser: expect.any(String),
       payments_card: expect.any(String),

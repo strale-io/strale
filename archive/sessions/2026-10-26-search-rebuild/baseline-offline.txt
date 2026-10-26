@@ -1,0 +1,71 @@
+Engine: legacy-keyword
+kind         n   top-1           top-3           MRR@5
+country       9  5/9 (55.6%)     8/9 (88.9%)     0.6852
+keyword      30  5/30 (16.7%)    13/30 (43.3%)   0.3178
+natural      37  13/37 (35.1%)   21/37 (56.8%)   0.4829
+typo          5  1/5 (20.0%)     1/5 (20.0%)     0.2000
+workflow      6  2/6 (33.3%)     3/6 (50.0%)     0.4167
+overall      87  26/87 (29.9%)   46/87 (52.9%)   0.4261
+
+Top-1 misses:
+{"q":"vat","expect":["vat-validate","vat-format-validate","vat-rate-lookup"],"actual":["invoice-process","invoice-verify-at","kyb-complete-at","kyb-essentials-at","kyc-finland"]}
+{"q":"iban","expect":["iban-validate","iban-to-bank"],"actual":["invoice-process","invoice-verify-at","payment-validate","sepa-readiness","vendor-onboard"]}
+{"q":"sanctions","expect":["sanctions-check"],"actual":["crypto-counterparty-kyb","customer-risk-screen","defi-risk-check","enhanced-due-diligence","hr-candidate-screen"]}
+{"q":"pep","expect":["pep-check"],"actual":["customer-risk-screen","enhanced-due-diligence","hr-candidate-screen","kyb-complete-at","kyc-finland"]}
+{"q":"dns","expect":["dns-lookup"],"actual":["defi-protocol-risk","domain-intel","domain-security-check","domain-trust","email-audit"]}
+{"q":"whois","expect":["whois-lookup"],"actual":["crypto-counterparty-kyb","defi-risk-check","domain-intel","domain-security-check","domain-trust"]}
+{"q":"lei","expect":["lei-lookup"],"actual":["kyb-complete-at","kyb-essentials-at","company-id-detect","german-company-data","gleif-l2-children-lookup"]}
+{"q":"ssl","expect":["ssl-check","ssl-certificate-chain"],"actual":["crypto-counterparty-kyb","defi-protocol-risk","defi-risk-check","domain-intel","domain-security-check"]}
+{"q":"markdown","expect":["url-to-markdown","markdown-to-html"],"actual":["web-extract-clean","api-docs-generate","json-repair","markdown-to-html","url-to-markdown"]}
+{"q":"pdf","expect":["pdf-extract","html-to-pdf"],"actual":["academic-paper-search","arxiv-search","html-to-pdf","invoice-extract","paper-details"]}
+{"q":"email","expect":["email-validate","email-validate-bulk","email-deliverability-check"],"actual":["contact-verify","crypto-counterparty-kyb","email-audit","hr-candidate-screen","invoice-verify-at"]}
+{"q":"phone","expect":["phone-validate","phone-normalize","phone-type-detect"],"actual":["contact-verify","hr-candidate-screen","domain-contact-extract","phone-normalize","phone-type-detect"]}
+{"q":"swedish company","expect":["swedish-company-data"],"actual":["invoice-verify-se","kyb-essentials-se","kyc-sweden","vendor-onboard","company-id-detect"]}
+{"q":"german company","expect":["german-company-data"],"actual":["invoice-verify-de","kyb-complete-de","kyb-essentials-de","company-id-detect","german-company-data"]}
+{"q":"uk company","expect":["uk-company-data"],"actual":["enhanced-due-diligence","invoice-verify-uk","kyb-complete-uk","kyb-essentials-uk","beneficial-ownership-lookup"]}
+{"q":"exchange rate","expect":["exchange-rate","currency-convert"],"actual":["sepa-readiness","country-tax-rates","exchange-rate","forex-history","currency-convert"]}
+{"q":"stock price","expect":["stock-quote"],"actual":["nl-housing-stats","stock-quote","nl-property-check","gas-price-check","nl-housing-price-index"]}
+{"q":"google","expect":["google-search"],"actual":["backlink-check","brand-mention-search","docstring-generate","google-search","keyword-rank-check"]}
+{"q":"screenshot","expect":["screenshot-url"],"actual":["image-to-text","screenshot-url"]}
+{"q":"tech stack","expect":["tech-stack-detect","company-tech-stack"],"actual":["competitor-read","competitor-snapshot","defi-protocol-risk","domain-security-check","lead-enrich"]}
+{"q":"ubo","expect":["beneficial-ownership-lookup","gleif-l2-ubo-lookup"],"actual":["kyb-complete-at","gleif-l2-ubo-lookup"]}
+{"q":"kyb","expect":["kyb-essentials-{cc}","kyb-complete-{cc}"],"actual":["crypto-counterparty-kyb","invoice-verify-at","kyb-complete-at","kyb-essentials-at","web3-counterparty-kyb"]}
+{"q":"insolvency","expect":["insolvency-check","french-insolvency-check","no-bankruptcy-check"],"actual":["invoice-verify-uk","kyb-complete-uk","fr-bodacc-lookup","french-insolvency-check","insolvency-check"]}
+{"q":"holidays","expect":["public-holiday-lookup","holiday-calendar"],"actual":["business-day-check","holiday-calendar","public-holiday-lookup"]}
+{"q":"json","expect":["json-repair","json-schema-validate","json-to-csv","json-to-typescript","json-to-zod","json-to-pydantic","flatten-json","diff-json"],"actual":["csv-to-json","deduplicate","diff-json","flatten-json","json-repair"]}
+{"q":"check if a company is bankrupt","expect":["insolvency-check","no-bankruptcy-check","french-insolvency-check","fr-bodacc-lookup"],"actual":["kyc-finland","no-bankruptcy-check","gdpr-audit","invoice-verify-at","kyb-complete-at"]}
+{"q":"verify a VAT number","expect":["vat-validate"],"actual":["invoice-process","invoice-verify-at","kyb-essentials-at","invoice-validate","vat-format-validate"]}
+{"q":"validate an IBAN","expect":["iban-validate"],"actual":["invoice-process","invoice-verify-at","payment-validate","sepa-readiness","vendor-onboard"]}
+{"q":"look up a Swedish company","expect":["swedish-company-data"],"actual":["au-company-data","austrian-company-data","swedish-company-data","verify-us-company","belgian-company-data"]}
+{"q":"screen a person against sanctions lists","expect":["sanctions-check"],"actual":["kyb-essentials-at","verify-us-company","aml-risk-score","sanctions-check","invoice-verify-at"]}
+{"q":"is this person a politically exposed person","expect":["pep-check"],"actual":["gdpr-audit","verify-us-company","website-security-audit","pep-check","competitor-read"]}
+{"q":"turn a webpage into markdown","expect":["url-to-markdown"],"actual":["address-geocode","markdown-to-html","url-to-markdown","address-parse","aml-risk-score"]}
+{"q":"check if an email address is real","expect":["email-validate","email-deliverability-check","lead-email-verify"],"actual":["kyc-finland","lead-email-verify","email-validate","prospect-brief","web3-protocol-health"]}
+{"q":"what technologies does this website use","expect":["tech-stack-detect","company-tech-stack"],"actual":["competitor-read","gdpr-audit","website-security-audit","incoterms-explain","prompt-optimize"]}
+{"q":"is this domain trustworthy","expect":["domain-reputation","domain-trust","domain-age-check"],"actual":["domain-security-check","domain-trust","web3-protocol-health","competitor-read","defi-protocol-risk"]}
+{"q":"show me the DNS records for a domain","expect":["dns-lookup"],"actual":["invoice-verify-at","email-audit","kyb-complete-at","web3-counterparty-kyb","adverse-media-check"]}
+{"q":"convert 100 euro to dollars","expect":["currency-convert","exchange-rate"],"actual":["invoice-process","token-project-dd","web-extract-clean","aml-risk-score","base64-encode-url"]}
+{"q":"find academic papers on a topic","expect":["academic-paper-search","arxiv-search","pubmed-search"],"actual":["wallet-age-check","vendor-onboard","vendor-risk-assess","academic-paper-search","aml-risk-score"]}
+{"q":"GDP of Germany","expect":["country-economic-indicators"],"actual":["gdpr-website-check","gdpr-audit","kyb-complete-de","kyb-essentials-de","gdpr-fine-lookup"]}
+{"q":"is this bitcoin address valid","expect":["bitcoin-address-validate"],"actual":["email-validate-bulk","vat-validate","address-validate","bitcoin-address-validate","email-validate"]}
+{"q":"does this site have a valid SSL certificate","expect":["ssl-check","ssl-certificate-chain"],"actual":["defi-protocol-risk","defi-risk-check","domain-security-check","email-audit","gdpr-audit"]}
+{"q":"find the HS code for a product","expect":["hs-code-lookup"],"actual":["data-protection-authority-lookup","hs-code-lookup","invoice-verify-at","address-parse","adverse-media-check"]}
+{"q":"track a parcel","expect":["shipping-track"],"actual":["ai-act-assess","api-quality-check","email-audit","gdpr-audit","invoice-verify-at"]}
+{"q":"is this website up","expect":["uptime-check","url-health-check","page-exists"],"actual":["gdpr-audit","website-security-audit","competitor-read","page-seo-check","web3-protocol-health"]}
+{"q":"find the bank for a BIC code","expect":["bank-bic-lookup","swift-validate"],"actual":["invoice-verify-at","swift-validate","bank-bic-lookup","cz-bank-account-validate","data-protection-authority-lookup"]}
+{"q":"what is the VAT rate in France","expect":["vat-rate-lookup","country-tax-rates"],"actual":["invoice-verify-fr","competitor-read","invoice-process","kyb-essentials-fr","country-tax-rates"]}
+{"q":"find public tenders in the EU","expect":["ted-procurement"],"actual":["invoice-process","invoice-verify-at","eu-regulation-search","competitor-snapshot","kyb-essentials-at"]}
+{"q":"count tokens in a prompt","expect":["token-count"],"actual":["country-economic-indicators","invoice-verify-at","web3-counterparty-kyb","address-parse","address-validate"]}
+{"q":"fix broken JSON from an LLM","expect":["json-repair","llm-output-validate"],"actual":["agent-trace-analyze","json-repair","tool-call-validate","csv-clean","cve-lookup"]}
+{"q":"sanctoins check","expect":["sanctions-check"],"actual":["api-quality-check","competitor-read","competitor-snapshot","crypto-counterparty-kyb","customer-risk-screen"]}
+{"q":"swedsih company","expect":["swedish-company-data"],"actual":["enhanced-due-diligence","invoice-verify-at","kyb-complete-at","kyb-essentials-at","kyc-finland"]}
+{"q":"valdiate iban","expect":["iban-validate"],"actual":["invoice-process","invoice-verify-at","payment-validate","sepa-readiness","vendor-onboard"]}
+{"q":"adress validation","expect":["address-validate"],"actual":["contact-verify","kyc-finland","lead-enrich","payment-validate","sepa-readiness"]}
+{"q":"company registration number lookup norway","expect":["norwegian-company-data"],"actual":["kyb-essentials-no","belgian-company-data","irish-company-data","latvian-company-data","polish-company-data"]}
+{"q":"Companies House","expect":["uk-company-data","uk-companies-house-officers","uk-filing-events"],"actual":["beneficial-ownership-lookup","insolvency-check","uk-companies-house-officers","uk-company-data","uk-filing-events"]}
+{"q":"Irish company CRO number","expect":["irish-company-data"],"actual":["kyb-essentials-hr","croatian-company-data","irish-company-data","invoice-verify-hr","kyb-complete-hr"]}
+{"q":"French company SIREN","expect":["french-company-data"],"actual":["fr-bodacc-lookup","french-company-data","french-insolvency-check","invoice-verify-fr","kyb-complete-fr"]}
+{"q":"KYB check for a German company","expect":["kyb-essentials-de","kyb-complete-de"],"actual":["invoice-verify-at","company-id-detect","german-company-data","kyb-complete-at","kyb-essentials-at"]}
+{"q":"onboard a new supplier in Sweden","expect":["kyb-essentials-se","vendor-onboard","kyc-sweden"],"actual":["invoice-extract","customer-risk-screen","invoice-verify-at","company-news","domain-age-check"]}
+{"q":"check an invoice from a German supplier for fraud","expect":["invoice-verify-de"],"actual":["invoice-verify-at","invoice-extract","accessibility-audit","address-validate","adverse-media-check"]}
+{"q":"check a crypto wallet before sending funds","expect":["web3-counterparty-kyb","crypto-counterparty-kyb","wallet-age-check","stablecoin-flow-check"],"actual":["email-auth-check","crypto-counterparty-kyb","defi-risk-check","web3-vasp-check","website-security-audit"]}

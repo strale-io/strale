@@ -105,7 +105,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | uspto | USPTO | unknown | 2026-09-10 | unknown | unknown |
 | uznemumu-registrs | Uzņēmumu reģistrs | active | 2026-09-10 | unknown | unknown |
 | vies | VIES | active | 2026-09-10 | unknown | unknown |
-| voyage-ai | Voyage AI | active | 2026-09-10 | unknown | unknown |
+| voyage-ai | Voyage AI | retired | 2026-10-26 | unknown | unknown |
 | yapily | Yapily | rejected | 2026-09-11 | unknown | unknown |
 | zefix | Zefix | active | 2026-09-10 | unknown | unknown |
 
@@ -117,7 +117,7 @@ The customer-facing per-category vendor map `apps/api/src/lib/platform-facts.ts`
 |---|---|---|---|---|
 | adverse_media_fallback | Serper.dev (Google) | serper | active | unknown |
 | adverse_media_primary | Dilisense | dilisense | active | unknown |
-| embeddings | Voyage AI | voyage-ai | active | unknown |
+| embeddings | Anthropic Claude (search ranking; no embeddings) | anthropic | active | unknown |
 | fr_litigation | BODACC | bodacc | active | unknown |
 | headless_browser | Browserless.io | browserless | active | unknown |
 | log_sink | Better Stack | better-stack | active | unknown |

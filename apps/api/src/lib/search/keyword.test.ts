@@ -1,0 +1,161 @@
+import { describe, it, expect } from "vitest";
+import {
+  createKeywordIndex,
+  editDistance,
+  stem,
+  RELEVANCE_RATIO,
+  type SearchItem,
+} from "./keyword.js";
+import { extractCountries, itemCountries } from "./countries.js";
+const item = (
+  slug: string,
+  name: string,
+  description = "",
+  search_tags: string[] = [],
+  geography: string | null = "global"
+): SearchItem => ({
+  type: "capability",
+  slug,
+  name,
+  description,
+  search_tags,
+  geography,
+  category: "",
+});
+describe("keyword relevance constraints", () => {
+  it("removes question words and stop words", () => {
+    expect(
+      createKeywordIndex([item("company-data", "Company Data")]).search(
+        "how what who which is a the"
+      )
+    ).toEqual([]);
+  });
+  it("uses prefix only for the final token and only in name/slug/tags", () => {
+    const index = createKeywordIndex([
+      item("email-validate", "Email Validation", "Deliverability"),
+      item("other", "Other", "Email validation checks"),
+      item("tagged", "Tagged", "", ["email"]),
+    ]);
+    expect(index.search("em").map((r) => r.item.slug)).toEqual(
+      expect.arrayContaining(["email-validate", "tagged"])
+    );
+    expect(index.search("em").some((r) => r.item.slug === "other")).toBe(false);
+    expect(index.search("em unknown")).toEqual([]);
+    expect(index.search("deli")).toEqual([]);
+    expect(index.search("e")).toEqual([]);
+  });
+  it("does not prefix GDP into GDPR when the catalogue has an exact GDP token", () => {
+    const index = createKeywordIndex([
+      item("indicators", "Economic Indicators", "GDP and inflation"),
+      item("gdpr-audit", "GDPR Audit"),
+    ]);
+    expect(index.search("gdp").map((r) => r.item.slug)).toEqual(["indicators"]);
+  });
+  it("weights names/slugs above tags, descriptions and categories", () => {
+    const rows = [
+      item("exact", "Quantum Processor"),
+      item("tagged", "Other", "", ["quantum"]),
+      item("description", "Another", "Quantum"),
+      { ...item("category", "Another"), category: "quantum" },
+    ];
+    for (let i = 0; i < rows.length - 1; i++)
+      expect(
+        createKeywordIndex(rows.slice(i)).search("quantum")[0].item.slug
+      ).toBe(rows[i].slug);
+  });
+  it("matches transpositions and bounds tolerance by token length", () => {
+    expect(editDistance("sanctoins", "sanctions", 2)).toBe(1);
+    expect(editDistance("adress", "address", 1)).toBe(1);
+    const index = createKeywordIndex([
+      item("sanctions-check", "Sanctions Check"),
+      item("dns-lookup", "DNS Lookup"),
+    ]);
+    expect(index.search("sanctoins")[0].item.slug).toBe("sanctions-check");
+    expect(index.search("dms")).toEqual([]);
+  });
+  it("stems symmetrically and keeps acronyms intact", () => {
+    expect(stem("validation")).toBe(stem("validate"));
+    expect(stem("valid")).toBe(stem("validate"));
+    expect(stem("tracking")).toBe(stem("track"));
+    expect(stem("gdp")).not.toBe(stem("gdpr"));
+  });
+  it("treats aliases as weaker than a direct hit", () => {
+    const index = createKeywordIndex([
+      item("fx-feed", "FX Feed"),
+      item("exchange-rate", "Exchange Rate"),
+      item("aside", "Aside", "Mentions currency"),
+    ]);
+    const results = index.search("fx");
+    expect(results[0].item.slug).toBe("fx-feed");
+    expect(results.some((r) => r.item.slug === "exchange-rate")).toBe(true);
+  });
+  it("does not turn genuine catalogue terms into country typos", () => {
+    const index = createKeywordIndex([
+      item("cron-explain", "Cron Explain"),
+      item("fear-greed-index", "Fear and Greed Index"),
+      item("irish-company-data", "Irish Company Data"),
+      item("greek-company-data", "Greek Company Data"),
+    ]);
+    expect(index.search("cron")[0].item.slug).toBe("cron-explain");
+    expect(index.search("greed")[0].item.slug).toBe("fear-greed-index");
+  });
+  it("understands registry phrases, accents, and broad geography labels", () => {
+    expect([...extractCountries("Companies House").codes]).toEqual(["UK"]);
+    expect([...extractCountries("Brønnøysund").codes]).toEqual(["NO"]);
+    expect([
+      ...itemCountries(
+        item(
+          "swedish-company-data",
+          "Swedish Company Data",
+          "",
+          [],
+          "nordic"
+        ) as SearchItem
+      ),
+    ]).toEqual(["SE"]);
+    const index = createKeywordIndex([
+      item("swedish-company-data", "Swedish Company Data", "", [], "nordic"),
+      item("german-company-data", "German Company Data", "", [], "eu"),
+      item("global-company", "Global Company"),
+    ]);
+    expect(index.search("swedsih company")[0].item.slug).toBe(
+      "swedish-company-data"
+    );
+    expect(index.search("Bolagsverket")[0].item.slug).toBe(
+      "swedish-company-data"
+    );
+    expect(index.search("company", { geo: "DE" })[0].item.slug).toBe(
+      "german-company-data"
+    );
+  });
+  it("keeps regional geography hints and ignores invalid country codes", () => {
+    const index = createKeywordIndex([
+      item("german-company-data", "German Company Data", "", [], "eu"),
+      item("swedish-company-data", "Swedish Company Data", "", [], "nordic"),
+      item("global-company-data", "Global Company Data", "", [], "global"),
+    ]);
+    const base = index.search("company");
+    const score = (geo: string, slug: string) =>
+      index.search("company", { geo }).find((r) => r.item.slug === slug)!.score;
+    const initial = (slug: string) =>
+      base.find((r) => r.item.slug === slug)!.score;
+    expect(score("eu", "german-company-data")).toBeCloseTo(
+      initial("german-company-data") * 1.25
+    );
+    expect(score("nordic", "swedish-company-data")).toBeCloseTo(
+      initial("swedish-company-data") * 1.25
+    );
+    expect(index.search("company", { geo: "zz" })).toEqual(base);
+  });
+  it("uses one relevance cutoff consistently for returned rows and total", () => {
+    const results = createKeywordIndex([
+      item("sanctions-check", "Sanctions Check"),
+      item("aside", "Aside", "Sanctions"),
+      item("none", "None"),
+    ]).search("sanctions-check");
+    expect(
+      results.every((r) => r.score >= results[0].score * RELEVANCE_RATIO)
+    ).toBe(true);
+    expect(results.map((r) => r.item.slug)).toEqual(["sanctions-check"]);
+  });
+});
