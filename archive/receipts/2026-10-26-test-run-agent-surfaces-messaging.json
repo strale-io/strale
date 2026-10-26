@@ -1,0 +1,938 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "npx vitest run (agent surfaces, facts, wallet, free tier)",
+    "commit": "beafcb62649d4ed2f4944a74e9e420c94688be2d"
+  },
+  "at": "2026-10-26T10:55:15.502Z",
+  "inputs": {
+    "source": "/tmp/surfaces-vitest.json"
+  },
+  "summary": {
+    "passed": 69,
+    "failed": 0,
+    "files": 7,
+    "success": true
+  },
+  "topic": "agent-surfaces-messaging",
+  "raw": {
+    "numTotalTestSuites": 28,
+    "numPassedTestSuites": 28,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 69,
+    "numPassedTests": 69,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1793012059301,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "the free-tier advertisement is produced by the servability predicate"
+            ],
+            "fullName": "the free-tier advertisement is produced by the servability predicate does not advertise a quarantined free-tier capability",
+            "status": "passed",
+            "title": "does not advertise a quarantined free-tier capability",
+            "duration": 11.709498999999937,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the free-tier advertisement is produced by the servability predicate"
+            ],
+            "fullName": "the free-tier advertisement is produced by the servability predicate does not advertise a capability that was never listed",
+            "status": "passed",
+            "title": "does not advertise a capability that was never listed",
+            "duration": 0.6505689999999049,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the free-tier advertisement is produced by the servability predicate"
+            ],
+            "fullName": "the free-tier advertisement is produced by the servability predicate advertises everything that is servable, probation included",
+            "status": "passed",
+            "title": "advertises everything that is servable, probation included",
+            "duration": 1.0482670000000098,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the free-tier advertisement is produced by the servability predicate"
+            ],
+            "fullName": "the free-tier advertisement is produced by the servability predicate agrees with isServableCapability row for row — no second definition",
+            "status": "passed",
+            "title": "agrees with isServableCapability row for row — no second definition",
+            "duration": 0.9173139999999194,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the free-tier advertisement is produced by the servability predicate"
+            ],
+            "fullName": "the free-tier advertisement is produced by the servability predicate carries price and description through for the pricing surface",
+            "status": "passed",
+            "title": "carries price and description through for the pricing surface",
+            "duration": 0.6580149999999776,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the free-tier advertisement is produced by the servability predicate"
+            ],
+            "fullName": "the free-tier advertisement is produced by the servability predicate re-lists a capability once it becomes visible again",
+            "status": "passed",
+            "title": "re-lists a capability once it becomes visible again",
+            "duration": 0.6187159999999494,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012062759,
+        "endTime": 1793012062774.658,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/lib/free-tier.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "live catalogue pricing facts"
+            ],
+            "fullName": "live catalogue pricing facts returns the database price floor and restricts its aggregate to visible active paid tools",
+            "status": "passed",
+            "title": "returns the database price floor and restricts its aggregate to visible active paid tools",
+            "duration": 7.430788000000007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "live catalogue pricing facts"
+            ],
+            "fullName": "live catalogue pricing facts does not invent a price floor when the paid catalogue is empty",
+            "status": "passed",
+            "title": "does not invent a price floor when the paid catalogue is empty",
+            "duration": 0.5474490000000287,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012063784,
+        "endTime": 1793012063791.5474,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/lib/platform-facts-live.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS retention_days_default mirrors TRANSACTION_RETENTION_DAYS",
+            "status": "passed",
+            "title": "retention_days_default mirrors TRANSACTION_RETENTION_DAYS",
+            "duration": 1.6321869999999308,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS pii_retention_days mirrors PII_RETENTION_DAYS",
+            "status": "passed",
+            "title": "pii_retention_days mirrors PII_RETENTION_DAYS",
+            "duration": 1.5415000000000418,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS PII columns are dropped no later than the compliance skeleton",
+            "status": "passed",
+            "title": "PII columns are dropped no later than the compliance skeleton",
+            "duration": 0.3195069999999305,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS retention_days_max_configurable is at least retention_days_default",
+            "status": "passed",
+            "title": "retention_days_max_configurable is at least retention_days_default",
+            "duration": 0.26040000000011787,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS vendors map names every category we make compliance claims about",
+            "status": "passed",
+            "title": "vendors map names every category we make compliance claims about",
+            "duration": 2.4370799999999235,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS sanctions and pep vendor are Dilisense (DEC-20260429-A)",
+            "status": "passed",
+            "title": "sanctions and pep vendor are Dilisense (DEC-20260429-A)",
+            "duration": 0.2256320000001324,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts STATIC_FACTS"
+            ],
+            "fullName": "platform-facts STATIC_FACTS tos_version_current matches the routes/auth.ts CURRENT_TOS_VERSION shape",
+            "status": "passed",
+            "title": "tos_version_current matches the routes/auth.ts CURRENT_TOS_VERSION shape",
+            "duration": 0.34146400000008725,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts vendor helpers (Phase B substrate)"
+            ],
+            "fullName": "platform-facts vendor helpers (Phase B substrate) every checked STATIC_FACTS.vendors category corresponds to a shipped capability slug",
+            "status": "passed",
+            "title": "every checked STATIC_FACTS.vendors category corresponds to a shipped capability slug",
+            "duration": 5.04476499999987,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts vendor helpers (Phase B substrate)"
+            ],
+            "fullName": "platform-facts vendor helpers (Phase B substrate) getActiveVendorNames() and getStaleVendorNames() are disjoint",
+            "status": "passed",
+            "title": "getActiveVendorNames() and getStaleVendorNames() are disjoint",
+            "duration": 0.4628029999998944,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts vendor helpers (Phase B substrate)"
+            ],
+            "fullName": "platform-facts vendor helpers (Phase B substrate) getActiveVendorNames() is non-empty",
+            "status": "passed",
+            "title": "getActiveVendorNames() is non-empty",
+            "duration": 0.2263759999998456,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts vendor helpers (Phase B substrate)"
+            ],
+            "fullName": "platform-facts vendor helpers (Phase B substrate) getStaleVendorNames() is non-empty",
+            "status": "passed",
+            "title": "getStaleVendorNames() is non-empty",
+            "duration": 0.1199420000000373,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "platform-facts vendor helpers (Phase B substrate)"
+            ],
+            "fullName": "platform-facts vendor helpers (Phase B substrate) STALE_VENDORS contains the historical superseded vendors",
+            "status": "passed",
+            "title": "STALE_VENDORS contains the historical superseded vendors",
+            "duration": 0.152576000000181,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes pulls 2-letter prefixes from {cc}-company-data slugs",
+            "status": "passed",
+            "title": "pulls 2-letter prefixes from {cc}-company-data slugs",
+            "duration": 0.36447100000009414,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes dedupes and sorts",
+            "status": "passed",
+            "title": "dedupes and sorts",
+            "duration": 0.1494439999999031,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes ignores non-matching slugs",
+            "status": "passed",
+            "title": "ignores non-matching slugs",
+            "duration": 0.10687600000005659,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes includes longer prefixes (e.g. swedish-company-data)",
+            "status": "passed",
+            "title": "includes longer prefixes (e.g. swedish-company-data)",
+            "duration": 0.10382899999990514,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes empty input → empty output",
+            "status": "passed",
+            "title": "empty input → empty output",
+            "duration": 0.0895020000000386,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes keeps prefixes longer than 12 letters (luxembourgish)",
+            "status": "passed",
+            "title": "keeps prefixes longer than 12 letters (luxembourgish)",
+            "duration": 0.08947100000000319,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "extractCountryCodes"
+            ],
+            "fullName": "extractCountryCodes keeps vendor-suffixed slugs (us-company-data-cobalt)",
+            "status": "passed",
+            "title": "keeps vendor-suffixed slugs (us-company-data-cobalt)",
+            "duration": 0.10207500000001346,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "countriesToIso"
+            ],
+            "fullName": "countriesToIso counts each country once, whatever its prefix",
+            "status": "passed",
+            "title": "counts each country once, whatever its prefix",
+            "duration": 0.26633300000003146,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "countriesToIso"
+            ],
+            "fullName": "countriesToIso drops a prefix that is not a known country rather than guessing",
+            "status": "passed",
+            "title": "drops a prefix that is not a known country rather than guessing",
+            "duration": 7.845792000000074,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "countriesToIso"
+            ],
+            "fullName": "countriesToIso maps prefixes of registries that exist only in the database today",
+            "status": "passed",
+            "title": "maps prefixes of registries that exist only in the database today",
+            "duration": 0.6540330000000267,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "countriesToIso"
+            ],
+            "fullName": "countriesToIso every company-data manifest prefix maps to a country",
+            "status": "passed",
+            "title": "every company-data manifest prefix maps to a country",
+            "duration": 0.8710499999999683,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012062813,
+        "endTime": 1793012062840.871,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/lib/platform-facts.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "eurCentsToUsd"
+            ],
+            "fullName": "eurCentsToUsd emits clean machine-readable numbers (the sanctions-check case: 20c → 0.216)",
+            "status": "passed",
+            "title": "emits clean machine-readable numbers (the sanctions-check case: 20c → 0.216)",
+            "duration": 3.768051000000014,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsd"
+            ],
+            "fullName": "eurCentsToUsd does not reintroduce the historical ten-cent cap above one euro",
+            "status": "passed",
+            "title": "does not reintroduce the historical ten-cent cap above one euro",
+            "duration": 0.4824639999999363,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsd"
+            ],
+            "fullName": "eurCentsToUsd produces no float artifacts across the whole realistic price range",
+            "status": "passed",
+            "title": "produces no float artifacts across the whole realistic price range",
+            "duration": 19.206299000000058,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdcAtomic"
+            ],
+            "fullName": "eurCentsToUsdcAtomic does not overcharge the extra atomic unit (20c → exactly 216000, not 216001)",
+            "status": "passed",
+            "title": "does not overcharge the extra atomic unit (20c → exactly 216000, not 216001)",
+            "duration": 0.21736300000009123,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdcAtomic"
+            ],
+            "fullName": "eurCentsToUsdcAtomic advertised price and settled amount agree exactly for every price",
+            "status": "passed",
+            "title": "advertised price and settled amount agree exactly for every price",
+            "duration": 14.930834000000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdcAtomic"
+            ],
+            "fullName": "eurCentsToUsdcAtomic still rounds up, never down (5c at 1.08 → 54000 exactly; 1c → 10800)",
+            "status": "passed",
+            "title": "still rounds up, never down (5c at 1.08 → 54000 exactly; 1c → 10800)",
+            "duration": 0.2615529999999353,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdcAtomic"
+            ],
+            "fullName": "eurCentsToUsdcAtomic survives the route-layer float round-trip (usd → ×1e6 → round) exactly",
+            "status": "passed",
+            "title": "survives the route-layer float round-trip (usd → ×1e6 → round) exactly",
+            "duration": 9.581144999999992,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdFixed"
+            ],
+            "fullName": "eurCentsToUsdFixed renders the exact atomic amount with six decimal places",
+            "status": "passed",
+            "title": "renders the exact atomic amount with six decimal places",
+            "duration": 0.4454849999999624,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdFixed"
+            ],
+            "fullName": "eurCentsToUsdFixed round-trips to the canonical atomic amount across the realistic price range",
+            "status": "passed",
+            "title": "round-trips to the canonical atomic amount across the realistic price range",
+            "duration": 17.452958999999964,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "eurCentsToUsdFixed"
+            ],
+            "fullName": "eurCentsToUsdFixed rejects malformed prices and supports the PostgreSQL integer maximum",
+            "status": "passed",
+            "title": "rejects malformed prices and supports the PostgreSQL integer maximum",
+            "duration": 1.7266720000000078,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "describes tools per call in the payment challenge",
+            "status": "passed",
+            "title": "describes tools per call in the payment challenge",
+            "duration": 1.1890449999999646,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012061755,
+        "endTime": 1793012061825.189,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/lib/x402-gateway.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "public agent skill"
+            ],
+            "fullName": "public agent skill serves both URLs as cached Markdown with front matter and live facts",
+            "status": "passed",
+            "title": "serves both URLs as cached Markdown with front matter and live facts",
+            "duration": 145.28603199999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "public agent skill"
+            ],
+            "fullName": "public agent skill changes all catalogue figures when facts change and handles an empty paid catalogue",
+            "status": "passed",
+            "title": "changes all catalogue figures when facts change and handles an empty paid catalogue",
+            "duration": 4.850795000000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "public agent skill"
+            ],
+            "fullName": "public agent skill contains no digit-count or price literals in the template",
+            "status": "passed",
+            "title": "contains no digit-count or price literals in the template",
+            "duration": 1.1305900000000406,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "public agent skill"
+            ],
+            "fullName": "public agent skill returns 503 without a good cache, then serves stale instructions during an outage",
+            "status": "passed",
+            "title": "returns 503 without a good cache, then serves stale instructions during an outage",
+            "duration": 16.25324999999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "API discovery messaging"
+            ],
+            "fullName": "API discovery messaging uses live coverage and adopted framing in llms.txt, welcome, catalog and MCP card",
+            "status": "passed",
+            "title": "uses live coverage and adopted framing in llms.txt, welcome, catalog and MCP card",
+            "duration": 1147.7102869999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "API discovery messaging"
+            ],
+            "fullName": "API discovery messaging removes retired framing and fixed coverage from the OpenAPI description and solution catalogue",
+            "status": "passed",
+            "title": "removes retired framing and fixed coverage from the OpenAPI description and solution catalogue",
+            "duration": 38.99423200000001,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012059733,
+        "endTime": 1793012061088.9941,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/routes/agent-surfaces.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "GET /.well-known/agent-card.json"
+            ],
+            "fullName": "GET /.well-known/agent-card.json asks Postgres for visible capabilities only",
+            "status": "passed",
+            "title": "asks Postgres for visible capabilities only",
+            "duration": 417.325563,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /llms-full.txt"
+            ],
+            "fullName": "GET /llms-full.txt asks Postgres for visible capabilities only",
+            "status": "passed",
+            "title": "asks Postgres for visible capabilities only",
+            "duration": 91.42977700000006,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /.well-known/mcp.json"
+            ],
+            "fullName": "GET /.well-known/mcp.json counts visible capabilities through platform facts",
+            "status": "passed",
+            "title": "counts visible capabilities through platform facts",
+            "duration": 262.8421740000001,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/solutions"
+            ],
+            "fullName": "GET /v1/solutions does not describe a step whose capability is withdrawn",
+            "status": "passed",
+            "title": "does not describe a step whose capability is withdrawn",
+            "duration": 131.04662899999994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/solutions/:slug"
+            ],
+            "fullName": "GET /v1/solutions/:slug filters both the step join and the extends_with lookup",
+            "status": "passed",
+            "title": "filters both the step join and the extends_with lookup",
+            "duration": 31.49090799999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/capabilities/:slug"
+            ],
+            "fullName": "GET /v1/capabilities/:slug asks Postgres for a visible capability only",
+            "status": "passed",
+            "title": "asks Postgres for a visible capability only",
+            "duration": 181.41159000000016,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/capabilities/:slug"
+            ],
+            "fullName": "GET /v1/capabilities/:slug filters the detail view exactly as the list view does",
+            "status": "passed",
+            "title": "filters the detail view exactly as the list view does",
+            "duration": 26.284761999999773,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012060386,
+        "endTime": 1793012061531.2847,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/routes/public-surface-visibility.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup"
+            ],
+            "fullName": "POST /v1/wallet/topup creates a Stripe Checkout session with correct amount, currency, user linkage, and exact redirect URLs",
+            "status": "passed",
+            "title": "creates a Stripe Checkout session with correct amount, currency, user linkage, and exact redirect URLs",
+            "duration": 127.71021100000007,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup"
+            ],
+            "fullName": "POST /v1/wallet/topup rejects a missing amount_cents with a structured 400",
+            "status": "passed",
+            "title": "rejects a missing amount_cents with a structured 400",
+            "duration": 8.98147199999994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup"
+            ],
+            "fullName": "POST /v1/wallet/topup rejects an amount below the €10 minimum with a structured 400",
+            "status": "passed",
+            "title": "rejects an amount below the €10 minimum with a structured 400",
+            "duration": 6.00315999999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup"
+            ],
+            "fullName": "POST /v1/wallet/topup rejects an amount above the €10,000 maximum with a structured 400",
+            "status": "passed",
+            "title": "rejects an amount above the €10,000 maximum with a structured 400",
+            "duration": 3.0830489999998463,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup"
+            ],
+            "fullName": "POST /v1/wallet/topup rejects a non-integer amount_cents with a structured 400",
+            "status": "passed",
+            "title": "rejects a non-integer amount_cents with a structured 400",
+            "duration": 5.261345000000119,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup"
+            ],
+            "fullName": "POST /v1/wallet/topup returns 401 for a request with no Authorization header, without calling Stripe",
+            "status": "passed",
+            "title": "returns 401 for a request with no Authorization header, without calling Stripe",
+            "duration": 2.885138999999981,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/wallet/topup — via the real app.ts pipeline (MAJOR 1)"
+            ],
+            "fullName": "POST /v1/wallet/topup — via the real app.ts pipeline (MAJOR 1) a Stripe API failure surfaces via app.ts's real onError as a structured error, not a raw exception",
+            "status": "passed",
+            "title": "a Stripe API failure surfaces via app.ts's real onError as a structured error, not a raw exception",
+            "duration": 3973.975857,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/balance"
+            ],
+            "fullName": "GET /v1/wallet/balance returns balance_cents as an integer (wire-shape rule), scoped to the authenticated user",
+            "status": "passed",
+            "title": "returns balance_cents as an integer (wire-shape rule), scoped to the authenticated user",
+            "duration": 2.693424999999479,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/balance"
+            ],
+            "fullName": "GET /v1/wallet/balance returns balance_cents 0 when no wallet row exists yet",
+            "status": "passed",
+            "title": "returns balance_cents 0 when no wallet row exists yet",
+            "duration": 2.173250000000735,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/balance"
+            ],
+            "fullName": "GET /v1/wallet/balance returns 401 without an Authorization header",
+            "status": "passed",
+            "title": "returns 401 without an Authorization header",
+            "duration": 3.0071649999999863,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/transactions"
+            ],
+            "fullName": "GET /v1/wallet/transactions returns the transaction list with integer-cents shape, scoped to the authenticated user's wallet",
+            "status": "passed",
+            "title": "returns the transaction list with integer-cents shape, scoped to the authenticated user's wallet",
+            "duration": 3.8909999999996217,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/transactions"
+            ],
+            "fullName": "GET /v1/wallet/transactions caps the result at 100 rows (regression: .limit(100) in the query)",
+            "status": "passed",
+            "title": "caps the result at 100 rows (regression: .limit(100) in the query)",
+            "duration": 2.0384860000003755,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/transactions"
+            ],
+            "fullName": "GET /v1/wallet/transactions returns an empty list when no wallet row exists yet, and does not issue a second query for wallet_transactions",
+            "status": "passed",
+            "title": "returns an empty list when no wallet row exists yet, and does not issue a second query for wallet_transactions",
+            "duration": 2.900348999999551,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "GET /v1/wallet/transactions"
+            ],
+            "fullName": "GET /v1/wallet/transactions returns 401 without an Authorization header",
+            "status": "passed",
+            "title": "returns 401 without an Authorization header",
+            "duration": 0.8821260000004258,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793012060651,
+        "endTime": 1793012064797.882,
+        "status": "passed",
+        "message": "",
+        "name": "/tmp/claude-0/-home-user-strale/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/clones/surfaces/apps/api/src/routes/wallet.test.ts"
+      }
+    ]
+  }
+}

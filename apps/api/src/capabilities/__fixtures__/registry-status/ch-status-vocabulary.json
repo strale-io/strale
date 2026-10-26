@@ -1,0 +1,18 @@
+{
+  "capture": {
+    "url": "https://www.zefix.admin.ch/ZefixPublicREST/v3/api-docs",
+    "captured_at": "2026-10-26T13:27:55.408528+00:00",
+    "http_status": 200,
+    "raw_sha256": "ff8e72380dcb0dbde910919154f5295051b0006a12513195afe7d8d110781450",
+    "note": "Official live OpenAPI status property, not a company capture. API requires credentials (anonymous lookup HTTP 401)."
+  },
+  "response": {
+    "type": "string",
+    "description": "Current company status (active, in liquidation, deleted)",
+    "enum": [
+      "ACTIVE",
+      "CANCELLED",
+      "BEING_CANCELLED"
+    ]
+  }
+}

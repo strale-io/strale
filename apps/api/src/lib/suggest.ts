@@ -1,80 +1,18 @@
-import { MODELS } from "./models.js";
 import { eq, and, asc, inArray, sql } from "drizzle-orm";
 import { SERVABLE_LIFECYCLE_STATES } from "./x402-eligibility.js";
-import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "../db/index.js";
-import {
-  solutions,
-  solutionSteps,
-  capabilities,
-} from "../db/schema.js";
-import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
-import { tokenize } from "./tokenize.js";
-import {
-  aliasTermsFor,
-  ALIAS_PRIMARY_WEIGHT,
-  ALIAS_SECONDARY_WEIGHT,
-} from "./search-aliases.js";
+import { solutions, solutionSteps, capabilities } from "../db/schema.js";
+import { createKeywordIndex, MAX_KEYWORD_QUERY_CHARS, type SearchItem } from "./search/keyword.js";
+import { extractCountries } from "./search/countries.js";
+import { sanitizeSearchText } from "./search/smart.js";
+import { groupSolutionVariants } from "./search/ranking.js";
+import { createSearchRanker, buildCatalogPrompt } from "./search/smart.js";
+export {
+  applyConditionalSolutionBonus,
+  isSlugFamilyMatch,
+} from "./search/ranking.js";
 import { determineBadge } from "./trust-helpers.js";
-import { log, logError, logWarn } from "./log.js";
-
-/**
- * Ranking boost for bundled solutions, applied only when solutions already lead
- * or tie the capabilities on raw match quality. Large relative to raw token
- * scores (which top out near 3) — that is deliberate, and is why it has to be
- * conditional rather than unconditional. See the application sites.
- */
-const SOLUTION_BONUS = 3;
-
-/**
- * The same boost on the semantic path, where scores are cosine similarities in
- * the 0.3–1.0 band left by the retrieval threshold rather than raw token counts.
- * Kept as its own constant so a rescale of one path cannot silently mis-scale
- * the other.
- */
-const SEMANTIC_SOLUTION_BONUS = 0.03;
-
-/**
- * Apply the solutions-first ranking bonus, but only when solutions already lead
- * or tie the capabilities on raw match quality. Mutates `scored` in place.
- *
- * The bonus used to be unconditional. Raw token scores top out around 3, so it
- * was larger than the signal it was added to: a solution matching one word beat
- * a capability matching every word, and `/v1/suggest` returned solutions and
- * nothing else. Live examples before the fix — "validate an IBAN" resolved to
- * the payment-validate solution rather than iban-validate, and "look up a
- * Swedish company" to verify-us-company.
- *
- * Gating on raw merit keeps the original intent (a caller describing a workflow
- * should be handed the bundle rather than made to assemble it) while letting a
- * caller who names one function reach it. Ties still go to the solution.
- */
-export function applyConditionalSolutionBonus<
-  T extends { item: { type: "solution" | "capability" }; score: number },
->(scored: T[], bonus: number = SOLUTION_BONUS): void {
-  // Seeded with -Infinity, not 0: seeding at 0 would clamp both sides up to 0
-  // for an all-negative field and manufacture a tie, applying the bonus when a
-  // capability was actually ahead. Today's callers only ever pass positive
-  // scores, so that is unreachable — but this is exported, and a caller-side
-  // invariant the type system does not express is not one to lean on.
-  const topOf = (wantSolution: boolean) =>
-    scored.reduce(
-      (best, s) => ((s.item.type === "solution") === wantSolution ? Math.max(best, s.score) : best),
-      -Infinity,
-    );
-
-  const topCapability = topOf(false);
-  if (topOf(true) < topCapability) return;
-
-  // Only solutions that are themselves at least as good as the best capability
-  // are lifted. Boosting the whole field would let a solution that matched one
-  // word overtake a capability that matched two — the original bug in
-  // miniature, one rank further down, where it shows up in the alternatives
-  // list and the typeahead dropdown rather than in the recommendation.
-  for (const s of scored) {
-    if (s.item.type === "solution" && s.score >= topCapability) s.score += bonus;
-  }
-}
+import { logError, logWarn } from "./log.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -88,7 +26,7 @@ interface TrustSummary {
   data_source: "internal_testing" | "blended" | "customer_transactions";
 }
 
-interface CatalogItem {
+export interface CatalogItem extends SearchItem {
   type: "solution" | "capability";
   slug: string;
   name: string;
@@ -109,15 +47,7 @@ interface CatalogItem {
     otherCapabilityNames: string[];
   }>;
   isFreeTier: boolean;
-  embedding: number[];
-  embeddingText: string;
-  tokens: Set<string>;
-  /**
-   * Tokens from the name and slug only — what the item *is*, as opposed to
-   * everything it mentions. Used to rank alias matches, where a description
-   * mention is much weaker evidence than a name match.
-   */
-  primaryTokens: Set<string>;
+  search_tags: string[];
   trustSummary?: TrustSummary;
 }
 
@@ -146,7 +76,7 @@ interface SuggestRecommendation {
   trust?: TrustSummary;
 }
 
-interface SuggestResponse {
+export interface SuggestResponse {
   recommendation: SuggestRecommendation | null;
   alternatives: SuggestRecommendation[];
   total_matches: number;
@@ -176,10 +106,10 @@ const FILLER_PREFIXES = [
 ];
 
 function normalizeQuery(raw: string): string {
-  let q = raw.toLowerCase().trim();
+  let q = raw.trim();
 
   for (const prefix of FILLER_PREFIXES) {
-    if (q.startsWith(prefix)) {
+    if (q.toLowerCase().startsWith(prefix)) {
       q = q.slice(prefix.length);
       break;
     }
@@ -210,12 +140,14 @@ function getQueryCached(key: string): SuggestResponse | null {
 }
 
 function setQueryCache(key: string, response: SuggestResponse): void {
-  if (queryCache.size > 500) {
+  if (queryCache.size >= 500) {
     const now = Date.now();
     for (const [k, v] of queryCache) {
       if (now > v.expiresAt) queryCache.delete(k);
     }
   }
+  if (queryCache.size >= 500)
+    queryCache.delete(queryCache.keys().next().value!);
   queryCache.set(key, {
     response,
     expiresAt: Date.now() + QUERY_CACHE_TTL_MS,
@@ -224,11 +156,14 @@ function setQueryCache(key: string, response: SuggestResponse): void {
 
 // ─── Catalog cache ──────────────────────────────────────────────────────────
 
-const CATALOG_CACHE_TTL_MS = 10 * 60 * 1000; // Match SQS cache TTL for consistent trust data
+const CATALOG_CACHE_TTL_MS = 10 * 60 * 1000; // Catalogue and trust data refresh together
 let catalog: CatalogItem[] | null = null;
 let catalogCachedAt = 0;
 let catalogLoading: Promise<CatalogItem[]> | null = null;
-let useEmbeddings = true;
+let keywordIndex: ReturnType<typeof createKeywordIndex<CatalogItem>> | null =
+  null;
+let catalogPrompt = "";
+const rankWithModel = createSearchRanker();
 
 async function loadCatalog(): Promise<CatalogItem[]> {
   const now = Date.now();
@@ -258,29 +193,30 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         .orderBy(asc(solutions.displayOrder));
       // Batch-fetch ALL steps for ALL solutions in one query (eliminates N+1)
       const solIds = solRows.map((s) => s.id);
-      const allSolSteps = solIds.length > 0
-        ? await db
-            .select({
-              solutionId: solutionSteps.solutionId,
-              capabilitySlug: solutionSteps.capabilitySlug,
-              parallelGroup: solutionSteps.parallelGroup,
-              capabilityName: capabilities.name,
-            })
-            .from(solutionSteps)
-            // Same withdrawal rule as GET /v1/solutions. These names reach the
-            // public response as `extra_description`: "also includes …", so a
-            // withdrawn capability was being suggested by name to a caller
-            // whenever it shared a solution with a matched one.
-            .innerJoin(
-              capabilities,
-              and(
-                eq(solutionSteps.capabilitySlug, capabilities.slug),
-                eq(capabilities.visible, true),
-              ),
-            )
-            .where(inArray(solutionSteps.solutionId, solIds))
-            .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
-        : [];
+      const allSolSteps =
+        solIds.length > 0
+          ? await db
+              .select({
+                solutionId: solutionSteps.solutionId,
+                capabilitySlug: solutionSteps.capabilitySlug,
+                parallelGroup: solutionSteps.parallelGroup,
+                capabilityName: capabilities.name,
+              })
+              .from(solutionSteps)
+              // Same withdrawal rule as GET /v1/solutions. These names reach the
+              // public response as `extra_description`: "also includes …", so a
+              // withdrawn capability was being suggested by name to a caller
+              // whenever it shared a solution with a matched one.
+              .innerJoin(
+                capabilities,
+                and(
+                  eq(solutionSteps.capabilitySlug, capabilities.slug),
+                  eq(capabilities.visible, true)
+                )
+              )
+              .where(inArray(solutionSteps.solutionId, solIds))
+              .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
+          : [];
       const stepsBySolId = new Map<string, typeof allSolSteps>();
       for (const step of allSolSteps) {
         const list = stepsBySolId.get(step.solutionId) ?? [];
@@ -290,21 +226,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
 
       const solItems: CatalogItem[] = solRows.map((sol) => {
         const steps = stepsBySolId.get(sol.id) ?? [];
-        const stepNames = steps
-          .map((s) => s.capabilityName ?? s.capabilitySlug)
-          .join(", ");
-        // search_tags are hand-authored vocabulary bridges (the words agents
-        // actually type, which don't always appear in the name/description
-        // prose) — fold them into both the embedding text and the token set
-        // so they influence ranking rather than sitting unused in the API
-        // response. See suggest.ts capItems mapping below for the same fix
-        // on the capability side.
-        const tagText = sol.searchTags && sol.searchTags.length > 0 ? sol.searchTags.join(", ") : "";
-        const embeddingText = sol.agentDescription
-          ? `${sol.name}. ${sol.agentDescription}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.${tagText ? ` Also known as: ${tagText}.` : ""}`
-          : `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.${tagText ? ` Also known as: ${tagText}.` : ""}`;
-        const tokenText = `${sol.name} ${sol.description} ${sol.agentDescription ?? ""} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")} ${tagText}`;
-
         return {
           type: "solution" as const,
           slug: sol.slug,
@@ -320,10 +241,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             parallelGroup: s.parallelGroup,
           })),
           stepCount: steps.length,
-          embedding: [],
-          embeddingText,
-          tokens: tokenize(tokenText),
-          primaryTokens: tokenize(`${sol.name} ${sol.slug}`),
+          search_tags: sol.searchTags ?? [],
         };
       });
 
@@ -351,23 +269,11 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             // servability floor, so this recommended capabilities /v1/do then
             // refused. A recommender may be stricter than the floor; it may
             // never be looser.
-            inArray(capabilities.lifecycleState, [...SERVABLE_LIFECYCLE_STATES]),
-          ),
+            inArray(capabilities.lifecycleState, [...SERVABLE_LIFECYCLE_STATES])
+          )
         );
 
       const capItems: CatalogItem[] = capRows.map((cap) => {
-        const slugWords = cap.slug.replace(/-/g, " ");
-        // search_tags (manifest field `search_tags`) previously flowed all
-        // the way to the API response and to this catalog item but was never
-        // read by embeddingText/tokenText — a capability's discoverability
-        // depended on name+description+category+slug only, so hand-authored
-        // vocabulary bridges (e.g. "email address", "phone number", "KYB")
-        // had zero effect on ranking. Fold them in here.
-        const tagWords = cap.searchTags && cap.searchTags.length > 0 ? cap.searchTags.join(", ") : "";
-        const alsoKnownAs = tagWords ? `${slugWords}, ${tagWords}` : slugWords;
-        const embeddingText = `${cap.name}. ${cap.description}. Category: ${cap.category}. Also known as: ${alsoKnownAs}.`;
-        const tokenText = `${cap.name} ${cap.description} ${cap.category} ${cap.slug} ${tagWords}`;
-
         return {
           type: "capability" as const,
           slug: cap.slug,
@@ -377,10 +283,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           priceCents: cap.priceCents,
           isFreeTier: cap.isFreeTier,
           geography: cap.geography ?? "global",
-          embedding: [],
-          embeddingText,
-          tokens: tokenize(tokenText),
-          primaryTokens: tokenize(`${cap.name} ${cap.slug}`),
+          search_tags: cap.searchTags ?? [],
         };
       });
 
@@ -389,7 +292,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       // Build reverse index: capability → solutions containing it
       for (const cap of capItems) {
         const parents = solItems.filter((sol) =>
-          sol.steps?.some((s) => s.capabilitySlug === cap.slug),
+          sol.steps?.some((s) => s.capabilitySlug === cap.slug)
         );
         if (parents.length > 0) {
           cap.partOfSolutions = parents.map((sol) => ({
@@ -405,7 +308,9 @@ async function loadCatalog(): Promise<CatalogItem[]> {
 
       // Batch-fetch persisted success-rate / latency and test counts (2 queries instead of ~5,355)
       const allCapSlugs = capItems.map((c) => c.slug);
-      const allStepSlugs = solItems.flatMap((s) => (s.steps ?? []).map((st) => st.capabilitySlug));
+      const allStepSlugs = solItems.flatMap((s) =>
+        (s.steps ?? []).map((st) => st.capabilitySlug)
+      );
       const allSlugsNeeded = [...new Set([...allCapSlugs, ...allStepSlugs])];
 
       const [persistedRows, testCountRows] = await Promise.all([
@@ -421,8 +326,8 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               .where(
                 and(
                   eq(capabilities.isActive, true),
-                  inArray(capabilities.slug, allSlugsNeeded),
-                ),
+                  inArray(capabilities.slug, allSlugsNeeded)
+                )
               )
           : Promise.resolve([]),
         // Query 2: Batch test pass/fail counts + last tested (one query for all slugs)
@@ -436,7 +341,10 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 FROM test_results tr
                 INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
                 WHERE ts.active = true
-                  AND tr.capability_slug IN (${sql.join(allSlugsNeeded.map(s => sql`${s}`), sql`, `)})
+                  AND tr.capability_slug IN (${sql.join(
+                    allSlugsNeeded.map((s) => sql`${s}`),
+                    sql`, `
+                  )})
                 ORDER BY tr.test_suite_id, tr.executed_at DESC
               )
               SELECT
@@ -451,16 +359,21 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       ]);
 
       // Build lookup maps
-      const persistedMap = new Map(
-        persistedRows.map((r) => [r.slug, r]),
-      );
-      const testCountRaw = Array.isArray(testCountRows) ? testCountRows : (testCountRows as any)?.rows ?? [];
-      const testCountMap = new Map<string, { passed: number; total: number; last_tested_at: string | null }>();
+      const persistedMap = new Map(persistedRows.map((r) => [r.slug, r]));
+      const testCountRaw = Array.isArray(testCountRows)
+        ? testCountRows
+        : (testCountRows as any)?.rows ?? [];
+      const testCountMap = new Map<
+        string,
+        { passed: number; total: number; last_tested_at: string | null }
+      >();
       for (const r of testCountRaw as any[]) {
         testCountMap.set(r.capability_slug, {
           passed: Number(r.passed),
           total: Number(r.total),
-          last_tested_at: r.last_tested_at ? new Date(r.last_tested_at).toISOString() : null,
+          last_tested_at: r.last_tested_at
+            ? new Date(r.last_tested_at).toISOString()
+            : null,
         });
       }
 
@@ -470,8 +383,14 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           if (item.type === "capability") {
             const persisted = persistedMap.get(item.slug);
             const tests = testCountMap.get(item.slug);
-            const sr = persisted?.successRate ? parseFloat(persisted.successRate) : null;
-            const { badge, badge_label } = determineBadge(tests?.total ?? 0, 0, sr);
+            const sr = persisted?.successRate
+              ? parseFloat(persisted.successRate)
+              : null;
+            const { badge, badge_label } = determineBadge(
+              tests?.total ?? 0,
+              0,
+              sr
+            );
 
             item.trustSummary = {
               badge,
@@ -522,34 +441,9 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         }
       }
 
-      // Embed if Voyage API key is available
-      if (process.env.VOYAGE_API_KEY) {
-        try {
-          const texts = allItems.map((item) => item.embeddingText);
-          const vectors = await embedDocuments(texts);
-          for (let i = 0; i < allItems.length; i++) {
-            allItems[i].embedding = vectors[i];
-          }
-          useEmbeddings = true;
-          log.info(
-            {
-              label: "suggest-catalog-loaded",
-              solutions: solItems.length,
-              capabilities: capItems.length,
-              use_embeddings: true,
-            },
-            "suggest-catalog-loaded",
-          );
-        } catch (embErr) {
-          useEmbeddings = false;
-          logError("suggest-embedding-failed", embErr);
-        }
-      } else {
-        useEmbeddings = false;
-        logWarn("suggest-no-voyage-key", "VOYAGE_API_KEY not set; using keyword fallback");
-      }
-
-      // Clear query cache when catalog refreshes (embeddings changed)
+      // One immutable search index and deterministic prompt per catalogue load.
+      keywordIndex = createKeywordIndex(allItems);
+      catalogPrompt = buildCatalogPrompt(allItems);
       queryCache.clear();
 
       catalog = allItems;
@@ -592,257 +486,64 @@ export interface TypeaheadResponse {
   total: number;
 }
 
-/**
- * True when `word` names `slug` or the slug family it belongs to: the slug
- * itself, or a hyphenated run of whole slug segments. "invoice-verify" names
- * the invoice-verify-{cc} solutions and "company-data" the *-company-data
- * capabilities; "voice-ver" names nothing.
- *
- * A bare word is only an exact-slug match. Treating "validate" as naming every
- * *-validate slug would hand the bonus to dozens of items for one common word;
- * a hyphenated query is slug-shaped, which is what makes it a family name.
- */
-export function isSlugFamilyMatch(slug: string, word: string): boolean {
-  if (word === slug) return true;
-  if (!word.includes("-") || word.startsWith("-") || word.endsWith("-")) return false;
-  return `-${slug}-`.includes(`-${word}-`);
-}
-
-/** A hyphenated query word, normalized, and the forms it is matched by. */
-export interface HyphenatedWord {
-  word: string;
-  /** Empty when any segment was under 2 characters ("e-mail"): matching the
-   *  rest alone would answer a different question than the one typed. */
-  parts: string[];
-  /** The word without hyphens ("email"), for spellings the catalog joins. */
-  joined: string;
-}
-
-export interface TypeaheadQuery {
-  /** Plain words, matched against tokens and name/description prefixes. */
-  words: string[];
-  /** Slug-shaped words ("invoice-verify"), matched as a unit — see scoreTypeaheadItem. */
-  hyphenated: HyphenatedWord[];
-}
-
-/**
- * Parse a typeahead query. A hyphenated word is kept whole for the slug-family
- * check and split into parts for matching, because the token index splits on
- * hyphens. Doubled and dangling hyphens are dropped ("invoice-verify-" is still
- * being typed). A word with a 1-letter segment gets no parts at all: the
- * letter would prefix-match nearly every item, and the remainder alone ("mail"
- * for "e-mail") is not what was asked for, so only the family and joined forms
- * can match it.
- */
-export function parseTypeaheadQuery(query: string): TypeaheadQuery {
-  const words: string[] = [];
-  const hyphenated: HyphenatedWord[] = [];
-  for (const raw of query.toLowerCase().trim().split(/\s+/)) {
-    const word = raw.replace(/-+/g, "-").replace(/^-|-$/g, "");
-    if (word.length === 0) continue;
-    if (!word.includes("-")) {
-      if (!words.includes(word)) words.push(word);
-      continue;
-    }
-    const segments = word.split("-");
-    const parts = segments.every((p) => p.length > 1) ? segments : [];
-    hyphenated.push({ word, parts, joined: segments.join("") });
-  }
-  return { words, hyphenated };
-}
-
-/** Every word a query could match on directly. */
-export function typeaheadTerms(q: TypeaheadQuery): string[] {
-  const hyphenTerms = q.hyphenated.flatMap((h) => (h.parts.length > 0 ? h.parts : [h.joined]));
-  return [...new Set([...q.words, ...hyphenTerms])];
-}
-
-/**
- * Score one catalog item for typeahead, before the geography boost and the
- * field-wide solution bonus. Exported for testing.
- *
- * A hyphenated word counts for an item only when it names the item's slug
- * family (+2, then its parts score as usual) or every one of its parts
- * matches this item. Scoring the parts independently would turn a slug nobody
- * sells ("web3-assurance") into matches on whichever items mention "web3",
- * and an exact slug ("vat-validate") into a lookup trailed by every
- * *-validate item. The query names one thing; the parts must agree on it.
- *
- * Aliases follow the same rule. A part may match through its alias ("fx-rate"
- * reaches exchange-rate as "fx rate" does), but a hyphenated word's aliases
- * score only on items the word matched; otherwise "fx-zzzz" would still
- * surface every currency item.
- */
-export function scoreTypeaheadItem(
-  item: KeywordScorable,
-  query: TypeaheadQuery,
-): { score: number; snippet?: string } {
-  let score = 0;
-  let snippet: string | undefined;
-
-  // Prefix matching on name/description words for partial matches
-  const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
-  const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
-  const hits = (w: string) =>
-    item.tokens.has(w) ||
-    nameWords.some((nw) => nw.startsWith(w)) ||
-    descWords.some((dw) => dw.startsWith(w)) ||
-    [...aliasTermsFor([w])].some((t) => item.tokens.has(t));
-
-  // Vocabulary bridge: "fx" should reach exchange-rate even though the catalog
-  // never uses the word. Scored below a direct hit so literal matches win.
-  const aliasTerms = aliasTermsFor(query.words);
-
-  const qWords = [...query.words];
-  for (const { word, parts, joined } of query.hyphenated) {
-    let matched = true;
-    if (isSlugFamilyMatch(item.slug, word)) {
-      // Exact slug or slug-family match: +2
-      score += 2;
-      qWords.push(...parts);
-    } else if (item.tokens.has(joined)) {
-      qWords.push(joined);
-    } else if (parts.length > 0 && parts.every(hits)) {
-      qWords.push(...parts);
-    } else {
-      matched = false;
-    }
-    if (matched) for (const t of aliasTermsFor(parts)) aliasTerms.add(t);
-  }
-
-  // Exact one-word slug: +2
-  if (query.words.some((w) => w === item.slug)) score += 2;
-
-  // Token matching: +1 for each query word found in item tokens
-  for (const word of new Set(qWords)) {
-    if (item.tokens.has(word)) score++;
-  }
-
-  // A term the user typed anywhere already scored as a direct hit.
-  const typed = new Set(typeaheadTerms(query));
-  for (const term of aliasTerms) {
-    if (typed.has(term)) continue;
-    if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
-    else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
-  }
-
-  for (const qw of new Set(qWords)) {
-    if (nameWords.some((nw) => nw.startsWith(qw) && !item.tokens.has(qw))) {
-      score++;
-      // Build snippet from name if prefix matched
-      if (!snippet) snippet = item.name;
-    }
-    if (descWords.some((dw) => dw.startsWith(qw) && !item.tokens.has(qw))) {
-      score++;
-    }
-  }
-
-  return { score, snippet };
-}
-
 export async function typeahead(
   query: string,
   limit: number,
   geo?: string,
-  typeFilter?: "solution" | "capability",
+  typeFilter?: "solution" | "capability"
 ): Promise<TypeaheadResponse> {
   const items = await loadCatalog();
-  const parsed = parseTypeaheadQuery(query);
+  return typeaheadFromCatalog(
+    items,
+    keywordIndex!,
+    query,
+    limit,
+    geo,
+    typeFilter
+  );
+}
 
-  if (typeaheadTerms(parsed).length === 0) {
-    return { results: [], total: 0 };
-  }
-
-  const scored: Array<{ item: CatalogItem; score: number; snippet?: string; _alsoAvailable?: string[] }> = [];
-
-  for (const item of items) {
-    // Type filter: skip items that don't match the requested type
-    if (typeFilter && item.type !== typeFilter) continue;
-    const base = scoreTypeaheadItem(item, parsed);
-    let score = base.score;
-    const snippet = base.snippet;
-
-    // Solutions-first bonus is applied after the loop — it depends on how the
-    // whole field scored, not on this item alone. See below.
-
-    // Geography boost: +1 if geo param matches
-    if (geo && score > 0 && item.geography) {
-      const geoUpper = geo.toUpperCase();
-      const geoLower = geo.toLowerCase();
-      if (
-        item.geography.toUpperCase().includes(geoUpper) ||
-        item.geography.toLowerCase().includes(geoLower)
-      ) {
-        score++;
-      }
-    }
-
-    if (score > 0) {
-      scored.push({ item, score, snippet });
-    }
-  }
-
-  applyConditionalSolutionBonus(scored);
-
-  scored.sort((a, b) => b.score - a.score);
-
-  // Deduplicate country-variant solutions (e.g., "KYB Essentials — Sweden",
-  // "KYB Essentials — Norway"). Keep highest-scored variant per base name,
-  // add also_available_for with the collapsed country names.
-  const deduped: typeof scored = [];
-  const solutionGroupBest = new Map<string, number>(); // base name → index in deduped
-
-  for (const entry of scored) {
-    if (entry.item.type === "solution") {
-      // Split on " — " or " – " to find base name and variant suffix
-      const dashIdx = entry.item.name.search(/\s[—–]\s/);
-      if (dashIdx > 0) {
-        const baseName = entry.item.name.slice(0, dashIdx);
-        const variant = entry.item.name.slice(dashIdx).replace(/^\s[—–]\s/, "");
-        const existingIdx = solutionGroupBest.get(baseName);
-        if (existingIdx != null) {
-          // Already have a higher-scored variant — just add this one's name
-          const existing = deduped[existingIdx];
-          if (!existing._alsoAvailable) existing._alsoAvailable = [];
-          existing._alsoAvailable.push(variant);
-          continue;
-        }
-        solutionGroupBest.set(baseName, deduped.length);
-      }
-    }
-    deduped.push(entry);
-  }
-
+/** Pure wire adapter used by the offline harness and contract tests. */
+export function typeaheadFromCatalog(
+  items: CatalogItem[],
+  index: ReturnType<typeof createKeywordIndex<CatalogItem>>,
+  query: string,
+  limit: number,
+  geo?: string,
+  typeFilter?: "solution" | "capability"
+): TypeaheadResponse {
+  const scored = index.search(query, { geo, type: typeFilter });
+  const deduped = groupSolutionVariants(scored, items);
   const total = deduped.length;
   const topItems = deduped.slice(0, limit);
 
-  const results: TypeaheadResult[] = topItems.map(({ item, snippet, _alsoAvailable }) => {
-    const result: TypeaheadResult = {
-      type: item.type,
-      slug: item.slug,
-      name: item.name,
-      description: item.description,
-      category: item.category,
-      // DEC-20260304-A: price_cents MUST be null for capabilities
-      price_cents: item.type === "solution" ? item.priceCents : null,
-      geography: item.geography,
-      is_free_tier: item.isFreeTier || undefined,
-    };
-    if (item.type === "solution" && item.stepCount) {
-      result.step_count = item.stepCount;
+  const results: TypeaheadResult[] = topItems.map(
+    ({ item, alsoAvailable, snippet }) => {
+      const result: TypeaheadResult = {
+        type: item.type,
+        slug: item.slug,
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        // DEC-20260304-A: price_cents MUST be null for capabilities
+        price_cents: item.type === "solution" ? item.priceCents : null,
+        geography: item.geography,
+        is_free_tier: item.isFreeTier || undefined,
+      };
+      if (item.type === "solution" && item.stepCount) {
+        result.step_count = item.stepCount;
+      }
+      if (snippet) result.match_snippet = snippet;
+      if (alsoAvailable && alsoAvailable.length > 0) {
+        result.also_available_for = alsoAvailable;
+      }
+      return result;
     }
-    if (snippet) {
-      result.match_snippet = snippet;
-    }
-    if (_alsoAvailable && _alsoAvailable.length > 0) {
-      result.also_available_for = _alsoAvailable;
-    }
-    return result;
-  });
+  );
 
   // Fallback: if type filter produced zero results, retry without filter
   if (results.length === 0 && typeFilter) {
-    return typeahead(query, limit, geo);
+    return typeaheadFromCatalog(items, index, query, limit, geo);
   }
 
   return { results, total };
@@ -857,8 +558,7 @@ export async function typeahead(
  * protects one caller and this engine has more than one. `POST /v1/suggest`
  * capped queries at 500 characters; `POST /a2a` reached the same engine with
  * whatever text a message part carried, bounded only by a 256 KB body limit.
- * A query costs a full catalog scan, and when embeddings are active it costs a
- * billed Voyage embedding plus a billed Anthropic re-rank — so the ceiling
+ * A query can reach a billed Anthropic search request, so the ceiling
  * belongs with the work, not with one of the doors to it.
  */
 export const MAX_SUGGEST_QUERY_CHARS = 500;
@@ -869,7 +569,7 @@ export class SuggestQueryTooLongError extends Error {
   readonly maxChars = MAX_SUGGEST_QUERY_CHARS;
   constructor(actualChars: number) {
     super(
-      `Query must be under ${MAX_SUGGEST_QUERY_CHARS} characters (received ${actualChars}).`,
+      `Query must be under ${MAX_SUGGEST_QUERY_CHARS} characters (received ${actualChars}).`
     );
     this.name = "SuggestQueryTooLongError";
   }
@@ -893,423 +593,122 @@ export function assertSuggestQueryLength(query: string): void {
 export async function suggest(req: {
   query: string;
   limit?: number;
+  clientIp?: string;
 }): Promise<SuggestResponse> {
   // Before anything else, including the cache lookup — an oversized query must
   // not be normalized, hashed or stored, only refused.
   assertSuggestQueryLength(req.query);
+  if (req.query.trim().length < 2)
+    return {
+      recommendation: null,
+      alternatives: [],
+      total_matches: 0,
+      query_understood_as: req.query.trim(),
+    };
 
   const normalized = normalizeQuery(req.query);
-  const limit = req.limit ?? 3;
-
-  // Check query cache first
-  const cached = getQueryCached(normalized);
-  if (cached) return cached;
-
+  const limit = Math.min(
+    10,
+    Math.max(1, Number.isFinite(req.limit) ? Math.floor(req.limit!) : 3)
+  );
+  // Load first so a catalogue refresh invalidates query-cache entries too.
   const items = await loadCatalog();
-
-  let result: SuggestResponse;
-  if (useEmbeddings && items[0]?.embedding.length > 0) {
-    result = await suggestSemantic(normalized, req.query, items, limit);
-  } else {
-    result = suggestKeyword(normalized, items, limit);
-  }
-
-  setQueryCache(normalized, result);
+  const cacheKey = `${limit}:${normalized.toLowerCase()}:${[...extractCountries(normalized).codes].sort().join(",")}`;
+  const cached = getQueryCached(cacheKey);
+  if (cached) return cached;
+  const scored = keywordIndex!.search(normalized.slice(0, MAX_KEYWORD_QUERY_CHARS), { prefix: false });
+  const ranking = await rankWithModel({
+    prompt: catalogPrompt,
+    query: req.query,
+    limit,
+    ip: req.clientIp ?? "unknown",
+    slugs: new Set(items.map((i) => i.slug)),
+    confidentKeyword:
+      (scored[0]?.coverage ?? 0) >= 0.6 && (scored[0]?.score ?? 0) >= 3,
+  });
+  const result = ranking
+    ? responseFromPicks(
+        ranking.understood_as,
+        ranking.results.map((r) => ({
+          item: items.find((i) => i.slug === r.slug)!,
+          reason: r.reason,
+        })),
+        limit,
+        ranking.results.length
+      )
+    : keywordResponse(normalized, scored, limit, items);
+  // Budget-limited/error fallbacks are not cached: one IP must not poison the
+  // shared normalized-query cache for other callers or after transient outages.
+  if (ranking) setQueryCache(cacheKey, result);
   return result;
 }
 
-// ─── Semantic path (Voyage + Claude) ────────────────────────────────────────
-
-async function suggestSemantic(
-  normalized: string,
-  originalQuery: string,
-  items: CatalogItem[],
-  limit: number,
-): Promise<SuggestResponse> {
-  const queryEmbedding = await embedQuery(normalized);
-
-  const scored = items.map((item) => ({
-    item,
-    similarity: cosineSimilarity(queryEmbedding, item.embedding),
-  }));
-  scored.sort((a, b) => b.similarity - a.similarity);
-
-  const RETRIEVAL_THRESHOLD = 0.3;
-  const candidates = scored
-    .filter((s) => s.similarity >= RETRIEVAL_THRESHOLD)
-    .slice(0, 10);
-
-  if (candidates.length === 0) {
-    return {
-      recommendation: null,
-      alternatives: [],
-      total_matches: 0,
-      query_understood_as: originalQuery.trim(),
-    };
-  }
-
-  // Phase 2: Claude re-ranking (pass original query for natural phrasing)
-  return rerankWithClaude(originalQuery, candidates, limit);
-}
-
-async function rerankWithClaude(
+export function keywordResponse(
   query: string,
-  candidates: Array<{ item: CatalogItem; similarity: number }>,
+  scored: Array<{ item: CatalogItem }>,
   limit: number,
-): Promise<SuggestResponse> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return fallbackRanking(query, candidates, limit);
-  }
-
-  const client = new Anthropic({ apiKey });
-
-  const candidateDescriptions = candidates
-    .map(({ item, similarity }, i) => {
-      let desc = `[${i}] ${item.type.toUpperCase()}: "${item.name}" (slug: ${item.slug})`;
-      desc += `\n    ${item.description}`;
-      desc += `\n    Category: ${item.category}, Price: €${(item.priceCents / 100).toFixed(2)}`;
-      if (item.geography) desc += `, Geography: ${item.geography}`;
-      if (item.steps && item.steps.length > 0) {
-        desc += `\n    Steps: ${item.steps.map((s) => s.name).join(" → ")}`;
-      }
-      if (item.partOfSolutions && item.partOfSolutions.length > 0) {
-        desc += `\n    Part of solutions: ${item.partOfSolutions.map((s) => s.name).join(", ")}`;
-      }
-      desc += `\n    Semantic similarity: ${similarity.toFixed(3)}`;
-      return desc;
-    })
-    .join("\n\n");
-
-  try {
-    const response = await client.messages.create({
-      model: MODELS.capability_default.id,
-      max_tokens: 1000,
-      messages: [
-        {
-          role: "user",
-          content: `You are the recommendation engine for Strale, a marketplace of API capabilities for AI agents.
-
-A developer searched for: "${query}"
-
-Here are the top ${candidates.length} semantic matches from our catalog:
-
-${candidateDescriptions}
-
-Your job:
-1. Pick the SINGLE best match for the developer's intent. Prefer solutions over individual capabilities when the developer's query implies a multi-step workflow. But if they clearly want a single specific function, prefer the matching capability.
-2. Pick up to ${limit} alternatives. Rules:
-   - If the best match is a solution, alternatives can be other matching solutions OR individual capabilities that are NOT components of the best match.
-   - If the best match is a capability that is part of a solution, include that solution as an alternative (upsell).
-   - Never include capabilities that are steps within the recommended solution.
-3. For each pick, write a one-sentence match_reason explaining WHY it fits the developer's query — do NOT repeat the item's description.
-   Bad: "Verifies a Swedish company's identity and registration details" (that's just the description).
-   Good: "Best match for Swedish company verification — bundles company data, VAT, and sanctions in one call".
-   The match_reason must reference the user's query and explain the fit, not describe what the item does.
-4. Rephrase the developer's query into a clean, concise label (query_understood_as).
-5. CRITICAL: Set total_relevant to 0 if NONE of the candidates actually match the developer's intent. Semantic similarity alone is not enough — the candidate must functionally do what the developer is asking for.
-
-Here are examples of good output:
-
-Example 1 — Clear solution match:
-Query: "check if a swedish company exists"
-Candidates: [0: Nordic KYC — Sweden (solution), 1: Swedish Company Data (capability), 2: VAT Validate (capability)]
-Good output:
-{"best_index": 0, "best_match_reason": "Combines company lookup, VAT validation, and sanctions screening into one compliance check for Swedish companies", "alternatives": [{"index": 1, "match_reason": "Individual company data lookup if you only need basic company info without full verification"}], "query_understood_as": "Swedish company verification", "total_relevant": 2}
-
-Example 2 — No relevant match (veto):
-Query: "translate my website to french"
-Candidates: [0: Website Carbon Estimate (capability, similarity 0.31), 1: OG Image Check (capability, similarity 0.30)]
-Good output:
-{"best_index": 0, "best_match_reason": "", "alternatives": [], "query_understood_as": "Website translation to French", "total_relevant": 0}
-Note: total_relevant is 0 because none of the candidates actually do translation. The system will return null.
-
-Example 3 — Capability that's part of a solution (upsell):
-Query: "dns records for a domain"
-Candidates: [0: DNS Lookup (capability), 1: Domain Intelligence (solution containing DNS Lookup), 2: SSL Certificate Check (capability)]
-Good output:
-{"best_index": 0, "best_match_reason": "Queries A, AAAA, MX, TXT, CNAME, and NS records for any domain", "alternatives": [{"index": 1, "match_reason": "Full domain analysis including DNS, SSL, WHOIS, and reputation — use if you need more than just DNS records"}], "query_understood_as": "DNS record lookup", "total_relevant": 2}
-
-Return ONLY valid JSON:
-{
-  "best_index": <number>,
-  "best_match_reason": "one sentence",
-  "alternatives": [
-    { "index": <number>, "match_reason": "one sentence" }
-  ],
-  "query_understood_as": "clean rephrased query",
-  "total_relevant": <how many of the ${candidates.length} candidates are actually relevant to the query>
-}`,
-        },
-      ],
-    });
-
-    const responseText =
-      response.content[0].type === "text"
-        ? response.content[0].text.trim()
-        : "";
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logWarn("suggest-rerank-invalid-json", "Claude re-ranking returned invalid JSON, falling back");
-      return fallbackRanking(query, candidates, limit);
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    // Claude veto: if it says no candidates are relevant, return null
-    if (parsed.total_relevant === 0) {
-      return {
-        recommendation: null,
-        alternatives: [],
-        total_matches: 0,
-        query_understood_as: parsed.query_understood_as ?? query.trim(),
-      };
-    }
-
-    const bestIdx: number = parsed.best_index;
-    const best = candidates[bestIdx]?.item;
-
-    if (!best) {
-      return fallbackRanking(query, candidates, limit);
-    }
-
-    const recommendation = buildRecommendation(
-      best,
-      parsed.best_match_reason,
-    );
-
-    const alternatives: SuggestRecommendation[] = [];
-    const usedSlugs = new Set([best.slug]);
-
-    for (const alt of parsed.alternatives ?? []) {
-      const altItem = candidates[alt.index]?.item;
-      if (altItem && !usedSlugs.has(altItem.slug)) {
-        usedSlugs.add(altItem.slug);
-        alternatives.push(buildRecommendation(altItem, alt.match_reason));
-      }
-      if (alternatives.length >= limit) break;
-    }
-
-    return {
-      recommendation,
-      alternatives,
-      total_matches: parsed.total_relevant ?? candidates.length,
-      query_understood_as: parsed.query_understood_as ?? query.trim(),
-    };
-  } catch (err) {
-    logWarn("suggest-rerank-failed", "Claude re-ranking failed, falling back", {
-      err: err instanceof Error ? err.message : String(err),
-    });
-    return fallbackRanking(query, candidates, limit);
-  }
-}
-
-function fallbackRanking(
-  query: string,
-  candidates: Array<{ item: CatalogItem; similarity: number }>,
-  limit: number,
+  items: CatalogItem[] = scored.map((s) => s.item)
 ): SuggestResponse {
-  const reranked = candidates.map(({ item, similarity }) => ({ item, score: similarity }));
-
-  // Same rule as the keyword scorers, at this path's scale. The bonus here was
-  // always proportionate — cosine similarity runs 0.3–1.0 after the retrieval
-  // threshold, so 0.03 is a nudge rather than the override the keyword path's
-  // +3 became — but it was still unconditional, and this is the path that runs
-  // when Claude re-ranking is unavailable or has just failed. That is when the
-  // ranking most needs to be defensible, not least.
-  applyConditionalSolutionBonus(reranked, SEMANTIC_SOLUTION_BONUS);
-  reranked.sort((a, b) => b.score - a.score);
-
-  const best = reranked[0].item;
-  const recommendation = buildRecommendation(
-    best,
-    best.description.split(".")[0],
+  scored = groupSolutionVariants(scored, items);
+  const result = responseFromPicks(
+    query,
+    scored.map(({ item }) => ({
+      item,
+      reason: `Matches “${query.trim()}” in the catalogue.`,
+    })),
+    limit,
+    scored.length
   );
-
-  const primaryComponentSlugs = new Set(
-    best.type === "solution"
-      ? (best.steps ?? []).map((s) => s.capabilitySlug)
-      : [],
-  );
-
-  const alternatives: SuggestRecommendation[] = [];
-  for (const { item } of reranked.slice(1)) {
-    if (alternatives.length >= limit) break;
-    if (
-      item.type === "capability" &&
-      primaryComponentSlugs.has(item.slug)
-    )
-      continue;
-    alternatives.push(
-      buildRecommendation(item, item.description.split(".")[0]),
+  const best = scored[0]?.item;
+  const parentSlug =
+    best?.type === "capability" ? best.partOfSolutions?.[0]?.slug : undefined;
+  if (
+    parentSlug &&
+    result.alternatives.length < limit &&
+    !result.alternatives.some((a) => a.slug === parentSlug)
+  ) {
+    const parent = items.find(
+      (i) => i.type === "solution" && i.slug === parentSlug
     );
-  }
-
-  return {
-    recommendation,
-    alternatives,
-    total_matches: candidates.length,
-    query_understood_as: query.trim(),
-  };
-}
-
-// ─── Keyword fallback (no Voyage) ───────────────────────────────────────────
-
-/** The subset of a catalog item this scorer reads. Narrowed so tests can build
- *  one without standing up an embedding or a trust summary. */
-export interface KeywordScorable {
-  slug: string;
-  name: string;
-  description: string;
-  tokens: Set<string>;
-  primaryTokens: Set<string>;
-}
-
-/**
- * Score one catalog item against a tokenized query. Exported for testing — the
- * ranking rules here decide what a caller discovers, so they are worth pinning
- * down directly rather than only through the endpoint.
- */
-export function scoreKeywordMatch(
-  item: KeywordScorable,
-  queryTokens: Set<string>,
-  aliasTerms: Iterable<string>,
-  slugWords: readonly string[] = [],
-): number {
-  let score = 0;
-
-  for (const token of queryTokens) {
-    if (item.tokens.has(token)) score++;
-  }
-  for (const term of aliasTerms) {
-    if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
-    else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
-  }
-  // `queryTokens` is hyphen-split, so it can only ever hold a one-word slug;
-  // `slugWords` carries the typed words whole for hyphenated slugs and
-  // families ("invoice-verify" → invoice-verify-se). Same +2 as typeahead.
-  const slugHit =
-    queryTokens.has(item.slug) || slugWords.some((w) => isSlugFamilyMatch(item.slug, w));
-  if (slugHit) score += 2;
-
-  // Prefix matching on name and description, mirroring `typeahead`. Tokens are
-  // exact-match only, so without this the two scorers disagree: a developer
-  // asking whether an email address "is valid" never reaches email-validate,
-  // because "valid" is not the token "validate". The best match then fell to
-  // whichever unrelated item happened to share a common word — live, that query
-  // returned eori-validate, a customs identifier.
-  const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
-  const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
-  for (const qw of queryTokens) {
-    if (item.tokens.has(qw)) continue; // already counted as an exact match
-    if (nameWords.some((w) => w.startsWith(qw))) score++;
-    if (descWords.some((w) => w.startsWith(qw))) score++;
-  }
-
-  // Identity match: the query names every word of this item's slug, so it is
-  // asking for this thing by name ("validate an IBAN" → iban-validate). Type-
-  // neutral: a solution named in full earns it too. Without this, naming a
-  // capability exactly only ties the broader solution sharing one word, and the
-  // tie goes to the solution. Not on top of a slug hit: both mean "the query
-  // names this item", and one naming is worth +2 however it was spelled.
-  const slugTokens = item.slug.split("-").filter((t) => t.length > 2);
-  if (!slugHit && slugTokens.length > 1 && slugTokens.every((t) => queryTokens.has(t))) {
-    score += 2;
-  }
-
-  return score;
-}
-
-function suggestKeyword(
-  query: string,
-  items: CatalogItem[],
-  limit: number,
-): SuggestResponse {
-  const queryTokens = tokenize(query);
-  if (queryTokens.size === 0) {
-    return {
-      recommendation: null,
-      alternatives: [],
-      total_matches: 0,
-      query_understood_as: query.trim(),
-    };
-  }
-
-  // Same vocabulary bridge as typeahead — this path runs whenever
-  // VOYAGE_API_KEY is absent, so it must not be blind to synonyms the
-  // typeahead surface understands.
-  const aliasTerms = aliasTermsFor([...queryTokens]);
-
-  const scored: Array<{ item: CatalogItem; score: number }> = [];
-
-  const slugWords = parseTypeaheadQuery(query).hyphenated.map((h) => h.word);
-
-  for (const item of items) {
-    const score = scoreKeywordMatch(item, queryTokens, aliasTerms, slugWords);
-    if (score > 0) scored.push({ item, score });
-  }
-
-  applyConditionalSolutionBonus(scored);
-
-  scored.sort((a, b) => b.score - a.score);
-
-  if (scored.length === 0) {
-    return {
-      recommendation: null,
-      alternatives: [],
-      total_matches: 0,
-      query_understood_as: query.trim(),
-    };
-  }
-
-  const best = scored[0].item;
-  const recommendation = buildRecommendation(
-    best,
-    best.description.split(".")[0],
-  );
-
-  const excludedSlugs = new Set<string>();
-  if (best.type === "solution") {
-    for (const step of best.steps ?? []) {
-      excludedSlugs.add(step.capabilitySlug);
-    }
-  }
-
-  const alternatives: SuggestRecommendation[] = [];
-  for (const { item } of scored.slice(1)) {
-    if (alternatives.length >= limit) break;
-    if (
-      item.type === "capability" &&
-      excludedSlugs.has(item.slug)
-    )
-      continue;
-    alternatives.push(
-      buildRecommendation(item, item.description.split(".")[0]),
-    );
-  }
-
-  if (best.type === "capability" && best.partOfSolutions?.length) {
-    const parentSlug = best.partOfSolutions[0].slug;
-    if (!alternatives.some((a) => a.slug === parentSlug)) {
-      const parentItem = items.find(
-        (i) => i.type === "solution" && i.slug === parentSlug,
+    if (parent)
+      result.alternatives.push(
+        buildRecommendation(
+          parent,
+          `A broader workflow including ${best!.name}.`
+        )
       );
-      if (parentItem && alternatives.length < limit) {
-        alternatives.push(
-          buildRecommendation(
-            parentItem,
-            parentItem.description.split(".")[0],
-          ),
-        );
-      }
-    }
   }
+  return result;
+}
 
+export function responseFromPicks(
+  query: string,
+  picks: Array<{ item: CatalogItem; reason: string }>,
+  limit: number,
+  total: number
+): SuggestResponse {
+  const [best, ...rest] = picks;
+  if (!best)
+    return {
+      recommendation: null,
+      alternatives: [],
+      total_matches: 0,
+      query_understood_as: sanitizeSearchText(query, 120),
+    };
+  const excluded = new Set(
+    best.item.type === "solution"
+      ? best.item.steps?.map((s) => s.capabilitySlug)
+      : []
+  );
+  const alternatives = rest
+    .filter((p) => !excluded.has(p.item.slug))
+    .slice(0, limit)
+    .map((p) => buildRecommendation(p.item, p.reason));
   return {
-    recommendation,
+    recommendation: buildRecommendation(best.item, best.reason),
     alternatives,
-    total_matches: scored.length,
-    query_understood_as: query.trim(),
+    total_matches: total,
+    query_understood_as: sanitizeSearchText(query, 120),
   };
 }
 
@@ -1317,14 +716,14 @@ function suggestKeyword(
 
 function buildRecommendation(
   item: CatalogItem,
-  matchReason: string,
+  matchReason: string
 ): SuggestRecommendation {
   const rec: SuggestRecommendation = {
     type: item.type,
     slug: item.slug,
     name: item.name,
     description: item.description,
-    match_reason: matchReason,
+    match_reason: sanitizeSearchText(matchReason, 240),
     price_cents: item.priceCents,
   };
 
@@ -1347,9 +746,10 @@ function buildRecommendation(
         slug: parent.slug,
         name: parent.name,
         price_cents: parent.priceCents,
-        extra_description: parent.otherCapabilityNames.length > 0
-          ? `also includes ${parent.otherCapabilityNames.join(", ")}`
-          : "",
+        extra_description:
+          parent.otherCapabilityNames.length > 0
+            ? `also includes ${parent.otherCapabilityNames.join(", ")}`
+            : "",
       };
     }
   }

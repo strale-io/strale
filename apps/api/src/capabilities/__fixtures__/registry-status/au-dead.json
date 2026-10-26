@@ -1,0 +1,10 @@
+{
+  "response": "<response><businessEntity><entityStatus><entityStatusCode>Cancelled</entityStatusCode></entityStatus></businessEntity></response>",
+  "capture": {
+    "url": "https://abr.business.gov.au/ABN/View?id=38111203993",
+    "captured_at": "2026-10-26T13:31:06.365498+00:00",
+    "http_status": 200,
+    "raw_sha256": "56b42a31c1f1185d83102a3964749591048dbe121477a997fc3bf0547f4bbcd2",
+    "note": "Live ABR public page records Cancelled; projected value in synthetic API XML envelope. No live XML call: API requires GUID."
+  }
+}

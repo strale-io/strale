@@ -1,0 +1,65 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "npm test; ci-local.sh; apps/api/scripts/mutation-test.mjs",
+    "commit": "5469b7d66cd733c567f81b7925cd8aab79414b10"
+  },
+  "at": "2026-10-26T18:49:45.849Z",
+  "inputs": {
+    "source": "/tmp/search-round2-receipt-input.json"
+  },
+  "summary": {
+    "full_api_passed": 5485,
+    "full_api_skipped": 321,
+    "focused_passed": 95,
+    "root_ci_failures": 0,
+    "context_tests_passed": 180,
+    "mutation_cases_caught": 4,
+    "golden_top1_before": 81,
+    "golden_top1_after": 81,
+    "golden_top3_before": 86,
+    "golden_top3_after": 86,
+    "keyword_none_passed": 2,
+    "keyword_none_total": 3,
+    "oversized_query_max_ms": 18.798,
+    "old_engine_distinct_query_ms": 1221.715
+  },
+  "topic": "search-round2",
+  "raw": {
+    "inputs": {
+      "baseline": "990b219c",
+      "commands": [
+        "npm test",
+        "bash ci-local.sh",
+        "npx tsc --noEmit",
+        "node apps/api/scripts/mutation-test.mjs"
+      ]
+    },
+    "raw": {
+      "full_api_summary": " 322 passed | 31 skipped (353)\n      Tests  5485 passed | 321 skipped (5806)\n   Start at  18:47:24\n   Duration  119.03s (transform 15.19s, setup 3.27s, import 131.25s, tests 149.97s, environment 49ms)\n\n",
+      "focused_summary": " 7 passed (7)\n      Tests  95 passed (95)\n   Start at  18:48:19\n   Duration  4.43s (transform 1.36s, setup 485ms, import 2.24s, tests 6.27s, environment 1ms)\n\n",
+      "root_ci_output": "CI-LOCAL-DONE\n",
+      "context_summary": "180\nℹ suites 0\nℹ pass 180\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 127059.034638\n",
+      "mutations": [
+        {
+          "name": "country-demotion",
+          "output": "candidate commit: 1c6dfe4ce3a799d83ad114b11c70540d4c6013f1\n\n── baseline (must PASS) ─────────────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 17 skipped (18)\n   Start at  18:45:55\n   Duration  287ms (transform 81ms, setup 32ms, import 78ms, tests 11ms, environment 0ms)\n\n\n── mutated apps/api/src/lib/search/keyword.ts (must FAIL) ──────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n ❯ src/lib/search/keyword.test.ts (18 tests | 1 failed | 17 skipped) 11ms\n     × demotes another single-country registry even when its lexical score is stronger 9ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/lib/search/keyword.test.ts > keyword relevance constraints > demotes another single-country registry even when its lexical score is stronger\nAssertionError: expected 0.3495890400911607 to be close to 0.0524383560136741, received difference is 0.2971506840774866, but expected 0.005\n ❯ src/lib/search/keyword.test.ts:95:36\n     93|     expect(swedish[0].item.slug).toBe(\"swedish-company-data\");\n     94|     const wrong = swedish.find((r) => r.item.slug === \"german-company-…\n     95|     if (wrong) expect(wrong.score).toBeCloseTo(base[0].score * 0.15);\n       |                                    ^\n     96|   });\n     97|   it(\"never infers a country by edit distance\", () => {\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 17 skipped (18)\n   Start at  18:45:56\n   Duration  345ms (transform 110ms, setup 39ms, import 105ms, tests 11ms, environment 0ms)\n\n\n── restored apps/api/src/lib/search/keyword.ts from 1c6dfe4ce3a7 ───────\n\n── after restore (must PASS again) ─────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 17 skipped (18)\n   Start at  18:45:57\n   Duration  298ms (transform 115ms, setup 43ms, import 103ms, tests 9ms, environment 0ms)\n\n\nMUTATION CAUGHT — green → red → green. The test discriminates.\n"
+        },
+        {
+          "name": "fallback-not-cached",
+          "output": "candidate commit: 1c6dfe4ce3a799d83ad114b11c70540d4c6013f1\n\n── baseline (must PASS) ─────────────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 36 skipped (37)\n   Start at  18:45:58\n   Duration  949ms (transform 230ms, setup 40ms, import 111ms, tests 646ms, environment 0ms)\n\n\n── mutated apps/api/src/lib/suggest.ts (must FAIL) ──────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n ❯ src/lib/search/smart.test.ts (37 tests | 1 failed | 36 skipped) 682ms\n     × does not cache keyword fallback results after a transient model error 680ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/lib/search/smart.test.ts > suggest wire mapping and engine fallback > does not cache keyword fallback results after a transient model error\nAssertionError: expected \"vi.fn()\" to be called 2 times, but got 1 times\n ❯ src/lib/search/smart.test.ts:294:26\n    292|     expect(fallback.recommendation?.match_reason).toContain(\"Matches\");\n    293|     const recovered = await suggest({ query: \"email validate\", clientI…\n    294|     expect(mocks.create).toHaveBeenCalledTimes(2);\n       |                          ^\n    295|     expect(recovered.recommendation?.match_reason).toBe(body().results…\n    296|   });\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 36 skipped (37)\n   Start at  18:46:00\n   Duration  1.03s (transform 263ms, setup 41ms, import 121ms, tests 682ms, environment 0ms)\n\n\n── restored apps/api/src/lib/suggest.ts from 1c6dfe4ce3a7 ───────\n\n── after restore (must PASS again) ─────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 36 skipped (37)\n   Start at  18:46:01\n   Duration  1.26s (transform 316ms, setup 39ms, import 136ms, tests 908ms, environment 0ms)\n\n\nMUTATION CAUGHT — green → red → green. The test discriminates.\n"
+        },
+        {
+          "name": "client-ip",
+          "output": "candidate commit: 1c6dfe4ce3a799d83ad114b11c70540d4c6013f1\n\n── baseline (must PASS) ─────────────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 36 skipped (37)\n   Start at  18:46:04\n   Duration  1.17s (transform 315ms, setup 44ms, import 160ms, tests 729ms, environment 0ms)\n\n\n── mutated apps/api/src/lib/suggest.ts (must FAIL) ──────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n ❯ src/lib/search/smart.test.ts (37 tests | 1 failed | 36 skipped) 749ms\n     × passes clientIp through suggest into the actual ranker's separate IP budgets 747ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/lib/search/smart.test.ts > suggest wire mapping and engine fallback > passes clientIp through suggest into the actual ranker's separate IP budgets\nAssertionError: expected \"vi.fn()\" to be called 11 times, but got 10 times\n ❯ src/lib/search/smart.test.ts:311:26\n    309|     expect(mocks.create).toHaveBeenCalledTimes(10);\n    310|     const independent = await suggest({ query: \"email validate second …\n    311|     expect(mocks.create).toHaveBeenCalledTimes(11);\n       |                          ^\n    312|     expect(independent.recommendation?.match_reason).toBe(body().resul…\n    313|   });\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 36 skipped (37)\n   Start at  18:46:06\n   Duration  1.13s (transform 281ms, setup 34ms, import 137ms, tests 749ms, environment 0ms)\n\n\n── restored apps/api/src/lib/suggest.ts from 1c6dfe4ce3a7 ───────\n\n── after restore (must PASS again) ─────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 36 skipped (37)\n   Start at  18:46:08\n   Duration  966ms (transform 246ms, setup 36ms, import 114ms, tests 633ms, environment 0ms)\n\n\nMUTATION CAUGHT — green → red → green. The test discriminates.\n"
+        },
+        {
+          "name": "old-unbounded-engine-final",
+          "output": "candidate commit: 5469b7d66cd733c567f81b7925cd8aab79414b10\n\n── baseline (must PASS) ─────────────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 12 skipped (13)\n   Start at  18:47:22\n   Duration  521ms (transform 229ms, setup 41ms, import 280ms, tests 23ms, environment 0ms)\n\n\n── mutated apps/api/src/lib/search/keyword.ts (must FAIL) ──────────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n ❯ src/lib/search/search-quality.test.ts (13 tests | 1 failed | 12 skipped) 1278ms\n     × bounds synchronous work for a 10 KB query, including distinct unknown tokens 1270ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/lib/search/search-quality.test.ts > frozen public catalogue quality gate > bounds synchronous work for a 10 KB query, including distinct unknown tokens\nAssertionError: expected 1221.714905 to be less than 50\n ❯ src/lib/search/search-quality.test.ts:33:43\n     31|       const started = performance.now();\n     32|       index.search(query);\n     33|       expect(performance.now() - started).toBeLessThan(50);\n       |                                           ^\n     34|     }\n     35|   });\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 12 skipped (13)\n   Start at  18:47:24\n   Duration  1.82s (transform 262ms, setup 67ms, import 281ms, tests 1.28s, environment 0ms)\n\n\n── restored apps/api/src/lib/search/keyword.ts from 5469b7d66cd7 ───────\n\n── after restore (must PASS again) ─────────────────────────\n\n RUN  v4.1.4 /tmp/strale-wt-search-round2/apps/api\n\n\n Test Files  1 passed (1)\n      Tests  1 passed | 12 skipped (13)\n   Start at  18:47:27\n   Duration  562ms (transform 235ms, setup 49ms, import 285ms, tests 18ms, environment 0ms)\n\n\nMUTATION CAUGHT — green → red → green. The test discriminates.\n"
+        }
+      ],
+      "evaluation_artifact": "archive/sessions/2026-10-26-search-rebuild/round2-evaluation.json",
+      "check_results_artifact": "archive/sessions/2026-10-26-search-rebuild/round2-checks.json"
+    }
+  }
+}

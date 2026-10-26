@@ -1,0 +1,525 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "784d66873d337307afdad60890b34a7075d1b63f"
+  },
+  "at": "2026-10-26T20:48:21.438Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "base_commit": "784d66873d337307afdad60890b34a7075d1b63f",
+    "live_checks": "No new live upstream checks or authenticated screenings; mocked actual-adapter tests cover ZWNJ and XML names. Prior Round 1 live results remain in their original receipt.",
+    "remaining": "Production onboarding/discovery, DB validation, authenticated smoke and ready:true verification, independent orchestrator review, commit/push/PR handling; no production writes or publishing performed"
+  },
+  "topic": "invoice-counterparty-check-round-2",
+  "raw": {
+    "ok": true,
+    "base_commit": "784d66873d337307afdad60890b34a7075d1b63f",
+    "source_sha256": {
+      "apps/api/src/lib/invoice-counterparty/compose.ts": "85ffea2029a72d5d0d12b95f02e75dd3165ba1da94797c53f509b071a14a2c26",
+      "apps/api/src/lib/invoice-counterparty/name.ts": "9ba27903f5277268fd97626725aaca53440d4ea7e17bbd469b2921dfecf98584",
+      "apps/api/src/lib/invoice-counterparty/compose.test.ts": "33ab24c930f452f48e8454d57cbfa46b8d86bfbfe594e54c5d534327e6e67d04",
+      "apps/api/src/lib/invoice-counterparty/sanctions-contract.test.ts": "6abd14bdfc52bbdfc80b2475f4306a4bb80346e76264f372015b78fcc8c045d8",
+      "manifests/invoice-counterparty-check.yaml": "5fc9a50a0a92bdcfedece33bb8e0773bfc7a3051b1f191502c35b389e4896c3a"
+    },
+    "focused": {
+      "command": "cd apps/api && npx vitest run src/lib/invoice-counterparty src/lib/company-status src/lib/composite-breaker.test.ts",
+      "exit_code": 0,
+      "passed": 421,
+      "failed": 0,
+      "invoice_tests": 143,
+      "shared_breaker_tests": 7
+    },
+    "full_api": {
+      "command": "npm test",
+      "exit_code": 0,
+      "passed": 5657,
+      "skipped": 321,
+      "total": 5978,
+      "log_sha256": "5d4adf0ad211f933d178fb422489850c0341b699d266b069a432af215d5d3f58"
+    },
+    "fail_before": {
+      "method": "Tests added and run against untouched implementation at base_commit before fixes; no source mutation or Git restoration used.",
+      "passed": 97,
+      "failed": 29,
+      "failing_tests": [
+        "Round 2 counterparty regressions B1: flags conflicting identifiers and screens both names for SE556703748501",
+        "Round 2 counterparty regressions B1: flags conflicting identifiers and screens both names for FI01120389",
+        "Round 2 counterparty regressions B1: records normalized identifier agreement for SE556703748501",
+        "Round 2 counterparty regressions B1: records normalized identifier agreement for FI01120389",
+        "Round 2 counterparty regressions B1: records normalized identifier agreement for NO923609016MVA",
+        "Round 2 counterparty regressions B1: records normalized identifier agreement for BE0403199702",
+        "Round 2 counterparty regressions B1: leaves linkage absent when no deterministic mapping exists",
+        "Round 2 counterparty regressions B1: retains the first screening but refuses billing if the second fails",
+        "Round 2 counterparty regressions B2: registry not-found is completed evidence: CapabilityRefusalError: PRH has no record that was found for this FI identifier (not found): No Finnish company found",
+        "Round 2 counterparty regressions B2: registry not-found is completed evidence: Error: No Finnish company found for business ID 0112038-9",
+        "Round 2 counterparty regressions B2: transient registry failure is visible with a retry reason",
+        "Round 2 counterparty regressions B2: check lists partition the check set for normal",
+        "Round 2 counterparty regressions B2: check lists partition the check set for error",
+        "Round 2 counterparty regressions B2: check lists partition the check set for unavailable",
+        "Round 2 counterparty regressions B2: check lists partition the check set for conflict",
+        "Round 2 counterparty regressions B2: check lists partition the check set for required_error",
+        "Round 2 counterparty regressions item 1: reports hits with short or control/format-containing names: شرکت‌آزمایشی",
+        "Round 2 counterparty regressions item 1: reports hits with short or control/format-containing names: A",
+        "Round 2 counterparty regressions item 1: reports hits with short or control/format-containing names: A\u0000\n‮B",
+        "Round 2 counterparty regressions item 1: sanitizes registry names without falling back to invoice",
+        "Round 2 counterparty regressions item 1: sanitizes vies names without falling back to invoice",
+        "Round 2 counterparty regressions item 2: exposes legal-form differences for Volvo AB / Volvo GmbH",
+        "Round 2 counterparty regressions item 2: exposes legal-form differences for Acme Ltd. / Acme Limited",
+        "Round 2 counterparty regressions item 2: exposes legal-form differences for Acme B.V. / Acme BV",
+        "Round 2 counterparty regressions item 2: exposes legal-form differences for Acme A/S / Acme ApS",
+        "Round 2 counterparty regressions item 2: exposes legal-form differences for Acme / Acme Oy",
+        "Round 2 counterparty regressions item 2: exposes legal-form differences for Acme AB / Acme AB",
+        "Round 2 counterparty regressions item 4: logs sanitized failure classification without input or vendor message",
+        "Round 2 counterparty regressions item 5: decodes XML entities in registry and sanctions names"
+      ]
+    },
+    "root_ci": {
+      "job": "check",
+      "commands": [
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit_code": 0,
+          "duration_seconds": 2.01,
+          "log_sha256": "d65d3e0d3125ecab32b3c96ec984120737a991214f25c9ba920cdcdab0e4f68f"
+        },
+        {
+          "command": "npm --workspace=packages/sdk-typescript run build",
+          "exit_code": 0,
+          "duration_seconds": 1.48,
+          "log_sha256": "29a9de7fe4fd80ac352d1aa546db3c9942d4d9c632951f724bc9416065fb59bb"
+        },
+        {
+          "command": "npm run typecheck",
+          "exit_code": 0,
+          "duration_seconds": 36.19,
+          "log_sha256": "7e183b6b437e37506fa965221a26539762a8598fe39de4f5ef9a16b1e2edc419"
+        },
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit_code": 0,
+          "duration_seconds": 1.37,
+          "log_sha256": "aa3f63c06e4ffbeda7746fbf666cce61be14245340927a08ac2dd35c544c567b"
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit_code": 0,
+          "duration_seconds": 0.35,
+          "log_sha256": "0b62c317e91b01715e627e61445b6a711ea36a4da1448da0a34268328f3e287b"
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit_code": 0,
+          "duration_seconds": 0.26,
+          "log_sha256": "ce3d7ecec6be264aff23c97c6c04876b234f8a8c3e3dce86b146e766dc6cf24a"
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.06,
+          "log_sha256": "0e96162c9937a97fd56f8d74f07933d6cea3ad7623ededce4379317adac915b0"
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit_code": 0,
+          "duration_seconds": 0.41,
+          "log_sha256": "be5e1ce8e79a42818b2a052f602619fe48cdbc03211056ad91c3ca9b3376da0b"
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.21,
+          "log_sha256": "807be70b60fe57b1e393417e15a02f7a39c6d1e8d9c4c9421df22f48ed3560fb"
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.05,
+          "log_sha256": "ff166fc4821598aa8edc1c91cc7ede8322fb1a4685a9b8699c9eaeade6da4a98"
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit_code": 0,
+          "duration_seconds": 0.7,
+          "log_sha256": "565906a972445909eee9f66e78e880b1af46b2a29d6aaf73e61a18e047bc2415"
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit_code": 0,
+          "duration_seconds": 1.59,
+          "log_sha256": "e6fddf74de662c7f997b5c0c1d8895467a326f208b4ee73887e0288da4ce268e"
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.76,
+          "log_sha256": "49dbf78642f2c3e85041449e38c39a123eba6b112b2f990ecd82cdaaf0ecff61"
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit_code": 0,
+          "duration_seconds": 0.13,
+          "log_sha256": "5267e778115f5e85f3058c5f972ac9299170b75cc0d9a202fec7a5fd324c73c5"
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit_code": 0,
+          "duration_seconds": 0.28,
+          "log_sha256": "12b852cede02c558fc7136cfcbac0d8e79e0117ccb6655c78e1fe6c75815ecd5"
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit_code": 0,
+          "duration_seconds": 0.48,
+          "log_sha256": "8742d0bebc7e964c4fc129d3b225ce8cabb40c240ea3f94e222f550f4ec85f2d"
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit_code": 0,
+          "duration_seconds": 0.24,
+          "log_sha256": "21fb12f67bb183a99bf6514b3919c6e136a8cbda084281691361dc0d555f67aa"
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit_code": 0,
+          "duration_seconds": 0.26,
+          "log_sha256": "9bd454e0f8c743c6e010f7a9b2b7ac8dd3d2ebd78b6f419a7f3b6f61b2e8a574"
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.06,
+          "log_sha256": "8f13c1f73cbb9a00505aa2981ecf639b400ddad43086a319e87450c62ef85e0a"
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.3,
+          "log_sha256": "99d9e23cb3e22b6fc7a29f113655855458a15bfae4ed4c9906b61dccd145a0c8"
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "exit_code": 0,
+          "duration_seconds": 0.17,
+          "log_sha256": "d91a2f6532a808143549013bb08d0c3f8e5818b52c393d55609fd0fa1f740938"
+        },
+        {
+          "command": "npm run programs:check",
+          "exit_code": 0,
+          "duration_seconds": 0.46,
+          "log_sha256": "e1c1a78c590218752e0bc9ae7f24ee5643e9fcc0506d121f0d4257b7795051f2"
+        },
+        {
+          "command": "npm run programs:test",
+          "exit_code": 0,
+          "duration_seconds": 2.74,
+          "log_sha256": "a346abb1475ffec64d2127b4e1dfc3b909e2bf32c029aba5c068568be5c51b97",
+          "tests_passed": 30
+        },
+        {
+          "command": "npm run research:check",
+          "exit_code": 0,
+          "duration_seconds": 1.32,
+          "log_sha256": "9a719b98721598b1e4c22a9662764949d1fd5919e4bf5e463205cd51ca534e72"
+        },
+        {
+          "command": "npm run research:test",
+          "exit_code": 0,
+          "duration_seconds": 4.71,
+          "log_sha256": "3e791d22340db3046201a2d3ae7f4d81ab6e3c3458515e29ebf929f521255e41",
+          "tests_passed": 31
+        },
+        {
+          "command": "npm run design:check",
+          "exit_code": 0,
+          "duration_seconds": 1.54,
+          "log_sha256": "93829f0fb3fd118d4e78f9e6ce4de54f5f2a09cc22ee6961cb3834269b6b3165"
+        },
+        {
+          "command": "npm run design:test",
+          "exit_code": 0,
+          "duration_seconds": 12.82,
+          "log_sha256": "30b0060300fd83a51ce67e13dd044a4e79f0600e85d60cbf6912fe13d585bbf6",
+          "tests_passed": 84
+        },
+        {
+          "command": "npm run env:check",
+          "exit_code": 0,
+          "duration_seconds": 0.76,
+          "log_sha256": "6b91ea53931524583020311d0acb4a8d1c8cf5cc0bf06ec42b6604e843befc28"
+        },
+        {
+          "command": "npm run env:test",
+          "exit_code": 0,
+          "duration_seconds": 1.27,
+          "log_sha256": "ffc1f440c82a3ff896f7e62493a7a9b6cae9460f2e5c3335f942809f66b49cd7",
+          "tests_passed": 24
+        },
+        {
+          "command": "npm run vendors:check",
+          "exit_code": 0,
+          "duration_seconds": 1.34,
+          "log_sha256": "a9d9477b73ca61296349ddfec704f3f5c4d0ff3b9efcf1b7224b5876909379b5"
+        },
+        {
+          "command": "npm run vendors:test",
+          "exit_code": 0,
+          "duration_seconds": 3.67,
+          "log_sha256": "80fbd4ae501c1e8d4d955de61203c06ff6ed9a57ac158dc8e6f681cc789f357c",
+          "tests_passed": 78
+        },
+        {
+          "command": "npm run distribution:check",
+          "exit_code": 0,
+          "duration_seconds": 0.36,
+          "log_sha256": "274334e808caf2bc11b6fb8b0a063a63fbf1b179b981ca454aea700578361bea"
+        },
+        {
+          "command": "npm run distribution:test",
+          "exit_code": 0,
+          "duration_seconds": 0.57,
+          "log_sha256": "4490253b4742b037456ce951157033eecf10a36fac8b6c446de56039859a2b1b",
+          "tests_passed": 15
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "exit_code": 0,
+          "duration_seconds": 0.42,
+          "log_sha256": "596526440ee4b85cec7e700e3be8422b79372b9783b8019dc82ebcc277cf6c5b",
+          "tests_passed": 20
+        },
+        {
+          "command": "npm run candidates:test",
+          "exit_code": 0,
+          "duration_seconds": 0.35,
+          "log_sha256": "a65fad2a74b339a7d7ccc1f14d3df5336191e597464f82c914fc8c35c564bf94",
+          "tests_passed": 3
+        },
+        {
+          "command": "npm run protocols:check",
+          "exit_code": 0,
+          "duration_seconds": 0.27,
+          "log_sha256": "27cb2403502b36ff2d54439bb1a7c42cedc651abedfed4a8ceab261ef1c9382e"
+        },
+        {
+          "command": "npm run protocols:test",
+          "exit_code": 0,
+          "duration_seconds": 0.41,
+          "log_sha256": "3dae32b39afbb3853f1651fcb730d1b50470c9e9070bc189f0f323cf8cae3ac5",
+          "tests_passed": 12
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "exit_code": 0,
+          "duration_seconds": 0.5,
+          "log_sha256": "79c6c1a59e32ba1d16dc62256a910ccedc7a396262e4b77dbcb7898f630d02be"
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "exit_code": 0,
+          "duration_seconds": 0.96,
+          "log_sha256": "564930f69abfc74cfc29cc2adf400486047cc33b6b6e8cf570a0c646682471e3",
+          "tests_passed": 16
+        },
+        {
+          "command": "npm run scheduled:check",
+          "exit_code": 0,
+          "duration_seconds": 0.39,
+          "log_sha256": "80c0a1b5573ff7914b8320f01be3da34be1e07d32f31ef2c4ee7f269c4de12d3"
+        },
+        {
+          "command": "npm run scheduled:test",
+          "exit_code": 0,
+          "duration_seconds": 1.05,
+          "log_sha256": "cd4f3aaf035c39a1aded3e4617444a93381eb9e1c8eff95d804b199c28b1801f",
+          "tests_passed": 43
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "exit_code": 0,
+          "duration_seconds": 1.42,
+          "log_sha256": "6ad761dcf28093bedad8b6626c6fc318f2e73f84869ffa454a309fde33aee8e4",
+          "tests_passed": 24
+        },
+        {
+          "command": "npm run models:check",
+          "exit_code": 0,
+          "duration_seconds": 0.49,
+          "log_sha256": "2090fd4d6a18e634fb5a10bd910203b5d80d5800fe65efd9ee433af3cd01b5ae"
+        },
+        {
+          "command": "npm run models:test",
+          "exit_code": 0,
+          "duration_seconds": 0.97,
+          "log_sha256": "cf49688989138de412304bcbd1b055995eced39871b1aea13aac5b1e2c6f4021",
+          "tests_passed": 14
+        },
+        {
+          "command": "npm run claims:check",
+          "exit_code": 0,
+          "duration_seconds": 3.62,
+          "log_sha256": "1d997d1f1d6f00dab198d3ed305b31e75b649094765d488950c0339b0aca6d8f"
+        },
+        {
+          "command": "npm run claims:test",
+          "exit_code": 0,
+          "duration_seconds": 2.84,
+          "log_sha256": "287eea39bbd55f928eeb8420821042300ce485b34c6fdb8fe0b4ca93844b25b8",
+          "tests_passed": 18
+        },
+        {
+          "command": "npm run docs:check",
+          "exit_code": 0,
+          "duration_seconds": 0.24,
+          "log_sha256": "09fa0b728ac4ccb15a2482e7a8af95140cdcc2b0035195ef62b7b5353fbb093e"
+        },
+        {
+          "command": "npm run docs:test",
+          "exit_code": 0,
+          "duration_seconds": 0.58,
+          "log_sha256": "c36958a1734dbb1ff9f81a50d3fd73717099634e0684b5ce9dd0ae6c4e6f89c5",
+          "tests_passed": 6
+        },
+        {
+          "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+          "exit_code": 0,
+          "duration_seconds": 0.1,
+          "log_sha256": "defafeb7337cb5ee191ba82dc06943c6c533c6d70bd2b04007dea87a23a5a31c"
+        },
+        {
+          "command": "npm run archive:index:test",
+          "exit_code": 0,
+          "duration_seconds": 0.71,
+          "log_sha256": "8c02d549782f6212bd0ed7ed4b7d311688c63a722934d921d0ca1a0a5e9c321d",
+          "tests_passed": 12
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit_code": 0,
+          "duration_seconds": 14.58,
+          "log_sha256": "5ce4103eda4cf475c774b7aab29e49155048d4828d97ef98d72974c859fc9ee5"
+        },
+        {
+          "command": "npm run receipts:test",
+          "exit_code": 0,
+          "duration_seconds": 6.35,
+          "log_sha256": "5840458dacc20a50410afde13d76c045fc5337e05a12358e22815600bc580e9b",
+          "tests_passed": 25
+        },
+        {
+          "command": "npm run migrations:check",
+          "exit_code": 0,
+          "duration_seconds": 0.23,
+          "log_sha256": "43fbc4828157c64855323071651a541ff7ac2935013e2922901441dd3899d790"
+        },
+        {
+          "command": "npm run migrations:test",
+          "exit_code": 0,
+          "duration_seconds": 0.37,
+          "log_sha256": "c4a98a628da413f9823c9e6e4d6e80b26a4b0d217831a32ad5173a56e0c23dcf",
+          "tests_passed": 23
+        },
+        {
+          "command": "npm run handoff:test",
+          "exit_code": 0,
+          "duration_seconds": 12.91,
+          "log_sha256": "a60f13bb862cc09c68f40bf46b004872024cfa29ce28162c85be52ae943b7f4f",
+          "tests_passed": 46
+        },
+        {
+          "command": "npm run context:check",
+          "exit_code": 0,
+          "duration_seconds": 5.48,
+          "log_sha256": "8e6d48268d03aeda171a935a3250ceae0ae046712e0a178ca51446bf342faee0"
+        },
+        {
+          "command": "npm run context:test",
+          "exit_code": 0,
+          "duration_seconds": 122.83,
+          "log_sha256": "025b2ec19cd53460cddcf0abaa33afbee2b525bc78ce15d97a0abeaf8d2f852b",
+          "tests_passed": 180
+        }
+      ],
+      "npm_ci": "Already supplied by orchestrator; not rerun",
+      "database_job": "Not run: no disposable database, PostgreSQL binary or Docker daemon"
+    },
+    "additional_checks": [
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "note": "Repeated after final source edits"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "note": "Repeated after final source edits"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "note": "Repeated after final source edits"
+      },
+      {
+        "command": "validateManifest + validateCapabilityStructure (offline)",
+        "exit_code": 0,
+        "errors": [],
+        "violations": []
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/invoice-counterparty-check.yaml --dry-run",
+        "exit_code": 1,
+        "result": "Manifest validation passed; AUTHORIZATION_UNAVAILABLE (operator-write credential unavailable)"
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug invoice-counterparty-check",
+        "exit_code": 1,
+        "result": "DATABASE_URL required for read-only operator handle"
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug invoice-counterparty-check --dry-run",
+        "exit_code": 1,
+        "result": "DATABASE_URL required for read-only operator handle"
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit_code": 1,
+        "result": "dirty, branch, merged-branch; prescribed remedies conflict with explicit build-agent restrictions"
+      },
+      {
+        "command": "git add -- <five changed source/test/manifest files>",
+        "exit_code": 128,
+        "result": "Git index is read-only; no commit created"
+      }
+    ],
+    "earlier_runs": [
+      {
+        "command": "npm test",
+        "exit_code": 0,
+        "passed": 5645,
+        "skipped": 321,
+        "note": "Before final test additions"
+      },
+      {
+        "command": "npm test",
+        "exit_code": 1,
+        "passed": 5653,
+        "failed": 4,
+        "skipped": 321,
+        "note": "Invalidated: overlapped final edits and loaded earlier composer with later cause-category tests; frozen final run above replaces this result"
+      }
+    ],
+    "live_checks": "No new live upstream checks or authenticated screenings; mocked actual-adapter tests cover ZWNJ and XML names. Prior Round 1 live results remain in their original receipt.",
+    "remaining": "Production onboarding/discovery, DB validation, authenticated smoke and ready:true verification, independent orchestrator review, commit/push/PR handling; no production writes or publishing performed"
+  }
+}

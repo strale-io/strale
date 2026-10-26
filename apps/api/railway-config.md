@@ -23,7 +23,6 @@ Key vars:
 - `DILISENSE_API_KEY` — AML screening (sanctions, PEP, adverse media)
 - `COMPANIES_HOUSE_API_KEY` — UK company data
 - `SERPER_API_KEY` — Google search API
-- `VOYAGE_API_KEY` — Embeddings for suggest/typeahead
 - `ADMIN_SECRET` — Admin endpoint auth
 - `AUDIT_HMAC_SECRET` — Transaction integrity hashing
 
@@ -36,6 +35,7 @@ Key vars:
 
 ### Retired env vars (safe to remove from Railway)
 
+- `VOYAGE_API_KEY` — Search uses in-memory keyword retrieval and Anthropic ranking.
 - `OPENSANCTIONS_API_KEY` — Replaced by `DILISENSE_API_KEY` on 2026-03-25.
   Zero codebase references remain. Remove from Railway Variables.
 
