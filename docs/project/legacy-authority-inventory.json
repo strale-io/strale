@@ -823,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "bb5222e0e8f99d587a5d895ca690c651004c378cd797b9da59a35225e36c3a03",
+      "sha256": "3754d3ecaa26f02fb1166f1e37767f42b35b5b46511534ee0ec548d909065e93",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -929,6 +929,7 @@
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
+        "archive/sessions/2026-10-26-agent-surfaces-messaging-review.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

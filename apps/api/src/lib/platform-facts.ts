@@ -36,6 +36,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { TRANSACTION_RETENTION_DAYS, PII_RETENTION_DAYS } from "./data-retention.js";
 import { getStraleJurisdiction, getProcessingLocation } from "./processing-location.js";
+import { getFreeTierSlugs } from "./free-tier.js";
 import { logWarn } from "./log.js";
 
 // ─── Static facts (compile-time constants) ──────────────────────────────────
@@ -208,6 +209,8 @@ export interface CountryCoverage {
 export interface PlatformFacts {
   capability_counts: CapabilityCounts;
   solution_count_active: number;
+  /** Lowest positive price among active, visible tools; null if none exist. */
+  price_floor_cents: number | null;
   countries: CountryCoverage;
   /** Computed from Railway region; honest about US-East deploy. */
   processing_region: string;
@@ -261,17 +264,17 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
       COUNT(*) FILTER (WHERE lifecycle_state = 'active' AND visible = true)::int AS active_visible,
       COUNT(*) FILTER (WHERE lifecycle_state = 'active')::int AS active_total,
       COUNT(*) FILTER (WHERE lifecycle_state != 'deactivated')::int AS catalogued,
-      ARRAY_AGG(slug) FILTER (WHERE is_free_tier = true) AS free_tier_slugs,
+      MIN(price_cents) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND price_cents > 0)::int AS price_floor_cents,
       ARRAY_AGG(slug) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND slug LIKE '%-company-data%') AS active_country_slugs,
       ARRAY_AGG(slug) FILTER (WHERE slug LIKE '%-company-data%') AS all_country_slugs
     FROM capabilities
   `);
 
   const rows = (Array.isArray(result) ? result : (result as { rows?: unknown[] })?.rows ?? []) as Array<{
+    price_floor_cents: number | null;
     active_visible: number;
     active_total: number;
     catalogued: number;
-    free_tier_slugs: string[] | null;
     active_country_slugs: string[] | null;
     all_country_slugs: string[] | null;
   }>;
@@ -291,9 +294,10 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
       active_visible: row?.active_visible ?? 0,
       active_total: row?.active_total ?? 0,
       catalogued: row?.catalogued ?? 0,
-      free_tier_slugs: (row?.free_tier_slugs ?? []).sort(),
+      free_tier_slugs: await getFreeTierSlugs(db),
     },
     solution_count_active: solCount,
+    price_floor_cents: row?.price_floor_cents ?? null,
     countries: {
       company_data_active: activeCountries,
       company_data_ever: allCountries,

@@ -26,7 +26,7 @@ export const openApiSpec = {
     title: "Strale API",
     version: "1.0.0",
     description:
-      "The trust layer for AI agents — 250+ independently tested data capabilities across 27 countries. Execute capabilities via REST, MCP, A2A, or x402 micropayments. Every call returns an audit record.",
+      "Give your agent a new tool without opening another provider account. Search and read the web, read documents, check details and look up companies through one connection. Pay per call with an API key or, on eligible tools, an x402 wallet. Browse /v1/platform/facts for live coverage.",
     contact: { name: "Strale", email: "hello@strale.io", url: "https://strale.dev" },
     termsOfService: "https://strale.dev/terms",
     license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
@@ -39,7 +39,7 @@ export const openApiSpec = {
     { name: "wallet", description: "Wallet balance and top-ups" },
     { name: "transactions", description: "Transaction history and verification" },
     { name: "auth", description: "Registration and API key management" },
-    { name: "trust", description: "Quality scores and trust data" },
+    { name: "trust", description: "Tool sources, limitations and test history" },
     { name: "suggest", description: "AI-powered capability suggestions" },
     { name: "discovery", description: "Agent discovery endpoints" },
   ],

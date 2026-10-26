@@ -1,3 +1,4 @@
+import { MIN_TOPUP_CENTS } from "../lib/pricing-constants.js";
 import { Hono } from "hono";
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -8,7 +9,6 @@ import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
-const MIN_TOPUP_CENTS = 1000; // €10
 const MAX_TOPUP_CENTS = 1_000_000; // €10,000 — F-0-016: cap single-session top-ups
 const SUGGESTED_AMOUNTS = [1000, 2500, 5000, 10000]; // €10, €25, €50, €100
 
