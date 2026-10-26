@@ -51,6 +51,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | einsearch | EINsearch | active | 2026-09-10 | unknown | unknown |
 | esortcode | eSortCode | active | 2026-09-10 | unknown | unknown |
 | etherscan | Etherscan | held | 2026-09-11 | unknown | prohibited (verified 2026-09-10) |
+| eurostat | Eurostat | evaluating | 2026-10-26 | unknown | conditional (verified 2026-10-26) |
 | france-travail | France Travail | candidate | 2026-09-11 | unknown | unknown |
 | gemi | GEMI | active | 2026-09-10 | unknown | unknown |
 | github | GitHub | active | 2026-09-10 | unknown | conditional (verified 2026-09-10) |

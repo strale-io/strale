@@ -70,6 +70,8 @@ export function prohibitedHostsIn(text: string): string[] {
 export interface VendorTermsRecord {
   vendor: string;
   hosts: readonly string[];
+  /** Restrict a host-wide record to these service URL prefixes, if set. */
+  url_prefixes?: readonly string[];
   /** Vendor id passed to meteredVendorFetch, when calls go through it. */
   metered_id?: string;
   /** Executors that call one of `hosts`. */
@@ -86,6 +88,24 @@ export interface VendorTermsRecord {
 }
 
 export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
+  {
+    vendor: "Eurostat",
+    hosts: ["ec.europa.eu"],
+    url_prefixes: ["https://ec.europa.eu/eurostat/"],
+    capabilities: ["eurostat-data"],
+    resale: "permitted",
+    terms_url: "https://ec.europa.eu/eurostat/help/copyright-notice",
+    accessed: "2026-10-26",
+    how_read: "Official copyright notice fetched via web open, including General principles and Exceptions; candidate list checked on the EU enlargement page.",
+    findings: [
+      "Commission Decision 2011/833/EU authorises commercial reuse with source acknowledgement, subject to individual notices and these exceptions; this record covers only the restricted eurostat-data executor.",
+      "(a) Data identified as belonging to sources other than Eurostat and third-party copyrighted material are excluded: refuse non-Eurostat source declarations and unrecognised rights notices in returned JSON-stat source/extension/annotations. Separately linked ESMS documents and catalogue notices are not inspected; missing declarations are reported as an output limitation. No third-party documents are returned.",
+      "(b) Data for countries outside EU/EFTA/official acceding and candidate countries are excluded: require geo, validate against EUROSTAT_ALLOWED_GEOS (including the explicitly supported EU/euro-area aggregates), then drop and count any out-of-list observations and omit their category labels.",
+      "(c) Liechtenstein and Switzerland declaring-country trade data from 1995 under HS, SITC, BEC, NSTR and national classifications are excluded. Austria declaring-country CN8 trade data are also excluded: conservatively refuse ALL trade datasets through explicit ext_, DS-, comext, itgs_, trade_ prefixes and international-trade themes/titles exposed in JSON-stat metadata.",
+      "Logos and trademarks are excluded; the executor returns statistical codes, labels and observations only, with no logos or publications. Modifications must be declared with a non-responsibility disclaimer: every output acknowledges Eurostat and the Commission Decision and states Strale flattened the data and Eurostat is not responsible for the rendering.",
+    ],
+    decision_ref: "DEC-20261023-A; orchestrator approval 2026-10-26 scoped to commercial-permitted Eurostat data",
+  },
   {
     vendor: "Brønnøysundregistrene",
     hosts: ["data.brreg.no"],
