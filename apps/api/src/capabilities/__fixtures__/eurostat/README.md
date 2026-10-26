@@ -1,6 +1,7 @@
 Recorded directly from the official Eurostat statistics API on 2026-10-26,
 using `Strale/1.0 (+https://strale.dev)`. Bodies are unchanged (tec00013 is
-pretty-printed). No production Strale calls or database writes.
+pretty-printed), except sbs_na_2c_own-metadata.json omits value/status and is pretty-printed;
+its recorded empty geo selection still exposes the owner dimension and source annotations. No production Strale calls or database writes.
 
 Base URL: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/
 
@@ -11,6 +12,8 @@ Base URL: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/
 | unknown-dataset.json | zzzz_nonexistent?geo=SE | 404 |
 | extraction-too-big.json | bop_c6_q?geo=SE&lastTimePeriod=1 | 413 |
 | asynchronous-response.json | bop_c6_q?geo=SE&partner=DE&lastTimePeriod=1 | 413 |
+
+| sbs_na_2c_own-metadata.json | sbs_na_2c_own?geo=DE&sinceTimePeriod=2001&untilTimePeriod=2001 | 200 |
 
 Geo codelist checked:
 https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/codelist/ESTAT/GEO?format=TSV&lang=en

@@ -18,6 +18,7 @@ input_schema:
       description: Eurostat dataset code, for example nama_10_gdp or une_rt_m. Trade datasets are excluded by code and returned metadata rules described in limitations.
     filters:
       type: object
+      required: [geo]
       minProperties: 1
       maxProperties: 10
       propertyNames:
@@ -35,8 +36,9 @@ input_schema:
       description: >-
         Dimension codes to one value or an array; at most 50 values total. Keys are case-insensitive;
         duplicate key variants and reserved options are refused. geo is required. Country values
-        are uppercased and restricted in every country dimension listed in limitations, including
-        permitted NUTS regions and supported EU/EFTA/euro-area aggregates.
+        are checked by label across every returned dimension; pre-fetch country checks apply to geo, partner, citizen, counterp, natvessr, reporter and c_* ids. Country codes are uppercased. NUTS regional
+        codes and supported EU/EFTA/euro-area aggregates are accepted in geo; non-country totals
+        and aggregates pass in other dimensions except explicitly denied geographic groups.
         Example: {geo: [SE, DE], unit: CP_MEUR, na_item: B1GQ}.
     since_period:
       type: string
@@ -80,7 +82,11 @@ output_schema:
           status: {type: string}
         additionalProperties: true
     observation_count: {type: integer}
-    dropped_observation_count: {type: integer, description: Cells removed because any country-valued dimension is outside the commercial allowlist.}
+    dropped_observation_count: {type: integer, description: Cells removed because any dimension has a restricted country/geographic code.}
+    dropped_observation_count_by_dimension:
+      type: object
+      additionalProperties: {type: integer}
+      description: Restricted cells per dimension; one cell can contribute to multiple dimension counts.
     source: {type: string}
     licence_note: {type: string}
     metadata_limitations: {type: string}
@@ -126,6 +132,7 @@ output_field_reliability:
   observations: guaranteed
   observation_count: guaranteed
   dropped_observation_count: guaranteed
+  dropped_observation_count_by_dimension: guaranteed
   source: guaranteed
   licence_note: guaranteed
   metadata_limitations: guaranteed
@@ -152,28 +159,39 @@ limitations:
       Decision 2011/833/EU with DOI, access date, attribution and modification/non-responsibility notices.
       geo is required. The country allowlist reflects EU27, EFTA and the official candidate list checked
       on 2026-10-26 at https://enlargement.ec.europa.eu/enlargement-policy/candidate-countries-and-potential-candidates_en
-      (Kosovo is a potential candidate and excluded). The same allowlist is applied before fetching and
-      to every returned row in geo, partner, citizen, c_birth, c_resid, c_orig, c_dest, counterp and c_work.
-      NUTS regional codes matching an allowed two-letter country followed by 1–3 uppercase letters/digits
-      are allowed. Supported aggregates are EA, EA11–EA21 (EA21 from 2026), EU, EU_V, EU_V_NO, EU6, EU9,
-      EU10, EU12, EU15, EU25, EU27_2007, EU27_2020, EU28, EFTA, EEA, EEA18, EEA28, EEA30_2007, EEA31,
-      EEA30_2020, EU27_2020_EFTA and EU28_EFTA, checked against the Eurostat geo codelist at
+      (Kosovo is a potential candidate and excluded). Pre-fetch country refusals apply only to geo, partner, citizen, counterp, natvessr, reporter
+      and c_* ids (case-insensitive). Post-fetch country detection checks ALL dimensions: a country
+      code must have a category label matching or starting with its English GEO label after
+      case, whitespace and punctuation normalisation (so unit NR labelled Number passes). The embedded 2026-10-26 snapshot
+      contains all ISO 3166-1 alpha-2 countries and Eurostat aliases/variants, including CN_X_HK.
+      Country codes require an exact, case-insensitive allowlist match. Only geo also accepts NUTS
+      regional codes matching ^<allowlisted 2-letter>[0-9A-Z]{1,3}$ and the supported EU/EFTA/euro-area
+      aggregates in EUROSTAT_ALLOWED_AGGREGATES (including EA11–EA21). EA14 is accepted by policy but
+      absent from the checked codelist. All other geo codes are refused or dropped. In non-geo dimensions,
+      non-country totals and aggregates such as citizen=TOTAL, WORLD, NAT, FOR, EXT_EU27_2020,
+      EU27_2020 and EA21 pass because a total is not data for a particular country.
+      Explicit geographic groups containing non-allowlisted countries (continents, Melanesia, Southern
+      polar regions, Mediterranean Basin and the other groups in EUROSTAT_DENIED_GEOGRAPHIC_AGGREGATES)
+      are refused or dropped across all dimensions. MEL/PLR/MED are denied; BAL (Baltic countries)
+      and ESM (European Stability Mechanism) are not. Snapshot and group labels were read from
       https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/codelist/ESTAT/GEO?format=TSV&lang=en.
-      EA14 is accepted by policy but absent from the checked codelist; an allowed code does not guarantee upstream observations.
-      Returned rows outside the allowlist in any listed country dimension are dropped and counted.
+      Dropped cells are counted once overall and once per restricted dimension; their labels are omitted.
       Returned third-party source declarations and unrecognised rights notices are refused.
       DISSEMINATION_SOURCE_DATASET is lineage, not a source declaration. No logos or third-party documents are returned.
     category: coverage
     severity: warning
   - title: Metadata may not expose every dataset-specific restriction
     text: >-
-      Trade datasets are conservatively refused by case-insensitive code prefixes ext_, ds-, comext,
+      International trade datasets are conservatively refused by case-insensitive code prefixes ext_, ds-, comext,
       itgs_, trade_, tet, teiet, tipsex, cult_trd_, sprt_trd_, enpe_ext_, bop_its, for_trop and ei_etea;
       by the words trade, import/imports or export/exports (case-insensitive, word boundaries) in returned
-      dataset titles or theme/category labels; and by DISSEMINATION_SOURCE_DATASET annotation titles
+      dataset titles or theme/category labels, except domestic retail trade, wholesale trade, distributive
+      trade and trade sector phrases (international/foreign/extra-EU/intra-EU trade remains refused);
+      by a stk_flow dimension (this conservatively also refuses nrg_stk_gas); and by DISSEMINATION_SOURCE_DATASET annotation titles
       starting with ext_, ds- or comext (case-insensitive). This covers Swiss/Liechtenstein post-1995
       commodity and Austrian CN8 restrictions. The executor checks source/rights anchors including
-      SOURCE_INSTITUTIONS in returned JSON-stat source, extension and annotations. Separately linked
+      SOURCE_INSTITUTIONS in returned JSON-stat source, extension and annotations, never dimension ids
+      or category codes (owner is a valid dimension). Separately linked
       ESMS documents and catalogue notices are not inspected; absent source declarations are reported
       in metadata_limitations. No blanket rights clearance of every catalogue dataset is implied.
     category: coverage
