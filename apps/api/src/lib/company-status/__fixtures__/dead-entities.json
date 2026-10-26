@@ -1,0 +1,182 @@
+[
+  {
+    "id": "FI-association-alive",
+    "registry_slug": "finnish-company-data",
+    "label": "registered association, not in trade register",
+    "executor_input": {
+      "business_id": "0101279-1"
+    },
+    "captured_at": "2026-10-26T11:31:27.086Z",
+    "executor_output": {
+      "status": "inactive",
+      "company_name": "FC Honka ry",
+      "legal_name": "FC Honka ry",
+      "business_id": "0101279-1",
+      "registration_date": "1978-03-15"
+    }
+  },
+  {
+    "id": "IE-struck-off",
+    "registry_slug": "irish-company-data",
+    "label": "CRO status Struck Off",
+    "executor_input": {
+      "cro_number": "596725"
+    },
+    "captured_at": "2026-10-26T11:31:27.856Z",
+    "executor_output": {
+      "status": "Struck Off",
+      "company_name": "STALLION CARPENTRY WORKS LIMITED",
+      "legal_name": "STALLION CARPENTRY WORKS LIMITED",
+      "cro_number": "596725",
+      "status_date": "2026-10-16",
+      "dissolution_date": null,
+      "registration_date": "2017-01-18"
+    }
+  },
+  {
+    "id": "IE-dissolved",
+    "registry_slug": "irish-company-data",
+    "label": "CRO status Dissolved",
+    "executor_input": {
+      "cro_number": "279457"
+    },
+    "captured_at": "2026-10-26T11:31:28.426Z",
+    "executor_output": {
+      "status": "Dissolved",
+      "company_name": "COLBERT SERVICES LIMITED",
+      "legal_name": "COLBERT SERVICES LIMITED",
+      "cro_number": "279457",
+      "status_date": "2000-06-30",
+      "dissolution_date": "2000-06-30",
+      "registration_date": "1998-01-29"
+    }
+  },
+  {
+    "id": "IE-liquidation",
+    "registry_slug": "irish-company-data",
+    "label": "CRO status Liquidation",
+    "executor_input": {
+      "cro_number": "283902"
+    },
+    "captured_at": "2026-10-26T11:31:28.567Z",
+    "executor_output": {
+      "status": "Liquidation",
+      "company_name": "N 17 ELECTRICS LIMITED",
+      "legal_name": "N 17 ELECTRICS LIMITED",
+      "cro_number": "283902",
+      "status_date": "2011-02-14",
+      "dissolution_date": null,
+      "registration_date": "1998-04-09"
+    }
+  },
+  {
+    "id": "LV-terminated",
+    "registry_slug": "latvian-company-data",
+    "label": "terminated 2023-08-15, closed L",
+    "executor_input": {
+      "reg_number": "40203246549"
+    },
+    "captured_at": "2026-10-26T11:31:30.633Z",
+    "executor_output": {
+      "status": "Likvidēts",
+      "company_name": "SIA \"ES Trade\"",
+      "legal_name": "SIA \"ES Trade\"",
+      "reg_number": "40203246549",
+      "registration_date": "2020-05-11"
+    }
+  },
+  {
+    "id": "EE-liquidation",
+    "registry_slug": "estonian-company-data",
+    "label": "status L",
+    "executor_input": {
+      "registry_code": "16157985"
+    },
+    "captured_at": "2026-10-26T11:31:31.574Z",
+    "executor_output": {
+      "status": "in_liquidation",
+      "company_name": "Likvideerimisel OÜ",
+      "legal_name": "Likvideerimisel OÜ",
+      "registry_code": "16157985"
+    }
+  },
+  {
+    "id": "FR-closed",
+    "registry_slug": "french-company-data",
+    "label": "etat_administratif C",
+    "executor_input": {
+      "siren": "479575037"
+    },
+    "captured_at": "2026-10-26T11:31:54.193Z",
+    "executor_output": {
+      "status": "closed",
+      "company_name": "SARL (SOCIAL)",
+      "legal_name": "SARL (SOCIAL)",
+      "siren": "479575037"
+    }
+  },
+  {
+    "id": "SG-deregistered",
+    "registry_slug": "singapore-company-data",
+    "label": "ACRA Deregistered",
+    "executor_input": {
+      "uen": "201201936C"
+    },
+    "captured_at": "2026-10-26T11:31:34.113Z",
+    "executor_output": {
+      "status": "Deregistered",
+      "entity_name": "MILLENNIUM AUTOMATION & SYSTEMS PTE. LTD.",
+      "legal_name": "MILLENNIUM AUTOMATION & SYSTEMS PTE. LTD.",
+      "uen": "201201936C"
+    }
+  },
+  {
+    "id": "NO-deleted",
+    "registry_slug": "norwegian-company-data",
+    "label": "deleted 2026-10-20 (excluded country)",
+    "executor_input": {
+      "org_number": "930663530"
+    },
+    "captured_at": "2026-10-26T11:31:34.850Z",
+    "executor_output": {
+      "status": "active",
+      "company_name": "[sole trader: personal name removed from this fixture]",
+      "legal_name": "[sole trader: personal name removed from this fixture]",
+      "org_number": "930663530",
+      "registration_date": null
+    },
+    "note": "Name removed (natural person). Registry: deleted 2026-10-20; executor still reports active."
+  },
+  {
+    "id": "PL-struck-off",
+    "registry_slug": "polish-company-data",
+    "label": "Grupa Lotos, struck off 2022 (excluded country)",
+    "executor_input": {
+      "krs_number": "0000106150"
+    },
+    "captured_at": "2026-10-26T11:31:36.770Z",
+    "executor_output": {
+      "status": "active",
+      "company_name": "GRUPA LOTOS SPÓŁKA AKCYJNA",
+      "legal_name": "GRUPA LOTOS SPÓŁKA AKCYJNA",
+      "krs_number": "0000106150",
+      "registration_date": null
+    }
+  },
+  {
+    "id": "CZ-v-likvidaci",
+    "registry_slug": "cz-company-data",
+    "label": "v likvidaci (excluded country)",
+    "executor_input": {
+      "ico": "01485377"
+    },
+    "captured_at": "2026-10-26T11:31:37.466Z",
+    "executor_output": {
+      "status": "active",
+      "company_name": "TIKA stavby s.r.o. v likvidaci",
+      "legal_name": "TIKA stavby s.r.o. v likvidaci",
+      "ico": "01485377",
+      "registration_date": "2013-03-13"
+    }
+  }
+]
