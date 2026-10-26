@@ -36,6 +36,13 @@ const bundles = solutionsFor(data, slug);
 const related = tools.filter((t) => t.job === tool.job && t.slug !== slug && (t.category === tool.category || t.country !== null && tool.country !== null)).slice(0, 6);
 const snippets = toolSnippets({ slug, inputs, priceCents: tool.price_cents, free: tool.free, x402: tool.x402 });
 const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag] : undefined;
+// The published example input and example answer are recorded separately. Show them side by side
+// only when the answer visibly belongs to the input (every input value appears in it); otherwise
+// show the answer on its own, and the call below carries the input.
+const flat = (v: unknown) => String(v).toLowerCase().replace(/[^a-z0-9]/g, "");
+const outText = output ? flat(JSON.stringify(output)) : "";
+const inputValues = Object.values(inputs).filter((v) => typeof v === "string" || typeof v === "number");
+const paired = !!output && inputValues.length > 0 && inputValues.every((v) => outText.includes(flat(v)));
 ---
 <Base title={tool.name} current="tools" description={tool.description.slice(0, 160)}>
   <article>
@@ -46,7 +53,7 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
         <p class="t-lead">{tool.description}</p>
         <div class="row">
           {tool.free && <span class="tag tag-teal">Free to try</span>}
-          {tool.x402 && <span class="tag tag-kit">x402 eligible</span>}
+          {tool.x402 && <span class="tag tag-kit">Pay by wallet (x402)</span>}
           {tool.transparency_tag === "ai_generated" && <span class="tag tag-soft">AI-generated</span>}
           {tool.country && <a class="tag tag-link" href={`/company-data/${tool.country.path}`}>{tool.country.name}: all company records</a>}
           <code class="slug">{tool.slug}</code>
@@ -58,11 +65,19 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
       <div class="tool-main">
         <section aria-labelledby="example-title" class="stack">
           <h2 id="example-title" class="t-section">Example</h2>
-          <div class="grid-2 example-grid">
-            <CodeBlock id="ex-in" title="Example input" wrap panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
-            {output ? <CodeBlock id="ex-out" title="Example output" wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} /> : <p class="muted">This tool publishes no example output. Its fields are listed below.</p>}
-          </div>
-          <p class="small muted">Published examples, not a live call. The input and the output are recorded separately and may not come from the same call.{!extras?.example_input && " This tool publishes no example input; fill in the fields listed under Inputs before calling it."}</p>
+          {paired ? (
+            <div class="grid-2 example-grid">
+              <CodeBlock id="ex-in" title="Input" wrap panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
+              <CodeBlock id="ex-out" title="Answer" wrap panels={[{ label: "Answer", lang: "json", code: json(output) }]} />
+            </div>
+          ) : output ? (
+            <CodeBlock id="ex-out" title="Example answer" wrap panels={[{ label: "Answer", lang: "json", code: json(output) }]} />
+          ) : (
+            <>
+              <CodeBlock id="ex-in" title="Example input" wrap panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
+              <p class="small muted">The fields it answers with are listed under Output fields.</p>
+            </>
+          )}
           {tool.free && (
             <form class="try card" data-try data-api={API_BASE} data-slug={slug}>
               <h3 class="t-subhead">Try it</h3>
@@ -128,7 +143,7 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
         <section class="card stack-tight" aria-labelledby="test-title">
           <h2 id="test-title" class="label">Last recorded test</h2>
           {trust?.tested && trust.last_tested_at ? (
-            <p class="t-compact">{formatDate(trust.last_tested_at)}{trust.pass_rate !== null && <span class="muted">. {trust.pass_rate}% of its tests passed on their latest run.</span>}</p>
+            <p class="t-compact">{formatDate(trust.last_tested_at)}{trust.pass_rate !== null && <span class="muted"> · {trust.pass_rate === 100 ? "all tests passed" : `${trust.pass_rate}% of tests passed`}</span>}</p>
           ) : (
             <p class="t-compact muted">No test result is recorded for this tool{data.mode !== "live" ? " in this preview build" : ""}.</p>
           )}

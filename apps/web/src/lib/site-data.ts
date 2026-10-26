@@ -45,6 +45,12 @@ function extras(m: Record<string, any> | null): ManifestExtras {
   };
 }
 
+/** Scaffolding rows that must never reach a storefront (mirrors isInternalArtifact in apps/api/src/routes/a2a.ts). */
+// Deliberately narrow, as there: a plain test- prefix would drop test-case-generate, a real tool.
+export function isInternalSlug(slug: string): boolean {
+  return /-delete-me$|^zzz-|test-solution/.test(slug);
+}
+
 let cached: Promise<SiteData> | null = null;
 
 export function getSiteData(): Promise<SiteData> {
@@ -54,14 +60,23 @@ export function getSiteData(): Promise<SiteData> {
     const base = mode === "live" ? await loadLive(API_BASE) : loadPreview(REPO_ROOT);
     const raw = "raw" in base ? (base.raw as Map<string, Record<string, unknown>>) : undefined;
     const manifests = new Map<string, ManifestExtras>();
-    for (const c of base.capabilities) manifests.set(c.slug, extras(readManifest(c.slug, raw)));
+    // A tool's name and description are manifest-canonical (capability-field-authority.ts): the
+    // database holds a copy that a startup migration or sync brings up to date after deploy. The
+    // site is built from this repository, so it reads the canonical text rather than a copy that
+    // can lag it.
+    const capabilities = base.capabilities.filter((c) => !isInternalSlug(c.slug)).map((c) => {
+      const m = readManifest(c.slug, raw);
+      manifests.set(c.slug, extras(m));
+      return { ...c, name: typeof m?.name === "string" ? m.name : c.name, description: typeof m?.description === "string" ? m.description : c.description };
+    });
     return {
       mode,
       source: mode === "live" ? API_BASE : "repository manifests",
       loaded_at: new Date().toISOString(),
       facts: base.facts,
-      capabilities: [...base.capabilities].sort((a, b) => a.name.localeCompare(b.name)),
-      solutions: base.solutions,
+      capabilities: capabilities.sort((a, b) => a.name.localeCompare(b.name)),
+      // Internal scaffolding rows are never storefront items; the A2A card filters them the same way.
+      solutions: base.solutions.filter((s) => !isInternalSlug(s.slug)),
       x402: base.x402,
       trust: base.trust,
       manifests,

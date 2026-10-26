@@ -1,7 +1,8 @@
 ---
-// Tools catalogue (SITE-STRUCTURE.md page 2). Every visible tool is in the HTML,
-// so the page works and is indexable without script; the script only filters.
-// Filters use the job-group vocabulary (src/content/jobs.ts), not API categories.
+// Tools catalogue (SITE-STRUCTURE.md page 2). Every visible tool is in the HTML, so the page works
+// and is indexable without script. Tools are grouped by job (src/content/jobs.ts vocabulary, not
+// API categories); with script, each group opens at its first few tools and the filters narrow the
+// whole list. Per-country bundled checks are shown as one card per family (src/content/bundles.ts).
 import { Image } from "astro:assets";
 import Base from "../../layouts/Base.astro";
 import artLibrary from "../../assets/illustrations/tool-library.webp";
@@ -9,35 +10,66 @@ import { getSiteData, tools as allTools, coverage } from "../../lib/site-data.ts
 import { formatEur, formatUsd, plural } from "../../lib/format.ts";
 import { firstSentence } from "../../lib/describe.ts";
 import { JOB_GROUPS } from "../../content/jobs.ts";
+import { BUNDLE_FAMILIES, familyOf } from "../../content/bundles.ts";
 
 const data = await getSiteData();
 const tools = allTools(data);
 const countries = coverage(data);
 const x402Solutions = new Map(data.x402.solutions.map((x) => [x.slug, x]));
 const contact = data.facts.static.controller?.contact_email;
-const jobCount = (id: string) => tools.filter((t) => t.job === id).length;
 const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).join(" ").toLowerCase();
+
+// A group opens at this many tools; the rest wait behind "Show all".
+const OPEN = 6;
+const groups = JOB_GROUPS.map((g) => {
+  const list = tools.filter((t) => t.job === g.id);
+  const rank = (slug: string) => { const i = g.examples.indexOf(slug); return i < 0 ? g.examples.length : i; };
+  return { ...g, list: [...list].sort((a, b) => rank(a.slug) - rank(b.slug) || a.name.localeCompare(b.name)) };
+}).filter((g) => g.list.length > 0);
+
+// Bundled checks: families first, one card each with their countries; the rest as single cards.
+const families = BUNDLE_FAMILIES.map((f) => {
+  const members = data.solutions.filter((s) => familyOf(s.slug)?.prefix === f.prefix)
+    .map((s) => ({ s, country: s.name.split(" — ")[1] ?? s.slug.slice(-2).toUpperCase() }))
+    .sort((a, b) => a.country.localeCompare(b.country));
+  const prices = members.map((m) => m.s.price_cents);
+  const steps = members.map((m) => m.s.capabilities.length || m.s.step_count);
+  return { ...f, members, minPrice: Math.min(...prices), samePrice: new Set(prices).size === 1, minSteps: Math.min(...steps), maxSteps: Math.max(...steps) };
+}).filter((f) => f.members.length > 0);
+const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.name.localeCompare(b.name));
 ---
 <Base title="Tools" current="tools" description="Search every tool AI agents can call through Strale: price per call, how to call it, and its limits.">
   <section class="page-head">
     <div class="container page-head-grid">
       <div class="stack">
         <h1 class="t-campaign">Tools</h1>
-        <p class="t-lead">One API key and one balance for every tool, or no account at all with an x402 wallet on eligible tools. Connect over MCP, the REST API or the SDKs, and try the free tools without signing up.</p>
+        <p class="t-lead">{plural(tools.length, "tool")} your agent can call with one key, or with no account at all through an x402 wallet. Each has one price per call, and {plural(tools.filter((t) => t.free).length, "tool")} are free to try.</p>
       </div>
-      <div class="plate page-head-art"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+      <span class="page-head-art" aria-hidden="true"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></span>
     </div>
   </section>
 
-  <section class="container catalogue" id="catalogue" aria-label="Tool catalogue" data-catalogue>
-    <form class="catalogue-controls" role="search" action="/tools" method="get" data-catalogue-form>
-      <div class="field catalogue-search">
+  <section class="container cat" id="catalogue" aria-label="Tool catalogue" data-catalogue>
+    <form class="cat-side" role="search" action="/tools" method="get" data-catalogue-form>
+      <div class="field">
         <label class="field-label" for="q">Search tools</label>
         <div class="input-wrap">
           <svg class="icon lead-icon" aria-hidden="true"><use href="#i-search" /></svg>
-          <input class="input has-lead" id="q" name="q" type="search" placeholder="Name, job or input, e.g. invoice, VAT, DNS" autocomplete="off" />
+          <input class="input has-lead" id="q" name="q" type="search" placeholder="Invoice, VAT, DNS…" autocomplete="off" />
         </div>
       </div>
+      <fieldset class="side-set">
+        <legend class="field-label">Job</legend>
+        <div class="job-list">
+          <button class="job-opt" type="button" data-job="" aria-pressed="true"><span>All tools</span><span class="num">{tools.length}</span></button>
+          {groups.map((g) => <button class="job-opt" type="button" data-job={g.id} aria-pressed="false"><span>{g.label}</span><span class="num">{g.list.length}</span></button>)}
+        </div>
+      </fieldset>
+      <fieldset class="side-set">
+        <legend class="field-label">Access</legend>
+        <label class="choice"><input type="checkbox" name="free" value="1" /> <span>Free to try</span></label>
+        <label class="choice"><input type="checkbox" name="x402" value="1" /> <span>Pay by wallet (x402)</span></label>
+      </fieldset>
       <div class="field">
         <label class="field-label" for="country">Company records for</label>
         <select class="select" id="country" name="country">
@@ -45,71 +77,93 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
           {countries.map((c) => <option value={c.iso}>{c.name}</option>)}
         </select>
       </div>
-      <fieldset class="catalogue-filters">
-        <legend class="field-label">Job</legend>
-        <div class="chip-row">
-          <button class="chip" type="button" data-job="" aria-pressed="true">All jobs</button>
-          {JOB_GROUPS.map((g) => <button class="chip" type="button" data-job={g.id} aria-pressed="false">{g.label} <span class="chip-count">{jobCount(g.id)}</span></button>)}
-        </div>
-      </fieldset>
-      <fieldset class="catalogue-filters">
-        <legend class="field-label">Access</legend>
-        <div class="chip-row">
-          <label class="choice"><input type="checkbox" name="free" value="1" /> <span>Free to try</span></label>
-          <label class="choice"><input type="checkbox" name="x402" value="1" /> <span>Keyless (x402)</span></label>
-        </div>
-      </fieldset>
     </form>
 
-    <p class="catalogue-count" role="status" aria-live="polite" data-count>{plural(tools.length, "tool")}</p>
+    <div class="cat-main">
+      <div class="cat-bar">
+        <p class="cat-count" role="status" aria-live="polite" data-count>{plural(tools.length, "tool")}</p>
+        <button class="link-quiet cat-clear" type="button" data-clear hidden>Clear filters</button>
+      </div>
 
-    <ul class="tool-list" role="list" data-list>
-      {tools.map((t) => (
-        <li class="tool-row" data-job={t.job} data-free={t.free ? "1" : undefined} data-x402={t.x402 ? "1" : undefined} data-country={t.country?.iso} data-search={index([t.name, t.slug, firstSentence(t.description), t.category, ...(t.search_tags ?? []), t.country?.name, ...Object.keys(t.input_schema?.properties ?? {})])}>
-          <a class="tool-link" href={`/tools/${t.slug}`}>
-            <span class="tool-name">{t.name}</span>
-            <span class="tool-desc">{firstSentence(t.description)}</span>
-          </a>
-          <span class="tool-badges">
-            {t.free && <span class="tag tag-teal">Free to try</span>}
-            {t.x402 && <span class="tag tag-kit">x402</span>}
-            {t.country && <span class="tag"><abbr title={t.country.name}>{t.country.iso}</abbr></span>}
-          </span>
-          <span class="tool-price num">{t.free ? "Free" : formatEur(t.price_cents)}</span>
-        </li>
+      {groups.map((g) => (
+        <section class="group" data-group={g.id} aria-labelledby={`g-${g.id}`}>
+          <header class="group-head">
+            <h2 id={`g-${g.id}`} class="t-subhead">{g.label}</h2>
+            <p class="t-compact muted">{g.line}</p>
+          </header>
+          <ul class="cards" role="list" data-list>
+            {g.list.map((t, i) => (
+              <li class="card-tool" data-extra={i >= OPEN ? "1" : undefined} data-job={t.job} data-free={t.free ? "1" : undefined} data-x402={t.x402 ? "1" : undefined} data-country={t.country?.iso} data-search={index([t.name, t.slug, t.description, t.category, ...(t.search_tags ?? []), t.country?.name, ...Object.keys(t.input_schema?.properties ?? {})])}>
+                <a class="card-tool-link" href={`/tools/${t.slug}`} data-spotlight>
+                  <span class="card-tool-name">{t.name}</span>
+                  <span class="card-tool-desc">{firstSentence(t.description)}</span>
+                  <span class="card-tool-foot">
+                    <span class="card-tool-price num">{t.free ? "Free" : formatEur(t.price_cents)}</span>
+                    {t.free && <span class="tag tag-teal">Free to try</span>}
+                    {t.x402 && <span class="tag tag-kit">x402</span>}
+                    {t.country && <span class="tag"><abbr title={t.country.name}>{t.country.iso}</abbr></span>}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          {g.list.length > OPEN && <button class="btn btn-secondary group-more" type="button" data-more hidden>Show all {plural(g.list.length, "tool")}</button>}
+        </section>
       ))}
-    </ul>
 
-    <div class="empty-state" data-empty hidden>
-      <svg class="icon icon-lg" aria-hidden="true"><use href="#i-empty" /></svg>
-      <p><strong>No tool matches these filters.</strong></p>
-      <p>Try another word, or clear the filters. If the tool does not exist yet, tell us the job (below).</p>
-      <button class="btn btn-secondary" type="button" data-clear>Clear filters</button>
+      <div class="empty-state" data-empty hidden>
+        <svg class="icon icon-lg" aria-hidden="true"><use href="#i-empty" /></svg>
+        <p><strong>No tool matches these filters.</strong></p>
+        <p>Try another word, or clear the filters. If the tool does not exist yet, tell us the job below.</p>
+      </div>
     </div>
   </section>
 
-  <section class="section" id="bundled" aria-labelledby="bundled-title">
+  <section class="section section-sunken" id="bundled" aria-labelledby="bundled-title">
     <div class="container stack-loose">
       <div class="section-head">
-        <h2 id="bundled-title" class="t-section">Bundled checks</h2>
-        <p class="t-lead muted">Several tools run as one call at one price, such as a company check or an invoice-issuer check. Each returns every step’s result. A bundled check is charged in full when its steps return results, and refunded when every step fails or Strale withholds a step.</p>
+        <p class="label">Bundled checks</p>
+        <h2 id="bundled-title" class="t-section">A whole check in one call</h2>
+        <p class="t-lead muted">Several tools run together at one price, and you get every step’s result. If the check cannot run, because every step fails or an early step finds nothing to check, the charge is refunded.</p>
       </div>
       {data.solutions.length > 0 ? (
-        <ul class="tool-list" role="list">
-          {data.solutions.map((s) => (
-            <li class="tool-row">
-              <a class="tool-link" href={`/solutions/${s.slug}`}>
-                <span class="tool-name">{s.name}</span>
-                <span class="tool-desc">{firstSentence(s.description)}</span>
-              </a>
-              <span class="tool-badges">
-                <span class="tag">{plural(s.capabilities.length || s.step_count, "step")}</span>
-                {x402Solutions.has(s.slug) && <span class="tag tag-kit">x402 {formatUsd(x402Solutions.get(s.slug)!.price_usd)}</span>}
-              </span>
-              <span class="tool-price num">{formatEur(s.price_cents)}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div class="families">
+            {families.map((f) => (
+              <article class="family" data-spotlight>
+                <div class="family-head">
+                  <h3 class="t-subhead">{f.label}</h3>
+                  <span class="family-price"><span class="num">{f.samePrice ? "" : "from "}{formatEur(f.minPrice)}</span><span class="unit">per check</span></span>
+                </div>
+                <p class="t-compact muted">{f.line}</p>
+                <p class="family-meta">{f.minSteps === f.maxSteps ? plural(f.minSteps, "step") : `${f.minSteps} to ${f.maxSteps} steps`} · {plural(f.members.length, "country", "countries")}</p>
+                <ul class="family-countries" role="list" aria-label={`${f.label}: countries`}>
+                  {f.members.map((m) => <li><a class="chip-link" href={`/solutions/${m.s.slug}`}>{m.country}</a></li>)}
+                </ul>
+              </article>
+            ))}
+          </div>
+          {single.length > 0 && (
+            <>
+              <h3 class="t-subhead more-title">More bundled checks</h3>
+              <ul class="cards cards-bundles" role="list">
+                {single.map((s) => (
+                  <li class="card-tool">
+                    <a class="card-tool-link" href={`/solutions/${s.slug}`} data-spotlight>
+                      <span class="card-tool-name">{s.name}</span>
+                      <span class="card-tool-desc">{firstSentence(s.description)}</span>
+                      <span class="card-tool-foot">
+                        <span class="card-tool-price num">{formatEur(s.price_cents)}</span>
+                        <span class="tag">{plural(s.capabilities.length || s.step_count, "step")}</span>
+                        {x402Solutions.has(s.slug) && <span class="tag tag-kit">x402 {formatUsd(x402Solutions.get(s.slug)!.price_usd)}</span>}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
       ) : (
         <div class="empty-state">
           <p><strong>No bundled checks in this build.</strong></p>
@@ -119,11 +173,13 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
     </div>
   </section>
 
-  <section class="section section-sunken" aria-labelledby="missing-title">
-    <div class="container stack">
-      <h2 id="missing-title" class="t-subhead">Can’t find the tool your agent needs?</h2>
-      <p class="t-body muted">Tell us the job. The catalogue grows from what agents ask for and do not find.</p>
-      {contact && <a class="link-standalone" href={`mailto:${contact}?subject=${encodeURIComponent("Tool request")}`}>Email {contact} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>}
+  <section class="section" aria-labelledby="missing-title">
+    <div class="container ask">
+      <div class="stack">
+        <h2 id="missing-title" class="t-subhead">Can’t find the tool your agent needs?</h2>
+        <p class="t-body muted">Tell us the job. The catalogue grows from what agents ask for and don’t find.</p>
+      </div>
+      {contact && <a class="btn btn-secondary" href={`mailto:${contact}?subject=${encodeURIComponent("Tool request")}`}>Email {contact}</a>}
     </div>
   </section>
 </Base>
@@ -131,39 +187,79 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
 <script>import "../../scripts/catalogue.ts";</script>
 
 <style>
-  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head { padding-block: var(--space-48) var(--space-24); }
   .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
-  .page-head-art { display: none; width: 100%; }
+  .page-head .t-lead { max-width: var(--measure-lead); }
+  .page-head-art { display: none; }
+  .page-head-art img { width: 100%; height: auto; }
   @media (min-width: 1024px) {
     .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
-    .page-head-art { display: block; }
+    .page-head-art { display: block; max-width: calc(var(--space-160) + var(--space-64)); justify-self: end; }
   }
   .section { padding-block: var(--section-space); }
   .section-sunken { background: var(--surface-sunken); }
   .section-head { display: grid; gap: var(--space-12); }
-  .catalogue { display: grid; gap: var(--space-24); padding-bottom: var(--space-48); }
-  .catalogue-controls { display: grid; gap: var(--space-16); padding: var(--space-24); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); }
-  @media (min-width: 1024px) { .catalogue-controls { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } .catalogue-filters { grid-column: 1 / -1; } }
-  .catalogue-filters { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-8); }
-  .catalogue-filters legend { padding: 0; margin-bottom: var(--space-8); }
-  .chip-count { color: inherit; opacity: 0.75; font-feature-settings: var(--type-numeric-features); }
-  .choice { min-height: var(--control-h-sm); padding-block: 0; align-items: center; margin-right: var(--space-16); }
+  .section-head .t-lead { max-width: var(--measure-lead); }
+
+  /* Layout: filters in a sticky side column from 1024px; a block above the list below that. */
+  .cat { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); padding-bottom: var(--space-64); }
+  @media (min-width: 1024px) { .cat { grid-template-columns: calc(var(--space-160) + var(--space-80)) minmax(0, 1fr); gap: var(--space-48); align-items: start; } }
+  .cat-side { display: grid; gap: var(--space-24); align-content: start; padding: var(--space-20); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); }
+  @media (min-width: 1024px) { .cat-side { position: sticky; top: calc(var(--nav-h) + var(--space-24)); padding: 0; background: none; border: 0; } }
+  .side-set { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+  .side-set legend { padding: 0; margin-bottom: var(--space-8); }
+  .job-list { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+  @media (min-width: 1024px) { .job-list { display: grid; } }
+  .job-opt { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-12); min-height: var(--control-h-sm); padding-inline: var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font-family: var(--type-ui-family); font-size: var(--type-small-size); text-align: left; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+  @media (min-width: 1024px) { .job-opt { border-color: transparent; border-radius: var(--radius-control); background: none; } }
+  .job-opt:hover { background: var(--action-subtle); }
+  .job-opt[aria-pressed="true"] { background: var(--action-subtle); border-color: var(--action-subtle); color: var(--text); font-weight: var(--type-ui-weight); }
+  .job-opt .num { color: var(--text-muted); font-size: var(--type-label-size); }
+  .choice { display: flex; min-height: var(--control-h-sm); gap: var(--space-8); align-items: center; font-size: var(--type-small-size); }
   .choice input { margin: 0; }
-  .tool-list { display: grid; margin: 0; padding: 0; list-style: none; border: var(--border-width) solid var(--border); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; }
-  .tool-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4) var(--space-16); align-items: center; padding: var(--space-16); border-bottom: var(--border-width) solid var(--border); }
-  .tool-row:last-child { border-bottom: 0; }
-  .tool-row[hidden] { display: none; }
-  .tool-row:hover { background: var(--surface-sunken); }
-  .tool-link { display: grid; gap: var(--space-4); grid-column: 1; text-decoration: none; color: var(--text); }
-  .tool-link:hover .tool-name { color: var(--link); text-decoration: underline; text-underline-offset: var(--space-4); }
-  .tool-name { font-family: var(--type-detail-family); font-weight: var(--type-detail-weight); font-size: var(--type-compact-size); }
-  .tool-desc { color: var(--text-muted); font-size: var(--type-small-size); line-height: var(--type-small-line); max-width: var(--measure-body); }
-  .tool-badges { display: flex; flex-wrap: wrap; gap: var(--space-4); grid-column: 1; }
-  .tool-badges abbr { text-decoration: none; }
-  .tool-price { grid-column: 2; grid-row: 1; text-align: right; white-space: nowrap; }
-  @media (min-width: 768px) {
-    .tool-row { grid-template-columns: minmax(0, 1fr) auto calc(var(--space-80) + var(--space-8)); }
-    .tool-badges { grid-column: 2; grid-row: 1; justify-content: flex-end; }
-    .tool-price { grid-column: 3; }
+
+  .cat-main { display: grid; gap: var(--space-48); min-width: 0; }
+  .cat-bar { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-16); margin-bottom: calc(-1 * var(--space-24)); }
+  .cat-count { color: var(--text-muted); font-size: var(--type-small-size); }
+  .cat-clear { font-size: var(--type-small-size); background: none; border: 0; padding: 0; cursor: pointer; }
+  .group { display: grid; gap: var(--space-16); }
+  .group[hidden] { display: none; }
+  .group-head { display: grid; gap: var(--space-4); }
+  .group-head .t-compact { max-width: var(--measure-body); }
+  .group-more { justify-self: start; }
+
+  /* Tool cards: the whole card is the link. */
+  .cards { display: grid; gap: var(--space-12); grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
+  @media (min-width: 640px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1280px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .group[data-collapsed] .card-tool[data-extra] { display: none; }
+  .card-tool[hidden] { display: none; }
+  .card-tool-link { display: grid; grid-template-rows: auto 1fr auto; gap: var(--space-8); height: 100%; padding: var(--space-16) var(--space-20); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); color: var(--text); text-decoration: none; transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
+  .card-tool-link:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); transform: translateY(calc(-1 * var(--space-2))); }
+  .card-tool-name { font-family: var(--type-detail-family); font-weight: var(--type-detail-weight); font-size: var(--type-compact-size); }
+  .card-tool-link:hover .card-tool-name { color: var(--link); }
+  .card-tool-desc { color: var(--text-muted); font-size: var(--type-small-size); line-height: var(--type-small-line); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-tool-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); margin-top: var(--space-4); }
+  .card-tool-price { margin-right: auto; font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .card-tool-foot abbr { text-decoration: none; }
+
+  /* Bundled checks */
+  .families { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .families { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .family { display: grid; gap: var(--space-12); align-content: start; padding: var(--space-24); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); }
+  .family-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-12); }
+  .family-price { white-space: nowrap; }
+  .family-price .unit { margin-left: var(--space-4); color: var(--text-muted); font-size: var(--type-small-size); }
+  .family-meta { color: var(--text-muted); font-size: var(--type-small-size); }
+  .family-countries { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+  .chip-link { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); color: var(--text); text-decoration: none; font-size: var(--type-small-size); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+  .chip-link:hover { border-color: var(--action); background: var(--action-subtle); }
+  .more-title { margin-top: var(--space-16); }
+
+  .ask { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-24); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-tool-link, .job-opt, .chip-link { transition: none; }
+    .card-tool-link:hover { transform: none; }
   }
 </style>
