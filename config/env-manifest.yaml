@@ -980,6 +980,15 @@
   set_in:
     - none
   cost_note: "No active subscription as of the 2026-08-18 vendor audit. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
+- name: SEARCH_LLM_DAILY_CAP
+  purpose: Process-wide daily smart-search model request cap; defaults to 5000, zero disables model requests.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  cost_note: "In-memory per-process counter; resets on restart and multiplies across replicas. Requests beyond this cap use keyword search."
 - name: SERPER_API_KEY
   purpose: Serper.dev (Google Search API) key — google-search capability, and the fallback path for adverse-media-check when Dilisense doesn't cover a query.
   provider: Serper.dev
@@ -1277,16 +1286,6 @@
     - test
   set_in:
     - .env.test
-- name: VOYAGE_API_KEY
-  purpose: Voyage AI API key for capability-search embeddings (POST /v1/suggest).
-  provider: Voyage AI
-  holder: petter
-  cost_class: metered
-  required_in:
-    - local
-  set_in:
-    - .env
-  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: WEBHOOK_URL
   purpose: Generic outbound webhook URL used by lib/webhook.ts for operational notifications.
   provider: internal

@@ -54,7 +54,8 @@ export const STATIC_FACTS = {
     pep: "Dilisense",
     adverse_media_primary: "Dilisense",
     adverse_media_fallback: "Serper.dev (Google)",
-    embeddings: "Voyage AI",
+    // Legacy wire key: search now ranks the full catalogue without embeddings.
+    embeddings: "Anthropic Claude (search ranking; no embeddings)",
     risk_narrative: "Anthropic Claude",
     headless_browser: "Browserless.io",
     payments_card: "Stripe",
@@ -135,6 +136,8 @@ export const STATIC_FACTS = {
  * https://www.notion.so/35967c87082c81dc905fceff85603fe5
  */
 export const STALE_VENDORS = [
+  // Catalogue embeddings removed by DEC-20261026-A.
+  "Voyage AI",
   // Sanctions/PEP — self-host deferred 2026-04-29 per DEC-20260429-A
   "OpenSanctions self-host",
   // IBAN/name match — all rejected per DEC-20260430-A

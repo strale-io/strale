@@ -122,7 +122,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "106dc553d95d86a665e2e4f7096b03fc9289ff2f66f714c439b18742e586c077",
+      "sha256": "bedb000e374ce2f37d1ad4595145d9ab193eb1ab4be2c9f6ec83d781967abba7",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -236,6 +236,7 @@
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
+        "archive/sessions/2026-10-26-search-rebuild/report.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -297,6 +298,7 @@
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
         "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
+        "docs/strategy/2026-10-26-tool-search-decision.md",
         "handoff/_general/from-code/2026-03-18-dark-launch-qualification.md",
         "handoff/_general/from-code/2026-03-18-smart-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-03-21-integrity-check.md",
@@ -699,7 +701,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "616a30c3329875bfb9c3b487345d03f1fc4c066014796943697475a16e7611ca",
+      "sha256": "386b5c75bfb9cf40e97395cd3e48b4202684a030897892447b7aa3893e06e3dc",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -733,6 +735,7 @@
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
+        "archive/sessions/2026-10-26-search-rebuild/report.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
@@ -823,7 +826,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "aba4f5f1048bcf46d74aca6073a9f16f61cb06ebb7dcf7e6722e3eb4eaa7aa24",
+      "sha256": "340b1c3d06a05f9852bee5bc812aff26a01635112671902ec25a6a4c188c4fa0",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -931,6 +934,10 @@
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/2026-10-26-agent-surfaces-messaging-review.md",
+        "archive/sessions/2026-10-26-search-rebuild/report.md",
+        "archive/sessions/2026-10-26-search-rebuild/round2-checks.json",
+        "archive/sessions/2026-10-26-search-rebuild/round2.md",
+        "archive/sessions/2026-10-26-search-rebuild/verification.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

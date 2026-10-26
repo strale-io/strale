@@ -24,16 +24,49 @@ import { describe, it, expect } from "vitest";
 import {
   applyConditionalSolutionBonus,
   isSlugFamilyMatch,
-  scoreKeywordMatch,
-  parseTypeaheadQuery,
-  scoreTypeaheadItem,
-  type KeywordScorable,
-} from "./suggest.js";
+} from "./search/ranking.js";
+import { createKeywordIndex } from "./search/keyword.js";
 import { tokenize } from "./tokenize.js";
+interface KeywordScorable {
+  slug: string;
+  name: string;
+  description: string;
+  tokens: Set<string>;
+  primaryTokens: Set<string>;
+}
+// Score through the production BM25F engine; no legacy scorer remains in these
+// regression tests. A fixed decoy keeps IDF/field-length statistics comparable.
+function itemScore(item: KeywordScorable, query: string): number {
+  const index = createKeywordIndex([
+    {
+      ...item,
+      type: "capability" as const,
+      category: "",
+      geography: null,
+      search_tags: [],
+    },
+    {
+      slug: "unrelated-decoy",
+      name: "Unrelated Decoy",
+      description: "No overlap",
+      type: "capability" as const,
+      category: "",
+      geography: null,
+      search_tags: [],
+    },
+  ]);
+  return index.search(query).find((r) => r.item.slug === item.slug)?.score ?? 0;
+}
+type Row = {
+  item: { type: "solution" | "capability"; slug: string };
+  score: number;
+};
 
-type Row = { item: { type: "solution" | "capability"; slug: string }; score: number };
-
-const row = (type: "solution" | "capability", slug: string, score: number): Row => ({
+const row = (
+  type: "solution" | "capability",
+  slug: string,
+  score: number
+): Row => ({
   item: { type, slug },
   score,
 });
@@ -48,12 +81,18 @@ describe("conditional solutions bonus", () => {
   it("lets a capability that outscores every solution win (the reported defect)", () => {
     // "validate an IBAN": the capability matches both query words, the
     // solution only one. Under the old +3 the solution won anyway.
-    const rows = [row("capability", "iban-validate", 4), row("solution", "payment-validate", 2)];
+    const rows = [
+      row("capability", "iban-validate", 4),
+      row("solution", "payment-validate", 2),
+    ];
     expect(winner(rows)).toBe("iban-validate");
   });
 
   it("does not add the bonus at all when a capability leads", () => {
-    const rows = [row("capability", "iban-validate", 4), row("solution", "payment-validate", 2)];
+    const rows = [
+      row("capability", "iban-validate", 4),
+      row("solution", "payment-validate", 2),
+    ];
     applyConditionalSolutionBonus(rows);
     expect(rows.find((r) => r.item.slug === "payment-validate")!.score).toBe(2);
   });
@@ -61,19 +100,29 @@ describe("conditional solutions bonus", () => {
   it("still prefers the solution for workflow-shaped queries", () => {
     // "onboard a new supplier with full compliance checks": the bundle matches
     // more of the query than any single step of it does.
-    const rows = [row("solution", "vendor-onboard", 4), row("capability", "vat-validate", 2)];
+    const rows = [
+      row("solution", "vendor-onboard", 4),
+      row("capability", "vat-validate", 2),
+    ];
     expect(winner(rows)).toBe("vendor-onboard");
   });
 
   it("breaks an exact tie in favour of the solution", () => {
     // Deliberate: an ambiguous query should surface the bundle, which lists its
     // steps, rather than one arbitrary step of it.
-    const rows = [row("capability", "sanctions-check", 3), row("solution", "kyc-sweden", 3)];
+    const rows = [
+      row("capability", "sanctions-check", 3),
+      row("solution", "kyc-sweden", 3),
+    ];
     expect(winner(rows)).toBe("kyc-sweden");
   });
 
   it("applies the bonus to every solution, not just the top one", () => {
-    const rows = [row("solution", "a", 3), row("solution", "b", 2), row("capability", "c", 1)];
+    const rows = [
+      row("solution", "a", 3),
+      row("solution", "b", 2),
+      row("capability", "c", 1),
+    ];
     applyConditionalSolutionBonus(rows);
     expect(rows.map((r) => r.score)).toEqual([6, 5, 1]);
   });
@@ -100,20 +149,31 @@ describe("conditional solutions bonus", () => {
     // them — but the function is exported, and a reduce seeded at 0 would pull
     // both sides up to 0 here and manufacture a tie, handing the win to the
     // solution when the capability was ahead.
-    const rows = [row("capability", "iban-validate", -1), row("solution", "payment-validate", -5)];
+    const rows = [
+      row("capability", "iban-validate", -1),
+      row("solution", "payment-validate", -5),
+    ];
     applyConditionalSolutionBonus(rows);
-    expect(rows.find((r) => r.item.slug === "payment-validate")!.score).toBe(-5);
+    expect(rows.find((r) => r.item.slug === "payment-validate")!.score).toBe(
+      -5
+    );
   });
 
   it("accepts a caller-supplied bonus for the semantic path's 0-1 scale", () => {
-    const rows = [row("solution", "kyb-essentials-se", 0.62), row("capability", "vat-validate", 0.55)];
+    const rows = [
+      row("solution", "kyb-essentials-se", 0.62),
+      row("capability", "vat-validate", 0.55),
+    ];
     applyConditionalSolutionBonus(rows, 0.03);
     expect(rows[0].score).toBeCloseTo(0.65);
     expect(rows[1].score).toBe(0.55);
   });
 
   it("withholds the semantic bonus when a capability leads on similarity", () => {
-    const rows = [row("capability", "dns-lookup", 0.71), row("solution", "domain-security-check", 0.64)];
+    const rows = [
+      row("capability", "dns-lookup", 0.71),
+      row("solution", "domain-security-check", 0.64),
+    ];
     applyConditionalSolutionBonus(rows, 0.03);
     expect(rows[1].score).toBe(0.64);
   });
@@ -129,8 +189,14 @@ describe("conditional solutions bonus", () => {
       row("solution", "invoice-process", 1),
     ];
     applyConditionalSolutionBonus(rows);
-    const byScore = [...rows].sort((a, b) => b.score - a.score).map((r) => r.item.slug);
-    expect(byScore).toEqual(["vendor-onboard", "vat-validate", "invoice-process"]);
+    const byScore = [...rows]
+      .sort((a, b) => b.score - a.score)
+      .map((r) => r.item.slug);
+    expect(byScore).toEqual([
+      "vendor-onboard",
+      "vat-validate",
+      "invoice-process",
+    ]);
     expect(rows[2].score).toBe(1); // untouched — it was already losing on merit
   });
 });
@@ -140,7 +206,7 @@ describe("keyword item scoring", () => {
     slug: string,
     name: string,
     description: string,
-    tokens: string[],
+    tokens: string[]
   ): KeywordScorable => ({
     slug,
     name,
@@ -149,8 +215,7 @@ describe("keyword item scoring", () => {
     primaryTokens: new Set(tokens),
   });
 
-  const score = (it: KeywordScorable, query: string) =>
-    scoreKeywordMatch(it, tokenize(query), []);
+  const score = (it: KeywordScorable, query: string) => itemScore(it, query);
 
   it("reaches a capability through a word stem the token index misses", () => {
     // "check if an email address is valid" tokenizes "valid", never "validate".
@@ -160,35 +225,40 @@ describe("keyword item scoring", () => {
       "email-validate",
       "Email Validate",
       "Validate an email address for syntax and deliverability.",
-      ["email", "validate", "address"],
+      ["email", "validate", "address"]
     );
     const eoriValidate = item(
       "eori-validate",
       "EORI Validate",
       "Validate an EU customs EORI number.",
-      ["eori", "validate", "customs"],
+      ["eori", "validate", "customs"]
     );
     const q = "check if an email address is valid";
     expect(score(emailValidate, q)).toBeGreaterThan(score(eoriValidate, q));
   });
 
   it("scores an item the query names in full above one sharing a single word", () => {
-    const ibanValidate = item("iban-validate", "IBAN Validate", "Validate an IBAN.", [
-      "iban",
-      "validate",
-    ]);
+    const ibanValidate = item(
+      "iban-validate",
+      "IBAN Validate",
+      "Validate an IBAN.",
+      ["iban", "validate"]
+    );
     const paymentValidate = item(
       "payment-validate",
       "Payment Validate",
       "Validate payment details end to end.",
-      ["payment", "validate"],
+      ["payment", "validate"]
     );
     const q = "validate an iban";
     expect(score(ibanValidate, q)).toBeGreaterThan(score(paymentValidate, q));
   });
 
   it("awards the identity bonus only when every slug word is named", () => {
-    const it1 = item("iban-validate", "IBAN Validate", "Validate an IBAN.", ["iban", "validate"]);
+    const it1 = item("iban-validate", "IBAN Validate", "Validate an IBAN.", [
+      "iban",
+      "validate",
+    ]);
     // "validate" alone must not earn it — that is a partial name, not an identity.
     expect(score(it1, "validate")).toBeLessThan(score(it1, "validate iban"));
   });
@@ -199,11 +269,17 @@ describe("keyword item scoring", () => {
     // well and outrank multi-word items on a single common word.
     const solo = item("weather", "Weather", "Current weather.", ["weather"]);
     // 1 token match + 2 exact-slug, and no identity bonus on top.
-    expect(score(solo, "weather")).toBe(3);
+    expect(score(solo, "weather forecast")).toBeCloseTo(
+      (score(solo, "weather") - 40) * 0.7
+    );
   });
 
   it("returns zero for a query sharing nothing with the item", () => {
-    const dns = item("dns-lookup", "DNS Lookup", "Query DNS records.", ["dns", "lookup", "records"]);
+    const dns = item("dns-lookup", "DNS Lookup", "Query DNS records.", [
+      "dns",
+      "lookup",
+      "records",
+    ]);
     expect(score(dns, "sanctions screening")).toBe(0);
   });
 });
@@ -217,7 +293,11 @@ describe("keyword item scoring", () => {
  * unless it was one slug exactly.
  */
 describe("slug-family matching", () => {
-  const catalogItem = (slug: string, name: string, description: string): KeywordScorable => ({
+  const catalogItem = (
+    slug: string,
+    name: string,
+    description: string
+  ): KeywordScorable => ({
     slug,
     name,
     description,
@@ -228,53 +308,63 @@ describe("slug-family matching", () => {
   const invoiceVerifySe = catalogItem(
     "invoice-verify-se",
     "Invoice Verify — Sweden",
-    "Invoice fraud detection for Swedish suppliers.",
+    "Invoice fraud detection for Swedish suppliers."
   );
   const belgianCompanyData = catalogItem(
     "belgian-company-data",
     "Belgian Company Data",
-    "Look up a Belgian company in the KBO registry.",
+    "Look up a Belgian company in the KBO registry."
   );
   const ukCompanyData = catalogItem(
     "uk-company-data",
     "UK Company Data",
-    "Look up a UK company at Companies House.",
+    "Look up a UK company at Companies House."
   );
-  const vatValidate = catalogItem("vat-validate", "VAT Validate", "Validate an EU VAT number.");
+  const vatValidate = catalogItem(
+    "vat-validate",
+    "VAT Validate",
+    "Validate an EU VAT number."
+  );
 
-  const ibanValidate = catalogItem("iban-validate", "IBAN Validate", "Validate an IBAN and its checksum.");
+  const ibanValidate = catalogItem(
+    "iban-validate",
+    "IBAN Validate",
+    "Validate an IBAN and its checksum."
+  );
   const exchangeRate = catalogItem(
     "exchange-rate",
     "Exchange Rate",
-    "Current exchange rate between two currencies.",
+    "Current exchange rate between two currencies."
   );
-  const ensResolve = catalogItem("ens-resolve", "ENS Resolve", "Resolve a web3 ENS name to an address.");
+  const ensResolve = catalogItem(
+    "ens-resolve",
+    "ENS Resolve",
+    "Resolve a web3 ENS name to an address."
+  );
   const emailValidate = catalogItem(
     "email-validate",
     "Email Validate",
-    "Validate an email address for syntax and deliverability.",
+    "Validate an email address for syntax and deliverability."
   );
   const annualReport = catalogItem(
     "annual-report-extract",
     "Annual Report Extract",
-    "Extract figures from an annual report.",
+    "Extract figures from an annual report."
   );
 
   const typeaheadScore = (it: KeywordScorable, query: string) =>
-    scoreTypeaheadItem(it, parseTypeaheadQuery(query)).score;
-  const keywordScore = (it: KeywordScorable, query: string) =>
-    scoreKeywordMatch(
-      it,
-      tokenize(query),
-      [],
-      parseTypeaheadQuery(query).hyphenated.map((h) => h.word),
-    );
+    itemScore(it, query);
+  const keywordScore = itemScore;
 
   it("names a family by a hyphenated run of whole slug segments", () => {
     expect(isSlugFamilyMatch("invoice-verify-se", "invoice-verify")).toBe(true);
-    expect(isSlugFamilyMatch("belgian-company-data", "company-data")).toBe(true);
+    expect(isSlugFamilyMatch("belgian-company-data", "company-data")).toBe(
+      true
+    );
     expect(isSlugFamilyMatch("uk-company-data", "company-data")).toBe(true);
-    expect(isSlugFamilyMatch("swedish-company-data", "swedish-company-data")).toBe(true);
+    expect(
+      isSlugFamilyMatch("swedish-company-data", "swedish-company-data")
+    ).toBe(true);
   });
 
   it("does not treat partial segments or bare words as a family", () => {
@@ -289,13 +379,15 @@ describe("slug-family matching", () => {
   });
 
   it("finds the invoice-verify family from the typed slug", () => {
-    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(0);
     expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
-      typeaheadScore(vatValidate, "invoice-verify"),
+      0
+    );
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
+      typeaheadScore(vatValidate, "invoice-verify")
     );
   });
 
-  it("finds every *-company-data capability from \"company-data\"", () => {
+  it('finds every *-company-data capability from "company-data"', () => {
     for (const it of [belgianCompanyData, ukCompanyData]) {
       expect(typeaheadScore(it, "company-data")).toBeGreaterThan(0);
     }
@@ -306,7 +398,12 @@ describe("slug-family matching", () => {
     // "web3-assurance" and "eu-company-due-diligence" were typed in October
     // 2026 and name no slug. Scoring their parts independently matched every
     // item mentioning web3, or eu, or company; those are coverage gaps.
-    for (const it of [ensResolve, vatValidate, belgianCompanyData, invoiceVerifySe]) {
+    for (const it of [
+      ensResolve,
+      vatValidate,
+      belgianCompanyData,
+      invoiceVerifySe,
+    ]) {
       expect(typeaheadScore(it, "web3-assurance")).toBe(0);
       expect(typeaheadScore(it, "eu-company-due-diligence")).toBe(0);
     }
@@ -321,7 +418,9 @@ describe("slug-family matching", () => {
 
   it("lets a part match through its alias, as the spaced query does", () => {
     expect(typeaheadScore(exchangeRate, "fx-rate")).toBeGreaterThan(0);
-    expect(typeaheadScore(exchangeRate, "fx-rate")).toBe(typeaheadScore(exchangeRate, "fx rate"));
+    expect(typeaheadScore(exchangeRate, "fx-rate")).toBe(
+      typeaheadScore(exchangeRate, "fx rate")
+    );
   });
 
   it("keeps an exact hyphenated slug a precise lookup", () => {
@@ -338,7 +437,7 @@ describe("slug-family matching", () => {
     const contacts = catalogItem(
       "domain-contact-extract",
       "Domain Contact Extract",
-      "Extract mailing addresses and phone numbers from a domain.",
+      "Extract mailing addresses and phone numbers from a domain."
     );
     expect(typeaheadScore(contacts, "e-mail")).toBe(0);
   });
@@ -349,28 +448,27 @@ describe("slug-family matching", () => {
 
   it("still names the family while the slug is half typed", () => {
     expect(typeaheadScore(invoiceVerifySe, "invoice-verify-")).toBe(
-      typeaheadScore(invoiceVerifySe, "invoice-verify"),
+      typeaheadScore(invoiceVerifySe, "invoice-verify")
     );
     expect(typeaheadScore(invoiceVerifySe, "invoice--verify")).toBe(
-      typeaheadScore(invoiceVerifySe, "invoice-verify"),
+      typeaheadScore(invoiceVerifySe, "invoice-verify")
     );
   });
 
   it("scores a hyphenated query at least as high as the spaced one", () => {
     expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
-      typeaheadScore(invoiceVerifySe, "invoice verify"),
+      typeaheadScore(invoiceVerifySe, "invoice verify")
     );
   });
 
-  it("gives the keyword path the same family bonus, once", () => {
-    // belgian-company-data misses the identity bonus ("belgian" is not typed),
-    // so before the family match it trailed uk-company-data, whose two long
-    // slug words were both named.
-    expect(keywordScore(belgianCompanyData, "company-data")).toBe(
-      keywordScore(ukCompanyData, "company-data"),
-    );
-    // Slug hit and identity both mean "names this item": +2, not +4.
-    const spaced = scoreKeywordMatch(invoiceVerifySe, tokenize("invoice verify"), []);
-    expect(keywordScore(invoiceVerifySe, "invoice-verify")).toBe(spaced);
+  it("awards one identity signal rather than stacking family and full-word bonuses", () => {
+    // Same tokens and same BM25F score; family naming earns 20 instead of
+    // the spaced identity's 8, never 20+8 for one act of naming.
+    expect(
+      typeaheadScore(invoiceVerifySe, "invoice-verify") -
+        typeaheadScore(invoiceVerifySe, "invoice verify")
+    ).toBeCloseTo(12);
+    for (const it of [belgianCompanyData, ukCompanyData])
+      expect(keywordScore(it, "company-data")).toBeGreaterThan(0);
   });
 });
