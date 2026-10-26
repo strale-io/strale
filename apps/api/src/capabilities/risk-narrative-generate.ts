@@ -93,13 +93,83 @@ Respond ONLY with valid JSON matching this schema:
   "data_sources_consulted": ["list of data sources"]
 }`;
 
-/** Only registry checks carry company lifecycle status; other checks use
- * status for unrelated purposes (HTTP, DNS, etc.). Treat an unfamiliar
- * registry value as requiring review, never as evidence of active trading. */
+/** Only known lifecycle findings bypass synthesis. Raw registry words and
+ * unknown/pending values keep the pre-existing narrative behaviour.
+ * References below are executor mappings, not a universal status vocabulary. */
+const NON_ACTIVE_REGISTRY_STATUSES: Readonly<Record<string, readonly string[]>> = {
+  // norwegian-company-data.ts:120-124
+  "norwegian-company-data": ["deleted", "bankrupt", "compulsory_dissolution", "dissolving"],
+  // polish-company-data.ts:117-119
+  "polish-company-data": ["deregistered"],
+  // cz-company-data.ts:210-220
+  "cz-company-data": ["dissolved", "insolvency", "liquidation"],
+  // finnish-company-data.ts:214-219 (pending/unknown are not distress findings).
+  "finnish-company-data": ["inactive", "bankrupt", "liquidation", "restructuring"],
+  // greek-company-data.ts:160-165
+  "greek-company-data": ["inactive", "bankrupt", "liquidation", "dissolved"],
+  // danish-company-data.ts:111
+  "danish-company-data": ["ceased"],
+  // french-company-data.ts:64
+  "french-company-data": ["closed"],
+  // german-company-data.ts:304-308
+  "german-company-data": ["terminated"],
+  // swedish-company-data.ts:183-189
+  "swedish-company-data": ["deregistered"],
+  // uk-company-data.ts:149-160 (values after statusMap, not upstream keys).
+  "uk-company-data": ["dissolved", "in_liquidation", "receivership", "closed", "voluntary_arrangement", "insolvency", "administration"],
+  // estonian-company-data.ts:222-227
+  "estonian-company-data": ["in_liquidation", "deleted", "in_bankruptcy"],
+  // lithuanian-company-data.ts:231 (other classifier labels pass through).
+  "lithuanian-company-data": ["Išregistruotas"],
+  // irish-company-data.ts:187 passes CRO status through; Dissolved is recorded
+  // in irish-company-data.test.ts:21-22, alongside the live Normal fixture.
+  "irish-company-data": ["Dissolved"],
+  // latvian-company-data.ts:227-230
+  "latvian-company-data": ["Likvidēts", "Slēgts"],
+  // croatian-company-data.ts:92-95
+  "croatian-company-data": ["inactive"],
+  // slovak-company-data.ts:147-152
+  "slovak-company-data": ["inactive"],
+  // austrian-company-data.ts:465
+  "austrian-company-data": ["dissolved"],
+  // spanish-company-data.ts:237-243
+  "spanish-company-data": ["inactive"],
+  // belgian-company-data.ts:120,178-180 (vendor status / canonical alias).
+  "belgian-company-data": ["inactive"],
+  // These executors delegate to lib/openapi-resolver.ts:304-315, which maps
+  // inactive/dissolved/ceased/terminated upstream values to inactive.
+  // bulgarian-company-data.ts:49
+  "bulgarian-company-data": ["inactive"],
+  // cypriot-company-data.ts:153
+  "cypriot-company-data": ["inactive"],
+  // dutch-company-data.ts:44
+  "dutch-company-data": ["inactive"],
+  // hungarian-company-data.ts:43
+  "hungarian-company-data": ["inactive"],
+  // italian-company-data.ts:70
+  "italian-company-data": ["inactive"],
+  // luxembourgish-company-data.ts:44
+  "luxembourgish-company-data": ["inactive"],
+  // maltese-company-data.ts:43
+  "maltese-company-data": ["inactive"],
+  // portuguese-company-data.ts:52
+  "portuguese-company-data": ["inactive"],
+  // romanian-company-data.ts:45
+  "romanian-company-data": ["inactive"],
+  // australian-company-data.ts:34 and japanese-company-data.ts:33 delegate to
+  // lib/browserless-extract.ts:66's explicit extraction vocabulary.
+  "australian-company-data": ["inactive", "dissolved"],
+  "japanese-company-data": ["inactive", "dissolved"],
+  // No known non-active vocabulary in singapore-company-data.ts:139,
+  // au-company-data.ts:138, brazilian-company-data.ts:55,
+  // canadian-company-data.ts:148 or providers/swiss-company-data.ts:83.
+  // slovenian-company-data.ts:144-156 has no status output at all.
+};
+
 function registryNeedsReview(checkName: string, result: any): boolean {
   if (checkName === "no-bankruptcy-check") return result?.has_any_distress_signal === true || result?.is_deleted === true;
-  return checkName.endsWith("-company-data") &&
-    typeof result?.status === "string" && result.status.toLowerCase() !== "active";
+  return Object.hasOwn(NON_ACTIVE_REGISTRY_STATUSES, checkName) && typeof result?.status === "string" &&
+    (NON_ACTIVE_REGISTRY_STATUSES[checkName]?.includes(result.status) ?? false);
 }
 
 /** Algorithmic fallback when Sonnet is unavailable */
@@ -214,10 +284,6 @@ function algorithmicAssessment(
   if (checks.some(([name, result]) => registryNeedsReview(name, result))) {
     // A populated dead-company record is an answer, not a passed KYB check.
     if (riskScore < 75) { riskLevel = "high"; riskScore = 75; }
-  }
-
-  if (flags.some((flag) => flag.severity === "critical")) {
-    riskLevel = "critical"; riskScore = Math.max(riskScore, 90);
   }
 
   const contextLabel = context === "kyb" ? "entity verification" : "invoice fraud detection";

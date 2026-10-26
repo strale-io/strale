@@ -130,7 +130,7 @@ output_field_reliability:
   jurisdiction: guaranteed
 limitations:
   - title: Official registry data access
-    text: "Official per-entity API terms read on 2026-10-26: https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    text: "Data comes from the official registry's public API under its open-data terms (https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie); results carry the registry as their source."
     category: coverage
     severity: info
   - title: Registry status interpretation
@@ -149,3 +149,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: KRS (Ministry of Justice Poland)

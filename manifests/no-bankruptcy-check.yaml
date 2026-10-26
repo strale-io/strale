@@ -1,6 +1,6 @@
 slug: no-bankruptcy-check
 name: "Norwegian Bankruptcy Check"
-description: "Check Norwegian registry bankruptcy, voluntary or compulsory dissolution and deletion signals by organisation number or company name."
+description: "Check a Norwegian company for bankruptcy and dissolution in the Brønnøysund registers: any bankruptcy filing and its date, voluntary or forced dissolution, and the register's notes."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -114,7 +114,7 @@ output_field_reliability:
   bankruptcy_date: rare
 limitations:
   - title: Official registry data access
-    text: "Official per-entity API terms read on 2026-10-26: https://www.brreg.no/en/use-of-data-from-the-bronnoysund-register-centre/datasets-and-api/. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    text: "Data comes from the official registry's public API under its open-data terms (https://www.brreg.no/en/use-of-data-from-the-bronnoysund-register-centre/datasets-and-api/); results carry the registry as their source."
     category: coverage
     severity: info
   - title: Registry status interpretation
@@ -146,3 +146,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: Brønnøysundregistrene

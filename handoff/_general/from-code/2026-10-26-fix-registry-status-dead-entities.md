@@ -249,3 +249,128 @@ were changed. Context generation succeeded in that isolated worktree. The
 supplied checkout context checker still sees unstaged/untracked inventory drift
 because its Git index cannot be written; that is an environment limit, not an
 exception to the commit hook in the writable packaging worktree.
+
+
+## Round 2
+
+The orchestrator's Round 2 instructions supersede Round 1's packaging and
+shipping notes: all changes remain uncommitted in this supplied isolated clone;
+no commits, pushes, PRs, merges, branch switches or production writes were made.
+
+- Extended the import graph in `vendor-terms.test.ts` into reachable `src/lib`
+  helpers, using literal runtime imports, re-exports and dynamic imports.
+  Type-only imports do not create request paths. Executor registration is a
+  graph boundary, so importing its registry functions does not traverse all
+  fallback providers and operational health probes. Only executor-reachable
+  lib files are added; all capability helpers remain checked for orphans.
+  No audited-helper exemption list or Brreg path special case was added.
+- Brønnøysundregistrene's exact callers are `no-bankruptcy-check`,
+  `norwegian-company-data`, and `vat-validate`, through direct URLs or imported
+  helpers. Bare provenance labels do not count as requests. The delegating
+  Norway provider is explicitly tested as neither a host caller nor an orphan.
+  In-memory unrecorded executors fail the same exact-caller assertion through
+  a static import, re-export or literal dynamic import of `lib/brreg-fetch.ts`;
+  an orphan helper also fails.
+- Restored the GEMI/GLEIF record boundary lost in the merge. Added required
+  `data_access.upstream_vendor` metadata to the seven manifests covered by the
+  registry records, including the existing Brreg leg of `vat-validate`. This
+  fixes the existing data-access-manifests guard without changing its policy.
+- Replaced the active-only narrative rule with explicit per-executor emitted
+  non-active vocabularies, each citing its mapping's file and line. Unfamiliar
+  strings, `pending` and `unknown` retain pre-Round-1 behavior. Norway's
+  `has_any_distress_signal` and `is_deleted` rule remains independently tested.
+  The unrelated sanctions aggregate-critical override is removed; critical
+  sanctions flags still retain their severity and `source_check`. The honest
+  consulted-source list remains.
+- Living-company cases cover every company-data executor, using recorded
+  tier-coverage outputs, the archived Bosch German response, and manifest
+  examples for the legacy Australian, Canadian and Danish paths. Poland uses
+  the recorded active ORLEN mapping regression rather than the dead MARTOM
+  example. Slovenian output has no status, which is tested as absent. Both
+  AI synthesis and the no-key fallback remain available for these living cases.
+- Fresh technical and product review contexts read REVIEW.md and returned GO
+  after confirming the recorded-fixture evidence fix. Manual simplification
+  retained the direct mapping and cached import edges; no standalone simplify
+  skill is installed. The `/go` shipping stages were excluded by the explicit
+  build-agent instructions.
+
+### Round 2 verification
+
+Evidence: [Round 2 verification receipt](../../../archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-2.json).
+
+- Focused Vitest: **220 passed** across vendor-terms, data-access-manifests,
+  registry-status, registry-status.consumers and the narrative registry tests.
+- Full `cd apps/api && npx vitest run`: **4697 passed, 1 failed, 321 skipped**
+  (311 passed files, one failed file, 31 skipped files). The remaining failure
+  is `src/lib/startup-migrations.test.ts:3376`: the Greek description differs
+  from block 0123's historical catalogue target. It reproduces against unchanged
+  HEAD `ab77a0ba` in a disposable source copy. This round does not edit that
+  unrelated historical assertion, migration block or public description.
+  The first full run also exposed missing upstream-vendor metadata; that guard
+  passes after the seven metadata additions above.
+- `npm --workspace=packages/mcp-server run build`: passed. API `npx tsc --noEmit`:
+  passed, including a final rerun after fixture-source changes.
+- Root `claims:check`, `receipts:check`, `docs:check`, `models:check`,
+  `env:check`, `programs:check`: all passed. Receipt warnings concern existing
+  historical handoffs. `git diff --check`: passed.
+- Fail-before narrative run with the actual Round 1 runtime: **16 failed,
+  89 passed**. The final candidate's corresponding suite passes. The separate
+  HEAD baseline reproduced both the missing metadata guard and Greek copy
+  assertion before this round's changes.
+- `validate-capability.ts --slug risk-narrative-generate`,
+  `smoke-test.ts --slug risk-narrative-generate --dry-run` and
+  `checkReadiness("risk-narrative-generate")`: unavailable, DATABASE_URL absent.
+  `onboard.ts --manifest ../../manifests/risk-narrative-generate.yaml --backfill
+  --dry-run`: local manifest validation passed; DB preview unavailable because
+  the script opens a production write handle even for dry-run. No authority
+  bypass or database write occurred.
+- `npm run handoff:orient`: passed. `npm run handoff:check`: fails with dirty,
+  branch, ahead and merged-branch findings. Committing, switching the supplied
+  branch, pushing an upstream or deleting another remote branch would violate
+  the explicit orchestrator restrictions. The handoff is updated; remaining
+  closeout work belongs to the orchestrator.
+No live lookups were repeated: this round changes the narrative consumer and
+source guard, not registry request/parsing code. Existing response projections
+remain the live-check evidence in the earlier sections.
+
+The new narrative tests were also run against Round 1's actual executor read
+with `git show HEAD:<path>` in a disposable source copy under the ignored
+`node_modules/.cache/` directory. They fail on living raw statuses, unfamiliar
+values, and the unrelated sanctions override; the candidate passes. No working
+tree source was overwritten for this verification. The standard mutation tool
+requires a committed clean candidate, incompatible with the explicit no-commit
+instruction, so no commit/stash/restore workaround was used.
+
+### Production steps left
+
+The Polish known-answer fixture in production `test_suites` still names
+MARTOM (`0000033945`, deregistered). Re-sync it from the manifest's active
+ORLEN fixture (`0000028860`) using
+`apps/api/scripts/sync-known-answer-fixtures.ts`. This requires production write
+authority and was not executed here. From `apps/api` in the authorised operator
+process, inspect the preview, then apply:
+
+```bash
+npx tsx scripts/sync-known-answer-fixtures.ts --slugs polish-company-data --dry-run
+npx tsx scripts/sync-known-answer-fixtures.ts --slugs polish-company-data
+```
+
+The earlier deployment, catalogue/schema synchronisation, smoke and readiness
+steps remain with the orchestrator. No production readiness is claimed.
+
+
+### Round 2 files changed
+
+- `apps/api/src/lib/vendor-terms.test.ts`
+- `apps/api/src/lib/vendor-terms.ts` (GEMI/GLEIF record boundary)
+- `apps/api/src/capabilities/risk-narrative-generate.ts`
+- `apps/api/src/capabilities/risk-narrative-generate.registry-status.test.ts`
+- `manifests/norwegian-company-data.yaml`
+- `manifests/no-bankruptcy-check.yaml`
+- `manifests/vat-validate.yaml`
+- `manifests/polish-company-data.yaml`
+- `manifests/cz-company-data.yaml`
+- `manifests/finnish-company-data.yaml`
+- `manifests/greek-company-data.yaml`
+- This handoff (Round 2 section appended; historical Round 1 retained).
+- `archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-2.json`

@@ -121,7 +121,7 @@ test_fixtures:
     ico: "00177041"
 limitations:
   - title: Official registry data access
-    text: "Official per-entity API terms read on 2026-10-26: https://mf.gov.cz/cs/ministerstvo/informacni-systemy/ares. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    text: "Data comes from the official registry's public API under its open-data terms (https://mf.gov.cz/cs/ministerstvo/informacni-systemy/ares); results carry the registry as their source."
     category: coverage
     severity: info
   - title: Registry status interpretation
@@ -173,3 +173,4 @@ output_field_reliability:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: ARES (Czech Ministry of Finance)

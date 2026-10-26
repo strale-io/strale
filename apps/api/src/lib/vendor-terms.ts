@@ -140,6 +140,8 @@ export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
     how_read: "Official API terms page read via web open; no authenticated company lookup attempted.",
     findings: ["API and open data licensed ODC-BY-1.0, permitting commercial reuse with attribution. Existing API-key access remains required."],
     decision_ref: "DEC-20261023-A (existing official registry API; status correction)",
+  },
+  {
     vendor: "GLEIF",
     hosts: ["api.gleif.org"],
     capabilities: ["lei-lookup", "entity-resolve", "gleif-l2-ubo-lookup", "gleif-l2-children-lookup"],

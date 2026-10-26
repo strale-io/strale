@@ -128,7 +128,7 @@ output_field_reliability:
   matched_registry_name: rare
 limitations:
   - title: Official registry data access
-    text: "Official per-entity API terms read on 2026-10-26: https://avoindata.prh.fi/en. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    text: "Data comes from the official registry's public API under its open-data terms (https://avoindata.prh.fi/en); results carry the registry as their source."
     category: coverage
     severity: info
   - title: Registry status interpretation
@@ -160,3 +160,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: PRH (Finnish Patent and Registration Office)
