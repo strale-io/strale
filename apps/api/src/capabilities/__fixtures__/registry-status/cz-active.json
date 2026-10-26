@@ -1,0 +1,17 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/00177041",
+    "captured_at": "2026-10-26T11:31:05.611508+00:00",
+    "http_status": 200,
+    "raw_sha256": "d9273480242a599e97543ce0af2ea7e2483ff34f80e8b475731b00e80dbe2a4a",
+    "note": "Live read-only registry response projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "ico": "00177041",
+    "seznamRegistraci": {
+      "stavZdrojeRos": "AKTIVNI",
+      "stavZdrojeVr": "AKTIVNI",
+      "stavZdrojeIr": "NEEXISTUJICI"
+    }
+  }
+}

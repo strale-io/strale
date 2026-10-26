@@ -1,0 +1,44 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a4dc5853ac6a04e9b1dada8c64917685df79143f"
+  },
+  "at": "2026-10-26T13:57:16.077Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "passed": 5043,
+    "failed": 0,
+    "skipped": 321
+  },
+  "topic": "registry-status-dead-entities-final",
+  "raw": {
+    "summary": {
+      "passed": 5043,
+      "failed": 0,
+      "skipped": 321,
+      "api_typecheck_passed": true
+    },
+    "checks": [
+      {
+        "command": "cd apps/api && npx vitest run",
+        "result": "passed",
+        "passed": 5043,
+        "failed": 0,
+        "skipped": 321
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/vendor-terms.test.ts src/capabilities/registry-status.test.ts src/capabilities/risk-narrative-generate.registry-status.test.ts src/capabilities/registry-status.consumers.test.ts src/lib/company-status test/guard-production-write-access.test.ts",
+        "result": "passed",
+        "passed": 569,
+        "failed": 0
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "result": "passed"
+      }
+    ]
+  }
+}

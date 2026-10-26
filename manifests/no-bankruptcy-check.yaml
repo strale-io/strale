@@ -36,6 +36,10 @@ output_schema:
       type:
         - string
         - "null"
+    is_deleted:
+      type: boolean
+    deletion_date:
+      type: [string, "null"]
     has_bankruptcy_filing:
       type: boolean
     bankruptcy_date:
@@ -97,6 +101,8 @@ test_fixtures:
   health_check_input:
     org_number: "923609016"
 output_field_reliability:
+  is_deleted: guaranteed
+  deletion_date: common
   org_number: guaranteed
   has_bankruptcy_filing: guaranteed
   is_under_dissolution: guaranteed
@@ -107,6 +113,14 @@ output_field_reliability:
   company_name: common
   bankruptcy_date: rare
 limitations:
+  - title: Official registry data access
+    text: "Data comes from the official registry's public API under its open-data terms (https://www.brreg.no/en/use-of-data-from-the-bronnoysund-register-centre/datasets-and-api/); results carry the registry as their source."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Deleted-unit tombstones set is_deleted and deletion_date and count in has_any_distress_signal. Deletion alone does not imply bankruptcy; bankruptcy and dissolution flags remain separate."
+    category: coverage
+    severity: info
   - title: Coverage limited to entities in Brønnøysundregistrene Enhetsregisteret
     text: >-
       Only Norwegian entities registered in Enhetsregisteret are covered. Foreign entities and informal businesses
@@ -132,3 +146,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: Brønnøysundregistrene

@@ -823,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "c98394e5c10ee23cefbdc8c2bf354f9e5cf180941e09b90151b681f29e602c90",
+      "sha256": "5c157c2488fbe61c2796009120801ce1aa6d647f46e87ab4b3f77ef769aaa5fa",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -882,6 +882,7 @@
         "archive/receipts/2026-09-05-check-quiet-material-kit-index-bound-proof.json",
         "archive/receipts/2026-09-06-check-brand-editorial-readiness.json",
         "archive/receipts/2026-09-11-audit-browserless-credential-outage.json",
+        "archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-08-16-t02-quality-floor-quarantine-audit.md",
         "archive/sessions/2026-08-18-local-branch-cleanup.md",

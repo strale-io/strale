@@ -9,8 +9,9 @@
  * client must refuse behind a licence gate, and nothing else may name one.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import ts from "typescript";
 import { PROHIBITED_UPSTREAM_HOSTS, VENDOR_TERMS_RECORDS, prohibitedHostsIn } from "./vendor-terms.js";
 import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
 import { getEthRpcEndpoints } from "./eth-rpc-endpoints.js";
@@ -180,45 +181,196 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
   const CAPS = resolve(SRC, "capabilities");
   // Every source file under capabilities/, recursively, with comments stripped
   // so an explanation that names a host is not mistaken for a call.
-  const files = walk(CAPS).map((f) => {
-    const src = readFileSync(f, "utf8");
+  function sourceFile(path: string, src = readFileSync(path, "utf8")) {
     const code = codeOnly(src);
-    return { path: f, file: rel(f), code, slug: code.match(/registerCapability\(\s*["'`]([^"'`]+)["'`]/)?.[1] };
-  });
-  const directlyCallsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
-    record.hosts.some((h) => code.includes(h)) || code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
-  // Follow literal static/dynamic imports of shared capability helpers, so factoring a fetch
-  // into lib/ does not hide its callers or require an exemption allowlist.
+    return { path, file: rel(path), code, slug: code.match(/registerCapability\(\s*["'`]([a-z0-9-]+)["'`]/)?.[1] };
+  }
+  const files = walk(CAPS).map(f => sourceFile(f));
+  const withoutMetadata = new Map<string, string>();
+  const directlyCallsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) => {
+    // Remove literal provenance/label values only. Every remaining host counts,
+    // regardless of which HTTP helper (or alias) performs the request.
+    const original = code;
+    const cached = withoutMetadata.get(code);
+    if (cached !== undefined) code = cached;
+    else {
+      // A label is stripped only if this file never reads that property back:
+      // a value that is read (cfg.source_url, t["label"]) may feed a request.
+      const labels = new Set(["source", "source_url", "upstream_vendor", "primary_source_reference", "label", "name"]
+        .filter(p => !new RegExp(`\\.${p}\\b|\\[\\s*["'\x60]${p}["'\x60]\\s*\\]`).test(code)));
+      const tree = ts.createSourceFile("vendor-client.ts", code, ts.ScriptTarget.Latest, true);
+      const spans: Array<[number, number]> = [];
+      function visit(node: ts.Node) {
+        const value = ts.isPropertyAssignment(node) && labels.has(node.name.getText(tree).replace(/^['"]|['"]$/g, ""))
+          ? node.initializer
+          : ts.isLabeledStatement(node) && labels.has(node.label.text) && ts.isExpressionStatement(node.statement)
+            ? node.statement.expression : undefined;
+        if (value && (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value))) {
+          spans.push([value.getStart(tree), value.getEnd()]);
+        }
+        ts.forEachChild(node, visit);
+      }
+      visit(tree);
+      for (const [start, end] of spans.sort((a, b) => b[0] - a[0])) code = code.slice(0, start) + '""' + code.slice(end);
+      withoutMetadata.set(original, code);
+    }
+    return record.hosts.some(host => code.includes(host)) ||
+      code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
+  };
+  // Follow literal imports and re-exports into capability helpers and reachable
+  // src/lib helpers. Do not scan unrelated lib clients (e.g. health probes).
   const byPath = new Map(files.map(f => [f.path, f]));
+  const importCache = new Map<string, (typeof files)>();
   function sharedImports(file: (typeof files)[number]) {
-    return [...file.code.matchAll(/(?:from\s*|import\s*(?:\(\s*)?)["'`](\.[^"'`]+)["'`]/g)]
-      .map(m => byPath.get(resolve(dirname(file.path), m[1].replace(/\.js$/, ".ts"))))
+    // Registration infrastructure is a graph boundary, just like other
+    // executors: importing registerCapability/getDirectExecutor is not a
+    // customer call into every provider and its operational health probes.
+    if (/export\s+function\s+registerCapability\s*\(/.test(file.code)) return [];
+    const cached = importCache.get(file.path);
+    if (cached) return cached;
+    const imports: string[] = [];
+    const tree = ts.createSourceFile(file.path, file.code, ts.ScriptTarget.Latest, true);
+    function visit(node: ts.Node) {
+      if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+        const clause = ts.isImportDeclaration(node) ? node.importClause : undefined;
+        const typeOnly = ts.isExportDeclaration(node) ? node.isTypeOnly : clause?.isTypeOnly ||
+          (clause?.namedBindings && ts.isNamedImports(clause.namedBindings) && !clause.name &&
+            clause.namedBindings.elements.every(e => e.isTypeOnly));
+        if (!typeOnly && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) imports.push(node.moduleSpecifier.text);
+      } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        const arg = node.arguments[0];
+        if (arg && (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg))) imports.push(arg.text);
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(tree);
+    const helpers = imports.filter(specifier => specifier.startsWith("."))
+      .map(specifier => {
+        const path = resolve(dirname(file.path), specifier.replace(/\.js$/, ".ts"));
+        if (!byPath.has(path) && rel(path).startsWith("lib/") && path.endsWith(".ts")
+          && !path.endsWith(".test.ts") && existsSync(path)) {
+          const helper = sourceFile(path);
+          byPath.set(path, helper);
+          files.push(helper);
+        }
+        return byPath.get(path);
+      })
       .filter((f): f is (typeof files)[number] => !!f && !f.slug);
+    importCache.set(file.path, helpers);
+    return helpers;
+  }
+  // Expand only from executors. Capability helpers remain in files for orphan
+  // detection, but their unrelated operational imports do not seed a lib scan.
+  const queue = files.filter(f => f.slug);
+  const visited = new Set<string>();
+  for (const file of queue) {
+    if (visited.has(file.path)) continue;
+    visited.add(file.path);
+    queue.push(...sharedImports(file));
   }
   function reaches(from: (typeof files)[number], target: (typeof files)[number], seen = new Set<string>()): boolean {
     if (from === target) return true;
     if (seen.has(from.path)) return false;
     seen.add(from.path);
-    return sharedImports(from).some(f => reaches(f, target, seen));
+    return (importCache.get(from.path) ?? (from.slug ? sharedImports(from) : [])).some(f => reaches(f, target, seen));
   }
   const callsVendor = (file: (typeof files)[number], record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
     files.some(target => directlyCallsVendor(target.code, record) && reaches(file, target));
 
+  function exactCallers(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
+    return candidates.filter(f => f.slug && callsVendor(f, record)).map(f => f.slug as string).sort();
+  }
+  function assertExactCallers(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
+    expect([...record.capabilities].sort()).toEqual(exactCallers(record, candidates));
+  }
+
+  it.each([
+    'import { brregFetch } from "../lib/brreg-fetch.js";',
+    'export { brregFetch } from "../lib/brreg-fetch.js";',
+    'const helper = import("../lib/brreg-fetch.js");',
+  ])("rejects an unrecorded executor reaching src/lib/brreg-fetch.ts: %s", imports => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+    const extra = sourceFile(join(CAPS, "unrecorded-brreg-fixture.ts"),
+      `${imports} registerCapability("unrecorded-brreg-fixture", handler);`);
+    importCache.delete(extra.path);
+    expect(exactCallers(record, [...files, extra])).toContain("unrecorded-brreg-fixture");
+    expect(() => assertExactCallers(record, [...files, extra])).toThrow();
+    importCache.delete(extra.path);
+  });
+
+  it.each([
+    'const HOST = "data.brreg.no"; fetch(`https://${HOST}/x`);',
+    'fetch(`https://data.brreg.no${path}`);',
+    'getDirectExecutor("other"); fetch(`https://data.brreg.no${path}`);',
+    'import { request } from "undici"; getDirectExecutor("other"); request("https://data.brreg.no/x");',
+  ])("rejects an unrecorded executor constructing a vendor URL: %s", code => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+    const extra = sourceFile(join(CAPS, "unrecorded-url-probe.ts"),
+      `${code} registerCapability("unrecorded-url-probe", handler);`);
+    // Direct probes must participate in the same reachability/exact-callers guard.
+    files.push(extra);
+    try {
+      expect(exactCallers(record)).toContain("unrecorded-url-probe");
+      expect(() => assertExactCallers(record)).toThrow();
+    } finally {
+      files.splice(files.indexOf(extra), 1);
+      importCache.delete(extra.path);
+    }
+  });
+
+  function unrecordedShared(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
+    return candidates.filter(f => !f.slug && directlyCallsVendor(f.code, record)
+      && !candidates.some(caller => caller.slug && record.capabilities.includes(caller.slug) && reaches(caller, f)))
+      .map(f => f.file);
+  }
+
+  it("still rejects an orphan capability helper, and does not mistake provenance for a call", () => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+    const orphan = sourceFile(join(CAPS, "lib/orphan-brreg-fixture.ts"), 'fetch("https://data.brreg.no/enhetsregisteret/api/enheter/123456789");');
+    expect(unrecordedShared(record, [...files, orphan])).toEqual([orphan.file]);
+    expect(directlyCallsVendor('getDirectExecutor("norwegian-company-data"); source: "data.brreg.no"', record)).toBe(false);
+    expect(directlyCallsVendor('fetch("https://dataXbrregYno/")', record)).toBe(false);
+  });
+
+  it.each(["fetchPage", "fetchWithRetry", "browserlessFetch", "gleifFetch", "aliasedFetch", "new Request"])(
+    "delegation cannot hide an HTTP helper: %s", helper => {
+      const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+      expect(directlyCallsVendor(`getDirectExecutor("x"); ${helper}("https://data.brreg.no/x")`, record)).toBe(true);
+    },
+  );
+  it.each(["source", "source_url", "upstream_vendor", "primary_source_reference", "label", "name"])(
+    "ignores only literal %s metadata", property => {
+      const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+      expect(directlyCallsVendor(`const metadata = { "${property}": "data.brreg.no" };`, record)).toBe(false);
+      expect(directlyCallsVendor(`const metadata = { ${property}: "data.brreg.no" }; fetchPage("https://data.brreg.no/x")`, record)).toBe(true);
+    },
+  );
+  it.each(["source", "source_url", "upstream_vendor", "primary_source_reference", "label", "name"])(
+    "counts a %s value that the file reads back, since it may feed a request", property => {
+      const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+      expect(directlyCallsVendor(`const cfg = { ${property}: "https://data.brreg.no/x" }; fetch(cfg.${property});`, record)).toBe(true);
+      expect(directlyCallsVendor(`const t = { ${property}: "data.brreg.no" }; fetch(\`https://\${t["${property}"]}/x\`);`, record)).toBe(true);
+    },
+  );
+
+  it("does not treat the delegating Norway provider as a vendor client or orphan", () => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+    const provider = files.find(f => f.file === "capabilities/providers/norwegian-company-data.ts")!;
+    expect(provider.code).toContain("getDirectExecutor");
+    expect(callsVendor(provider, record)).toBe(false);
+    expect(files.map(f => f.file)).not.toContain("lib/dependency-manifest.ts");
+    expect(files.map(f => f.file)).not.toContain("lib/situation-assessment.ts");
+  });
+
   for (const record of VENDOR_TERMS_RECORDS) {
     it(`${record.vendor}: lists exactly the executors that call it`, () => {
-      const callers = files
-        .filter((f) => f.slug && callsVendor(f, record))
-        .map((f) => f.slug as string)
-        .sort();
-      expect([...record.capabilities].sort()).toEqual(callers);
+      assertExactCallers(record);
     });
 
     it(`${record.vendor}: no shared client outside an executor calls it unrecorded`, () => {
       // An imported helper is accounted for through every executor that uses
       // it. Orphan clients still fail: their callers have not been recorded.
-      const shared = files.filter(f => !f.slug && directlyCallsVendor(f.code, record)
-        && !files.some(caller => caller.slug && record.capabilities.includes(caller.slug) && reaches(caller, f)))
-        .map(f => f.file);
+      const shared = unrecordedShared(record);
       expect(shared).toEqual([]);
     });
 

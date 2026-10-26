@@ -1,0 +1,11 @@
+{
+  "capture": {
+    "url": "https://data.gov.sg/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&limit=1",
+    "captured_at": "2026-10-26T13:29:17.668829+00:00",
+    "http_status": 200,
+    "raw_sha256": "3442a1a0586fc3d940afe1210e3ea2d364da66c1edbe18b9e77451f5012539a5"
+  },
+  "response": {
+    "total": 2127089
+  }
+}

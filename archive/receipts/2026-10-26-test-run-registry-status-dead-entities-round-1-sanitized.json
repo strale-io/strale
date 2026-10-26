@@ -1,0 +1,29 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b81da359cce91bc3f58f047cd65c232c5b480941"
+  },
+  "at": "2026-10-26T12:59:31.223Z",
+  "inputs": {
+    "source": "historical Round 1 summary"
+  },
+  "summary": {
+    "note": "Historical Round 1 summary, replacing the branch-only receipt to omit local paths and raw command logs. Results were produced in Round 1, not rerun here."
+  },
+  "topic": "registry-status-dead-entities-round-1-sanitized",
+  "raw": {
+    "summary": {
+      "passed": 189,
+      "failed": 0,
+      "skipped": 4,
+      "test_files": 7,
+      "fail_before_executors": 7,
+      "live_captures": 13,
+      "required_root_checks_passed": 6,
+      "database_verification": "unavailable",
+      "upstream_hosts_added": 0
+    },
+    "note": "Historical Round 1 summary, replacing the branch-only receipt to omit local paths and raw command logs. Results were produced in Round 1, not rerun here."
+  }
+}

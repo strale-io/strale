@@ -127,6 +127,14 @@ output_field_reliability:
   directors: common
   is_branch: guaranteed
 limitations:
+  - title: Official registry data access
+    text: "Data comes from the official registry's public API under its open-data terms (https://opendata.businessportal.gr/license/); results carry the registry as their source."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Known GEMI descriptions map to active, inactive, dissolved, bankrupt or liquidation. Unrecognised descriptions are preserved verbatim; missing descriptions return unknown. No live GEMI status validation was possible without a key."
+    category: coverage
+    severity: info
   - title: GEMI rate limit is 8 requests per minute
     text: >-
       The GEMI Open Data API enforces a maximum of 8 requests per minute per API key. Requests exceeding this limit
@@ -153,3 +161,4 @@ limitations:
 data_access:
   lane: preferred
   acquisition_method: direct_api
+  upstream_vendor: GEMI Open Data

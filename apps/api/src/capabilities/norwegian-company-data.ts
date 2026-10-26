@@ -116,7 +116,12 @@ function shapeBrregOutput(data: Record<string, unknown>): Record<string, unknown
     address,
     registration_date: (data.registreringsdatoEnhetsregisteret as string) || null,
     employee_count: (data.antallAnsatte as number) ?? null,
-    status: data.konkurs ? "bankrupt" : data.underAvvikling ? "dissolving" : "active",
+    // Deleted units are HTTP 200 tombstones without the live-unit flags.
+    status: data.respons_klasse === "SlettetEnhet" || data.slettedato
+      ? "deleted"
+      : data.konkurs ? "bankrupt"
+      : data.underTvangsavviklingEllerTvangsopplosning ? "compulsory_dissolution"
+      : data.underAvvikling ? "dissolving" : "active",
     vat_number: deriveVatNO(orgNo),
   };
 }

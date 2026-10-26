@@ -1,0 +1,12 @@
+{
+  "capture": {
+    "url": "https://receitaws.com.br/v1/cnpj/92772821003007",
+    "captured_at": "2026-10-26T13:32:20.414348+00:00",
+    "http_status": 200,
+    "raw_sha256": "2853f18668c985693eaf6e1a4aed7f992a15e54204e9cc0b137b2fb2e79d959e",
+    "note": "Live ReceitaWS response projected to situacao only; identities and locations omitted."
+  },
+  "response": {
+    "situacao": "BAIXADA"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "capture": {
+    "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0112038-9",
+    "captured_at": "2026-10-26T11:31:05.385198+00:00",
+    "http_status": 200,
+    "raw_sha256": "e79eac1b388ff3dfef21da986e87453fb1719229d218bb1ce9d6473f8980dc06",
+    "note": "Live read-only registry response projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "companies": [
+      {
+        "status": "2",
+        "tradeRegisterStatus": "1",
+        "companySituations": []
+      }
+    ]
+  }
+}
