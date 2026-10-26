@@ -54,7 +54,8 @@ export function parseIdentifier(input: Record<string, unknown>): { identifier: s
   if (typeof input.identifier !== "string" || !input.identifier.trim() || input.identifier.length > 100) {
     throw new EntityResolveError("invalid_request", "'identifier' must be a company identifier (1–100 characters).");
   }
-  const identifier = input.identifier.trim().toUpperCase();
+  const rawIdentifier = input.identifier.trim().toUpperCase();
+  const identifier = rawIdentifier.replace(/[\s-]/g, "");
   let country: string | undefined;
   if (input.country !== undefined) {
     if (typeof input.country !== "string" || (!/^[A-Z]{2}$/i.test(input.country) || resolveCountryAlpha2(input.country) !== input.country.toUpperCase())) {
@@ -68,17 +69,18 @@ export function parseIdentifier(input: Record<string, unknown>): { identifier: s
     }
     const type = input.type as IdentifierType;
     if (type === "registry" && !country) throw new EntityResolveError("invalid_request", "'country' must be supplied as ISO2 for a registry identifier.");
-    if (!checks[type](identifier)) throw new EntityResolveError("invalid_request", `'identifier' must be a valid ${type} identifier. Check its format and check digits, where applicable.`);
-    return { identifier, type, country };
+    const value = type === "registry" ? rawIdentifier : identifier;
+    if (!checks[type](value)) throw new EntityResolveError("invalid_request", `'identifier' must be a valid ${type} identifier. Check its format and check digits, where applicable.`);
+    return { identifier: value, type, country };
   }
   const candidates = (Object.keys(checks) as IdentifierType[]).filter(type =>
     type !== "registry" && checks[type](identifier));
-  if (!candidates.length && country && checks.registry(identifier)) candidates.push("registry");
+  if (!candidates.length && country && checks.registry(rawIdentifier)) candidates.push("registry");
   if (candidates.length !== 1) {
     throw new EntityResolveError("invalid_request", candidates.length > 1
-      ? "'type' must be supplied for an ambiguous identifier: lei, bic, isin, vat or registry."
+      ? `'type' must be supplied for an ambiguous identifier. Candidates: ${candidates.join(", ")}.`
       : "'identifier' must be recognized and unambiguous. Check format and check digits, or provide type and country for a registry number.",
     { candidates });
   }
-  return { identifier, type: candidates[0], country };
+  return { identifier: candidates[0] === "registry" ? rawIdentifier : identifier, type: candidates[0], country };
 }

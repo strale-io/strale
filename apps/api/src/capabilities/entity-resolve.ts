@@ -22,6 +22,7 @@ type Document = {
 async function request(path: string, allow404 = false): Promise<Document | null> {
   const response = await gleifFetch(path);
   if (allow404 && response.status === 404) return null;
+  if (response.status === 429) throw new EntityResolveError("execution_failed", "GLEIF rate-limited the request. Retry later.", { upstream_status: 429 });
   if (!response.ok) throw new EntityResolveError("execution_failed", "GLEIF is unavailable. Retry later.", { upstream_status: response.status });
   const body = await response.json();
   if (!body || body.errors || !("data" in body)) throw new EntityResolveError("execution_failed", "GLEIF returned an invalid response. Retry later.");
@@ -45,11 +46,16 @@ function unique(doc: Document | null): GleifRecord | undefined {
 
 export async function resolveEntity(input: CapabilityInput) {
   const { identifier, type, country } = parseIdentifier(input);
+  // VIES suppresses trader names for DE/ES (confirmed live 2026-10-26).
+  if (type === "vat" && ["DE", "ES"].includes(identifier.slice(0, 2))) {
+    throw new EntityResolveError("invalid_request", "'identifier' must be a registry number with country and type registry for DE/ES entities; VIES does not provide their trader names.");
+  }
   const match_method = { lei: "lei_direct", isin: "isin_mapping", bic: "bic_mapping", registry: "registry_id", vat: "name_country" }[type];
   const confidence = type === "vat" ? "probable" : "exact";
   const fetchedAt = new Date().toISOString();
   let vatProvenance: Record<string, unknown> | undefined;
   let confirmedVat: string | undefined;
+  let bicMatched: string | undefined;
   const result = (output: Record<string, unknown>) => ({ output, provenance: {
     source: type === "vat" ? "GLEIF; VIES via vat-validate" : "GLEIF",
     fetched_at: fetchedAt, acquisition_method: "direct_api", data_access_lane: "preferred", upstream_vendor: "gleif",
@@ -64,12 +70,14 @@ export async function resolveEntity(input: CapabilityInput) {
       if (doc) record = doc.data as GleifRecord;
     } else if (type === "vat") {
       const validate = getDirectExecutor("vat-validate");
-      if (!validate) throw new EntityResolveError("execution_failed", "VAT validation is unavailable. Retry later.");
-      const vat = await validate({ vat_number: identifier });
+      if (!validate) throw new EntityResolveError("execution_failed", "VIES VAT validation is unavailable. Retry later.");
+      const vat = await validate({ vat_number: identifier }).catch(() => {
+        throw new EntityResolveError("execution_failed", "VIES VAT validation failed. Retry later.");
+      });
       vatProvenance = vat.provenance;
-      if (vat.output.stale === true) throw new EntityResolveError("execution_failed", "Fresh VAT validation is unavailable. Retry later.");
+      if (vat.output.stale === true) throw new EntityResolveError("execution_failed", "Fresh VIES VAT validation is unavailable. Retry later.");
       if (vat.output.valid === false) return unresolved("vat_not_valid");
-      if (vat.output.valid !== true) throw new EntityResolveError("execution_failed", "VAT validation returned an invalid response. Retry later.");
+      if (vat.output.valid !== true) throw new EntityResolveError("execution_failed", "VIES VAT validation returned an invalid response. Retry later.");
       confirmedVat = identifier;
       const name = vat.output.company_name;
       if (typeof name !== "string" || !name.trim() || /^[\s.-]+$/.test(name)) return unresolved("vat_legal_name_unavailable");
@@ -97,7 +105,13 @@ export async function resolveEntity(input: CapabilityInput) {
         }
       }
     } else {
-      doc = await search({ [type]: type === "bic" && identifier.length === 8 ? `${identifier}XXX` : identifier });
+      bicMatched = type === "bic" ? (identifier.length === 8 ? `${identifier}XXX` : identifier) : undefined;
+      doc = await search({ [type]: bicMatched ?? identifier });
+      if (type === "bic" && identifier.length === 11 && !identifier.endsWith("XXX")
+        && records(doc).length === 0 && (doc?.meta?.pagination?.total ?? 0) === 0) {
+        bicMatched = `${identifier.slice(0, 8)}XXX`;
+        doc = await search({ bic: bicMatched });
+      }
       record = unique(doc);
     }
     if (!record) return unresolved((doc?.meta?.pagination?.total ?? records(doc).length) > 1 ? "multiple_entities_matched" : "no_gleif_match");
@@ -110,6 +124,7 @@ export async function resolveEntity(input: CapabilityInput) {
     const isin_count = isins?.meta?.pagination?.total;
     if (!Number.isInteger(isin_count) || isin_count! < 0) throw new EntityResolveError("execution_failed", "GLEIF returned an invalid ISIN count. Retry later.");
     return result({ resolved: true, match_method, confidence,
+      ...(bicMatched ? { bic_matched: bicMatched } : {}),
       entity: {
         legal_name: e.legalName.name, lei: a.lei, lei_status: a.registration?.status ?? null,
         jurisdiction: e.jurisdiction ?? null, legal_form: e.legalForm?.id ?? null,
@@ -117,7 +132,7 @@ export async function resolveEntity(input: CapabilityInput) {
         entity_status: e.status ?? null, headquarters_country: e.headquartersAddress?.country ?? null,
         legal_address: e.legalAddress ?? null,
       },
-      identifiers: { lei: a.lei, bic: a.bic ?? [], isin_count,
+      identifiers: { lei: a.lei, bic: (a.bic ?? []).slice(0, 25), bic_count: (a.bic ?? []).length, isin_count,
         ...(confirmedVat ? { vat: confirmedVat } : {}), registry_number: e.registeredAs ?? null },
       as_of: doc?.meta?.goldenCopy?.publishDate ?? fetchedAt,
     });
