@@ -26,7 +26,6 @@ describe("frozen public catalogue quality gate", () => {
     for (let i = 0; i < 1000; i++)
       index.search(golden.queries[i % golden.queries.length].q);
     const elapsed = performance.now() - started;
-    console.info(`keyword benchmark: ${elapsed.toFixed(1)} ms / 1,000 queries`);
     expect(elapsed).toBeLessThan(2000);
   });
 });
