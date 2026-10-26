@@ -184,7 +184,7 @@ export function createKeywordIndex<T extends SearchItem>(items: readonly T[]) {
     options: { geo?: string; type?: T["type"]; prefix?: boolean } = {}
   ): KeywordHit<T>[] {
     query = query.slice(0, MAX_KEYWORD_QUERY_CHARS);
-    const extracted = extractCountries(query);
+    const extracted = extractCountries(query, (t) => df.has(t) || df.has(stem(t)));
     const countries = extracted.codes;
     const hasIdentifier = extracted.words.some((t) => /^\d{6,}$/.test(t));
     const rawTokens = extracted.words.filter((t) => !/^\d{6,}$/.test(t));

@@ -44,7 +44,7 @@ function logSearch(row: {
 // GET /v1/suggest/typeahead — Public, no auth, fast in-memory matching
 suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
   // Typeahead considers the first 200 characters; no paid/model work here.
-  const q = c.req.query("q")?.slice(0, MAX_KEYWORD_QUERY_CHARS).trim();
+  const q = c.req.query("q")?.trim().slice(0, MAX_KEYWORD_QUERY_CHARS).trim();
   if (!q || q.length < 2) {
     return c.json(
       apiError("invalid_request", "'q' parameter is required and must be at least 2 characters."),

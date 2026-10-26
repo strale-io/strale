@@ -214,3 +214,28 @@ describe("keyword relevance constraints", () => {
     expect(results.map((r) => r.item.slug)).toEqual(["sanctions-check"]);
   });
 });
+
+describe("misspelt country names and trailing us", () => {
+  const catalogue = [
+    item("norwegian-company-data", "Norwegian Company Data", "Company register lookup", [], "NO"),
+    item("german-company-data", "German Company Data", "Company register lookup", [], "DE"),
+    item("swedish-company-data", "Swedish Company Data", "Company register lookup", [], "SE"),
+    item("us-company-data", "US Company Data", "Company register lookup", [], "US"),
+    item("austrian-company-data", "Austrian Company Data", "Company register lookup", [], "AT"),
+    item("malt-recipe", "Malt Recipe", "Brewing helper"),
+  ];
+  const index = createKeywordIndex(catalogue);
+  it.each([
+    ["norwegain company", "norwegian-company-data"],
+    ["germnay company", "german-company-data"],
+    ["swedsih company", "swedish-company-data"],
+    ["company data us", "us-company-data"],
+  ])("%s resolves the country", (q, slug) => {
+    expect(index.search(q)[0]?.item.slug).toBe(slug);
+  });
+  it("leaves short words and catalogue words alone", () => {
+    expect(extractCountries("malt", () => false).codes.size).toBe(0);
+    expect(extractCountries("recipe", () => true).codes.size).toBe(0);
+    expect(index.search("malt")[0]?.item.slug).toBe("malt-recipe");
+  });
+});

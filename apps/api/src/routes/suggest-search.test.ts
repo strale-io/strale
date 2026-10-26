@@ -38,6 +38,12 @@ describe("public search route guard and IP propagation", () => {
     expect(response.status).toBe(200);
     expect(mocks.suggest).toHaveBeenCalledWith({ query: "validate email", limit: 1, clientIp: "203.0.113.44" });
   });
+  it("trims leading spaces before applying the 200-character cap", async () => {
+    mocks.typeahead.mockResolvedValue({ results: [], total: 0 });
+    const response = await app.request(`/v1/suggest/typeahead?q=${encodeURIComponent(" ".repeat(250) + "vat")}`);
+    expect(response.status).toBe(200);
+    expect(mocks.typeahead.mock.calls.at(-1)?.[0]).toBe("vat");
+  });
   it("truncates typeahead queries to 200 characters before matching", async () => {
     mocks.typeahead.mockResolvedValue({ results: [], total: 0 });
     const response = await app.request(`/v1/suggest/typeahead?q=${"x".repeat(10_240)}`);

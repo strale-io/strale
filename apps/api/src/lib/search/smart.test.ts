@@ -522,3 +522,11 @@ describe("suggest wire mapping and engine fallback", () => {
     });
   });
 });
+
+
+describe("sanitizeSearchText whitespace", () => {
+  it("keeps words apart across newlines and tabs", async () => {
+    const { sanitizeSearchText } = await import("./smart.js");
+    expect(sanitizeSearchText("line one\nline two\tend", 240)).toBe("line one line two end");
+  });
+});

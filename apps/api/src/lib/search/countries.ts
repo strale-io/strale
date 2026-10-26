@@ -1,6 +1,6 @@
 /** ISO codes follow catalogue spelling (UK, rather than GB). */
 const COUNTRIES: Record<string, string[]> = {
-  SE: ["sweden", "swedish", "swedsih", "bolagsverket", "orgnr", "organisationsnummer"],
+  SE: ["sweden", "swedish", "bolagsverket", "orgnr", "organisationsnummer"],
   NO: ["norway", "norwegian", "brønnøysund", "bronnoysund", "brreg"],
   DK: ["denmark", "danish", "cvr"],
   FI: ["finland", "finnish", "prh"],
@@ -43,12 +43,13 @@ export const countryLexicon = new Map(
   )
 );
 export const countryCodes = new Set(Object.keys(COUNTRIES));
-const REGISTRY_TERMS = new Set([
+const REGISTRY_TERMS_LIST = [
   "abn", "kvk", "siren", "siret", "sirene", "cro", "krs", "ico", "ičo",
   "ares", "cvr", "orgnr", "organisationsnummer", "brreg", "brønnøysund",
   "bronnoysund", "companies house", "handelsregister", "bolagsverket", "prh",
   "firmenbuch", "kbo", "bce", "cnpj", "zefix", "borme", "gemi", "oib", "acra", "uen",
-]);
+];
+const REGISTRY_TERMS = new Set(REGISTRY_TERMS_LIST);
 export function words(text: string): string[] {
   return (
     text
@@ -57,7 +58,32 @@ export function words(text: string): string[] {
       .match(/[\p{L}\p{N}]+/gu) ?? []
   );
 }
-export function extractCountries(text: string): {
+// Country names and adjectives of 6+ letters, for one-edit typo recovery
+// ("norwegain", "germnay"). Shorter words stay exact: "malt" is not Malta.
+const FUZZY_COUNTRY_TERMS = [...countryLexicon.keys()].filter(
+  (t) => t.length >= 6 && /^[a-z]+$/.test(t) && !REGISTRY_TERMS_LIST.includes(t)
+);
+/** True when a and b differ by at most one insertion, deletion, substitution
+ *  or adjacent transposition. */
+function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (a.length === b.length) {
+    if (a.slice(i + 1) === b.slice(i + 1)) return true;
+    return a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2);
+  }
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+function fuzzyCountry(token: string, isKnownWord?: (t: string) => boolean): string | undefined {
+  if (token.length < 6 || !/^[a-z]+$/.test(token) || isKnownWord?.(token)) return undefined;
+  const hits = new Set(FUZZY_COUNTRY_TERMS.filter((t) => withinOneEdit(token, t)).map((t) => countryLexicon.get(t)!));
+  return hits.size === 1 ? [...hits][0] : undefined;
+}
+/** isKnownWord: a catalogue-vocabulary check, so a real catalogue word is
+ *  never reinterpreted as a misspelt country. Only query parsing passes it. */
+export function extractCountries(text: string, isKnownWord?: (t: string) => boolean): {
   codes: Set<string>;
   registryCodes: Set<string>;
   words: string[];
@@ -69,11 +95,14 @@ export function extractCountries(text: string): {
   const remaining: string[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const pair = countryLexicon.get(`${tokens[i]} ${tokens[i + 1]}`);
-    let code = pair ?? countryLexicon.get(tokens[i]);
+    let code = pair ?? countryLexicon.get(tokens[i]) ?? (isKnownWord ? fuzzyCountry(tokens[i], isKnownWord) : undefined);
     // Lowercase pronoun "us" is common in contact/email queries. Require a
     // country cue; uppercase US, "the us" and "united states" stay explicit.
+    const companyCue = (t?: string) =>
+      /^(company|companies|registry|business|corporate|incorporation|sec|edgar|filings)$/.test(t ?? "");
+    const trailingUs = i === tokens.length - 1 && tokens.slice(0, i).some((t) => companyCue(t));
     if (tokens[i] === "us" && rawTokens[i] !== "US" &&
-        tokens[i - 1] !== "the" &&
+        tokens[i - 1] !== "the" && !trailingUs &&
         ![tokens[i - 1], tokens[i + 1]].some((t) =>
           /^(company|companies|registry|business|corporate|incorporation|sec|edgar|filings)$/.test(t ?? "")))
       code = undefined;
