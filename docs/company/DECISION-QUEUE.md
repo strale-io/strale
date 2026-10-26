@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · no deadline — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
+**DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · answered 2026-10-26, open until the registers reply — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
 
 Under the data-access rule (DEC-20261023-A), a per-call read of a public source is allowed when its terms permit it. Building the Swiss company-ID and VAT check (portfolio plan 1.12), the build stopped at that test, and it applies to two live tools too.
 
@@ -36,7 +36,9 @@ Under the data-access rule (DEC-20261023-A), a per-call read of a public source 
 
 *My recommendation:* option 1 now, with the two live tools left as they are while you wait, since the exposure is low and the tools are already live. I build 1.12 the day a yes comes back. If you would rather not wait, option 2 is defensible; option 3 is out of proportion to the risk.
 
-**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · no deadline (a two-week window is recommended below) — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
+**Answered 2026-10-26 by Petter, in session:** "i agree with your rec on #1 and 2". The entry stays `your_call` until the registers reply, because the three tools still run on unconfirmed terms. Option 1: Petter writes to the registers, using drafts the assistant prepared. The addresses are uid@bfs.admin.ch (Swiss UID register, read from the Federal Statistical Office's UID pages); zefix@bj.admin.ch, copied on the same email (Zefix, moderate confidence: from search results citing the register's page, not read directly); and ares@mfcr.cz (Czech ARES, read from the Ministry of Finance's ARES page). `vat-validate`'s Swiss path, `swiss-company-data` and `cz-company-data` stay live while the replies are awaited. Portfolio 1.12 is built the day a yes arrives.
+
+**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · answered 2026-10-26, open until Serper replies or the exception ends 2026-11-09 — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
 
 Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
 vendor's data only when the vendor's terms permit resale, checked and written
@@ -119,6 +121,8 @@ not confirmed. Under the rule you adopted, that is the "never" lane
 
 *How you'd reverse it:* a vendor change is per tool and reversible; a
 switch-off is one line in the deactivation list.
+
+**Answered 2026-10-26 by Petter, in session:** "i agree with your rec on #1 and 2". The entry stays `your_call` until Serper replies or the exception ends, because the eight tools still run on unconfirmed terms. Option 1: Petter writes to Serper at hello@serper.dev (the "Contact us" address on serper.dev), using a draft the assistant prepared. Meanwhile the eight Serper-backed tools keep running, under a time-boxed exception that ends 2026-11-09 (two weeks, matching the prepaid allowance that expires 2026-11-08). If Serper says no or has not answered by then, option 2 applies: move the tools to a per-call vendor whose terms permit resale, and switch off only the tools with no replacement. The option 2 groundwork starts now; it is technical and involves no vendor contact.
 
 **DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology
