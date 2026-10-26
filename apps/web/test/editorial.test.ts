@@ -38,6 +38,7 @@ test("every company-registry tool maps to a country", () => {
   assert.deepEqual(prefixes.filter((p) => !COUNTRY_BY_PREFIX[p]), []);
   assert.equal(companyDataPrefix("us-company-data-cobalt"), "us");
   assert.equal(companyDataPrefix("company-enrich"), null);
+  for (const m of manifests) if (companyDataPrefix(m.slug)) assert.equal(jobFor(m.slug, m.category), "company", m.slug);
 });
 
 test("every company-registry tool names its data source (evidence for claims.yaml official-records-company-data)", () => {
@@ -69,4 +70,11 @@ test("money formatting follows the wire-shape rule (cents in, display out)", () 
   assert.equal(formatEur(250), "€2.50");
   assert.equal(formatUsd(0.0216), "$0.0216");
   assert.equal(usdcAtomic(0.0216), "21600");
+});
+
+test("snippet and description helpers handle the edge cases the review found", async () => {
+  const { pyValue } = await import("../src/lib/snippets.ts");
+  const { firstSentence } = await import("../src/lib/describe.ts");
+  assert.equal(pyValue({ email: "null@example.com", ok: true, n: null }), '{\n    "email": "null@example.com",\n    "ok": True,\n    "n": None,\n}');
+  assert.equal(firstSentence("Checks a VAT number, e.g. DE123. Then more."), "Checks a VAT number, e.g. DE123.");
 });

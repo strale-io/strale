@@ -2,7 +2,7 @@
 // in light and dark, an axe-core accessibility scan of each, and a check that
 // nothing scrolls sideways. Writes review/<out>/report.json and the screenshots.
 //
-//   node scripts/review.mjs [--pages /,/tools] [--out review/latest] [--playwright path/to/playwright]
+//   node scripts/review.mjs [--pages /,/tools] [--out review/latest] [--dist dist] [--playwright path/to/playwright]
 //
 // Needs a Playwright with Chromium (not a dependency of the site; CI and the
 // cloud sandbox provide one). Exits 1 if any page has an axe violation or
@@ -14,11 +14,11 @@ import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const web = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dist = join(web, "dist");
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : fallback;
 };
+const dist = resolve(web, arg("dist", "dist"));
 const require = createRequire(import.meta.url);
 const pwPath = arg("playwright", process.env.PLAYWRIGHT_PATH);
 const { chromium } = pwPath ? require(resolve(pwPath)) : require("playwright");
@@ -52,6 +52,7 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
+const MAX_SHOT_PX = Number(arg("max-height", "7000"));
 const VIEWPORTS = [{ name: "desktop-1440", width: 1440, height: 900 }, { name: "mobile-390", width: 390, height: 844 }];
 const THEMES = ["light", "dark"];
 mkdirSync(out, { recursive: true });
@@ -78,8 +79,11 @@ for (const path of pages) {
         return { violations: r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.slice(0, 5).map((n) => ({ target: n.target.join(" "), summary: n.failureSummary })) })), passes: r.passes.length, incomplete: r.incomplete.map((v) => ({ id: v.id, nodes: v.nodes.length })) };
       });
       const shot = `${slug}--${vp.name}-${theme}.jpg`;
-      await page.screenshot({ path: join(out, shot), fullPage: true, type: "jpeg", quality: 72 });
-      const entry = { path, viewport: vp.name, theme, status: resp?.status(), overflow_px: overflow, console_errors: consoleErrors, axe, screenshot: shot };
+      // Very long pages (the full catalogue) are cut at MAX_SHOT_PX; the axe scan above still covers the whole page.
+      const height = await page.evaluate(() => document.documentElement.scrollHeight);
+      const clipped = height > MAX_SHOT_PX;
+      await page.screenshot({ path: join(out, shot), fullPage: true, type: "jpeg", quality: 72, ...(clipped ? { clip: { x: 0, y: 0, width: vp.width, height: MAX_SHOT_PX } } : {}) });
+      const entry = { path, viewport: vp.name, theme, status: resp?.status(), overflow_px: overflow, console_errors: consoleErrors, axe, screenshot: shot, page_height_px: height, screenshot_clipped_at_px: clipped ? MAX_SHOT_PX : null };
       if (axe.violations.length || overflow > 0 || consoleErrors.length || resp?.status() !== 200) failures++;
       report.pages.push(entry);
       console.log(`${axe.violations.length || overflow > 0 || consoleErrors.length ? "FAIL" : "ok  "} ${path} ${vp.name} ${theme}: ${axe.violations.length} axe violations (${axe.violations.map((v) => v.id).join(", ")}), ${axe.passes} rule passes, overflow ${overflow}px, ${consoleErrors.length} console errors`);

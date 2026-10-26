@@ -90,3 +90,5 @@ document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) => {
     }
   });
 });
+
+export {};
