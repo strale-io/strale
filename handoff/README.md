@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-349 files (322 with a recorded intent, 27 without).
+350 files (323 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-entity-resolve.md`](_general/from-code/2026-10-26-feat-entity-resolve.md) | Built entity-resolve on the assigned isolated clone/branch, tested public GLEIF lookups, and prepared files for a loc... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md`](_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md) | Retire API agent-facing trust/score framing and serve live-facts SKILL.md; build, verify and commit locally for orche... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md`](_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md) | close the documentation follow-ups from the 2026-10-26 independent reviews of PR #728 and PR #705. |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-checkin-morning.md`](_general/from-code/2026-10-26-checkin-morning.md) | run the 2026-10-26 operating session under DAILY-RUN.md — close week |
