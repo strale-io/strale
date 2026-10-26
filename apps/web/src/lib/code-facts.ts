@@ -14,8 +14,8 @@ function constant(file: string, name: string): number {
 
 /** Anonymous calls a day to free tools, per identified IP (apps/api/src/routes/do.ts). */
 export const FREE_TIER_DAILY_LIMIT = constant("apps/api/src/routes/do.ts", "FREE_TIER_DAILY_LIMIT");
-/** Smallest wallet top-up, in EUR cents (apps/api/src/routes/wallet.ts). */
-export const MIN_TOPUP_CENTS = constant("apps/api/src/routes/wallet.ts", "MIN_TOPUP_CENTS");
+/** Smallest wallet top-up, in EUR cents (apps/api/src/lib/pricing-constants.ts). */
+export const MIN_TOPUP_CENTS = constant("apps/api/src/lib/pricing-constants.ts", "MIN_TOPUP_CENTS");
 
 /** The provenance.source string an executor writes, when it is a literal. */
 export function executorSource(slug: string): string | null {
