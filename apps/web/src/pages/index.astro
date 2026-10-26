@@ -13,6 +13,8 @@ import artWeb from "../assets/illustrations/search-web.webp";
 import artDocuments from "../assets/illustrations/read-documents.webp";
 import artCheck from "../assets/illustrations/check-details.webp";
 import artDeveloper from "../assets/illustrations/developer-jobs.webp";
+import artText from "../assets/illustrations/connect.webp";
+import artSites from "../assets/illustrations/screening.webp";
 import artCompany from "../assets/illustrations/company-records.webp";
 import artBalance from "../assets/illustrations/pay-balance.webp";
 import artWallet from "../assets/illustrations/pay-wallet.webp";
@@ -30,14 +32,15 @@ const bySlug = new Map(tools.map((t) => [t.slug, t]));
 // The count a visitor can browse: the catalogue itself, so the hero, the job groups and /tools agree.
 const libraryCount = tools.length;
 
-// Kinds of work: the four non-flagship job groups, with live counts and visible examples.
-const JOB_ART = { web: artWeb, documents: artDocuments, check: artCheck, developer: artDeveloper } as const;
-const breadth = JOB_GROUPS.filter((g) => ["web", "documents", "check", "developer"].includes(g.id)).map((g) => ({
+// Kinds of work: six of the non-flagship job groups (two even rows of three), with visible examples.
+// Every card links with the same words; breadth is in the hero chip, and the Tools filter keeps per-group counts.
+const JOB_ART = { web: artWeb, documents: artDocuments, text: artText, check: artCheck, sites: artSites, code: artDeveloper } as const;
+const breadth = (Object.keys(JOB_ART) as (keyof typeof JOB_ART)[]).map((id) => JOB_GROUPS.find((g) => g.id === id)!).map((g) => ({
   ...g,
   art: JOB_ART[g.id as keyof typeof JOB_ART],
-  count: tools.filter((t) => t.job === g.id).length,
   picks: g.examples.map((s) => bySlug.get(s)).filter((t) => t !== undefined).slice(0, 3),
 }));
+const jobCount = JOB_GROUPS.filter((g) => tools.some((t) => t.job === g.id)).length;
 
 // One call: a free tool, so a reader can repeat it with no key. The response is trimmed to what a reader needs.
 const demo = ["iban-validate", "email-validate", "dns-lookup"].map((s) => bySlug.get(s)).find((t) => t?.free);
@@ -99,11 +102,12 @@ const WAYS = [
               <span class="job-title t-subhead">{g.label}</span>
               <span class="t-compact muted">{g.line}</span>
               <span class="job-picks">{g.picks.map((t) => t!.name).join(" · ")}</span>
-              <span class="job-more">{plural(g.count, "tool")} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></span>
+              <span class="job-more">See the tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></span>
             </span>
           </a>
         ))}
       </div>
+      <a class="link-standalone" href="/tools#catalogue" data-reveal>Browse all {jobCount} jobs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
     </div>
   </section>
 
@@ -245,19 +249,20 @@ const WAYS = [
   .section-head { display: grid; gap: var(--space-12); }
   .section-head .t-lead { max-width: var(--measure-lead); }
 
-  /* 2 Kinds of work: four cards, one row at 1280+, with the transparent art standing on the card. */
+  /* 2 Kinds of work: six cards, two rows of three from 1024px, with the transparent art standing on the card. */
   .jobs { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 640px) { .jobs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (min-width: 1280px) { .jobs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (min-width: 1024px) { .jobs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .job { display: grid; grid-template-rows: auto 1fr; gap: var(--space-8); padding: var(--space-8) var(--space-24) var(--space-24); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); color: var(--text); text-decoration: none; box-shadow: var(--shadow-1); transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
   .job:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); transform: translateY(calc(-1 * var(--space-4))); }
   .job-art { display: block; height: var(--space-160); }
   .job-art img { width: 100%; height: 100%; object-fit: contain; transition: transform var(--duration-slow) var(--ease-standard); }
   .job:hover .job-art img { transform: translateY(calc(-1 * var(--space-4))) scale(1.03); }
-  .job-copy { display: grid; gap: var(--space-8); align-content: start; }
+  /* The link sits on the card's bottom edge whatever the copy above it, so a row of cards ends level. */
+  .job-copy { display: flex; flex-direction: column; gap: var(--space-8); }
   .job-title { color: var(--text); }
   .job-picks { color: var(--text-muted); font-size: var(--type-small-size); line-height: var(--type-small-line); }
-  .job-more { display: inline-flex; align-items: center; gap: var(--space-4); margin-top: var(--space-8); color: var(--link); font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); }
+  .job-more { display: inline-flex; align-items: center; gap: var(--space-4); margin-top: auto; padding-top: var(--space-8); color: var(--link); font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); }
   .job:hover .job-more .icon { transform: translateX(var(--space-4)); }
   .job-more .icon { transition: transform var(--duration-base) var(--ease-standard); }
 
