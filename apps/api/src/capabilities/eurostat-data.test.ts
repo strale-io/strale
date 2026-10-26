@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkEurostatMetadata, EUROSTAT_ALLOWED_GEOS, EUROSTAT_ALLOWED_COUNTRIES, EUROSTAT_ALLOWED_AGGREGATES, EUROSTAT_WORLD_COUNTRIES, EUROSTAT_COUNTRY_LABELS, eurostatCategoryIsCountry, EUROSTAT_ALLOWED_DATASETS, EUROSTAT_REFUSED_DATASET_PREFIXES, EUROSTAT_LICENCE_NOTE, EurostatError, executeEurostat, flattenEurostat, type JsonStat, validateEurostatInput } from "./eurostat-data.js";
 import { VENDOR_TERMS_RECORDS } from "../lib/vendor-terms.js";
+import { EUROSTAT_ALLOWED_REGIONS } from "./lib/eurostat-regions.js";
 
 function recorded(name: string) { return JSON.parse(readFileSync(new URL(`./__fixtures__/eurostat/${name}.json`, import.meta.url), "utf8")); }
 
@@ -362,5 +363,56 @@ describe("Eurostat recorded dataset allowlist", () => {
       expect(row.findings.length).toBeGreaterThan(0);
       expect(EUROSTAT_ALLOWED_DATASETS).not.toContain(row.dataset);
     }
+  });
+});
+
+
+describe("Eurostat regional geo codes", () => {
+  const audit = recorded("dataset-audit-2026-10-26");
+  const included = audit.datasets.filter((row: { result: string }) => row.result === "included");
+  const geoCodes = (metadata: JsonStat) => {
+    const index = metadata.dimension.geo.category.index;
+    return Array.isArray(index) ? index : Object.keys(index);
+  };
+  it("lists exactly the region-shaped codes of allowed countries seen in the included datasets", () => {
+    const derived = new Set<string>();
+    for (const row of included) for (const code of geoCodes(row.metadata)) {
+      if (EUROSTAT_ALLOWED_COUNTRIES.includes(code) || EUROSTAT_ALLOWED_AGGREGATES.includes(code)) continue;
+      if (/^[A-Z]{2}[0-9A-Z]{1,3}$/.test(code) && EUROSTAT_ALLOWED_COUNTRIES.includes(code.slice(0, 2))) derived.add(code);
+    }
+    expect([...EUROSTAT_ALLOWED_REGIONS].sort()).toEqual([...derived].sort());
+  });
+  it("lets every geo category of an included dataset through only as a country, an aggregate or a listed region", () => {
+    for (const row of included) for (const code of geoCodes(row.metadata)) {
+      const passes = EUROSTAT_ALLOWED_GEOS.includes(code) || EUROSTAT_ALLOWED_REGIONS.has(code);
+      let refused = false;
+      try { validateEurostatInput({ dataset: row.dataset, filters: { geo: code } }); } catch { refused = true; }
+      expect(refused, `${row.dataset}/${code}`).toBe(!passes);
+      if (passes && !EUROSTAT_ALLOWED_GEOS.includes(code)) expect(EUROSTAT_ALLOWED_COUNTRIES).toContain(code.slice(0, 2));
+    }
+  });
+  it.each(["SE1", "SE11", "SE110", "FRB", "ITC", "DEA", "EL30", "ALX"])("accepts region %s", geo => {
+    expect(() => validateEurostatInput({ dataset: "demo_r_d3dens", filters: { geo } })).not.toThrow();
+  });
+  it.each(["MEL", "MED", "ALA", "NOECD", "PLR", "TRS", "ESA", "ESM", "ESTAT", "EESC", "BAL", "UKC1", "XK1"])("refuses region-shaped non-territory %s before fetching", geo => {
+    expect(() => validateEurostatInput({ dataset: "demo_r_d3dens", filters: { geo } })).toThrow(expect.objectContaining({ code: "commercial_reuse_restricted" }));
+  });
+  it("drops a region-shaped non-territory after fetch", () => {
+    const data = { class: "dataset", version: "2.0", id: ["geo", "time"], size: [2, 1], value: [1, 2], dimension: { geo: { category: { index: ["SE", "MEL"], label: { SE: "Sweden", MEL: "Melanesia" } } }, time: { category: { index: ["2024"] } } } } as unknown as JsonStat;
+    const result = flattenEurostat(data);
+    expect(result.observations.map((o: Record<string, unknown>) => o.geo)).toEqual(["SE"]);
+    expect(result.dropped_observation_count).toBe(1);
+  });
+  it("hints that Eurostat codes Greece EL", () => {
+    expect(() => validateEurostatInput({ dataset: "une_rt_a", filters: { geo: "GR" } })).toThrow(/codes Greece as EL/);
+    expect(() => validateEurostatInput({ dataset: "une_rt_a", filters: { geo: "EL" } })).not.toThrow();
+  });
+  it("accepts half-year periods and orders them", () => {
+    expect(validateEurostatInput({ dataset: "nrg_pc_204", filters: { geo: "SE" }, since_period: "2024-S1", until_period: "2024-S2" }).searchParams.get("sinceTimePeriod")).toBe("2024-S1");
+    expect(() => validateEurostatInput({ dataset: "nrg_pc_204", filters: { geo: "SE" }, since_period: "2024-S2", until_period: "2024-S1" })).toThrow(/must not follow/);
+    expect(() => validateEurostatInput({ dataset: "nrg_pc_204", filters: { geo: "SE" }, since_period: "2024-S3" })).toThrow(/Periods must be/);
+  });
+  it.each(EUROSTAT_REFUSED_DATASET_PREFIXES.map(p => `${p}x`))("refuses trade prefix %s in the post-fetch metadata check", dataset => {
+    expect(() => checkEurostatMetadata({}, dataset)).toThrow(/exception \(c\)/);
   });
 });

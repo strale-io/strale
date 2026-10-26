@@ -43,11 +43,11 @@ input_schema:
     since_period:
       type: string
       pattern: '^\d{4}(-Q[1-4]|-(0[1-9]|1[0-2]))?$'
-      description: Inclusive lower bound, YYYY, YYYY-Q1 or YYYY-MM.
+      description: Inclusive lower bound, YYYY, YYYY-Q1, YYYY-S1 or YYYY-MM.
     until_period:
       type: string
       pattern: '^\d{4}(-Q[1-4]|-(0[1-9]|1[0-2]))?$'
-      description: Inclusive upper bound, YYYY, YYYY-Q1 or YYYY-MM.
+      description: Inclusive upper bound, YYYY, YYYY-Q1, YYYY-S1 or YYYY-MM.
 output_schema:
   type: object
   properties:
@@ -168,10 +168,12 @@ limitations:
       at runtime.
       geo is required and restricted to EU27, EFTA and official candidates, checked on 2026-10-26 at
       https://enlargement.ec.europa.eu/enlargement-policy/candidate-countries-and-potential-candidates_en.
-      Kosovo is a potential candidate and excluded. Exact country codes, NUTS regions matching
-      ^<allowlisted 2-letter>[0-9A-Z]{1,3}$ and EUROSTAT_ALLOWED_AGGREGATES (including EA11–EA21)
-      pass. EA14 is accepted by policy but absent from the checked codelist. All other geo codes
-      are refused before fetch or dropped after fetch; label-aware checks apply only to geo.
+      Kosovo is a potential candidate and excluded. Exact country codes, the regional codes of
+      those countries recorded in the allowlisted datasets on 2026-10-26 (EUROSTAT_ALLOWED_REGIONS:
+      NUTS 1-3 and "not regionalised" buckets) and EUROSTAT_ALLOWED_AGGREGATES (including EA11–EA21)
+      pass. EA14 is accepted by policy but absent from the checked codelist. All other geo codes,
+      including region-shaped non-territories such as MEL (Melanesia) or NOECD, are refused before
+      fetch or dropped after fetch. Eurostat codes Greece EL; GR is refused with that hint.
       Dropped geo cells are counted and their labels omitted. These restrictions enforce Eurostat's
       commercial-reuse country exception without guessing whether non-geo category codes are countries.
       Returned third-party source declarations and unrecognised rights notices are refused as defence

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { EUROSTAT_ALLOWED_REGIONS } from "./lib/eurostat-regions.js";
 
 // Curated against recorded live metadata; see __fixtures__/eurostat/README.md.
 export const EUROSTAT_ALLOWED_DATASETS: readonly string[] = Object.freeze([
@@ -410,8 +411,7 @@ export function allowedEurostatCountry(value: string): boolean {
 export function allowedEurostatValue(dimension: string, value: string): boolean {
   if (dimension.toLowerCase() !== "geo") return true;
   const code = value.toUpperCase();
-  return allowedEurostatCountry(code) || EUROSTAT_ALLOWED_AGGREGATES.includes(code) ||
-    (/^[A-Z]{2}[0-9A-Z]{1,3}$/.test(code) && allowedEurostatCountry(code.slice(0, 2)));
+  return allowedEurostatCountry(code) || EUROSTAT_ALLOWED_AGGREGATES.includes(code) || EUROSTAT_ALLOWED_REGIONS.has(code);
 }
 // Compare words after case, whitespace and punctuation normalisation. A suffix
 // is allowed at a word boundary, e.g. China (People's Republic of China).
@@ -425,17 +425,14 @@ export function eurostatCategoryIsCountry(code: string, label: string | undefine
   const actual = normaliseCountryLabel(label);
   return actual === expected || actual.startsWith(`${expected} `);
 }
-function allowedReturnedCategory(dimension: string, code: string, label: string | undefined): boolean {
-  if (dimension !== "geo") return true;
-  // Label-aware country detection is defence in depth for geo alone.
-  if (eurostatCategoryIsCountry(code, label) && !allowedEurostatCountry(code)) return false;
-  return allowedEurostatValue(dimension, code);
+function allowedReturnedCategory(dimension: string, code: string): boolean {
+  return dimension !== "geo" || allowedEurostatValue(dimension, code);
 }
 // Deliberately exclude ALL trade datasets, covering both Swiss/Liechtenstein
 // post-1995 commodity data (exception c) and Austrian CN8 declaring-country data.
 export const EUROSTAT_REFUSED_DATASET_PREFIXES = ["ext_", "ds-", "comext", "itgs_", "trade_", "tet", "teiet", "tipsex", "cult_trd_", "sprt_trd_", "enpe_ext_", "bop_its", "for_trop", "ei_etea"] as const;
 const TOKEN = /^[A-Za-z0-9_.-]{1,40}$/;
-const PERIOD = /^\d{4}(?:-Q[1-4]|-(?:0[1-9]|1[0-2]))?$/;
+const PERIOD = /^\d{4}(?:-Q[1-4]|-S[12]|-(?:0[1-9]|1[0-2]))?$/;
 const MAX_OBSERVATIONS = 5000;
 
 export class EurostatError extends Error {
@@ -458,7 +455,6 @@ export function validateEurostatInput(input: CapabilityInput): URL {
   const { dataset, filters, since_period, until_period } = input;
   if (typeof dataset !== "string") refuse("invalid_request", "'dataset' must match ^[a-z0-9_]{3,40}$. Find codes in the Eurostat data browser.");
   if (!EUROSTAT_ALLOWED_DATASETS.includes(dataset)) refuse("dataset_not_supported", `Dataset '${dataset}' is not supported. Request an addition through Strale support with the dataset code and intended filters; additions require a Eurostat source and geography/terms metadata review.`, { dataset, allowed_datasets: EUROSTAT_ALLOWED_DATASETS });
-  if (EUROSTAT_REFUSED_DATASET_PREFIXES.some(p => dataset.startsWith(p))) refuseTrade(dataset);
   if (!filters || typeof filters !== "object" || Array.isArray(filters)) refuse("invalid_request", "'filters' must be an object with a required 'geo' filter.");
   const entries = Object.entries(filters);
   if (!entries.length || entries.length > 10) refuse("invalid_request", "Supply 1–10 filter dimensions, including geo.");
@@ -478,14 +474,18 @@ export function validateEurostatInput(input: CapabilityInput): URL {
     if (count > 50) refuse("invalid_request", "At most 50 filter values are allowed.");
     for (const value of values) {
       if (typeof value !== "string" || !TOKEN.test(value)) refuse("invalid_request", `Filter '${key}' values must match ^[A-Za-z0-9_.-]{1,40}$.`);
-      if (!allowedEurostatValue(key, value)) refuse("commercial_reuse_restricted", `Eurostat's terms do not permit commercial reuse of category '${value}'. Choose an allowed EU, EFTA or official candidate country, or supported EU/euro-area aggregate.`, { dimension: key, geo: value, terms_url: TERMS });
+      if (!allowedEurostatValue(key, value)) {
+        // Eurostat codes Greece EL, not its ISO code GR.
+        const hint = value.toUpperCase() === "GR" ? " Eurostat codes Greece as EL, not GR." : "";
+        refuse("commercial_reuse_restricted", `Eurostat's terms do not permit commercial reuse of category '${value}', or it is not a region of a supported country. Choose an allowed EU, EFTA or official candidate country, one of its NUTS regions, or a supported EU/euro-area aggregate.${hint}`, { dimension: key, geo: value, terms_url: TERMS });
+      }
       url.searchParams.append(key, key === "geo" ? value.toUpperCase() : value);
     }
   }
   if (!seen.has("geo")) refuse("invalid_request", "The 'geo' filter is required for commercial reuse.");
   for (const [key, value] of [["sinceTimePeriod", since_period], ["untilTimePeriod", until_period]] as const) {
     if (value !== undefined) {
-      if (typeof value !== "string" || !PERIOD.test(value)) refuse("invalid_request", "Periods must be YYYY, YYYY-Q1…Q4 or YYYY-MM (01…12).");
+      if (typeof value !== "string" || !PERIOD.test(value)) refuse("invalid_request", "Periods must be YYYY, YYYY-Q1…Q4, YYYY-S1…S2 or YYYY-MM (01…12).");
       url.searchParams.set(key, value);
     }
   }
@@ -495,6 +495,7 @@ export function validateEurostatInput(input: CapabilityInput): URL {
       const suffix = period.slice(5);
       const offset = !suffix ? (upper ? 11 : 0)
         : suffix.startsWith("Q") ? (Number(suffix.slice(1)) - 1) * 3 + (upper ? 2 : 0)
+        : suffix.startsWith("S") ? (Number(suffix.slice(1)) - 1) * 6 + (upper ? 5 : 0)
         : Number(suffix) - 1;
       return year * 12 + offset;
     };
@@ -601,7 +602,7 @@ export function flattenEurostat(data: JsonStat) {
       row[data.id[dim]] = codes[dim][remainder % data.size[dim]];
       remainder = Math.floor(remainder / data.size[dim]);
     }
-    const restricted = data.id.filter(id => !allowedReturnedCategory(id, String(row[id]), data.dimension[id].category.label?.[String(row[id])]));
+    const restricted = data.id.filter(id => !allowedReturnedCategory(id, String(row[id])));
     if (restricted.length) {
       dropped++;
       // A cell restricted in multiple dimensions counts once overall, once per dimension.
