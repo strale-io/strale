@@ -4,8 +4,9 @@
  * and detects the transparency tag.
  */
 
+import { withinOnboardingBudget } from "./onboarding-budget.js";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testSuites } from "../db/schema.js";
 import { generateTestInput } from "./test-input-generator.js";
 import { getExecutor } from "../capabilities/index.js";
@@ -26,8 +27,12 @@ import { wasDeactivatedDeliberately } from "./solution-activation.js";
  * Call after a capability is inserted or updated in the database.
  * Idempotent — safe to call multiple times for the same slug.
  */
-export async function onCapabilityCreated(capabilitySlug: string): Promise<void> {
-  const db = getDb();
+export async function onCapabilityCreated(
+  capabilitySlug: string,
+  options: { db?: Database; signal?: AbortSignal } = {},
+): Promise<void> {
+  const db = options.db ?? getDb();
+  options.signal?.throwIfAborted();
 
   const [cap] = await db
     .select()
@@ -107,7 +112,7 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
     // by executing the capability once and capturing the output as ground truth.
     // Algorithmic caps are free to test — no external cost — so this is safe.
     if (cap.transparencyTag === "algorithmic") {
-      await generateAlgorithmicRegressionTest(cap, testInput).catch((err) => {
+      await generateAlgorithmicRegressionTest(cap, testInput, db, options.signal).catch((err) => {
         logWarn("onboarding-regression-gen-failed", "regression test generation failed", {
           capability_slug: capabilitySlug,
           err: err instanceof Error ? err.message : String(err),
@@ -120,11 +125,12 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       "onboarding-test-suites-created",
     );
 
-    // Validate fixtures against real execution (fire-and-forget).
+    // CLI/legacy callers retain detached fixture validation. Route runs skip
+    // it: pipeline verification already runs under the deadline and lock.
     // NOTE: getExecutor may return null during seed.ts if the capability file
     // hasn't been imported yet. In that case, validation is skipped — it will
     // happen on the first scheduled test run via the self-heal system.
-    validateTestFixtures(capabilitySlug).catch((err) => {
+    if (!options.signal) validateTestFixtures(capabilitySlug).catch((err) => {
       logWarn("onboarding-fixture-validation-failed", "fixture validation failed", {
         capability_slug: capabilitySlug,
         err: err instanceof Error ? err.message : String(err),
@@ -162,7 +168,8 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
 
   // 4. Readiness gate — single source of truth for onboarding completeness
   clearReadinessCache();
-  const readiness = await checkReadiness(capabilitySlug);
+  options.signal?.throwIfAborted();
+  const readiness = await checkReadiness(capabilitySlug, db);
   if (!readiness.ready) {
     logWarn(
       "onboarding-not-ready",
@@ -179,7 +186,8 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
   // 5. Gate 5: Path coverage (DEC-20260411-B)
   // Runs after fixtures exist. Warns but does not block — existing capabilities
   // may have uncovered paths that need fixtures added separately.
-  const gate5 = await runGate5(capabilitySlug);
+  options.signal?.throwIfAborted();
+  const gate5 = await runGate5(capabilitySlug, db);
   if (gate5.isMultiPath && !gate5.passed) {
     logWarn(
       "onboarding-gate5-failed",
@@ -204,7 +212,8 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
   // 6. Visibility gate — verify capability is externally visible
   // Catches silent exclusion issues like visible=false that leave
   // a capability internally healthy but invisible to users for days.
-  await verifyCapabilityVisibility(capabilitySlug);
+  options.signal?.throwIfAborted();
+  await verifyCapabilityVisibility(capabilitySlug, db);
 }
 
 // ─── Visibility verification ────────────────────────────────────────────────
@@ -216,8 +225,7 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
  * Does NOT throw — logs a warning so onboarding isn't rolled back.
  * The capability exists and will work; it just isn't visible to users yet.
  */
-async function verifyCapabilityVisibility(slug: string): Promise<void> {
-  const db = getDb();
+async function verifyCapabilityVisibility(slug: string, db: Database): Promise<void> {
 
   const [cap] = await db
     .select({
@@ -560,8 +568,10 @@ export async function validateTestFixtures(
 async function generateAlgorithmicRegressionTest(
   cap: typeof capabilities.$inferSelect,
   testInput: Record<string, unknown>,
+  db: Database,
+  signal?: AbortSignal,
 ): Promise<void> {
-  const db = getDb();
+  signal?.throwIfAborted();
   const executor = getExecutor(cap.slug);
 
   if (!executor) {
@@ -582,7 +592,7 @@ async function generateAlgorithmicRegressionTest(
       kind: "internal_test",
       suiteId: "onboarding-regression",
       reason: "manual",
-    });
+    }, { db, signal });
   } catch (err) {
     if (
       err instanceof CapabilityInvocationRefusedError ||
@@ -601,7 +611,10 @@ async function generateAlgorithmicRegressionTest(
 
   let result: Awaited<ReturnType<typeof executor>> | null = null;
   try {
-    result = await executor(testInput);
+    signal?.throwIfAborted();
+    const execution = executor(testInput);
+    result = signal ? await withinOnboardingBudget(execution, signal) : await execution;
+    signal?.throwIfAborted();
   } catch (err) {
     logWarn(
       "onboarding-regression-exec-failed",

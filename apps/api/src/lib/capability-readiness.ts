@@ -17,7 +17,7 @@
  */
 
 import { eq, and } from "drizzle-orm";
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import { capabilities, capabilityLimitations, testSuites } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
@@ -114,8 +114,8 @@ function getOutputSchemaProperties(schema: unknown): string[] {
 
 // ─── Core ──────────────────────────────────────────────────────────────────────
 
-export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
-  const cached = getCached(slug);
+export async function checkReadiness(slug: string, handle?: Database): Promise<ReadinessCheck> {
+  const cached = handle ? undefined : getCached(slug);
   if (cached) return cached;
 
   const deactivated = getDeactivatedCapabilities();
@@ -123,7 +123,7 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
 
   const hasExecutor = !!getExecutor(slug);
 
-  const db = getDb();
+  const db = handle ?? getDb();
 
   const [row] = await db
     .select({
@@ -245,7 +245,7 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
     issues,
   };
 
-  setCache(slug, result);
+  if (!handle) setCache(slug, result);
   return result;
 }
 

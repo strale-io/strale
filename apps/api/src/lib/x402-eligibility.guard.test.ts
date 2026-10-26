@@ -81,6 +81,9 @@ const REVIEWED_NOT_DECIDING = new Set([
   "lib/vendor-control-tower.ts",
   "lib/capability-persistence.ts",
   "lib/capability-onboarding.ts",
+  // Extracted CLI pipeline creates dark-launch rows and reports lifecycle;
+  // it does not decide serving or payment eligibility.
+  "lib/onboarding-pipeline.ts",
   // REPORT on lifecycle — dashboards, digests, monitors, issue filing.
   "jobs/invariant-checker.ts",
   "lib/digest-compiler.ts",
