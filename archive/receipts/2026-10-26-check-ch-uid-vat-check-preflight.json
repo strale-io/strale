@@ -1,0 +1,58 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "beafcb62649d4ed2f4944a74e9e420c94688be2d"
+  },
+  "at": "2026-10-26T10:50:55.763Z",
+  "inputs": {
+    "source": "/tmp/ch-uid-check-results.json"
+  },
+  "summary": {
+    "ok": true,
+    "warnings_count": 1,
+    "scope": "Baseline checks only; implementation stopped at source terms gate"
+  },
+  "topic": "ch-uid-vat-check-preflight",
+  "raw": {
+    "ok": true,
+    "scope": "Baseline checks only; implementation stopped at source terms gate",
+    "commands": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      }
+    ],
+    "warnings": [
+      "receipts:check: 19 pre-existing HANDOFF_BARE_TEST_COUNT warnings"
+    ]
+  }
+}
