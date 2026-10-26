@@ -210,22 +210,27 @@
             "use": "Page title (h1) on inner pages; major section statement."
           },
           "section": {
-            "source": "kit-06",
+            "source": "derived",
             "family": "display",
             "weight": 600,
-            "min": 26,
-            "max": 36,
+            "min": 24,
+            "max": 32,
             "line": 1.15,
             "tracking": -0.03,
             "measure": "28ch",
-            "use": "Section heading (h2)."
+            "use": "Section heading (h2).",
+            "kit_original": {
+              "min": 26,
+              "max": 36,
+              "measure": "28ch"
+            }
           },
           "subhead": {
             "source": "derived",
             "family": "display",
             "weight": 600,
-            "min": 20,
-            "max": 24,
+            "min": 18,
+            "max": 22,
             "line": 1.25,
             "tracking": -0.02,
             "measure": "32ch",
@@ -251,8 +256,8 @@
             "source": "derived",
             "family": "body",
             "weight": 400,
-            "min": 17,
-            "max": 19,
+            "min": 16,
+            "max": 18,
             "line": 1.5,
             "tracking": 0,
             "measure": "44ch",
@@ -268,7 +273,7 @@
             "family": "body",
             "weight": 400,
             "min": 16,
-            "max": 17,
+            "max": 16,
             "line": 1.6,
             "tracking": 0,
             "measure": "45ch",
@@ -283,19 +288,19 @@
             },
             "family": "body",
             "weight": 400,
-            "min": 16,
-            "max": 16,
+            "min": 15,
+            "max": 15,
             "line": 1.5,
             "tracking": 0,
             "measure": "46ch",
-            "use": "Card bodies, table cells, dense reference."
+            "use": "Card bodies, table cells, dense reference. Sustained reading uses body (16px minimum)."
           },
           "ui": {
             "source": "derived",
             "family": "body",
             "weight": 500,
-            "min": 16,
-            "max": 16,
+            "min": 15,
+            "max": 15,
             "line": 1.25,
             "tracking": 0,
             "measure": "none",
@@ -306,30 +311,35 @@
             "family": "body",
             "weight": 400,
             "min": 13,
-            "max": 14,
+            "max": 13,
             "line": 1.45,
             "tracking": 0,
             "measure": "60ch",
             "use": "Helper text, metadata, captions, legal. Never the only carrier of essential content."
           },
           "label": {
-            "source": "kit-06",
+            "source": "derived",
             "family": "body",
             "weight": 600,
             "min": 12,
-            "max": 13,
+            "max": 12,
             "line": 1.5,
             "tracking": 0.06,
             "measure": "40ch",
-            "use": "Eyebrow label, badge text. Sentence case; supports hierarchy, never replaces body copy."
+            "use": "Eyebrow label, badge text. Sentence case; supports hierarchy, never replaces body copy.",
+            "kit_original": {
+              "min": 12,
+              "max": 13,
+              "measure": "40ch"
+            }
           },
           "code": {
             "source": "derived",
             "family": "mono",
             "weight": 400,
-            "min": 14,
-            "max": 15,
-            "line": 1.6,
+            "min": 13,
+            "max": 13,
+            "line": 1.55,
             "tracking": 0,
             "measure": "none",
             "use": "Code blocks, inline code, request/response bodies, identifiers."
@@ -469,7 +479,10 @@
           "base": 16,
           "loose": 24,
           "group": 32,
-          "block": 48
+          "block": 48,
+          "heading-before": 96,
+          "heading-after": 16,
+          "heading-subsection": 48
         },
         "control": {
           "height_sm_px": 36,
@@ -896,7 +909,7 @@
       "provenance": {
         "source": "design/tokens/candidates/open-flow.json",
         "captured_at": "2026-10-26",
-        "note": "Open Flow website system 0.3, Daylight (0.1 adopted by DEC-20261024-B, revised to 0.2 by DEC-20261025-A and to 0.3 under Petter's type-size direction of 2026-10-26; BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file)."
+        "note": "Open Flow website system 0.3, Daylight (0.1 adopted by DEC-20261024-B, revised to 0.2 by DEC-20261025-A and to 0.3 under Petter's type-size direction of 2026-10-26; BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file). Refined to 0.4 under Petter’s 2026-10-26 website-polish instruction; see the Open Flow README and handoff/_general/from-code/2026-10-26-design-site-polish.md."
       },
       "adopted_by": "DEC-20261025-A",
       "adopted_at": "2026-10-25",

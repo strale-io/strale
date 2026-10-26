@@ -198,7 +198,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
     .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
     .page-head-art { display: block; }
   }
-  .section { padding-block: var(--section-space); }
+  .section { padding-block: max(var(--section-space), var(--stack-heading-before)) var(--section-space); }
   .section-tight { padding-block: 0 var(--section-space); }
   .section-sunken { background: var(--surface-sunken); }
   .section-head { display: grid; gap: var(--space-12); }
@@ -227,7 +227,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
   .jobs-table td:last-child { text-align: right; white-space: nowrap; }
   .jobs-table .link-standalone { min-height: 0; }
 
-  .tool-chip { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .tool-chip { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); }
   .tool-chip:hover { background: var(--action-subtle); border-color: var(--link); }
 
   .faq-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }

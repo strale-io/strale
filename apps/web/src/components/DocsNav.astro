@@ -76,7 +76,7 @@ const routes: { id: DocsPage; href: string; label: string }[] = [
   .docs { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); padding-block: var(--space-32) var(--space-96); }
   .docs-nav { display: grid; gap: var(--space-12); align-content: start; min-width: 0; }
   .docs-links { display: flex; flex-wrap: wrap; gap: var(--space-8); }
-  .docs-link { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .docs-link { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); }
   .docs-link:hover { background: var(--action-subtle); }
   .docs-link[aria-current="page"] { background: var(--action); border-color: var(--action); color: var(--text-on-action); }
   .docs-toc { display: none; }
@@ -92,7 +92,7 @@ const routes: { id: DocsPage; href: string; label: string }[] = [
 
 <style is:global>
   .docs-body .table td:nth-child(2) { white-space: nowrap; }
-  .docs-body { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-64); align-content: start; }
+  .docs-body { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--stack-heading-before); align-content: start; }
   .docs-body > section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-24); align-content: start; min-width: 0; }
   .docs-body > section > * { min-width: 0; }
   .docs-body .doc-list { padding-left: var(--space-24); display: grid; gap: var(--space-8); max-width: var(--type-body-measure); }

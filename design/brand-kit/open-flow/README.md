@@ -77,28 +77,30 @@ Six categorical slots, assigned in fixed order and never cycled. Light: `#3027ff
 
 ## Type
 
+Refined to 0.4 under Petter’s 2026-10-26 website-polish instruction. Sustained reading stays at 16px; compact reference and interactive text use 15px. Interactive labels never use the smaller metadata roles. Hero and campaign sizes are unchanged.
+
 | Role | Family | Size (px, fluid 360→1440) | Use |
 |---|---|---|---|
 | `hero` | Space Grotesk 600 | 36–76, lh 1.04, −0.045em, 16ch | One per page, in the hero shell |
 | `campaign` | Space Grotesk 600 | 30–52 | Inner-page h1, major statement |
-| `section` | Space Grotesk 600 | 26–36 | h2 |
-| `subhead` | Space Grotesk 600 | 20–24 | h3, card titles |
+| `section` | Space Grotesk 600 | 24–32 | h2 |
+| `subhead` | Space Grotesk 600 | 18–22 | h3, card titles |
 | `detail` | Instrument Sans 600 | 16–18 (kit 17–20, revised 0.3) | h4, group headings |
-| `lead` | Instrument Sans 400 | 17–19, 44ch (0.2: 18–21, 52ch) | Intro paragraph |
-| `body` | Instrument Sans 400 | 16–17, lh 1.6, 45ch (kit 16–19, 62ch; revised 0.3) | Reading text, never below 16 |
-| `compact` | Instrument Sans 400 | 16, 46ch (kit 16–17, 58ch; revised 0.3) | Cards, tables, reference |
-| `ui` | Instrument Sans 500 | 16 | Buttons, nav, tabs, labels |
-| `small` | Instrument Sans 400 | 13–14 (0.2: 14) | Helper text, metadata, legal. Never the only carrier of essential content |
-| `label` | Instrument Sans 600 | 12–13, +0.06em | Eyebrows, badges. Sentence case |
-| `code` | IBM Plex Mono 400 | 14–15 | Code, identifiers |
+| `lead` | Instrument Sans 400 | 16–18, 44ch | Intro paragraph |
+| `body` | Instrument Sans 400 | 16, lh 1.6, 45ch | Reading text, never below 16 |
+| `compact` | Instrument Sans 400 | 15, 46ch | Cards, tables, reference |
+| `ui` | Instrument Sans 500 | 15 | Buttons, nav, tabs, labels |
+| `small` | Instrument Sans 400 | 13 | Helper text, metadata, legal. Never the only carrier of essential content |
+| `label` | Instrument Sans 600 | 12, +0.06em | Eyebrows, badges. Sentence case |
+| `code` | IBM Plex Mono 400 | 13, lh 1.55 | Code, identifiers |
 | `stat` | Space Grotesk 600, tabular | 36–56 | A single headline number |
 | `numeric` | Instrument Sans 500, tabular | 16 | Prices, counts, latency. Right-aligned in columns |
 
-Space Grotesk introduces and Instrument Sans explains. Use at most two weights in one composition. Sustained reading is left-aligned. Only a short, self-contained statement may be centred. Never typeset the logo in either font. `small` (13–14px) is a derived deviation from the kit's 16px floor. It is allowed only for metadata and helper text, never for reading text.
+Space Grotesk introduces and Instrument Sans explains. Use at most two weights in one composition. Sustained reading is left-aligned. Only a short, self-contained statement may be centred. Never typeset the logo in either font. `small` (13px) is a derived deviation from the kit's 16px floor. It is allowed only for metadata and helper text, never for reading text.
 
 ## Space, radii, elevation, layout
 
-- **Spacing:** 0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160. Named stacks: tight 8, base 16, loose 24, group 32, block 48.
+- **Spacing:** 0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160. Named stacks: tight 8, base 16, loose 24, group 32, block 48, heading-before 96, heading-subsection 48 and heading-after 16. Content sections use at least heading-before above their opening h2; the smaller heading-after keeps it attached to the following content. Heading-led subsections use heading-subsection (48px, previously 24px). Existing larger section padding is preserved.
 - **Radii:** tag 4, control 8 (kit), card 12, media 20, pill.
 - **Elevation:** four levels (0–3). Cards rest at 1, hover lifts to 2, menus sit at 3. On dark, elevation also raises the surface colour, because a shadow alone doesn't read there.
 - **Layout:** containers 1200 (content; 1320 from 1600px and 1440 from 1920px, 0.3), 1320 (wide), 720 (prose). Grid 4 / 8 / 12 columns at 0 / 768 / 1024px. Gutters 16 / 24 / 32. Section rhythm 64 / 80 / 96 (0.3; was 64 / 96 / 128). Breakpoints 640, 768, 1024, 1280, 1600, 1920. Mobile first. Measures: body 45ch, lead 44ch (0.3; were 62ch and 52ch), section 28ch, hero 16ch.

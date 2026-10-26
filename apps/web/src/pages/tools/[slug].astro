@@ -179,10 +179,10 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
   .tool-head .t-lead { max-width: var(--measure-body); }
   .slug { font-size: var(--type-small-size); }
   .tool-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-48); padding-block: var(--space-48) var(--space-64); }
-  .tool-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-64); min-width: 0; }
+  .tool-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--stack-heading-before); min-width: 0; }
   @media (min-width: 1024px) { .tool-layout { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); } .tool-side { position: sticky; top: calc(var(--nav-h) + var(--space-24)); align-self: start; } }
   .example-grid { align-items: start; }
-  .code-input { font-family: var(--type-code-family); font-size: var(--type-code-size); min-height: calc(var(--space-128) + var(--space-32)); }
+  .code-input { font-family: var(--type-code-family); font-size: var(--type-ui-size); min-height: calc(var(--space-128) + var(--space-32)); }
   .try-output { margin: 0; padding: var(--space-16); background: var(--code-bg); color: var(--code-text); border-radius: var(--radius-card); overflow-x: auto; max-height: calc(var(--space-160) * 3); }
   .tool-side .card { box-shadow: none; }
   .tag-link { text-decoration: none; }

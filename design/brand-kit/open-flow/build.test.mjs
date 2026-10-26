@@ -40,6 +40,14 @@ test('reading text below 16px violates the kit rule', () => {
   assert.throws(() => validate(t, prov, { checkFiles: false }), /never below 16px/);
 });
 
+test('compact and UI roles retain the founder-requested 15px floor', () => {
+  for (const role of ['compact', 'ui']) {
+    const t = structuredClone(tokens);
+    t.type.scale[role].min = 14;
+    assert.throws(() => validate(t, prov, { checkFiles: false }), /never below 15px/);
+  }
+});
+
 test('kit-06 brand colours are carried over unchanged', () => {
   const kit = { blue: '#3027ff', violet: '#7222ff', teal: '#008c87', soft: '#eecff2', ink: '#17151c', paper: '#ffffff', 'mist-blue': '#e4e8ff', 'mist-teal': '#d7efeb', 'deep-violet': '#29164b', 'logo-black': '#000000' };
   for (const [k, v] of Object.entries({ ...kit, border: '#d2cfd8' })) assert.equal(tokens.palette[`brand.${k}`], v, k);

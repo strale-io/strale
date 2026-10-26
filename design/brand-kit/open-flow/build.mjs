@@ -79,7 +79,8 @@ export function validate(t, prov = loadProvenance(), { checkFiles = true, websit
     assert(r.min <= r.max, `Type role ${id}: min above max`);
     assert(r.family in t.type.families, `Type role ${id}: unknown family ${r.family}`);
   }
-  assert(t.type.scale.body.min >= 16 && t.type.scale.compact.min >= 16, 'Kit-06 type-measure rule: reading text never below 16px');
+  assert(t.type.scale.body.min >= 16, 'Kit-06 type-measure rule: reading text never below 16px');
+  assert(t.type.scale.compact.min >= 15 && t.type.scale.ui.min >= 15, 'Open Flow 0.4: compact and interactive text never below 15px');
   for (const v of Object.values(t.layout.radius_roles)) assert(t.radii.includes(v), `Radius role ${v} is off the radius scale`);
   for (const v of Object.values(t.layout.stack_px)) assert(t.spacing.includes(v), `Stack value ${v} is off the spacing scale`);
   for (const v of [...Object.values(t.layout.gutter_px), ...Object.values(t.layout.section_rhythm_px)]) assert(t.spacing.includes(v), `Layout value ${v} is off the spacing scale`);

@@ -52,6 +52,9 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .stack > * + * { margin-top: var(--stack-base); }
 .stack-tight > * + * { margin-top: var(--stack-tight); }
 .stack-loose > * + * { margin-top: var(--stack-loose); }
+/* Content headings keep more space above than below; section shells supply the opening gap. */
+main :where(.stack, .stack-tight, .stack-loose) > h2:not(:first-child) { margin-top: var(--stack-heading-before); }
+main :where(.stack, .stack-tight, .stack-loose) > h2 + * { margin-top: var(--stack-heading-after); }
 .grid-2, .grid-3, .grid-4 { display: grid; gap: var(--stack-group) var(--column-gap); grid-template-columns: minmax(0, 1fr); }
 .row { display: flex; flex-wrap: wrap; gap: var(--space-12); align-items: center; }
 .layout-grid > span { background: var(--surface-blue); color: var(--text-muted); border-radius: var(--radius-tag); padding-block: var(--space-24); text-align: center; }
@@ -280,7 +283,7 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .code .tab[aria-selected="true"] { color: var(--code-text); }
 .code .tab[aria-selected="true"]::after { background: var(--code-keyword); }
 .code :focus-visible { outline-color: var(--focus-code); }
-.copy-btn { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); padding-inline: var(--space-12); border: 0; border-radius: var(--radius-control); background: none; color: var(--code-muted); font-family: var(--type-ui-family); font-size: var(--type-small-size); cursor: pointer; }
+.copy-btn { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); padding-inline: var(--space-12); border: 0; border-radius: var(--radius-control); background: none; color: var(--code-muted); font-family: var(--type-ui-family); font-size: var(--type-ui-size); cursor: pointer; }
 .copy-btn:hover { color: var(--code-text); background: var(--code-border); }
 .copy-btn.is-copied { color: var(--code-string); }
 .tk-k { color: var(--code-keyword); }
@@ -374,7 +377,7 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .catalogue-bar { display: grid; gap: var(--space-16); }
 @media (min-width: 1024px) { .catalogue-bar { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
 .chip-row { display: flex; flex-wrap: wrap; gap: var(--space-8); }
-.chip { display: inline-flex; align-items: center; gap: var(--space-4); min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); cursor: pointer; }
+.chip { display: inline-flex; align-items: center; gap: var(--space-4); min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); cursor: pointer; }
 .chip:hover { background: var(--action-subtle); }
 .chip[aria-pressed="true"] { background: var(--action); border-color: var(--action); color: var(--text-on-action); }
 .chip:disabled { color: var(--text-muted); border-color: var(--border); cursor: not-allowed; }
@@ -436,3 +439,6 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 /* ---------- scroll reveals (site.ts) ---------- */
 /* Set only on blocks below the fold at load, and never under reduced motion; site.ts animates them in. */
 [data-reveal].is-pending, [data-reveal-group] > .is-pending { opacity: 0; translate: 0 var(--space-24); }
+
+/* Metadata may be smaller; actions and navigation retain the 15px UI floor. */
+:where(button, input, select, textarea, summary), .small a, .t-small a, .label a, .tag-link, .footer-base a { font-size: var(--type-ui-size); }

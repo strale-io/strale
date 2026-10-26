@@ -168,9 +168,9 @@ const words = headline.split(/\s+/).filter(Boolean);
   .g-web { background: var(--brand-blue); }
   .g-ref { background: var(--brand-violet); }
   .g-dev { background: var(--brand-ink); }
-  .sb-tag { --_dx: 0px; position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); white-space: nowrap; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
+  .sb-tag { --_dx: 0px; position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); white-space: nowrap; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
   .sb-tag small { margin-left: var(--space-8); font-family: var(--type-code-family); font-weight: var(--type-body-weight); opacity: 0.75; }
-  .sb-name { font-family: var(--type-ui-family); font-size: var(--type-label-size); line-height: var(--type-label-line); text-align: center; }
+  .sb-name { font-family: var(--type-ui-family); font-size: var(--type-ui-size); line-height: var(--type-label-line); text-align: center; }
   .sb-tag::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--_dx)); margin-left: calc(-1 * var(--space-4)); border: var(--space-4) solid transparent; border-top-color: var(--surface-inverse); }
   .sb-tag { display: none; }
   .sb-port.on .sb-tag, .sb-port:hover .sb-tag, .sb-port:focus-visible .sb-tag { opacity: 1; translate: calc(-50% + var(--_dx)) 0; }

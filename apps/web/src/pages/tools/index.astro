@@ -210,18 +210,18 @@ const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.
   .side-set legend { padding: 0; margin-bottom: var(--space-8); }
   .job-list { display: flex; flex-wrap: wrap; gap: var(--space-4); }
   @media (min-width: 1024px) { .job-list { display: grid; } }
-  .job-opt { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-12); min-height: var(--control-h-sm); padding-inline: var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font-family: var(--type-ui-family); font-size: var(--type-small-size); text-align: left; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+  .job-opt { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-12); min-height: var(--control-h-sm); padding-inline: var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font-family: var(--type-ui-family); font-size: var(--type-ui-size); text-align: left; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
   @media (min-width: 1024px) { .job-opt { border-color: transparent; border-radius: var(--radius-control); background: none; } }
   .job-opt:hover { background: var(--action-subtle); }
   .job-opt[aria-pressed="true"] { background: var(--action-subtle); border-color: var(--action-subtle); color: var(--text); font-weight: var(--type-ui-weight); }
   .job-opt .num { color: var(--text-muted); font-size: var(--type-label-size); }
-  .choice { display: flex; min-height: var(--control-h-sm); gap: var(--space-8); align-items: center; font-size: var(--type-small-size); }
+  .choice { display: flex; min-height: var(--control-h-sm); gap: var(--space-8); align-items: center; font-size: var(--type-ui-size); }
   .choice input { margin: 0; }
 
   .cat-main { display: grid; gap: var(--space-48); min-width: 0; }
   .cat-bar { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-16); margin-bottom: calc(-1 * var(--space-24)); }
   .cat-count { color: var(--text-muted); font-size: var(--type-small-size); }
-  .cat-clear { font-size: var(--type-small-size); background: none; border: 0; padding: 0; cursor: pointer; }
+  .cat-clear { font-size: var(--type-ui-size); background: none; border: 0; padding: 0; cursor: pointer; }
   .group { display: grid; gap: var(--space-16); }
   .group[hidden], .empty-state[hidden] { display: none; }
   .group-head { display: grid; gap: var(--space-4); }
@@ -252,7 +252,7 @@ const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.
   .family-price .unit { margin-left: var(--space-4); color: var(--text-muted); font-size: var(--type-small-size); }
   .family-meta { color: var(--text-muted); font-size: var(--type-small-size); }
   .family-countries { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
-  .chip-link { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); color: var(--text); text-decoration: none; font-size: var(--type-small-size); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+  .chip-link { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); color: var(--text); text-decoration: none; font-size: var(--type-ui-size); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
   .chip-link:hover { border-color: var(--action); background: var(--action-subtle); }
   .more-title { margin-top: var(--space-16); }
 
