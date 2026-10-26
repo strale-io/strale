@@ -140,7 +140,7 @@ environmental split was to stop burying real alarms under repeats. Fixed in D.
 |---|---|---|
 | #729 sdk READMEs (docs) | draft, reviewed (fresh read-only agent, comment on PR), CI green, conflicts only in generated indexes | merged main in `strale-wt-prsweep`, regenerated `archive:index` + `context:generate` ×2, pushed `4618621f`, ready, auto-merge → **merged `93ea2727`**; PR files identical between tip and merge |
 | #728 platform-facts country count | draft, reviewed, CI green; held only because its session could not reach production | refreshed twice (second time after #729 moved main), `75f16f59`, ready, auto-merge → **merged `bdb103fa`**; PR files identical between tip and merge. Post-deploy check is next-session item 3 |
-| #705 Delegate competitive analysis (research, docs) | draft, no hold reason stated, `research:check` passed | refreshed three times as main moved (last after #728), ready, auto-merge on; merge outcome recorded at close |
+| #705 Delegate competitive analysis (research, docs) | draft, no hold reason stated, `research:check` passed | refreshed three times as main moved (last after #728), ready, auto-merge → **merged `4a76bdd9`** |
 | #730 T7 small + contract cut | draft, "Do not merge" pending Petter's confirmation of DEC-20261024-A items 2 and 5 | not touched; conflicting; owner its session |
 | #725–#727, #736 website series | drafts updated this morning (08:42–08:44Z) by a live session (`strale-wt-design`) | not touched |
 | #682 M4 batch 7 | unchanged since 2026-09-13 | not touched (M4 delegated-merge rule); M4 idle 43 days |
