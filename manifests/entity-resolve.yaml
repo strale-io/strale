@@ -1,0 +1,147 @@
+slug: entity-resolve
+name: Entity Resolve
+description: Resolve a company LEI, ISIN, BIC, VAT or registry number to a canonical GLEIF entity, with its available identifiers and legal address.
+category: company-data
+price_cents: 15
+external_cost_cents: 0
+cost_class: free_unlimited
+quota_window: none
+is_free_tier: false
+data_source: GLEIF public API; VIES via vat-validate for EU VAT inputs
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+avg_latency_ms: 800
+data_access:
+  lane: preferred
+  acquisition_method: direct_api
+  upstream_vendor: gleif
+input_schema:
+  type: object
+  required: [identifier]
+  additionalProperties: false
+  properties:
+    identifier:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: Company identifier; LEI and ISIN check digits are checked before fetching.
+    type:
+      type: string
+      enum: [lei, bic, isin, vat, registry]
+      description: Identifier type. Supply a hint when the identifier cannot be detected unambiguously.
+    country:
+      type: string
+      pattern: '^[A-Za-z]{2}$'
+      description: ISO2 country code, required for registry identifiers.
+output_schema:
+  type: object
+  required: [resolved, as_of]
+  properties:
+    resolved: { type: boolean }
+    reason: { type: string }
+    match_method:
+      type: string
+      enum: [lei_direct, isin_mapping, bic_mapping, registry_id, name_country]
+    confidence:
+      type: string
+      enum: [exact, probable]
+    entity:
+      type: object
+      required: [legal_name, lei, lei_status, jurisdiction, legal_form, registration_authority_id, registry_number, entity_status, headquarters_country, legal_address]
+      properties:
+        legal_name: { type: string }
+        lei: { type: string }
+        lei_status: { type: [string, 'null'] }
+        jurisdiction: { type: [string, 'null'] }
+        legal_form: { type: [string, 'null'] }
+        registration_authority_id: { type: [string, 'null'] }
+        registry_number: { type: [string, 'null'] }
+        entity_status: { type: [string, 'null'] }
+        headquarters_country: { type: [string, 'null'] }
+        legal_address:
+          type: [object, 'null']
+          description: GLEIF company legal address, preserved as published; not a person's address.
+          properties:
+            language: { type: [string, 'null'] }
+            addressLines: { type: array, items: { type: string } }
+            addressNumber: { type: [string, 'null'] }
+            addressNumberWithinBuilding: { type: [string, 'null'] }
+            mailRouting: { type: [string, 'null'] }
+            city: { type: [string, 'null'] }
+            region: { type: [string, 'null'] }
+            country: { type: [string, 'null'] }
+            postalCode: { type: [string, 'null'] }
+    identifiers:
+      type: object
+      required: [lei, bic, isin_count, registry_number]
+      properties:
+        lei: { type: string }
+        bic: { type: array, items: { type: string } }
+        isin_count: { type: integer, minimum: 0 }
+        vat: { type: string }
+        registry_number: { type: [string, 'null'] }
+    as_of:
+      type: string
+      format: date-time
+      description: GLEIF Golden Copy publication date where available, otherwise fetch time.
+test_fixtures:
+  known_answer:
+    input: { identifier: HWUPKR0MPOU8FGXBT394, type: lei }
+    expected_fields:
+      - { field: resolved, operator: equals, value: true, reliability: guaranteed }
+      - { field: as_of, operator: not_null, reliability: guaranteed }
+  health_check_input: { identifier: HWUPKR0MPOU8FGXBT394, type: lei }
+output_field_reliability:
+  resolved: guaranteed
+  reason: rare
+  match_method: common
+  confidence: common
+  entity: common
+  entity.legal_name: common
+  entity.lei: common
+  entity.lei_status: common
+  entity.jurisdiction: common
+  entity.legal_form: common
+  entity.registration_authority_id: common
+  entity.registry_number: common
+  entity.entity_status: common
+  entity.headquarters_country: common
+  entity.legal_address: common
+  entity.legal_address.language: common
+  entity.legal_address.addressLines: common
+  entity.legal_address.addressNumber: rare
+  entity.legal_address.addressNumberWithinBuilding: rare
+  entity.legal_address.mailRouting: rare
+  entity.legal_address.city: common
+  entity.legal_address.region: common
+  entity.legal_address.country: common
+  entity.legal_address.postalCode: common
+  identifiers: common
+  identifiers.lei: common
+  identifiers.bic: common
+  identifiers.isin_count: common
+  identifiers.vat: rare
+  identifiers.registry_number: common
+  as_of: guaranteed
+limitations:
+  - title: LEI coverage only
+    text: Only entities with GLEIF LEI records can resolve. A clean absence or nonunique match returns resolved false; identifiers are those published by GLEIF.
+    category: coverage
+    severity: info
+  - title: VAT matches are probable
+    text: EU and XI VAT inputs use the existing free VIES validator. Names can be unavailable; only a unique matching legal name and country resolves, always probable. Stale validation is rejected.
+    category: coverage
+    severity: info
+  - title: Registry authority and number
+    text: Registry numbers need country and an identifiable GLEIF registration authority. Number formatting must match GLEIF. Multiple candidates are not automatically selected.
+    category: coverage
+    severity: info
+  - title: GLEIF terms and mapping coverage
+    text: GLEIF Access Service terms section II permits individual API lookups and CC0 commercial reuse. Read 2026-10-26 at https://www.gleif.org/en/meta/lei-data-terms-of-use; recorded in vendor-terms.ts. No endorsement is implied; BIC and ISIN mappings can be incomplete.
+    category: coverage
+    severity: info

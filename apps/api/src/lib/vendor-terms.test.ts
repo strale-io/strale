@@ -10,7 +10,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { PROHIBITED_UPSTREAM_HOSTS, VENDOR_TERMS_RECORDS, prohibitedHostsIn } from "./vendor-terms.js";
 import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
 import { getEthRpcEndpoints } from "./eth-rpc-endpoints.js";
@@ -183,25 +183,42 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
   const files = walk(CAPS).map((f) => {
     const src = readFileSync(f, "utf8");
     const code = codeOnly(src);
-    return { file: rel(f), code, slug: code.match(/registerCapability\(\s*["'`]([^"'`]+)["'`]/)?.[1] };
+    return { path: f, file: rel(f), code, slug: code.match(/registerCapability\(\s*["'`]([^"'`]+)["'`]/)?.[1] };
   });
-  const callsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
+  const directlyCallsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
     record.hosts.some((h) => code.includes(h)) || code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
+  // Follow literal static/dynamic imports of shared capability helpers, so factoring a fetch
+  // into lib/ does not hide its callers or require an exemption allowlist.
+  const byPath = new Map(files.map(f => [f.path, f]));
+  function sharedImports(file: (typeof files)[number]) {
+    return [...file.code.matchAll(/(?:from\s*|import\s*(?:\(\s*)?)["'`](\.[^"'`]+)["'`]/g)]
+      .map(m => byPath.get(resolve(dirname(file.path), m[1].replace(/\.js$/, ".ts"))))
+      .filter((f): f is (typeof files)[number] => !!f && !f.slug);
+  }
+  function reaches(from: (typeof files)[number], target: (typeof files)[number], seen = new Set<string>()): boolean {
+    if (from === target) return true;
+    if (seen.has(from.path)) return false;
+    seen.add(from.path);
+    return sharedImports(from).some(f => reaches(f, target, seen));
+  }
+  const callsVendor = (file: (typeof files)[number], record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
+    files.some(target => directlyCallsVendor(target.code, record) && reaches(file, target));
 
   for (const record of VENDOR_TERMS_RECORDS) {
     it(`${record.vendor}: lists exactly the executors that call it`, () => {
       const callers = files
-        .filter((f) => f.slug && callsVendor(f.code, record))
+        .filter((f) => f.slug && callsVendor(f, record))
         .map((f) => f.slug as string)
         .sort();
       expect([...record.capabilities].sort()).toEqual(callers);
     });
 
     it(`${record.vendor}: no shared client outside an executor calls it unrecorded`, () => {
-      // A call routed through capabilities/lib or providers/ would hide its
-      // callers from the check above, so any such client fails here and must
-      // be handled explicitly.
-      const shared = files.filter((f) => !f.slug && callsVendor(f.code, record)).map((f) => f.file);
+      // An imported helper is accounted for through every executor that uses
+      // it. Orphan clients still fail: their callers have not been recorded.
+      const shared = files.filter(f => !f.slug && directlyCallsVendor(f.code, record)
+        && !files.some(caller => caller.slug && record.capabilities.includes(caller.slug) && reaches(caller, f)))
+        .map(f => f.file);
       expect(shared).toEqual([]);
     });
 
