@@ -1,5 +1,119 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// Curated against recorded live metadata; see __fixtures__/eurostat/README.md.
+export const EUROSTAT_ALLOWED_DATASETS: readonly string[] = Object.freeze([
+  "demo_find",
+  "demo_frate",
+  "demo_gind",
+  "demo_magec",
+  "demo_minfind",
+  "demo_mlexpec",
+  "demo_mlifetable",
+  "demo_nind",
+  "demo_pjan",
+  "demo_pjangroup",
+  "demo_pjanind",
+  "demo_r_d2jan",
+  "demo_r_d3area",
+  "demo_r_d3dens",
+  "demo_r_find2",
+  "demo_r_gind3",
+  "demo_r_magec",
+  "demo_r_mlifexp",
+  "demo_r_pjanaggr3",
+  "env_ac_mfa",
+  "env_ac_rme",
+  "env_wasmun",
+  "gov_10a_exp",
+  "gov_10a_main",
+  "gov_10dd_edpt1",
+  "gov_10q_ggdebt",
+  "gov_10q_ggnfa",
+  "ilc_di03",
+  "ilc_di04",
+  "ilc_di11",
+  "ilc_di12",
+  "ilc_li01",
+  "ilc_li02",
+  "ilc_li03",
+  "lfsi_emp_a",
+  "lfsi_emp_q",
+  "lfst_r_lfe2eftpt",
+  "lfst_r_lfe2emp",
+  "lfst_r_lfe2emprt",
+  "lfst_r_lfp2act",
+  "lfst_r_lfu3pers",
+  "lfst_r_lfu3rt",
+  "nama_10_a10",
+  "nama_10_gdp",
+  "nama_10_lp_ulc",
+  "nama_10_pc",
+  "namq_10_a10",
+  "namq_10_gdp",
+  "nrg_pc_204",
+  "nrg_pc_205",
+  "prc_hicp_aind",
+  "prc_hicp_inw",
+  "prc_hicp_manr",
+  "prc_hicp_midx",
+  "prc_ppp_ind",
+  "sdg_01_10",
+  "sdg_01_20",
+  "sdg_01_40",
+  "sdg_01_41",
+  "sdg_02_10",
+  "sdg_02_20",
+  "sdg_02_40",
+  "sdg_03_20",
+  "sdg_03_41",
+  "sdg_03_60",
+  "sdg_04_10",
+  "sdg_04_20",
+  "sdg_05_20",
+  "sdg_05_30",
+  "sdg_05_40",
+  "sdg_06_10",
+  "sdg_06_20",
+  "sdg_07_10",
+  "sdg_07_20",
+  "sdg_07_30",
+  "sdg_07_40",
+  "sdg_08_10",
+  "sdg_08_11",
+  "sdg_08_20",
+  "sdg_08_30",
+  "sdg_08_40",
+  "sdg_08_60",
+  "sdg_09_10",
+  "sdg_09_30",
+  "sdg_10_10",
+  "sdg_10_20",
+  "sdg_10_30",
+  "sdg_11_20",
+  "sdg_11_60",
+  "sdg_12_10",
+  "sdg_16_10",
+  "sdg_16_20",
+  "sdg_16_30",
+  "sts_copr_a",
+  "sts_copr_m",
+  "sts_inpr_a",
+  "sts_inpr_m",
+  "sts_intv_m",
+  "sts_setu_m",
+  "sts_trtu_a",
+  "sts_trtu_m",
+  "tour_cap_nat",
+  "tour_cap_nuts2",
+  "tour_cap_nuts3",
+  "tour_occ_anor",
+  "tour_occ_anor2",
+  "tour_occ_mnor",
+  "une_ltu_a",
+  "une_rt_a",
+  "une_rt_m",
+]);
+
 const API = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/";
 const TERMS = "https://ec.europa.eu/eurostat/help/copyright-notice";
 export const EUROSTAT_LICENCE_NOTE = "Reused under Commission Decision 2011/833/EU; source: Eurostat. Strale reshapes the JSON-stat response into a flat list; Eurostat is not responsible for this rendering.";
@@ -290,130 +404,13 @@ export const EUROSTAT_COUNTRY_LABELS: Readonly<Record<string, string>> = Object.
   ZW: "Zimbabwe",
 });
 export const EUROSTAT_WORLD_COUNTRIES: ReadonlySet<string> = new Set(Object.keys(EUROSTAT_COUNTRY_LABELS));
-// Geographic groups containing non-allowlisted countries, from the same GEO snapshot.
-// Explicit rather than prefix-based: BAL (Baltic countries) and ESM (European
-// Stability Mechanism) are not denied. Non-country totals (TOTAL/WORLD/NAT/FOR)
-// and relational aggregates (e.g. EXT_EU27_2020) remain allowed outside geo.
-export const EUROSTAT_DENIED_GEOGRAPHIC_AGGREGATES: ReadonlySet<string> = new Set([
-  "ACP", // African, Caribbean and Pacific Group of States, signatories of the Partnership Agreement
-  "ACP_AFR", // African ACP states
-  "ACP_CRB", // Caribbean ACP states
-  "ACP_PAC", // Pacific ACP states
-  "AFR", // Africa
-  "AFR_C", // Central Africa
-  "AFR_C_S", // Central and South Africa
-  "AFR_E", // Eastern Africa
-  "AFR_N", // Northern Africa
-  "AFR_NSP", // African countries, not specified
-  "AFR_N_ASI_NME", // Northern Africa, Near and Middle East Asia
-  "AFR_OTH", // Other African countries (aggregate changing according to the context)
-  "AFR_S", // Southern Africa
-  "AFR_W", // Western Africa
-  "ALA", // Partner Countries in Asia and Latin America
-  "AME", // America
-  "AME_C", // Central America
-  "AME_C_CRB", // Central America and Caribbean
-  "AME_C_OTH", // Other Central American countries
-  "AME_C_S", // Central and South America
-  "AME_C_S_OTH", // Other Central or South American countries
-  "AME_LAT", // Latin American countries
-  "AME_N", // Northern America
-  "AME_N_NSP", // Northern American countries, not specified
-  "AME_N_OCE", // Northern America and Oceania
-  "AME_N_OTH", // Other Northern American countries
-  "AME_OTH", // Other American countries (aggregate changing according to the context)
-  "AME_S", // South America
-  "AME_S_OTH", // Other South American countries
-  "AME_X_N", // Caribbean, Central and South America
-  "AME_X_N_NSP", // Caribbean, Central and South American countries, not specified
-  "AME_X_N_OTH", // Other Caribbean, Central and South American countries
-  "APEC", // Asia-Pacific Economic Cooperation
-  "ASEAN", // Association of Southeast Asian Nations
-  "ASI", // Asia
-  "ASI_C", // Central Asia
-  "ASI_E", // Eastern Asia
-  "ASI_ESSE", // Eastern, Southern and South-Eastern Asia
-  "ASI_E_OTH", // Other Eastern Asian countries
-  "ASI_G", // Gulf Arabian Countries
-  "ASI_NME", // Near and Middle East Asia (aggregate changing according to the context)
-  "ASI_NME_OTH", // Other Near and Middle East Asian countries
-  "ASI_NSP", // Asian countries, not specified
-  "ASI_OCE_OTH", // Other Asian and Oceanian countries (aggregate changing according to the context)
-  "ASI_OTH", // Other Asian countries (aggregate changing according to the context)
-  "ASI_S", // Southern Asia
-  "ASI_SSE", // Southern and South-Eastern Asia
-  "ASI_S_E", // South-Eastern Asia
-  "ASI_W", // Western Asia
-  "ASI_W_IR", // Western Asia including Iran
-  "ASI_W_OTH", // Other Western Asian countries
-  "AU_ISL", // Australian Oceania
-  "AU_NZ", // Australia and New Zealand
-  "BRIC", // BRIC countries
-  "BRICS", // BRICS countries
-  "CARICOM", // Caribbean Community
-  "CA_US", // Canada and United States
-  "CEMAC", // Central African Economic and Monetary Community
-  "COMESA", // Common Market for Eastern and Southern Africa
-  "CRB", // Caribbean
-  "CRB_OTH", // Other Caribbean countries
-  "ECCAS", // Economic Community of Central African States
-  "ECOWAS", // Economic Community of West African States
-  "EUR", // Europe
-  "EURMED", // Mediterranean countries in the Euro-Mediterranean Partnership
-  "EXT", // Countries other than EU, EFTA and Candidate countries
-  "EX_SU", // Soviet Union
-  "EX_SU_ASI", // Asian Republics of the former Soviet Union
-  "EX_SU_EUR", // European Republics of the former Soviet Union
-  "EX_SU_OTH", // Other countries of former Soviet Union (before 1991)
-  "EX_YD", // Former South Yemen (before 1990)
-  "EX_YE", // Former North Yemen (before 1990)
-  "EX_YU", // Yugoslavia
-  "EX_YU_OTH", // Other countries of former Yugoslavia (before 1992)
-  "FZ", // Franc Zone
-  "G20", // Group of Twenty
-  "G20_X_EU27_2020", // Group of Twenty except the EU27 countries (from 2020)
-  "GG_JE", // Channel Islands (Guernsey and Jersey)
-  "MACR", // Mashrek
-  "MAGR", // Maghreb
-  "MED", // Mediterranean Basin Countries
-  "MED_X_HR", // Mediterranean Basin Countries except Croatia
-  "MEL", // Melanesia
-  "MERCOSUR", // Southern Common Market Southern Common Market (MERCOSUR5_1991, MERCOSUR4_2016)
-  "MERCOSUR4_2016", // Southern Common Market – 4 countries (from 2016)
-  "MERCOSUR5_1991", // Southern Common Market – 5 countries (1991-2016)
-  "MIC", // Micronesia
-  "NAFTA", // North American Free Trade Agreement
-  "NOECD", // Non-OECD countries
-  "NZ_ISL", // New Zealand Oceania
-  "OCE", // Oceania
-  "OCE_NSP", // Oceanian countries, not specified
-  "OCE_OTH", // Other Oceanian countries (aggregate changing according to the context)
-  "OCE_PLR", // Oceania and southern polar regions
-  "OECD", // Organisation for Economic Co-operation and Development (OECD)
-  "OECD34", // Organisation for Economic Co-operation and Development (OECD - 34 countries)
-  "OECD_NEU", // OECD non-EU countries
-  "OPEC", // Organization of Petroleum Exporting Countries (OPEC)
-  "OPEC12", // Organization of Petroleum Exporting Countries (OPEC - 12 countries)
-  "PALOP", // Portuguese-speaking African Countries
-  "PLR", // Southern polar regions
-  "POL", // Polynesia
-  "SADC", // Southern African Development Community
-  "UEMOA", // West African Economic and Monetary Union
-  "USMCA", // United States-Mexico-Canada Agreement (USMCA)
-  "US_ISL", // American Oceania (US)
-]);
 export function allowedEurostatCountry(value: string): boolean {
   return EUROSTAT_ALLOWED_COUNTRIES.includes(value.toUpperCase());
 }
-function countryDimension(dimension: string): boolean {
-  return /^(?:geo|partner|citizen|counterp|natvessr|reporter)$|^c_/i.test(dimension);
-}
 export function allowedEurostatValue(dimension: string, value: string): boolean {
-  const code = value.toUpperCase();
-  if (EUROSTAT_DENIED_GEOGRAPHIC_AGGREGATES.has(code)) return false;
-  if (EUROSTAT_WORLD_COUNTRIES.has(code)) return !countryDimension(dimension) || allowedEurostatCountry(code);
   if (dimension.toLowerCase() !== "geo") return true;
-  return EUROSTAT_ALLOWED_AGGREGATES.includes(code) ||
+  const code = value.toUpperCase();
+  return allowedEurostatCountry(code) || EUROSTAT_ALLOWED_AGGREGATES.includes(code) ||
     (/^[A-Z]{2}[0-9A-Z]{1,3}$/.test(code) && allowedEurostatCountry(code.slice(0, 2)));
 }
 // Compare words after case, whitespace and punctuation normalisation. A suffix
@@ -429,11 +426,9 @@ export function eurostatCategoryIsCountry(code: string, label: string | undefine
   return actual === expected || actual.startsWith(`${expected} `);
 }
 function allowedReturnedCategory(dimension: string, code: string, label: string | undefined): boolean {
-  const upper = code.toUpperCase();
-  if (EUROSTAT_DENIED_GEOGRAPHIC_AGGREGATES.has(upper)) return false;
-  if (EUROSTAT_WORLD_COUNTRIES.has(upper)) {
-    return !eurostatCategoryIsCountry(code, label) || allowedEurostatCountry(code);
-  }
+  if (dimension !== "geo") return true;
+  // Label-aware country detection is defence in depth for geo alone.
+  if (eurostatCategoryIsCountry(code, label) && !allowedEurostatCountry(code)) return false;
   return allowedEurostatValue(dimension, code);
 }
 // Deliberately exclude ALL trade datasets, covering both Swiss/Liechtenstein
@@ -461,8 +456,9 @@ function refuseTrade(dataset: string): never {
 
 export function validateEurostatInput(input: CapabilityInput): URL {
   const { dataset, filters, since_period, until_period } = input;
-  if (typeof dataset === "string" && EUROSTAT_REFUSED_DATASET_PREFIXES.some(p => dataset.toLowerCase().startsWith(p))) refuseTrade(dataset);
-  if (typeof dataset !== "string" || !/^[a-z0-9_]{3,40}$/.test(dataset)) refuse("invalid_request", "'dataset' must match ^[a-z0-9_]{3,40}$. Find codes in the Eurostat data browser.");
+  if (typeof dataset !== "string") refuse("invalid_request", "'dataset' must match ^[a-z0-9_]{3,40}$. Find codes in the Eurostat data browser.");
+  if (!EUROSTAT_ALLOWED_DATASETS.includes(dataset)) refuse("dataset_not_supported", `Dataset '${dataset}' is not supported. Request an addition through Strale support with the dataset code and intended filters; additions require a Eurostat source and geography/terms metadata review.`, { dataset, allowed_datasets: EUROSTAT_ALLOWED_DATASETS });
+  if (EUROSTAT_REFUSED_DATASET_PREFIXES.some(p => dataset.startsWith(p))) refuseTrade(dataset);
   if (!filters || typeof filters !== "object" || Array.isArray(filters)) refuse("invalid_request", "'filters' must be an object with a required 'geo' filter.");
   const entries = Object.entries(filters);
   if (!entries.length || entries.length > 10) refuse("invalid_request", "Supply 1–10 filter dimensions, including geo.");
@@ -483,7 +479,7 @@ export function validateEurostatInput(input: CapabilityInput): URL {
     for (const value of values) {
       if (typeof value !== "string" || !TOKEN.test(value)) refuse("invalid_request", `Filter '${key}' values must match ^[A-Za-z0-9_.-]{1,40}$.`);
       if (!allowedEurostatValue(key, value)) refuse("commercial_reuse_restricted", `Eurostat's terms do not permit commercial reuse of category '${value}'. Choose an allowed EU, EFTA or official candidate country, or supported EU/euro-area aggregate.`, { dimension: key, geo: value, terms_url: TERMS });
-      url.searchParams.append(key, key === "geo" || EUROSTAT_WORLD_COUNTRIES.has(value.toUpperCase()) ? value.toUpperCase() : value);
+      url.searchParams.append(key, key === "geo" ? value.toUpperCase() : value);
     }
   }
   if (!seen.has("geo")) refuse("invalid_request", "The 'geo' filter is required for commercial reuse.");
@@ -513,6 +509,7 @@ function record(value: unknown): value is Metadata { return value !== null && ty
 /** No generic catalogue endpoint is assumed: inspect the JSON-stat metadata
  * returned with this exact query. Linked ESMS documents are not fetched. */
 export function checkEurostatMetadata(data: Metadata, dataset: string): boolean {
+  if (EUROSTAT_REFUSED_DATASET_PREFIXES.some(p => dataset.toLowerCase().startsWith(p))) refuseTrade(dataset);
   let sourceFound = false;
   function source(value: unknown) {
     sourceFound = true;

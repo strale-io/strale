@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkEurostatMetadata, EUROSTAT_ALLOWED_GEOS, EUROSTAT_ALLOWED_COUNTRIES, EUROSTAT_ALLOWED_AGGREGATES, EUROSTAT_WORLD_COUNTRIES, EUROSTAT_COUNTRY_LABELS, eurostatCategoryIsCountry, EUROSTAT_DENIED_GEOGRAPHIC_AGGREGATES, EUROSTAT_REFUSED_DATASET_PREFIXES, EUROSTAT_LICENCE_NOTE, EurostatError, executeEurostat, flattenEurostat, type JsonStat, validateEurostatInput } from "./eurostat-data.js";
+import { checkEurostatMetadata, EUROSTAT_ALLOWED_GEOS, EUROSTAT_ALLOWED_COUNTRIES, EUROSTAT_ALLOWED_AGGREGATES, EUROSTAT_WORLD_COUNTRIES, EUROSTAT_COUNTRY_LABELS, eurostatCategoryIsCountry, EUROSTAT_ALLOWED_DATASETS, EUROSTAT_REFUSED_DATASET_PREFIXES, EUROSTAT_LICENCE_NOTE, EurostatError, executeEurostat, flattenEurostat, type JsonStat, validateEurostatInput } from "./eurostat-data.js";
 import { VENDOR_TERMS_RECORDS } from "../lib/vendor-terms.js";
 
 function recorded(name: string) { return JSON.parse(readFileSync(new URL(`./__fixtures__/eurostat/${name}.json`, import.meta.url), "utf8")); }
@@ -61,7 +61,7 @@ describe("Eurostat input and reuse restrictions", () => {
   it("allows EU27, EFTA, nine candidates and explicit aggregates only", () => {
     expect(EUROSTAT_ALLOWED_GEOS).toEqual([...EUROSTAT_ALLOWED_COUNTRIES, ...EUROSTAT_ALLOWED_AGGREGATES]);
     expect(new Set(EUROSTAT_ALLOWED_GEOS).size).toBe(EUROSTAT_ALLOWED_GEOS.length);
-    for (const geo of EUROSTAT_ALLOWED_GEOS) expect(() => validateEurostatInput({ dataset: "une_rt_m", filters: { geo } })).not.toThrow();
+    for (const geo of EUROSTAT_ALLOWED_GEOS) expect(() => validateEurostatInput({ dataset: "une_rt_a", filters: { geo } })).not.toThrow();
   });
   it.each(["US", "JP", "CN", "UK", "XK", "WORLD"])("refuses commercial reuse for %s before any fetch", async geo => {
     const fetch = mock();
@@ -70,7 +70,7 @@ describe("Eurostat input and reuse restrictions", () => {
   });
   it.each(["ext_lt_intertrd", "DS-045409", "ds-045409", "comext_data", "trade_goods", "itgs_m", "cult_trd_prd", "cult_trd_prt", "sprt_trd_prd", "sprt_trd_prt", "for_trop", "enpe_ext_bal", "bop_its6_tot", "bop_its_tot", "tet00038", "teiet001", "tipsex001", "ei_etea_m", ...EUROSTAT_REFUSED_DATASET_PREFIXES.map(p => `${p}test`)])("refuses trade prefix %s before fetching", async dataset => {
     const fetch = mock();
-    await expect(executeEurostat({ ...input, dataset })).rejects.toThrow(/exception \(c\)/);
+    await expect(executeEurostat({ ...input, dataset })).rejects.toMatchObject({ code: "dataset_not_supported" });
     expect(fetch).not.toHaveBeenCalled();
   });
   it.each([
@@ -161,13 +161,13 @@ describe("Eurostat executor", () => {
 
 
 describe("Eurostat round-two restrictions", () => {
-  it.each(["nama_10_gdp", "une_rt_m"])("permits non-trade dataset %s", async dataset => {
+  it.each(["nama_10_gdp", "une_rt_a"])("permits non-trade dataset %s", async dataset => {
     mock(); expect((await executeEurostat({ ...input, dataset })).output.observation_count).toBe(4);
   });
   it("accepts recorded derived-table metadata without confusing lineage with ownership", async () => {
     const data = recorded("tec00013");
     expect(checkEurostatMetadata(data, "tec00013")).toBe(true);
-    mock(data); expect((await executeEurostat({ dataset: "tec00013", filters: { geo: "SE" } })).output.observation_count).toBeGreaterThan(0);
+    mock(data); await expect(executeEurostat({ dataset: "tec00013", filters: { geo: "SE" } })).rejects.toMatchObject({ code: "dataset_not_supported" });
   });
   it("refuses a non-Eurostat source on an otherwise permitted derived table", async () => {
     const data = recorded("tec00013");
@@ -201,27 +201,18 @@ describe("Eurostat round-two restrictions", () => {
   it.each([{ geo: "SE", GEO: "SE" }, { geo: "SE", unit: "X", UNIT: "Y" }])("rejects duplicate normalised keys %j", filters => {
     expect(() => validateEurostatInput({ ...input, filters })).toThrow(/Duplicate/);
   });
-  it.each(["geo", "partner", "citizen", "c_birth", "c_resid", "c_orig", "c_dest", "counterp", "c_work", "natvessr", "reporter"])("enforces %s before and after fetch, including regions and aggregates", async dimension => {
-    const fetch = mock();
-    await expect(executeEurostat({ ...input, filters: { ...(dimension === "geo" ? {} : { geo: "SE" }), [dimension.toUpperCase()]: "US" } })).rejects.toMatchObject({ code: "commercial_reuse_restricted" });
-    expect(fetch).not.toHaveBeenCalled();
-    for (const value of ["se", "SE1", "SE11", "SE110", ...EUROSTAT_ALLOWED_AGGREGATES]) {
-      expect(() => validateEurostatInput({ ...input, filters: { geo: "SE", [dimension]: value } })).not.toThrow();
+  it("keeps regional and aggregate geo rules before and after fetch", () => {
+    for (const geo of ["se", "SE1", "SE11", "SE110", ...EUROSTAT_ALLOWED_AGGREGATES]) {
+      expect(() => validateEurostatInput({ ...input, filters: { geo } })).not.toThrow();
     }
-    for (const value of dimension === "geo" ? ["US1", "UK123", "XK1", "SE1234", "TOTAL", "WORLD"] : ["US", "UK", "XK", "CN_X_HK"]) {
-      expect(() => validateEurostatInput({ ...input, filters: { geo: "SE", [dimension]: value } })).toThrow();
+    for (const geo of ["US1", "UK123", "XK1", "SE1234", "TOTAL", "WORLD", "CIS", "NIC_ASI", "EXT_FOR_HDI_HI"]) {
+      expect(() => validateEurostatInput({ ...input, filters: { geo } })).toThrow();
+      const data = fixture(); data.dimension.geo.category.index = ["SE110", geo];
+      const flat = flattenEurostat(data);
+      expect(flat.dropped_observation_count).toBe(2);
+      expect(flat.dropped_observation_count_by_dimension).toEqual({ geo: 2 });
+      expect(flat.dimensions[0].categories.map(c => c.code)).toEqual(["SE110"]);
     }
-    const data = fixture();
-    if (dimension !== "geo") {
-      data.id[0] = dimension; data.id.splice(1, 0, "geo"); data.size.splice(1, 0, 1);
-      data.dimension[dimension] = data.dimension.geo;
-      data.dimension.geo = { category: { index: ["SE"] } };
-    }
-    data.dimension[dimension].category.index = ["SE110", "US"]; data.dimension[dimension].category.label = { US: "United States" };
-    const flat = flattenEurostat(data);
-    expect(flat.dropped_observation_count).toBe(2);
-    expect(flat.observations).toHaveLength(2);
-    expect(JSON.stringify(flat.dimensions)).not.toContain('"US"');
   });
   it.each([{}, { "0": null }, []])("refuses an empty extraction without returning billable output %j", async value => {
     mock({ ...fixture(), value });
@@ -274,16 +265,6 @@ describe("Eurostat label-aware country restrictions", () => {
     expect(result.output.dropped_observation_count).toBe(0);
     expect(result.output.unit).toBe("NR");
   });
-  it("defers unknown filter dimensions and drops NR labelled Nauru after fetch", () => {
-    expect(() => validateEurostatInput({ ...input, filters: { geo: "SE", x: "NR" } })).not.toThrow();
-    const data = fixture(); data.id[1] = "x";
-    data.dimension.x = { category: { index: ["NR"], label: { NR: "Nauru" } } };
-    const flat = flattenEurostat(data);
-    expect(flat.observations).toEqual([]);
-    expect(flat.dropped_observation_count).toBe(4);
-    expect(flat.dropped_observation_count_by_dimension).toEqual({ x: 4 });
-    expect(flat.dimensions.find(d => d.id === "x")?.categories).toEqual([]);
-  });
   it.each([
     ["CN", "  CHINA (People’s Republic of China) ", true],
     ["US", "UNITED---STATES, of America", true],
@@ -298,51 +279,20 @@ describe("Eurostat label-aware country restrictions", () => {
     expect(EUROSTAT_WORLD_COUNTRIES.size).toBe(257);
     for (const code of ["US", "CN", "JP", "RU", "CN_X_HK", "XK", "UK", "EL", "AQ", "GB", "GR"]) expect(EUROSTAT_WORLD_COUNTRIES.has(code)).toBe(true);
   });
-  it.each([
-    ["rail_go_intgong", "c_unload"], ["rail_go_intcmgn", "c_load"],
-    ["road_go_ia_utt", "c_load"], ["road_go_ia_ltt", "c_unload"],
-    ["road_go_ta_tra", "c_trans"], ["road_go_ca_hac", "c_cabot"],
-    ["iww_go_anave", "natvessr"], ["fats_ctrl_rd", "c_ctrl"],
-    ["fats_activ_rd", "c_ctrl"], ["fats_g1b_rd", "c_ctrl"],
-    ["future_table", "arbitrary_dimension"],
-  ])("drops restricted countries in %s's %s dimension", async (dataset, dimension) => {
-    // Synthetic JSON-stat cells; dataset/dimension patterns from the reported live tables.
-    const codes = ["DE", "US", "CN", "RU", "CN_X_HK", "JP", "IN", "BR", "TOTAL"];
-    const data: JsonStat = { version: "2.0", class: "dataset", label: "Transport or enterprise statistics", source: "ESTAT",
-      id: ["geo", dimension, "time"], size: [1, codes.length, 1], value: codes.map(() => 1),
-      dimension: { geo: { category: { index: ["DE"] } }, [dimension]: { category: { index: codes, label: Object.fromEntries(codes.map(code => [code, EUROSTAT_COUNTRY_LABELS[code] ?? code])) } }, time: { category: { index: ["2023"] } } } };
-    mock(data);
-    const { output } = await executeEurostat({ dataset, filters: { geo: "DE" } });
-    expect(output.observations.map(row => row[dimension])).toEqual(["DE", "TOTAL"]);
-    expect(output.dropped_observation_count).toBe(7);
-    expect(output.dropped_observation_count_by_dimension).toEqual({ [dimension]: 7 });
-    expect(output.dimensions.find(d => d.id === dimension)?.categories.map(c => c.code)).toEqual(["DE", "TOTAL"]);
-  });
-  it("counts cells restricted in multiple dimensions once overall and once per dimension", () => {
-    const data = fixture(); data.dimension.geo.category.index = ["US", "DE"]; data.dimension.geo.category.label = { US: "United States", DE: "Germany" };
-    data.id[1] = "unknown_id"; data.dimension.unknown_id = { category: { index: ["CN"], label: { CN: "China" } } };
-    const flat = flattenEurostat(data);
-    expect(flat.dropped_observation_count).toBe(4);
-    expect(flat.dropped_observation_count_by_dimension).toEqual({ geo: 2, unknown_id: 4 });
-  });
-  it("refuses c_unload=US before any fetch and normalises country values on arbitrary filters", async () => {
+  it.each(["rail_go_intgong", "migr_imm1ctz", "cens_01nsres", "future_table", "tour_occ_ninraw"])("refuses non-listed %s before fetching", async dataset => {
     const fetch = mock();
-    await expect(executeEurostat({ dataset: "rail_go_intgong", filters: { geo: "DE", c_unload: "us" } })).rejects.toMatchObject({ code: "commercial_reuse_restricted", details: { dimension: "c_unload" } });
+    await expect(executeEurostat({ ...input, dataset })).rejects.toMatchObject({ code: "dataset_not_supported", message: expect.stringMatching(/Request an addition.*dataset code.*filters/), details: { dataset, allowed_datasets: EUROSTAT_ALLOWED_DATASETS } });
     expect(fetch).not.toHaveBeenCalled();
-    expect(validateEurostatInput({ ...input, filters: { geo: "de", any_key: "se" } }).searchParams.get("any_key")).toBe("SE");
   });
-  it.each(["TOTAL", "WORLD", "NAT", "FOR", "EXT_EU27_2020", "EU27_2020", "EA21", "BAL", "ESM"])("allows non-country total/aggregate %s outside geo", code => {
-    expect(() => validateEurostatInput({ ...input, filters: { geo: "DE", citizen: code, partner: code } })).not.toThrow();
-    const data = fixture(); data.id[1] = "citizen"; data.dimension.citizen = { category: { index: [code] } };
-    expect(flattenEurostat(data).observations).toHaveLength(4);
-  });
-  it.each([...EUROSTAT_DENIED_GEOGRAPHIC_AGGREGATES])("refuses and drops explicit geographic aggregate %s in every dimension", code => {
-    for (const dimension of ["geo", "partner", "citizen", "arbitrary_dimension"]) {
-      expect(() => validateEurostatInput({ ...input, filters: { geo: "DE", [dimension]: code } })).toThrow(/commercial reuse/);
-      const data = fixture(); data.id[1] = dimension === "geo" ? "partner" : dimension;
-      data.dimension[data.id[1]] = { category: { index: [code] } };
-      expect(flattenEurostat(data).dropped_observation_count).toBe(4);
-    }
+  it.each([["unit", "EUR"], ["quantile", "MED"], ["class", "G20"], ["indicator", "POL"], ["unit", "NR"]])("preserves non-geographic %s=%s without country detection", async (dimension, code) => {
+    const data = fixture(); data.id[1] = dimension;
+    data.dimension[dimension] = { category: { index: [code], label: { [code]: code } } };
+    mock(data);
+    const result = await executeEurostat({ ...input, filters: { geo: "SE", [dimension]: code } });
+    expect(result.output.observation_count).toBe(4);
+    expect(result.output.dropped_observation_count).toBe(0);
+    expect(result.output.observations.every(row => row[dimension] === code)).toBe(true);
+    expect(validateEurostatInput({ ...input, filters: { geo: "se", [dimension]: code.toLowerCase() } }).searchParams.get(dimension)).toBe(code.toLowerCase());
   });
   it("permits recorded sbs_na_2c_own metadata and still checks dataset-level ownership", () => {
     const data = recorded("sbs_na_2c_own-metadata");
@@ -351,14 +301,66 @@ describe("Eurostat label-aware country restrictions", () => {
     expect(() => checkEurostatMetadata({ ...data, extension: { owner: "OECD" } }, "sbs_na_2c_own")).toThrow(/source other than Eurostat/);
   });
   it.each([
-    ["ei_isrt_m", "Retail trade volume"], ["ei_isrt_q", "Wholesale trade indicators"],
+    ["sts_trtu_m", "Retail trade volume"], ["ei_isrt_q", "Wholesale trade indicators"],
     ["ei_bsrt_m_r2", "Retail trade confidence indicator"], ["sbs_sc_dt_r2", "Distributive trade by size class"],
     ["example", "Employment in the trade sector"],
   ])("permits domestic activity title in %s", async (dataset, label) => {
-    mock({ ...fixture(), label });
-    expect((await executeEurostat({ ...input, dataset })).output.observation_count).toBe(4);
+    expect(() => checkEurostatMetadata({ ...fixture(), label }, dataset)).not.toThrow();
   });
   it.each(["International retail trade", "Foreign wholesale trade", "Extra-EU distributive trade", "Intra-EU trade sector", "Retail trade and exports", "Retail trade and international trade", "Retail trade - foreign", "Imports and wholesale trade"])("still refuses international or mixed trade title %s", label => {
     expect(() => checkEurostatMetadata({ label }, "example")).toThrow(/exception \(c\)/);
+  });
+});
+
+
+describe("Eurostat recorded dataset allowlist", () => {
+  const audit = recorded("dataset-audit-2026-10-26");
+  const isoCountries = new Set(audit.iso_3166_alpha2);
+  it("matches every included audit row exactly and stays within the curated size bound", () => {
+    expect(audit.checked_at).toBe("2026-10-26");
+    expect(isoCountries.size).toBe(249);
+    expect(audit.iso_3166_alpha2).toEqual([...EUROSTAT_WORLD_COUNTRIES].filter(code => !["AN", "CP", "CQ", "EL", "FX", "UK", "XK", "CN_X_HK"].includes(code)).sort());
+    expect(EUROSTAT_ALLOWED_DATASETS).toEqual(audit.datasets.filter((row: {result: string}) => row.result === "included").map((row: {dataset: string}) => row.dataset));
+    expect(new Set(EUROSTAT_ALLOWED_DATASETS).size).toBe(EUROSTAT_ALLOWED_DATASETS.length);
+    expect(EUROSTAT_ALLOWED_DATASETS.length).toBeGreaterThanOrEqual(30);
+    expect(EUROSTAT_ALLOWED_DATASETS.length).toBeLessThanOrEqual(120);
+    for (const dataset of ["demo_pjan", "demo_gind", "namq_10_gdp", "prc_hicp_manr", "gov_10dd_edpt1", "sts_inpr_m", "nrg_pc_204", "une_rt_m"]) expect(EUROSTAT_ALLOWED_DATASETS).toContain(dataset);
+  });
+  // The audit rule, restated independently of the script that wrote the fixture.
+  const GEOGRAPHIC_ID = /^(?:partner|citizen|counterp|natvessr|reporter|resid|origin|destination|control|residence|country.*|c_.*)$/i;
+  function dimensionFindings(metadata: JsonStat): string[] {
+    const findings: string[] = [];
+    for (const id of metadata.id.filter(id => id !== "geo" && id !== "time")) {
+      if (GEOGRAPHIC_ID.test(id)) findings.push(`${id}: geographic id`);
+      const category = metadata.dimension[id].category;
+      const codes = Array.isArray(category.index) ? category.index : Object.keys(category.index);
+      const labels = (category.label ?? {}) as Record<string, string>;
+      for (const code of codes) if (eurostatCategoryIsCountry(code, labels[code])) findings.push(`${id}=${code} (${labels[code]})`);
+      if (codes.filter(code => isoCountries.has(code)).length >= 5) findings.push(`${id}: five or more ISO codes`);
+    }
+    return findings;
+  }
+  const synthetic = (id: string, labels: Record<string, string>): JsonStat => ({ id: [id, "geo", "time"], size: [], dimension: { [id]: { category: { index: Object.keys(labels), label: labels } } } } as unknown as JsonStat);
+  it("screen refuses a renamed country dimension, a country-dense one, and passes look-alike codes", () => {
+    expect(dimensionFindings(synthetic("flow_x", { DE: "Germany", TOTAL: "Total" }))).not.toEqual([]);
+    expect(dimensionFindings(synthetic("flow_x", { DE: "x", FR: "x", IT: "x", ES: "x", PL: "x" }))).not.toEqual([]);
+    expect(dimensionFindings(synthetic("partner", { TOTAL: "Total" }))).not.toEqual([]);
+    expect(dimensionFindings(synthetic("unit", { NR: "Number", KM2: "Square kilometre" }))).toEqual([]);
+    expect(dimensionFindings(synthetic("s_adj", { SA: "Seasonally adjusted data, not calendar adjusted data", CA: "Calendar adjusted data, not seasonally adjusted data", TC: "Trend cycle data", NSA: "Unadjusted data" }))).toEqual([]);
+  });
+  it.each(audit.datasets)("$dataset verdict matches the restated rule", ({ dataset, metadata, findings, result, url }: { dataset: string; metadata: JsonStat; findings: string[]; result: string; url: string }) => {
+    expect(url).toBe(`https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/${dataset}?lang=EN&lastTimePeriod=1`);
+    let sourceOk = true;
+    try { checkEurostatMetadata(metadata, dataset); } catch { sourceOk = false; }
+    const passes = sourceOk && dimensionFindings(metadata).length === 0;
+    expect(result).toBe(passes ? "included" : "excluded");
+    expect(findings.length === 0).toBe(passes);
+    if (passes) { expect(metadata.id).toContain("geo"); expect(metadata.id).toContain("time"); }
+  });
+  it("keeps excluded candidates out of the runtime list", () => {
+    for (const row of audit.datasets.filter((row: {result: string}) => row.result === "excluded")) {
+      expect(row.findings.length).toBeGreaterThan(0);
+      expect(EUROSTAT_ALLOWED_DATASETS).not.toContain(row.dataset);
+    }
   });
 });
