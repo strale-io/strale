@@ -60,5 +60,7 @@ const { rows, loadedAt } = Astro.props;
   .who a { font-family: var(--type-detail-family); font-weight: var(--type-detail-weight); font-size: var(--type-compact-size); }
   .when { color: var(--text-muted); font-size: var(--type-small-size); line-height: var(--type-small-line); }
   .tested-row .num { font-size: var(--type-small-size); color: var(--text-muted); white-space: nowrap; }
+  /* The price shares the tool name's baseline, not the row's top edge. */
+  .tested-row .who, .tested-row .num { align-self: baseline; }
   @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
 </style>

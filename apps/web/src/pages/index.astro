@@ -113,7 +113,7 @@ const WAYS = [
 
   <!-- 3 One call, start to finish, with a free tool. -->
   {demo && (
-    <section class="section section-sunken" aria-labelledby="call-title">
+    <section class="section section-sunken section-call" aria-labelledby="call-title">
       <div class="container split">
         <div class="stack call-copy" data-reveal>
           <p class="label">How a call works</p>
@@ -267,11 +267,13 @@ const WAYS = [
   .job-more .icon { transition: transform var(--duration-base) var(--ease-standard); }
 
   /* 3 One call */
+  /* The one feature section: more air than the standard rhythm, the copy and the code card centred on each other. */
+  .section-call { padding-block: calc(var(--section-space) * 1.5); }
   .split { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }
-  @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-64); align-items: start; } }
-  .steps { display: grid; gap: var(--space-16); padding-left: var(--space-20); margin: var(--space-8) 0 0; }
+  @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-64); align-items: center; } }
+  .call-copy .t-section { margin-top: var(--space-12); }
+  .steps { display: grid; gap: var(--space-20); padding-left: var(--space-20); margin: var(--space-32) 0 0; }
   .steps li { padding-left: var(--space-4); }
-  .split-even { align-items: start; }
   @media (min-width: 1024px) { .split-even { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
 
   /* 4 The stage: deep violet in both themes, light text. */
@@ -292,11 +294,11 @@ const WAYS = [
   .country abbr { text-decoration: none; font-family: var(--type-code-family); color: var(--brand-mist-blue); }
   .stage-cards { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 768px) { .stage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .stage-card { display: grid; gap: var(--space-8); align-content: start; padding: var(--space-24); border-radius: var(--radius-card); background: var(--brand-deep-violet); box-shadow: inset 0 0 0 var(--border-width) var(--brand-violet); color: var(--text-inverse); text-decoration: none; transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
+  .stage-card { display: flex; flex-direction: column; gap: var(--space-8); padding: var(--space-24); border-radius: var(--radius-card); background: var(--brand-deep-violet); box-shadow: inset 0 0 0 var(--border-width) var(--brand-violet); color: var(--text-inverse); text-decoration: none; transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
   .stage-card:hover { transform: translateY(calc(-1 * var(--space-4))); box-shadow: inset 0 0 0 var(--border-width) var(--brand-mist-blue), var(--shadow-3); }
   .stage-card-title { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); line-height: var(--type-subhead-line); }
   .stage-card-body { opacity: 0.82; font-size: var(--type-compact-size); line-height: var(--type-compact-line); }
-  .stage-card-meta { margin-top: var(--space-8); color: var(--brand-mist-blue); font-size: var(--type-small-size); }
+  .stage-card-meta { margin-top: auto; padding-top: var(--space-8); color: var(--brand-mist-blue); font-size: var(--type-small-size); }
 
   /* 5 Paying */
   .pay { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); }
@@ -321,6 +323,7 @@ const WAYS = [
   .cta-copy .t-lead { color: var(--text-inverse); opacity: 0.86; text-wrap: pretty; max-width: var(--measure-lead); }
   .cta-copy .row { margin-top: var(--space-8); }
   .ways { display: grid; gap: var(--space-12); grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+  .ways > li { display: grid; }
   .way { position: relative; display: grid; gap: var(--space-4); padding: var(--space-20); border-radius: var(--radius-card); background: var(--brand-deep-violet); box-shadow: inset 0 0 0 var(--border-width) var(--brand-violet); color: var(--text-inverse); text-decoration: none; transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
   .way:hover { transform: translateY(calc(-1 * var(--space-4))); box-shadow: inset 0 0 0 var(--border-width) var(--brand-mist-blue), var(--shadow-3); }
   .way-title { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); }
