@@ -414,17 +414,49 @@ function describeFailures(rows: readonly CorrectnessTestRow[], limit = 5): strin
 }
 
 /**
+ * Whether any environmental failure in the window is newer than the last
+ * time this capability's environmental-only finding was reported.
+ *
+ * The check runs every 2 hours over a 12-hour window, so without this one
+ * failure is re-reported up to six times. Measured 2026-10-26 over the
+ * preceding week: ~104 such alerts across five capabilities, almost every one
+ * a single timeout or 429 re-raised every run, with no customer behind any of
+ * them — the steady low-rate noise in which a real one goes unread. A new
+ * failure still reports, so a continuing outage keeps saying so.
+ */
+export function hasUnreportedFailure(
+  failureTimes: readonly (string | Date)[],
+  lastReportedAt: string | Date | null,
+): boolean {
+  if (failureTimes.length === 0) return false;
+  if (lastReportedAt == null) return true;
+  const last = new Date(lastReportedAt).getTime();
+  return failureTimes.some((t) => new Date(t).getTime() > last);
+}
+
+/**
  * Every failure in the window was environmental. Report it at Tier 2 so the
  * signal moves rather than disappearing — a capability whose upstream has been
  * down for twelve hours is still something an operator should see, just not
- * under a heading that says its code is wrong.
+ * under a heading that says its code is wrong. Each failure is reported once
+ * (`hasUnreportedFailure`), not once per run that can still see it.
  */
 async function reportEnvironmentalOnly(
   cap: { slug: string; name: string },
-  environmentalFailures: readonly CorrectnessTestRow[],
+  environmentalFailures: readonly (CorrectnessTestRow & { executed_at: string | Date })[],
   windowHours: number,
 ): Promise<void> {
   if (environmentalFailures.length === 0) return;
+  const lastReport = (await getDb().execute(sql`
+    SELECT MAX(created_at) AS last_reported_at
+      FROM health_monitor_events
+     WHERE capability_slug = ${cap.slug}
+       AND event_type = 'invariant_alert'
+       AND details->>'check' = 'algorithmic_correctness_environmental_only'
+  `)) as unknown as Array<{ last_reported_at: string | Date | null }>;
+  const lastReportedAt = (Array.isArray(lastReport) ? lastReport : (lastReport as any)?.rows ?? [])[0]
+    ?.last_reported_at ?? null;
+  if (!hasUnreportedFailure(environmentalFailures.map((r) => r.executed_at), lastReportedAt)) return;
   logWarn(
     "invariant-check-5-environmental-only",
     `All known-answer failures for ${cap.slug} in the last ${windowHours}h were environmental; no correctness evidence`,
@@ -446,7 +478,7 @@ async function reportEnvironmentalOnly(
   });
 }
 
-async function checkAlgorithmicCorrectnessFloor(
+export async function checkAlgorithmicCorrectnessFloor(
   unhealthyCapabilities: Set<string>,
 ): Promise<{ alerts: number; checked: number }> {
   const db = getDb();
@@ -502,7 +534,11 @@ async function checkAlgorithmicCorrectnessFloor(
     // correctness evidence to judge — say so at Tier 2 and move on, rather than
     // either crying code-bug or going quiet.
     if (passed + attributableFailures.length === 0) {
-      await reportEnvironmentalOnly(cap, environmentalFailures, ROLLING_WINDOW_HOURS);
+      await reportEnvironmentalOnly(
+        cap,
+        environmentalFailures as typeof rows,
+        ROLLING_WINDOW_HOURS,
+      );
       continue;
     }
 
