@@ -64,9 +64,7 @@ switches Claude account.
        under DEC-20261023-A;
      - `ai-act-assess` had a stale August 2026 deadline;
      - the KYB families said "for United Kingdom".
-   - **Check its state first:** `gh pr list --head content/catalogue-copy`. If the agent
-     did not finish, its worktree is under `.claude/worktrees/` on that branch. The PR
-     needs an independent review before merge.
+   - It became PR #738. The outcome is in "Catalogue copy PR #738" below.
    - This branch deliberately does **not** carry the manifest edits, so the two never
      conflict. Merge main into the stack after the copy PR lands.
 4. **Learnings made durable**:
@@ -95,7 +93,34 @@ switches Claude account.
 5. Before #736 merges: an independent review in a separate context of the homepage and
    catalogue commits. Neither has had one yet; the earlier batches did.
 
+## Catalogue copy PR #738 (outcome)
+
+- Built by a worktree agent, reviewed independently by a fresh agent in a separate context.
+  - First review: FAIL on copy truth only. Three new descriptions repeated old false claims:
+    - Price Comparison: Google Shopping, which was removed;
+    - Startup Name Availability: X handles, which it does not check;
+    - Phone Validation: carrier, which is always empty.
+  - The review also flagged that bumping `updated_at` on 296 tools would reset invariant-checker
+    clocks and could hide alerts.
+  - All fixed in 1d301f62, plus `charity-lookup-uk`, whose real source is Find that Charity.
+- Block 0123 writes name, description, long_description and agent_description only, each
+  guarded on today's exact production value, and never `updated_at`. The ledger now hashes a
+  block's declared data file (`// migration-data:`).
+- After deploy: the ledger row `0123_catalogueCopy` should show about 571 rows. Fewer means
+  some values changed since the 2026-10-26 snapshot, which is safe.
+- Deliberately excluded from #738:
+  - `password-strength`: production still says "Password is NOT stored", which is false because
+    inputs are kept 90 days. It needs its own guarded fix.
+  - `social-profile-check`: its newer copy from #731 is not yet in production.
+
 ## Open items found along the way
+
+- **Data-access rule:**
+  - `price-compare` reads PriceRunner, a commercial price aggregator. DEC-20261023-A puts
+    commercial aggregators in the never lane, even per call. Switch the tool off, or record a
+    decision.
+  - `charity-lookup-uk` reads Find that Charity; whether that counts as an aggregator is
+    undecided.
 
 - `GET /v1/solutions` lists `test-solution-delete-me`. The A2A card filters it with
   `isInternalArtifact`; the solutions route does not. The site now filters it too.
