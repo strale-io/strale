@@ -9,13 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-343 files (316 with a recorded intent, 27 without).
+344 files (317 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-catalogue-copy.md`](_general/from-code/2026-10-26-catalogue-copy.md) | Rewrite the public names and descriptions of the catalogue's tools, fix the bundled-check copy problems, and make pro... |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step4-review-md.md`](_general/from-code/2026-10-24-wow-step4-review-md.md) | Apply step 4 of the way-of-working review (DEC-20261024-A): one reviewer brief and a capability-onboarding skill. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md`](_general/from-code/2026-10-24-wow-step1-quick-wins.md) | Apply step 1 of the way-of-working review (DEC-20261024-A): fewer paperwork failures in CI, same product checks. |
+| 2026-10-24 | [`handoff/_general/from-code/2026-10-24-straleio-readmes.md`](_general/from-code/2026-10-24-straleio-readmes.md) | make the straleio SDK READMEs match the clients, as Petter asked in session on 2026-10-24. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md`](_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md) | Carry out DQ-38 — remove false web3 regulatory claims from the public methodology. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md`](_general/from-code/2026-10-24-data-access-vendor-terms.md) | DEC-20261023-A adoption, work item 3. Record Serper.dev's and Jina |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-provenance.md`](_general/from-code/2026-10-24-data-access-provenance.md) | DEC-20261023-A adoption, item 2: acquisition method and the rule's lane on every answer. |
