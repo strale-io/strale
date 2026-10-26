@@ -6,7 +6,7 @@
 // - The automatic cycle is silent to screen readers (aria-live="off"); a call the visitor chose is
 //   announced. It holds while the pointer or keyboard focus is on a tool, and the Pause button stops
 //   it until pressed again (WCAG 2.2.2).
-// - From 1280px it fits the board to the space the hero leaves (--_s on the board wrap: the console and
+// - From 1024px it fits the board to the space the hero leaves (--_s on the board wrap: the console and
 //   tiles scale together) and places each tile's label clear of the console (--_dx on the label).
 //   Every line, dot and label is computed in one pass from the same numbers the CSS places the tiles
 //   with (a tile's centre is x·width, y·height of the board), so they cannot drift apart; the pass
@@ -75,18 +75,16 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
   const px = (name: string) => parseFloat(css.getPropertyValue(name)) || 0;
   // Board units, before scaling: the tile size, the corner radius, the bus offset from the console and the
   // spacing between buses, the clear gap a label keeps from the console, and the design console height.
-  const U = { tile: px("--space-48") + px("--space-8"), r: px("--space-12"), bus: px("--space-32") + px("--space-2"), step: px("--space-12") + px("--space-2"), gap: px("--space-12"), pad: px("--space-24"), wide: px("--container-wide") };
+  const U = { tile: px("--space-48") + px("--space-8"), r: px("--space-12"), bus: px("--space-32") + px("--space-2"), step: px("--space-12") + px("--space-2"), gap: px("--space-12"), wide: px("--space-160") * 4 + px("--space-20"), high: px("--space-160") * 3 + px("--space-80") };
   // Where each side's routes enter the console, as fractions of its height, top to bottom.
   const ENTRY = [0.32, 0.5, 0.68];
   let scale = 1;
-  let routes: { d: string; out: string; node: [number, number]; rise: number | null }[] = [];
+  let routes: { d: string; out: string; node: [number, number] }[] = [];
 
-  // Fit: the console and tiles scale with the height the hero leaves for the board, and with the width (so the
-  // buses between the inner tiles and the console always fit), between 0.8 and 1.6.
+  // Fit the complete diagram to the right column. Tiles remain at least 44px at 1024px.
   function fit() {
-    const fieldH = wrap!.clientHeight, fieldW = wrap!.clientWidth, deskH = desk!.offsetHeight;
-    const s = Math.min((fieldH - 2 * U.pad) / deskH, fieldW / (U.wide + 2 * U.pad));
-    scale = Math.round(Math.max(0.8, Math.min(1.6, s)) * 100) / 100;
+    const s = Math.min(wrap!.clientHeight / U.high, wrap!.clientWidth / U.wide, 1.6);
+    scale = Math.floor(s * 1000) / 1000;
     wrap!.style.setProperty("--_s", String(scale));
   }
   // Orthogonal route with rounded corners: out of the tile, along to its bus column, up or down, into the console.
@@ -101,21 +99,28 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
     // The decorative run outward goes to the edge of the field, not just the board.
     const wb = wrap!.getBoundingClientRect(), bb = board!.getBoundingClientRect();
     const out = `M${cx - dir * half} ${cy} H ${L ? wb.left - bb.left : wb.right - bb.left}`;
-    if (Math.abs(ey - cy) < R * 2) return { d: `M${sx} ${cy} H ${ex}`, node, out, rise: null };
-    // rise: the x of a route that climbs past the label's height on its way to the console, which the label must not cover.
-    return { d: `M${sx} ${cy} H ${bus - dir * R} Q ${bus} ${cy} ${bus} ${cy + v * R} V ${ey - v * R} Q ${bus} ${ey} ${bus + dir * R} ${ey} H ${ex}`, node, out, rise: v < 0 ? bus - dir * R : null };
+    if (Math.abs(ey - cy) < R * 2) return { d: `M${sx} ${cy} H ${ex}`, node: [(sx + ex) / 2, cy] as [number, number], out };
+    return { d: `M${sx} ${cy} H ${bus - dir * R} Q ${bus} ${cy} ${bus} ${cy + v * R} V ${ey - v * R} Q ${bus} ${ey} ${bus + dir * R} ${ey} H ${ex}`, node, out };
   }
-  // A label sits above its tile, centred on it where it can be, shifted outward just enough to stay clear of
-  // the console, of its own route where that climbs past it, and inside the field.
-  function placeTag(i: number, W: number, d: { left: number; right: number }) {
+  // Labels above the outer tiles can span the board. A middle label wraps inside its
+  // side channel, keeping it near its tool and clear of both the console and upper tiles.
+  function placeTag(i: number, W: number, H: number, d: { left: number; right: number; top: number; height: number }) {
     const tag = tags[i];
     if (!tag) return;
-    const s = scale, w = tag.offsetWidth * s, cx = data[i].x * W, L = data[i].x < 0.5;
+    tag.style.removeProperty("--_max");
+    const s = scale, cx = data[i].x * W, L = data[i].x < 0.5;
     const bb = board!.getBoundingClientRect(), wb = wrap!.getBoundingClientRect();
-    const rise = routes[i]?.rise ?? null;
-    let lo = L ? wb.left - bb.left + U.gap : d.right + U.gap * s, hi = L ? d.left - U.gap * s : wb.right - bb.left - U.gap;
-    if (rise !== null) { if (L) hi = Math.min(hi, rise - U.gap * s); else lo = Math.max(lo, rise + U.gap * s); }
-    const left = Math.min(Math.max(cx - w / 2, lo), hi - w);
+    const lo = wb.left - bb.left + U.gap, hi = wb.right - bb.left - U.gap;
+    let w = tag.offsetWidth * s;
+    const tagH = tag.offsetHeight * s;
+    const top = data[i].y * H - (U.tile / 2 + U.gap) * s - tagH;
+    let left = Math.min(Math.max(cx - w / 2, lo), hi - w);
+    if (top + tagH > d.top - U.gap * s && top < d.top + d.height + U.gap * s) {
+      const edge = L ? d.left - U.gap * s : d.right + U.gap * s;
+      tag.style.setProperty("--_max", `${(L ? edge - lo : hi - edge) / s}px`);
+      w = tag.offsetWidth * s;
+      left = L ? Math.min(Math.max(cx - w / 2, lo), edge - w) : Math.max(Math.min(cx - w / 2, hi - w), edge);
+    }
     tag.style.setProperty("--_dx", `${(left + w / 2 - cx) / s}px`);
   }
   let cur = Math.max(0, buttons.findIndex((b) => b.classList.contains("on")));
@@ -126,7 +131,7 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
     return len;
   }
   function layout() {
-    if (!drawn()) { wrap!.style.removeProperty("--_s"); tags.forEach((t) => t?.style.removeProperty("--_dx")); return; }
+    if (!drawn()) { wrap!.style.removeProperty("--_s"); tags.forEach((t) => { t?.style.removeProperty("--_dx"); t?.style.removeProperty("--_max"); }); return; }
     fit();
     const b = board!.getBoundingClientRect(), dr = desk!.getBoundingClientRect();
     const W = b.width, H = b.height, d = { left: dr.left - b.left, right: dr.right - b.left, top: dr.top - b.top, height: dr.height };
@@ -136,7 +141,7 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
       restOut[i].setAttribute("d", r.out);
       nodes[i].setAttribute("cx", String(r.node[0]));
       nodes[i].setAttribute("cy", String(r.node[1]));
-      placeTag(i, W, d);
+      placeTag(i, W, H, d);
       nodes[i].classList.toggle("on", i === cur);
     });
     setWire(cur);

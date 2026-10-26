@@ -23,9 +23,9 @@ This proves the token pairs. It does not certify text placed over imagery: text 
 | `text-muted` #5c5468 | `surface-blue` #eef0ff | 6.34 | 4.5 | pass | Secondary text on blue mist |
 | `text-muted` #5c5468 | `surface-teal` #e8f5f2 | 6.42 | 4.5 | pass | Secondary text on teal mist |
 | `text-inverse` #ffffff | `surface-inverse` #29164b | 16.02 | 4.5 | pass | Text in CTA band / deep violet field |
-| `text-on-action` #ffffff | `action` #3027ff | 7.34 | 4.5 | pass | Primary button label |
-| `text-on-action` #ffffff | `action-hover` #2118d6 | 9.69 | 4.5 | pass | Primary button label, hover |
-| `text-on-action` #ffffff | `action-active` #1a10b0 | 12.03 | 4.5 | pass | Primary button label, pressed |
+| `text-on-action` #ffffff | `action` #17151c | 18.10 | 4.5 | pass | Primary button label |
+| `text-on-action` #ffffff | `action-hover` #302c38 | 13.61 | 4.5 | pass | Primary button label, hover |
+| `text-on-action` #ffffff | `action-active` #0f0d13 | 19.31 | 4.5 | pass | Primary button label, pressed |
 | `text` #17151c | `action-subtle` #e4e8ff | 14.90 | 4.5 | pass | Selected row / secondary hover |
 | `link` #3027ff | `canvas` #ffffff | 7.34 | 4.5 | pass | Inline link on page |
 | `link` #3027ff | `surface` #ffffff | 7.34 | 4.5 | pass | Inline link on cards |
@@ -48,9 +48,9 @@ This proves the token pairs. It does not certify text placed over imagery: text 
 | `focus` #3027ff | `surface-teal` #e8f5f2 | 6.56 | 3 | pass | Focus ring on surface-teal (non-text) |
 | `focus-inverse` #ffffff | `surface-inverse` #29164b | 16.02 | 3 | pass | Focus ring on the deep-violet band (non-text) |
 | `focus-code` #b9b5ff | `code-bg` #1a1427 | 9.47 | 3 | pass | Focus ring inside code blocks (non-text) |
-| `indicator` #3027ff | `canvas` #ffffff | 7.34 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on canvas (non-text) |
-| `indicator` #3027ff | `surface` #ffffff | 7.34 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface (non-text) |
-| `indicator` #3027ff | `surface-sunken` #f6f6f9 | 6.81 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text) |
+| `indicator` #17151c | `canvas` #ffffff | 18.10 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on canvas (non-text) |
+| `indicator` #17151c | `surface` #ffffff | 18.10 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface (non-text) |
+| `indicator` #17151c | `surface-sunken` #f6f6f9 | 16.78 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text) |
 | `success` #16703f | `success-bg` #e6f4ea | 5.40 | 4.5 | pass | Success notice text |
 | `success` #16703f | `surface` #ffffff | 6.13 | 4.5 | pass | Success inline text |
 | `warning` #8a5300 | `warning-bg` #fdf0d9 | 5.62 | 4.5 | pass | Warning notice text |
@@ -90,9 +90,9 @@ This proves the token pairs. It does not certify text placed over imagery: text 
 | `text-muted` #bdb4cc | `surface-blue` #1f1a4a | 8.10 | 4.5 | pass | Secondary text on blue mist |
 | `text-muted` #bdb4cc | `surface-teal` #0f2a2a | 7.63 | 4.5 | pass | Secondary text on teal mist |
 | `text-inverse` #ffffff | `surface-inverse` #29164b | 16.02 | 4.5 | pass | Text in CTA band / deep violet field |
-| `text-on-action` #ffffff | `action` #3027ff | 7.34 | 4.5 | pass | Primary button label |
-| `text-on-action` #ffffff | `action-hover` #4f47ff | 5.71 | 4.5 | pass | Primary button label, hover |
-| `text-on-action` #ffffff | `action-active` #2118d6 | 9.69 | 4.5 | pass | Primary button label, pressed |
+| `text-on-action` #17151c | `action` #f7f3fb | 16.52 | 4.5 | pass | Primary button label |
+| `text-on-action` #17151c | `action-hover` #ffffff | 18.10 | 4.5 | pass | Primary button label, hover |
+| `text-on-action` #17151c | `action-active` #e5dfed | 13.88 | 4.5 | pass | Primary button label, pressed |
 | `text` #f7f3fb | `action-subtle` #241f5c | 13.45 | 4.5 | pass | Selected row / secondary hover |
 | `link` #b9b5ff | `canvas` #130d21 | 10.04 | 4.5 | pass | Inline link on page |
 | `link` #b9b5ff | `surface` #1c1530 | 9.27 | 4.5 | pass | Inline link on cards |
@@ -115,9 +115,9 @@ This proves the token pairs. It does not certify text placed over imagery: text 
 | `focus` #b9b5ff | `surface-teal` #0f2a2a | 8.03 | 3 | pass | Focus ring on surface-teal (non-text) |
 | `focus-inverse` #ffffff | `surface-inverse` #29164b | 16.02 | 3 | pass | Focus ring on the deep-violet band (non-text) |
 | `focus-code` #b9b5ff | `code-bg` #0d0918 | 10.40 | 3 | pass | Focus ring inside code blocks (non-text) |
-| `indicator` #b9b5ff | `canvas` #130d21 | 10.04 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on canvas (non-text) |
-| `indicator` #b9b5ff | `surface` #1c1530 | 9.27 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface (non-text) |
-| `indicator` #b9b5ff | `surface-sunken` #0f0a1b | 10.30 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text) |
+| `indicator` #f7f3fb | `canvas` #130d21 | 17.31 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on canvas (non-text) |
+| `indicator` #f7f3fb | `surface` #1c1530 | 15.98 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface (non-text) |
+| `indicator` #f7f3fb | `surface-sunken` #0f0a1b | 17.76 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text) |
 | `success` #5fd08f | `success-bg` #10301f | 7.45 | 4.5 | pass | Success notice text |
 | `success` #5fd08f | `surface` #1c1530 | 9.09 | 4.5 | pass | Success inline text |
 | `warning` #f0b44d | `warning-bg` #33240a | 8.12 | 4.5 | pass | Warning notice text |

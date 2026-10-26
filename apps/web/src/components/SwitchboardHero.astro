@@ -4,10 +4,8 @@
 // route; the console shows the agent's question, the call with its live price, and the tool's
 // published example result. Server-rendered with the first call complete, so the page reads
 // the same with no script, with reduced motion, and in a thumbnail; switchboard.ts animates it.
-// From 1280px the hero fills the screen under the header (--viewport-height minus --nav-h, capped
-// for very tall windows): the board takes the height left under the copy, and the script scales the
-// console and tiles (--_s) to it, then draws every line from the same geometry the CSS places the
-// tiles with. Below 1280px the tools become a row of buttons above the console and no lines are drawn.
+// From 1024px copy and board sit in two columns. The board scales from its own field;
+// below that the text is followed by the existing tool-grid and console variant.
 import type { Tool } from "../lib/site-data";
 import { formatEur, plural } from "../lib/format";
 
@@ -21,12 +19,12 @@ interface Port { slug: string; label: string; x: number; y: number; glyph: Glyph
 // Wherever the published example echoes an input key, the example's own value is used, so question, call and result always agree.
 // x, y place the port on the board (fractions); fields pick which keys of the published example to show.
 const PORTS: Port[] = [
-  { slug: "swedish-company-data", label: "Swedish companies", x: 0.2, y: 0.2, glyph: "company", ask: "Is {org_number} an active company?", input: { org_number: "556703-7485" }, fields: ["company_name", "status", "registered_date"], src: "Bolagsverket" },
+  { slug: "swedish-company-data", label: "Swedish companies", x: 0.2, y: 0.16, glyph: "company", ask: "Is {org_number} an active company?", input: { org_number: "556703-7485" }, fields: ["company_name", "status", "registered_date"], src: "Bolagsverket" },
   { slug: "vat-validate", label: "VAT check", x: 0.1, y: 0.5, glyph: "check", ask: "Check this VAT number before we invoice.", input: { vat_number: "SE556703748501" }, fields: ["valid", "company_name", "country_code"], src: "EU VIES" },
-  { slug: "iban-validate", label: "IBAN check", x: 0.22, y: 0.8, glyph: "card", ask: "Is this IBAN well formed?", input: { iban: "SE4550000000058398257466" }, fields: ["valid", "country_code", "bank_code"], src: "ISO 13616 check" },
-  { slug: "url-to-markdown", label: "Web page to text", x: 0.8, y: 0.2, glyph: "web", ask: "Read {url} for me.", input: { url: "https://example.com" }, fields: ["title", "word_count"], src: "fetched live" },
+  { slug: "iban-validate", label: "IBAN check", x: 0.22, y: 0.88, glyph: "card", ask: "Is this IBAN well formed?", input: { iban: "SE4550000000058398257466" }, fields: ["valid", "country_code", "bank_code"], src: "ISO 13616 check" },
+  { slug: "url-to-markdown", label: "Web page to text", x: 0.8, y: 0.16, glyph: "web", ask: "Read {url} for me.", input: { url: "https://example.com" }, fields: ["title", "word_count"], src: "fetched live" },
   { slug: "exchange-rate", label: "Exchange rates", x: 0.9, y: 0.5, glyph: "ref", ask: "What is 1 {from} in {to}?", input: { from: "USD", to: "EUR" }, fields: ["rate", "date"], src: "ECB reference rates" },
-  { slug: "dns-lookup", label: "DNS lookup", x: 0.78, y: 0.8, glyph: "dev", ask: "Does {domain} publish SPF and DMARC?", input: { domain: "google.com" }, fields: ["has_spf", "has_dmarc"], src: "DNS" },
+  { slug: "dns-lookup", label: "DNS lookup", x: 0.78, y: 0.88, glyph: "dev", ask: "Does {domain} publish SPF and DMARC?", input: { domain: "google.com" }, fields: ["has_spf", "has_dmarc"], src: "DNS" },
 ];
 
 // A port is shown only when its tool is live and publishes an example carrying every field shown.
@@ -76,7 +74,8 @@ const callHtml = s0 ? `<span class="tk-s">${esc(s0.slug)}</span> · ${esc(s0.pri
 const words = headline.split(/\s+/).filter(Boolean);
 ---
 <section class="sb" aria-labelledby="hero-title" data-switchboard>
-  <div class="container sb-copy">
+  <div class="container sb-layout">
+  <div class="sb-copy">
     <p class="sb-eyebrow"><span class="sb-pulse" aria-hidden="true"></span><strong>{plural(libraryCount, "tool")}</strong><span aria-hidden="true">·</span>one connection<span aria-hidden="true">·</span>pay per call</p>
     <h1 id="hero-title" class="sb-title">{words.map((w, i) => <><span class="sb-word" style={`--_i: ${i}`}>{w}</span>{i < words.length - 1 ? " " : ""}</>)}</h1>
     <p class="t-lead sb-lead">{support}</p>
@@ -86,7 +85,6 @@ const words = headline.split(/\s+/).filter(Boolean);
         <input class="input" id="hero-q" name="q" type="search" placeholder="Find a tool for a job" autocomplete="off" />
         <button class="sb-go" type="submit" aria-label="Search tools"><svg class="icon" aria-hidden="true"><use href="#i-search" /></svg></button>
       </form>
-      <a class="btn btn-primary btn-lg" href="/tools" data-magnet>Browse tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
       <a class="link-standalone" href="/docs">Read the docs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
     </div>
   </div>
@@ -118,26 +116,25 @@ const words = headline.split(/\s+/).filter(Boolean);
       </div>
     </div>
   )}
+  </div>
 </section>
 
 <script>import "../scripts/switchboard.ts";</script>
 
 <style>
-  .sb { --_s: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
-  .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-16); padding-block: var(--space-24) 0; }
-  .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-h-sm); padding: var(--space-4) var(--space-20) var(--space-4) var(--space-16); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-compact-size); box-shadow: var(--shadow-1); }
+  .sb { --_s: 1; position: relative; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
+  .sb-layout { display: grid; align-content: center; min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width)); padding-block: var(--space-32); }
+  .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-16); padding: 0; }
+  .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--space-32); padding: var(--space-4) var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-small-size); box-shadow: var(--shadow-1); }
   .sb-eyebrow strong { color: var(--text); font-weight: var(--type-ui-weight); }
   .sb-pulse { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--success); box-shadow: 0 0 0 0 var(--success-bg); animation: sb-ping var(--duration-reveal-atmosphere) var(--ease-standard) infinite; }
   @keyframes sb-ping { 70% { box-shadow: 0 0 0 var(--space-8) var(--success-bg); } 100% { box-shadow: 0 0 0 0 var(--success-bg); } }
   .sb-title { font-family: var(--type-hero-family); font-weight: var(--type-hero-weight); letter-spacing: var(--type-hero-tracking); line-height: var(--type-section-line); font-size: var(--type-campaign-size); max-width: 26ch; text-wrap: balance; }
-  /* From 1280px the headline sizes with the window's height as well as its width: 7.5% of the height, between the
-     campaign and hero sizes, so a short laptop screen keeps room for the board and a tall monitor gets a bigger line. */
-  @media (min-width: 1280px) { .sb-title { font-size: clamp(var(--type-campaign-size), calc(var(--viewport-height) * 0.075), var(--type-hero-size)); line-height: var(--type-hero-line); } }
   .sb-word { --_i: 0; display: inline-block; animation: sb-rise var(--duration-reveal-signature) var(--ease-enter) both; animation-delay: calc(var(--_i) * var(--duration-fast) / 2); }
   @keyframes sb-rise { from { opacity: 0; transform: translateY(var(--space-12)); filter: blur(var(--space-4)); } to { opacity: 1; transform: none; filter: none; } }
   .sb-lead { color: var(--text-muted); max-width: 64ch; }
-  .sb-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-12) var(--space-16); margin-top: var(--space-4); width: 100%; }
-  .sb-search { position: relative; flex: 1 1 calc(var(--space-160) * 2); max-width: calc(var(--space-160) * 2 + var(--space-80)); }
+  .sb-actions { display: grid; justify-items: center; gap: var(--space-12) var(--space-16); margin-top: var(--space-4); width: 100%; }
+  .sb-search { position: relative; width: 100%; max-width: calc(var(--space-160) * 2 + var(--space-80)); }
   .sb-search .input { min-height: var(--control-h-lg); padding-right: calc(var(--control-h-lg) + var(--space-4)); box-shadow: var(--shadow-1); }
   .sb-go { position: absolute; right: var(--space-4); top: 50%; translate: 0 -50%; display: grid; place-items: center; width: calc(var(--control-h-lg) - var(--space-8)); height: calc(var(--control-h-lg) - var(--space-8)); border: 0; border-radius: var(--radius-control); background: var(--action-subtle); color: var(--link); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard); }
   .sb-go:hover { background: var(--action); color: var(--text-on-action); }
@@ -149,7 +146,7 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-board-wrap::before { content: ""; position: absolute; inset: 0; z-index: -1;
     background-image: repeating-linear-gradient(0deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4))),
       repeating-linear-gradient(90deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4)));
-    mask-image: linear-gradient(to bottom, transparent, black 30%); }
+    mask-image: radial-gradient(ellipse, black 30%, transparent 75%); }
   .sb-board-wrap::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 40% 60% at 50% 55%, var(--action-subtle), transparent 70%); opacity: 0.7; }
   .sb-board { position: relative; width: 100%; margin-inline: auto; max-width: var(--container-wide); padding: var(--space-24) var(--gutter); display: grid; gap: var(--space-16); }
   .sb-lines { display: none; }
@@ -168,8 +165,8 @@ const words = headline.split(/\s+/).filter(Boolean);
   .g-web { background: var(--brand-blue); }
   .g-ref { background: var(--brand-violet); }
   .g-dev { background: var(--brand-ink); }
-  .sb-tag { --_dx: 0px; position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); white-space: nowrap; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
-  .sb-tag small { margin-left: var(--space-8); font-family: var(--type-code-family); font-weight: var(--type-body-weight); opacity: 0.75; }
+  .sb-tag { --_dx: 0px; --_max: calc(var(--space-160) + var(--space-32)); position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); width: max-content; max-width: var(--_max); white-space: normal; text-align: center; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
+  .sb-tag small { display: block; margin: 0; font-family: var(--type-code-family); font-weight: var(--type-body-weight); opacity: 0.75; }
   .sb-name { font-family: var(--type-ui-family); font-size: var(--type-ui-size); line-height: var(--type-label-line); text-align: center; }
   .sb-tag::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--_dx)); margin-left: calc(-1 * var(--space-4)); border: var(--space-4) solid transparent; border-top-color: var(--surface-inverse); }
   .sb-tag { display: none; }
@@ -180,6 +177,7 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-bar i { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--code-border); }
   .sb-bar span { margin-left: auto; }
   .sb-pause { display: inline-grid; place-items: center; width: var(--space-24); height: var(--space-24); padding: 0; border: var(--border-width) solid var(--code-border); border-radius: var(--radius-pill); background: transparent; color: var(--code-muted); font: inherit; cursor: pointer; }
+  .sb-pause[hidden] { display: none; }
   .sb-pause:hover { color: var(--code-text); border-color: var(--code-muted); }
   .sb-pause:focus-visible { outline: var(--focus-width) solid var(--focus-code); outline-offset: var(--focus-offset); }
   .sb-rows { display: grid; align-content: start; gap: var(--space-8); padding: var(--space-16) var(--space-20) var(--space-8); min-height: calc(var(--space-160) + var(--space-8)); }
@@ -192,31 +190,31 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-foot { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-8) var(--space-20); border-top: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
   .sb-foot b { color: var(--code-string); font-weight: var(--type-body-weight); }
 
-  /* From 1280px: the circuit board, one screen tall. The hero fills the small viewport height under the header
-     (and its bottom border; capped at nine --space-160 for very tall windows); the board fills what the copy
-     leaves, up to a height that grows with the scale, and sits centred in its field. switchboard.ts sets --_s from that space (the console
-     and tiles grow or shrink together, never the type alone), places each label clear of the console, and draws
-     the lines from the geometry below: a tile's centre is exactly (--_x, --_y) of the board. */
-  @media (min-width: 1280px) {
-    .sb { min-height: min(calc(var(--viewport-height) - var(--nav-h) - var(--border-width)), calc(var(--space-160) * 9)); }
-    .sb-copy { gap: clamp(var(--space-12), calc(var(--viewport-height) * 0.016), var(--space-24)); padding-top: clamp(var(--space-24), calc(var(--viewport-height) * 0.05), var(--space-64)); }
-    .sb-board-wrap { margin-top: clamp(var(--space-24), calc(var(--viewport-height) * 0.04), var(--space-48)); min-height: calc(var(--space-160) + var(--space-128)); }
-    .sb-board { display: block; position: absolute; inset: 0; margin: auto; padding: 0; width: min(100%, calc(var(--container-wide) * var(--_s))); height: min(100%, calc(var(--space-160) * 4 * var(--_s))); max-width: none; }
+  /* A minimum board height lets short windows scroll instead of squeezing the diagram. */
+  @media (min-width: 1024px) {
+    .sb-layout { grid-template-columns: minmax(0, 0.43fr) minmax(0, 0.57fr); align-items: center; gap: var(--space-32); padding-block: var(--space-32); }
+    .sb-copy { justify-items: start; text-align: left; gap: var(--space-24); }
+    .sb-title { font-size: clamp(calc(var(--space-40) + var(--space-4)), calc(var(--viewport-height) * 0.075), var(--type-home-hero-size)); line-height: var(--type-home-hero-line); max-width: var(--type-home-hero-measure); }
+    .sb-lead { max-width: var(--type-lead-measure); }
+    .sb-actions { justify-items: start; }
+    .sb-search { max-width: none; }
+    .sb-board-wrap { margin: 0; min-width: 0; height: clamp(calc(var(--space-160) * 2 + var(--space-128)), calc(var(--viewport-height) - var(--nav-h) - var(--space-80) - var(--border-width)), calc(var(--space-160) * 4)); border-radius: var(--radius-media); }
+    .sb-board { display: block; position: absolute; inset: 0; margin: auto; padding: 0; width: 100%; height: min(100%, calc((var(--space-160) * 3 + var(--space-80)) * var(--_s))); max-width: none; }
     .sb-lines { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
     .sb-ports { display: contents; }
     .sb-name { display: none; }
     .sb-port { position: absolute; left: var(--_x); top: var(--_y); width: calc(var(--space-48) + var(--space-8)); height: calc(var(--space-48) + var(--space-8)); padding: 0; margin: calc(-1 * (var(--space-24) + var(--space-4))) 0 0 calc(-1 * (var(--space-24) + var(--space-4))); z-index: 2; scale: var(--_s); }
-    .sb-desk { position: absolute; left: 50%; top: 50%; translate: -50% -50%; scale: var(--_s); }
+    .sb-desk { width: calc(var(--space-160) * 2 + var(--space-80)); position: absolute; left: 50%; top: 50%; translate: -50% -50%; scale: var(--_s); }
     /* A fixed console height keeps every route's end still while the calls change. */
-    .sb-rows { height: var(--space-160); min-height: 0; }
+    .sb-rows { height: calc(var(--space-160) + var(--space-64)); min-height: 0; }
     .sb-tag { display: block; }
   }
   .sb-lines :global(.rest) { fill: none; stroke: var(--circuit); stroke-width: 1.5; }
   .sb-lines :global(.rest.out) { opacity: 0.5; }
   .sb-lines :global(.node) { fill: var(--surface-sunken); stroke: var(--circuit); stroke-width: 1.5; }
-  .sb-lines :global(.node.on) { fill: var(--action); stroke: var(--action); }
-  .sb-lines :global(.live) { fill: none; stroke: var(--action); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-  .sb-lines :global(.packet) { fill: var(--action); filter: drop-shadow(0 0 var(--space-4) var(--brand-blue)); }
+  .sb-lines :global(.node.on) { fill: var(--brand-blue); stroke: var(--brand-blue); }
+  .sb-lines :global(.live) { fill: none; stroke: var(--brand-blue); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .sb-lines :global(.packet) { fill: var(--brand-blue); filter: drop-shadow(0 0 var(--space-4) var(--brand-blue)); }
 
   @media (prefers-reduced-motion: reduce) {
     .sb-pulse { animation: none; }

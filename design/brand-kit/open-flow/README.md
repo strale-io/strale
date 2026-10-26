@@ -31,13 +31,15 @@ It replaces [Quiet Material](../README.md) as the visual direction. Quiet Materi
 
 ## Principles
 
-1. **Colour carries recognition. Ink and light surfaces carry information.** Blue, violet and teal belong to the artwork, the logo stage, the primary action and charts. None of them signals state on its own.
+1. **Colour carries recognition. Ink and light surfaces carry information.** Blue, violet and teal belong to the artwork, the logo stage, links, focus rings and charts. None of them signals state on its own.
 2. **One message per section.** A section opens with a statement, then explains. Add detail by grouping it, never by shrinking type below its role.
 3. **Artwork stays whole.** Each image is composed for one format. Show it at its own ratio, uncropped. Put text only in the reading region the kit declared. If copy doesn't fit there, put the text beside the image.
 4. **States are words plus colour.** Every status has an icon and a label. Focus is always a visible 2px ring.
 5. **The reading surface never moves.** Graphics reveal in place and settle. Since 0.2 a slow ambient loop is allowed only in the home Switchboard hero (which has a Pause control and holds while the pointer or focus is in it) and in the pulsing status dots; everything else reveals once. Loading indicators repeat while loading.
 
 ## Colour
+
+Petter approved ink primary buttons, inverse buttons in dark mode and ink/light indicators on 2026-10-26 ("go with all three"). Blue stays on links, focus rings, artwork, charts and brand stages. Outline buttons keep a surface background and strong border; the hero documentation action is a quiet text link. Approval record: [website identity and hero adoption](../../../docs/strategy/2026-10-26-website-identity-and-hero-adoption.md).
 
 Components use **role tokens** only (`--canvas`, `--text`, `--action` and so on). Each role resolves per theme. Brand tokens (`--brand-*`) are for artwork stages, identity and the inverse button, nowhere else.
 
@@ -52,10 +54,10 @@ Components use **role tokens** only (`--canvas`, `--text`, `--action` and so on)
 | `--text` / `--text-muted` | #17151c / #5c5468 | #f7f3fb / #bdb4cc | Reading text / secondary text. Both pass AA on every surface above |
 | `--border` | #d2cfd8 | #3a3050 | Decorative dividers only |
 | `--border-strong` | #7a7287 | #857a9c | Input and control boundaries (3:1 on every surface) |
-| `--action` (+ `-hover`, `-active`) | #3027ff | #3027ff | Primary button. White label, 7.3:1 |
+| `--action` / `--action-hover` / `--action-active` | #17151c / #302c38 / #0f0d13 | #f7f3fb / #ffffff / #e5dfed | Ink primary with white label in light; inverse primary with ink label in dark. All states exceed AA |
 | `--action-subtle` | #e4e8ff | #241f5c | Hover and selected backgrounds |
 | `--link` / `--focus` | #3027ff | #b9b5ff | Links, focus rings, icon accents |
-| `--indicator` | #3027ff | #b9b5ff | Selected-tab and current-page underline, checkbox and radio fill (3:1). Electric blue is only 2.6:1 on the dark canvas |
+| `--indicator` | #17151c | #f7f3fb | Ink / light-text selected-tab and current-page underline, checkbox and radio fill (3:1) |
 | `--focus-inverse` / `--focus-code` | #ffffff / #b9b5ff | same | Focus ring on the deep-violet band / inside code blocks |
 | `--success` `--warning` `--danger` `--info` (+ `-bg`) | see tokens | see tokens | Status. Always with an icon and words |
 | `--code-*` | dark | darker | Code blocks are dark in both themes |
@@ -77,11 +79,12 @@ Six categorical slots, assigned in fixed order and never cycled. Light: `#3027ff
 
 ## Type
 
-Refined to 0.4 under Petter’s 2026-10-26 website-polish instruction. Sustained reading stays at 16px; compact reference and interactive text use 15px. Interactive labels never use the smaller metadata roles. Hero and campaign sizes are unchanged.
+Refined to 0.4 under Petter’s 2026-10-26 website-polish instruction. Sustained reading stays at 16px; compact reference and interactive text use 15px. Interactive labels never use the smaller metadata roles. General hero and campaign sizes are unchanged. Petter approved the smaller `home-hero` role for the two-column homepage on 2026-10-26.
 
 | Role | Family | Size (px, fluid 360→1440) | Use |
 |---|---|---|---|
 | `hero` | Space Grotesk 600 | 36–76, lh 1.04, −0.045em, 16ch | One per page, in the hero shell |
+| `home-hero` | Space Grotesk 600 | 44–56, lh 1.08, −0.045em, 16ch | Home hero from 1024px; campaign size below |
 | `campaign` | Space Grotesk 600 | 30–52 | Inner-page h1, major statement |
 | `section` | Space Grotesk 600 | 24–32 | h2 |
 | `subhead` | Space Grotesk 600 | 18–22 | h3, card titles |
@@ -159,7 +162,7 @@ Every component is in the specimen with its states. State classes (`is-hover`, `
 
 | Component | Variants | States shown | Rules |
 |---|---|---|---|
-| Navigation | desktop bar with disclosure menu; mobile menu button with in-page panel | current page, hover, open, theme switch | Escape closes and returns focus. An outside click closes. The menu opens in the page, not as a modal. Flowing-S logo, ink in light and inverse in dark |
+| Navigation | desktop bar with disclosure menu; mobile menu button with in-page panel | current page, hover, open, theme switch | Escape closes and returns focus. An outside click closes. The menu opens in the page, not as a modal. Adopted kit-06 STRALE wordmark, ink in light and inverse in dark |
 | Buttons | primary, secondary, tertiary, destructive, inverse, inverse outline, icon; 36 / 44 / 52 | default, hover, pressed, focus, disabled, loading | One primary per group. Loading keeps the label and sets `aria-busy`. Explain a disabled button when the next step isn't obvious. Focus ring turns white on deep violet |
 | Links | inline, standalone with arrow, external | default, hover, focus | Inline links are always underlined. External links say so to screen readers |
 | Form fields | text, search, select, textarea, checkbox, radio | placeholder, hover, focus, filled, error, valid, disabled, checking | Label above the field. Help text below. Errors give an icon plus a sentence saying how to fix it, linked with `aria-describedby` and `aria-invalid` |
@@ -177,7 +180,8 @@ Every component is in the specimen with its states. State classes (`is-hover`, `
 
 These are shells only. Dashed outlines mark slots. Hero copy, order and message come from the positioning work, not from this kit.
 
-- **Hero shell.** On light: `wide` full-bleed. From 1024px, the slots (eyebrow, headline, one sentence, two actions) sit inside its reading region. Below 1024px the text stacks above the whole image. On dark: the same slots, with `bands.svg` anchored bottom-right.
+- **Home Switchboard hero (approved by Petter on 2026-10-26).** From 1024px, a 43% copy / 57% board split, with smaller eyebrow and 44–56px headline, one sentence, search, then a quiet documentation link. Vertically centred in the remaining viewport with a minimum diagram height so short windows scroll. Below 1024px copy precedes the full-width mobile board. No Browse tools button.
+- **Artwork hero shell (other pages).** On light: `wide` full-bleed. From 1024px, the slots (eyebrow, headline, one sentence, two actions) sit inside its reading region. Below 1024px the text stacks above the whole image. On dark: the same slots, with `bands.svg` anchored bottom-right.
 - **Feature.** Three-up cards with one thought each, or a split with text and a list beside a `card-field` media panel, which may sit on `--surface-sunken`.
 - **Catalogue grid.** Search plus filter chips in one row, then a result count, then a 1 / 2 / 3-column grid of link cards. Filtering to nothing shows the empty state with "Clear filters".
 - **Comparison.** A table with word-labelled ticks and dashes (placeholder values only), with the recommended column in blue mist. Below 768px it becomes cards.
@@ -204,7 +208,7 @@ node design/brand-kit/open-flow/screenshot.mjs path/to/node_modules/playwright/i
 ## Open items
 
 - **Founder review** of this system. Adoption needs a decision record and the promotion swap described in `design/README.md`.
-- **Logo.** The kit's STRALE wordmark stays a candidate (raster only, R–A–L join open). The flowing-S logo is current until the founder decides.
+- **Logo.** The kit-06 STRALE wordmark was adopted by Petter on 2026-10-26 ("go with all three"), as a vector trace pending a professional redraw. Use `assets/logo/wordmark.svg` with `currentColor`: ink on light and inverse on dark, sized by height (22px nav, 24px footer). The trace has slightly uneven edges at very large sizes; a professional redraw is recommended later. The S-only favicon is retained.
 - **Imagery approval.** Kit-06 asset checks are `checks-pending`, and the library's approval is "not-granted". Each image used publicly needs a live copy-fit check and a rights record.
 - **Dark-native artwork.** No dark-ground raster exists. Dark uses `bands.svg` and contained panels. A dark field commission is optional.
 - **Missing formats** listed by the kit: small 1:1 card, sequence, 3:1 divider, 9:16 story. None blocks the website.

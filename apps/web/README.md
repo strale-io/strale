@@ -22,7 +22,7 @@ Astro, static output. Every catalogue fact on a page — tools, prices, countrie
 
 Styles use tokens only. `src/styles/tokens.generated.css` is generated from the `website` surface of `design/tokens/active.json` (`npm run design:web-tokens` at the repo root). `src/styles/site.css` holds the shared components, derived from the Open Flow specimen. From the repo root, `npm run design:check` refuses hex, px/rem/ms literals, raw font stacks, unknown tokens and non-token breakpoints anywhere in `src/` (`.css`, `<style>` blocks and literal `style=""`), and fails if the generated token file is stale.
 
-Fonts, the flowing-S logo and the vector bands are copied from `design/` into `public/` by `scripts/prepare-assets.mjs` before every dev or build run; raster artwork is imported from `design/` through `astro:assets`, which emits resized WebP.
+Fonts, the adopted kit-06 wordmark and the vector bands are copied from `design/` into `public/` by `scripts/prepare-assets.mjs` before every dev or build run; raster artwork is imported from `design/` through `astro:assets`, which emits resized WebP.
 
 ## Commands
 
