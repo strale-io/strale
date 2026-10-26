@@ -1,0 +1,163 @@
+---
+// Pricing (SITE-STRUCTURE.md page 9): what a call costs and how to pay. Every
+// figure is computed from the catalogue or read from the API source at build
+// time (src/lib/code-facts.ts); none is typed. "Charged only when the call
+// succeeds" is scoped to single tools (claims.yaml pay-per-successful-call);
+// a bundled check is refunded only if every step fails (solution-execute.ts).
+import Base from "../layouts/Base.astro";
+import { getSiteData, tools as allTools } from "../lib/site-data.ts";
+import { FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS, TRIAL_CREDITS_CENTS } from "../lib/code-facts.ts";
+import { formatEur, formatUsd, plural } from "../lib/format.ts";
+import { L1 } from "../content/positioning.ts";
+
+const data = await getSiteData();
+const tools = allTools(data);
+const paid = tools.filter((t) => !t.free).map((t) => t.price_cents).sort((a, b) => a - b);
+const median = paid.length ? paid[Math.floor((paid.length - 1) / 2)] : 0;
+const bundlePrices = data.solutions.map((s) => s.price_cents).sort((a, b) => a - b);
+const free = tools.filter((t) => t.free);
+const bands = [
+  { label: `Up to ${formatEur(5)}`, test: (c: number) => c <= 5 },
+  { label: `${formatEur(6)} to ${formatEur(20)}`, test: (c: number) => c > 5 && c <= 20 },
+  { label: `${formatEur(21)} to ${formatEur(50)}`, test: (c: number) => c > 20 && c <= 50 },
+  { label: `Over ${formatEur(50)}`, test: (c: number) => c > 50 },
+].map((b) => ({ ...b, count: paid.filter(b.test).length })).filter((b) => b.count > 0);
+const x402Tools = data.x402.capabilities.length;
+const x402Bundles = data.x402.solutions.length;
+const usd = data.x402.capabilities.map((x) => x.price_usd).filter((p) => p > 0).sort((a, b) => a - b);
+const network = data.x402.network === "base" ? "Base" : data.x402.network;
+const contact = data.facts.static.controller?.contact_email;
+---
+<Base title="Pricing" current="pricing" description="Strale pricing: pay per call with no subscription, from a prepaid EUR balance with an API key or in USDC per request over x402 on eligible tools.">
+  <header class="page-head">
+    <div class="container stack">
+      <h1 class="t-campaign">{L1.perCall.replace(/\.$/, "")}</h1>
+      <p class="t-lead">Every tool has one price per call, listed on its page. There is no monthly fee and nothing to cancel: your agent pays for the calls it makes.</p>
+      <div class="row">
+        <a class="btn btn-primary btn-lg" href="/signup">Get an API key</a>
+        <a class="link-standalone" href="/tools?free=1">Try a free tool first <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+    </div>
+  </header>
+
+  <section class="section" aria-labelledby="cost-title">
+    <div class="container stack-loose">
+      <h2 id="cost-title" class="t-section">What a call costs</h2>
+      <dl class="grid-3 stats">
+        {paid.length > 0 && <div class="card"><dt class="t-label">Tools</dt><dd><span class="t-stat num">{formatEur(paid[0])}–{formatEur(paid[paid.length - 1])}</span><span class="small muted">per call; half cost {formatEur(median)} or less</span></dd></div>}
+        {bundlePrices.length > 0 && <div class="card"><dt class="t-label">Bundled checks</dt><dd><span class="t-stat num">{formatEur(bundlePrices[0])}–{formatEur(bundlePrices[bundlePrices.length - 1])}</span><span class="small muted">per check, for every step it runs</span></dd></div>}
+        <div class="card"><dt class="t-label">Free tools</dt><dd><span class="t-stat num">{free.length}</span><span class="small muted">no charge; without a key, {FREE_TIER_DAILY_LIMIT} calls a day</span></dd></div>
+      </dl>
+      {bundlePrices.length === 0 && <p class="small muted">Bundled-check prices are read from the live API{data.mode !== "live" ? "; this preview build does not have them" : ""}.</p>}
+      <div class="table-wrap bands-wrap" tabindex="0" role="region" aria-labelledby="bands-title">
+        <table class="table bands">
+          <caption id="bands-title" class="t-subhead">Tools by price per call</caption>
+          <thead><tr><th scope="col">Price per call</th><th scope="col" class="num-col">Tools</th></tr></thead>
+          <tbody>{bands.map((b) => <tr><th scope="row">{b.label}</th><td class="num num-col">{b.count}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p class="t-compact muted">Each tool’s page shows its price, and the catalogue API returns it as <code>price_cents</code>. The answer to each API call includes the price charged, so your agent can keep its own tally.</p>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="charged-title">
+    <div class="container grid-2">
+      <div class="stack">
+        <h2 id="charged-title" class="t-section">When you are charged</h2>
+        <p class="t-body">A single tool is charged only when the call succeeds. If the tool fails, nothing is taken from your balance.</p>
+        <p class="t-body">A bundled check is charged once, at its listed price, when it returns a result. If some steps fail and others succeed, you still get the steps that worked and the check is charged in full; it is refunded only if every step fails.</p>
+      </div>
+      <div class="stack">
+        <h2 class="t-section">A cap on every call</h2>
+        <p class="t-body">Each API call with a key states the most it may cost, in <code>max_price_cents</code>. A tool that costs more is refused, not charged. The cap can be at most {formatEur(MAX_PRICE_CAP_CENTS)} per call.</p>
+        <p class="t-compact muted">On bundled checks the cap is optional. Over x402 there is no cap to set: the first answer quotes the price, and nothing is paid unless your wallet accepts it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="pay-title">
+    <div class="container stack-loose">
+      <h2 id="pay-title" class="t-section">Two ways to pay</h2>
+      <div class="grid-2 pay">
+        <article class="card">
+          <h3 class="card-title">API key and a prepaid balance</h3>
+          <ul class="feature-list">
+            <li>One key and one balance for every tool and bundled check.</li>
+            <li>Top up in EUR by card, through Stripe, from {formatEur(MIN_TOPUP_CENTS)}.</li>
+            <li>A new account gets {formatEur(TRIAL_CREDITS_CENTS)} of trial credit, with no card. There is one grant per email address.</li>
+          </ul>
+          <div class="row"><a class="btn btn-primary" href="/signup">Get an API key</a><a class="link" href="/topup">Top up a wallet</a></div>
+        </article>
+        <article class="card">
+          <h3 class="card-title">x402 wallet, per request</h3>
+          <ul class="feature-list">
+            <li>No account: the payment authorises the call.</li>
+            <li>USDC on {network}, per request{usd.length > 0 && <>, from <span class="num">{formatUsd(usd[0])}</span></>}.</li>
+            <li>Available for {plural(x402Tools, "tool")}{x402Bundles > 0 && ` and ${plural(x402Bundles, "bundled check")}`}, not for all of them. The x402 catalogue lists which.</li>
+            <li>The first request answers with the price; your client pays it and repeats the request.</li>
+          </ul>
+          <div class="row"><a class="btn btn-secondary" href="/docs/x402">How x402 works</a><a class="link" href="https://api.strale.io/x402/catalog">x402 catalogue</a></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {free.length > 0 && (
+    <section class="section section-sunken" aria-labelledby="free-title">
+      <div class="container stack">
+        <h2 id="free-title" class="t-section">Free tools</h2>
+        <p class="t-body">{plural(free.length, "tool")} cost nothing. Without a key you can call them {FREE_TIER_DAILY_LIMIT} times a day, across all of them; with a key the normal rate limits apply and nothing is charged.</p>
+        <ul class="chip-row" role="list">{free.map((t) => <li><a class="tag link-quiet" href={`/tools/${t.slug}`}>{t.name}</a></li>)}</ul>
+      </div>
+    </section>
+  )}
+
+  <section class="section" aria-labelledby="faq-title">
+    <div class="container"><div class="stack-loose faq">
+      <h2 id="faq-title" class="t-section">Questions</h2>
+      <details>
+        <summary>Is there a subscription or a minimum spend?</summary>
+        <p>No subscription and no monthly minimum. With an API key, the smallest top-up is {formatEur(MIN_TOPUP_CENTS)}; over x402 you pay per request.</p>
+      </details>
+      <details>
+        <summary>What happens when my balance runs out?</summary>
+        <p>The call is refused with the error code <code>insufficient_balance</code> and nothing is charged. Top up and call again.</p>
+      </details>
+      <details>
+        <summary>Which currency?</summary>
+        <p>Prices and balances are in euros. Over x402 the same tools are priced in USD and paid in USDC; each eligible tool’s page shows both.</p>
+      </details>
+      <details>
+        <summary>Can prices change?</summary>
+        <p>Yes. The price in force is on the tool’s page and in the catalogue API, the answer to each API call states what was charged, and the price cap on each call stops a call that would cost more than you allowed.</p>
+      </details>
+      <details>
+        <summary>Do I need an account with the companies behind the tools?</summary>
+        <p>No. Strale holds those accounts. Your agent calls every tool through Strale with one key, or with an x402 wallet on eligible tools.</p>
+      </details>
+      {contact && <p class="t-compact muted">Something else? Email <a class="link" href={`mailto:${contact}`}>{contact}</a>.</p>}
+    </div></div>
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-48); border-bottom: var(--border-width) solid var(--border); }
+  .page-head .t-lead { max-width: var(--measure-lead); }
+  .section { padding-block: var(--space-64); }
+  .section-sunken { background: var(--surface-sunken); }
+  .stats { margin: 0; }
+  .stats dd { margin: 0; display: grid; gap: var(--space-4); }
+  .bands-wrap { max-width: var(--measure-body); }
+  .bands th[scope="row"] { text-align: left; font-variant-numeric: tabular-nums; }
+  .bands caption { text-align: left; padding-bottom: var(--space-12); }
+  .num-col { text-align: right; }
+  .pay { align-items: stretch; }
+  .pay .row { margin-top: auto; }
+  .chip-row { margin: 0; padding: 0; list-style: none; }
+  .faq { max-width: var(--measure-body); }
+  .faq details { border-top: var(--border-width) solid var(--border); padding-block: var(--space-16); }
+  .faq details:last-of-type { border-bottom: var(--border-width) solid var(--border); }
+  .faq summary { cursor: pointer; font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); }
+  .faq summary:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+  .faq details p { margin-top: var(--space-12); max-width: var(--measure-body); }
+</style>

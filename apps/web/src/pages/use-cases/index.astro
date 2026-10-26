@@ -1,0 +1,60 @@
+---
+// Use cases (SITE-STRUCTURE.md page 7): one card per job, with a one-line
+// description and the tools it uses. Level 2. Editorial file: src/content/use-cases.ts.
+import Base from "../../layouts/Base.astro";
+import { getSiteData } from "../../lib/site-data.ts";
+import { useCases } from "../../lib/use-cases.ts";
+import { formatEur } from "../../lib/format.ts";
+
+const data = await getSiteData();
+const cases = useCases(data);
+---
+<Base title="Use cases" current="use-cases" description="What AI agents use Strale’s tools for: research, reading documents, checking data, onboarding a supplier, checking an invoice issuer, and SEO and web work.">
+  <header class="page-head">
+    <div class="container stack">
+      <h1 class="t-campaign">What agents use the tools for</h1>
+      <p class="t-lead">Each page takes one job, shows the tools an agent would call and in what order, and works out what one run costs at today’s prices.</p>
+    </div>
+  </header>
+
+  <section class="section" aria-label="Use cases">
+    <div class="container">
+      <ul class="grid-3 cases" role="list">
+        {cases.map((uc) => (
+          <li>
+            <article class="card case">
+              <h2 class="card-title"><a class="link-quiet case-link" href={`/use-cases/${uc.slug}`}>{uc.title}</a></h2>
+              <p class="card-body">{uc.summary}</p>
+              <ul class="chip-row" role="list" aria-label={`Tools used: ${uc.title}`}>
+                {uc.steps.map((s) => <li><span class="tag">{s.tool.name}</span></li>)}
+              </ul>
+              <p class="small muted card-meta">Example run: <span class="num">{formatEur(uc.runCents)}</span>{uc.bundle && <> · bundled check <span class="num">{formatEur(uc.bundle.solution.price_cents)}</span></>}</p>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="more-title">
+    <div class="container stack">
+      <h2 id="more-title" class="t-subhead">Doing something else?</h2>
+      <p class="t-compact muted">The catalogue is searchable by job. If the tool your agent needs is not there, tell us the job: the catalogue grows from what agents ask for and do not find.</p>
+      <div class="row"><a class="btn btn-secondary" href="/tools">Browse tools</a></div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-48) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
+  .page-head .t-lead { max-width: var(--measure-lead); }
+  .section { padding-block: var(--space-64); }
+  .section-sunken { background: var(--surface-sunken); }
+  .cases { margin: 0; padding: 0; list-style: none; }
+  .case { height: 100%; position: relative; align-content: start; }
+  .case-link::after { content: ""; position: absolute; inset: 0; }
+  .case:hover { border-color: var(--link); }
+  .case:focus-within { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+  .case-link:focus-visible { outline: none; }
+  .chip-row { margin: 0; padding: 0; list-style: none; }
+</style>

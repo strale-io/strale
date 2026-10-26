@@ -10,7 +10,7 @@ import { CATEGORY_GROUP, JOB_GROUPS, SLUG_GROUP, jobFor } from "../src/content/j
 import { COUNTRY_BY_PREFIX, companyDataPrefix } from "../src/content/countries.ts";
 import { deactivatedSlugs } from "../src/lib/load-preview.ts";
 import { highlightJson, highlightShell, escapeHtml } from "../src/lib/highlight.ts";
-import { FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS, executorSource } from "../src/lib/code-facts.ts";
+import { FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS, TRIAL_CREDITS_CENTS, executorSource } from "../src/lib/code-facts.ts";
 import { formatEur, formatUsd, usdcAtomic } from "../src/lib/format.ts";
 
 const repo = resolve(import.meta.dirname, "../../..");
@@ -61,7 +61,7 @@ test("highlighting escapes before it decorates", () => {
 });
 
 test("code facts are read from the API source", () => {
-  for (const n of [FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS]) assert.ok(Number.isInteger(n) && n > 0);
+  for (const n of [FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS, TRIAL_CREDITS_CENTS]) assert.ok(Number.isInteger(n) && n > 0);
   assert.equal(executorSource("iban-validate"), "iban-validate:algorithmic");
 });
 
@@ -98,4 +98,52 @@ test("Returns uses fields tools actually return, never availability flags", asyn
   // AU-like: state and postcode, not an address.
   assert.deepEqual(returns(t, { abn: "guaranteed", state: "common", postcode: "common" }), ["Name and number", "State and postcode"]);
   assert.deepEqual(returns(t, { name: "guaranteed", directors: "common", beneficial_owners: "rare" }), ["Name and number", "Officers"]);
+});
+
+test("use cases name real tools, and each sketch calls only tools its page lists", async () => {
+  const { USE_CASES } = await import("../src/content/use-cases.ts");
+  const { sketchSlugs } = await import("../src/lib/use-cases.ts");
+  const { PACKAGES } = await import("../src/lib/snippets.ts");
+  assert.equal(new Set(USE_CASES.map((u) => u.slug)).size, USE_CASES.length);
+  for (const uc of USE_CASES) {
+    assert.deepEqual(uc.steps.map((s) => s.slug).filter((s) => !slugs.has(s)), [], uc.slug);
+    assert.ok(uc.steps.length >= 2 && uc.steps.length <= 5, `${uc.slug}: two to five tools (SITE-STRUCTURE page 8)`);
+    assert.ok(uc.steps.some((s) => s.calls > 0), uc.slug);
+    const code = uc.sketch(() => 7);
+    const listed = new Set(uc.steps.filter((s) => s.calls > 0).map((s) => s.slug));
+    assert.deepEqual(sketchSlugs(code).filter((s) => !listed.has(s)), [], `${uc.slug} sketch`);
+    assert.ok(sketchSlugs(code).length > 0, uc.slug);
+    assert.match(code, new RegExp(`from "${PACKAGES.typescript}"`), `${uc.slug} sketch imports the published TypeScript package`);
+    assert.ok(!/max_price_cents: (?!7\b)\d/.test(code), `${uc.slug}: every cap comes from price()`);
+  }
+});
+
+test("a use case that runs a screening tool says where a person stays in the loop", async () => {
+  const { USE_CASES } = await import("../src/content/use-cases.ts");
+  for (const uc of USE_CASES) {
+    const screening = uc.steps.filter((s) => s.calls > 0).some((s) => {
+      const m = parse(readFileSync(resolve(repo, "manifests", `${s.slug}.yaml`), "utf8")) as { gdpr_art_22_classification?: string };
+      return m.gdpr_art_22_classification === "screening_signal" || m.gdpr_art_22_classification === "risk_synthesis";
+    });
+    if (screening) assert.ok(uc.human && uc.human.length > 40, uc.slug);
+  }
+});
+
+test("use-case run cost counts free tools as free and needs every paid tool on x402 for a USD total", async () => {
+  const { resolveUseCase } = await import("../src/lib/use-cases.ts");
+  const cap = (slug: string, price_cents: number) => ({ slug, name: slug, description: "", category: "validation", price_cents, input_schema: null, output_schema: null, transparency_tag: "algorithmic", geography: null, data_source: null, is_free_tier: false });
+  const d = {
+    capabilities: [cap("email-validate", 3), cap("vat-validate", 2), cap("phone-validate", 2)],
+    facts: { capability_counts: { free_tier_slugs: ["email-validate"] } },
+    x402: { capabilities: [{ slug: "vat-validate", name: "", price_usd: 0.03, method: "POST", endpoint: "" }], solutions: [] },
+    solutions: [],
+    manifests: new Map(),
+  } as never;
+  const uc = { slug: "t", title: "t", summary: "", job: "check" as const, intro: "", example: { setup: "", run: [] }, sketch: () => "", steps: [{ slug: "email-validate", role: "", calls: 2 }, { slug: "vat-validate", role: "", calls: 1 }, { slug: "missing-tool", role: "", calls: 1 }] };
+  const r = resolveUseCase(d, uc);
+  assert.equal(r.runCents, 2);
+  assert.equal(r.steps.length, 2, "a tool not in the catalogue is dropped");
+  assert.equal(r.runUsd, 0.03);
+  const r2 = resolveUseCase(d, { ...uc, steps: [...uc.steps, { slug: "phone-validate", role: "", calls: 1 }] });
+  assert.equal(r2.runUsd, null);
 });

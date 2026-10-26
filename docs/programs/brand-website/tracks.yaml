@@ -89,7 +89,7 @@ tracks:
     gate: none
     depends_on: [T5]
     owner: session
-    next_action: "apps/web is being built in stacked PRs held open for Petter's review (no merge publishes it; strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Slice 1 (tokens, app, homepage) is PR #725 on claude/loving-newton-mxoo9l; slice 2 (tools catalogue, tool and bundle pages) is PR #726; slice 3 (company-data hub and country pages) is on claude/loving-newton-mxoo9l-company-data. Next slices, in SITE-STRUCTURE order: use cases, pricing, docs, security, about; machine-readable surfaces. Live-data screenshots come from the CI web job's web-review artifact; the cloud sandbox can only build preview data."
+    next_action: "apps/web is being built in stacked PRs held open for Petter's review (no merge publishes it; strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Slice 1 (tokens, app, homepage) is PR #725 on claude/loving-newton-mxoo9l; slice 2 (tools catalogue, tool and bundle pages) is PR #726; slice 3 (company-data hub and country pages) is PR #727; slice 4 (use cases and pricing) is on claude/loving-newton-mxoo9l-use-cases. Next slices, in SITE-STRUCTURE order: docs, security, about; then machine-readable surfaces (llms.txt, sitemap, robots, agent and MCP cards). Live-data screenshots come from the CI web job's web-review artifact; the cloud sandbox can only build preview data."
     resume_file: apps/web/README.md
     exit:
       - Responsive, accessible and performant benefit-first website with truthful demonstrations.

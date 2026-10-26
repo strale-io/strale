@@ -28,3 +28,5 @@ export function executorSource(slug: string): string | null {
 }
 /** Hard ceiling on max_price_cents for one API call, in EUR cents (apps/api/src/routes/do.ts). */
 export const MAX_PRICE_CAP_CENTS = constant("apps/api/src/routes/do.ts", "MAX_PRICE_CAP_CENTS");
+/** Trial credit granted once per email address on signup, in EUR cents (apps/api/src/lib/trial-eligibility.ts). */
+export const TRIAL_CREDITS_CENTS = constant("apps/api/src/lib/trial-eligibility.ts", "TRIAL_CREDITS_CENTS");

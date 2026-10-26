@@ -1,0 +1,166 @@
+---
+// Use-case detail (SITE-STRUCTURE.md page 8): which tools an agent would use
+// for this job, in what order, and what one run costs. The job and the worked
+// example are editorial (src/content/use-cases.ts); every price, tool name and
+// bundle is read from the catalogue at build time.
+import Base from "../../layouts/Base.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData } from "../../lib/site-data.ts";
+import { useCases, chargedCents } from "../../lib/use-cases.ts";
+import { USE_CASES } from "../../content/use-cases.ts";
+import { JOB_GROUPS } from "../../content/jobs.ts";
+import { L1 } from "../../content/positioning.ts";
+import { BUNDLE_LABEL } from "../../lib/company-data.ts";
+import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { formatEur, formatUsd, plural } from "../../lib/format.ts";
+import { firstSentence, TRANSPARENCY } from "../../lib/describe.ts";
+
+export function getStaticPaths() {
+  return USE_CASES.map((uc) => ({ params: { slug: uc.slug }, props: { slug: uc.slug } }));
+}
+
+const { slug } = Astro.props as { slug: string };
+const data = await getSiteData();
+const uc = useCases(data).find((u) => u.slug === slug)!;
+const group = JOB_GROUPS.find((g) => g.id === uc.job)!;
+const first = uc.steps[0].tool;
+const aiTools = uc.run.filter((s) => s.tool.transparency_tag === "ai_generated" || s.tool.transparency_tag === "mixed");
+const hasFree = uc.run.some((s) => s.tool.free);
+const others = useCases(data).filter((u) => u.slug !== slug);
+---
+<Base title={uc.title} current="use-cases" description={uc.summary}>
+  <article>
+    <header class="page-head">
+      <div class="container stack">
+        <nav aria-label="Breadcrumb" class="small"><a class="link" href="/use-cases">Use cases</a></nav>
+        <h1 class="t-campaign">{uc.title}</h1>
+        <p class="t-lead">{uc.intro}</p>
+        <p class="benefit">{L1.headline.replace(/\.$/, "")}: one API key reaches every tool on this page.</p>
+      </div>
+    </header>
+
+    <section class="section" aria-labelledby="tools-title">
+      <div class="container stack-loose">
+        <div class="stack-tight">
+          <h2 id="tools-title" class="t-section">The tools, in order</h2>
+          <p class="t-compact muted">{group.label}: {group.line}</p>
+        </div>
+        <ol class="steps" role="list">
+          {uc.steps.map((s, i) => (
+            <li class="step">
+              <span class="step-n num" aria-hidden="true">{i + 1}</span>
+              <div class="stack-tight">
+                <a class="link-quiet step-name" href={`/tools/${s.tool.slug}`}>{s.tool.name}</a>
+                <p class="t-compact">{s.role}</p>
+                <p class="small muted">{s.tool.free ? "Free" : <span class="num">{formatEur(s.tool.price_cents)} per call</span>}{s.calls === 0 && " · not in the example run"}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {uc.bundle && (
+          <aside class="notice" aria-labelledby="bundle-title"><div class="stack-tight">
+            <p class="notice-title" id="bundle-title">Or as one call: <a class="link" href={`/solutions/${uc.bundle.solution.slug}`}>{uc.bundle.solution.name}</a></p>
+            <p class="t-compact">{uc.bundle.note} {plural(uc.bundle.steps, "step")}, <span class="num">{formatEur(uc.bundle.solution.price_cents)}</span> for the whole check.{uc.bundle.hasAiSummary && " It ends with a summary written by an AI model from the step results, for a person to review."}</p>
+          </div></aside>
+        )}
+      </div>
+    </section>
+
+    <section class="section section-sunken" aria-labelledby="example-title">
+      <div class="container split">
+        <div class="stack">
+          <h2 id="example-title" class="t-section">One run, worked through</h2>
+          <p class="tag tag-soft">Illustrative example</p>
+          <p class="t-body">{uc.example.setup}</p>
+          <ol class="run-list">{uc.example.run.map((r) => <li>{r}</li>)}</ol>
+          {aiTools.length > 0 && <p class="small muted">{aiTools.map((s) => s.tool.name).join(" and ")} {aiTools.length === 1 ? "uses" : "use"} an AI model. {TRANSPARENCY.ai_generated}</p>}
+        </div>
+        <div class="stack">
+          <h3 class="t-subhead" id="cost-title">What this run costs</h3>
+          <div class="table-wrap" tabindex="0" role="region" aria-labelledby="cost-title">
+            <table class="table cost-table">
+              <caption class="visually-hidden">Cost of the example run, per tool, at today’s prices</caption>
+              <thead><tr><th scope="col">Tool</th><th scope="col" class="num-col">Calls</th><th scope="col" class="num-col">Per call</th><th scope="col" class="num-col">Cost</th></tr></thead>
+              <tbody>
+                {uc.run.map((s) => (
+                  <tr>
+                    <th scope="row"><a class="link-quiet" href={`/tools/${s.tool.slug}`}>{s.tool.name}</a></th>
+                    <td class="num num-col">{s.calls}</td>
+                    <td class="num num-col">{s.tool.free ? "Free" : formatEur(s.tool.price_cents)}</td>
+                    <td class="num num-col">{formatEur(s.calls * chargedCents(s.tool))}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot><tr><th scope="row" colspan="3">With an API key</th><td class="num num-col"><strong>{formatEur(uc.runCents)}</strong></td></tr></tfoot>
+            </table>
+          </div>
+          <ul class="plain-list stack-tight small muted">
+            {uc.runUsd !== null && uc.runUsd > 0 && <li>Over x402, with no account: <span class="num">{formatUsd(uc.runUsd)}</span> USDC in total, paid per request.</li>}
+            {uc.runUsd === null && <li>Not every tool in this run is available over x402; use an API key.</li>}
+            {hasFree && <li>Free tools are not charged. Without a key they allow {FREE_TIER_DAILY_LIMIT} calls a day.</li>}
+            <li>A single tool is charged only when the call succeeds. Prices are today’s, read from the catalogue.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    {uc.sketch && (
+      <section class="section" aria-labelledby="sketch-title">
+        <div class="container stack">
+          <h2 id="sketch-title" class="t-section">A sketch in TypeScript</h2>
+          <p class="t-compact muted">Each call sets <code>max_price_cents</code> to the tool’s price, so a call that would cost more is refused. The same calls work over MCP, the REST API, Python and, for eligible tools, x402; each tool’s page has the snippet for every route.</p>
+          <CodeBlock id="sketch" title="TypeScript sketch" panels={[{ label: "TypeScript", lang: "plain", code: uc.sketch }]} />
+        </div>
+      </section>
+    )}
+
+    {uc.human && (
+      <section class="section section-human" aria-labelledby="human-title">
+        <div class="container stack">
+          <h2 id="human-title" class="t-section">Where a person stays in the loop</h2>
+          <p class="t-body">{uc.human}</p>
+          {uc.decisionSupport && <p class="small"><a class="link" href="/security">How disputes and data retention work</a></p>}
+        </div>
+      </section>
+    )}
+
+    <section class="section section-sunken" aria-labelledby="next-title">
+      <div class="container stack-loose">
+        <div class="stack">
+          <h2 id="next-title" class="t-section">Start with {first.name}</h2>
+          <p class="t-compact muted">{firstSentence(first.description)}</p>
+          <div class="row">
+            <a class="btn btn-primary" href={`/tools/${first.slug}`}>Open {first.name}</a>
+            <a class="link-standalone" href={`/tools?job=${uc.job}`}>All tools for {group.label.toLowerCase()} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+          </div>
+        </div>
+        <nav aria-label="Other use cases" class="stack-tight">
+          <h3 class="t-detail">Other use cases</h3>
+          <ul class="chip-row" role="list">{others.map((o) => <li><a class="tag link-quiet" href={`/use-cases/${o.slug}`}>{o.title}</a></li>)}</ul>
+        </nav>
+      </div>
+    </section>
+  </article>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-48) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
+  .page-head .t-lead { max-width: var(--measure-lead); }
+  .benefit { font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); color: var(--text); max-width: var(--measure-lead); padding-left: var(--space-12); border-left: var(--space-4) solid var(--brand-violet); }
+  .section { padding-block: var(--space-64); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-human { background: var(--surface-blue); }
+  .steps { display: grid; gap: var(--space-20); margin: 0; padding: 0; list-style: none; max-width: var(--measure-body); }
+  .step { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-16); align-items: start; }
+  .step-n { display: inline-grid; place-items: center; inline-size: var(--space-32); block-size: var(--space-32); border-radius: var(--radius-pill); background: var(--action-subtle); color: var(--link); font-weight: var(--type-ui-weight); }
+  .step-name { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); }
+  .notice { max-width: var(--measure-body); }
+  .split { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-64); align-items: start; } }
+  .run-list { display: grid; gap: var(--space-12); margin: 0; padding-left: var(--space-20); }
+  .tag { justify-self: start; }
+  .num-col { text-align: right; white-space: nowrap; }
+  .cost-table tfoot th, .cost-table tfoot td { border-top: var(--border-width) solid var(--border-strong); }
+  .plain-list { margin: 0; padding: 0; list-style: none; }
+  .chip-row { margin: 0; padding: 0; list-style: none; }
+</style>
