@@ -157,3 +157,8 @@ Require ready:true with zero issues; inspect generated paid-suite costs/eligibil
 | `npm run handoff:test` | PASS (exit 0) | 46 |
 | `npm run context:check` | PASS (exit 0) | — |
 | `npm run context:test` | PASS (exit 0) | 180 |
+
+
+## Round 2
+
+Fixed B1 with identifier-agreement evidence/findings and separate sanctions evidence for differing VIES/registry names; all required screenings must complete before billing. Fixed B2 with checks_errored, partition assertions across the test harness, registry-incomplete findings and completed found:false evidence for no-record replies. Source names decode XML and remove control/format characters without hiding short or ZWNJ-containing hits. Added legal_form_differs/findings, the company-only/sole-trader limitation, sanitized warning categories and broader no-verdict coverage. The manifest documents the new fields and a conservative two-call cost of 2 cents. Verification: 143 invoice tests, 421 focused tests and 5,657 full API tests passed (321 DB-dependent skips); tsc, root typecheck and all 57 root CI checks passed. Tests-first verification exposed 29 failures against 784d6687; the receipt also records an intermediate run invalidated by overlapping edits and its clean frozen-source replacement. [Commands, counts and fail-before tests](../../../archive/receipts/2026-10-26-test-run-invoice-counterparty-check-round-2.json). Production validation/readiness and independent confirmation remain with the orchestrator; commands are above. Git metadata is read-only, so changes remain uncommitted; the handoff gate's dirty/branch/remote-merged-branch findings require actions forbidden to this build agent. [BACKFILL] Journal: Round 2 repair verified locally; no external write.

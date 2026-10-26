@@ -4,6 +4,9 @@ import type { ComposeDeps } from "../company-status/compose.js";
 import { runInvoiceCounterpartyCheck } from "./compose.js";
 import { InvoiceCheckError, parseInvoiceInput, registryIdFromTaxId } from "./input.js";
 import { compareCompanyNames, normaliseCompanyName, decodeViesText } from "./name.js";
+import { CapabilityRefusalError } from "../capability-refusal.js";
+import { logWarn } from "../log.js";
+vi.mock("../log.js", () => ({ logWarn: vi.fn() }));
 import { DILISENSE_SANCTIONS_LISTS_QUERIED } from "../../capabilities/lib/dilisense-sources.js";
 
 const AT = "2026-10-26T12:00:00.000Z";
@@ -30,7 +33,22 @@ function harness() {
   const getExecutor = vi.fn((slug: string) => table[slug as keyof typeof table]);
   const isCircuitOpen = vi.fn(async (_s: string) => false);
   const deps: ComposeDeps = { getExecutor, isCircuitOpen, now: () => new Date(AT) };
-  return { table, getExecutor, isCircuitOpen, run: (i = input as CapabilityInput) => runInvoiceCounterpartyCheck(i, deps) };
+  return { table, getExecutor, isCircuitOpen, run: async (i = input as CapabilityInput) => {
+    const result = await runInvoiceCounterpartyCheck(i, deps).catch(e => e);
+    const checks = result instanceof InvoiceCheckError ? result.details.checks : result.output;
+    if (checks) {
+      const summary = result instanceof InvoiceCheckError ? result.details : result.output;
+      const keys = ["tax_id", "registry_status", "sanctions", ...(i.company_name ? ["name_match"] : [])];
+      const completed = summary.checks_completed, unavailable = summary.checks_not_available, errored = summary.checks_errored;
+      expect([completed, unavailable, errored].every(Array.isArray)).toBe(true);
+      expect([...completed, ...unavailable, ...errored].sort()).toEqual([...keys].sort());
+      for (const [list, status] of [[completed, "completed"], [unavailable, "not_available"], [errored, "error"]] as const) {
+        for (const key of list) expect(checks[key]).toMatchObject({ status });
+      }
+    }
+    if (result instanceof Error) throw result;
+    return result as CapabilityResult;
+  } };
 }
 
 describe("invoice counterparty evidence and charging", () => {
@@ -211,8 +229,13 @@ describe("invoice counterparty evidence and charging", () => {
     expect(r.output.findings).toContain("The name on the invoice differs from the registered name.");
   });
 
-  it("never emits verdict/recommendation/risk/score keys anywhere", async () => {
-    const r = await harness().run();
+  it.each(["success", "error", "not_available", "conflict", "unbilled_error"])("never emits verdict/recommendation/risk/score keys anywhere: %s", async scenario => {
+    const h = harness();
+    if (scenario === "error") h.table["company-status-check"].mockRejectedValue(new Error("timeout"));
+    if (scenario === "not_available") h.isCircuitOpen.mockImplementation(async s => s === "company-status-check");
+    if (scenario === "conflict") h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "Another Supplier Oy" }));
+    if (scenario === "unbilled_error") h.table["sanctions-check"].mockRejectedValue(new Error("timeout"));
+    const r = await h.run().catch(e => e);
     const forbidden = new Set(["verdict", "overall_verdict", "pass", "review", "fail", "risk", "risk_level", "risk_score", "score", "overall_score", "recommendation", "safe_to_pay", "is_sanctioned"]);
     function walk(v: unknown): void {
       if (v && typeof v === "object") for (const [key, value] of Object.entries(v)) { expect(forbidden.has(key), key).toBe(false); walk(value); }
@@ -272,5 +295,186 @@ describe("deterministic name comparison", () => {
   ])("%s versus %s is %s", (a, b, expected) => expect(compareCompanyNames(a, b)).toBe(expected));
   it("strips only suffixes, retaining internal names and digits", () => {
     expect(normaliseCompanyName("AB Acme 123 GmbH & Co Ltd.")).toBe("ab acme 123 gmbh co");
+  });
+});
+
+
+describe("Round 2 counterparty regressions", () => {
+  it.each([
+    ["SE556703748501", "556042-7220", "Spotify AB", "H & M Hennes & Mauritz AB"],
+    ["FI01120389", "0112038-8", "Nokia Oyj", "Other Supplier Oy"],
+  ])("B1: flags conflicting identifiers and screens both names for %s", async (tax_id, company_id, vies, registered) => {
+    const h = harness();
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: vies }));
+    h.table["company-status-check"].mockResolvedValue(ok({ ...registry().output, company_name: registered }));
+    const r = await h.run({ tax_id, company_id, company_name: registered });
+    expect(r.output.identifiers).toMatchObject({ company_id_matches_tax_id: false });
+    expect(r.output.findings).toContain("The registry number on the invoice does not match the registry number derived from the VAT number");
+    expect(r.output.findings).toContain("The VIES name differs from the registry name.");
+    expect(h.table["company-status-check"]).toHaveBeenCalledWith(expect.objectContaining({ identifier: company_id }));
+    expect(h.table["sanctions-check"].mock.calls.map(([i]) => i.name)).toEqual([registered, vies]);
+    expect(r.output.sanctions).toMatchObject({ screenings: [
+      { screened_name: registered, name_source: "registry_status", status: "completed" },
+      { screened_name: vies, name_source: "tax_id", status: "completed" },
+    ] });
+    expect(r.provenance.signals).toHaveLength(4);
+  });
+
+  it.each([
+    ["SE556703748501", "5567037485"], ["FI01120389", "01120389"],
+    ["NO923609016MVA", "923609016"], ["BE0403199702", "0403.199.702"],
+  ])("B1: records normalized identifier agreement for %s", async (tax_id, company_id) => {
+    const r = await harness().run({ tax_id, company_id, company_name: "Nokia Oyj" });
+    expect(r.output.identifiers).toMatchObject({ company_id_matches_tax_id: true });
+    expect(r.output.findings).not.toContain("The registry number on the invoice does not match the registry number derived from the VAT number");
+  });
+
+  it("B1: leaves linkage absent when no deterministic mapping exists", async () => {
+    const r = await harness().run({ tax_id: "DE129274202", company_id: "HRB123", company_name: "Supplier GmbH" });
+    expect(r.output.identifiers).not.toHaveProperty("company_id_matches_tax_id");
+  });
+
+  it("B1: retains the first screening but refuses billing if the second fails", async () => {
+    const h = harness();
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "Different Supplier Oy" }));
+    h.table["sanctions-check"].mockResolvedValueOnce(sanctions()).mockRejectedValueOnce(new Error("timeout"));
+    const e = await h.run().catch(e => e);
+    expect(e).toBeInstanceOf(InvoiceCheckError);
+    expect(e.details.checks.sanctions).toMatchObject({ status: "error", screenings: [
+      { screened_name: "Nokia Oyj", status: "completed" },
+    ] });
+    expect(h.table["sanctions-check"]).toHaveBeenCalledTimes(2);
+  });
+
+  it("B1: retains a potential hit found only under the VIES name", async () => {
+    const h = harness();
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "Other Supplier Oy" }));
+    h.table["sanctions-check"].mockResolvedValueOnce(sanctions()).mockResolvedValueOnce(ok({ ...sanctions().output,
+      match_count: 1, matches: [{ name: "Other Supplier Oy", datasets: ["eu_fsf"] }], queried_at: "2026-10-26T12:01:00Z" }));
+    const r = await h.run();
+    expect(r.output.sanctions).toMatchObject({ potential_match_count: 1, matches: [{ name: "Other Supplier Oy" }],
+      screenings: [{ screened_name: "Nokia Oyj", potential_match_count: 0 },
+        { screened_name: "Other Supplier Oy", name_source: "tax_id", potential_match_count: 1, checked_at: "2026-10-26T12:01:00Z" }] });
+    expect(r.output.findings).toContain("Sanctions screening checks found 1 potential matches.");
+  });
+
+  it.each(["malformed", "breaker"])("B1: a second screening that is %s is unbilled", async state => {
+    const h = harness();
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "Other Supplier Oy" }));
+    if (state === "malformed") h.table["sanctions-check"].mockResolvedValueOnce(sanctions()).mockResolvedValueOnce(ok({}));
+    else h.isCircuitOpen.mockImplementation(async slug => slug === "sanctions-check" && h.table["sanctions-check"].mock.calls.length === 1);
+    const e = await h.run().catch(e => e);
+    expect(e).toBeInstanceOf(InvoiceCheckError);
+    expect(e.details.checks.sanctions).toMatchObject({ status: state === "malformed" ? "error" : "not_available", screenings: [{ status: "completed" }] });
+  });
+
+  it.each([
+    new CapabilityRefusalError("PRH has no record that was found for this FI identifier (not found): No Finnish company found"),
+    new Error("No Finnish company found for business ID 0112038-9"),
+  ])("B2: registry not-found is completed evidence: %s", async error => {
+    const h = harness(); h.table["company-status-check"].mockRejectedValue(error);
+    const r = await h.run();
+    expect(r.output.registry_status).toMatchObject({ status: "completed", found: false, identifier: "0112038-9", checked_at: AT });
+    expect(r.output.checks_completed).toContain("registry_status");
+    expect(r.output.findings).toContain("The registry returned no record for this identifier");
+  });
+
+  it.each([
+    new CapabilityRefusalError("'identifier' must be valid"),
+    new CapabilityRefusalError("Site access refused (HTTP 403)"),
+    new Error("Registry lookup failed: HTTP 503 not found in response cache"),
+  ])("B2: other refusals and transient messages are not no-record evidence: %s", async error => {
+    const h = harness(); h.table["company-status-check"].mockRejectedValue(error);
+    const r = await h.run();
+    expect(r.output.registry_status).toMatchObject({ status: "error" });
+    expect(r.output.registry_status).not.toHaveProperty("found");
+  });
+
+  it("B2: transient registry failure is visible with a retry reason", async () => {
+    const h = harness(); h.table["company-status-check"].mockRejectedValue(new Error("timeout"));
+    const r = await h.run();
+    expect(r.output.checks_errored).toEqual(["registry_status"]);
+    expect(r.output.registry_status).toMatchObject({ status: "error", reason: expect.stringContaining("Retry") });
+    expect(r.output.findings).toContain("The registry lookup did not complete.");
+  });
+
+  it.each(["normal", "error", "unavailable", "conflict", "required_error"])("B2: check lists partition the check set for %s", async scenario => {
+    const h = harness();
+    if (scenario === "error") h.table["company-status-check"].mockRejectedValue(new Error("timeout"));
+    if (scenario === "unavailable") h.isCircuitOpen.mockImplementation(async s => s === "company-status-check");
+    if (scenario === "conflict") h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "Other Company Oy" }));
+    if (scenario === "required_error") h.table["vat-validate"].mockRejectedValue(new Error("timeout"));
+    const r = await h.run().catch(e => e);
+    const out = r instanceof InvoiceCheckError ? { ...r.details, ...r.details.checks as object } : r.output;
+    const lists = [out.checks_completed, out.checks_not_available, out.checks_errored];
+    expect(lists.every(Array.isArray)).toBe(true);
+    const all = lists.flat();
+    expect(all.sort()).toEqual(["name_match", "registry_status", "sanctions", "tax_id"]);
+    expect(new Set(all).size).toBe(all.length);
+    for (const [index, status] of ["completed", "not_available", "error"].entries()) {
+      for (const key of lists[index]) expect(out[key].status).toBe(status);
+    }
+  });
+
+  it.each(["شرکت\u200cآزمایشی", "A", "A\u0000\n\u202eB"])("item 1: reports hits with short or control/format-containing names: %s", async matchName => {
+    const h = harness();
+    h.table["sanctions-check"].mockResolvedValue(ok({ ...sanctions().output, match_count: 1, matches: [{ name: matchName, datasets: ["eu_fsf"] }] }));
+    const r = await h.run();
+    expect(r.output.sanctions).toMatchObject({ status: "completed", potential_match_count: 1 });
+    expect(r.output.findings).toContain("Sanctions screening checks found 1 potential matches.");
+    expect(JSON.stringify(r.output.sanctions)).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+  });
+
+  it.each(["registry", "vies"])("item 1: sanitizes %s names without falling back to invoice", async source => {
+    const h = harness();
+    h.table["company-status-check"].mockResolvedValue(ok({ ...registry().output, company_name: source === "registry" ? "Nokia\u200c\nOyj" : null }));
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "Nokia\u202e\nOyj" }));
+    const r = await h.run();
+    expect(r.output.sanctions).toMatchObject({ screened_name: "Nokia Oyj", name_source: source === "registry" ? "registry_status" : "tax_id" });
+  });
+
+  it.each([
+    ["Volvo AB", "Volvo GmbH", true], ["Acme Ltd.", "Acme Limited", false],
+    ["Acme B.V.", "Acme BV", false], ["Acme A/S", "Acme ApS", true],
+    ["Acme", "Acme Oy", false], ["Acme AB", "Acme AB", false],
+  ])("item 2: exposes legal-form differences for %s / %s", async (invoice, registered, differs) => {
+    const h = harness();
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: registered }));
+    h.table["company-status-check"].mockResolvedValue(ok({ ...registry().output, company_name: registered }));
+    const r = await h.run({ ...input, company_name: invoice });
+    expect(r.output.name_match).toMatchObject({ legal_form_differs: differs });
+    expect((r.output.findings as string[]).includes("The legal form on the invoice differs from the registered name.")).toBe(differs);
+  });
+
+  it("item 4: logs sanitized failure classification without input or vendor message", async () => {
+    vi.mocked(logWarn).mockClear();
+    const h = harness(); h.table["company-status-check"].mockRejectedValue(new Error("<html>SECRET Nokia Oyj FI01120389</html>"));
+    await h.run();
+    expect(logWarn).toHaveBeenCalledWith("invoice-counterparty-lookup-failed", expect.any(String), expect.objectContaining({ check: "registry_status", capability_slug: "company-status-check", cause: "upstream_failure" }));
+    expect(JSON.stringify(vi.mocked(logWarn).mock.calls)).not.toMatch(/SECRET|Nokia|FI01120389|html/);
+  });
+
+  it.each([
+    ["Registry lookup failed: HTTP 503 Secret Supplier", "upstream_unavailable"],
+    ["Request timed out for SECRET", "timeout"],
+    ["HTTP 403 for SECRET", "upstream_access_denied"],
+    ["HTTP 429 SECRET", "upstream_rate_limited"],
+  ])("item 4: preserves a safe cause category for %s", async (message, cause) => {
+    vi.mocked(logWarn).mockClear();
+    const h = harness(); h.table["company-status-check"].mockRejectedValue(new Error(message));
+    await h.run();
+    expect(logWarn).toHaveBeenCalledWith("invoice-counterparty-lookup-failed", expect.any(String), expect.objectContaining({ cause }));
+    expect(JSON.stringify(vi.mocked(logWarn).mock.calls)).not.toMatch(/SECRET|Secret Supplier/);
+  });
+
+  it("item 5: decodes XML entities in registry and sanctions names", async () => {
+    const h = harness();
+    h.table["company-status-check"].mockResolvedValue(ok({ ...registry().output, company_name: "A &amp; B Oy" }));
+    h.table["vat-validate"].mockResolvedValue(ok({ valid: true, company_name: "A &amp; B Oy" }));
+    h.table["sanctions-check"].mockResolvedValue(ok({ ...sanctions().output, match_count: 1, matches: [{ name: "A &amp; B &#214;y", datasets: ["eu_fsf"] }] }));
+    const r = await h.run({ ...input, company_name: "A & B Oy" });
+    expect(r.output.name_match).toMatchObject({ match: "exact", registered_name: "A & B Oy" });
+    expect(r.output.sanctions).toMatchObject({ matches: [{ name: "A & B Öy" }] });
+    expect(h.table["sanctions-check"]).toHaveBeenCalledWith(expect.objectContaining({ name: "A & B Oy" }));
   });
 });

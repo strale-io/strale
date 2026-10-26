@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { vendorFetch } = vi.hoisted(() => ({ vendorFetch: vi.fn() }));
 vi.mock("../metered-vendor-fetch.js", () => ({ meteredVendorFetch: vendorFetch }));
-vi.mock("../log.js", () => ({ logError: vi.fn() }));
+vi.mock("../log.js", () => ({ logError: vi.fn(), logWarn: vi.fn() }));
 import "../../capabilities/sanctions-check.js";
 import { getDirectExecutor } from "../../capabilities/index.js";
 import { runInvoiceCounterpartyCheck } from "./compose.js";
@@ -10,9 +10,13 @@ import { DILISENSE_SANCTIONS_LISTS_QUERIED } from "../../capabilities/lib/dilise
 
 describe("actual sanctions-check adapter contract (network mocked)", () => {
   beforeEach(() => { vi.clearAllMocks(); vi.stubEnv("DILISENSE_API_KEY", "test-only-dilisense-key"); });
-  it("composes the actual executor's SANCTION records and source attribution", async () => {
+  it.each([
+    ["Potential Company Ltd", "Potential Company Ltd"],
+    ["شرکت\u200cآزمایشی", "شرکتآزمایشی"],
+    ["A &amp; B &#214;y", "A & B Öy"],
+  ])("composes the actual executor's SANCTION records and source attribution: %s", async (rawName, cleanedName) => {
     vendorFetch.mockResolvedValue(new Response(JSON.stringify({ found_records: [
-      { name: "Potential Company Ltd", source_id: "us_ofac_sdn", source_type: "SANCTION", citizenship: ["fi"], sanction_details: ["Recorded source entry"], last_updated: "2026-10-25" },
+      { name: rawName, source_id: "us_ofac_sdn", source_type: "SANCTION", citizenship: ["fi"], sanction_details: ["Recorded source entry"], last_updated: "2026-10-25" },
       { name: "Unrelated Company Ltd", source_id: "pep_source", source_type: "PEP" },
     ] }), { status: 200 }));
     const execute = getDirectExecutor("sanctions-check")!;
@@ -22,7 +26,7 @@ describe("actual sanctions-check adapter contract (network mocked)", () => {
       isCircuitOpen: async () => false, now: () => new Date("2026-10-26T12:00:00Z"),
     });
     expect(r.output.sanctions).toMatchObject({ status: "completed", potential_match_count: 1, screened_name: "Invoice Company Ltd", name_source: "company_name",
-      matches: [{ name: "Potential Company Ltd", entity_id: "us_ofac_sdn", datasets: ["us_ofac_sdn"], countries: ["fi"], sanction_details: ["Recorded source entry"], last_updated_at: "2026-10-25" }],
+      matches: [{ name: cleanedName, entity_id: "us_ofac_sdn", datasets: ["us_ofac_sdn"], countries: ["fi"], sanction_details: ["Recorded source entry"], last_updated_at: "2026-10-25" }],
       lists_queried: DILISENSE_SANCTIONS_LISTS_QUERIED, source: "dilisense.com" });
     expect(r.output.findings).toContain("Sanctions screening checks found 1 potential matches.");
     expect(vendorFetch).toHaveBeenCalledTimes(1);

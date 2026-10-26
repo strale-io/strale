@@ -8,11 +8,12 @@ price_cents: 75
 is_free_tier: false
 cost_class: paid_prepaid
 quota_window: none
-# One Dilisense call (1 cent, the platform's conservative paid-vendor cost
+# Up to two Dilisense calls (1 cent each, the platform's conservative paid-vendor cost
 # classification in runMigration0062_paidVendorCosts), plus VIES/tax format (0)
-# and official identifier-only registry/insolvency calls (0). No LLM calls.
+# and official identifier-only registry/insolvency calls (0). Conflicting VIES
+# and registry names require both screenings. No LLM calls.
 # This explicit estimate does not claim to know the private vendor agreement.
-external_cost_cents: 1
+external_cost_cents: 2
 avg_latency_ms: 2500
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -35,14 +36,18 @@ input_schema:
       description: ISO 3166-1 alpha-2; required without a tax ID prefix and must agree with the prefix when supplied.
     company_id:
       type: string
-      description: Registry identifier; overrides VAT-to-registry derivation. This supplied identifier is not independently linked to the VAT number.
+      description: Registry identifier; overrides VAT-to-registry derivation. Compared with the VAT-derived registry number when a documented mapping exists; otherwise linkage is unknown.
     company_name:
       type: string
       description: Name printed on the invoice; compared as a string with a registered name and used for screening only if neither registry nor VIES supplies one.
 output_schema:
   type: object
-  required: [tax_id, registry_status, sanctions, checks_completed, checks_not_available, findings]
+  required: [tax_id, registry_status, sanctions, identifiers, checks_completed, checks_not_available, checks_errored, findings]
   properties:
+    identifiers:
+      type: object
+      properties:
+        company_id_matches_tax_id: {type: boolean}
     tax_id:
       type: object
       properties:
@@ -62,6 +67,7 @@ output_schema:
         status: {type: string, enum: [completed, not_available, error]}
         source: {type: string}
         reason: {type: string}
+        found: {type: boolean}
         company_status: {type: string, enum: [active, inactive, dissolved, in_liquidation, in_insolvency, struck_off, unknown]}
         registry_status_raw: {type: [string, 'null']}
         registered_name: {type: [string, 'null']}
@@ -122,6 +128,41 @@ output_schema:
             version: {type: [string, 'null']}
             last_updated_at: {type: [string, 'null']}
         checked_at: {type: string, format: date-time}
+        screenings:
+          type: array
+          description: One completed evidence object per required name. Both names are screened when registry and VIES names differ.
+          items:
+            type: object
+            properties:
+              status: {type: string, enum: [completed, not_available, error]}
+              source: {type: string}
+              reason: {type: string}
+              screened_name: {type: string}
+              name_source: {type: string, enum: [registry_status, tax_id, company_name]}
+              potential_match_count: {type: integer}
+              matches:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name: {type: string}
+                    entity_id: {type: string}
+                    datasets: {type: array, items: {type: string}}
+                    countries: {type: array, items: {type: string}}
+                    sanction_details: {type: array, items: {type: string}}
+                    last_updated_at: {type: [string, 'null']}
+              matches_truncated: {type: boolean}
+              lists_queried:
+                type: object
+                properties:
+                  collection: {type: string}
+                  source_count: {type: integer}
+                  major_lists: {type: array, items: {type: string}}
+                  freshness_note: {type: string}
+                  source_catalog_url: {type: string}
+                  version: {type: [string, 'null']}
+                  last_updated_at: {type: [string, 'null']}
+              checked_at: {type: string, format: date-time}
     name_match:
       type: object
       properties:
@@ -129,10 +170,12 @@ output_schema:
         source: {type: string}
         reason: {type: string}
         match: {type: string, enum: [exact, equivalent, different]}
+        legal_form_differs: {type: boolean}
         invoice_name: {type: string}
         registered_name: {type: string}
     checks_completed: {type: array, items: {type: string}}
     checks_not_available: {type: array, items: {type: string}}
+    checks_errored: {type: array, items: {type: string}}
     findings: {type: array, items: {type: string}}
 test_fixtures:
   # Nokia Oyj: VIES valid and PRH active, checked live 2026-10-26.
@@ -145,6 +188,8 @@ test_fixtures:
       - {field: sanctions, operator: not_null, reliability: guaranteed}
       - {field: checks_completed, operator: not_null, reliability: guaranteed}
       - {field: checks_not_available, operator: not_null, reliability: guaranteed}
+      - {field: identifiers, operator: not_null, reliability: guaranteed}
+      - {field: checks_errored, operator: not_null, reliability: guaranteed}
       - {field: findings, operator: not_null, reliability: guaranteed}
   health_check_input: {tax_id: FI01120389, company_name: Nokia Oyj}
 # Nested paths are conservatively common/rare: the platform's guaranteed-field
@@ -156,6 +201,9 @@ output_field_reliability:
   name_match: common
   checks_completed: guaranteed
   checks_not_available: guaranteed
+  checks_errored: guaranteed
+  identifiers: guaranteed
+  identifiers.company_id_matches_tax_id: common
   findings: guaranteed
   tax_id.status: common
   tax_id.source: common
@@ -170,6 +218,7 @@ output_field_reliability:
   registry_status.status: common
   registry_status.source: common
   registry_status.reason: common
+  registry_status.found: common
   registry_status.company_status: common
   registry_status.registry_status_raw: common
   registry_status.registered_name: common
@@ -213,31 +262,60 @@ output_field_reliability:
   sanctions.lists_queried.version: rare
   sanctions.lists_queried.last_updated_at: rare
   sanctions.checked_at: common
+  sanctions.screenings: common
+  sanctions.screenings[].status: common
+  sanctions.screenings[].source: common
+  sanctions.screenings[].reason: rare
+  sanctions.screenings[].screened_name: common
+  sanctions.screenings[].name_source: common
+  sanctions.screenings[].potential_match_count: common
+  sanctions.screenings[].matches: common
+  sanctions.screenings[].matches[].name: rare
+  sanctions.screenings[].matches[].entity_id: rare
+  sanctions.screenings[].matches[].datasets: rare
+  sanctions.screenings[].matches[].countries: rare
+  sanctions.screenings[].matches[].sanction_details: rare
+  sanctions.screenings[].matches[].last_updated_at: rare
+  sanctions.screenings[].matches_truncated: common
+  sanctions.screenings[].lists_queried: common
+  sanctions.screenings[].lists_queried.collection: common
+  sanctions.screenings[].lists_queried.source_count: common
+  sanctions.screenings[].lists_queried.major_lists: common
+  sanctions.screenings[].lists_queried.freshness_note: common
+  sanctions.screenings[].lists_queried.source_catalog_url: common
+  sanctions.screenings[].lists_queried.version: rare
+  sanctions.screenings[].lists_queried.last_updated_at: rare
+  sanctions.screenings[].checked_at: common
   name_match.status: common
   name_match.source: common
   name_match.reason: rare
   name_match.match: common
+  name_match.legal_form_differs: common
   name_match.invoice_name: common
   name_match.registered_name: common
 limitations:
+  - title: Company screening only
+    text: Supplier names are screened with entity_type company. A sole trader named as a person is not screened as an individual; individual screening requires a separate sanctions-check request with the appropriate entity type.
+    category: coverage
+    severity: warning
   - title: Tax coverage and freshness
     text: VIES covers EU VAT numbers only here. Non-EU tax-id-validate checks are format-only; its current rules implement no checksums. Format validity is never registry confirmation. VAT answers may be cached for 48 hours; checked_at preserves the source timestamp. Stale fallback evidence is refused.
     category: coverage
     severity: warning
   - title: Registry coverage and identifier linkage
-    text: Registry status is limited to company-status-check's supported countries and deterministic mappings for SE organisation VAT, FI and NO MVA. BE maps to an enterprise number but its registry is not covered. DK VAT can be an SE administrative-unit number rather than CVR, and NL BTW is not KVK. No name-based entity resolution is used. company_id is supplied evidence and is not independently linked to tax_id. Registry errors are reported without blocking a completed tax and sanctions check.
+    text: Registry status is limited to company-status-check's supported countries and deterministic mappings for SE organisation VAT, FI and NO MVA. BE maps to an enterprise number but its registry is not covered. DK VAT can be an SE administrative-unit number rather than CVR, and NL BTW is not KVK. No name-based entity resolution is used. company_id is compared with the tax-derived registry number only where a documented mapping exists; all other linkage is unknown. No-record replies are completed evidence with found false. Registry errors are reported without blocking a completed tax and sanctions check.
     category: coverage
     severity: warning
   - title: Single screening vendor
-    text: Screening uses Dilisense through sanctions-check. Potential name matches are evidence, not a sanction-status assertion. The vendor returns no match score or per-list version timestamp; neither is fabricated. At most ten match records are returned; potential_match_count retains the full count and matches_truncated discloses the cap. country is passed to sanctions-check but its present Dilisense adapter does not filter the upstream query by country.
+    text: Screening uses Dilisense through sanctions-check. Potential name matches are evidence, not a sanction-status assertion. The vendor returns no match score or per-list version timestamp; neither is fabricated. At most ten match records per screened name are returned; potential_match_count sums the source counts across screenings and may include the same entity more than once. matches_truncated discloses any per-name cap. Each screening retains its own name, name source, source lists and timestamp; the legacy top-level name, source lists and timestamp describe the first screening. country is passed to sanctions-check but its present Dilisense adapter does not filter the upstream query by country.
     category: accuracy
     severity: warning
   - title: Name normalisation and source order
-    text: Registry name precedes VIES name, then the invoice name. Name equivalence removes case, diacritics, punctuation and selected trailing legal forms. It cannot establish entity identity, translate names, detect impersonation or compare bank ownership. Without a registered name, name_match is not_available.
+    text: Registry name precedes VIES name, then the invoice name; when VIES and registry names compare as different, both are screened and the discrepancy is reported. Source names have XML entities decoded and control/format characters removed, with whitespace collapsed. Name equivalence removes case, diacritics, punctuation and selected trailing legal forms. Recognised legal-form differences are separately flagged when both names carry a form. It cannot establish entity identity, translate names, detect impersonation or compare bank ownership. Without a registered name, name_match is not_available.
     category: accuracy
     severity: warning
   - title: Evidence without a verdict
-    text: By design there is no overall verdict, risk level, recommendation or safe-to-pay claim. Only successful tax and sanctions checks are billed; invalid VAT is a completed check, while incomplete required checks throw an unbilled structured error. Registry active means registered status, not trading activity.
+    text: By design there is no overall verdict, risk level, recommendation or safe-to-pay claim. The composite is billed only after the tax check and every required sanctions screening complete; invalid VAT is a completed check, while incomplete required checks throw an unbilled structured error. Registry active means registered status, not trading activity.
     category: coverage
     severity: info
   - title: Existing upstream access conditions
