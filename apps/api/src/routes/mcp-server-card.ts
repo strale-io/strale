@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { computePlatformFacts } from "../lib/platform-facts.js";
 
 const mcpServerCardRoute = new Hono();
 
@@ -40,11 +41,13 @@ async function buildCard(): Promise<object> {
       ),
     );
   const count = rows.length;
+  const facts = await computePlatformFacts();
+  const countryCount = facts.countries.company_data_active_iso.length;
 
   const card = {
     name: "strale",
     version: "0.1.0",
-    description: `One API call. Verified data your agent can trust. ${count} independently tested and scored capabilities across 27 countries, accessible via MCP and REST API.`,
+    description: `Give your agent a new tool without opening another provider account. ${count} tools accessible via MCP and REST API; company data across ${countryCount} countries.`,
     transport: [
       {
         type: "streamable-http",
@@ -88,10 +91,10 @@ async function buildCard(): Promise<object> {
     },
     metadata: {
       capabilities_count: count,
-      countries_covered: 27,
-      free_tier_available: true,
+      countries_covered: countryCount,
+      free_tier_available: facts.capability_counts.free_tier_slugs.length > 0,
       trust_model:
-        "Free capabilities canary-tested hourly; paid capabilities observed via production traffic. Every call returns an audit record.",
+        "Browse each tool’s inputs, output fields, price, limitations and source in the catalogue.",
       compliance: ["EU AI Act", "GDPR"],
       protocols: ["MCP", "A2A", "REST", "x402"],
     },

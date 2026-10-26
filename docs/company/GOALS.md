@@ -1239,6 +1239,18 @@ conversion.
   M1's concentration bar (none above 60%) remains further away than its
   revenue bar. No outreach.
 
+- **Week of 10-19 closed at €72.61, the second-best completed week, and the
+  first in which concentration fell while revenue held** (measured 2026-10-26
+  ~09:00Z; commercial pack and `revenueCents` + `payerFacts` for
+  10-19T00:00Z → 10-25T23:59Z, equal: 7261 c, €0 unattributed). Growth
+  verdict: falling (€77.57 → €72.61). **79.8% one buyer** (€57.94 vs €14.67
+  across six others), down from 94.7%; the largest still bought on all 7 days
+  but spent €15 less. The registered account buyer went from €1.56 on 3 days
+  to **€12.27 on 6 days** (first purchase in window: uk-company-data). Four
+  payers bought on more than one day (was 2). Still above M1's 60% bar, but
+  this is the first week a second recurring buyer is measurable. No outreach
+  (DQ-21 and the charter's customer-data boundary).
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |

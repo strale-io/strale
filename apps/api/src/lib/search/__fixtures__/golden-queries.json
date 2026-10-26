@@ -1,0 +1,692 @@
+{
+ "version": "2026-10-26",
+ "note": "Golden queries for tool search. 'expect' lists every slug acceptable as the top answer; a family pattern ending in -{cc} matches any country suffix. kind: keyword (what people type in a dropdown), natural (a sentence), typo, country (country-specific), workflow (a bundle is the right answer), none (no tool in the catalogue does this).",
+ "queries": [
+  {
+   "q": "vat",
+   "kind": "keyword",
+   "expect": [
+    "vat-validate",
+    "vat-format-validate",
+    "vat-rate-lookup"
+   ]
+  },
+  {
+   "q": "iban",
+   "kind": "keyword",
+   "expect": [
+    "iban-validate",
+    "iban-to-bank"
+   ]
+  },
+  {
+   "q": "sanctions",
+   "kind": "keyword",
+   "expect": [
+    "sanctions-check"
+   ]
+  },
+  {
+   "q": "pep",
+   "kind": "keyword",
+   "expect": [
+    "pep-check"
+   ]
+  },
+  {
+   "q": "dns",
+   "kind": "keyword",
+   "expect": [
+    "dns-lookup"
+   ]
+  },
+  {
+   "q": "whois",
+   "kind": "keyword",
+   "expect": [
+    "whois-lookup"
+   ]
+  },
+  {
+   "q": "lei",
+   "kind": "keyword",
+   "expect": [
+    "lei-lookup"
+   ]
+  },
+  {
+   "q": "ssl",
+   "kind": "keyword",
+   "expect": [
+    "ssl-check",
+    "ssl-certificate-chain"
+   ]
+  },
+  {
+   "q": "markdown",
+   "kind": "keyword",
+   "expect": [
+    "url-to-markdown",
+    "markdown-to-html"
+   ]
+  },
+  {
+   "q": "pdf",
+   "kind": "keyword",
+   "expect": [
+    "pdf-extract",
+    "html-to-pdf"
+   ]
+  },
+  {
+   "q": "translate",
+   "kind": "keyword",
+   "expect": [
+    "translate"
+   ]
+  },
+  {
+   "q": "email",
+   "kind": "keyword",
+   "expect": [
+    "email-validate",
+    "email-validate-bulk",
+    "email-deliverability-check"
+   ]
+  },
+  {
+   "q": "phone",
+   "kind": "keyword",
+   "expect": [
+    "phone-validate",
+    "phone-normalize",
+    "phone-type-detect"
+   ]
+  },
+  {
+   "q": "invoice",
+   "kind": "keyword",
+   "expect": [
+    "invoice-extract",
+    "invoice-validate",
+    "invoice-verify-{cc}",
+    "invoice-process"
+   ]
+  },
+  {
+   "q": "swedish company",
+   "kind": "keyword",
+   "expect": [
+    "swedish-company-data"
+   ]
+  },
+  {
+   "q": "german company",
+   "kind": "keyword",
+   "expect": [
+    "german-company-data"
+   ]
+  },
+  {
+   "q": "uk company",
+   "kind": "keyword",
+   "expect": [
+    "uk-company-data"
+   ]
+  },
+  {
+   "q": "exchange rate",
+   "kind": "keyword",
+   "expect": [
+    "exchange-rate",
+    "currency-convert"
+   ]
+  },
+  {
+   "q": "stock price",
+   "kind": "keyword",
+   "expect": [
+    "stock-quote"
+   ]
+  },
+  {
+   "q": "weather",
+   "kind": "keyword",
+   "expect": [
+    "weather-lookup"
+   ]
+  },
+  {
+   "q": "bitcoin",
+   "kind": "keyword",
+   "expect": [
+    "bitcoin-address-validate"
+   ]
+  },
+  {
+   "q": "google",
+   "kind": "keyword",
+   "expect": [
+    "google-search"
+   ]
+  },
+  {
+   "q": "screenshot",
+   "kind": "keyword",
+   "expect": [
+    "screenshot-url"
+   ]
+  },
+  {
+   "q": "tech stack",
+   "kind": "keyword",
+   "expect": [
+    "tech-stack-detect",
+    "company-tech-stack"
+   ]
+  },
+  {
+   "q": "ubo",
+   "kind": "keyword",
+   "expect": [
+    "beneficial-ownership-lookup",
+    "gleif-l2-ubo-lookup"
+   ]
+  },
+  {
+   "q": "kyb",
+   "kind": "keyword",
+   "expect": [
+    "kyb-essentials-{cc}",
+    "kyb-complete-{cc}"
+   ]
+  },
+  {
+   "q": "insolvency",
+   "kind": "keyword",
+   "expect": [
+    "insolvency-check",
+    "french-insolvency-check",
+    "no-bankruptcy-check"
+   ]
+  },
+  {
+   "q": "holidays",
+   "kind": "keyword",
+   "expect": [
+    "public-holiday-lookup",
+    "holiday-calendar"
+   ]
+  },
+  {
+   "q": "timezone",
+   "kind": "keyword",
+   "expect": [
+    "timezone-lookup",
+    "timezone-meeting-find"
+   ]
+  },
+  {
+   "q": "json",
+   "kind": "keyword",
+   "expect": [
+    "json-repair",
+    "json-schema-validate",
+    "json-to-csv",
+    "json-to-typescript",
+    "json-to-zod",
+    "json-to-pydantic",
+    "flatten-json",
+    "diff-json"
+   ]
+  },
+  {
+   "q": "check if a company is bankrupt",
+   "kind": "natural",
+   "expect": [
+    "insolvency-check",
+    "no-bankruptcy-check",
+    "french-insolvency-check",
+    "fr-bodacc-lookup"
+   ]
+  },
+  {
+   "q": "verify a VAT number",
+   "kind": "natural",
+   "expect": [
+    "vat-validate"
+   ]
+  },
+  {
+   "q": "validate an IBAN",
+   "kind": "natural",
+   "expect": [
+    "iban-validate"
+   ]
+  },
+  {
+   "q": "look up a Swedish company",
+   "kind": "natural",
+   "expect": [
+    "swedish-company-data"
+   ]
+  },
+  {
+   "q": "who owns this company",
+   "kind": "natural",
+   "expect": [
+    "beneficial-ownership-lookup",
+    "gleif-l2-ubo-lookup"
+   ]
+  },
+  {
+   "q": "screen a person against sanctions lists",
+   "kind": "natural",
+   "expect": [
+    "sanctions-check"
+   ]
+  },
+  {
+   "q": "is this person a politically exposed person",
+   "kind": "natural",
+   "expect": [
+    "pep-check"
+   ]
+  },
+  {
+   "q": "negative news about a company",
+   "kind": "natural",
+   "expect": [
+    "adverse-media-check"
+   ]
+  },
+  {
+   "q": "turn a webpage into markdown",
+   "kind": "natural",
+   "expect": [
+    "url-to-markdown"
+   ]
+  },
+  {
+   "q": "get the plain text of a web page",
+   "kind": "natural",
+   "expect": [
+    "url-to-text",
+    "url-to-markdown",
+    "web-extract"
+   ]
+  },
+  {
+   "q": "extract data from an invoice",
+   "kind": "natural",
+   "expect": [
+    "invoice-extract"
+   ]
+  },
+  {
+   "q": "read the text in a scanned image",
+   "kind": "natural",
+   "expect": [
+    "image-to-text"
+   ]
+  },
+  {
+   "q": "check if an email address is real",
+   "kind": "natural",
+   "expect": [
+    "email-validate",
+    "email-deliverability-check",
+    "lead-email-verify"
+   ]
+  },
+  {
+   "q": "what technologies does this website use",
+   "kind": "natural",
+   "expect": [
+    "tech-stack-detect",
+    "company-tech-stack"
+   ]
+  },
+  {
+   "q": "is this domain trustworthy",
+   "kind": "natural",
+   "expect": [
+    "domain-reputation",
+    "domain-trust",
+    "domain-age-check"
+   ]
+  },
+  {
+   "q": "show me the DNS records for a domain",
+   "kind": "natural",
+   "expect": [
+    "dns-lookup"
+   ]
+  },
+  {
+   "q": "convert 100 euro to dollars",
+   "kind": "natural",
+   "expect": [
+    "currency-convert",
+    "exchange-rate"
+   ]
+  },
+  {
+   "q": "search Google and get the results",
+   "kind": "natural",
+   "expect": [
+    "google-search"
+   ]
+  },
+  {
+   "q": "find academic papers on a topic",
+   "kind": "natural",
+   "expect": [
+    "academic-paper-search",
+    "arxiv-search",
+    "pubmed-search"
+   ]
+  },
+  {
+   "q": "GDP of Germany",
+   "kind": "natural",
+   "expect": [
+    "country-economic-indicators"
+   ]
+  },
+  {
+   "q": "is this bitcoin address valid",
+   "kind": "natural",
+   "expect": [
+    "bitcoin-address-validate"
+   ]
+  },
+  {
+   "q": "check whether a phone number is valid",
+   "kind": "natural",
+   "expect": [
+    "phone-validate"
+   ]
+  },
+  {
+   "q": "does this site have a valid SSL certificate",
+   "kind": "natural",
+   "expect": [
+    "ssl-check",
+    "ssl-certificate-chain"
+   ]
+  },
+  {
+   "q": "summarize a long document",
+   "kind": "natural",
+   "expect": [
+    "summarize"
+   ]
+  },
+  {
+   "q": "detect the language of a text",
+   "kind": "natural",
+   "expect": [
+    "language-detect"
+   ]
+  },
+  {
+   "q": "remove personal data from text",
+   "kind": "natural",
+   "expect": [
+    "pii-redact"
+   ]
+  },
+  {
+   "q": "find the HS code for a product",
+   "kind": "natural",
+   "expect": [
+    "hs-code-lookup"
+   ]
+  },
+  {
+   "q": "track a parcel",
+   "kind": "natural",
+   "expect": [
+    "shipping-track"
+   ]
+  },
+  {
+   "q": "is this website up",
+   "kind": "natural",
+   "expect": [
+    "uptime-check",
+    "url-health-check",
+    "page-exists"
+   ]
+  },
+  {
+   "q": "who are the directors of a UK company",
+   "kind": "natural",
+   "expect": [
+    "uk-companies-house-officers"
+   ]
+  },
+  {
+   "q": "has this director been disqualified",
+   "kind": "natural",
+   "expect": [
+    "uk-disqualified-director-check"
+   ]
+  },
+  {
+   "q": "check a payee name before paying a UK bank account",
+   "kind": "natural",
+   "expect": [
+    "uk-cop-check"
+   ]
+  },
+  {
+   "q": "find the bank for a BIC code",
+   "kind": "natural",
+   "expect": [
+    "bank-bic-lookup",
+    "swift-validate"
+   ]
+  },
+  {
+   "q": "what is the VAT rate in France",
+   "kind": "natural",
+   "expect": [
+    "vat-rate-lookup",
+    "country-tax-rates"
+   ]
+  },
+  {
+   "q": "find public tenders in the EU",
+   "kind": "natural",
+   "expect": [
+    "ted-procurement"
+   ]
+  },
+  {
+   "q": "count tokens in a prompt",
+   "kind": "natural",
+   "expect": [
+    "token-count"
+   ]
+  },
+  {
+   "q": "fix broken JSON from an LLM",
+   "kind": "natural",
+   "expect": [
+    "json-repair",
+    "llm-output-validate"
+   ]
+  },
+  {
+   "q": "sanctoins check",
+   "kind": "typo",
+   "expect": [
+    "sanctions-check"
+   ]
+  },
+  {
+   "q": "beneficail owner",
+   "kind": "typo",
+   "expect": [
+    "beneficial-ownership-lookup",
+    "gleif-l2-ubo-lookup"
+   ]
+  },
+  {
+   "q": "swedsih company",
+   "kind": "typo",
+   "expect": [
+    "swedish-company-data"
+   ]
+  },
+  {
+   "q": "valdiate iban",
+   "kind": "typo",
+   "expect": [
+    "iban-validate"
+   ]
+  },
+  {
+   "q": "adress validation",
+   "kind": "typo",
+   "expect": [
+    "address-validate"
+   ]
+  },
+  {
+   "q": "company registration number lookup norway",
+   "kind": "country",
+   "expect": [
+    "norwegian-company-data"
+   ]
+  },
+  {
+   "q": "Companies House",
+   "kind": "country",
+   "expect": [
+    "uk-company-data",
+    "uk-companies-house-officers",
+    "uk-filing-events"
+   ]
+  },
+  {
+   "q": "Handelsregister",
+   "kind": "country",
+   "expect": [
+    "german-company-data"
+   ]
+  },
+  {
+   "q": "Bolagsverket",
+   "kind": "country",
+   "expect": [
+    "swedish-company-data"
+   ]
+  },
+  {
+   "q": "Irish company CRO number",
+   "kind": "country",
+   "expect": [
+    "irish-company-data"
+   ]
+  },
+  {
+   "q": "French company SIREN",
+   "kind": "country",
+   "expect": [
+    "french-company-data"
+   ]
+  },
+  {
+   "q": "Australian ABN",
+   "kind": "country",
+   "expect": [
+    "au-company-data"
+   ]
+  },
+  {
+   "q": "Czech ICO",
+   "kind": "country",
+   "expect": [
+    "cz-ico-validate",
+    "cz-company-data"
+   ]
+  },
+  {
+   "q": "US company SEC filings",
+   "kind": "country",
+   "expect": [
+    "sec-edgar-filings",
+    "sec-filing-events"
+   ]
+  },
+  {
+   "q": "KYB check for a German company",
+   "kind": "workflow",
+   "expect": [
+    "kyb-essentials-de",
+    "kyb-complete-de"
+   ]
+  },
+  {
+   "q": "onboard a new supplier in Sweden",
+   "kind": "workflow",
+   "expect": [
+    "kyb-essentials-se",
+    "vendor-onboard",
+    "kyc-sweden"
+   ]
+  },
+  {
+   "q": "check an invoice from a German supplier for fraud",
+   "kind": "workflow",
+   "expect": [
+    "invoice-verify-de"
+   ]
+  },
+  {
+   "q": "full due diligence on a UK company",
+   "kind": "workflow",
+   "expect": [
+    "kyb-complete-uk",
+    "enhanced-due-diligence"
+   ]
+  },
+  {
+   "q": "audit the security of my website",
+   "kind": "workflow",
+   "expect": [
+    "website-security-audit",
+    "header-security-check",
+    "domain-security-check"
+   ]
+  },
+  {
+   "q": "check a crypto wallet before sending funds",
+   "kind": "workflow",
+   "expect": [
+    "web3-counterparty-kyb",
+    "crypto-counterparty-kyb",
+    "wallet-age-check",
+    "stablecoin-flow-check"
+   ]
+  },
+  {
+   "q": "book a flight to Paris",
+   "kind": "none",
+   "expect": []
+  },
+  {
+   "q": "generate a photo of a cat",
+   "kind": "none",
+   "expect": []
+  },
+  {
+   "q": "send an SMS",
+   "kind": "none",
+   "expect": []
+  }
+ ]
+}

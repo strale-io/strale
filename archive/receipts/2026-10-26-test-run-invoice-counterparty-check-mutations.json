@@ -1,0 +1,96 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "737c10e51b03219e90317bd47405cead62ef68e0"
+  },
+  "at": "2026-10-26T20:28:36.849Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "mutations_caught": 9,
+    "mutations_failed": 0
+  },
+  "topic": "invoice-counterparty-check-mutations",
+  "raw": {
+    "ok": true,
+    "mutations_caught": 9,
+    "mutations_failed": 0,
+    "results": [
+      {
+        "topic": "tax-charge",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 4.23,
+        "log_sha256": "b9089f1fe105e1ddad857a548fb9bb15a4a830fe7e2cffe38ead3c2c1a395906",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "sanctions-charge",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 3.98,
+        "log_sha256": "17818d395e5abcef03789cd8ac6190efdaedef3cf73bb2907a417ca63e6c4917",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "validation-before-executors",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 3.76,
+        "log_sha256": "75c37b62d2fa7bd94fa957e62eae2c85306fe6d48f3f888513e5da71247f9fbc",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "optional-registry",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 3.77,
+        "log_sha256": "595d4deb86832a6052d6d4bb648deeca07824842136be3ee5b0fee054fb49593",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "no-verdict",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 3.96,
+        "log_sha256": "8d01274d2a6316c51792324ecbb98b8c70b61ca37eec80c55afb30b30374521c",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "xml-name",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 3.77,
+        "log_sha256": "f5e75da16de3ab71a4c11b5335af402e0522793d2fc5d4c18f64442273120c94",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "name-priority",
+        "file": "apps/api/src/lib/invoice-counterparty/compose.ts",
+        "exit_code": 0,
+        "duration_s": 3.63,
+        "log_sha256": "164c1a0cf673cde84c407bad86a1d0d116e867587e35a9091b17992613ca700e",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "all-mappings",
+        "file": "apps/api/src/lib/invoice-counterparty/input.ts",
+        "exit_code": 0,
+        "duration_s": 3.73,
+        "log_sha256": "dd0e061ff022d02469d195a17b7e788cb76d95873ce8593258efa52d58bd311e",
+        "baseline_fail_restore_pass": true
+      },
+      {
+        "topic": "legal-suffixes",
+        "file": "apps/api/src/lib/invoice-counterparty/name.ts",
+        "exit_code": 0,
+        "duration_s": 3.79,
+        "log_sha256": "22f8eb8eba485cd8ac9eae90582aa0fb311eab6cc4b4e2a9f28591f3212a36b5",
+        "baseline_fail_restore_pass": true
+      }
+    ]
+  }
+}

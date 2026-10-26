@@ -20,13 +20,49 @@ const errorResponse = (code: string, message: string) => ({
   content: { "application/json": { schema: errorSchema, example: { error_code: code, message } } },
 });
 
+const suggestRecommendationSchema = {
+  type: "object" as const,
+  required: ["type", "slug", "name", "description", "match_reason", "price_cents"],
+  properties: {
+    type: { type: "string" as const, enum: ["capability", "solution"] },
+    slug: { type: "string" as const },
+    name: { type: "string" as const },
+    description: { type: "string" as const },
+    match_reason: { type: "string" as const, maxLength: 240 },
+    price_cents: { type: "integer" as const },
+    category: { type: "string" as const },
+    geography: { type: "string" as const },
+    badge: { type: "string" as const },
+    step_count: { type: "integer" as const },
+    steps: { type: "array" as const, items: {
+      type: "object" as const,
+      properties: {
+        name: { type: "string" as const },
+        capability_slug: { type: "string" as const },
+        parallel_group: { type: "integer" as const, nullable: true },
+      },
+    } },
+    part_of_solution: { type: "object" as const, nullable: true, properties: {
+      slug: { type: "string" as const }, name: { type: "string" as const },
+      price_cents: { type: "integer" as const }, extra_description: { type: "string" as const },
+    } },
+    trust: { type: "object" as const, properties: {
+      badge: { type: "string" as const }, badge_label: { type: "string" as const },
+      avg_response_time_ms: { type: "number" as const, nullable: true },
+      tests_passing: { type: "integer" as const }, tests_total: { type: "integer" as const },
+      last_tested_at: { type: "string" as const, format: "date-time", nullable: true },
+      data_source: { type: "string" as const, enum: ["internal_testing", "blended", "customer_transactions"] },
+    } },
+  },
+};
+
 export const openApiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Strale API",
     version: "1.0.0",
     description:
-      "The trust layer for AI agents — 250+ independently tested data capabilities across 27 countries. Execute capabilities via REST, MCP, A2A, or x402 micropayments. Every call returns an audit record.",
+      "Give your agent a new tool without opening another provider account. Search and read the web, read documents, check details and look up companies through one connection. Pay per call with an API key or, on eligible tools, an x402 wallet. Browse /v1/platform/facts for live coverage.",
     contact: { name: "Strale", email: "hello@strale.io", url: "https://strale.dev" },
     termsOfService: "https://strale.dev/terms",
     license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
@@ -39,7 +75,7 @@ export const openApiSpec = {
     { name: "wallet", description: "Wallet balance and top-ups" },
     { name: "transactions", description: "Transaction history and verification" },
     { name: "auth", description: "Registration and API key management" },
-    { name: "trust", description: "Quality scores and trust data" },
+    { name: "trust", description: "Tool sources, limitations and test history" },
     { name: "suggest", description: "AI-powered capability suggestions" },
     { name: "discovery", description: "Agent discovery endpoints" },
   ],
@@ -824,7 +860,7 @@ export const openApiSpec = {
       post: {
         tags: ["suggest"],
         summary: "AI capability suggestion",
-        description: "Uses AI to find the best capability or solution for a natural language query. Returns ranked suggestions with confidence scores.",
+        description: "Uses AI to find the best capability or solution for a natural language query. Returns a recommendation, alternatives, a match count and a query interpretation. Uses keyword fallback when model ranking is unavailable.",
         "x-ratelimit": { limit: 20, window: "1s", scope: "per IP" },
         requestBody: {
           required: true,
@@ -834,7 +870,7 @@ export const openApiSpec = {
                 type: "object" as const,
                 required: ["query"],
                 properties: {
-                  query: { type: "string" as const, maxLength: 500, example: "validate a Swedish company's VAT number" },
+                  query: { type: "string" as const, minLength: 2, maxLength: 500, example: "validate a Swedish company's VAT number" },
                   limit: { type: "integer" as const, minimum: 1, maximum: 10, default: 3 },
                 },
               },
@@ -849,21 +885,10 @@ export const openApiSpec = {
                 schema: {
                   type: "object" as const,
                   properties: {
-                    query: { type: "string" as const },
-                    suggestions: {
-                      type: "array" as const,
-                      items: {
-                        type: "object" as const,
-                        properties: {
-                          slug: { type: "string" as const },
-                          name: { type: "string" as const },
-                          type: { type: "string" as const, enum: ["capability", "solution"] },
-                          description: { type: "string" as const },
-                          price_cents: { type: "integer" as const, nullable: true },
-                          confidence: { type: "number" as const },
-                        },
-                      },
-                    },
+                    recommendation: { ...suggestRecommendationSchema, nullable: true },
+                    alternatives: { type: "array" as const, items: suggestRecommendationSchema },
+                    total_matches: { type: "integer" as const },
+                    query_understood_as: { type: "string" as const, maxLength: 120 },
                   },
                 },
               },
@@ -877,10 +902,10 @@ export const openApiSpec = {
       get: {
         tags: ["suggest"],
         summary: "Typeahead search",
-        description: "Fast keyword-based autocomplete for capability and solution names.",
+        description: "Fast keyword-based autocomplete for capability and solution names. Queries are truncated to the first 200 characters before matching.",
         "x-ratelimit": { limit: 30, window: "1s", scope: "per IP" },
         parameters: [
-          { name: "q", in: "query" as const, required: true, schema: { type: "string" as const, minLength: 2 }, description: "Search query" },
+          { name: "q", in: "query" as const, required: true, schema: { type: "string" as const, minLength: 2 }, description: "Search query; only the first 200 characters are considered." },
           { name: "limit", in: "query" as const, required: false, schema: { type: "integer" as const, minimum: 1, maximum: 10, default: 6 } },
           { name: "geo", in: "query" as const, required: false, schema: { type: "string" as const }, description: "Geography filter" },
           { name: "type", in: "query" as const, required: false, schema: { type: "string" as const, enum: ["capability", "solution"] } },

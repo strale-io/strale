@@ -1,0 +1,157 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "737c10e51b03219e90317bd47405cead62ef68e0"
+  },
+  "at": "2026-10-26T20:28:36.611Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "tax_probes_completed": 2,
+    "registry_probes_completed": 2,
+    "sanctions_live": false
+  },
+  "topic": "invoice-counterparty-check-live",
+  "raw": [
+    {
+      "check": "tax",
+      "input": "FI01120389",
+      "duration_ms": 0,
+      "result": {
+        "output": {
+          "valid": true,
+          "country_code": "FI",
+          "vat_number": "FI01120389",
+          "company_name": "Nokia Oyj",
+          "company_address": "c/oVero-osasto PL 226\n00045 NOKIA GROUP",
+          "request_date": "2026-10-26+01:00"
+        },
+        "provenance": {
+          "source": "ec.europa.eu/taxation_customs/vies",
+          "fetched_at": "2026-10-26T20:07:11.988Z"
+        }
+      }
+    },
+    {
+      "check": "tax",
+      "input": "SE556042722001",
+      "duration_ms": 0,
+      "result": {
+        "output": {
+          "valid": true,
+          "country_code": "SE",
+          "vat_number": "SE556042722001",
+          "company_name": "H &amp; M Hennes &amp; Mauritz AB",
+          "company_address": "MÄSTER SAMUELSGATAN 46 A \n106 38 STOCKHOLM",
+          "request_date": "2026-10-26+01:00"
+        },
+        "provenance": {
+          "source": "ec.europa.eu/taxation_customs/vies",
+          "fetched_at": "2026-10-26T20:07:12.754Z"
+        }
+      }
+    },
+    {
+      "check": "registry",
+      "input": {
+        "country": "FI",
+        "identifier": "0112038-9"
+      },
+      "result": {
+        "output": {
+          "status": "active",
+          "registry_status_raw": "active",
+          "company_name": "Nokia Oyj",
+          "registry": {
+            "name": "PRH (Finnish Patent and Registration Office)",
+            "slug": "finnish-company-data"
+          },
+          "identifier": "0112038-9",
+          "country": "FI",
+          "insolvency": {
+            "checked": false,
+            "reason": "No official insolvency source is connected for FI."
+          },
+          "as_of": "2026-10-26T20:07:13.809Z"
+        },
+        "provenance": {
+          "source": "avoindata.prh.fi",
+          "fetched_at": "2026-10-26T20:07:13.809Z",
+          "acquisition_method": "direct_api",
+          "data_access_lane": "allowed_with_checks",
+          "data_access_checks": "pending",
+          "signals": [
+            {
+              "role": "registry",
+              "capability_slug": "finnish-company-data",
+              "source": "avoindata.prh.fi",
+              "fetched_at": "2026-10-26T20:07:13.808Z",
+              "acquisition_method": "direct_api",
+              "data_access_lane": null,
+              "data_access_checks": null,
+              "upstream_vendor": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "check": "registry",
+      "input": {
+        "country": "NO",
+        "identifier": "923609016"
+      },
+      "result": {
+        "output": {
+          "status": "active",
+          "registry_status_raw": "active",
+          "company_name": "EQUINOR ASA",
+          "registry": {
+            "name": "Brønnøysundregistrene Enhetsregisteret",
+            "slug": "norwegian-company-data"
+          },
+          "identifier": "923609016",
+          "country": "NO",
+          "insolvency": {
+            "checked": true,
+            "source": "Brønnøysundregistrene Enhetsregisteret",
+            "notices_found": 0,
+            "notices": []
+          },
+          "as_of": "2026-10-26T20:07:14.835Z"
+        },
+        "provenance": {
+          "source": "data.brreg.no",
+          "fetched_at": "2026-10-26T20:07:14.835Z",
+          "acquisition_method": "direct_api",
+          "data_access_lane": "allowed_with_checks",
+          "data_access_checks": "pending",
+          "signals": [
+            {
+              "role": "registry",
+              "capability_slug": "norwegian-company-data",
+              "source": "data.brreg.no",
+              "fetched_at": "2026-10-26T20:07:14.673Z",
+              "acquisition_method": "direct_api",
+              "data_access_lane": null,
+              "data_access_checks": null,
+              "upstream_vendor": null
+            },
+            {
+              "role": "insolvency",
+              "capability_slug": "no-bankruptcy-check",
+              "source": "data.brreg.no",
+              "fetched_at": "2026-10-26T20:07:14.835Z",
+              "acquisition_method": "direct_api",
+              "data_access_lane": null,
+              "data_access_checks": null,
+              "upstream_vendor": null
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

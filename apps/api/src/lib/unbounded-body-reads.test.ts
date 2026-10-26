@@ -279,7 +279,6 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
     "capabilities/providers/latvian-company-data-sdda.ts": 2,
     "capabilities/providers/swiss-company-data.ts": 3,
     "lib/brreg-fetch.ts": 3,
-    "lib/embeddings.ts": 4,
     "lib/sec-ticker-map.ts": 1,
     // the streaming core's own bodyless fallback (also class B)
     "lib/resource-limits.ts": 1,

@@ -18,13 +18,13 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 async function buildCatalog() {
   const facts = await computePlatformFacts();
   const capCount = facts.capability_counts.active_visible;
-  const countryCount = facts.countries.company_data_active.length;
+  const countryCount = facts.countries.company_data_active_iso.length;
   return {
     version: "0.1",
     publisher: {
       name: "Strale",
       url: "https://strale.dev",
-      description: "One API call. Verified data your agent can trust.",
+      description: "Give your agent a new tool without opening another provider account.",
       contact: "hello@strale.io",
     },
     services: [
@@ -32,7 +32,7 @@ async function buildCatalog() {
         id: "strale-mcp",
         type: "mcp",
         name: "Strale MCP Server",
-        description: `${capCount}+ independently tested and scored business data capabilities accessible via MCP. EU/Nordic focus, ${countryCount} countries.`,
+        description: `${capCount} tools for AI agents accessible via MCP, paid per call. Company data across ${countryCount} countries.`,
         server_card: "https://api.strale.io/.well-known/mcp.json",
         endpoint: "https://api.strale.io/mcp",
         transport: "streamable-http",

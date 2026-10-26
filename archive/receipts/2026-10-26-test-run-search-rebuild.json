@@ -1,0 +1,29 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "42e71dccceff2c94dbae8161832d4b6391cc6663"
+  },
+  "at": "2026-10-26T18:09:31.257Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "scope": "search module, suggest route, ranking and alias tests"
+  },
+  "topic": "search-rebuild",
+  "raw": {
+    "numTotalTests": 92,
+    "numPassedTests": 92,
+    "numFailedTests": 0,
+    "files": [
+      "src/lib/search-aliases.test.ts",
+      "src/lib/suggest-ranking.test.ts",
+      "src/routes/suggest-search.test.ts",
+      "src/lib/search/eval.test.ts",
+      "src/lib/search/keyword.test.ts",
+      "src/lib/search/search-quality.test.ts",
+      "src/lib/search/smart.test.ts"
+    ]
+  }
+}

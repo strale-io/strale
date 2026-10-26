@@ -56,7 +56,7 @@ async function prhNameQuery(name: string): Promise<any[]> {
   // production on 2026-08-12.
   const url = `${PRH_API}?name=${encodeURIComponent(name)}&totalResults=false`;
   const response = await fetch(url, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error(`PRH API search returned HTTP ${response.status}`);
@@ -156,7 +156,7 @@ async function searchPrh(name: string): Promise<PrhNameResolution> {
 async function fetchCompany(businessId: string): Promise<Record<string, unknown>> {
   const url = `${PRH_API}?businessId=${encodeURIComponent(businessId)}&totalResults=false&maxResults=1`;
   const response = await fetch(url, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) throw new Error(`PRH API returned HTTP ${response.status}`);
@@ -207,10 +207,16 @@ async function fetchCompany(businessId: string): Promise<Record<string, unknown>
     mainLine?.descriptions?.[0]?.description ||
     null;
 
-  // Status from companySituations and tradeRegisterStatus
-  const situations = company.companySituations || [];
-  const hasLiquidation = situations.some((s: any) => !s.endDate);
-  const trStatus = company.tradeRegisterStatus;
+  // PRH v3: STATUS3 is Business ID status (2=valid, 1=pending,
+  // 5=invalidated). Trade Register membership is not entity existence.
+  // CompanySituation types are KONK, SELTILA and SANE per the API schema.
+  const situations = (company.companySituations || []).filter((s: any) => !s.endDate);
+  const status = company.endDate || company.status === "5" ? "inactive"
+    : situations.some((s: any) => s.type === "KONK") ? "bankrupt"
+    : situations.some((s: any) => s.type === "SELTILA") ? "liquidation"
+    : situations.some((s: any) => s.type === "SANE") ? "restructuring"
+    : company.status === "2" ? "active"
+    : company.status === "1" ? "pending" : "unknown";
 
   return {
     company_name: currentName?.name || "",
@@ -221,7 +227,7 @@ async function fetchCompany(businessId: string): Promise<Record<string, unknown>
     address,
     registration_date: company.registrationDate || company.businessId?.registrationDate || null,
     website: company.website?.url || null,
-    status: hasLiquidation ? "liquidation" : trStatus === "1" ? "active" : "inactive",
+    status,
     vat_number: deriveVatFI(company.businessId?.value || businessId),
   };
 }

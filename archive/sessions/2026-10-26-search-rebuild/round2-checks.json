@@ -1,0 +1,320 @@
+{
+  "checks": [
+    {
+      "command": "npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "npm --workspace=apps/api run lint:no-bare-catch",
+      "result": "PASS"
+    },
+    {
+      "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "npm --workspace=apps/api run lint:no-new-console",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-framework-packages.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/guard-production-write-access.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s programs:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s programs:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s research:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s research:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s design:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s design:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s env:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s env:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s vendors:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s vendors:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s distribution:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s distribution:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s digest:shadow:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s candidates:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s protocols:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s protocols:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s protocols:coverage",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s protocols:coverage:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s scheduled:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s scheduled:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s scheduled:outcomes:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s models:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s models:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s claims:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s claims:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s docs:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s docs:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s archive:index:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s receipts:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s receipts:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s migrations:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s migrations:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s handoff:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s context:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run -s context:test",
+      "result": "PASS"
+    },
+    {
+      "command": "npm --workspace=packages/mcp-server run build",
+      "result": "PASS"
+    },
+    {
+      "command": "npm --workspace=packages/sdk-typescript run build",
+      "result": "PASS"
+    },
+    {
+      "command": "cd apps/api && npx tsc --noEmit",
+      "result": "PASS"
+    },
+    {
+      "command": "cd apps/api && npx tsc --noEmit --project tsconfig.scripts.json",
+      "result": "PASS"
+    },
+    {
+      "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+      "result": "PASS (15 existing length warnings)"
+    },
+    {
+      "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+      "result": "PASS (22 allowlisted findings, zero new)"
+    },
+    {
+      "command": "node apps/api/scripts/check-pii.mjs --strict",
+      "result": "PASS"
+    },
+    {
+      "command": "node apps/api/scripts/check-shape-contracts.mjs",
+      "result": "SKIP (sibling frontend absent; exit 0)"
+    },
+    {
+      "command": "node scripts/generate-archive-index.mjs --check",
+      "result": "PASS"
+    },
+    {
+      "command": "cd apps/api && npx vitest run src/lib/search src/routes/suggest-search.test.ts src/routes/a2a-limits.test.ts",
+      "result": "PASS (7 files, 95 tests; final distinct-token cost assertion)"
+    },
+    {
+      "command": "npm test",
+      "result": "PASS (322 files, 5485 tests; 31 files/321 tests skipped)"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm ci (writable worktree)",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run context:generate (writable worktree)",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run archive:index (writable worktree)",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run context:check (writable worktree)",
+      "result": "PASS (no warnings, after importing local origin/main ref)"
+    },
+    {
+      "command": "npm run context:test (writable worktree)",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run docs:check (writable worktree)",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run receipts:check (writable worktree)",
+      "result": "PASS (19 existing bare-count handoff warnings)"
+    },
+    {
+      "command": "npm run handoff:check (writable worktree)",
+      "result": "FAIL: ahead/no upstream; push prohibited by user"
+    },
+    {
+      "command": "git commit (code and distinct-token test)",
+      "result": "PASS: pre-commit handoff gate"
+    }
+  ],
+  "ci_runner_output": "CI-LOCAL-DONE\n",
+  "full_api_summary": " 322 passed | 31 skipped (353)\n      Tests  5485 passed | 321 skipped (5806)\n   Start at  18:47:24\n   Duration  119.03s (transform 15.19s, setup 3.27s, import 131.25s, tests 149.97s, environment 49ms)\n\n",
+  "mutation_checks": [
+    {
+      "name": "country-demotion",
+      "exit_code": 0,
+      "test": "cd apps/api && npx vitest run src/lib/search/keyword.test.ts -t 'demotes another'"
+    },
+    {
+      "name": "fallback-not-cached",
+      "exit_code": 0,
+      "test": "cd apps/api && npx vitest run src/lib/search/smart.test.ts -t 'does not cache keyword fallback'"
+    },
+    {
+      "name": "client-ip",
+      "exit_code": 0,
+      "test": "cd apps/api && npx vitest run src/lib/search/smart.test.ts -t 'passes clientIp through suggest'"
+    },
+    {
+      "name": "old-unbounded-engine",
+      "exit_code": 0,
+      "test": "cd apps/api && npx vitest run src/lib/search/search-quality.test.ts -t 'bounds synchronous work'",
+      "initial_weak_probe_survived": true
+    }
+  ],
+  "handoff_gate": {
+    "result": "FAIL (expected scope limitation)",
+    "findings": [
+      "ahead: branch feat/search-rebuild has no upstream of its own"
+    ],
+    "reason": "The user prohibits pushing; orchestrator owns pushes/PR/merge."
+  }
+}

@@ -1,0 +1,211 @@
+slug: company-status-check
+name: "Company Status Check"
+description: "Check whether a company is still registered and active in its official registry, with insolvency notices where an official source exists."
+category: company-data
+# Cost: every routed path is an identifier lookup against a free official
+# registry (lib/company-status/routing.ts); none reaches an executor's paid
+# name-resolution step. External cost per routed country is therefore 0 cents,
+# so external_cost_cents is 0 (the maximum over all routed countries). It is a
+# database column, not a manifest field. cost_class is free_quota because AU,
+# HR and SE are quota-limited registries; quota_cap is the smallest of
+# their daily caps (500, HR).
+cost_class: free_quota
+quota_window: daily
+quota_cap: 500
+price_cents: 8
+is_free_tier: false
+avg_latency_ms: 1200
+# Classification and personal-data fields follow the most sensitive routed input: insolvency-check
+# (GB) is screening_signal / sensitive_special, and sole-trader insolvency notices (BODACC natural
+# persons) are personal financial data. The lookup itself returns what the registry says and no verdict.
+gdpr_art_22_classification: screening_signal
+input_schema:
+  type: object
+  required:
+    - country
+    - identifier
+  properties:
+    country:
+      type: string
+      description: ISO 3166-1 alpha-2 country code of the registry (UK is accepted as GB). The supported list is returned in the error for an unsupported code.
+    identifier:
+      type: string
+      description: The company's identifier in that country's registry, for example 556703-7485 (SE), 00445790 (GB), 513174 (IE), 923609016 (NO), 0000028860 (PL) or 00177041 (CZ, mod-11 checksum required). Keep leading zeros for PL and CZ; send these identifiers as strings. The error for a malformed identifier says which format the country expects.
+output_schema:
+  type: object
+  example:
+    status: active
+    registry_status_raw: active
+    company_name: TESCO PLC
+    registry:
+      name: Companies House (UK Government)
+      slug: uk-company-data
+    identifier: "00445790"
+    country: GB
+    insolvency:
+      checked: true
+      source: Companies House insolvency register
+      notices_found: 0
+      notices: []
+    as_of: "2026-10-26T12:00:00.000Z"
+  properties:
+    status:
+      type: string
+      enum:
+        - active
+        - inactive
+        - dissolved
+        - in_liquidation
+        - in_insolvency
+        - struck_off
+        - unknown
+    registry_status_raw:
+      type:
+        - string
+        - "null"
+    company_name:
+      type:
+        - string
+        - "null"
+    registry:
+      type: object
+    identifier:
+      type: string
+    country:
+      type: string
+    insolvency:
+      type: object
+    as_of:
+      type: string
+data_source: "Official company registries (see registry in the output) and, where listed, the national insolvency source"
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - professional
+  - financial
+  - sensitive_special
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      country: GB
+      identifier: "00445790"
+    expected_fields:
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: country
+        operator: equals
+        reliability: guaranteed
+        value: GB
+      - field: identifier
+        operator: equals
+        reliability: guaranteed
+        value: "00445790"
+      - field: registry
+        operator: not_null
+        reliability: guaranteed
+      - field: insolvency
+        operator: not_null
+        reliability: guaranteed
+      - field: as_of
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    country: GB
+    identifier: "00445790"
+output_field_reliability:
+  status: guaranteed
+  registry_status_raw: guaranteed
+  company_name: guaranteed
+  registry: guaranteed
+  identifier: guaranteed
+  country: guaranteed
+  insolvency: guaranteed
+  as_of: guaranteed
+limitations:
+  - title: Registry status is not trading status
+    text: >-
+      "active" means the official registry lists the company as registered and not wound up. It says nothing about
+      whether the company trades, has staff or files accounts. A dormant company is active here.
+    category: coverage
+    severity: warning
+    workaround: Pair with a filing-date or accounts source where recent activity matters.
+  - title: Registry vocabularies differ
+    text: >-
+      Each registry words its status differently and some do not publish every state. The registry's own value is
+      returned in registry_status_raw. A value this capability has no mapping for returns status "unknown" with the
+      raw value, never a guess.
+    category: coverage
+    severity: info
+    workaround: Read registry_status_raw when status is "unknown".
+  - title: Countries covered
+    text: >-
+      14 countries: Austria (AT), Australia (AU), Czechia (CZ), Estonia (EE), Finland (FI), France (FR),
+      United Kingdom (GB), Croatia (HR), Ireland (IE), Latvia (LV), Norway (NO), Poland (PL), Sweden (SE) and
+      Singapore (SG). The error for any other country names the supported list. Greece stays excluded because
+      live status behaviour could not be checked without a GEMI key. Also left out: Belgium, Brazil, Germany,
+      Spain and Japan, whose data-access checks are still pending;
+      the United States, Slovakia and Slovenia, which publish no usable status; and Canada and Switzerland, whose
+      status vocabulary could not be checked.
+    category: coverage
+    severity: warning
+    workaround: Use the per-country company-data capability for a country not listed.
+  - title: Lookup by registry identifier only
+    text: >-
+      The input is the company's identifier in its country's registry. There is no name search, so a name cannot
+      resolve to the wrong company. Sweden accepts organisation numbers only, not personal identity numbers.
+    category: input
+    severity: info
+    workaround: Resolve the identifier first with the country's company-data capability or VAT validation.
+  - title: Insolvency notices only where an official source is connected
+    text: >-
+      Insolvency notices come from Companies House (GB), BODACC (FR), Brønnøysundregistrene (NO) and Bolagsverket's pending proceedings (SE).
+      For every other country the insolvency block says checked false; Czech registry insolvency status still
+      maps to in_insolvency. Norway reports bankruptcy and dissolution flags as notices, with dates only where
+      supplied; deletion alone is not an insolvency notice. For Sweden, notices are reported when
+      Bolagsverket lists a pending proceeding and an open konkurs or likvidation sets the status; when none is
+      listed the block says checked false, because the answer cannot show whether that part of the record loaded.
+      An empty notices list for GB, FR or NO means the source lists none for this company, not that none exist elsewhere.
+      Sole-trader notices can be personal financial data.
+    category: coverage
+    severity: warning
+    workaround: Check the national insolvency register directly for countries marked checked false.
+  - title: A failing registry can pause the check for every country
+    text: >-
+      The health checks that suspend a capability after repeated failures are keyed on this capability, not on
+      each country. A sustained outage or authentication failure at one registry can temporarily pause the check
+      for all countries. Unknown identifiers and malformed identifiers do not count towards that.
+    category: reliability
+    severity: warning
+    workaround: Retry after a few minutes; the error names the registry that did not answer.
+  - title: Freshness follows each registry
+    text: >-
+      Answers are fetched live, but registries update at their own pace: a closure or filing can appear days after it
+      takes effect. The IE and LV sources are open-data datasets refreshed daily.
+    category: freshness
+    severity: info
+    workaround: Use as_of for when the lookup ran and the registry's own date fields for when the status changed.
+  - title: BODACC window
+    text: >-
+      For France only the 100 most recent BODACC announcements for the company are read. A company with more
+      announcements than that returns a window_note, and older notices are not listed.
+    category: coverage
+    severity: info
+    workaround: Query BODACC directly for the full history.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+# Every routed registry and insolvency source is on the preferred lane with a
+# direct API; company-status-routing.test.ts fails if a routed source is
+# weaker than this block, so the composite never claims more than its inputs.
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

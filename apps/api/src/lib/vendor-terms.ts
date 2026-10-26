@@ -70,6 +70,8 @@ export function prohibitedHostsIn(text: string): string[] {
 export interface VendorTermsRecord {
   vendor: string;
   hosts: readonly string[];
+  /** Restrict a host-wide record to these service URL prefixes, if set. */
+  url_prefixes?: readonly string[];
   /** Vendor id passed to meteredVendorFetch, when calls go through it. */
   metered_id?: string;
   /** Executors that call one of `hosts`. */
@@ -86,6 +88,93 @@ export interface VendorTermsRecord {
 }
 
 export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
+  {
+    vendor: "Eurostat",
+    hosts: ["ec.europa.eu"],
+    url_prefixes: ["https://ec.europa.eu/eurostat/"],
+    capabilities: ["eurostat-data"],
+    resale: "permitted",
+    terms_url: "https://ec.europa.eu/eurostat/help/copyright-notice",
+    accessed: "2026-10-26",
+    how_read: "Official copyright notice fetched via web open, including General principles and Exceptions; candidate list checked on the EU enlargement page.",
+    findings: [
+      "Commission Decision 2011/833/EU authorises commercial reuse with source acknowledgement, subject to individual notices and these exceptions; this record covers only the restricted eurostat-data executor.",
+      "(a) Data identified as belonging to sources other than Eurostat and third-party copyrighted material are excluded: refuse non-Eurostat source declarations and unrecognised rights notices in returned JSON-stat source/extension/annotations. SOURCE_INSTITUTIONS and other explicit source anchors are checked; DISSEMINATION_SOURCE_DATASET annotations identify lineage, not ownership. Separately linked ESMS documents and catalogue notices are not inspected; missing declarations are reported as an output limitation. No third-party documents are returned.",
+      "(b) Data for countries outside EU/EFTA/official acceding and candidate countries are excluded. Round 5 uses EUROSTAT_ALLOWED_DATASETS: a curated Eurostat-sourced dataset list audited against live JSON-stat metadata on 2026-10-26 (recorded in __fixtures__/eurostat/dataset-audit-2026-10-26.json). The sole geographic dimension must be geo; partner/citizen/birth/residence/load/unload/origin/destination/control/counterpart/vessel-nationality tables are excluded. The audit conservatively rejects every non-geo/time code matching ISO alpha-2 or a country-prefix NUTS shape, including non-geographic collisions; this necessarily narrows coverage of requested families. There is no runtime country-content detection outside geo. Require geo and accept only exact EU/EFTA/official candidate countries, their NUTS regions (country prefix plus 1–3 letters/digits), and supported EU/EFTA/euro-area aggregates. Potential candidate Kosovo is excluded. Retain post-fetch geo dropping/counting and label-aware defence in depth only for geo. Omit excluded labels. Other datasets return dataset_not_supported with the supported list and instructions to request an addition through Strale support; additions require metadata and terms review. This implements the country restriction without trying to infer geographic meaning in arbitrary codelists.",
+      "(c) Liechtenstein and Switzerland declaring-country trade data from 1995 under HS, SITC, BEC, NSTR and national classifications are excluded. Austria declaring-country CN8 trade data are also excluded: the curated list excludes international trade; retain defence-in-depth refusal through the executor's dataset-prefix, title/theme/category and trade-lineage rules. Domestic retail trade, wholesale trade, distributive trade and trade sector phrases are exempt; international/foreign/extra-EU/intra-EU trade remains refused. A stk_flow dimension also triggers refusal (including nrg_stk_gas). Source-key rules inspect dataset metadata, not data.dimension ids/categories such as owner.",
+      "Logos and trademarks are excluded; the executor returns statistical codes, labels and observations only, with no logos or publications. Modifications must be declared with a non-responsibility disclaimer: every output includes the dataset DOI (10.2908/CODE), access date, acknowledges Eurostat and the Commission Decision and states Strale flattened the data and Eurostat is not responsible for the rendering.",
+    ],
+    decision_ref: "DEC-20261023-A; orchestrator approval 2026-10-26 scoped to commercial-permitted Eurostat data",
+  },
+  {
+    vendor: "Brønnøysundregistrene",
+    hosts: ["data.brreg.no"],
+    capabilities: ["norwegian-company-data", "no-bankruptcy-check", "vat-validate"],
+    resale: "permitted",
+    terms_url: "https://www.brreg.no/en/use-of-data-from-the-bronnoysund-register-centre/datasets-and-api/",
+    accessed: "2026-10-26",
+    how_read: "Official datasets/API terms read via web open; API documentation links NLOD.",
+    findings: ["NLOD permits commercial reuse with attribution; anonymous per-entity API calls need no registration. Both executors call the shared lib/brreg-fetch.ts helper."],
+    decision_ref: "DEC-20261023-A (existing official registry API; status correction)",
+  },
+  {
+    vendor: "KRS (Ministry of Justice Poland)",
+    hosts: ["api-krs.ms.gov.pl"],
+    capabilities: ["polish-company-data"],
+    resale: "permitted",
+    terms_url: "https://prs.ms.gov.pl/krs/openApi",
+    accessed: "2026-10-26",
+    how_read: "Official reuse page and prs.ms.gov.pl/krs/openApi read; extracted the latter from its served JavaScript because the HTML is an app shell. Also read the linked 2021 open-data act at eli.gov.pl/api/acts/DU/2021/1641/text.html.",
+    findings: ["Statutory basis: official API page authorises anyone to download full/current semantic JSON under KRS Act art. 4b(2) and Open Data Act art. 24(1). Open Data Act allows commercial reuse; preserve attribution and privacy restrictions. The KRS extract contains personal data which this executor does not return. No per-call automation or resale prohibition in these published terms."],
+    decision_ref: "DEC-20261023-A (existing official registry API; status correction)",
+  },
+  {
+    vendor: "ARES (Czech Ministry of Finance)",
+    hosts: ["ares.gov.cz"],
+    capabilities: ["cz-company-data"],
+    resale: "unverified",
+    terms_url: "https://mf.gov.cz/cs/ministerstvo/informacni-systemy/ares",
+    accessed: "2026-10-26",
+    how_read: "Official operating conditions read via web open, including API usage limits and third-party portal attribution.",
+    findings: ["Public API available to everyone subject to operating conditions: at most 500 requests/minute, no excessive parallel requests, repeated identical/invalid queries or evasion. Informational data only; preserve ARES source attribution. The page declares no reuse licence or resale grant. Regulation (EU) 2023/138 includes company registers among high-value datasets with reuse requirements; this is context pending assessment of applicability, not an established legal basis for this API."],
+    decision_ref: "docs/company/DECISION-QUEUE.md DQ-40",
+  },
+  {
+    vendor: "PRH (Finnish Patent and Registration Office)",
+    hosts: ["avoindata.prh.fi"],
+    capabilities: ["finnish-company-data"],
+    resale: "permitted",
+    terms_url: "https://avoindata.prh.fi/opendata-ytj-api/v3/schema?lang=en",
+    accessed: "2026-10-26",
+    how_read: "Official open-data page read via web open and v3/schema?lang=en fetched directly.",
+    findings: ["API schema info.license licenses data CC BY 4.0 (commercial reuse permitted). Attribute PRH; do not use PRH/YTJ logos or imitate PRH services."],
+    decision_ref: "DEC-20261023-A (existing official registry API; status correction)",
+  },
+  {
+    vendor: "GEMI Open Data",
+    hosts: ["opendata-api.businessportal.gr"],
+    capabilities: ["greek-company-data"],
+    resale: "permitted",
+    terms_url: "https://opendata.businessportal.gr/license/",
+    accessed: "2026-10-26",
+    how_read: "Official API terms page read via web open; no authenticated company lookup attempted.",
+    findings: ["API and open data licensed ODC-BY-1.0, permitting commercial reuse with attribution. Existing API-key access remains required."],
+    decision_ref: "DEC-20261023-A (existing official registry API; status correction)",
+  },
+  {
+    vendor: "GLEIF",
+    hosts: ["api.gleif.org"],
+    capabilities: ["lei-lookup", "entity-resolve", "gleif-l2-ubo-lookup", "gleif-l2-children-lookup"],
+    resale: "permitted",
+    terms_url: "https://www.gleif.org/en/meta/lei-data-terms-of-use",
+    accessed: "2026-10-26",
+    how_read: "Read the actual GLEIF terms page through the web tool on 2026-10-26.",
+    findings: [
+      "Section II permits individual lookups through the Access Service, free of charge; data are licensed CC0 1.0.",
+      "Commercial reuse is permitted. No circumvention or claims of GLEIF endorsement; availability and accuracy are not guaranteed.",
+    ],
+    decision_ref: "DEC-20261023-A",
+  },
   {
     vendor: "Serper.dev",
     hosts: ["google.serper.dev"],

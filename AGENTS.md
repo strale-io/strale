@@ -337,8 +337,9 @@ drift:
   breakers, fixture mode, and canary mode survive. Never edit
   `src/lib/sqs.ts` to "fix" a score — it doesn't exist; diagnose root cause
   instead (Scoring Integrity, retired but the discipline stands).
-- Free-tier capability list is `is_free_tier = true` in the `capabilities`
-  table, surfaced via `free_tier_slugs` on `/v1/platform/facts`. The
+- Free-tier flag is `is_free_tier = true` in the `capabilities` table;
+  `free_tier_slugs` on `/v1/platform/facts` lists the servable ones
+  (`getFreeTierSlugs`). The
   per-IP daily limit is FREE_TIER_DAILY_LIMIT in `src/routes/do.ts` — read
   it there, don't restate it.
 - x402 pay-per-use (rail details: `platform-facts.ts`) is DB-driven: `x402_enabled` on the

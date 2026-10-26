@@ -1,0 +1,3413 @@
+{
+  "baseline_commit": "990b219c",
+  "before": {
+    "engine": "keyword",
+    "mode": "typeahead",
+    "metrics": [
+      {
+        "kind": "country",
+        "count": 9,
+        "top1": 9,
+        "top3": 9,
+        "mrr5": 1
+      },
+      {
+        "kind": "keyword",
+        "count": 30,
+        "top1": 30,
+        "top3": 30,
+        "mrr5": 1
+      },
+      {
+        "kind": "natural",
+        "count": 37,
+        "top1": 31,
+        "top3": 36,
+        "mrr5": 0.9054054054054054
+      },
+      {
+        "kind": "typo",
+        "count": 5,
+        "top1": 5,
+        "top3": 5,
+        "mrr5": 1
+      },
+      {
+        "kind": "workflow",
+        "count": 6,
+        "top1": 6,
+        "top3": 6,
+        "mrr5": 1
+      },
+      {
+        "kind": "overall",
+        "count": 87,
+        "top1": 81,
+        "top3": 86,
+        "mrr5": 0.9597701149425287
+      }
+    ],
+    "rows": [
+      {
+        "query": {
+          "q": "vat",
+          "kind": "keyword",
+          "expect": [
+            "vat-validate",
+            "vat-format-validate",
+            "vat-rate-lookup"
+          ]
+        },
+        "slugs": [
+          "vat-format-validate",
+          "vat-validate",
+          "vat-rate-lookup",
+          "cz-unreliable-vat-payer",
+          "belgian-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "iban",
+          "kind": "keyword",
+          "expect": [
+            "iban-validate",
+            "iban-to-bank"
+          ]
+        },
+        "slugs": [
+          "iban-validate",
+          "iban-to-bank",
+          "payment-validate",
+          "sepa-readiness",
+          "sepa-xml-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "sanctions",
+          "kind": "keyword",
+          "expect": [
+            "sanctions-check"
+          ]
+        },
+        "slugs": [
+          "sanctions-check",
+          "verify-us-company",
+          "vendor-risk-assess",
+          "kyb-essentials-au",
+          "aml-risk-score"
+        ]
+      },
+      {
+        "query": {
+          "q": "pep",
+          "kind": "keyword",
+          "expect": [
+            "pep-check"
+          ]
+        },
+        "slugs": [
+          "pep-check",
+          "verify-us-company",
+          "aml-risk-score",
+          "customer-risk-screen",
+          "kyc-finland"
+        ]
+      },
+      {
+        "query": {
+          "q": "dns",
+          "kind": "keyword",
+          "expect": [
+            "dns-lookup"
+          ]
+        },
+        "slugs": [
+          "dns-lookup",
+          "lead-email-verify",
+          "domain-intel",
+          "domain-trust",
+          "ens-resolve"
+        ]
+      },
+      {
+        "query": {
+          "q": "whois",
+          "kind": "keyword",
+          "expect": [
+            "whois-lookup"
+          ]
+        },
+        "slugs": [
+          "whois-lookup",
+          "domain-security-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "lei",
+          "kind": "keyword",
+          "expect": [
+            "lei-lookup"
+          ]
+        },
+        "slugs": [
+          "lei-lookup",
+          "gleif-l2-ubo-lookup",
+          "gleif-l2-children-lookup",
+          "kyb-essentials-au",
+          "german-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "ssl",
+          "kind": "keyword",
+          "expect": [
+            "ssl-check",
+            "ssl-certificate-chain"
+          ]
+        },
+        "slugs": [
+          "ssl-check",
+          "ssl-certificate-chain",
+          "domain-intel",
+          "url-health-check",
+          "domain-trust"
+        ]
+      },
+      {
+        "query": {
+          "q": "markdown",
+          "kind": "keyword",
+          "expect": [
+            "url-to-markdown",
+            "markdown-to-html"
+          ]
+        },
+        "slugs": [
+          "url-to-markdown",
+          "markdown-to-html",
+          "api-docs-generate",
+          "web-extract-clean",
+          "json-repair"
+        ]
+      },
+      {
+        "query": {
+          "q": "pdf",
+          "kind": "keyword",
+          "expect": [
+            "pdf-extract",
+            "html-to-pdf"
+          ]
+        },
+        "slugs": [
+          "html-to-pdf",
+          "pdf-extract",
+          "resume-parse",
+          "invoice-extract",
+          "arxiv-search"
+        ]
+      },
+      {
+        "query": {
+          "q": "translate",
+          "kind": "keyword",
+          "expect": [
+            "translate"
+          ]
+        },
+        "slugs": [
+          "translate"
+        ]
+      },
+      {
+        "query": {
+          "q": "email",
+          "kind": "keyword",
+          "expect": [
+            "email-validate",
+            "email-validate-bulk",
+            "email-deliverability-check"
+          ]
+        },
+        "slugs": [
+          "email-validate",
+          "email-draft",
+          "email-validate-bulk",
+          "email-audit",
+          "email-deliverability-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "phone",
+          "kind": "keyword",
+          "expect": [
+            "phone-validate",
+            "phone-normalize",
+            "phone-type-detect"
+          ]
+        },
+        "slugs": [
+          "phone-validate",
+          "phone-normalize",
+          "phone-type-detect",
+          "domain-contact-extract",
+          "contact-verify"
+        ]
+      },
+      {
+        "query": {
+          "q": "invoice",
+          "kind": "keyword",
+          "expect": [
+            "invoice-extract",
+            "invoice-validate",
+            "invoice-verify-{cc}",
+            "invoice-process"
+          ]
+        },
+        "slugs": [
+          "invoice-validate",
+          "invoice-extract",
+          "invoice-verify-au",
+          "invoice-process",
+          "risk-narrative-generate"
+        ]
+      },
+      {
+        "query": {
+          "q": "swedish company",
+          "kind": "keyword",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data",
+          "kyb-essentials-se",
+          "invoice-verify-se",
+          "company-enrich",
+          "company-news"
+        ]
+      },
+      {
+        "query": {
+          "q": "german company",
+          "kind": "keyword",
+          "expect": [
+            "german-company-data"
+          ]
+        },
+        "slugs": [
+          "german-company-data",
+          "kyb-essentials-de",
+          "invoice-verify-de",
+          "company-enrich",
+          "company-news"
+        ]
+      },
+      {
+        "query": {
+          "q": "uk company",
+          "kind": "keyword",
+          "expect": [
+            "uk-company-data"
+          ]
+        },
+        "slugs": [
+          "uk-company-data",
+          "uk-companies-house-officers",
+          "kyb-essentials-uk",
+          "beneficial-ownership-lookup",
+          "uk-filing-events"
+        ]
+      },
+      {
+        "query": {
+          "q": "exchange rate",
+          "kind": "keyword",
+          "expect": [
+            "exchange-rate",
+            "currency-convert"
+          ]
+        },
+        "slugs": [
+          "exchange-rate",
+          "forex-history"
+        ]
+      },
+      {
+        "query": {
+          "q": "stock price",
+          "kind": "keyword",
+          "expect": [
+            "stock-quote"
+          ]
+        },
+        "slugs": [
+          "stock-quote",
+          "nl-housing-stats",
+          "price-compare",
+          "nl-housing-price-index",
+          "gas-price-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "weather",
+          "kind": "keyword",
+          "expect": [
+            "weather-lookup"
+          ]
+        },
+        "slugs": [
+          "weather-lookup"
+        ]
+      },
+      {
+        "query": {
+          "q": "bitcoin",
+          "kind": "keyword",
+          "expect": [
+            "bitcoin-address-validate"
+          ]
+        },
+        "slugs": [
+          "bitcoin-address-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "google",
+          "kind": "keyword",
+          "expect": [
+            "google-search"
+          ]
+        },
+        "slugs": [
+          "google-search",
+          "docstring-generate",
+          "brand-mention-search",
+          "backlink-check",
+          "page-speed-test"
+        ]
+      },
+      {
+        "query": {
+          "q": "screenshot",
+          "kind": "keyword",
+          "expect": [
+            "screenshot-url"
+          ]
+        },
+        "slugs": [
+          "screenshot-url",
+          "image-to-text"
+        ]
+      },
+      {
+        "query": {
+          "q": "tech stack",
+          "kind": "keyword",
+          "expect": [
+            "tech-stack-detect",
+            "company-tech-stack"
+          ]
+        },
+        "slugs": [
+          "company-tech-stack",
+          "tech-stack-detect",
+          "company-enrich",
+          "competitor-read",
+          "competitor-snapshot"
+        ]
+      },
+      {
+        "query": {
+          "q": "ubo",
+          "kind": "keyword",
+          "expect": [
+            "beneficial-ownership-lookup",
+            "gleif-l2-ubo-lookup"
+          ]
+        },
+        "slugs": [
+          "gleif-l2-ubo-lookup"
+        ]
+      },
+      {
+        "query": {
+          "q": "kyb",
+          "kind": "keyword",
+          "expect": [
+            "kyb-essentials-{cc}",
+            "kyb-complete-{cc}"
+          ]
+        },
+        "slugs": [
+          "kyb-essentials-at",
+          "kyb-complete-at",
+          "crypto-counterparty-kyb",
+          "web3-counterparty-kyb",
+          "lei-lookup"
+        ]
+      },
+      {
+        "query": {
+          "q": "insolvency",
+          "kind": "keyword",
+          "expect": [
+            "insolvency-check",
+            "french-insolvency-check",
+            "no-bankruptcy-check"
+          ]
+        },
+        "slugs": [
+          "insolvency-check",
+          "french-insolvency-check",
+          "fr-bodacc-lookup",
+          "swedish-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "holidays",
+          "kind": "keyword",
+          "expect": [
+            "public-holiday-lookup",
+            "holiday-calendar"
+          ]
+        },
+        "slugs": [
+          "holiday-calendar",
+          "public-holiday-lookup",
+          "business-day-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "timezone",
+          "kind": "keyword",
+          "expect": [
+            "timezone-lookup",
+            "timezone-meeting-find"
+          ]
+        },
+        "slugs": [
+          "timezone-lookup",
+          "timezone-meeting-find"
+        ]
+      },
+      {
+        "query": {
+          "q": "json",
+          "kind": "keyword",
+          "expect": [
+            "json-repair",
+            "json-schema-validate",
+            "json-to-csv",
+            "json-to-typescript",
+            "json-to-zod",
+            "json-to-pydantic",
+            "flatten-json",
+            "diff-json"
+          ]
+        },
+        "slugs": [
+          "json-repair",
+          "json-schema-validate",
+          "json-to-csv",
+          "csv-to-json",
+          "diff-json"
+        ]
+      },
+      {
+        "query": {
+          "q": "check if a company is bankrupt",
+          "kind": "natural",
+          "expect": [
+            "insolvency-check",
+            "no-bankruptcy-check",
+            "french-insolvency-check",
+            "fr-bodacc-lookup"
+          ]
+        },
+        "slugs": [
+          "no-bankruptcy-check",
+          "insolvency-check",
+          "verify-us-company",
+          "company-id-detect",
+          "au-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "verify a VAT number",
+          "kind": "natural",
+          "expect": [
+            "vat-validate"
+          ]
+        },
+        "slugs": [
+          "vat-format-validate",
+          "vat-validate",
+          "invoice-validate",
+          "id-number-validate",
+          "invoice-process"
+        ]
+      },
+      {
+        "query": {
+          "q": "validate an IBAN",
+          "kind": "natural",
+          "expect": [
+            "iban-validate"
+          ]
+        },
+        "slugs": [
+          "iban-validate",
+          "sepa-xml-validate",
+          "payment-validate",
+          "sepa-readiness"
+        ]
+      },
+      {
+        "query": {
+          "q": "look up a Swedish company",
+          "kind": "natural",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data",
+          "kyb-essentials-se",
+          "invoice-verify-se",
+          "company-enrich",
+          "company-news"
+        ]
+      },
+      {
+        "query": {
+          "q": "who owns this company",
+          "kind": "natural",
+          "expect": [
+            "beneficial-ownership-lookup",
+            "gleif-l2-ubo-lookup"
+          ]
+        },
+        "slugs": [
+          "beneficial-ownership-lookup",
+          "gleif-l2-children-lookup",
+          "domain-contact-extract",
+          "breach-exposure-check",
+          "classify-text"
+        ]
+      },
+      {
+        "query": {
+          "q": "screen a person against sanctions lists",
+          "kind": "natural",
+          "expect": [
+            "sanctions-check"
+          ]
+        },
+        "slugs": [
+          "sanctions-check",
+          "verify-us-company",
+          "pep-check",
+          "aml-risk-score",
+          "kyb-essentials-au"
+        ]
+      },
+      {
+        "query": {
+          "q": "is this person a politically exposed person",
+          "kind": "natural",
+          "expect": [
+            "pep-check"
+          ]
+        },
+        "slugs": [
+          "pep-check",
+          "verify-us-company"
+        ]
+      },
+      {
+        "query": {
+          "q": "negative news about a company",
+          "kind": "natural",
+          "expect": [
+            "adverse-media-check"
+          ]
+        },
+        "slugs": [
+          "company-news",
+          "adverse-media-check",
+          "hacker-news-search"
+        ]
+      },
+      {
+        "query": {
+          "q": "turn a webpage into markdown",
+          "kind": "natural",
+          "expect": [
+            "url-to-markdown"
+          ]
+        },
+        "slugs": [
+          "markdown-to-html",
+          "url-to-markdown",
+          "api-docs-generate",
+          "web-extract-clean",
+          "json-repair"
+        ]
+      },
+      {
+        "query": {
+          "q": "get the plain text of a web page",
+          "kind": "natural",
+          "expect": [
+            "url-to-text",
+            "url-to-markdown",
+            "web-extract"
+          ]
+        },
+        "slugs": [
+          "url-to-text",
+          "web-extract",
+          "link-extract",
+          "screenshot-url",
+          "url-to-markdown"
+        ]
+      },
+      {
+        "query": {
+          "q": "extract data from an invoice",
+          "kind": "natural",
+          "expect": [
+            "invoice-extract"
+          ]
+        },
+        "slugs": [
+          "invoice-extract",
+          "invoice-process",
+          "invoice-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "read the text in a scanned image",
+          "kind": "natural",
+          "expect": [
+            "image-to-text"
+          ]
+        },
+        "slugs": [
+          "image-to-text",
+          "og-image-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "check if an email address is real",
+          "kind": "natural",
+          "expect": [
+            "email-validate",
+            "email-deliverability-check",
+            "lead-email-verify"
+          ]
+        },
+        "slugs": [
+          "lead-email-verify",
+          "email-validate",
+          "email-reputation-score",
+          "domain-contact-extract",
+          "email-deliverability-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "what technologies does this website use",
+          "kind": "natural",
+          "expect": [
+            "tech-stack-detect",
+            "company-tech-stack"
+          ]
+        },
+        "slugs": [
+          "tech-stack-detect",
+          "website-carbon-estimate",
+          "website-health",
+          "gdpr-website-check",
+          "website-security-audit"
+        ]
+      },
+      {
+        "query": {
+          "q": "is this domain trustworthy",
+          "kind": "natural",
+          "expect": [
+            "domain-reputation",
+            "domain-trust",
+            "domain-age-check"
+          ]
+        },
+        "slugs": [
+          "domain-trust",
+          "domain-security-check",
+          "domain-reputation",
+          "domain-intel",
+          "domain-age-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "show me the DNS records for a domain",
+          "kind": "natural",
+          "expect": [
+            "dns-lookup"
+          ]
+        },
+        "slugs": [
+          "dns-lookup",
+          "whois-lookup",
+          "mx-lookup",
+          "domain-reputation",
+          "domain-intel"
+        ]
+      },
+      {
+        "query": {
+          "q": "convert 100 euro to dollars",
+          "kind": "natural",
+          "expect": [
+            "currency-convert",
+            "exchange-rate"
+          ]
+        },
+        "slugs": [
+          "currency-convert",
+          "unit-convert",
+          "code-convert",
+          "iso-country-lookup",
+          "image-resize"
+        ]
+      },
+      {
+        "query": {
+          "q": "search Google and get the results",
+          "kind": "natural",
+          "expect": [
+            "google-search"
+          ]
+        },
+        "slugs": [
+          "google-search",
+          "serp-analyze",
+          "brand-mention-search",
+          "keyword-rank-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "find academic papers on a topic",
+          "kind": "natural",
+          "expect": [
+            "academic-paper-search",
+            "arxiv-search",
+            "pubmed-search"
+          ]
+        },
+        "slugs": [
+          "academic-paper-search",
+          "paper-details"
+        ]
+      },
+      {
+        "query": {
+          "q": "GDP of Germany",
+          "kind": "natural",
+          "expect": [
+            "country-economic-indicators"
+          ]
+        },
+        "slugs": [
+          "country-economic-indicators"
+        ]
+      },
+      {
+        "query": {
+          "q": "is this bitcoin address valid",
+          "kind": "natural",
+          "expect": [
+            "bitcoin-address-validate"
+          ]
+        },
+        "slugs": [
+          "bitcoin-address-validate",
+          "address-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "check whether a phone number is valid",
+          "kind": "natural",
+          "expect": [
+            "phone-validate"
+          ]
+        },
+        "slugs": [
+          "phone-validate",
+          "phone-type-detect",
+          "phone-normalize",
+          "id-number-validate",
+          "vat-format-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "does this site have a valid SSL certificate",
+          "kind": "natural",
+          "expect": [
+            "ssl-check",
+            "ssl-certificate-chain"
+          ]
+        },
+        "slugs": [
+          "ssl-check",
+          "ssl-certificate-chain",
+          "defi-risk-check",
+          "website-health",
+          "defi-protocol-risk"
+        ]
+      },
+      {
+        "query": {
+          "q": "summarize a long document",
+          "kind": "natural",
+          "expect": [
+            "summarize"
+          ]
+        },
+        "slugs": [
+          "summarize",
+          "invoice-validate",
+          "log-parse",
+          "invoice-extract",
+          "context-window-optimize"
+        ]
+      },
+      {
+        "query": {
+          "q": "detect the language of a text",
+          "kind": "natural",
+          "expect": [
+            "language-detect"
+          ]
+        },
+        "slugs": [
+          "language-detect",
+          "translate"
+        ]
+      },
+      {
+        "query": {
+          "q": "remove personal data from text",
+          "kind": "natural",
+          "expect": [
+            "pii-redact"
+          ]
+        },
+        "slugs": [
+          "pii-redact",
+          "country-tax-rates",
+          "deduplicate"
+        ]
+      },
+      {
+        "query": {
+          "q": "find the HS code for a product",
+          "kind": "natural",
+          "expect": [
+            "hs-code-lookup"
+          ]
+        },
+        "slugs": [
+          "hs-code-lookup",
+          "customs-duty-lookup"
+        ]
+      },
+      {
+        "query": {
+          "q": "track a parcel",
+          "kind": "natural",
+          "expect": [
+            "shipping-track"
+          ]
+        },
+        "slugs": [
+          "container-track",
+          "shipping-track",
+          "cookie-scan",
+          "gdpr-website-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "is this website up",
+          "kind": "natural",
+          "expect": [
+            "uptime-check",
+            "url-health-check",
+            "page-exists"
+          ]
+        },
+        "slugs": [
+          "website-carbon-estimate",
+          "website-health",
+          "gdpr-website-check",
+          "website-security-audit",
+          "gdpr-audit"
+        ]
+      },
+      {
+        "query": {
+          "q": "who are the directors of a UK company",
+          "kind": "natural",
+          "expect": [
+            "uk-companies-house-officers"
+          ]
+        },
+        "slugs": [
+          "uk-disqualified-director-check",
+          "uk-companies-house-officers"
+        ]
+      },
+      {
+        "query": {
+          "q": "has this director been disqualified",
+          "kind": "natural",
+          "expect": [
+            "uk-disqualified-director-check"
+          ]
+        },
+        "slugs": [
+          "uk-disqualified-director-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "check a payee name before paying a UK bank account",
+          "kind": "natural",
+          "expect": [
+            "uk-cop-check"
+          ]
+        },
+        "slugs": [
+          "uk-cop-check"
+        ]
+      },
+      {
+        "query": {
+          "q": "find the bank for a BIC code",
+          "kind": "natural",
+          "expect": [
+            "bank-bic-lookup",
+            "swift-validate"
+          ]
+        },
+        "slugs": [
+          "bank-bic-lookup",
+          "swift-validate",
+          "iban-to-bank",
+          "iban-validate",
+          "cz-bank-account-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "what is the VAT rate in France",
+          "kind": "natural",
+          "expect": [
+            "vat-rate-lookup",
+            "country-tax-rates"
+          ]
+        },
+        "slugs": [
+          "vat-rate-lookup",
+          "country-tax-rates",
+          "sepa-readiness",
+          "exchange-rate",
+          "forex-history"
+        ]
+      },
+      {
+        "query": {
+          "q": "find public tenders in the EU",
+          "kind": "natural",
+          "expect": [
+            "ted-procurement"
+          ]
+        },
+        "slugs": [
+          "ted-procurement"
+        ]
+      },
+      {
+        "query": {
+          "q": "count tokens in a prompt",
+          "kind": "natural",
+          "expect": [
+            "token-count"
+          ]
+        },
+        "slugs": [
+          "token-count",
+          "prompt-compress",
+          "prompt-optimize"
+        ]
+      },
+      {
+        "query": {
+          "q": "fix broken JSON from an LLM",
+          "kind": "natural",
+          "expect": [
+            "json-repair",
+            "llm-output-validate"
+          ]
+        },
+        "slugs": [
+          "json-repair",
+          "tool-call-validate",
+          "csv-clean",
+          "llm-output-validate",
+          "llm-cost-calculate"
+        ]
+      },
+      {
+        "query": {
+          "q": "sanctoins check",
+          "kind": "typo",
+          "expect": [
+            "sanctions-check"
+          ]
+        },
+        "slugs": [
+          "sanctions-check",
+          "defi-risk-check",
+          "web3-vasp-check",
+          "vendor-onboard",
+          "verify-us-company"
+        ]
+      },
+      {
+        "query": {
+          "q": "beneficail owner",
+          "kind": "typo",
+          "expect": [
+            "beneficial-ownership-lookup",
+            "gleif-l2-ubo-lookup"
+          ]
+        },
+        "slugs": [
+          "beneficial-ownership-lookup",
+          "enhanced-due-diligence",
+          "gleif-l2-ubo-lookup",
+          "whois-lookup"
+        ]
+      },
+      {
+        "query": {
+          "q": "swedsih company",
+          "kind": "typo",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data",
+          "kyb-essentials-se",
+          "invoice-verify-se",
+          "company-enrich",
+          "company-news"
+        ]
+      },
+      {
+        "query": {
+          "q": "valdiate iban",
+          "kind": "typo",
+          "expect": [
+            "iban-validate"
+          ]
+        },
+        "slugs": [
+          "iban-validate",
+          "iban-to-bank",
+          "invoice-verify-au",
+          "payment-validate",
+          "sepa-readiness"
+        ]
+      },
+      {
+        "query": {
+          "q": "adress validation",
+          "kind": "typo",
+          "expect": [
+            "address-validate"
+          ]
+        },
+        "slugs": [
+          "address-validate",
+          "xrp-address-validate",
+          "tron-address-validate",
+          "dogecoin-address-validate",
+          "eth-address-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "company registration number lookup norway",
+          "kind": "country",
+          "expect": [
+            "norwegian-company-data"
+          ]
+        },
+        "slugs": [
+          "norwegian-company-data",
+          "kyb-essentials-no",
+          "company-id-detect",
+          "lei-lookup",
+          "vat-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "Companies House",
+          "kind": "country",
+          "expect": [
+            "uk-company-data",
+            "uk-companies-house-officers",
+            "uk-filing-events"
+          ]
+        },
+        "slugs": [
+          "uk-company-data",
+          "uk-companies-house-officers"
+        ]
+      },
+      {
+        "query": {
+          "q": "Handelsregister",
+          "kind": "country",
+          "expect": [
+            "german-company-data"
+          ]
+        },
+        "slugs": [
+          "german-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "Bolagsverket",
+          "kind": "country",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "Irish company CRO number",
+          "kind": "country",
+          "expect": [
+            "irish-company-data"
+          ]
+        },
+        "slugs": [
+          "irish-company-data",
+          "kyb-essentials-ie",
+          "company-id-detect",
+          "domain-contact-extract",
+          "vat-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "French company SIREN",
+          "kind": "country",
+          "expect": [
+            "french-company-data"
+          ]
+        },
+        "slugs": [
+          "french-company-data",
+          "kyb-essentials-fr",
+          "invoice-verify-fr",
+          "company-enrich",
+          "company-news"
+        ]
+      },
+      {
+        "query": {
+          "q": "Australian ABN",
+          "kind": "country",
+          "expect": [
+            "au-company-data"
+          ]
+        },
+        "slugs": [
+          "au-company-data",
+          "company-enrich",
+          "gdpr-fine-lookup",
+          "ticker-lookup",
+          "privacy-policy-analyze"
+        ]
+      },
+      {
+        "query": {
+          "q": "Czech ICO",
+          "kind": "country",
+          "expect": [
+            "cz-ico-validate",
+            "cz-company-data"
+          ]
+        },
+        "slugs": [
+          "cz-company-data",
+          "company-enrich",
+          "gdpr-fine-lookup",
+          "ticker-lookup",
+          "privacy-policy-analyze"
+        ]
+      },
+      {
+        "query": {
+          "q": "US company SEC filings",
+          "kind": "country",
+          "expect": [
+            "sec-edgar-filings",
+            "sec-filing-events"
+          ]
+        },
+        "slugs": [
+          "sec-edgar-filings",
+          "us-company-data"
+        ]
+      },
+      {
+        "query": {
+          "q": "KYB check for a German company",
+          "kind": "workflow",
+          "expect": [
+            "kyb-essentials-de",
+            "kyb-complete-de"
+          ]
+        },
+        "slugs": [
+          "kyb-essentials-de",
+          "kyb-complete-de",
+          "german-company-data",
+          "company-id-detect",
+          "invoice-verify-de"
+        ]
+      },
+      {
+        "query": {
+          "q": "onboard a new supplier in Sweden",
+          "kind": "workflow",
+          "expect": [
+            "kyb-essentials-se",
+            "vendor-onboard",
+            "kyc-sweden"
+          ]
+        },
+        "slugs": [
+          "vendor-onboard",
+          "invoice-extract",
+          "receipt-categorize",
+          "customer-risk-screen"
+        ]
+      },
+      {
+        "query": {
+          "q": "check an invoice from a German supplier for fraud",
+          "kind": "workflow",
+          "expect": [
+            "invoice-verify-de"
+          ]
+        },
+        "slugs": [
+          "invoice-verify-de",
+          "invoice-extract",
+          "invoice-validate"
+        ]
+      },
+      {
+        "query": {
+          "q": "full due diligence on a UK company",
+          "kind": "workflow",
+          "expect": [
+            "kyb-complete-uk",
+            "enhanced-due-diligence"
+          ]
+        },
+        "slugs": [
+          "kyb-complete-uk",
+          "enhanced-due-diligence",
+          "web3-counterparty-kyb",
+          "risk-narrative-generate",
+          "token-project-dd"
+        ]
+      },
+      {
+        "query": {
+          "q": "audit the security of my website",
+          "kind": "workflow",
+          "expect": [
+            "website-security-audit",
+            "header-security-check",
+            "domain-security-check"
+          ]
+        },
+        "slugs": [
+          "website-security-audit",
+          "gdpr-audit",
+          "package-security-audit",
+          "workflow-security-audit",
+          "email-audit"
+        ]
+      },
+      {
+        "query": {
+          "q": "check a crypto wallet before sending funds",
+          "kind": "workflow",
+          "expect": [
+            "web3-counterparty-kyb",
+            "crypto-counterparty-kyb",
+            "wallet-age-check",
+            "stablecoin-flow-check"
+          ]
+        },
+        "slugs": [
+          "wallet-age-check",
+          "crypto-counterparty-kyb",
+          "defi-risk-check",
+          "wallet-balance-lookup",
+          "wallet-transactions-lookup"
+        ]
+      },
+      {
+        "query": {
+          "q": "book a flight to Paris",
+          "kind": "none",
+          "expect": []
+        },
+        "slugs": [
+          "paid-api-preflight"
+        ]
+      },
+      {
+        "query": {
+          "q": "generate a photo of a cat",
+          "kind": "none",
+          "expect": []
+        },
+        "slugs": [
+          "receipt-categorize",
+          "image-to-text",
+          "gitignore-generate",
+          "dockerfile-generate",
+          "fake-data-generate"
+        ]
+      },
+      {
+        "query": {
+          "q": "send an SMS",
+          "kind": "none",
+          "expect": []
+        },
+        "slugs": [
+          "phone-type-detect",
+          "email-auth-check"
+        ]
+      }
+    ],
+    "benchmark": {
+      "queries": 1000,
+      "index_build_ms": 30.835699000000005,
+      "total_ms": 612.413024,
+      "mean_ms": 0.612413024,
+      "p95_ms": 1.6137579999999616,
+      "max_ms": 3.2236199999999826
+    }
+  },
+  "after": {
+    "engine": "keyword",
+    "mode": "typeahead",
+    "metrics": [
+      {
+        "kind": "country",
+        "count": 9,
+        "top1": 9,
+        "top3": 9,
+        "mrr5": 1
+      },
+      {
+        "kind": "keyword",
+        "count": 30,
+        "top1": 30,
+        "top3": 30,
+        "mrr5": 1
+      },
+      {
+        "kind": "natural",
+        "count": 37,
+        "top1": 31,
+        "top3": 36,
+        "mrr5": 0.9054054054054054
+      },
+      {
+        "kind": "typo",
+        "count": 5,
+        "top1": 5,
+        "top3": 5,
+        "mrr5": 1
+      },
+      {
+        "kind": "workflow",
+        "count": 6,
+        "top1": 6,
+        "top3": 6,
+        "mrr5": 1
+      },
+      {
+        "kind": "none",
+        "count": 3,
+        "top1": 2,
+        "top3": 2,
+        "mrr5": 0.6666666666666666
+      },
+      {
+        "kind": "overall",
+        "count": 87,
+        "top1": 81,
+        "top3": 86,
+        "mrr5": 0.9597701149425287
+      }
+    ],
+    "rows": [
+      {
+        "query": {
+          "q": "vat",
+          "kind": "keyword",
+          "expect": [
+            "vat-validate",
+            "vat-format-validate",
+            "vat-rate-lookup"
+          ]
+        },
+        "slugs": [
+          "vat-format-validate",
+          "vat-validate",
+          "vat-rate-lookup",
+          "cz-unreliable-vat-payer",
+          "belgian-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "iban",
+          "kind": "keyword",
+          "expect": [
+            "iban-validate",
+            "iban-to-bank"
+          ]
+        },
+        "slugs": [
+          "iban-validate",
+          "iban-to-bank",
+          "payment-validate",
+          "sepa-readiness",
+          "sepa-xml-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "sanctions",
+          "kind": "keyword",
+          "expect": [
+            "sanctions-check"
+          ]
+        },
+        "slugs": [
+          "sanctions-check",
+          "verify-us-company",
+          "vendor-risk-assess",
+          "kyb-essentials-au",
+          "aml-risk-score"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "pep",
+          "kind": "keyword",
+          "expect": [
+            "pep-check"
+          ]
+        },
+        "slugs": [
+          "pep-check",
+          "verify-us-company",
+          "aml-risk-score",
+          "customer-risk-screen",
+          "kyc-finland"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "dns",
+          "kind": "keyword",
+          "expect": [
+            "dns-lookup"
+          ]
+        },
+        "slugs": [
+          "dns-lookup",
+          "lead-email-verify",
+          "domain-intel",
+          "domain-trust",
+          "ens-resolve"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "whois",
+          "kind": "keyword",
+          "expect": [
+            "whois-lookup"
+          ]
+        },
+        "slugs": [
+          "whois-lookup",
+          "domain-security-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "lei",
+          "kind": "keyword",
+          "expect": [
+            "lei-lookup"
+          ]
+        },
+        "slugs": [
+          "lei-lookup",
+          "gleif-l2-ubo-lookup",
+          "gleif-l2-children-lookup",
+          "kyb-essentials-au",
+          "german-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "ssl",
+          "kind": "keyword",
+          "expect": [
+            "ssl-check",
+            "ssl-certificate-chain"
+          ]
+        },
+        "slugs": [
+          "ssl-check",
+          "ssl-certificate-chain",
+          "domain-intel",
+          "url-health-check",
+          "domain-trust"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "markdown",
+          "kind": "keyword",
+          "expect": [
+            "url-to-markdown",
+            "markdown-to-html"
+          ]
+        },
+        "slugs": [
+          "url-to-markdown",
+          "markdown-to-html",
+          "api-docs-generate",
+          "web-extract-clean",
+          "json-repair"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "pdf",
+          "kind": "keyword",
+          "expect": [
+            "pdf-extract",
+            "html-to-pdf"
+          ]
+        },
+        "slugs": [
+          "html-to-pdf",
+          "pdf-extract",
+          "resume-parse",
+          "invoice-extract",
+          "arxiv-search"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "translate",
+          "kind": "keyword",
+          "expect": [
+            "translate"
+          ]
+        },
+        "slugs": [
+          "translate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "email",
+          "kind": "keyword",
+          "expect": [
+            "email-validate",
+            "email-validate-bulk",
+            "email-deliverability-check"
+          ]
+        },
+        "slugs": [
+          "email-validate",
+          "email-draft",
+          "email-validate-bulk",
+          "email-audit",
+          "email-deliverability-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "phone",
+          "kind": "keyword",
+          "expect": [
+            "phone-validate",
+            "phone-normalize",
+            "phone-type-detect"
+          ]
+        },
+        "slugs": [
+          "phone-validate",
+          "phone-normalize",
+          "phone-type-detect",
+          "domain-contact-extract",
+          "contact-verify"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "invoice",
+          "kind": "keyword",
+          "expect": [
+            "invoice-extract",
+            "invoice-validate",
+            "invoice-verify-{cc}",
+            "invoice-process"
+          ]
+        },
+        "slugs": [
+          "invoice-validate",
+          "invoice-extract",
+          "invoice-verify-au",
+          "invoice-process",
+          "risk-narrative-generate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "swedish company",
+          "kind": "keyword",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data",
+          "kyb-essentials-se",
+          "invoice-verify-se",
+          "company-enrich",
+          "company-news"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "german company",
+          "kind": "keyword",
+          "expect": [
+            "german-company-data"
+          ]
+        },
+        "slugs": [
+          "german-company-data",
+          "kyb-essentials-de",
+          "invoice-verify-de",
+          "company-enrich",
+          "company-news"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "uk company",
+          "kind": "keyword",
+          "expect": [
+            "uk-company-data"
+          ]
+        },
+        "slugs": [
+          "uk-company-data",
+          "uk-companies-house-officers",
+          "kyb-essentials-uk",
+          "beneficial-ownership-lookup",
+          "uk-filing-events"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "exchange rate",
+          "kind": "keyword",
+          "expect": [
+            "exchange-rate",
+            "currency-convert"
+          ]
+        },
+        "slugs": [
+          "exchange-rate",
+          "forex-history"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "stock price",
+          "kind": "keyword",
+          "expect": [
+            "stock-quote"
+          ]
+        },
+        "slugs": [
+          "stock-quote",
+          "nl-housing-stats",
+          "price-compare",
+          "nl-housing-price-index",
+          "gas-price-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "weather",
+          "kind": "keyword",
+          "expect": [
+            "weather-lookup"
+          ]
+        },
+        "slugs": [
+          "weather-lookup"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "bitcoin",
+          "kind": "keyword",
+          "expect": [
+            "bitcoin-address-validate"
+          ]
+        },
+        "slugs": [
+          "bitcoin-address-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "google",
+          "kind": "keyword",
+          "expect": [
+            "google-search"
+          ]
+        },
+        "slugs": [
+          "google-search",
+          "docstring-generate",
+          "brand-mention-search",
+          "backlink-check",
+          "page-speed-test"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "screenshot",
+          "kind": "keyword",
+          "expect": [
+            "screenshot-url"
+          ]
+        },
+        "slugs": [
+          "screenshot-url",
+          "image-to-text"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "tech stack",
+          "kind": "keyword",
+          "expect": [
+            "tech-stack-detect",
+            "company-tech-stack"
+          ]
+        },
+        "slugs": [
+          "company-tech-stack",
+          "tech-stack-detect",
+          "company-enrich",
+          "competitor-read",
+          "competitor-snapshot"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "ubo",
+          "kind": "keyword",
+          "expect": [
+            "beneficial-ownership-lookup",
+            "gleif-l2-ubo-lookup"
+          ]
+        },
+        "slugs": [
+          "gleif-l2-ubo-lookup"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "kyb",
+          "kind": "keyword",
+          "expect": [
+            "kyb-essentials-{cc}",
+            "kyb-complete-{cc}"
+          ]
+        },
+        "slugs": [
+          "kyb-essentials-at",
+          "kyb-complete-at",
+          "crypto-counterparty-kyb",
+          "web3-counterparty-kyb",
+          "lei-lookup"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "insolvency",
+          "kind": "keyword",
+          "expect": [
+            "insolvency-check",
+            "french-insolvency-check",
+            "no-bankruptcy-check"
+          ]
+        },
+        "slugs": [
+          "insolvency-check",
+          "french-insolvency-check",
+          "fr-bodacc-lookup",
+          "swedish-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "holidays",
+          "kind": "keyword",
+          "expect": [
+            "public-holiday-lookup",
+            "holiday-calendar"
+          ]
+        },
+        "slugs": [
+          "holiday-calendar",
+          "public-holiday-lookup",
+          "business-day-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "timezone",
+          "kind": "keyword",
+          "expect": [
+            "timezone-lookup",
+            "timezone-meeting-find"
+          ]
+        },
+        "slugs": [
+          "timezone-lookup",
+          "timezone-meeting-find"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "json",
+          "kind": "keyword",
+          "expect": [
+            "json-repair",
+            "json-schema-validate",
+            "json-to-csv",
+            "json-to-typescript",
+            "json-to-zod",
+            "json-to-pydantic",
+            "flatten-json",
+            "diff-json"
+          ]
+        },
+        "slugs": [
+          "json-repair",
+          "json-schema-validate",
+          "json-to-csv",
+          "csv-to-json",
+          "diff-json"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "check if a company is bankrupt",
+          "kind": "natural",
+          "expect": [
+            "insolvency-check",
+            "no-bankruptcy-check",
+            "french-insolvency-check",
+            "fr-bodacc-lookup"
+          ]
+        },
+        "slugs": [
+          "no-bankruptcy-check",
+          "insolvency-check",
+          "verify-us-company",
+          "company-id-detect",
+          "au-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "verify a VAT number",
+          "kind": "natural",
+          "expect": [
+            "vat-validate"
+          ]
+        },
+        "slugs": [
+          "vat-format-validate",
+          "vat-validate",
+          "invoice-validate",
+          "id-number-validate",
+          "invoice-process"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "validate an IBAN",
+          "kind": "natural",
+          "expect": [
+            "iban-validate"
+          ]
+        },
+        "slugs": [
+          "iban-validate",
+          "sepa-xml-validate",
+          "payment-validate",
+          "sepa-readiness"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "look up a Swedish company",
+          "kind": "natural",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data",
+          "kyb-essentials-se",
+          "invoice-verify-se",
+          "company-enrich",
+          "company-news"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "who owns this company",
+          "kind": "natural",
+          "expect": [
+            "beneficial-ownership-lookup",
+            "gleif-l2-ubo-lookup"
+          ]
+        },
+        "slugs": [
+          "beneficial-ownership-lookup",
+          "gleif-l2-children-lookup",
+          "domain-contact-extract",
+          "breach-exposure-check",
+          "classify-text"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "screen a person against sanctions lists",
+          "kind": "natural",
+          "expect": [
+            "sanctions-check"
+          ]
+        },
+        "slugs": [
+          "sanctions-check",
+          "verify-us-company",
+          "pep-check",
+          "aml-risk-score",
+          "kyb-essentials-au"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "is this person a politically exposed person",
+          "kind": "natural",
+          "expect": [
+            "pep-check"
+          ]
+        },
+        "slugs": [
+          "pep-check",
+          "verify-us-company"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "negative news about a company",
+          "kind": "natural",
+          "expect": [
+            "adverse-media-check"
+          ]
+        },
+        "slugs": [
+          "company-news",
+          "adverse-media-check",
+          "hacker-news-search"
+        ],
+        "topCoverage": 0.6666666666666666
+      },
+      {
+        "query": {
+          "q": "turn a webpage into markdown",
+          "kind": "natural",
+          "expect": [
+            "url-to-markdown"
+          ]
+        },
+        "slugs": [
+          "markdown-to-html",
+          "url-to-markdown",
+          "api-docs-generate",
+          "web-extract-clean",
+          "json-repair"
+        ],
+        "topCoverage": 0.6666666666666666
+      },
+      {
+        "query": {
+          "q": "get the plain text of a web page",
+          "kind": "natural",
+          "expect": [
+            "url-to-text",
+            "url-to-markdown",
+            "web-extract"
+          ]
+        },
+        "slugs": [
+          "url-to-text",
+          "web-extract",
+          "link-extract",
+          "screenshot-url",
+          "url-to-markdown"
+        ],
+        "topCoverage": 0.75
+      },
+      {
+        "query": {
+          "q": "extract data from an invoice",
+          "kind": "natural",
+          "expect": [
+            "invoice-extract"
+          ]
+        },
+        "slugs": [
+          "invoice-extract",
+          "invoice-process",
+          "invoice-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "read the text in a scanned image",
+          "kind": "natural",
+          "expect": [
+            "image-to-text"
+          ]
+        },
+        "slugs": [
+          "image-to-text",
+          "og-image-check"
+        ],
+        "topCoverage": 0.75
+      },
+      {
+        "query": {
+          "q": "check if an email address is real",
+          "kind": "natural",
+          "expect": [
+            "email-validate",
+            "email-deliverability-check",
+            "lead-email-verify"
+          ]
+        },
+        "slugs": [
+          "lead-email-verify",
+          "email-validate",
+          "email-reputation-score",
+          "domain-contact-extract",
+          "email-deliverability-check"
+        ],
+        "topCoverage": 0.75
+      },
+      {
+        "query": {
+          "q": "what technologies does this website use",
+          "kind": "natural",
+          "expect": [
+            "tech-stack-detect",
+            "company-tech-stack"
+          ]
+        },
+        "slugs": [
+          "tech-stack-detect",
+          "website-carbon-estimate",
+          "website-health",
+          "gdpr-website-check",
+          "website-security-audit"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "is this domain trustworthy",
+          "kind": "natural",
+          "expect": [
+            "domain-reputation",
+            "domain-trust",
+            "domain-age-check"
+          ]
+        },
+        "slugs": [
+          "domain-trust",
+          "domain-security-check",
+          "domain-reputation",
+          "domain-intel",
+          "domain-age-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "show me the DNS records for a domain",
+          "kind": "natural",
+          "expect": [
+            "dns-lookup"
+          ]
+        },
+        "slugs": [
+          "dns-lookup",
+          "whois-lookup",
+          "mx-lookup",
+          "domain-reputation",
+          "domain-intel"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "convert 100 euro to dollars",
+          "kind": "natural",
+          "expect": [
+            "currency-convert",
+            "exchange-rate"
+          ]
+        },
+        "slugs": [
+          "currency-convert",
+          "unit-convert",
+          "code-convert",
+          "iso-country-lookup",
+          "image-resize"
+        ],
+        "topCoverage": 0.25
+      },
+      {
+        "query": {
+          "q": "search Google and get the results",
+          "kind": "natural",
+          "expect": [
+            "google-search"
+          ]
+        },
+        "slugs": [
+          "google-search",
+          "serp-analyze",
+          "brand-mention-search",
+          "keyword-rank-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "find academic papers on a topic",
+          "kind": "natural",
+          "expect": [
+            "academic-paper-search",
+            "arxiv-search",
+            "pubmed-search"
+          ]
+        },
+        "slugs": [
+          "academic-paper-search",
+          "paper-details"
+        ],
+        "topCoverage": 0.6666666666666666
+      },
+      {
+        "query": {
+          "q": "GDP of Germany",
+          "kind": "natural",
+          "expect": [
+            "country-economic-indicators"
+          ]
+        },
+        "slugs": [
+          "country-economic-indicators"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "is this bitcoin address valid",
+          "kind": "natural",
+          "expect": [
+            "bitcoin-address-validate"
+          ]
+        },
+        "slugs": [
+          "bitcoin-address-validate",
+          "address-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "check whether a phone number is valid",
+          "kind": "natural",
+          "expect": [
+            "phone-validate"
+          ]
+        },
+        "slugs": [
+          "phone-validate",
+          "phone-type-detect",
+          "phone-normalize",
+          "id-number-validate",
+          "vat-format-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "does this site have a valid SSL certificate",
+          "kind": "natural",
+          "expect": [
+            "ssl-check",
+            "ssl-certificate-chain"
+          ]
+        },
+        "slugs": [
+          "ssl-check",
+          "ssl-certificate-chain",
+          "defi-risk-check",
+          "website-health",
+          "defi-protocol-risk"
+        ],
+        "topCoverage": 0.75
+      },
+      {
+        "query": {
+          "q": "summarize a long document",
+          "kind": "natural",
+          "expect": [
+            "summarize"
+          ]
+        },
+        "slugs": [
+          "summarize",
+          "invoice-validate",
+          "log-parse",
+          "invoice-extract",
+          "context-window-optimize"
+        ],
+        "topCoverage": 0.3333333333333333
+      },
+      {
+        "query": {
+          "q": "detect the language of a text",
+          "kind": "natural",
+          "expect": [
+            "language-detect"
+          ]
+        },
+        "slugs": [
+          "language-detect",
+          "translate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "remove personal data from text",
+          "kind": "natural",
+          "expect": [
+            "pii-redact"
+          ]
+        },
+        "slugs": [
+          "pii-redact",
+          "country-tax-rates",
+          "deduplicate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "find the HS code for a product",
+          "kind": "natural",
+          "expect": [
+            "hs-code-lookup"
+          ]
+        },
+        "slugs": [
+          "hs-code-lookup",
+          "customs-duty-lookup"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "track a parcel",
+          "kind": "natural",
+          "expect": [
+            "shipping-track"
+          ]
+        },
+        "slugs": [
+          "container-track",
+          "shipping-track",
+          "cookie-scan",
+          "gdpr-website-check"
+        ],
+        "topCoverage": 0.5
+      },
+      {
+        "query": {
+          "q": "is this website up",
+          "kind": "natural",
+          "expect": [
+            "uptime-check",
+            "url-health-check",
+            "page-exists"
+          ]
+        },
+        "slugs": [
+          "website-carbon-estimate",
+          "website-health",
+          "gdpr-website-check",
+          "website-security-audit",
+          "gdpr-audit"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "who are the directors of a UK company",
+          "kind": "natural",
+          "expect": [
+            "uk-companies-house-officers"
+          ]
+        },
+        "slugs": [
+          "uk-disqualified-director-check",
+          "uk-companies-house-officers"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "has this director been disqualified",
+          "kind": "natural",
+          "expect": [
+            "uk-disqualified-director-check"
+          ]
+        },
+        "slugs": [
+          "uk-disqualified-director-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "check a payee name before paying a UK bank account",
+          "kind": "natural",
+          "expect": [
+            "uk-cop-check"
+          ]
+        },
+        "slugs": [
+          "uk-cop-check"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "find the bank for a BIC code",
+          "kind": "natural",
+          "expect": [
+            "bank-bic-lookup",
+            "swift-validate"
+          ]
+        },
+        "slugs": [
+          "bank-bic-lookup",
+          "swift-validate",
+          "iban-to-bank",
+          "iban-validate",
+          "cz-bank-account-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "what is the VAT rate in France",
+          "kind": "natural",
+          "expect": [
+            "vat-rate-lookup",
+            "country-tax-rates"
+          ]
+        },
+        "slugs": [
+          "vat-rate-lookup",
+          "country-tax-rates",
+          "sepa-readiness",
+          "exchange-rate",
+          "forex-history"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "find public tenders in the EU",
+          "kind": "natural",
+          "expect": [
+            "ted-procurement"
+          ]
+        },
+        "slugs": [
+          "ted-procurement"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "count tokens in a prompt",
+          "kind": "natural",
+          "expect": [
+            "token-count"
+          ]
+        },
+        "slugs": [
+          "token-count",
+          "prompt-compress",
+          "prompt-optimize"
+        ],
+        "topCoverage": 0.6666666666666666
+      },
+      {
+        "query": {
+          "q": "fix broken JSON from an LLM",
+          "kind": "natural",
+          "expect": [
+            "json-repair",
+            "llm-output-validate"
+          ]
+        },
+        "slugs": [
+          "json-repair",
+          "tool-call-validate",
+          "csv-clean",
+          "llm-output-validate",
+          "llm-cost-calculate"
+        ],
+        "topCoverage": 0.75
+      },
+      {
+        "query": {
+          "q": "sanctoins check",
+          "kind": "typo",
+          "expect": [
+            "sanctions-check"
+          ]
+        },
+        "slugs": [
+          "sanctions-check",
+          "defi-risk-check",
+          "web3-vasp-check",
+          "vendor-onboard",
+          "verify-us-company"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "beneficail owner",
+          "kind": "typo",
+          "expect": [
+            "beneficial-ownership-lookup",
+            "gleif-l2-ubo-lookup"
+          ]
+        },
+        "slugs": [
+          "beneficial-ownership-lookup",
+          "enhanced-due-diligence",
+          "gleif-l2-ubo-lookup",
+          "whois-lookup"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "swedsih company",
+          "kind": "typo",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data",
+          "kyb-essentials-se",
+          "invoice-verify-se",
+          "company-enrich",
+          "company-news"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "valdiate iban",
+          "kind": "typo",
+          "expect": [
+            "iban-validate"
+          ]
+        },
+        "slugs": [
+          "iban-validate",
+          "iban-to-bank",
+          "invoice-verify-au",
+          "payment-validate",
+          "sepa-readiness"
+        ],
+        "topCoverage": 0.5
+      },
+      {
+        "query": {
+          "q": "adress validation",
+          "kind": "typo",
+          "expect": [
+            "address-validate"
+          ]
+        },
+        "slugs": [
+          "address-validate",
+          "xrp-address-validate",
+          "tron-address-validate",
+          "dogecoin-address-validate",
+          "eth-address-validate"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "company registration number lookup norway",
+          "kind": "country",
+          "expect": [
+            "norwegian-company-data"
+          ]
+        },
+        "slugs": [
+          "norwegian-company-data",
+          "kyb-essentials-no",
+          "company-id-detect",
+          "lei-lookup",
+          "vat-validate"
+        ],
+        "topCoverage": 0.75
+      },
+      {
+        "query": {
+          "q": "Companies House",
+          "kind": "country",
+          "expect": [
+            "uk-company-data",
+            "uk-companies-house-officers",
+            "uk-filing-events"
+          ]
+        },
+        "slugs": [
+          "uk-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "Handelsregister",
+          "kind": "country",
+          "expect": [
+            "german-company-data"
+          ]
+        },
+        "slugs": [
+          "german-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "Bolagsverket",
+          "kind": "country",
+          "expect": [
+            "swedish-company-data"
+          ]
+        },
+        "slugs": [
+          "swedish-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "Irish company CRO number",
+          "kind": "country",
+          "expect": [
+            "irish-company-data"
+          ]
+        },
+        "slugs": [
+          "irish-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "French company SIREN",
+          "kind": "country",
+          "expect": [
+            "french-company-data"
+          ]
+        },
+        "slugs": [
+          "french-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "Australian ABN",
+          "kind": "country",
+          "expect": [
+            "au-company-data"
+          ]
+        },
+        "slugs": [
+          "au-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "Czech ICO",
+          "kind": "country",
+          "expect": [
+            "cz-ico-validate",
+            "cz-company-data"
+          ]
+        },
+        "slugs": [
+          "cz-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "US company SEC filings",
+          "kind": "country",
+          "expect": [
+            "sec-edgar-filings",
+            "sec-filing-events"
+          ]
+        },
+        "slugs": [
+          "sec-edgar-filings",
+          "us-company-data"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "KYB check for a German company",
+          "kind": "workflow",
+          "expect": [
+            "kyb-essentials-de",
+            "kyb-complete-de"
+          ]
+        },
+        "slugs": [
+          "kyb-essentials-de",
+          "kyb-complete-de",
+          "german-company-data",
+          "company-id-detect",
+          "invoice-verify-de"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "onboard a new supplier in Sweden",
+          "kind": "workflow",
+          "expect": [
+            "kyb-essentials-se",
+            "vendor-onboard",
+            "kyc-sweden"
+          ]
+        },
+        "slugs": [
+          "vendor-onboard",
+          "invoice-extract",
+          "receipt-categorize",
+          "customer-risk-screen"
+        ],
+        "topCoverage": 0.5
+      },
+      {
+        "query": {
+          "q": "check an invoice from a German supplier for fraud",
+          "kind": "workflow",
+          "expect": [
+            "invoice-verify-de"
+          ]
+        },
+        "slugs": [
+          "invoice-verify-de",
+          "invoice-extract",
+          "invoice-validate"
+        ],
+        "topCoverage": 0.5
+      },
+      {
+        "query": {
+          "q": "full due diligence on a UK company",
+          "kind": "workflow",
+          "expect": [
+            "kyb-complete-uk",
+            "enhanced-due-diligence"
+          ]
+        },
+        "slugs": [
+          "kyb-complete-uk",
+          "enhanced-due-diligence",
+          "web3-counterparty-kyb",
+          "risk-narrative-generate",
+          "token-project-dd"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "audit the security of my website",
+          "kind": "workflow",
+          "expect": [
+            "website-security-audit",
+            "header-security-check",
+            "domain-security-check"
+          ]
+        },
+        "slugs": [
+          "website-security-audit",
+          "gdpr-audit",
+          "package-security-audit",
+          "workflow-security-audit",
+          "email-audit"
+        ],
+        "topCoverage": 1
+      },
+      {
+        "query": {
+          "q": "check a crypto wallet before sending funds",
+          "kind": "workflow",
+          "expect": [
+            "web3-counterparty-kyb",
+            "crypto-counterparty-kyb",
+            "wallet-age-check",
+            "stablecoin-flow-check"
+          ]
+        },
+        "slugs": [
+          "wallet-age-check",
+          "crypto-counterparty-kyb",
+          "defi-risk-check",
+          "wallet-balance-lookup",
+          "wallet-transactions-lookup"
+        ],
+        "topCoverage": 0.4
+      },
+      {
+        "query": {
+          "q": "book a flight to Paris",
+          "kind": "none",
+          "expect": []
+        },
+        "slugs": [
+          "paid-api-preflight"
+        ],
+        "topCoverage": 0.3333333333333333
+      },
+      {
+        "query": {
+          "q": "generate a photo of a cat",
+          "kind": "none",
+          "expect": []
+        },
+        "slugs": [
+          "receipt-categorize",
+          "image-to-text",
+          "gitignore-generate",
+          "dockerfile-generate",
+          "fake-data-generate"
+        ],
+        "topCoverage": 0.3333333333333333
+      },
+      {
+        "query": {
+          "q": "send an SMS",
+          "kind": "none",
+          "expect": []
+        },
+        "slugs": [
+          "phone-type-detect",
+          "email-auth-check"
+        ],
+        "topCoverage": 1
+      }
+    ],
+    "benchmark": {
+      "queries": 1000,
+      "index_build_ms": 88.24169799999999,
+      "total_ms": 574.4113039999999,
+      "mean_ms": 0.5744113039999998,
+      "p95_ms": 1.0299509999999827,
+      "max_ms": 8.384803000000034
+    }
+  },
+  "per_query_changes": [
+    {
+      "q": "Companies House",
+      "before": [
+        "uk-company-data",
+        "uk-companies-house-officers"
+      ],
+      "after": [
+        "uk-company-data"
+      ]
+    },
+    {
+      "q": "Irish company CRO number",
+      "before": [
+        "irish-company-data",
+        "kyb-essentials-ie",
+        "company-id-detect",
+        "domain-contact-extract",
+        "vat-validate"
+      ],
+      "after": [
+        "irish-company-data"
+      ]
+    },
+    {
+      "q": "French company SIREN",
+      "before": [
+        "french-company-data",
+        "kyb-essentials-fr",
+        "invoice-verify-fr",
+        "company-enrich",
+        "company-news"
+      ],
+      "after": [
+        "french-company-data"
+      ]
+    },
+    {
+      "q": "Australian ABN",
+      "before": [
+        "au-company-data",
+        "company-enrich",
+        "gdpr-fine-lookup",
+        "ticker-lookup",
+        "privacy-policy-analyze"
+      ],
+      "after": [
+        "au-company-data"
+      ]
+    },
+    {
+      "q": "Czech ICO",
+      "before": [
+        "cz-company-data",
+        "company-enrich",
+        "gdpr-fine-lookup",
+        "ticker-lookup",
+        "privacy-policy-analyze"
+      ],
+      "after": [
+        "cz-company-data"
+      ]
+    }
+  ],
+  "probes_before": [
+    {
+      "q": "book a flight to Paris",
+      "hits": [
+        {
+          "slug": "paid-api-preflight",
+          "coverage": 0.3333333333333333,
+          "score": 4.898447612042185
+        }
+      ]
+    },
+    {
+      "q": "generate a photo of a cat",
+      "hits": [
+        {
+          "slug": "receipt-categorize",
+          "coverage": 0.3333333333333333,
+          "score": 3.4866674646174647
+        },
+        {
+          "slug": "image-to-text",
+          "coverage": 0.3333333333333333,
+          "score": 3.41363661709497
+        },
+        {
+          "slug": "gitignore-generate",
+          "coverage": 0.3333333333333333,
+          "score": 2.5985033436678404
+        }
+      ]
+    },
+    {
+      "q": "send an SMS",
+      "hits": [
+        {
+          "slug": "phone-type-detect",
+          "coverage": 1,
+          "score": 10.856858296793785
+        },
+        {
+          "slug": "email-auth-check",
+          "coverage": 0.5,
+          "score": 3.4677266545013326
+        }
+      ]
+    },
+    {
+      "q": "gold price",
+      "hits": [
+        {
+          "slug": "nl-housing-price-index",
+          "coverage": 1,
+          "score": 9.920434874665673
+        },
+        {
+          "slug": "nl-housing-stats",
+          "coverage": 1,
+          "score": 6.443509051325334
+        },
+        {
+          "slug": "price-compare",
+          "coverage": 0.5,
+          "score": 5.361087053049009
+        }
+      ]
+    },
+    {
+      "q": "contact us",
+      "hits": [
+        {
+          "slug": "domain-contact-extract",
+          "coverage": 1,
+          "score": 8.45596337302616
+        },
+        {
+          "slug": "contact-verify",
+          "coverage": 1,
+          "score": 8.088255212960533
+        },
+        {
+          "slug": "email-validate",
+          "coverage": 1,
+          "score": 5.25699645159711
+        }
+      ]
+    },
+    {
+      "q": "send us an email",
+      "hits": [
+        {
+          "slug": "email-auth-check",
+          "coverage": 1,
+          "score": 9.416336145497795
+        },
+        {
+          "slug": "phone-type-detect",
+          "coverage": 0.5,
+          "score": 3.6172247544781833
+        },
+        {
+          "slug": "email-validate",
+          "coverage": 0.5,
+          "score": 3.342532485379418
+        }
+      ]
+    },
+    {
+      "q": "abn lookup",
+      "hits": [
+        {
+          "slug": "barcode-lookup",
+          "coverage": 1,
+          "score": 2.7136027215327774
+        },
+        {
+          "slug": "port-lookup",
+          "coverage": 1,
+          "score": 2.7136027215327774
+        },
+        {
+          "slug": "ticker-lookup",
+          "coverage": 1,
+          "score": 2.7136027215327774
+        }
+      ]
+    },
+    {
+      "q": "check abn",
+      "hits": [
+        {
+          "slug": "kyb-complete-au",
+          "coverage": 1,
+          "score": 2.2144874038856983
+        },
+        {
+          "slug": "api-health-check",
+          "coverage": 1,
+          "score": 1.7791542901601174
+        },
+        {
+          "slug": "url-health-check",
+          "coverage": 1,
+          "score": 1.7743094512963828
+        }
+      ]
+    },
+    {
+      "q": "kvk lookup",
+      "hits": [
+        {
+          "slug": "nl-bag-address",
+          "coverage": 1,
+          "score": 3.8741373724628354
+        },
+        {
+          "slug": "barcode-lookup",
+          "coverage": 1,
+          "score": 2.7136027215327774
+        },
+        {
+          "slug": "port-lookup",
+          "coverage": 1,
+          "score": 2.7136027215327774
+        }
+      ]
+    },
+    {
+      "q": "orgnr 1234567890",
+      "hits": []
+    },
+    {
+      "q": "malt",
+      "hits": [
+        {
+          "slug": "company-enrich",
+          "coverage": 1,
+          "score": 2.9717103985619127
+        },
+        {
+          "slug": "gdpr-fine-lookup",
+          "coverage": 1,
+          "score": 2.956133859487401
+        },
+        {
+          "slug": "ticker-lookup",
+          "coverage": 1,
+          "score": 2.956133859487401
+        }
+      ]
+    }
+  ],
+  "probes_after": [
+    {
+      "q": "book a flight to Paris",
+      "hits": [
+        {
+          "slug": "paid-api-preflight",
+          "coverage": 0.3333333333333333,
+          "score": 4.898447612042185
+        }
+      ]
+    },
+    {
+      "q": "generate a photo of a cat",
+      "hits": [
+        {
+          "slug": "receipt-categorize",
+          "coverage": 0.3333333333333333,
+          "score": 3.4866674646174647
+        },
+        {
+          "slug": "image-to-text",
+          "coverage": 0.3333333333333333,
+          "score": 3.41363661709497
+        },
+        {
+          "slug": "gitignore-generate",
+          "coverage": 0.3333333333333333,
+          "score": 2.871689045479235
+        }
+      ]
+    },
+    {
+      "q": "send an SMS",
+      "hits": [
+        {
+          "slug": "phone-type-detect",
+          "coverage": 1,
+          "score": 10.856858296793785
+        },
+        {
+          "slug": "email-auth-check",
+          "coverage": 0.5,
+          "score": 3.4677266545013326
+        }
+      ]
+    },
+    {
+      "q": "gold price",
+      "hits": [
+        {
+          "slug": "price-compare",
+          "coverage": 0.5,
+          "score": 5.361087053049009
+        },
+        {
+          "slug": "nl-housing-price-index",
+          "coverage": 0.5,
+          "score": 5.2104410850153045
+        },
+        {
+          "slug": "gas-price-check",
+          "coverage": 0.5,
+          "score": 5.137837308526019
+        }
+      ]
+    },
+    {
+      "q": "contact us",
+      "hits": [
+        {
+          "slug": "domain-contact-extract",
+          "coverage": 1,
+          "score": 8.45596337302616
+        },
+        {
+          "slug": "contact-verify",
+          "coverage": 1,
+          "score": 8.088255212960533
+        },
+        {
+          "slug": "email-validate",
+          "coverage": 1,
+          "score": 5.25699645159711
+        }
+      ]
+    },
+    {
+      "q": "send us an email",
+      "hits": [
+        {
+          "slug": "email-auth-check",
+          "coverage": 1,
+          "score": 9.416336145497795
+        },
+        {
+          "slug": "phone-type-detect",
+          "coverage": 0.5,
+          "score": 3.6172247544781833
+        },
+        {
+          "slug": "email-validate",
+          "coverage": 0.5,
+          "score": 3.342532485379418
+        }
+      ]
+    },
+    {
+      "q": "abn lookup",
+      "hits": [
+        {
+          "slug": "au-company-data",
+          "coverage": 1,
+          "score": 32.41980556577515
+        }
+      ]
+    },
+    {
+      "q": "check abn",
+      "hits": [
+        {
+          "slug": "au-company-data",
+          "coverage": 1,
+          "score": 32.41980556577515
+        }
+      ]
+    },
+    {
+      "q": "kvk lookup",
+      "hits": [
+        {
+          "slug": "company-id-detect",
+          "coverage": 0.5,
+          "score": 7
+        },
+        {
+          "slug": "id-number-validate",
+          "coverage": 0,
+          "score": 4
+        }
+      ]
+    },
+    {
+      "q": "orgnr 1234567890",
+      "hits": [
+        {
+          "slug": "swedish-company-data",
+          "coverage": 1,
+          "score": 46.93315235951609
+        }
+      ]
+    },
+    {
+      "q": "malt",
+      "hits": []
+    }
+  ],
+  "oversized_queries": [
+    {
+      "bytes": 10240,
+      "elapsed_ms": 8.22580899999997
+    },
+    {
+      "bytes": 11000,
+      "elapsed_ms": 1.4474569999999858
+    },
+    {
+      "bytes": 10240,
+      "elapsed_ms": 0.07294000000001688
+    },
+    {
+      "bytes": 10240,
+      "elapsed_ms": 18.79714899999999
+    }
+  ],
+  "old_engine_distinct_query_ms": 1221.714905
+}

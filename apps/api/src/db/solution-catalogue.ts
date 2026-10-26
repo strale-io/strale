@@ -1445,7 +1445,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Everything your SDR agent needs to decide whether to pursue a company: filing events, news sentiment, officers, tech stack, email patterns, social presence, domain age, and hiring signals. One call, 9 steps.",
     longDescription:
-      "The complete company research package for AI SDR agents. Given a company name and domain, returns: recent filing events (SEC/Companies House), news sentiment from global media, company officers and directors from public records, technology stack detection, email pattern discovery, social media presence across 11 platforms, domain registration age and registrar (WHOIS), and hiring activity from job boards. Replaces the manual process of querying 9+ APIs separately. Every data point is quality-scored and sourced.",
+      "The complete company research package for AI SDR agents. Given a company name and domain, returns: recent filing events (SEC/Companies House), news sentiment from global media, company officers and directors from public records, technology stack detection, email pattern discovery, social media presence across 11 platforms, domain registration age and registrar (WHOIS), and hiring activity from job boards. Replaces the manual process of querying 9+ APIs separately.",
     agentDescription:
       "research this company for outreach, SDR company intelligence, should I pursue this company, company research for sales, prospect company analysis, pre-outreach research, is this company worth targeting",
     category: "sales-outreach",

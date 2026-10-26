@@ -1,0 +1,17 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/01819062",
+    "captured_at": "2026-10-26T11:32:29.641747+00:00",
+    "http_status": 200,
+    "raw_sha256": "323997e837812146c3490e6db7b67f846cc033950dd00f20779171a6235e60de",
+    "note": "Live read-only registry response projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "ico": "01819062",
+    "seznamRegistraci": {
+      "stavZdrojeRos": "AKTIVNI",
+      "stavZdrojeVr": "AKTIVNI",
+      "stavZdrojeIr": "NEEXISTUJICI"
+    }
+  }
+}

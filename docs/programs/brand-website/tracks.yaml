@@ -1,7 +1,7 @@
 schema_version: 1
 program: brand-website
 program_status: active
-updated: "2026-10-24"
+updated: "2026-10-26"
 tracks:
   - id: T1
     title: Product and brand discovery
@@ -52,7 +52,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: "Open Flow adopted (DEC-20261024-B) and promoted: the candidate is status adopted and is the website surface of design/tokens/active.json, which apps/web builds from (branch claude/loving-newton-mxoo9l, PR open for Petter's review). This track closes when that PR merges; the remaining website work is T6. Open items that stay here: imagery rights and copy-fit record before any public use, and the kit-06 STRALE wordmark, which stays a candidate."
+    next_action: "Open Flow adopted (DEC-20261024-B) and promoted: the candidate is status adopted and is the website surface of design/tokens/active.json, which apps/web builds from (branch claude/loving-newton-mxoo9l, PR open for Petter's review). This track closes when that PR merges; the remaining website work is T6. Open items that stay here: imagery rights and copy-fit record before any public use, and a later professional redraw of the kit-06 STRALE wordmark, adopted by Petter on 2026-10-26 as a vector trace. Petter also approved ink/inverse primary buttons and a two-column hero (go with all three); see docs/strategy/2026-10-26-website-identity-and-hero-adoption.md."
     resume_file: design/brand-kit/open-flow/README.md
     exit:
       - Founder-chosen kit-06 direction built out as a complete website system (tokens, contrast proof, components with states, section patterns, imagery rules) with lineage to the kit.
@@ -89,7 +89,7 @@ tracks:
     gate: none
     depends_on: [T5]
     owner: session
-    next_action: "apps/web is built in stacked PRs #725 <- #726 <- #727 <- #736 (design/site-polish), main merged up the stack on 2026-10-26, nothing merged or published (strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Homepage (seven sections, approved by Petter) and the /tools catalogue redesign are on #736; the catalogue copy pass ships separately on branch content/catalogue-copy as a ledgered startup migration. Next: show Petter the catalogue, then company-data tidy, detail bugs, missing pages, and an independent review of #736. Full state: handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md."
+    next_action: "apps/web is built in stacked PRs #725 <- #726 <- #727 <- #736 (design/site-polish), main merged up the stack on 2026-10-26, nothing merged or published (strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Homepage (seven sections, approved by Petter) and the /tools catalogue redesign are on #736; the catalogue copy pass ships separately on branch content/catalogue-copy as a ledgered startup migration. Next: show Petter the catalogue, then company-data tidy, detail bugs, missing pages, and an independent review of #736. Full state: handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md. Latest local design/site-polish refinement adopts the kit-06 traced wordmark, ink/inverse primary actions and two-column hero approved by Petter on 2026-10-26; see handoff/_general/from-code/2026-10-26-design-site-polish.md. Next for this refinement is orchestrator review and local commit (the build sandbox mounts .git read-only), then push and PR/merge; later professional wordmark redraw remains deferred."
     resume_file: apps/web/README.md
     exit:
       - Responsive, accessible and performant benefit-first website with truthful demonstrations.

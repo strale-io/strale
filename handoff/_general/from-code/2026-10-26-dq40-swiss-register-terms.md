@@ -1,0 +1,7 @@
+Intent: build the Swiss UID / VAT check (portfolio plan 1.12). Stopped at the data-access terms gate before any code; raised DQ-40 instead.
+
+- Source: Swiss FSO UID register, `https://www.uid-wse.admin.ch/V5.0/PublicServices.svc` (SOAP; `GetByUID`, `ValidateUID`, `ValidateVatNumber`), keyless, free, 20 requests/minute (bk.admin.ch/de/uid-webservice, read 2026-10-26). Interface spec: FSO asset 24605175.
+- Terms: the register's footer points to the general federal terms (admin.ch/en/terms-and-conditions): "Any reproduction requires the prior written consent of the copyright holder." No UID-specific reuse licence found. DEC-20261023-A needs terms that permit resale, so the build stopped (Codex CLI build agent; confirmed by the orchestrator, who read the service page directly).
+- Same question applies to two live tools: `vat-validate`'s Swiss path (`capabilities/lib/vat-providers/uid-ch.ts`, V3 endpoint) and `swiss-company-data` (Zefix). Neither has a `VENDOR_TERMS_RECORDS` entry; adding them needs the register test to accept shared clients. Both left unchanged pending DQ-40.
+- Resume: on Petter's answer to DQ-40, either build `ch-uid-vat-check` (spec in the orchestrator brief: local mod-11 check digit before any call; outputs uid, exists, uid_status, active, vat_registered, vat_number, legal_name, legal_form, address, checked_at; 2 cents; data_lookup) plus the three register entries, or carry out option 3.
+- Evidence: archive/receipts/2026-10-26-check-ch-uid-vat-check-preflight.json.
