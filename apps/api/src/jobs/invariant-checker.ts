@@ -431,6 +431,8 @@ export function hasUnreportedFailure(
   if (failureTimes.length === 0) return false;
   if (lastReportedAt == null) return true;
   const last = new Date(lastReportedAt).getTime();
+  // An unreadable timestamp must not silence a capability for good.
+  if (Number.isNaN(last)) return true;
   return failureTimes.some((t) => new Date(t).getTime() > last);
 }
 
@@ -447,15 +449,22 @@ async function reportEnvironmentalOnly(
   windowHours: number,
 ): Promise<void> {
   if (environmentalFailures.length === 0) return;
-  const lastReport = (await getDb().execute(sql`
-    SELECT MAX(created_at) AS last_reported_at
-      FROM health_monitor_events
-     WHERE capability_slug = ${cap.slug}
-       AND event_type = 'invariant_alert'
-       AND details->>'check' = 'algorithmic_correctness_environmental_only'
-  `)) as unknown as Array<{ last_reported_at: string | Date | null }>;
-  const lastReportedAt = (Array.isArray(lastReport) ? lastReport : (lastReport as any)?.rows ?? [])[0]
-    ?.last_reported_at ?? null;
+  // A failed lookup reports anyway: the signal moves, it does not disappear,
+  // and one capability's lookup must not abort the check for the rest.
+  let lastReportedAt: string | Date | null = null;
+  try {
+    const lastReport = (await getDb().execute(sql`
+      SELECT MAX(created_at) AS last_reported_at
+        FROM health_monitor_events
+       WHERE capability_slug = ${cap.slug}
+         AND event_type = 'invariant_alert'
+         AND details->>'check' = 'algorithmic_correctness_environmental_only'
+    `)) as unknown as Array<{ last_reported_at: string | Date | null }>;
+    lastReportedAt = (Array.isArray(lastReport) ? lastReport : (lastReport as any)?.rows ?? [])[0]
+      ?.last_reported_at ?? null;
+  } catch {
+    lastReportedAt = null;
+  }
   if (!hasUnreportedFailure(environmentalFailures.map((r) => r.executed_at), lastReportedAt)) return;
   logWarn(
     "invariant-check-5-environmental-only",

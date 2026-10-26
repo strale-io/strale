@@ -57,6 +57,12 @@ describe("hasUnreportedFailure", () => {
   it("is false with no failures", () => {
     expect(hasUnreportedFailure([], null)).toBe(false);
   });
+  it("accepts Date objects as postgres-js returns them", () => {
+    expect(hasUnreportedFailure([new Date("2026-10-26T01:00:00Z")], new Date("2026-10-26T01:01:40Z"))).toBe(false);
+  });
+  it("reports when the last-report timestamp is unreadable", () => {
+    expect(hasUnreportedFailure(["2026-10-26T01:00:00Z"], "not a date")).toBe(true);
+  });
 });
 
 describe("checkAlgorithmicCorrectnessFloor — environmental-only reporting", () => {
@@ -73,6 +79,12 @@ describe("checkAlgorithmicCorrectnessFloor — environmental-only reporting", ()
       .mockResolvedValueOnce([{ last_reported_at: "2026-10-26T01:01:40Z" }]);
     await checkAlgorithmicCorrectnessFloor(new Set());
     expect(logHealthEvent).not.toHaveBeenCalled();
+  });
+
+  it("reports anyway when the last-report lookup fails", async () => {
+    execute.mockResolvedValueOnce([TIMEOUT_ROW]).mockRejectedValueOnce(new Error("connection reset"));
+    await checkAlgorithmicCorrectnessFloor(new Set());
+    expect(logHealthEvent).toHaveBeenCalledTimes(1);
   });
 
   it("reports again when a new timeout arrives after the last report", async () => {
