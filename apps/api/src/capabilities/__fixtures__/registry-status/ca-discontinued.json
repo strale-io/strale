@@ -1,0 +1,15 @@
+{
+  "capture": {
+    "url": "https://ised-isde.canada.ca/cc/lgcy/api/corporations/1098845.json?lang=eng",
+    "captured_at": "2026-10-26T13:29:19.863808+00:00",
+    "http_status": 200,
+    "raw_sha256": "37d0718b08f0b5b1cb87abe6d270678bb2203509c61a2f191e1e1429e8c46581",
+    "note": "Live read-only API response projected to status; identities and locations omitted."
+  },
+  "response": [
+    {
+      "status": "Inactive - Discontinued"
+    },
+    null
+  ]
+}

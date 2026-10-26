@@ -1,0 +1,14 @@
+{
+  "capture": {
+    "url": "https://data.brreg.no/enhetsregisteret/api/enheter/994387057",
+    "captured_at": "2026-10-26T13:52:55.673999+00:00",
+    "http_status": 200,
+    "raw_sha256": "8d61566dee54b45f04944ec252ac0dbdbcc5f6ef4fc31ffd385b36fe8f75df94",
+    "note": "Live read-only registry response for a deleted limited company (AS), projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "organisasjonsnummer": "994387057",
+    "respons_klasse": "SlettetEnhet",
+    "slettedato": "2026-10-15"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api: vitest run entity-resolve.test.ts lei-lookup.test.ts vendor-terms.test.ts data-access-manifests.test.ts",
+    "commit": "beafcb62649d4ed2f4944a74e9e420c94688be2d"
+  },
+  "at": "2026-10-26T10:58:11.783Z",
+  "inputs": {
+    "source": "/tmp/entity-final-evidence.json"
+  },
+  "summary": {
+    "success": true,
+    "numTotalTests": 104,
+    "numPassedTests": 104,
+    "numFailedTests": 0,
+    "all_guard_probes_rejected": true
+  },
+  "topic": "entity-resolve-final",
+  "raw": {
+    "success": true,
+    "numTotalTests": 104,
+    "numPassedTests": 104,
+    "numFailedTests": 0,
+    "files": [
+      {
+        "file": "apps/api/src/capabilities/entity-resolve.test.ts",
+        "status": "passed"
+      },
+      {
+        "file": "apps/api/src/capabilities/lei-lookup.test.ts",
+        "status": "passed"
+      },
+      {
+        "file": "apps/api/src/lib/data-access-manifests.test.ts",
+        "status": "passed"
+      },
+      {
+        "file": "apps/api/src/lib/vendor-terms.test.ts",
+        "status": "passed"
+      }
+    ],
+    "guard_probes": [
+      {
+        "mode": "static",
+        "exit_code": 1,
+        "expected_failure": true
+      },
+      {
+        "mode": "dynamic",
+        "exit_code": 1,
+        "expected_failure": true
+      }
+    ],
+    "all_guard_probes_rejected": true
+  }
+}

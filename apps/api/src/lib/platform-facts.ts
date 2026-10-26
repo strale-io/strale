@@ -36,6 +36,8 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { TRANSACTION_RETENTION_DAYS, PII_RETENTION_DAYS } from "./data-retention.js";
 import { getStraleJurisdiction, getProcessingLocation } from "./processing-location.js";
+import { getFreeTierSlugs } from "./free-tier.js";
+import { logWarn } from "./log.js";
 
 // ─── Static facts (compile-time constants) ──────────────────────────────────
 
@@ -52,7 +54,8 @@ export const STATIC_FACTS = {
     pep: "Dilisense",
     adverse_media_primary: "Dilisense",
     adverse_media_fallback: "Serper.dev (Google)",
-    embeddings: "Voyage AI",
+    // Legacy wire key: search now ranks the full catalogue without embeddings.
+    embeddings: "Anthropic Claude (search ranking; no embeddings)",
     risk_narrative: "Anthropic Claude",
     headless_browser: "Browserless.io",
     payments_card: "Stripe",
@@ -133,6 +136,8 @@ export const STATIC_FACTS = {
  * https://www.notion.so/35967c87082c81dc905fceff85603fe5
  */
 export const STALE_VENDORS = [
+  // Catalogue embeddings removed by DEC-20261026-A.
+  "Voyage AI",
   // Sanctions/PEP — self-host deferred 2026-04-29 per DEC-20260429-A
   "OpenSanctions self-host",
   // IBAN/name match — all rejected per DEC-20260430-A
@@ -182,7 +187,7 @@ export interface CapabilityCounts {
   active_total: number;
   /** Total non-deactivated rows including draft + validating + probation. */
   catalogued: number;
-  /** Slugs flagged is_free_tier=true. */
+  /** Free-tier slugs that are currently servable (getFreeTierSlugs: active, visible, not withheld), not every row flagged is_free_tier. */
   free_tier_slugs: string[];
 }
 
@@ -192,14 +197,23 @@ export interface CapabilityCounts {
  * bloc (AT/DE/IT/NL/PT/ES) being absent.
  */
 export interface CountryCoverage {
+  /** Slug prefixes ("swedish", "uk", "au"), as before. Two prefixes can name one country. */
   company_data_active: string[];
   /** Includes deactivated caps — useful for "countries we've ever supported". */
   company_data_ever: string[];
+  /**
+   * ISO 3166-1 alpha-2 codes of the countries in company_data_active, one per
+   * country (au- and australian-company-data are both "AU"). Use this for a
+   * country COUNT; the prefix list double-counts aliases. Added 2026-10-24.
+   */
+  company_data_active_iso: string[];
 }
 
 export interface PlatformFacts {
   capability_counts: CapabilityCounts;
   solution_count_active: number;
+  /** Lowest positive price among active, visible, marketplace-listed paid tools; null if none exist. */
+  price_floor_cents: number | null;
   countries: CountryCoverage;
   /** Computed from Railway region; honest about US-East deploy. */
   processing_region: string;
@@ -209,7 +223,38 @@ export interface PlatformFacts {
   as_of: string;
 }
 
-const COMPANY_DATA_SLUG_PATTERN = /^([a-z]{2,12})-company-data$/;
+/**
+ * `<prefix>-company-data`, optionally with a vendor suffix
+ * (`us-company-data-cobalt`). The prefix is a country code ("uk", "cz") or an
+ * adjective ("swedish", "luxembourgish"); the earlier `{2,12}` bound dropped
+ * "luxembourgish" (13 letters), and the `$` anchor dropped suffixed slugs.
+ */
+const COMPANY_DATA_SLUG_PATTERN = /^([a-z]{2,})-company-data(?:-[a-z0-9-]+)?$/;
+
+/**
+ * Prefix → ISO code for every company-data prefix in use. Two-letter prefixes
+ * not listed here are taken as ISO codes as written ("cz" → "CZ"), except
+ * "uk", which is "GB". A new adjective prefix must be added here; the test
+ * "every company-data manifest prefix maps to a country" fails until it is.
+ */
+export const COMPANY_DATA_PREFIX_ISO: Record<string, string> = {
+  australian: "AU", austrian: "AT", belgian: "BE", brazilian: "BR", bulgarian: "BG",
+  canadian: "CA", croatian: "HR", cypriot: "CY", danish: "DK", dutch: "NL",
+  estonian: "EE", finnish: "FI", french: "FR", german: "DE", greek: "GR",
+  hungarian: "HU", indian: "IN", irish: "IE", italian: "IT", japanese: "JP", latvian: "LV",
+  lithuanian: "LT", luxembourgish: "LU", maltese: "MT", mexican: "MX", norwegian: "NO", polish: "PL",
+  portuguese: "PT", romanian: "RO", singapore: "SG", slovak: "SK", slovenian: "SI",
+  spanish: "ES", swedish: "SE", swiss: "CH", uk: "GB",
+};
+
+/** Two-letter prefixes that are not countries. */
+const NOT_A_COUNTRY = new Set(["eu"]);
+
+/** ISO code for a company-data slug prefix, or null when the prefix is not a known country. */
+export function prefixToIso(prefix: string): string | null {
+  if (prefix in COMPANY_DATA_PREFIX_ISO) return COMPANY_DATA_PREFIX_ISO[prefix];
+  return /^[a-z]{2}$/.test(prefix) && !NOT_A_COUNTRY.has(prefix) ? prefix.toUpperCase() : null;
+}
 
 export async function computePlatformFacts(): Promise<PlatformFacts> {
   const db = getDb();
@@ -222,17 +267,17 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
       COUNT(*) FILTER (WHERE lifecycle_state = 'active' AND visible = true)::int AS active_visible,
       COUNT(*) FILTER (WHERE lifecycle_state = 'active')::int AS active_total,
       COUNT(*) FILTER (WHERE lifecycle_state != 'deactivated')::int AS catalogued,
-      ARRAY_AGG(slug) FILTER (WHERE is_free_tier = true) AS free_tier_slugs,
-      ARRAY_AGG(slug) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND slug LIKE '%-company-data') AS active_country_slugs,
-      ARRAY_AGG(slug) FILTER (WHERE slug LIKE '%-company-data') AS all_country_slugs
+      MIN(price_cents) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND marketplace_eligible = true AND price_cents > 0)::int AS price_floor_cents,
+      ARRAY_AGG(slug) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND slug LIKE '%-company-data%') AS active_country_slugs,
+      ARRAY_AGG(slug) FILTER (WHERE slug LIKE '%-company-data%') AS all_country_slugs
     FROM capabilities
   `);
 
   const rows = (Array.isArray(result) ? result : (result as { rows?: unknown[] })?.rows ?? []) as Array<{
+    price_floor_cents: number | null;
     active_visible: number;
     active_total: number;
     catalogued: number;
-    free_tier_slugs: string[] | null;
     active_country_slugs: string[] | null;
     all_country_slugs: string[] | null;
   }>;
@@ -252,12 +297,14 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
       active_visible: row?.active_visible ?? 0,
       active_total: row?.active_total ?? 0,
       catalogued: row?.catalogued ?? 0,
-      free_tier_slugs: (row?.free_tier_slugs ?? []).sort(),
+      free_tier_slugs: await getFreeTierSlugs(db),
     },
     solution_count_active: solCount,
+    price_floor_cents: row?.price_floor_cents ?? null,
     countries: {
       company_data_active: activeCountries,
       company_data_ever: allCountries,
+      company_data_active_iso: countriesToIso(activeCountries),
     },
     processing_region: getProcessingLocation(),
     processing_jurisdiction: getStraleJurisdiction(),
@@ -266,15 +313,27 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
   };
 }
 
-// Exported for tests. Pulls the leading {cc} out of "{cc}-company-data".
-// Skips any slug whose prefix isn't 2 letters (e.g. "swedish-company-data"
-// returns "swedish" — keep it as-is so prose names survive too; UI layer
-// can map names → ISO codes if it wants ISO).
+// Exported for tests. Pulls the prefix out of "{prefix}-company-data[-vendor]".
+// Prose prefixes survive as written ("swedish-company-data" returns
+// "swedish"); countriesToIso maps them to one ISO code per country.
 export function extractCountryCodes(slugs: string[]): string[] {
   const out = new Set<string>();
   for (const s of slugs) {
     const m = s.match(COMPANY_DATA_SLUG_PATTERN);
     if (m) out.add(m[1]);
+  }
+  return [...out].sort();
+}
+
+/** One ISO code per country for a list of prefixes; unknown prefixes are left out. */
+export function countriesToIso(prefixes: string[]): string[] {
+  const out = new Set<string>();
+  for (const p of prefixes) {
+    const iso = prefixToIso(p);
+    if (iso) out.add(iso);
+    // A live registry with no mapping would silently drop out of every public
+    // country count; say so where operators look.
+    else logWarn("platform-facts-unmapped-country-prefix", `company-data prefix "${p}" has no ISO mapping in COMPANY_DATA_PREFIX_ISO`, { prefix: p });
   }
   return [...out].sort();
 }

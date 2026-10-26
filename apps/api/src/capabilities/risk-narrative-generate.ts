@@ -93,15 +93,151 @@ Respond ONLY with valid JSON matching this schema:
   "data_sources_consulted": ["list of data sources"]
 }`;
 
+/** Only known lifecycle findings bypass synthesis. Raw registry words and
+ * unknown/pending values keep the pre-existing narrative behaviour.
+ * References below are executor mappings, not a universal status vocabulary. */
+const NON_ACTIVE_REGISTRY_STATUSES: Readonly<Record<string, readonly string[]>> = {
+  // norwegian-company-data.ts:120-124
+  "norwegian-company-data": ["deleted", "bankrupt", "compulsory_dissolution", "dissolving"],
+  // polish-company-data.ts:117-119
+  "polish-company-data": ["deregistered"],
+  // cz-company-data.ts:210-220
+  "cz-company-data": ["dissolved", "insolvency", "liquidation"],
+  // finnish-company-data.ts:214-219 (pending/unknown are not distress findings).
+  "finnish-company-data": ["inactive", "bankrupt", "liquidation", "restructuring"],
+  // greek-company-data.ts:160-165
+  "greek-company-data": ["inactive", "bankrupt", "liquidation", "dissolved"],
+  // danish-company-data.ts:111
+  "danish-company-data": ["ceased"],
+  // french-company-data.ts:64
+  "french-company-data": ["closed"],
+  // german-company-data.ts:304-308
+  "german-company-data": ["terminated"],
+  // swedish-company-data.ts:183-189
+  "swedish-company-data": ["deregistered"],
+  // uk-company-data.ts:149-160 (values after statusMap, not upstream keys).
+  "uk-company-data": ["dissolved", "in_liquidation", "receivership", "closed", "voluntary_arrangement", "insolvency", "administration"],
+  // estonian-company-data.ts:222-227
+  "estonian-company-data": ["in_liquidation", "deleted", "in_bankruptcy"],
+  // lithuanian-company-data.ts:231 (other classifier labels pass through).
+  "lithuanian-company-data": ["Išregistruotas"],
+  // CRO passes descriptions through: https://services.cro.ie/companystatuses.aspx/1000
+  // Strike Off Listed is a pending notice: review at high, never infer deletion.
+  "irish-company-data": ["Dissolved", "Dissolved-20 years", "Dissolved PostMerger", "Dissolved by Divis",
+    "Liquidation", "Liquidation(Receivership)", "Liquidation stayed", "Liquidation (UK)", "Struck Off",
+    "Strike Off Listed", "Ceased", "Ceased IRL", "Administration", "Administration (UK)", "Examinership",
+    "Deleted CB Merger", "Deleted per SE merge", "Deleted as per SE Tr", "Deleted CB Conversion",
+    "De-Registered ICAV", "De-Registered Investment Company", "InActive",
+    "Normal (Form E8 (Notice of Appointment of Receiver) Per S436 CA 2014 has been filed with the CRO in respect of part or all of the property of the company, which property may or may not be beneficially owned by the company. Please refer to the relevant E8 form(s) for further information)"],
+  // latvian-company-data.ts:227-230
+  "latvian-company-data": ["Likvidēts", "Slēgts"],
+  // croatian-company-data.ts:92-95
+  "croatian-company-data": ["inactive"],
+  // slovak-company-data.ts:147-152
+  "slovak-company-data": ["inactive"],
+  // austrian-company-data.ts:465
+  "austrian-company-data": ["dissolved"],
+  // spanish-company-data.ts:237-243
+  "spanish-company-data": ["inactive"],
+  // belgian-company-data.ts:120,178-180 (vendor status / canonical alias).
+  "belgian-company-data": ["inactive"],
+  // These executors delegate to lib/openapi-resolver.ts:304-315, which maps
+  // inactive/dissolved/ceased/terminated upstream values to inactive.
+  // bulgarian-company-data.ts:49
+  "bulgarian-company-data": ["inactive"],
+  // cypriot-company-data.ts:153
+  "cypriot-company-data": ["inactive"],
+  // dutch-company-data.ts:44
+  "dutch-company-data": ["inactive"],
+  // hungarian-company-data.ts:43
+  "hungarian-company-data": ["inactive"],
+  // italian-company-data.ts:70
+  "italian-company-data": ["inactive"],
+  // luxembourgish-company-data.ts:44
+  "luxembourgish-company-data": ["inactive"],
+  // maltese-company-data.ts:43
+  "maltese-company-data": ["inactive"],
+  // portuguese-company-data.ts:52
+  "portuguese-company-data": ["inactive"],
+  // romanian-company-data.ts:45
+  "romanian-company-data": ["inactive"],
+  // australian-company-data.ts:34 and japanese-company-data.ts:33 delegate to
+  // lib/browserless-extract.ts:66's explicit extraction vocabulary.
+  "australian-company-data": ["inactive", "dissolved"],
+  "japanese-company-data": ["inactive", "dissolved"],
+  // Receita Federal IN RFB 2119/2022 art. 9; executor passes situacao through.
+  // https://normas.receita.fazenda.gov.br/sijut2consulta/link.action?idAto=127567
+  "brazilian-company-data": ["BAIXADA", "INAPTA", "SUSPENSA", "NULA"],
+  // ABR entity status: https://abr.business.gov.au/FAQ/ABNLookup
+  "au-company-data": ["Cancelled"],
+  // This executor reads only Entities Registered with ACRA, uen_status_desc.
+  // Live 2026-10-26: Registered / Deregistered; see fixture capture counts.
+  // https://data.gov.sg/datasets/d_3f960c10fed6145404ca7b821f263b87/explorer
+  "singapore-company-data": ["Deregistered"],
+  // providers/swiss-company-data.ts passes Zefix status through unchanged.
+  // https://www.zefix.admin.ch/ZefixPublicREST/v3/api-docs
+  "swiss-company-data": ["CANCELLED", "BEING_CANCELLED"],
+  // canadian-company-data.ts passes Corporations Canada JSON status through.
+  // https://ised-isde.canada.ca/site/corporations-canada/en/search-tips
+  "canadian-company-data": ["Dissolved", "Inactive - Amalgamated", "Inactive - Discontinued"],
+  // slovenian-company-data has no status output at all.
+
+};
+
+function registryNeedsReview(checkName: string, result: any): boolean {
+  if (checkName === "no-bankruptcy-check") return result?.has_any_distress_signal === true || result?.is_deleted === true;
+  return Object.hasOwn(NON_ACTIVE_REGISTRY_STATUSES, checkName) && typeof result?.status === "string" &&
+    (NON_ACTIVE_REGISTRY_STATUSES[checkName]?.includes(result.status) ?? false);
+}
+
+/** A terminal registration differs from distress while the company still exists. */
+function registryIsTerminal(result: any): boolean {
+  return result?.is_deleted === true || (typeof result?.status === "string" &&
+    /^(?:deleted(?: .*)?|deregistered|de-registered(?: .*)?|struck off(?: - early dissolution)?|dissolved(?:[- ].*)?|ceased|closed|terminated|cancelled|baixada|nula|Išregistruotas|Likvidēts|Slēgts)$/i.test(result.status));
+}
+
+export const REGISTRY_STATUS_PHRASES = {
+  CANCELLED: "deleted from the register", BEING_CANCELLED: "in liquidation",
+  insolvency: "in insolvency proceedings", liquidation: "in liquidation",
+  administration: "in administration", examinership: "in examinership", receivership: "in receivership",
+  restructuring: "undergoing restructuring",
+  "Liquidation stayed": "in liquidation (stayed)",
+  "Inactive - Amalgamated": "merged into another corporation",
+  "Inactive - Discontinued": "no longer registered under federal legislation",
+  BAIXADA: "deregistered", INAPTA: "ineligible for active registration", SUSPENSA: "suspended", NULA: "registration annulled",
+  Išregistruotas: "deregistered", Likvidēts: "liquidated", Slēgts: "closed",
+  compulsory_dissolution: "being compulsorily dissolved", dissolving: "being wound up",
+  in_liquidation: "in liquidation", in_bankruptcy: "bankrupt",
+  voluntary_arrangement: "in an arrangement with its creditors",
+  "Strike Off Listed": "listed for possible removal from the register (a pending notice)",
+  "Liquidation(Receivership)": "in liquidation with a receiver appointed",
+  "Liquidation (UK)": "in liquidation in the United Kingdom",
+  "Administration (UK)": "in administration in the United Kingdom",
+  "Deleted CB Merger": "deleted from the register", "Deleted per SE merge": "deleted from the register",
+  "Deleted as per SE Tr": "deleted from the register", "Deleted CB Conversion": "deleted from the register",
+  "Dissolved by Divis": "dissolved", "Dissolved PostMerger": "dissolved after a merger",
+  "Dissolved-20 years": "dissolved", "Ceased IRL": "having ceased registration in Ireland",
+  "De-Registered ICAV": "deregistered", "De-Registered Investment Company": "deregistered",
+} as const;
+
+function registryFinding(checkName: string, result: any): string {
+  const country = ({ "cz": "Czech", "au": "Australian", "uk": "United Kingdom", "no-bankruptcy-check": "Norwegian" } as Record<string, string>)[checkName === "no-bankruptcy-check" ? checkName : checkName.split("-")[0]] ??
+    checkName.replace(/-company-data$/, "").replace(/^./, c => c.toUpperCase());
+  const status = typeof result.status === "string" ? result.status : result.is_deleted ? "deleted" : "showing signs of financial distress";
+  const plainStatus = REGISTRY_STATUS_PHRASES[status as keyof typeof REGISTRY_STATUS_PHRASES] ?? REGISTRY_STATUS_PHRASES[status.toLowerCase() as keyof typeof REGISTRY_STATUS_PHRASES] ?? (status.startsWith("Normal (Form E8") ? "subject to a notice of appointment of a receiver" : status.replace(/_/g, " ").replace(/\(/g, " (").toLowerCase());
+  return `The ${country} company registry lists this company as ${plainStatus}.`;
+}
+
 /** Algorithmic fallback when Sonnet is unavailable */
 function algorithmicAssessment(
   checkResults: Record<string, any>,
   context: string,
+  preserveRegistryStatus = false,
 ): Record<string, unknown> {
   const checks = Object.entries(checkResults);
   const passed: string[] = [];
   const failed: string[] = [];
-  const flags: Array<{ severity: string; finding: string; recommendation: string }> = [];
+  const flags: Array<{ severity: string; finding: string; recommendation: string; source_check?: string }> = [];
 
   for (const [checkName, result] of checks) {
     // Determine pass/fail from the step result shape:
@@ -122,15 +258,25 @@ function algorithmicAssessment(
     if (isError) {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "medium",
         finding: `${checkName.replace(/-/g, " ")} could not be completed`,
         recommendation: result?.skipped
           ? "This check was skipped because required inputs were not available. Provide additional data to enable this check."
           : "Review the error and retry. Manual verification may be needed.",
       });
+    } else if (registryNeedsReview(checkName, result)) {
+      failed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        source_check: checkName,
+        severity: registryIsTerminal(result) ? "critical" : "high",
+        finding: registryFinding(checkName, result),
+        recommendation: "Review the official registry record before proceeding; this result does not establish an active company.",
+      });
     } else if (isSanctioned) {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "critical",
         finding: `Sanctions screening returned a positive match`,
         recommendation: "Do not proceed without compliance review. Verify the match against official sanctions lists.",
@@ -139,6 +285,7 @@ function algorithmicAssessment(
       // PEP is a flag, not necessarily a failure
       passed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "medium",
         finding: `Politically Exposed Person (PEP) match detected`,
         recommendation: "Enhanced due diligence may be required under AML regulations.",
@@ -146,6 +293,7 @@ function algorithmicAssessment(
     } else if (isInvalid) {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "high",
         finding: `${checkName.replace(/-/g, " ")} validation failed`,
         recommendation: "Verify the input data is correct and retry.",
@@ -153,7 +301,8 @@ function algorithmicAssessment(
     } else if (isHighRisk) {
       passed.push(checkName.replace(/-/g, " "));
       flags.push({
-        severity: result?.risk_level === "critical" ? "high" : "medium",
+        source_check: checkName,
+        severity: preserveRegistryStatus && result?.risk_level === "critical" ? "critical" : result?.risk_level === "critical" ? "high" : "medium",
         finding: `${checkName.replace(/-/g, " ")} flagged elevated risk`,
         recommendation: "Review the detailed findings before proceeding.",
       });
@@ -162,6 +311,7 @@ function algorithmicAssessment(
     } else {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "low",
         finding: `${checkName.replace(/-/g, " ")} returned no data`,
         recommendation: "This may indicate a data gap. Consider manual verification.",
@@ -188,6 +338,14 @@ function algorithmicAssessment(
     riskScore = 90;
   }
 
+  if (preserveRegistryStatus) {
+    // A populated dead-company record is an answer, not a passed KYB check.
+    if (flags.some(flag => flag.severity === "critical")) {
+      riskLevel = "critical";
+      riskScore = Math.max(90, riskScore);
+    } else if (riskScore < 75) { riskLevel = "high"; riskScore = 75; }
+  }
+
   const contextLabel = context === "kyb" ? "entity verification" : "invoice fraud detection";
   const summary =
     failed.length === 0
@@ -201,7 +359,7 @@ function algorithmicAssessment(
     flags,
     passed_checks: passed,
     checks_performed: checks.length,
-    data_sources_consulted: ["algorithmic assessment"],
+    data_sources_consulted: checks.map(([name]) => name),
     note: "AI narrative was unavailable — algorithmic fallback used",
   };
 }
@@ -218,12 +376,22 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    // Fallback to algorithmic assessment
-    const output = algorithmicAssessment(checkResults, context);
+  const preserveRegistryStatus = Object.entries(checkResults).some(([name, result]) => registryNeedsReview(name, result));
+  if (!apiKey || preserveRegistryStatus) {
+    // Preserve registry lifecycle findings deterministically, including when
+    // AI synthesis is available; do not let a model turn them into a pass.
+    const output = algorithmicAssessment(checkResults, context, preserveRegistryStatus);
     return {
-      output: { ...output, raw_checks: checkResults },
-      provenance: { source: "algorithmic-fallback", fetched_at: new Date().toISOString() },
+      output: {
+        ...output,
+        ...(preserveRegistryStatus ? { note: "Registry lifecycle findings preserved by deterministic assessment" } : {}),
+        raw_checks: checkResults,
+      },
+      provenance: {
+        source: "algorithmic-fallback",
+        fallback_reason: preserveRegistryStatus ? "registry_status_preservation" : "missing_ai_credential",
+        fetched_at: new Date().toISOString(),
+      },
     };
   }
 

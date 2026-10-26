@@ -118,6 +118,7 @@ vendors:
     aliases:
       - Anthropic
       - Anthropic Claude
+      - "Anthropic Claude (search ranking; no embeddings)"
     lifecycle:
       - state: active
         date: 2026-09-10
@@ -1720,6 +1721,10 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+      - state: retired
+        date: 2026-10-26
+        decision: unknown
+        reason: "DEC-20261026-A (recorded in CLAUDE.md and docs/strategy/2026-10-26-tool-search-decision.md; no formal record file before M4). Catalogue embeddings removed; keyword retrieval and full-catalogue Anthropic ranking replace the unused Voyage integration."
     reevaluation_triggers: []
     verification:
       terms:
@@ -2027,3 +2032,33 @@ vendors:
     authorization:
       status: unknown
 
+  - id: eurostat
+    name: Eurostat
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-26
+        decision: unknown
+        reason: Official free statistics API; restricted eurostat-data implementation authorised by orchestrator. Production onboarding remains pending.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-26
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Commercial use subject to geo, third-party and trade exceptions enforced by eurostat-data; preserve attribution and modification disclaimer.
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-26
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: See Eurostat terms record and executor restrictions; dataset-specific metadata may expose additional rights limitations.
+    authorization:
+      status: unknown

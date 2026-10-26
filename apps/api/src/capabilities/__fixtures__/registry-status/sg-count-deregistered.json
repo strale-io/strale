@@ -1,0 +1,11 @@
+{
+  "capture": {
+    "url": "https://data.gov.sg/api/action/datastore_search?resource_id=d_3f960c10fed6145404ca7b821f263b87&limit=1&filters=%7B%22uen_status_desc%22%3A+%22Deregistered%22%7D",
+    "captured_at": "2026-10-26T13:29:17.645966+00:00",
+    "http_status": 200,
+    "raw_sha256": "b18fb5c10858f5cf42c6e16e4d82bcfd09239f630fd9e16252b516d5c193e7a3"
+  },
+  "response": {
+    "total": 1488626
+  }
+}
