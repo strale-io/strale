@@ -1,9 +1,6 @@
 slug: dogecoin-address-validate
-name: Dogecoin Address Validation
-description: >-
-  Validate a Dogecoin (DOGE) address. Checks Base58Check encoding and Dogecoin version bytes (P2PKH 0x1E / 0x71, P2SH
-  0x16 / 0xC4). Verifies the 4-byte double-SHA256 checksum to catch typos. Pure algorithmic — fast and cheap, no
-  on-chain lookup.
+name: "Dogecoin Address Validation"
+description: "Check a Dogecoin address: Base58Check encoding, the Dogecoin version bytes and the checksum that catches typos. No on-chain lookup."
 category: validation
 cost_class: free_unlimited
 quota_window: none

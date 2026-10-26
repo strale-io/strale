@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: pricing-page-extract
-name: Pricing Page Extract
-description: >-
-  Extract structured pricing data from any SaaS pricing page. Returns plan names, prices, features per plan, billing
-  periods, trial/guarantee info.
+name: "Pricing Page Extraction"
+description: "Read a SaaS pricing page: plans, prices, features per plan, billing periods, trials and guarantees."
 category: competitive-intelligence
 cost_class: paid_prepaid
 quota_window: none

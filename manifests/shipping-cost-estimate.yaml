@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: shipping-cost-estimate
-name: Shipping Cost Estimate
-description: Estimate shipping costs for PostNord, DHL, UPS by origin/destination, weight, and service level.
+name: "Shipping Cost Estimate"
+description: "Estimate PostNord, DHL and UPS shipping costs by origin, destination, weight and service level."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

@@ -1,8 +1,6 @@
 slug: nl-woz-value
-name: NL WOZ Property Value
-description: >-
-  Dutch WOZ (Waardering Onroerende Zaken) property tax assessment averages by municipality. Returns average property
-  values and year-over-year trends from CBS OpenData.
+name: "Dutch WOZ Property Values"
+description: "Get average WOZ property values by Dutch municipality, with year-on-year trends, from CBS."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

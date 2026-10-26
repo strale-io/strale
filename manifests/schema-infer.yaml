@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: schema-infer
-name: Schema Infer
-description: >-
-  Infer schema from JSON array or CSV. Returns field types, nullability, uniqueness, completeness, min/max/mean for
-  numeric fields. Algorithmic.
+name: "Schema Inference"
+description: "Work out the schema of a JSON array or CSV: field types, nulls, uniqueness and completeness, plus minimum, maximum and mean for numbers."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

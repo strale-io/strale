@@ -1,8 +1,6 @@
 slug: arxiv-search
-name: arXiv Search
-description: >-
-  Search arXiv preprints by keyword with optional category filter: title, abstract, authors, dates, categories,
-  DOI and PDF link, sorted by relevance or date.
+name: "arXiv Search"
+description: "Search arXiv preprints by keyword and category: title, abstract, authors, dates, categories, DOI and PDF link, by relevance or date."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

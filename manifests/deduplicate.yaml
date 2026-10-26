@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: deduplicate
-name: Deduplicate
-description: >-
-  Deduplicate a JSON array of objects using fuzzy string matching (Levenshtein + token sort). Specify match fields and
-  threshold.
+name: "Deduplication"
+description: "Remove near-duplicate records from a JSON array with fuzzy matching on the fields you choose, at the threshold you set."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

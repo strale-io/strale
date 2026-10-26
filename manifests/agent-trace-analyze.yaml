@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: agent-trace-analyze
-name: Agent Trace Analyze
-description: >-
-  Analyze AI agent execution traces (LangChain/CrewAI/AutoGen). Identifies failure points, root causes, token waste, and
-  suggests fixes.
+name: "Agent Trace Analysis"
+description: "Analyse an AI agent's run trace from LangChain, CrewAI or AutoGen: where it failed, why, wasted tokens, and suggested fixes."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

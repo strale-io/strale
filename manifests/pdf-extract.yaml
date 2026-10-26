@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: pdf-extract
-name: PDF Data Extraction
-description: >-
-  Extract structured data from any PDF document. Accepts a URL or base64-encoded PDF. Works on contracts, reports, forms
-  — any document type. Returns JSON based on your extraction instructions.
+name: "PDF Data Extraction"
+description: "Pull structured data out of any PDF, from a URL or a file. Works on contracts, reports and forms, and returns JSON shaped by your instructions."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

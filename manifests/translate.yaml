@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: translate
-name: Translate Text
-description: >-
-  Translate text between languages. Auto-detects source language. Supports all major languages. Returns translated text
-  with confidence.
+name: "Translation"
+description: "Translate text between all major languages, detecting the source language. Returns the translation with a confidence level."
 category: text-processing
 cost_class: paid_prepaid
 quota_window: none

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: bank-bic-lookup
-name: Bank BIC Lookup
-description: Validate BIC/SWIFT code format and identify the bank. Returns bank name, country, branch info.
+name: "Bank BIC Lookup"
+description: "Check a BIC/SWIFT code and identify the bank: name, country and branch."
 category: validation
 cost_class: free_unlimited
 quota_window: none

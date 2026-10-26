@@ -1,9 +1,6 @@
 slug: belgian-company-data
-name: Belgian Company Data
-description: >-
-  Look up Belgian company data from the KBO/BCE Crossroads Bank for Enterprises via the CBEAPI.be JSON wrapper. Accepts
-  enterprise number (10 digits, e.g. 0404.616.494), VAT-prefixed form (BE0404170701), or fuzzy company name. Returns
-  name, status, juridical form, address, registration date, establishment count, and derived BE VAT number.
+name: "Belgian Company Data"
+description: "Look up a Belgian company in the Crossroads Bank for Enterprises (KBO/BCE) by enterprise number, VAT number or name. Returns name, status, legal form, address, registration date, establishments and VAT number."
 category: company-data
 cost_class: free_quota
 quota_window: daily

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: page-speed-test
-name: Page Speed Test
-description: >-
-  Test page speed using Google PageSpeed Insights API. Returns performance score, Core Web Vitals, optimization
-  opportunities.
+name: "Page Speed Test"
+description: "Test a page with Google PageSpeed Insights. Returns the performance score, Core Web Vitals and what to fix first."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: brand-mention-search
-name: Brand Mention Search
-description: >-
-  Search Google for brand mentions. Returns URLs, titles, snippets, sentiment, and source type. Every result is a
-  clickable, verifiable URL.
+name: "Brand Mention Search"
+description: "Find mentions of a brand on Google: link, title, snippet, sentiment and type of source for each."
 category: competitive-intelligence
 cost_class: paid_prepaid
 quota_window: none

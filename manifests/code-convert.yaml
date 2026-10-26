@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: code-convert
-name: Code Convert
-description: >-
-  Convert code between programming languages. Uses idiomatic patterns for the target language. Supports all major
-  languages.
+name: "Code Converter"
+description: "Translate code into another programming language, written the way that language is normally written."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

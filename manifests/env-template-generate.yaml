@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: env-template-generate
-name: Env Template Generate
-description: >-
-  Scan source code for environment variable references (process.env, os.environ, etc.) and generate a .env template with
-  descriptions and example values.
+name: "Env Template Generator"
+description: "Scan source code for the environment variables it reads and generate a .env template with a description and example value for each."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

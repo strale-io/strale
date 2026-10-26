@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: fear-greed-index
-name: Fear & Greed Index
-description: >-
-  Get the Crypto Fear & Greed Index — a market sentiment indicator from 0 (Extreme Fear) to 100 (Extreme Greed).
-  Includes current value, classification, and optional historical data up to 30 days. Powered by Alternative.me.
+name: "Crypto Fear and Greed Index"
+description: "Get the Crypto Fear and Greed Index, a market sentiment score from 0 (extreme fear) to 100 (extreme greed), with up to 30 days of history. From Alternative.me."
 category: web3
 cost_class: free_unlimited
 quota_window: none

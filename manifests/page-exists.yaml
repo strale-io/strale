@@ -1,8 +1,6 @@
 slug: page-exists
-name: Page Exists
-description: >-
-  Check whether a URL still exists — catches hard 404s, soft-404 pages, dead links, and removed listings that
-  still return HTTP 200.
+name: "Page Existence Check"
+description: "Check whether a URL still exists. Catches hard 404s, soft 404 pages, dead links and removed listings that still answer with HTTP 200."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none

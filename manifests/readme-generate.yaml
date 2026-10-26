@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: readme-generate
-name: README Generate
-description: >-
-  Generate comprehensive README.md from project description. Includes installation, usage, API docs, contributing
-  sections.
+name: "README Generator"
+description: "Write a README from a project description, with installation, usage, API and contributing sections."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

@@ -1,8 +1,6 @@
 slug: dangerous-goods-classify
-name: Dangerous Goods Classify
-description: >-
-  Classify dangerous goods by UN number or substance name. Returns hazard class, packing group, labels, marine pollutant
-  status. 200+ substances.
+name: "Dangerous Goods Classification"
+description: "Classify dangerous goods by UN number or substance name: hazard class, packing group, labels and marine pollutant status, for 200+ substances."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

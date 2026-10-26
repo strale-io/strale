@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: ens-reverse-lookup
-name: ENS Reverse Lookup
-description: >-
-  Look up the primary ENS name for a wallet address. Includes forward verification to confirm the name actually points
-  back to the address. Returns null if no ENS name is set.
+name: "ENS Reverse Lookup"
+description: "Find the primary ENS name for a wallet address, and confirm the name points back to it. Returns nothing when no name is set."
 category: web3
 cost_class: free_unlimited
 quota_window: none

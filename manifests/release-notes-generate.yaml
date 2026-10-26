@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: release-notes-generate
-name: Release Notes Generate
-description: >-
-  Generate release notes from commit log or changelog. Keep a Changelog format with Added/Changed/Fixed/Removed
-  sections.
+name: "Release Notes Generator"
+description: "Write release notes from a commit log or changelog, with Added, Changed, Fixed and Removed sections."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

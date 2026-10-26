@@ -1,8 +1,6 @@
 slug: tron-address-validate
-name: Tron Address Validation
-description: >-
-  Validate a Tron (TRX) address. Checks Base58Check encoding and 0x41 mainnet version byte (T-prefix). Verifies the
-  4-byte double-SHA256 checksum to catch typos. Pure algorithmic — fast and cheap, no on-chain lookup.
+name: "Tron Address Validation"
+description: "Check a Tron address: Base58Check encoding, the mainnet T prefix and the checksum that catches typos. No on-chain lookup."
 category: validation
 cost_class: free_unlimited
 quota_window: none

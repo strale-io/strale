@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: uk-company-data
-name: UK Company Data
-description: >-
-  Look up UK company data from Companies House. Accepts company number (8 digits) or fuzzy company name. Returns company
-  name, status, incorporation date, SIC codes, registered address.
+name: "UK Company Data"
+description: "Look up a UK company at Companies House by company number or name. Returns name, status, incorporation date, SIC codes and registered address."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
