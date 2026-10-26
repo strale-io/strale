@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · no deadline — **the Swiss federal registers' terms say reproduction needs written consent, and two of our live tools resell them**
+**DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · no deadline — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
 
 Under the data-access rule (DEC-20261023-A), a per-call read of a public source is allowed when its terms permit it. Building the Swiss company-ID and VAT check (portfolio plan 1.12), the build stopped at that test, and it applies to two live tools too.
 
@@ -22,11 +22,12 @@ Under the data-access rule (DEC-20261023-A), a per-call read of a public source 
 - The UID register's service page (bk.admin.ch/de/uid-webservice) says only that the web service is free and limited to 20 requests a minute. It says nothing about reuse.
 - The register's footer links to the general federal terms (admin.ch/en/terms-and-conditions): "Any reproduction requires the prior written consent of the copyright holder." No UID-specific licence that replaces this was found.
 - The same service already answers Swiss numbers inside `vat-validate` (`capabilities/lib/vat-providers/uid-ch.ts`). The Zefix register behind `swiss-company-data` sits under the same federal terms. Neither has a recorded terms entry in `vendor-terms.ts`.
+- **Added 2026-10-26 14:40 CET: the Czech ARES register** behind `cz-company-data` is in the same position. Its operating conditions (mf.gov.cz/cs/ministerstvo/informacni-systemy/ares) let anyone use the API within rate limits for informational purposes, but declare no reuse licence, and the executor's own provenance says so. EU Regulation 2023/138 (high-value datasets) requires company-register basics to be reusable under CC BY 4.0 or more permissive terms, which likely covers most of what the tool returns (moderate confidence); it was not established for every returned field. Recorded as `resale: "unverified"` in `vendor-terms.ts`, citing this entry.
 - Against the strict reading: these are facts from statutory public registers, which copyright does not protect as such. Switzerland has no separate database right. And federal open-data policy points towards free reuse. That makes the legal risk low in my judgement (moderate confidence), but it is not the written permission the rule asks for.
 
 *Options:*
-1. **Ask the Federal Statistical Office in writing** (uid@bfs.admin.ch; and the Federal Office of Justice for Zefix) whether per-call commercial reuse of the public UID and Zefix data, with attribution, is permitted. It costs nothing, but it is vendor contact on behalf of Moonlighter AB, so it is yours.
-2. **Accept the statutory-register reading** and record it as your decision. I then build 1.12 and record terms entries for all three uses citing that decision.
+1. **Ask the registers in writing** (uid@bfs.admin.ch; the Federal Office of Justice for Zefix; the Czech Ministry of Finance for ARES) whether per-call commercial reuse of the public UID and Zefix data, with attribution, is permitted. It costs nothing, but it is vendor contact on behalf of Moonlighter AB, so it is yours.
+2. **Accept the statutory-register reading** for official registers whose terms are silent on resale (for ARES backed by the EU high-value-datasets regulation) and record it as your decision. I then build 1.12 and record terms entries for all uses citing that decision.
 3. **Treat it like Serper (DQ-39):** take the Swiss UID path out of `vat-validate` and pause `swiss-company-data` until 1 resolves.
 
 *What each costs:* option 1 takes days to weeks; option 2 carries the small residual legal risk above; option 3 loses Swiss coverage on two live tools (their revenue is not measured from this session).
