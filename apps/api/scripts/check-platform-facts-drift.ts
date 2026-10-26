@@ -246,7 +246,7 @@ for (const file of surfaceFiles) {
       file,
       i + 1,
       `hardcoded "${m[1]} countries"`,
-      "country count must come from PLATFORM_FACTS.countries.company_data_active.length",
+      "country count must come from PLATFORM_FACTS.countries.company_data_active_iso.length",
     );
   }
 }

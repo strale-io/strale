@@ -18,7 +18,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 async function buildCatalog() {
   const facts = await computePlatformFacts();
   const capCount = facts.capability_counts.active_visible;
-  const countryCount = facts.countries.company_data_active.length;
+  const countryCount = facts.countries.company_data_active_iso.length;
   return {
     version: "0.1",
     publisher: {
