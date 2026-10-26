@@ -555,7 +555,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "d282b933db133010a029b7a780970b297ee9663faaefae2a30f952145b21e4ef",
+      "sha256": "88ad90443c4164ced3dda653328d729595ec6a57b1a54c2808afbdda3d07a1a0",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -680,6 +680,7 @@
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-delegate-competitive-analysis.md",
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
+        "handoff/_general/from-code/2026-10-26-checkin-morning.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -822,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "bfabe18d1297e5215a45686de68334ecc94b757779653a64bd8dcbf07257bd35",
+      "sha256": "bb5222e0e8f99d587a5d895ca690c651004c378cd797b9da59a35225e36c3a03",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
