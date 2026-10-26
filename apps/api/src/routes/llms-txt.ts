@@ -26,7 +26,7 @@ const llmsTxtRoute = new Hono();
 
 function renderLlmsTxt(facts: Awaited<ReturnType<typeof computePlatformFacts>>): string {
   const capCount = facts.capability_counts.active_visible;
-  const countryCount = facts.countries.company_data_active.length;
+  const countryCount = facts.countries.company_data_active_iso.length;
   return `# Strale
 
 > One API call. Verified data your agent can trust. ${capCount}+ independently tested data capabilities across ${countryCount} countries.
@@ -162,7 +162,7 @@ async function buildFullText(): Promise<string> {
   if (cachedFull && now - cachedFull.at < CACHE_TTL_MS) return cachedFull.text;
 
   const facts = await computePlatformFacts();
-  const labels = categoryLabels(facts.countries.company_data_active.length);
+  const labels = categoryLabels(facts.countries.company_data_active_iso.length);
 
   const db = getDb();
   const rows = await db

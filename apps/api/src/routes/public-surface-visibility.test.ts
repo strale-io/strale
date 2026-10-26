@@ -97,7 +97,7 @@ describe("GET /.well-known/agent-card.json", () => {
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
         capability_counts: { active_visible: 0 },
-        countries: { company_data_active: [] },
+        countries: { company_data_active: [], company_data_active_iso: [] },
       }),
     }));
     const { buildAgentCard } = await import("./a2a.js");
@@ -120,7 +120,7 @@ describe("GET /llms-full.txt", () => {
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
         capability_counts: { active_visible: 0 },
-        countries: { company_data_active: [] },
+        countries: { company_data_active: [], company_data_active_iso: [] },
         free_tier_slugs: [],
       }),
     }));
