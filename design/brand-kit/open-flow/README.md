@@ -2,7 +2,7 @@
 
 > **Revised to 0.2, Daylight, on 2026-10-25 by Petter (DEC-20261025-A).** The light canvas is white and the light tinted surfaces are paler and cooler, so colour appears only in the artwork, the primary action and illustrations. The kit's no-loop rule is narrowed to ambient-only: a slow loop is allowed in the home Switchboard hero and the pulsing status dots, and lists and copy stay still. Spot illustrations live in `apps/web/src/assets/illustrations/` with their briefs in `provenance.json`. Kit colours, type, spacing and the dark theme are unchanged.
 
-> **Revised to 0.3 on 2026-10-26, on Petter's direction that day** ("some of the fonts … especially for ordinary text, should be slightly smaller … revisit our entire font sizing framework"). Running text is one step smaller: body 16–17px (kit 16–19), lead 17–19, compact 16 (kit 16–17), detail 16–18 (kit 17–20), small 13–14. The kit's 16px floor for reading text is kept, so phones read as before and the change shows from tablet width up. Headings, label, UI, code and stat sizes are unchanged. Resized kit roles are tagged `derived` with the kit's sizes kept in `kit_size_px`. 0.3 also adds the Switchboard `circuit` and `circuit-grid` roles (connector lines stand clear of the board grid; the connector meets 3:1 on the board in both themes) and `layout.viewport.height` (`--viewport-height`, the small viewport height the home hero fills).
+> **Revised to 0.3 on 2026-10-26, on Petter's direction that day** ("some of the fonts … especially for ordinary text, should be slightly smaller … revisit our entire font sizing framework"). Running text is one step smaller: body 16–17px (kit 16–19), lead 17–19, compact 16 (kit 16–17), detail 16–18 (kit 17–20), small 13–14. The kit's 16px floor for reading text is kept, so phones read as before and the change shows from tablet width up. Headings, label, UI, code and stat sizes are unchanged. Measures are set from a target line length rather than a raw ch count: Instrument Sans sets about 1.55 characters per `ch`, so the kit's 62ch body ran to about 95 characters a line; body is now 45ch (about 70 characters), compact 46ch and lead 44ch. Revised kit roles are tagged `derived` with the kit's sizes and measure kept in `kit_original`. Section rhythm is 64 / 80 / 96 (was 64 / 96 / 128), and the content container steps up to 1320 at 1600px and 1440 at 1920px (new breakpoints `2xl` and `3xl`). 0.3 also adds the Switchboard `circuit` and `circuit-grid` roles (connector lines stand clear of the board grid; the connector meets 3:1 on the board in both themes) and `layout.viewport.height` (`--viewport-height`, the small viewport height the home hero fills).
 
 # Open Flow — Strale website design system
 
@@ -84,9 +84,9 @@ Six categorical slots, assigned in fixed order and never cycled. Light: `#3027ff
 | `section` | Space Grotesk 600 | 26–36 | h2 |
 | `subhead` | Space Grotesk 600 | 20–24 | h3, card titles |
 | `detail` | Instrument Sans 600 | 16–18 (kit 17–20, revised 0.3) | h4, group headings |
-| `lead` | Instrument Sans 400 | 17–19, 52ch (0.2: 18–21) | Intro paragraph |
-| `body` | Instrument Sans 400 | 16–17, lh 1.6, 62ch (kit 16–19, revised 0.3) | Reading text, never below 16 |
-| `compact` | Instrument Sans 400 | 16 (kit 16–17, revised 0.3) | Cards, tables, reference |
+| `lead` | Instrument Sans 400 | 17–19, 44ch (0.2: 18–21, 52ch) | Intro paragraph |
+| `body` | Instrument Sans 400 | 16–17, lh 1.6, 45ch (kit 16–19, 62ch; revised 0.3) | Reading text, never below 16 |
+| `compact` | Instrument Sans 400 | 16, 46ch (kit 16–17, 58ch; revised 0.3) | Cards, tables, reference |
 | `ui` | Instrument Sans 500 | 16 | Buttons, nav, tabs, labels |
 | `small` | Instrument Sans 400 | 13–14 (0.2: 14) | Helper text, metadata, legal. Never the only carrier of essential content |
 | `label` | Instrument Sans 600 | 12–13, +0.06em | Eyebrows, badges. Sentence case |
@@ -101,7 +101,7 @@ Space Grotesk introduces and Instrument Sans explains. Use at most two weights i
 - **Spacing:** 0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160. Named stacks: tight 8, base 16, loose 24, group 32, block 48.
 - **Radii:** tag 4, control 8 (kit), card 12, media 20, pill.
 - **Elevation:** four levels (0–3). Cards rest at 1, hover lifts to 2, menus sit at 3. On dark, elevation also raises the surface colour, because a shadow alone doesn't read there.
-- **Layout:** containers 1200 (content), 1320 (wide), 720 (prose). Grid 4 / 8 / 12 columns at 0 / 768 / 1024px. Gutters 16 / 24 / 32. Section rhythm 64 / 96 / 128. Breakpoints 640, 768, 1024, 1280. Mobile first. Measures: body 62ch, lead 52ch, section 28ch, hero 16ch.
+- **Layout:** containers 1200 (content; 1320 from 1600px and 1440 from 1920px, 0.3), 1320 (wide), 720 (prose). Grid 4 / 8 / 12 columns at 0 / 768 / 1024px. Gutters 16 / 24 / 32. Section rhythm 64 / 80 / 96 (0.3; was 64 / 96 / 128). Breakpoints 640, 768, 1024, 1280, 1600, 1920. Mobile first. Measures: body 45ch, lead 44ch (0.3; were 62ch and 52ch), section 28ch, hero 16ch.
 - **Controls:** 36 / 44 / 52px heights. Primary actions and navigation use 44px targets or larger. Compact controls (small buttons, chips, code tabs, segmented control, theme switch) are 36px. Nothing interactive goes below the WCAG 2.2 floor of 24px. Borders 1px. Focus ring 2px with 2px offset.
 
 ## Motion

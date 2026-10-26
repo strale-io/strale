@@ -233,9 +233,10 @@
           },
           "detail": {
             "source": "derived",
-            "kit_size_px": {
+            "kit_original": {
               "min": 17,
-              "max": 20
+              "max": 20,
+              "measure": "42ch"
             },
             "family": "body",
             "weight": 600,
@@ -254,14 +255,15 @@
             "max": 19,
             "line": 1.5,
             "tracking": 0,
-            "measure": "52ch",
+            "measure": "44ch",
             "use": "Introductory paragraph under a page or section heading."
           },
           "body": {
             "source": "derived",
-            "kit_size_px": {
+            "kit_original": {
               "min": 16,
-              "max": 19
+              "max": 19,
+              "measure": "62ch"
             },
             "family": "body",
             "weight": 400,
@@ -269,14 +271,15 @@
             "max": 17,
             "line": 1.6,
             "tracking": 0,
-            "measure": "62ch",
+            "measure": "45ch",
             "use": "Reading text. Never below 16px."
           },
           "compact": {
             "source": "derived",
-            "kit_size_px": {
+            "kit_original": {
               "min": 16,
-              "max": 17
+              "max": 17,
+              "measure": "58ch"
             },
             "family": "body",
             "weight": 400,
@@ -284,7 +287,7 @@
             "max": 16,
             "line": 1.5,
             "tracking": 0,
-            "measure": "58ch",
+            "measure": "46ch",
             "use": "Card bodies, table cells, dense reference."
           },
           "ui": {
@@ -424,7 +427,9 @@
           "sm": 640,
           "md": 768,
           "lg": 1024,
-          "xl": 1280
+          "xl": 1280,
+          "2xl": 1600,
+          "3xl": 1920
         },
         "container_px": {
           "content": 1200,
@@ -449,15 +454,15 @@
           }
         },
         "measure": {
-          "body": "62ch",
-          "lead": "52ch",
+          "body": "45ch",
+          "lead": "44ch",
           "hero": "16ch",
           "section": "28ch"
         },
         "section_rhythm_px": {
           "base": 64,
-          "md": 96,
-          "lg": 128
+          "md": 80,
+          "lg": 96
         },
         "stack_px": {
           "tight": 8,
@@ -876,7 +881,17 @@
         },
         "viewport": {
           "height": "100svh"
-        }
+        },
+        "container_steps": [
+          {
+            "min_width": "2xl",
+            "content_px": 1320
+          },
+          {
+            "min_width": "3xl",
+            "content_px": 1440
+          }
+        ]
       },
       "provenance": {
         "source": "design/tokens/candidates/open-flow.json",
