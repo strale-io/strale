@@ -46,7 +46,7 @@ const contact = data.facts.static.controller?.contact_email;
       <dl class="grid-3 stats">
         {paid.length > 0 && <div class="card"><dt class="t-label">Tools</dt><dd><span class="t-stat num">{formatEur(paid[0])}–{formatEur(paid[paid.length - 1])}</span><span class="small muted">per call; half cost {formatEur(median)} or less</span></dd></div>}
         {bundlePrices.length > 0 && <div class="card"><dt class="t-label">Bundled checks</dt><dd><span class="t-stat num">{formatEur(bundlePrices[0])}–{formatEur(bundlePrices[bundlePrices.length - 1])}</span><span class="small muted">per check, for every step it runs</span></dd></div>}
-        <div class="card"><dt class="t-label">Free tools</dt><dd><span class="t-stat num">{free.length}</span><span class="small muted">no charge; without a key, {FREE_TIER_DAILY_LIMIT} calls a day</span></dd></div>
+        <div class="card"><dt class="t-label">Free tools</dt><dd><span class="t-stat num">{free.length}</span><span class="small muted">no charge with a key; without one, up to {FREE_TIER_DAILY_LIMIT} calls a day</span></dd></div>
       </dl>
       {bundlePrices.length === 0 && <p class="small muted">Bundled-check prices are read from the live API{data.mode !== "live" ? "; this preview build does not have them" : ""}.</p>}
       <div class="table-wrap bands-wrap" tabindex="0" role="region" aria-labelledby="bands-title">
@@ -64,7 +64,7 @@ const contact = data.facts.static.controller?.contact_email;
     <div class="container grid-2">
       <div class="stack">
         <h2 id="charged-title" class="t-section">When you are charged</h2>
-        <p class="t-body">A single tool is charged only when the call succeeds. If the tool fails, nothing is taken from your balance.</p>
+        <p class="t-body">A single tool is charged only when the call succeeds. If the tool fails, you are not charged.</p>
         <p class="t-body">A bundled check is charged once, at its listed price, when it returns a result. If some steps fail and others succeed, you still get the steps that worked and the check is charged in full; it is refunded only if every step fails.</p>
       </div>
       <div class="stack">
@@ -84,7 +84,7 @@ const contact = data.facts.static.controller?.contact_email;
           <ul class="feature-list">
             <li>One key and one balance for every tool and bundled check.</li>
             <li>Top up in EUR by card, through Stripe, from {formatEur(MIN_TOPUP_CENTS)}.</li>
-            <li>A new account gets {formatEur(TRIAL_CREDITS_CENTS)} of trial credit, with no card. There is one grant per email address.</li>
+            <li>A new account can get {formatEur(TRIAL_CREDITS_CENTS)} of trial credit, with no card. There is one grant per email address.</li>
           </ul>
           <div class="row"><a class="btn btn-primary" href="/signup">Get an API key</a><a class="link" href="/topup">Top up a wallet</a></div>
         </article>
@@ -106,7 +106,7 @@ const contact = data.facts.static.controller?.contact_email;
     <section class="section section-sunken" aria-labelledby="free-title">
       <div class="container stack">
         <h2 id="free-title" class="t-section">Free tools</h2>
-        <p class="t-body">{plural(free.length, "tool")} cost nothing. Without a key you can call them {FREE_TIER_DAILY_LIMIT} times a day, across all of them; with a key the normal rate limits apply and nothing is charged.</p>
+        <p class="t-body">{plural(free.length, "tool")} cost nothing. Without a key you can call them up to {FREE_TIER_DAILY_LIMIT} times a day, across all of them; with a key the normal rate limits apply and nothing is charged. Over x402, those listed there are paid like any other tool.</p>
         <ul class="chip-row" role="list">{free.map((t) => <li><a class="tag link-quiet" href={`/tools/${t.slug}`}>{t.name}</a></li>)}</ul>
       </div>
     </section>
@@ -121,7 +121,7 @@ const contact = data.facts.static.controller?.contact_email;
       </details>
       <details>
         <summary>What happens when my balance runs out?</summary>
-        <p>The call is refused with the error code <code>insufficient_balance</code> and nothing is charged. Top up and call again.</p>
+        <p>A call to a paid tool is refused with the error code <code>insufficient_balance</code> and nothing is charged. Free tools keep working. Top up and call again.</p>
       </details>
       <details>
         <summary>Which currency?</summary>

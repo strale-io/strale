@@ -84,7 +84,7 @@ for (const r of results.slice(0, 3)) {
     summary: "Pull text from images and the fields from invoices, receipts and PDFs.",
     job: "documents",
     intro:
-      "Agents that handle paperwork need what is written on it, as fields they can act on: who sent the invoice, how much, by when. These tools take a document by URL or as text and return structured fields. An AI model reads the document, so the agent should check the fields it acts on.",
+      "Agents that handle paperwork need what is written on it, as fields they can act on: who sent the invoice, how much, by when. These tools take a document by URL or as a file (receipts also as text) and return structured fields. An AI model reads the document, so the agent should check the fields it acts on.",
     steps: [
       { slug: "invoice-extract", role: "Read a supplier invoice: vendor, VAT number, amounts, due date, IBAN, line items.", calls: 1 },
       { slug: "receipt-categorize", role: "Read a receipt and file it under an expense category.", calls: 2 },
@@ -107,7 +107,7 @@ const invoice = await strale.do({
 });
 
 const { vendor_name, total_amount, currency, due_date } = invoice.output;
-// invoice.output.confidence says how sure the model is of each field`,
+// invoice.output.confidence, when present, says how sure the model is of the main fields`,
   },
   {
     slug: "checking-data",
@@ -162,7 +162,7 @@ if (!email.output.valid || !vat.output.valid) {
       { slug: "pep-check", role: "Check whether a director is a politically exposed person.", calls: 1 },
       { slug: "adverse-media-check", role: "Look for news coverage of fraud, corruption and similar risk categories.", calls: 1 },
     ],
-    bundle: { kind: "company-check", country: "se", note: "The bundled company check runs the lookup and screening in one call at one price and returns each step’s result." },
+    bundle: { kind: "full-check", country: "se", note: "The bundled full check runs these lookups and screenings, with further checks, in one call at one price and returns each step’s result." },
     example: {
       setup: "A procurement agent is asked to add a Swedish supplier, given its organisation number and the name of its managing director.",
       run: [
@@ -204,7 +204,7 @@ if (company.output.status !== "active" || sanctions.output.match_count) {
       { slug: "iban-validate", role: "Check the IBAN’s format and check digits and read the bank code.", calls: 1 },
       { slug: "swedish-company-data", role: "Look the issuer up in its country’s records. This example uses Sweden.", calls: 1 },
     ],
-    bundle: { kind: "invoice-check", country: "se", note: "The bundled invoice-issuer check runs these checks in one call at one price and returns each step’s result." },
+    bundle: { kind: "invoice-check", country: "se", note: "The bundled invoice-issuer check takes the details the agent read off the invoice, such as the VAT number and IBAN, and runs the VAT, IBAN and registry checks, screening and further checks in one call at one price, returning each step’s result." },
     example: {
       setup: "An accounts-payable agent receives an invoice from a Swedish supplier whose bank details differ from the last one.",
       run: [
@@ -215,7 +215,7 @@ if (company.output.status !== "active" || sanctions.output.match_count) {
       ],
     },
     human:
-      "The checks show whether the details are consistent; they do not prove an invoice is genuine, and an IBAN check does not show who holds the account. A person decides whether to pay.",
+      "The checks show whether the details are consistent; they do not prove an invoice is genuine, and an IBAN check does not show who holds the account. Any screening match in the bundled check is a possible match, not a finding. A person decides whether to pay.",
     sketch: (price) => `${client}
 const invoice = await strale.do({
   capability_slug: "invoice-extract",

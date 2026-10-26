@@ -14,8 +14,10 @@ export interface ResolvedUseCase extends Omit<UseCase, "steps" | "bundle" | "ske
   run: ResolvedStep[];
   /** With an API key. Free tools are not charged to the wallet (apps/api/src/routes/do.ts, executeFreeTierAuthenticated). */
   runCents: number;
-  /** The same run paid over x402, when every paid tool in it is eligible. */
+  /** The same run paid over x402, when every paid tool in it is eligible. Free tools are sold over x402 too and are counted when listed there. */
   runUsd: number | null;
+  /** Free tools in the run that are not on x402: called without a key, within the daily limit, and not in runUsd. */
+  freeOffX402: ResolvedStep[];
   bundle: (BundleEntry & { note: string }) | null;
   /** Null when a tool the sketch calls is not visible in this build's catalogue. */
   sketch: string | null;
@@ -34,9 +36,10 @@ export function resolveUseCase(d: SiteData, uc: UseCase): ResolvedUseCase {
   if (!steps.some((s) => s.calls > 0)) throw new Error(`Use case ${uc.slug}: no tool in its example run is visible in the catalogue`);
   const run = steps.filter((s) => s.calls > 0);
   const runCents = run.reduce((n, s) => n + s.calls * chargedCents(s.tool), 0);
-  // Free tools need no payment on either route; the rest must all be x402-eligible.
-  const paid = run.filter((s) => !s.tool.free);
-  const runUsd = paid.every((s) => s.tool.x402) ? paid.reduce((n, s) => n + s.calls * s.tool.x402!.price_usd, 0) : null;
+  // Over x402 every listed tool is paid, free-tier ones included (x402-gateway-v2.ts never serves an x402 caller free).
+  // A free tool that is not listed can still be called without a key; a paid one that is not listed rules x402 out.
+  const freeOffX402 = run.filter((s) => s.tool.free && !s.tool.x402);
+  const runUsd = run.every((s) => s.tool.x402 || s.tool.free) ? run.reduce((n, s) => n + s.calls * (s.tool.x402?.price_usd ?? 0), 0) : null;
   const iso = uc.bundle ? (uc.bundle.country === "uk" ? "GB" : uc.bundle.country.toUpperCase()) : null;
   const entry = iso ? bundlesByCountry(d).get(iso)?.find((b) => b.kind === uc.bundle!.kind) ?? null : null;
   const decisionSupport = run.some((s) => DECISION.has(d.manifests.get(s.tool.slug)?.gdpr_art_22_classification ?? ""));
@@ -45,7 +48,7 @@ export function resolveUseCase(d: SiteData, uc: UseCase): ResolvedUseCase {
   const code = uc.sketch(price);
   const sketch = sketchSlugs(code).every((s) => bySlug.has(s)) ? code : null;
   const { steps: _s, bundle: _b, sketch: _k, ...rest } = uc;
-  return { ...rest, steps, run, runCents, runUsd, bundle: entry && uc.bundle ? { ...entry, note: uc.bundle.note } : null, sketch, decisionSupport };
+  return { ...rest, steps, run, runCents, runUsd, bundle: entry && uc.bundle ? { ...entry, note: uc.bundle.note } : null, freeOffX402, sketch, decisionSupport };
 }
 
 export function useCases(d: SiteData): ResolvedUseCase[] {

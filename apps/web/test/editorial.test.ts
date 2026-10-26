@@ -143,7 +143,15 @@ test("use-case run cost counts free tools as free and needs every paid tool on x
   const r = resolveUseCase(d, uc);
   assert.equal(r.runCents, 2);
   assert.equal(r.steps.length, 2, "a tool not in the catalogue is dropped");
-  assert.equal(r.runUsd, 0.03);
+  assert.equal(r.runUsd, 0.03, "a free tool not on x402 adds nothing to the x402 total");
+  assert.deepEqual(r.freeOffX402.map((s) => s.tool.slug), ["email-validate"]);
   const r2 = resolveUseCase(d, { ...uc, steps: [...uc.steps, { slug: "phone-validate", role: "", calls: 1 }] });
-  assert.equal(r2.runUsd, null);
+  assert.equal(r2.runUsd, null, "a paid tool not on x402 rules the x402 route out");
+  const r3 = resolveUseCase(d, { ...uc, steps: [...uc.steps, { slug: "phone-validate", role: "", calls: 0 }] });
+  assert.equal(r3.runUsd, 0.03, "a listed tool outside the run does not affect the run's x402 total");
+  // Over x402 free-tier tools are sold: when listed, they are counted.
+  const d2 = { ...(d as object), x402: { capabilities: [{ slug: "vat-validate", name: "", price_usd: 0.03, method: "POST", endpoint: "" }, { slug: "email-validate", name: "", price_usd: 0.04, method: "POST", endpoint: "" }], solutions: [] } } as never;
+  const r4 = resolveUseCase(d2, uc);
+  assert.equal(Math.round(r4.runUsd! * 100) / 100, 0.11);
+  assert.equal(r4.runCents, 2, "with a key the free tool is still not charged");
 });

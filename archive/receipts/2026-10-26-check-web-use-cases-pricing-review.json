@@ -1,0 +1,1116 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "1b16560e3a345b82f8984d1b85139ffb801bb6d7"
+  },
+  "at": "2026-10-26T07:55:04.892Z",
+  "inputs": {
+    "source": "apps/web/review/latest/report.json"
+  },
+  "summary": {
+    "built_from": "dist",
+    "generated_at": "2026-10-26T07:53:48.801Z"
+  },
+  "topic": "web-use-cases-pricing-review",
+  "raw": {
+    "built_from": "dist",
+    "generated_at": "2026-10-26T07:53:48.801Z",
+    "pages": [
+      {
+        "path": "/",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "home--desktop-1440-light.jpg",
+        "page_height_px": 6872,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "home--desktop-1440-dark.jpg",
+        "page_height_px": 6872,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 54,
+          "incomplete": [
+            {
+              "id": "color-contrast",
+              "nodes": 3
+            }
+          ]
+        },
+        "screenshot": "home--mobile-390-light.jpg",
+        "page_height_px": 9474,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 54,
+          "incomplete": [
+            {
+              "id": "color-contrast",
+              "nodes": 3
+            }
+          ]
+        },
+        "screenshot": "home--mobile-390-dark.jpg",
+        "page_height_px": 9443,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 47,
+          "incomplete": []
+        },
+        "screenshot": "tools--desktop-1440-light.jpg",
+        "page_height_px": 31396,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 47,
+          "incomplete": []
+        },
+        "screenshot": "tools--desktop-1440-dark.jpg",
+        "page_height_px": 31396,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 47,
+          "incomplete": []
+        },
+        "screenshot": "tools--mobile-390-light.jpg",
+        "page_height_px": 47270,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 47,
+          "incomplete": []
+        },
+        "screenshot": "tools--mobile-390-dark.jpg",
+        "page_height_px": 47270,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools/iban-validate",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "tools-iban-validate--desktop-1440-light.jpg",
+        "page_height_px": 3854,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/iban-validate",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "tools-iban-validate--desktop-1440-dark.jpg",
+        "page_height_px": 3854,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/iban-validate",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "tools-iban-validate--mobile-390-light.jpg",
+        "page_height_px": 5921,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/iban-validate",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "tools-iban-validate--mobile-390-dark.jpg",
+        "page_height_px": 5921,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/invoice-extract",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "tools-invoice-extract--desktop-1440-light.jpg",
+        "page_height_px": 4555,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/invoice-extract",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "tools-invoice-extract--desktop-1440-dark.jpg",
+        "page_height_px": 4555,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/invoice-extract",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 50,
+          "incomplete": []
+        },
+        "screenshot": "tools-invoice-extract--mobile-390-light.jpg",
+        "page_height_px": 7532,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools/invoice-extract",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 50,
+          "incomplete": []
+        },
+        "screenshot": "tools-invoice-extract--mobile-390-dark.jpg",
+        "page_height_px": 7532,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "tools-swedish-company-data--desktop-1440-light.jpg",
+        "page_height_px": 5587,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "tools-swedish-company-data--desktop-1440-dark.jpg",
+        "page_height_px": 5587,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 50,
+          "incomplete": []
+        },
+        "screenshot": "tools-swedish-company-data--mobile-390-light.jpg",
+        "page_height_px": 10053,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 50,
+          "incomplete": []
+        },
+        "screenshot": "tools-swedish-company-data--mobile-390-dark.jpg",
+        "page_height_px": 10053,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/solutions/kyb-essentials-se",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 404,
+        "overflow_px": 0,
+        "console_errors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "axe": {
+          "violations": [
+            {
+              "id": "document-title",
+              "impact": "serious",
+              "help": "Documents must have <title> element to aid in navigation",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  Document does not have a non-empty <title> element"
+                }
+              ]
+            },
+            {
+              "id": "html-has-lang",
+              "impact": "serious",
+              "help": "<html> element must have a lang attribute",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  The <html> element does not have a lang attribute"
+                }
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "help": "Document should have one main landmark",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Document does not have a main landmark"
+                }
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "help": "Page should contain a level-one heading",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Page must have a level-one heading"
+                }
+              ]
+            }
+          ],
+          "passes": 2,
+          "incomplete": []
+        },
+        "screenshot": "solutions-kyb-essentials-se--desktop-1440-light.jpg",
+        "page_height_px": 900,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/solutions/kyb-essentials-se",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 404,
+        "overflow_px": 0,
+        "console_errors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "axe": {
+          "violations": [
+            {
+              "id": "document-title",
+              "impact": "serious",
+              "help": "Documents must have <title> element to aid in navigation",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  Document does not have a non-empty <title> element"
+                }
+              ]
+            },
+            {
+              "id": "html-has-lang",
+              "impact": "serious",
+              "help": "<html> element must have a lang attribute",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  The <html> element does not have a lang attribute"
+                }
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "help": "Document should have one main landmark",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Document does not have a main landmark"
+                }
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "help": "Page should contain a level-one heading",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Page must have a level-one heading"
+                }
+              ]
+            }
+          ],
+          "passes": 2,
+          "incomplete": []
+        },
+        "screenshot": "solutions-kyb-essentials-se--desktop-1440-dark.jpg",
+        "page_height_px": 900,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/solutions/kyb-essentials-se",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 404,
+        "overflow_px": 0,
+        "console_errors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "axe": {
+          "violations": [
+            {
+              "id": "document-title",
+              "impact": "serious",
+              "help": "Documents must have <title> element to aid in navigation",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  Document does not have a non-empty <title> element"
+                }
+              ]
+            },
+            {
+              "id": "html-has-lang",
+              "impact": "serious",
+              "help": "<html> element must have a lang attribute",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  The <html> element does not have a lang attribute"
+                }
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "help": "Document should have one main landmark",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Document does not have a main landmark"
+                }
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "help": "Page should contain a level-one heading",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Page must have a level-one heading"
+                }
+              ]
+            }
+          ],
+          "passes": 2,
+          "incomplete": []
+        },
+        "screenshot": "solutions-kyb-essentials-se--mobile-390-light.jpg",
+        "page_height_px": 844,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/solutions/kyb-essentials-se",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 404,
+        "overflow_px": 0,
+        "console_errors": [
+          "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "axe": {
+          "violations": [
+            {
+              "id": "document-title",
+              "impact": "serious",
+              "help": "Documents must have <title> element to aid in navigation",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  Document does not have a non-empty <title> element"
+                }
+              ]
+            },
+            {
+              "id": "html-has-lang",
+              "impact": "serious",
+              "help": "<html> element must have a lang attribute",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix any of the following:\n  The <html> element does not have a lang attribute"
+                }
+              ]
+            },
+            {
+              "id": "landmark-one-main",
+              "impact": "moderate",
+              "help": "Document should have one main landmark",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Document does not have a main landmark"
+                }
+              ]
+            },
+            {
+              "id": "page-has-heading-one",
+              "impact": "moderate",
+              "help": "Page should contain a level-one heading",
+              "nodes": [
+                {
+                  "target": "html",
+                  "summary": "Fix all of the following:\n  Page must have a level-one heading"
+                }
+              ]
+            }
+          ],
+          "passes": 2,
+          "incomplete": []
+        },
+        "screenshot": "solutions-kyb-essentials-se--mobile-390-dark.jpg",
+        "page_height_px": 844,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/company-data",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 47,
+          "incomplete": []
+        },
+        "screenshot": "company-data--desktop-1440-light.jpg",
+        "page_height_px": 8014,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 47,
+          "incomplete": []
+        },
+        "screenshot": "company-data--desktop-1440-dark.jpg",
+        "page_height_px": 8014,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 44,
+          "incomplete": []
+        },
+        "screenshot": "company-data--mobile-390-light.jpg",
+        "page_height_px": 17556,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 44,
+          "incomplete": []
+        },
+        "screenshot": "company-data--mobile-390-dark.jpg",
+        "page_height_px": 17556,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/sweden",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "company-data-sweden--desktop-1440-light.jpg",
+        "page_height_px": 5141,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/company-data/sweden",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "company-data-sweden--desktop-1440-dark.jpg",
+        "page_height_px": 5141,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/company-data/sweden",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "company-data-sweden--mobile-390-light.jpg",
+        "page_height_px": 9334,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/sweden",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "company-data-sweden--mobile-390-dark.jpg",
+        "page_height_px": 9334,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/united-states",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "company-data-united-states--desktop-1440-light.jpg",
+        "page_height_px": 7824,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/united-states",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "company-data-united-states--desktop-1440-dark.jpg",
+        "page_height_px": 7824,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/united-states",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "company-data-united-states--mobile-390-light.jpg",
+        "page_height_px": 15674,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/united-states",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "company-data-united-states--mobile-390-dark.jpg",
+        "page_height_px": 15674,
+        "screenshot_clipped_at_px": 7000
+      },
+      {
+        "path": "/company-data/japan",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "company-data-japan--desktop-1440-light.jpg",
+        "page_height_px": 3198,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/company-data/japan",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "company-data-japan--desktop-1440-dark.jpg",
+        "page_height_px": 3198,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/company-data/japan",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "company-data-japan--mobile-390-light.jpg",
+        "page_height_px": 4704,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/company-data/japan",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "company-data-japan--mobile-390-dark.jpg",
+        "page_height_px": 4704,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 42,
+          "incomplete": []
+        },
+        "screenshot": "use-cases--desktop-1440-light.jpg",
+        "page_height_px": 2015,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 42,
+          "incomplete": []
+        },
+        "screenshot": "use-cases--desktop-1440-dark.jpg",
+        "page_height_px": 2015,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 42,
+          "incomplete": []
+        },
+        "screenshot": "use-cases--mobile-390-light.jpg",
+        "page_height_px": 3741,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 42,
+          "incomplete": []
+        },
+        "screenshot": "use-cases--mobile-390-dark.jpg",
+        "page_height_px": 3741,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/supplier-onboarding",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 48,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-supplier-onboarding--desktop-1440-light.jpg",
+        "page_height_px": 3874,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/supplier-onboarding",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 48,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-supplier-onboarding--desktop-1440-dark.jpg",
+        "page_height_px": 3874,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/supplier-onboarding",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-supplier-onboarding--mobile-390-light.jpg",
+        "page_height_px": 5283,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/supplier-onboarding",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-supplier-onboarding--mobile-390-dark.jpg",
+        "page_height_px": 5283,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/checking-data",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 48,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-checking-data--desktop-1440-light.jpg",
+        "page_height_px": 3570,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/checking-data",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 48,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-checking-data--desktop-1440-dark.jpg",
+        "page_height_px": 3570,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/checking-data",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-checking-data--mobile-390-light.jpg",
+        "page_height_px": 4997,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/use-cases/checking-data",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 49,
+          "incomplete": []
+        },
+        "screenshot": "use-cases-checking-data--mobile-390-dark.jpg",
+        "page_height_px": 4997,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/pricing",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "pricing--desktop-1440-light.jpg",
+        "page_height_px": 3796,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/pricing",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "pricing--desktop-1440-dark.jpg",
+        "page_height_px": 3796,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/pricing",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "pricing--mobile-390-light.jpg",
+        "page_height_px": 5333,
+        "screenshot_clipped_at_px": null
+      },
+      {
+        "path": "/pricing",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 52,
+          "incomplete": []
+        },
+        "screenshot": "pricing--mobile-390-dark.jpg",
+        "page_height_px": 5333,
+        "screenshot_clipped_at_px": null
+      }
+    ]
+  }
+}

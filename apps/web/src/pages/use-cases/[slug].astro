@@ -10,7 +10,6 @@ import { useCases, chargedCents } from "../../lib/use-cases.ts";
 import { USE_CASES } from "../../content/use-cases.ts";
 import { JOB_GROUPS } from "../../content/jobs.ts";
 import { L1 } from "../../content/positioning.ts";
-import { BUNDLE_LABEL } from "../../lib/company-data.ts";
 import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
 import { formatEur, formatUsd, plural } from "../../lib/format.ts";
 import { firstSentence, TRANSPARENCY } from "../../lib/describe.ts";
@@ -21,12 +20,13 @@ export function getStaticPaths() {
 
 const { slug } = Astro.props as { slug: string };
 const data = await getSiteData();
-const uc = useCases(data).find((u) => u.slug === slug)!;
+const all = useCases(data);
+const uc = all.find((u) => u.slug === slug)!;
 const group = JOB_GROUPS.find((g) => g.id === uc.job)!;
 const first = uc.steps[0].tool;
 const aiTools = uc.run.filter((s) => s.tool.transparency_tag === "ai_generated" || s.tool.transparency_tag === "mixed");
 const hasFree = uc.run.some((s) => s.tool.free);
-const others = useCases(data).filter((u) => u.slug !== slug);
+const others = all.filter((u) => u.slug !== slug);
 ---
 <Base title={uc.title} current="use-cases" description={uc.summary}>
   <article>
@@ -95,9 +95,9 @@ const others = useCases(data).filter((u) => u.slug !== slug);
             </table>
           </div>
           <ul class="plain-list stack-tight small muted">
-            {uc.runUsd !== null && uc.runUsd > 0 && <li>Over x402, with no account: <span class="num">{formatUsd(uc.runUsd)}</span> USDC in total, paid per request.</li>}
-            {uc.runUsd === null && <li>Not every tool in this run is available over x402; use an API key.</li>}
-            {hasFree && <li>Free tools are not charged. Without a key they allow {FREE_TIER_DAILY_LIMIT} calls a day.</li>}
+            {uc.runUsd !== null && uc.runUsd > 0 && <li>Over x402, with no account: <span class="num">{formatUsd(uc.runUsd)}</span> USDC in total, paid per request{uc.freeOffX402.length > 0 && `, plus ${uc.freeOffX402.map((s) => s.tool.name).join(" and ")} called free without a key`}. Over x402 the free tools are paid too.</li>}
+            {uc.runUsd === null && <li>Not every paid tool in this run is available over x402; use an API key.</li>}
+            {hasFree && <li>Free tools are not charged with a key. Without a key they allow up to {FREE_TIER_DAILY_LIMIT} calls a day.</li>}
             <li>A single tool is charged only when the call succeeds. Prices are today’s, read from the catalogue.</li>
           </ul>
         </div>
