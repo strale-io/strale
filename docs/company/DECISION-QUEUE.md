@@ -38,6 +38,10 @@ Under the data-access rule (DEC-20261023-A), a per-call read of a public source 
 
 **Answered 2026-10-26 by Petter, in session:** "i agree with your rec on #1 and 2". The entry stays `your_call` until the registers reply, because the three tools still run on unconfirmed terms. Option 1: Petter writes to the registers, using drafts the assistant prepared. The addresses are uid@bfs.admin.ch (Swiss UID register, read from the Federal Statistical Office's UID pages); zefix@bj.admin.ch, copied on the same email (Zefix, moderate confidence: from search results citing the register's page, not read directly); and ares@mfcr.cz (Czech ARES, read from the Ministry of Finance's ARES page). `vat-validate`'s Swiss path, `swiss-company-data` and `cz-company-data` stay live while the replies are awaited. Portfolio 1.12 is built the day a yes arrives.
 
+**Update 2026-10-26, late evening (Petter's mailbox checked with his permission before sending):**
+- **Zefix is settled without a new request.** On 2026-03-20 the Federal Commercial Registry Office (zefix@bj.admin.ch) opened Strale's Zefix REST API account and stated its terms, which Petter accepted in writing the same day: use is free of charge, and "If the data is further used, its origin must be indicated and any modification of the data must be indicated." That is a written grant of further use with attribution, so `swiss-company-data` meets DEC-20261023-A's condition. Its `vendor-terms.ts` record is still to be added; per the register note above, that goes in the PR that adjusts the shared-client test.
+- **Emails sent by Petter on 2026-10-26:** the Swiss UID register (uid@bfs.admin.ch, now asking about UID only, citing the Zefix terms as precedent) and the Czech ARES register (ares@mfcr.cz). Neither had been contacted before.
+
 **DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · answered 2026-10-26, open until Serper replies or the exception ends 2026-11-09 — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
 
 Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
@@ -123,6 +127,11 @@ not confirmed. Under the rule you adopted, that is the "never" lane
 switch-off is one line in the deactivation list.
 
 **Answered 2026-10-26 by Petter, in session:** "i agree with your rec on #1 and 2". The entry stays `your_call` until Serper replies or the exception ends, because the eight tools still run on unconfirmed terms. Option 1: Petter writes to Serper at hello@serper.dev (the "Contact us" address on serper.dev), using a draft the assistant prepared. Meanwhile the eight Serper-backed tools keep running, under a time-boxed exception that ends 2026-11-09 (two weeks, matching the prepaid allowance that expires 2026-11-08). If Serper says no or has not answered by then, option 2 applies: move the tools to a per-call vendor whose terms permit resale, and switch off only the tools with no replacement. The option 2 groundwork starts now; it is technical and involves no vendor contact.
+
+**Update 2026-10-26, late evening:**
+- Petter emailed hello@serper.dev at 22:12 CET. His mailbox shows no earlier contact with Serper about terms, only payment receipts.
+- Option 2 research is in `docs/research/2026-10-26-serp-vendor-replacement.md`. None of the prepaid Google-results vendors explicitly permits resale. DataForSEO fits best, but it would need its own written yes. Scrapingdog's terms do permit redistribution, but only on a subscription from about $40 a month, which is a supplier contract and so Petter's call. Without either, google-search, serp-analyze, keyword-rank-check and serp-related-questions would switch off.
+- Petter decided on 2026-10-26 to hold off on contacting DataForSEO.
 
 **DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology
