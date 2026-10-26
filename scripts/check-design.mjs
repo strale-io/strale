@@ -6,6 +6,7 @@
 // Usage: node scripts/check-design.mjs [--json]
 import { checkAllDesign, repoRootFrom, GENERATED_PATH } from "./design-lib.mjs";
 import { generate } from "./generate-design-tokens.mjs";
+import { checkWebTokens, lintWebStyles } from "./web-design-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
@@ -21,6 +22,8 @@ if (genResult.stale) {
       : `${GENERATED_PATH} does not match design/tokens/active.json — fix: npm run design:tokens:generate (then commit it)`,
   });
 }
+
+failures.push(...checkWebTokens(root), ...lintWebStyles(root));
 
 if (json) {
   console.log(JSON.stringify({

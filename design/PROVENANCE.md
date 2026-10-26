@@ -13,9 +13,9 @@ it), `superseded` (replaced by a later direction in the same lineage),
 active review, earlier than proposed), `rejected` (closed without adoption;
 preserved as history, excluded from implementation).
 
-## Open Flow (BrandKit Lab reference kit 06) — `proposed`, 2026-10-23
+## Open Flow (BrandKit Lab reference kit 06) — `adopted`, 2026-10-24
 
-**The founder's visual-direction choice for the website.** On 23 October 2026 Petter chose `strale-reference-kit-06` (BrandKit Lab, 9 September 2026) as Strale's visual direction for the redesign and asked for a complete website design system built from it. It supersedes Quiet Material as the visual direction. Positioning (DEC-20260905-A) is unchanged. The candidate system is [Open Flow 0.1](brand-kit/open-flow/README.md), values in `design/tokens/candidates/open-flow.json`, with exploration record [`2026-10-23-open-flow-kit-06`](explorations/2026-10-23-open-flow-kit-06/README.md). The eleven kit colours, the fonts, the kit's seven type roles, the 8px radius and the reveal timings carry over unchanged. The page canvas `#fdf7fe` is sampled from the artwork ground, not a kit colour. The dark theme, interaction/status/chart colours, extra type roles, spacing, grid and components are derived. Artwork and fonts are byte-identical copies, hash-bound in `brand-kit/open-flow/provenance.json`. The kit's STRALE wordmark stays a candidate; the flowing-S logo is retained. Not adopted; `active.json` is unchanged.
+**The founder's visual-direction choice for the website.** On 23 October 2026 Petter chose `strale-reference-kit-06` (BrandKit Lab, 9 September 2026) as Strale's visual direction for the redesign and asked for a complete website design system built from it. It supersedes Quiet Material as the visual direction. Positioning (DEC-20260905-A) is unchanged. The candidate system is [Open Flow 0.1](brand-kit/open-flow/README.md), values in `design/tokens/candidates/open-flow.json`, with exploration record [`2026-10-23-open-flow-kit-06`](explorations/2026-10-23-open-flow-kit-06/README.md). The eleven kit colours, the fonts, the kit's seven type roles, the 8px radius and the reveal timings carry over unchanged. The page canvas `#fdf7fe` is sampled from the artwork ground, not a kit colour. The dark theme, interaction/status/chart colours, extra type roles, spacing, grid and components are derived. Artwork and fonts are byte-identical copies, hash-bound in `brand-kit/open-flow/provenance.json`. The kit's STRALE wordmark stays a candidate; the flowing-S logo is retained. **Adopted on 24 October 2026 by DEC-20261024-B:** the candidate's status is `adopted`, its values are the `website` surface of `design/tokens/active.json` (the two are checked identical), and `apps/web` builds its token CSS from that surface. Imagery approval (the kit's `checks-pending` asset checks and rights record) remains a publication gate, not part of the token adoption.
 
 ## Quiet Material — superseded as the visual direction, 2026-10-23
 
@@ -41,8 +41,12 @@ surface in `design/tokens/active.json`. Direction rationale (single-theme,
 because the audience is one founder reading daily in daylight) is in
 `docs/company/DESIGN-SYSTEM.md`.
 
-## Website dark Inter theme — `unrecorded`, running since before this
-discipline existed
+## Website dark Inter theme — `superseded` as the website surface, 2026-10-24 (still served by strale.dev until cutover)
+
+Replaced in `design/tokens/active.json` by Open Flow under DEC-20261024-B.
+strale.dev keeps serving it from `strale-frontend` until the founder-reserved
+public cutover; the captured values remain in the git history of
+`active.json` (last at commit `8277986`). The original record follows.
 
 Dark HSL-variable theme, Inter + JetBrains Mono, `strale-frontend`
 `src/index.css` + `tailwind.config.ts`. Serves `strale.dev` on `main` today

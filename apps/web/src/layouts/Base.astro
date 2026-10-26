@@ -1,0 +1,60 @@
+---
+// Page shell: head, theme bootstrap, skip link, header, footer. Every page uses it.
+import "../styles/tokens.generated.css";
+import "../styles/site.css";
+import Icons from "../components/Icons.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { getSiteData } from "../lib/site-data";
+import { SHORT_DESCRIPTION } from "../content/positioning";
+import { formatDate } from "../lib/format";
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Header item to mark as the current page. */
+  current?: "tools" | "company-data" | "use-cases" | "pricing" | "docs";
+}
+const { title, description = SHORT_DESCRIPTION, current } = Astro.props;
+const data = await getSiteData();
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preload" href="/fonts/SpaceGrotesk.ttf" as="font" type="font/ttf" crossorigin />
+  <link rel="preload" href="/fonts/InstrumentSans.ttf" as="font" type="font/ttf" crossorigin />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:type" content="website" />
+  <link rel="alternate" type="text/plain" title="llms.txt" href="https://api.strale.io/llms.txt" />
+  {data.mode !== "live" && <meta name="robots" content="noindex" />}
+  <script is:inline>try { var s = localStorage.getItem("strale-theme"); if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s); } catch (e) {}</script>
+</head>
+<body>
+  <Icons />
+  <a class="skip-link" href="#main">Skip to content</a>
+  {data.mode !== "live" && (
+    <aside class="preview-banner" aria-label="Preview build">
+      <div class="container">
+        <strong>Preview build.</strong> Built from this repository’s manifests on {formatDate(data.loaded_at)}, not from the live API. Tool visibility, x402 eligibility and USD prices are approximated; bundled checks and test results are not included. Not for publication.
+      </div>
+    </aside>
+  )}
+  <Header current={current} />
+  <main id="main">
+    <slot />
+  </main>
+  <Footer />
+  <script>import "../scripts/site.ts";</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+---
+// Dark code block, one or more tabbed panels, with a copy button whose result is said in words.
+import { highlight } from "../lib/highlight";
+
+interface Panel { label: string; code: string; lang?: "json" | "shell" | "plain" }
+interface Props { id: string; title?: string; panels: Panel[]; /** Wrap long lines instead of scrolling them. */ wrap?: boolean }
+const { id, title, panels, wrap = false } = Astro.props;
+const many = panels.length > 1;
+---
+<div class:list={["code", { "code-wrap": wrap }]}>
+  <div class="code-head">
+    {many ? (
+      <div class="tabs" role="tablist" aria-label={title ?? "Code"} data-tabs>
+        {panels.map((p, i) => (
+          <button class="tab" role="tab" type="button" id={`${id}-tab-${i}`} aria-controls={`${id}-panel-${i}`} aria-selected={i === 0 ? "true" : "false"} tabindex={i === 0 ? 0 : -1}>{p.label}</button>
+        ))}
+      </div>
+    ) : (
+      <span class="code-title">{title ?? panels[0].label}</span>
+    )}
+    <button class="copy-btn" type="button" data-copy><svg class="icon icon-sm" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy</span></button>
+  </div>
+  {panels.map((p, i) => (
+    <div role={many ? "tabpanel" : undefined} id={`${id}-panel-${i}`} aria-labelledby={many ? `${id}-tab-${i}` : undefined} hidden={i > 0}>
+      <pre tabindex="0"><code set:html={highlight(p.code, p.lang ?? "plain")} /></pre>
+    </div>
+  ))}
+  <span class="visually-hidden" role="status" data-copy-status></span>
+</div>

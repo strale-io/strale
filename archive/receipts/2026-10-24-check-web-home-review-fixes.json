@@ -1,0 +1,88 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4e745df95e3d667b9e682e0b89425ccf9dcde141"
+  },
+  "at": "2026-10-24T09:57:32.376Z",
+  "inputs": {
+    "source": "apps/web/review/latest/report.json"
+  },
+  "summary": {
+    "built_from": "dist",
+    "generated_at": "2026-10-24T09:57:21.053Z"
+  },
+  "topic": "web-home-review-fixes",
+  "raw": {
+    "built_from": "dist",
+    "generated_at": "2026-10-24T09:57:21.053Z",
+    "pages": [
+      {
+        "path": "/",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "home--desktop-1440-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": []
+        },
+        "screenshot": "home--desktop-1440-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 54,
+          "incomplete": [
+            {
+              "id": "color-contrast",
+              "nodes": 3
+            }
+          ]
+        },
+        "screenshot": "home--mobile-390-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 54,
+          "incomplete": [
+            {
+              "id": "color-contrast",
+              "nodes": 3
+            }
+          ]
+        },
+        "screenshot": "home--mobile-390-dark.jpg"
+      }
+    ]
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "8277986475769e114143a647ea925f213537fc42"
+  },
+  "at": "2026-10-24T09:46:44.438Z",
+  "inputs": {
+    "source": "apps/web/review/latest/report.json"
+  },
+  "summary": {
+    "built_from": "dist",
+    "generated_at": "2026-10-24T09:46:19.113Z"
+  },
+  "topic": "web-home-review",
+  "raw": {
+    "built_from": "dist",
+    "generated_at": "2026-10-24T09:46:19.113Z",
+    "pages": [
+      {
+        "path": "/",
+        "viewport": "desktop-1440",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": [
+            {
+              "id": "aria-prohibited-attr",
+              "nodes": 1
+            }
+          ]
+        },
+        "screenshot": "home--desktop-1440-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "desktop-1440",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 53,
+          "incomplete": [
+            {
+              "id": "aria-prohibited-attr",
+              "nodes": 1
+            }
+          ]
+        },
+        "screenshot": "home--desktop-1440-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "mobile-390",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 54,
+          "incomplete": [
+            {
+              "id": "aria-prohibited-attr",
+              "nodes": 1
+            },
+            {
+              "id": "color-contrast",
+              "nodes": 3
+            }
+          ]
+        },
+        "screenshot": "home--mobile-390-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "mobile-390",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "console_errors": [],
+        "axe": {
+          "violations": [],
+          "passes": 54,
+          "incomplete": [
+            {
+              "id": "aria-prohibited-attr",
+              "nodes": 1
+            },
+            {
+              "id": "color-contrast",
+              "nodes": 3
+            }
+          ]
+        },
+        "screenshot": "home--mobile-390-dark.jpg"
+      }
+    ]
+  }
+}
