@@ -334,7 +334,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
   // drifted from the live catalogue (production showed 6 active countries).
   const facts = await computePlatformFacts();
   const capCount = facts.capability_counts.active_visible;
-  const countryCount = facts.countries.company_data_active.length;
+  const countryCount = facts.countries.company_data_active_iso.length;
 
   const card = {
     name: "Strale",

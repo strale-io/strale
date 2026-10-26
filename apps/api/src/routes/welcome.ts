@@ -199,7 +199,7 @@ async function buildWelcome(): Promise<{ body: typeof WELCOME_TEMPLATE; md: stri
   try {
     const facts = await computePlatformFacts();
     const cap = facts.capability_counts.active_visible;
-    const cn = facts.countries.company_data_active.length;
+    const cn = facts.countries.company_data_active_iso.length;
     const description = `${cap}+ independently tested and scored data capabilities across ${cn} countries. Business data, compliance checks, web scraping, and more — accessible via REST API, MCP, and A2A protocols.`;
     const body = {
       ...WELCOME_TEMPLATE,
