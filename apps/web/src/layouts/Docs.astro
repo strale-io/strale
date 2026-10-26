@@ -1,0 +1,43 @@
+---
+// Docs shell: the page set from SITE-STRUCTURE page 10 in a side list, then the page.
+import Base from "./Base.astro";
+import { ROUTES } from "../content/docs";
+
+interface Props { title: string; description: string; lead?: string }
+const { title, description, lead } = Astro.props;
+const path = Astro.url.pathname.replace(/\.html$/, "");
+const pages = [{ href: "/docs", title: "Start here" }, ...ROUTES.map((r) => ({ href: r.href, title: r.title }))];
+---
+<Base title={title} current="docs" description={description}>
+  <div class="container docs-grid">
+    <nav class="docs-nav" aria-label="Docs">
+      <p class="t-label">Docs</p>
+      <ul role="list">
+        {pages.map((p) => <li><a class="docs-link" href={p.href} aria-current={path === p.href ? "page" : undefined}>{p.title}</a></li>)}
+        <li><a class="docs-link" href="https://api.strale.io/openapi.json">OpenAPI <svg class="icon icon-sm" aria-hidden="true"><use href="#i-external" /></svg></a></li>
+      </ul>
+    </nav>
+    <article class="docs-body">
+      <header class="stack docs-head">
+        <h1 class="t-campaign">{title}</h1>
+        {lead && <p class="t-lead">{lead}</p>}
+      </header>
+      <slot />
+    </article>
+  </div>
+</Base>
+
+<style>
+  .docs-grid { display: grid; gap: var(--space-32); padding-block: var(--space-48) var(--space-80); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .docs-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 4fr); gap: var(--space-64); } }
+  .docs-nav ul { margin: var(--space-8) 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-16); }
+  @media (min-width: 1024px) { .docs-nav { position: sticky; top: var(--space-96); align-self: start; } .docs-nav ul { display: grid; gap: var(--space-4); } }
+  .docs-link { display: inline-flex; align-items: center; gap: var(--space-4); min-height: var(--control-h-sm); color: var(--text-muted); text-decoration: none; font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); font-size: var(--type-small-size); }
+  .docs-link:hover { color: var(--link); }
+  .docs-link[aria-current="page"] { color: var(--text); box-shadow: inset var(--space-2) 0 0 var(--brand-violet); padding-left: var(--space-8); }
+  .docs-body { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-48); align-content: start; }
+  .docs-head .t-lead { max-width: var(--measure-lead); }
+  .docs-body :global(section) { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-16); }
+  .docs-body :global(section > p), .docs-body :global(section > ul), .docs-body :global(section > ol) { max-width: var(--measure-body); }
+  .docs-body :global(section > ul), .docs-body :global(section > ol) { display: grid; gap: var(--space-8); padding-left: var(--space-20); margin: 0; }
+</style>

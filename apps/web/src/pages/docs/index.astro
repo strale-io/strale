@@ -1,0 +1,51 @@
+---
+// Docs: start here (SITE-STRUCTURE page 10). Choose a route, then make the
+// first call with a free tool, no key. The reference for each route is on its
+// own page; every limit is read from the API source (src/lib/code-facts.ts).
+import Docs from "../../layouts/Docs.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData, toolBySlug } from "../../lib/site-data.ts";
+import { firstCall } from "../../lib/first-call.ts";
+import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { ROUTES } from "../../content/docs.ts";
+import { plural } from "../../lib/format.ts";
+
+const data = await getSiteData();
+const bySlug = toolBySlug(data);
+const first = firstCall(data, bySlug);
+const freeCount = [...bySlug.values()].filter((t) => t.free).length;
+---
+<Docs title="Start here" description="Connect an AI agent to Strale over MCP, the REST API, the SDKs or x402, and make a first call with a free tool and no key." lead="Pick how your agent connects, then make one call. The first one needs no account.">
+  <section aria-labelledby="routes-title">
+    <h2 id="routes-title" class="t-section">Choose a route</h2>
+    <ul class="grid-2 routes" role="list">
+      {ROUTES.map((r) => <li><a class="card card-link" href={r.href}><span class="card-title">{r.title}</span><span class="card-body">{r.line}</span></a></li>)}
+    </ul>
+    <p class="t-compact muted">The routes reach the same tools. MCP, the REST API and the SDKs use one API key and one balance; x402 needs no account and covers the tools listed in the x402 catalogue.</p>
+  </section>
+
+  {first && (
+    <section aria-labelledby="first-title">
+      <h2 id="first-title" class="t-section">Your first call, with no key</h2>
+      <p class="t-body">{first.tool.name} is one of {plural(freeCount, "free tool")}. Without a key, free tools allow up to {FREE_TIER_DAILY_LIMIT} calls a day. Paste this into a terminal:</p>
+      <CodeBlock id="first-req" title="Request" panels={[{ label: "Request", lang: "shell", code: first.request }]} />
+      <p class="t-body">The answer is the tool’s output as structured fields, the source it came from and the price, which is zero here:</p>
+      <CodeBlock id="first-res" title="Response (example)" panels={[{ label: "Response", lang: "json", code: first.response }]} />
+      <p class="small muted">Abridged. The output values are the tool’s published example; your call returns live values.</p>
+    </section>
+  )}
+
+  <section aria-labelledby="next-title">
+    <h2 id="next-title" class="t-section">Then</h2>
+    <ol>
+      <li><a class="link" href="/signup">Get an API key</a> to call every tool and to lift the free daily limit.</li>
+      <li>Find the tool for your job in <a class="link" href="/tools">the catalogue</a>. Each tool’s page has a copyable call on every route.</li>
+      <li>Read <a class="link" href="/docs/api">the REST API reference</a> for price caps, errors, retries and longer-running calls.</li>
+    </ol>
+  </section>
+</Docs>
+
+<style>
+  .routes { margin: 0; padding: 0; list-style: none; }
+  .routes .card { height: 100%; }
+</style>

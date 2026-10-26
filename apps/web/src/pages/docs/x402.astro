@@ -1,0 +1,60 @@
+---
+// Docs: x402. Keyless pay-per-request on eligible tools (MESSAGING-LEVELS L1.4,
+// L3.2: always "eligible", never "all"). The flow is the gateway's
+// (apps/api/src/routes/x402-gateway-v2.ts, lib/x402-gateway.ts): a 402 quote,
+// a signed payment header, verify, run, and settle only after the tool returns
+// (x402-gateway-v2.settlement-order.test.ts). Eligibility, prices and the
+// network come from /x402/catalog.
+import Docs from "../../layouts/Docs.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { API_BASE, getSiteData, toolBySlug } from "../../lib/site-data.ts";
+import { formatEur, formatUsd, plural, usdcAtomic } from "../../lib/format.ts";
+import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+
+const data = await getSiteData();
+const bySlug = toolBySlug(data);
+const tools = [...bySlug.values()];
+const example = ["vat-validate", "sanctions-check", "invoice-extract"].map((s) => bySlug.get(s)).find((t) => t?.x402 && t.x402.price_usd > 0) ?? tools.find((t) => t.x402 && t.x402.price_usd > 0);
+const network = data.x402.network === "base" ? "Base" : data.x402.network;
+const facilitator = data.facts.static.vendors.payments_x402;
+const input = example ? data.manifests.get(example.slug)?.example_input ?? {} : {};
+// GET carries scalar inputs in the query string; anything else is a JSON POST (as on tool pages).
+const get = example?.x402?.method.toUpperCase() === "GET" && Object.values(input).every((v) => v === null || typeof v !== "object");
+const ask = example?.x402 ? (get ? `GET ${example.x402.endpoint}?${new URLSearchParams(Object.entries(input).map(([k, v]) => [k, String(v)]))}` : `POST ${example.x402.endpoint}\nContent-Type: application/json\n\n${JSON.stringify(input)}`) : "";
+const quote = example?.x402
+  ? `${ask}\n\nHTTP/1.1 402 Payment Required\n{\n  "x402Version": 1,\n  "error": "Payment required. ${example.name} costs $${example.x402.price_usd.toFixed(4)} USDC per call.",\n  "accepts": [{\n    "scheme": "exact",\n    "network": "${data.x402.network}",\n    "maxAmountRequired": "${usdcAtomic(example.x402.price_usd)}",\n    "asset": "…",\n    "payTo": "…",\n    …\n  }]\n}`
+  : "";
+const paid = example?.x402 ? `${ask.replace(/\n|$/, "\nX-PAYMENT: <signed payment from your x402 client>\n").replace(/\n\n+/g, "\n\n")}\n\nHTTP/1.1 200 OK\nX-Payment-Response: <settlement>\n\n{ …the tool’s answer… }` : "";
+---
+<Docs title="x402" description="Pay for Strale tools per request in USDC over x402, with no account or API key, on eligible tools." lead={`Your agent pays per request from its own wallet, in USDC on ${network}. There is no account and no key, on the tools and bundled checks the x402 catalogue lists.`}>
+  <section aria-labelledby="what-title">
+    <h2 id="what-title" class="t-section">What is eligible</h2>
+    <p>{plural(data.x402.capabilities.length, "tool")}{data.x402.solutions.length > 0 ? ` and ${plural(data.x402.solutions.length, "bundled check")}` : ""} can be paid over x402 today, not all of them. The live list, with each USD price and endpoint, is the <a class="link" href={`${API_BASE}/x402/catalog`}>x402 catalogue</a>; agents and directories also read <a class="link" href={`${API_BASE}/.well-known/x402.json`}>/.well-known/x402.json</a>. Each eligible tool’s page shows its x402 price beside the EUR price.</p>
+  </section>
+
+  {example?.x402 && (
+    <section aria-labelledby="flow-title">
+      <h2 id="flow-title" class="t-section">How a paid request works</h2>
+      <ol>
+        <li><strong>Ask.</strong> Your agent calls the tool’s x402 endpoint with its inputs and no payment.</li>
+        <li><strong>Get a quote.</strong> Strale answers <code>402 Payment Required</code> with the price, the network and where to pay. Clients on x402 version 2 also get it in the <code>PAYMENT-REQUIRED</code> header.</li>
+        <li><strong>Pay and repeat.</strong> Your x402 client signs a USDC payment for that amount and repeats the request with it in the <code>X-PAYMENT</code> header (<code>PAYMENT-SIGNATURE</code> in version 2).</li>
+        <li><strong>Get the answer.</strong> Strale checks the payment, runs the tool, and settles the payment only after the tool returns a result. If the tool fails, the payment is not settled.</li>
+      </ol>
+      <CodeBlock id="x402-quote" title={`Steps 1 and 2 · ${example.name}`} wrap panels={[{ label: "Request and quote", lang: "plain", code: quote }]} />
+      <p class="small muted">Abridged. The amount is in USDC’s smallest unit (six decimals): {formatUsd(example.x402.price_usd)}. With an API key the same tool costs {formatEur(example.price_cents)}.</p>
+      <CodeBlock id="x402-paid" title="Steps 3 and 4" wrap panels={[{ label: "Paid request", lang: "plain", code: paid }]} />
+      <p>Any x402 client library handles steps 2 and 3 for you: it reads the quote, signs the payment from your wallet and repeats the request.</p>
+    </section>
+  )}
+
+  <section aria-labelledby="limits-title">
+    <h2 id="limits-title" class="t-section">What is different from an API key</h2>
+    <ul>
+      <li>No price cap to set: the quote is the price, and nothing is paid unless your client accepts it.</li>
+      <li>Free-tier tools are sold over x402 like any other listed tool. Without a key they are also free on the REST API, up to {FREE_TIER_DAILY_LIMIT} calls a day.</li>
+      <li>There is no account, so there is no balance, no transaction history and no dispute route tied to an account.</li>
+      <li>Payments are verified and settled through the {facilitator}.</li>
+    </ul>
+  </section>
+</Docs>

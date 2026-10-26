@@ -155,3 +155,40 @@ test("use-case run cost counts free tools as free and needs every paid tool on x
   assert.equal(Math.round(r4.runUsd! * 100) / 100, 0.11);
   assert.equal(r4.runCents, 2, "with a key the free tool is still not charged");
 });
+
+test("docs explain every error code the call routes return, and only real codes", async () => {
+  const { ERROR_CODES, ERROR_STATUSES } = await import("../src/lib/code-facts.ts");
+  const { ERROR_HELP } = await import("../src/content/docs.ts");
+  assert.ok(ERROR_CODES.includes("insufficient_balance") && ERROR_CODES.includes("idempotency_key_reused"));
+  assert.deepEqual(Object.keys(ERROR_HELP).filter((c) => !ERROR_CODES.includes(c)), []);
+  const returned = [...ERROR_STATUSES].filter(([, s]) => s.length > 0).map(([c]) => c);
+  assert.ok(returned.length >= 10, "the status scan found the call sites");
+  assert.deepEqual(returned.filter((c) => !ERROR_HELP[c]), []);
+  assert.deepEqual(ERROR_STATUSES.get("insufficient_balance"), [402]);
+});
+
+test("docs name only MCP tools the server registers, and only framework packages the integrity check verifies", async () => {
+  const { MCP_TOOLS, FRAMEWORK_PACKAGES } = await import("../src/lib/code-facts.ts");
+  const { MCP_TOOL_HELP, FRAMEWORK_LABEL } = await import("../src/content/docs.ts");
+  assert.deepEqual(Object.keys(MCP_TOOL_HELP).filter((t) => !MCP_TOOLS.includes(t)), []);
+  assert.ok(MCP_TOOLS.includes("strale_web3_assurance"), "tool names with digits are read");
+  const { execFileSync } = await import("node:child_process");
+  const out = execFileSync("node", ["apps/api/scripts/check-framework-packages.mjs"], { cwd: repo, encoding: "utf8" });
+  const verified = [...out.matchAll(/^ok\s+(\S+)/gm)].map((m) => m[1]).sort();
+  assert.deepEqual(FRAMEWORK_PACKAGES.map((p) => p.dir), verified);
+  assert.deepEqual(FRAMEWORK_PACKAGES.filter((p) => !FRAMEWORK_LABEL[p.dir]).map((p) => p.dir), []);
+});
+
+test("security labels cover every vendor role, cleared column and Article 22 class the code has", async () => {
+  const { CONTENT_COLUMNS } = await import("../src/lib/code-facts.ts");
+  const { VENDOR_ROLE, CONTENT_LABEL, ART22 } = await import("../src/content/security.ts");
+  const facts = readFileSync(resolve(repo, "apps/api/src/lib/platform-facts.ts"), "utf8");
+  const vendorBlock = facts.match(/vendors:\s*\{([\s\S]*?)\}\s*as const/)![1].replace(/\/\/.*$/gm, "");
+  const roles = [...vendorBlock.matchAll(/^\s*([a-z0-9_]+):/gm)].map((m) => m[1]);
+  assert.ok(roles.length > 5);
+  assert.deepEqual(roles.filter((r) => !VENDOR_ROLE[r]), []);
+  assert.ok(CONTENT_COLUMNS.includes("input") && CONTENT_COLUMNS.includes("output"));
+  assert.deepEqual(CONTENT_COLUMNS.filter((c) => !CONTENT_LABEL[c]), []);
+  const classes = new Set(readdirSync(resolve(repo, "manifests")).filter((f) => f.endsWith(".yaml")).map((f) => (parse(readFileSync(resolve(repo, "manifests", f), "utf8")) as { gdpr_art_22_classification?: string }).gdpr_art_22_classification ?? "data_lookup"));
+  assert.deepEqual([...classes].filter((c) => !ART22[c]), []);
+});

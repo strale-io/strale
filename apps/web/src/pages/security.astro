@@ -1,0 +1,115 @@
+---
+// Security and data (SITE-STRUCTURE page 12): what happens to the data an
+// agent sends, where tools get their data, and how tools are checked. Absorbs
+// today's /trust/methodology. Every value is read from /v1/platform/facts, the
+// trust endpoint, the manifests or the API source. The phrases this page must
+// never use (SITE-STRUCTURE page 12, "Never") are enforced by claims:check.
+import Base from "../layouts/Base.astro";
+import { getSiteData, tools as allTools } from "../lib/site-data.ts";
+import { CONTENT_COLUMNS, STRALE_USER_AGENT } from "../lib/code-facts.ts";
+import { VENDOR_ROLE, JURISDICTION, ART22, CONTENT_LABEL } from "../content/security.ts";
+import { plural } from "../lib/format.ts";
+
+const data = await getSiteData();
+const facts = data.facts;
+const tools = allTools(data);
+const where = JURISDICTION[facts.processing_jurisdiction] ?? facts.processing_jurisdiction;
+const contentDays = facts.static.pii_retention_days;
+const recordDays = facts.static.retention_days_default;
+const years = (d: number) => (d % 365 === 0 ? plural(d / 365, "year") : plural(d, "day"));
+const cleared = CONTENT_COLUMNS.map((c) => CONTENT_LABEL[c] ?? c.replace(/_/g, " "));
+const list = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+// One row per vendor, with every role it fills.
+const vendors = [...Object.entries(facts.static.vendors).reduce((m, [role, name]) => m.set(name, [...(m.get(name) ?? []), VENDOR_ROLE[role] ?? role]), new Map<string, string[]>())];
+const tested = tools.filter((t) => data.trust.get(t.slug)?.tested).length;
+const art22 = Object.keys(ART22).map((k) => ({ k, count: tools.filter((t) => (data.manifests.get(t.slug)?.gdpr_art_22_classification ?? "data_lookup") === k).length })).filter((r) => r.count > 0);
+const contact = facts.static.controller?.contact_email;
+---
+<Base title="Security and data" description="What happens to the data your agent sends to Strale, how long it is kept, where tools get their data, and how tools are checked.">
+  <header class="page-head">
+    <div class="container stack">
+      <h1 class="t-campaign">Security and data</h1>
+      <p class="t-lead">What happens to what your agent sends, where the tools get their data, and what a test of a tool does and does not tell you.</p>
+    </div>
+  </header>
+
+  <div class="container doc">
+    <section aria-labelledby="where-title">
+      <h2 id="where-title" class="t-section">Where calls are processed</h2>
+      <p>Calls are processed in {where}. Some tools pass your input on to the source they read, such as a company register or a data vendor; each tool’s page names its source.</p>
+    </section>
+
+    <section aria-labelledby="kept-title">
+      <h2 id="kept-title" class="t-section">What is kept, and for how long</h2>
+      <p>Strale keeps a record of each call. After {plural(contentDays, "day")} its content is cleared: {list(cleared)}. That applies to every tool.</p>
+      <p>What remains is the record that a call happened: the account, the tool, the time, the price and the outcome. It is kept for {years(recordDays)}.</p>
+    </section>
+
+    <section aria-labelledby="keys-title">
+      <h2 id="keys-title" class="t-section">Keys and payments</h2>
+      <ul>
+        <li>API keys are stored as one-way hashes, not as the keys themselves.</li>
+        <li>Card payments are handled by {facts.static.vendors.payments_card}; Strale does not see or store card numbers.</li>
+        <li>x402 payments are verified and settled through the {facts.static.vendors.payments_x402}, from the agent’s own wallet.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="vendors-title">
+      <h2 id="vendors-title" class="t-section">Sub-processors</h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-labelledby="vendors-cap">
+        <table class="table">
+          <caption id="vendors-cap" class="visually-hidden">Sub-processors and what each does</caption>
+          <thead><tr><th scope="col">Company</th><th scope="col">What for</th></tr></thead>
+          <tbody>{vendors.map(([name, roles]) => <tr><th scope="row">{name}</th><td>{roles.join("; ")}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p class="small muted">Read from the platform’s own list, the same one <a class="link" href="https://api.strale.io/v1/platform/facts">/v1/platform/facts</a> serves.</p>
+    </section>
+
+    <section aria-labelledby="source-title">
+      <h2 id="source-title" class="t-section">Where the data comes from</h2>
+      <p>In order of preference, tools read official APIs and registers, then data licensed from vendors whose terms allow it to be resold, then public pages read one at a time.</p>
+      <ul>
+        <li>When a tool fetches a page someone else publishes, it identifies itself as <code>{STRALE_USER_AGENT}</code>, honours the site’s robots.txt, and stops if the site blocks it. It does not retry a blocked request another way.</li>
+        <li>Under Strale’s data-access rule, tools never log in to other sites, use made-up accounts, or get around blocks and CAPTCHAs.</li>
+        <li>An answer to an API call names its source in <code>provenance</code>, and each tool’s page names the source and whether an AI model takes part.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="checks-title">
+      <h2 id="checks-title" class="t-section">How tools are checked</h2>
+      <p>Tools are added with test cases: a known input with its expected answer, the shape of the output, and inputs that should be refused. Tools whose tests cost nothing to run are tested on a schedule. Tools that call a paid source are checked through real calls rather than on a schedule.</p>
+      <p>{data.mode === "live" ? `${plural(tested, "tool")} of ${tools.length} have a recorded test.` : "Test records are read from the live API and are not in this preview build."} Each tool’s page shows its last recorded test and how many recent runs passed, or says that none is recorded.</p>
+      <p>A passing test shows the tool returned the expected answer for a known input at that time. It does not guarantee the next answer, and a tool’s source can change or fail.</p>
+    </section>
+
+    <section aria-labelledby="review-title">
+      <h2 id="review-title" class="t-section">Asking for a person to review a result</h2>
+      <p>A result from an API call can be disputed with <code>POST /v1/transactions/:id/dispute</code> and a reason. A person at Strale reviews it.</p>
+      <p>Each tool declares what kind of answer it gives, which matters when the answer feeds a decision about a person:</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-labelledby="art22-cap">
+        <table class="table">
+          <caption id="art22-cap" class="visually-hidden">Tools by kind of answer</caption>
+          <thead><tr><th scope="col">Kind of answer</th><th scope="col" class="num-col">Tools</th></tr></thead>
+          <tbody>{art22.map((r) => <tr><td>{ART22[r.k]}</td><td class="num num-col">{r.count}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </section>
+
+    {contact && (
+      <section aria-labelledby="contact-title">
+        <h2 id="contact-title" class="t-section">Contact</h2>
+        <p>Security reports and data questions: <a class="link" href={`mailto:${contact}`}>{contact}</a>.</p>
+      </section>
+    )}
+  </div>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
+  .page-head .t-lead { max-width: var(--measure-lead); }
+  .doc { display: grid; gap: var(--space-48); padding-block: var(--space-48) var(--space-80); }
+  .doc section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-16); max-width: var(--measure-body); }
+  .doc ul { display: grid; gap: var(--space-8); padding-left: var(--space-20); margin: 0; }
+  .num-col { text-align: right; }
+</style>

@@ -1,0 +1,52 @@
+---
+// Docs: SDKs. Package names come from the packages' manifests; the call
+// examples are the same snippets tool pages use (src/lib/snippets.ts, written
+// against the clients' real interfaces). Framework packages are listed by name
+// only, and only those check-framework-packages.mjs verifies (DEC-20260422-A):
+// no usage code is shown for them, so this page cannot invent an import.
+import Docs from "../../layouts/Docs.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData, toolBySlug } from "../../lib/site-data.ts";
+import { PACKAGES, toolSnippets } from "../../lib/snippets.ts";
+import { FRAMEWORK_PACKAGES } from "../../lib/code-facts.ts";
+import { FRAMEWORK_LABEL } from "../../content/docs.ts";
+
+const data = await getSiteData();
+const bySlug = toolBySlug(data);
+const tool = bySlug.get("vat-validate") ?? [...bySlug.values()].find((t) => !t.free)!;
+const snippets = toolSnippets({ slug: tool.slug, inputs: data.manifests.get(tool.slug)?.example_input ?? {}, priceCents: tool.price_cents, free: tool.free, x402: null });
+const ts = snippets.find((s) => s.label === "TypeScript")!;
+const py = snippets.find((s) => s.label === "Python")!;
+const registryUrl = (p: { name: string; registry: string }) => (p.registry === "npm" ? `https://www.npmjs.com/package/${p.name}` : `https://pypi.org/project/${p.name}/`);
+---
+<Docs title="SDKs" description={`Strale's TypeScript and Python SDKs, and packages for ${FRAMEWORK_PACKAGES.map((p) => FRAMEWORK_LABEL[p.dir] ?? p.dir).join(", ")}.`} lead="Typed clients for the same calls as the REST API, with one API key for every tool.">
+  <section aria-labelledby="ts-title">
+    <h2 id="ts-title" class="t-section">TypeScript</h2>
+    <CodeBlock id="sdk-ts-install" title="Install" panels={[{ label: "npm", lang: "shell", code: `npm install ${PACKAGES.typescript}` }]} />
+    <CodeBlock id="sdk-ts" title={`Call ${tool.name}`} panels={[ts]} />
+  </section>
+
+  <section aria-labelledby="py-title">
+    <h2 id="py-title" class="t-section">Python</h2>
+    <CodeBlock id="sdk-py-install" title="Install" panels={[{ label: "pip", lang: "shell", code: `pip install ${PACKAGES.python}` }]} />
+    <CodeBlock id="sdk-py" title={`Call ${tool.name}`} panels={[py]} />
+    <p class="small muted">The npm and PyPI packages share the name <code>{PACKAGES.typescript === PACKAGES.python ? PACKAGES.python : `${PACKAGES.typescript} / ${PACKAGES.python}`}</code> but are separate clients.</p>
+  </section>
+
+  <section aria-labelledby="fw-title">
+    <h2 id="fw-title" class="t-section">Agent frameworks</h2>
+    <p>Packages that expose Strale’s tools as tools of the framework your agent already uses. Each package’s page has its setup.</p>
+    <ul class="frameworks" role="list">
+      {FRAMEWORK_PACKAGES.map((p) => (
+        <li class="card">
+          <span class="card-title">{FRAMEWORK_LABEL[p.dir] ?? p.dir}</span>
+          <span class="card-body"><a class="link" href={registryUrl(p)}><code>{p.name}</code></a> on {p.registry}</span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Docs>
+
+<style>
+  .frameworks { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-16); grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-160) + var(--space-48)), 1fr)); }
+</style>

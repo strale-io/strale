@@ -7,9 +7,9 @@ import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
 import CodeBlock from "../components/CodeBlock.astro";
 import wide from "@design/brand-kit/open-flow/assets/imagery/wide.png";
-import { getSiteData, tools as allTools, coverage, API_BASE } from "../lib/site-data";
-import { formatEur, formatUsd, formatDate, json, plural, usdcAtomic } from "../lib/format";
-import { executorSource } from "../lib/code-facts";
+import { getSiteData, tools as allTools, coverage } from "../lib/site-data";
+import { formatEur, formatUsd, formatDate, plural, usdcAtomic } from "../lib/format";
+import { firstCall } from "../lib/first-call";
 import { JOB_GROUPS } from "../content/jobs";
 import { REGIONS } from "../content/countries";
 import { L1, SHORT_DESCRIPTION } from "../content/positioning";
@@ -33,26 +33,12 @@ const breadth = JOB_GROUPS.filter((g) => ["web", "documents", "check", "develope
 }));
 
 // §4 one call: a free tool, so a reader can repeat it with no key.
-const demo = ["iban-validate", "email-validate", "dns-lookup"].map((s) => bySlug.get(s)).find((t) => t?.free);
-const demoInput = demo ? data.manifests.get(demo.slug)?.example_input ?? {} : {};
-const demoOutput = demo?.output_schema?.example ?? {};
-const demoRequest = demo
-  ? `curl -X POST ${API_BASE}/v1/do \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify({ capability_slug: demo.slug, inputs: demoInput }, null, 2).replace(/\n/g, "\n  ")}'`
-  : "";
+const first = firstCall(data, bySlug);
+const demo = first?.tool;
+const demoInput = first?.input ?? {};
+const demoRequest = first?.request ?? "";
+const demoResponse = first?.response ?? "";
 const sentence = (t?: string) => (t ? (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`) : "");
-const demoResponse = demo
-  ? json({
-      result: {
-        transaction_id: "…",
-        status: "completed",
-        capability_used: demo.slug,
-        price_cents: 0,
-        output: demoOutput,
-        provenance: { source: executorSource(demo.slug) ?? demo.data_source, fetched_at: "…" },
-      },
-      free_tier: true,
-    })
-  : "";
 
 // §5 flagship: countries with a live registry tool, grouped by region; screening tools by name.
 const countries = coverage(data);

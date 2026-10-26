@@ -1,0 +1,53 @@
+---
+// Docs: MCP. The hosted server and the published package, configured as the
+// code reads them (packages/mcp-server/src/server.ts env vars, tools.ts tool
+// names). The agent sees a handful of tools that search and call the whole
+// catalogue, not one MCP tool per Strale tool.
+import Docs from "../../layouts/Docs.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { API_BASE, getSiteData, toolBySlug } from "../../lib/site-data.ts";
+import { PACKAGES } from "../../lib/snippets.ts";
+import { MCP_TOOLS, MCP_DEFAULT_MAX_PRICE_CENTS, FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { MCP_TOOL_HELP } from "../../content/docs.ts";
+import { formatEur, json } from "../../lib/format.ts";
+
+const named = Object.entries(MCP_TOOL_HELP).filter(([name]) => MCP_TOOLS.includes(name));
+const remote = json({ mcpServers: { strale: { type: "streamableHttp", url: `${API_BASE}/mcp`, headers: { Authorization: "Bearer YOUR_STRALE_API_KEY" } } } });
+const local = json({ mcpServers: { strale: { command: "npx", args: ["-y", PACKAGES.mcp], env: { STRALE_API_KEY: "YOUR_STRALE_API_KEY" } } } });
+// The example is a real tool with its published example input and live price.
+const data = await getSiteData();
+const example = toolBySlug(data).get("vat-validate") ?? [...toolBySlug(data).values()][0];
+const call = json({ tool: "strale_execute", arguments: { slug: example.slug, inputs: data.manifests.get(example.slug)?.example_input ?? {}, max_price_cents: Math.max(example.price_cents, 1) } });
+---
+<Docs title="MCP" description="Connect Claude, Cursor or any MCP client to Strale's MCP server: hosted over Streamable HTTP or run locally with npx." lead="Add Strale’s MCP server to your client. The agent can then search the catalogue and call any tool itself.">
+  <section aria-labelledby="remote-title">
+    <h2 id="remote-title" class="t-section">Hosted server</h2>
+    <p>Nothing to install. Point any client that supports Streamable HTTP at the hosted server and send your API key as a bearer token. Claude Desktop, Claude Code and Cursor take this configuration.</p>
+    <CodeBlock id="mcp-remote" title="MCP client configuration" panels={[{ label: "JSON", lang: "json", code: remote }]} />
+    <p>Without a key, the agent can still search the catalogue and call the free tools, up to {FREE_TIER_DAILY_LIMIT} calls a day.</p>
+  </section>
+
+  <section aria-labelledby="local-title">
+    <h2 id="local-title" class="t-section">Run it locally</h2>
+    <p>The same server is published on npm as <code>{PACKAGES.mcp}</code> and runs over stdio:</p>
+    <CodeBlock id="mcp-local" title="MCP client configuration" panels={[{ label: "JSON", lang: "json", code: local }]} />
+    <ul>
+      <li><code>STRALE_API_KEY</code>: your key. Needed for paid tools and the balance.</li>
+      <li><code>STRALE_MAX_PRICE_CENTS</code>: the price cap the server sends when the agent sets none. Default {MCP_DEFAULT_MAX_PRICE_CENTS} ({formatEur(MCP_DEFAULT_MAX_PRICE_CENTS)}).</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="tools-title">
+    <h2 id="tools-title" class="t-section">What the agent sees</h2>
+    <p>The server registers {MCP_TOOLS.length} tools rather than one per Strale tool, so it stays within the tool limits some clients set. The agent searches, then calls by slug:</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="mcp-tools-cap">
+      <table class="table">
+        <caption id="mcp-tools-cap" class="visually-hidden">MCP tools</caption>
+        <thead><tr><th scope="col">MCP tool</th><th scope="col">What it is for</th></tr></thead>
+        <tbody>{named.map(([name, help]) => <tr><th scope="row"><code>{name}</code></th><td>{help}</td></tr>)}</tbody>
+      </table>
+    </div>
+    <CodeBlock id="mcp-call" title="A call the agent makes" panels={[{ label: "strale_execute", lang: "json", code: call }]} />
+    <p>Every tool page in <a class="link" href="/tools">the catalogue</a> shows its <code>strale_execute</code> call with real inputs.</p>
+  </section>
+</Docs>

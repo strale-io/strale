@@ -1,0 +1,63 @@
+---
+// About (SITE-STRUCTURE page 13): who runs this, and how the catalogue grows.
+// Two founder choices are open and this page takes neither: whether to name
+// the founder (SITE-STRUCTURE "Decisions this needs from Petter" 2), and the
+// legal entity's public name, where /v1/platform/facts controller.legal_name
+// ("Strale") and the structure doc (Moonlighter AB) differ. So the page names
+// the country the facts give and no person or legal entity.
+import Base from "../layouts/Base.astro";
+import { getSiteData, tools as allTools, coverage } from "../lib/site-data.ts";
+import { L1, SENTENCE } from "../content/positioning.ts";
+import { JOB_GROUPS } from "../content/jobs.ts";
+import { plural } from "../lib/format.ts";
+
+const data = await getSiteData();
+const tools = allTools(data);
+const countries = coverage(data).length;
+const controller = data.facts.static.controller;
+const contact = controller?.contact_email;
+---
+<Base title="About" description={SENTENCE}>
+  <header class="page-head">
+    <div class="container stack">
+      <h1 class="t-campaign">About Strale</h1>
+      <p class="t-lead">{SENTENCE}</p>
+    </div>
+  </header>
+
+  <div class="container doc">
+    <section aria-labelledby="why-title">
+      <h2 id="why-title" class="t-section">What it is for</h2>
+      <p>An agent that has to act in the world needs many small tools: search the web, read a document, check a detail, look up a company. Each one usually means another provider, another account, another key and another bill.</p>
+      <p>{L1.headline} Strale holds the accounts with the providers. Your agent connects once, over MCP, the REST API, an SDK or x402, and pays per call.</p>
+    </section>
+
+    <section aria-labelledby="what-title">
+      <h2 id="what-title" class="t-section">What is in the library</h2>
+      <p>{plural(tools.length, "tool")} today, across {plural(JOB_GROUPS.length, "kind")} of work, from web search and document reading to company records in {plural(countries, "country", "countries")} and sanctions screening. Every tool has a page with its price, inputs, outputs, source and limitations.</p>
+      <p><a class="link" href="/tools">Browse the catalogue</a></p>
+    </section>
+
+    <section aria-labelledby="grow-title">
+      <h2 id="grow-title" class="t-section">How it grows</h2>
+      <p>New tools are chosen from what agents ask for and do not find: a request for a tool that does not exist is recorded, and the catalogue follows that demand. Tools are added through one pipeline that requires a source, test cases and written limitations before a tool is listed.</p>
+    </section>
+
+    <section aria-labelledby="source-title">
+      <h2 id="source-title" class="t-section">How tools get their data</h2>
+      <p>Official APIs and registers first, then data licensed from vendors whose terms allow it to be resold, then public pages read one at a time and never behind a login. <a class="link" href="/security">Security and data</a> has the details, including what is kept and for how long.</p>
+    </section>
+
+    <section aria-labelledby="company-title">
+      <h2 id="company-title" class="t-section">The company</h2>
+      <p>Strale is {controller?.incorporation_jurisdiction ? `based in ${controller.incorporation_jurisdiction}` : "an independent company"}.{contact && <> Write to <a class="link" href={`mailto:${contact}`}>{contact}</a>.</>}</p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
+  .page-head .t-lead { max-width: var(--measure-lead); }
+  .doc { display: grid; gap: var(--space-48); padding-block: var(--space-48) var(--space-80); }
+  .doc section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-16); max-width: var(--measure-body); }
+</style>

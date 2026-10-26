@@ -1,0 +1,147 @@
+---
+// Docs: REST API (SITE-STRUCTURE page 10, sections 3-5 and 7). Request and
+// response shape, longer-running calls, errors and retries, idempotency and
+// spend limits. Limits, error codes and their HTTP statuses are read from the
+// API source; the explanations live in src/content/docs.ts.
+import Docs from "../../layouts/Docs.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { API_BASE, getSiteData, toolBySlug } from "../../lib/site-data.ts";
+import { ERROR_STATUSES, ASYNC_THRESHOLD_MS, DEFAULT_HOURLY_SPEND_CAP_CENTS, KEY_RATE_LIMIT, MAX_PRICE_CAP_CENTS, TIMEOUT_SECONDS } from "../../lib/code-facts.ts";
+import { ERROR_HELP } from "../../content/docs.ts";
+import { formatEur, json } from "../../lib/format.ts";
+
+const errors = [...ERROR_STATUSES].filter(([code, statuses]) => statuses.length > 0 && ERROR_HELP[code]).map(([code, statuses]) => ({ code, statuses, ...ERROR_HELP[code] }));
+const rate = KEY_RATE_LIMIT.windowMs === 1000 ? `${KEY_RATE_LIMIT.requests} requests a second` : `${KEY_RATE_LIMIT.requests} requests per ${KEY_RATE_LIMIT.windowMs / 1000} seconds`;
+
+// Examples use live prices, so the cap and the refusal message match the catalogue.
+const bySlug = toolBySlug(await getSiteData());
+const vat = bySlug.get("vat-validate");
+const pricey = bySlug.get("invoice-extract") ?? [...bySlug.values()].sort((a, b) => b.price_cents - a.price_cents)[0];
+const lowCap = Math.max(1, Math.floor(pricey.price_cents / 2));
+const request = `curl -X POST ${API_BASE}/v1/do \\
+  -H "Authorization: Bearer $STRALE_API_KEY" \\
+  -H 'Content-Type: application/json' \\
+  -H 'Idempotency-Key: 7f0c2a9e-invoice-2291' \\
+  -d '{
+    "capability_slug": "vat-validate",
+    "inputs": { "vat_number": "SE556703748501" },
+    "max_price_cents": ${Math.max(vat?.price_cents ?? 1, 1)}
+  }'`;
+const response = json({
+  result: {
+    transaction_id: "…",
+    status: "completed",
+    capability_used: "vat-validate",
+    price_cents: "…",
+    latency_ms: "…",
+    wallet_balance_cents: "…",
+    output: { valid: true, vat_number: "…", company_name: "…", country_code: "SE" },
+    provenance: { source: "…", fetched_at: "…" },
+  },
+  meta: { audit: "…" },
+});
+const asyncResponse = json({
+  result: { transaction_id: "…", status: "executing", capability_used: "…", price_cents: "…", wallet_balance_cents: "…" },
+  meta: { audit: { status: "pending", poll_url: "/v1/transactions/…" } },
+});
+// The message format is do.ts's budget_exceeded message.
+const errorBody = json({ error_code: "budget_exceeded", message: `Capability '${pricey.slug}' costs €${(pricey.price_cents / 100).toFixed(2)} (${pricey.price_cents} cents) which exceeds your max_price_cents of ${lowCap}.`, details: { capability_slug: pricey.slug, actual_price_cents: pricey.price_cents, max_price_cents: lowCap } });
+---
+<Docs title="REST API" description="Strale REST API reference: POST /v1/do request and response, longer-running calls, error codes, retries, idempotency and spend limits." lead={`One endpoint runs every tool: POST /v1/do on ${API_BASE}, with your API key.`}>
+  <section aria-labelledby="call-title">
+    <h2 id="call-title" class="t-section">Call a tool</h2>
+    <p>Send the tool’s slug, its inputs and the most the call may cost. The key goes in the <code>Authorization</code> header.</p>
+    <CodeBlock id="api-req" title="Request" panels={[{ label: "Request", lang: "shell", code: request }]} />
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="fields-title">
+      <table class="table">
+        <caption id="fields-title" class="t-subhead cap">Request body</caption>
+        <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>capability_slug</code></th><td>string</td><td>The tool to run, as named in the catalogue. Either this or <code>task</code>.</td></tr>
+          <tr><th scope="row"><code>task</code></th><td>string</td><td>The job in words, matched to a tool when you send no slug.</td></tr>
+          <tr><th scope="row"><code>inputs</code></th><td>object</td><td>The tool’s inputs. Each tool’s page lists them.</td></tr>
+          <tr><th scope="row"><code>max_price_cents</code></th><td>integer</td><td>Required with a key. The most this call may cost, in euro cents, up to {MAX_PRICE_CAP_CENTS} ({formatEur(MAX_PRICE_CAP_CENTS)}). A tool that costs more is refused, not charged.</td></tr>
+          <tr><th scope="row"><code>timeout_seconds</code></th><td>integer</td><td>How long to wait. Default {TIMEOUT_SECONDS.default}, at most {TIMEOUT_SECONDS.max}.</td></tr>
+          <tr><th scope="row"><code>dry_run</code></th><td>boolean</td><td>Return which tool would run and its price, without running or charging.</td></tr>
+          <tr><th scope="row"><code>require_fresh</code></th><td>boolean</td><td>Refuse when a reference-data tool’s data is older than its update cycle.</td></tr>
+          <tr><th scope="row"><code>max_latency_ms</code></th><td>integer</td><td>Refuse when the tool’s recent 95th-percentile latency is above this.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="answer-title">
+    <h2 id="answer-title" class="t-section">The answer</h2>
+    <p>A successful call returns <code>result</code>: the transaction ID, the tool used, the price charged, your balance after the call, the tool’s <code>output</code> and its <code>provenance</code> (the source and when it was read).</p>
+    <CodeBlock id="api-res" title="Response (abridged)" panels={[{ label: "Response", lang: "json", code: response }]} />
+    <p>Output fields differ by tool. Each tool’s page lists them and how reliably each appears.</p>
+  </section>
+
+  <section aria-labelledby="async-title">
+    <h2 id="async-title" class="t-section">Longer-running tools</h2>
+    <p>A tool whose typical run takes more than {ASYNC_THRESHOLD_MS / 1000} seconds answers at once with HTTP 202 and <code>status: "executing"</code>. The price is held from your balance when the call is accepted and returned if the tool fails.</p>
+    <CodeBlock id="api-async" title="202 Accepted (abridged)" panels={[{ label: "Response", lang: "json", code: asyncResponse }]} />
+    <p>Fetch <code>GET /v1/transactions/:id</code> with your key until the status is <code>completed</code> or <code>failed</code>.</p>
+  </section>
+
+  <section aria-labelledby="errors-title">
+    <h2 id="errors-title" class="t-section">Errors and retries</h2>
+    <p>A failed call returns an HTTP error status and a body with a stable <code>error_code</code>, a message for people, and sometimes <code>details</code>:</p>
+    <CodeBlock id="api-err" title="Error body" panels={[{ label: "Error", lang: "json", code: errorBody }]} />
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="codes-title">
+      <table class="table codes">
+        <caption id="codes-title" class="t-subhead cap">Error codes on the call routes</caption>
+        <thead><tr><th scope="col">Code</th><th scope="col">HTTP</th><th scope="col">Meaning</th><th scope="col">What to do</th><th scope="col">Retry as is</th></tr></thead>
+        <tbody>
+          {errors.map((e) => (
+            <tr>
+              <th scope="row"><code>{e.code}</code></th>
+              <td class="num">{e.statuses.join(", ")}</td>
+              <td>{e.meaning}</td>
+              <td>{e.action}</td>
+              <td>{e.retry ? "Yes, after a wait" : "No"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p>Retry with exponential backoff, and send the same <code>Idempotency-Key</code> each time so a retry can never run the tool twice.</p>
+  </section>
+
+  <section aria-labelledby="idem-title">
+    <h2 id="idem-title" class="t-section">Idempotency and limits</h2>
+    <ul>
+      <li><strong>Idempotency-Key.</strong> Send a unique key, up to 255 characters, with each piece of work. Repeating the same request with the same key returns the first answer instead of running and charging again. Reusing a key for a different request is refused with <code>idempotency_key_reused</code>.</li>
+      <li><strong>Price cap.</strong> <code>max_price_cents</code> on every call with a key, at most {formatEur(MAX_PRICE_CAP_CENTS)}.</li>
+      <li><strong>Hourly spend limit.</strong> Each account has one, {formatEur(DEFAULT_HOURLY_SPEND_CAP_CENTS)} an hour by default. A call that would pass it is refused with <code>spend_cap_exceeded</code>.</li>
+      <li><strong>Rate limit.</strong> {rate} per key on <code>/v1/do</code>.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="more-title">
+    <h2 id="more-title" class="t-section">Other endpoints</h2>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="endpoints-title">
+      <table class="table">
+        <caption id="endpoints-title" class="t-subhead cap">Endpoints</caption>
+        <thead><tr><th scope="col">Endpoint</th><th scope="col">Key</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>GET /v1/capabilities</code></th><td>No</td><td>The catalogue: every visible tool with its inputs, outputs and price.</td></tr>
+          <tr><th scope="row"><code>GET /v1/capabilities/:slug</code></th><td>No</td><td>One tool.</td></tr>
+          <tr><th scope="row"><code>GET /v1/solutions</code></th><td>No</td><td>Bundled checks and the tools each one runs.</td></tr>
+          <tr><th scope="row"><code>POST /v1/solutions/:slug/execute</code></th><td>Yes</td><td>Run a bundled check with <code>inputs</code>; <code>max_price_cents</code> is optional.</td></tr>
+          <tr><th scope="row"><code>GET /v1/transactions/:id</code></th><td>Yes</td><td>The status and result of a call, for longer-running tools.</td></tr>
+          <tr><th scope="row"><code>POST /v1/transactions/:id/dispute</code></th><td>Yes</td><td>Ask for a person to review a result, with a <code>reason</code>.</td></tr>
+          <tr><th scope="row"><code>GET /v1/platform/facts</code></th><td>No</td><td>Live platform facts: counts, countries, free tools, retention.</td></tr>
+          <tr><th scope="row"><code>GET /x402/catalog</code></th><td>No</td><td>Tools and bundled checks payable over x402, with USD prices.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The full specification is <a class="link" href={`${API_BASE}/openapi.json`}>OpenAPI 3.1 at /openapi.json</a>.</p>
+  </section>
+</Docs>
+
+<style>
+  .cap { text-align: left; padding-bottom: var(--space-12); }
+  .codes td { min-width: calc(var(--space-160) + var(--space-32)); }
+  .codes td.num { min-width: 0; white-space: nowrap; }
+</style>
