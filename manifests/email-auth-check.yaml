@@ -217,3 +217,8 @@ limitations:
       but does not recursively evaluate includes or compute the effective pass set.
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

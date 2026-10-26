@@ -94,3 +94,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Validate generated references against the receiving bank's format requirements before issuing payment instructions
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

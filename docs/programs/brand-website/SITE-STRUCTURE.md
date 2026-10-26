@@ -222,7 +222,7 @@ One card per job, each with a one-line description and the tools it uses. Level 
   2. What is kept and for how long: call content (input, output, error and audit body) is cleared at 90 days, and the remaining record is kept for the default retention period. Both are read from facts. Before publishing, confirm in production that the older backlog has drained.
   3. Keys and payments: keys stored hashed, cards via Stripe, x402 via the facilitator.
   4. Sub-processors (facts `static.vendors`).
-  5. Where data comes from: official registers and APIs, licensed vendors, and direct per-call access to public registers. No bulk crawling and no getting around logins or CAPTCHAs (DEC-20260428-A, DEC-20260813-A). Avoid a flat "never scrapes" sentence: the catalogue fetches web pages per call (for example, page to markdown), and claims.yaml has no row for it.
+  5. Where data comes from: official registers and APIs, licensed vendors, and direct per-call access to public registers. No getting around logins or CAPTCHAs; the shared web fetch path also stops at a site's block and honours robots.txt (DEC-20261023-A, which superseded DEC-20260428-A and DEC-20260813-A). Check that every page-fetching tool is on that path before the page says so of all of them. Avoid a flat "never scrapes" sentence: the catalogue fetches web pages per call (for example, page to markdown), and claims.yaml has no row for it.
   6. How tools are checked, by mode and route, and what that does and does not establish. This absorbs `/trust/methodology`.
   7. Disputing a result (`POST /v1/transactions/:id/dispute`) and the GDPR Art. 22 classification per tool.
   8. Contact.

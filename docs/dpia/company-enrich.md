@@ -2,7 +2,8 @@
 
 **Last reviewed:** 2026-04-30
 **Owner:** Strale (controller for Strale-side LLM processing; processor for customer-supplied domain/email/name)
-**Re-review trigger:** addition of contact-extraction step, change to the LLM model, or change to the scrape doctrine (DEC-20260428-A)
+**Re-review trigger:** addition of contact-extraction step, change to the LLM model, or change to the data-access rule (DEC-20261023-A, which superseded the scrape doctrine DEC-20260428-A)
+**Re-review note (2026-10-24, engineering, not legal):** triggered by DEC-20261023-A. The fetch is a customer-directed single public fetch, allowed with checks. Since 2026-10-24 the fetch path checks robots.txt before fetching, sends an honest Strale user agent, and stops with a refusal at a block (401/403/407/429 or a challenge page) instead of retrying another route. Before that date the robots.txt statements in sections 3 and 4 below were not enforced by code; they are now (`apps/api/src/capabilities/lib/web-provider.ts`, `apps/api/src/lib/robots-txt.ts`).
 
 ## 1. Description of processing
 
@@ -60,7 +61,7 @@ proportionality analysis.
 | **Wrong company resolution** — input "spotify" resolves to the wrong Spotify entity (e.g. a satellite project rather than the parent company) | Low | Low | Customer is expected to supply a domain when accuracy matters; name-only input is a convenience for non-critical use cases. |
 | **Cross-border transfer** — LLM step happens at Anthropic (US) | Certain | Low | Anthropic is DPF-certified (covered in Privacy §5). |
 | **Re-identification through audit retention** | Low | Low | The retained input is just a domain name; the retained output is company-level data. Personal data exposure is minimal. |
-| **TOS/scraping risk** — fetching a company website may violate that site's TOS | Low | Low | The Browserless tier respects robots.txt. Fetching a public company homepage is the same act as a manual visit; we do not bypass authentication or paywalls. |
+| **TOS/scraping risk** — fetching a company website may violate that site's TOS | Low | Low | The fetch path honours robots.txt and stops at a block (since 2026-10-24). Fetching a public company homepage is the same act as a manual visit; we do not bypass authentication or paywalls. |
 
 ## 4. Mitigations
 
@@ -69,9 +70,10 @@ proportionality analysis.
 - **Output schema** does not have personal-data fields (no
   `personnel`, no `contacts`); the LLM cannot smuggle personal data
   through the output type without violating the schema.
-- **Browserless tier** is used for the fetch step; same constraints
-  as for any other public-page scrape (robots.txt compliance, no
-  authenticated content).
+- **The shared fetch path** (plain fetch, then Browserless for
+  rendering) is used for the fetch step; same constraints as for any
+  other customer-directed fetch (robots.txt compliance, an honest user
+  agent, stop at a block, no authenticated content).
 - **Audit response** carries the same Art. 22 disclosure as other
   capabilities; classification is `data_lookup` (factual data, not
   decision-supporting on its own).

@@ -15,7 +15,8 @@ import {
  * permitted with attribution).
  *
  * Replaces the prior northdata.com aggregator scraper, which was a
- * Tier-1 violation per DEC-20260428-A. This implementation is
+ * Tier-1 violation per DEC-20260428-A (superseded 2026-10-24 by
+ * DEC-20261023-A; this direct API path is its preferred lane). This implementation is
  * `acquisition_method: direct_api`.
  */
 

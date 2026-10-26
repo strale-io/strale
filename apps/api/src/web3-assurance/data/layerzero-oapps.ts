@@ -12,7 +12,7 @@
  *   - Public postmortems for incidents (KelpDAO Apr 2026, Radiant Oct 2024)
  *   - LayerZero V2 endpoint `getConfig` reads (manually performed for seed)
  *
- * Per DEC-20260428-A, Strale itself does not scrape; this seed is curated
+ * Per DEC-20260428-A (now DEC-20261023-A), Strale does not bulk-collect; this seed is curated
  * from public on-chain reads + public incident reports.
  *
  * "Reputable DVN" classification follows community consensus (LayerZero

@@ -19,7 +19,9 @@ import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 //
 // Named directors are NOT in the API response — only directorLimits
 // (min/max). The web UI shows names, but scraping it is exactly the
-// DEC-20260428-A/DEC-20260518-F question pending Petter's ruling, so
+// DEC-20260428-A/DEC-20260518-F question pending Petter's ruling (both superseded
+// 2026-10-24 by DEC-20261023-A, which allows per-call reads of public sources
+// whose terms permit it, once those terms are recorded), so
 // tier_2_available stays false with an honest reason.
 //
 // Name-search path (rebuilt 2026-08-14, see #224 follow-up): the site's

@@ -41,11 +41,17 @@ vi.mock("@anthropic-ai/sdk", () => ({
 
 // Avoid real DNS lookups in the shared layer's SSRF check (same pattern as
 // screenshot-url.test.ts) — the URLs below are fake test hosts.
+// robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
+// the robots request does not consume this suite's queued fetch responses.
+vi.mock("../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
 vi.mock("../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
 import { getDirectExecutor } from "./index.js";
 import "./web-extract.js";
-import { fetchPage, fetchRenderedHtml } from "./lib/web-provider.js";
+import { PREFLIGHT_RANGE, fetchPage, fetchRenderedHtml } from "./lib/web-provider.js";
 
 const RENDERED_HTML = `<html><head><title>Example Domain</title></head><body>${"Real page content. ".repeat(20)}</body></html>`;
 
@@ -66,7 +72,17 @@ describe("web-extract shared resilience", () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
 
     fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    // The rendered route's plain preflight (web-provider, DEC-20261023-A) is
+    // its own suite's concern (web-provider-access.test.ts). It asks for a
+    // byte range, so it is answered here with an ordinary page and does not
+    // consume this suite's queued Browserless responses.
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      const range = new Headers(init?.headers).get("range");
+      if (range === PREFLIGHT_RANGE) {
+        return Promise.resolve(new Response("<html><body>ordinary page</body></html>", { status: 200, headers: { "content-type": "text/html" } }));
+      }
+      return fetchMock(url, init);
+    });
 
     messagesCreate.mockReset();
     messagesCreate.mockResolvedValue({

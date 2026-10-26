@@ -76,3 +76,10 @@ limitations:
     text: Only national/federal holidays included — regional and local holidays may be missing
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: nager-date
+  checks: pending

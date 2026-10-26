@@ -12,6 +12,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
+// the robots request does not consume this suite's queued fetch responses.
+vi.mock("../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
 vi.mock("../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
 import {
@@ -21,6 +27,7 @@ import {
   waitDialectByHost,
 } from "./screenshot-url.js";
 import { getDirectExecutor } from "./index.js";
+import { PREFLIGHT_RANGE } from "./lib/web-provider.js";
 
 describe("normalizeWaitFor", () => {
   it('treats a numeric string ("3") as a 3-second timeout, not a selector (the bug case)', () => {
@@ -140,7 +147,16 @@ describe("executor v1 fallback", () => {
     process.env.BROWSERLESS_API_KEY = "test-token";
     waitDialectByHost.clear();
     fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    // The plain preflight before rendering (web-provider, DEC-20261023-A) is
+    // its own suite's concern (web-provider-access.test.ts). It asks for a
+    // byte range, so it is answered here with an ordinary page and does not
+    // consume this suite's queued Browserless responses.
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      if (new Headers(init?.headers).get("range") === PREFLIGHT_RANGE) {
+        return Promise.resolve(new Response("<html><body>ordinary page</body></html>", { status: 200, headers: { "content-type": "text/html" } }));
+      }
+      return fetchMock(url, init);
+    });
   });
 
   afterEach(() => {

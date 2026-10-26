@@ -14,6 +14,81 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · no deadline (a two-week window is recommended below) — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
+
+Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
+vendor's data only when the vendor's terms permit resale, checked and written
+down. Eight live tools run on Serper.dev: google-search, serp-analyze,
+brand-mention-search, google-news-search, keyword-rank-check,
+serp-related-questions, backlink-check, and the backup search in
+adverse-media-check. The
+first three alone earned about €138 in the 90 days to 23 October.
+
+*What is established:*
+- I could not open serper.dev/terms from this session: its network
+  policy blocks the site.
+- What I could read is a web-search tool's summary of, and excerpts from, a
+  cached copy about two and a half years old (the tool's estimate, not a
+  date stamped on the page). The quotations are the tool's excerpts, not
+  checked word-for-word against the page. In that copy:
+  - there is no permission to resell;
+  - it forbids "mirror[ing] the materials on any other server as-is with
+    no-value-added", which is close to what our plain google-search tool
+    does;
+  - Serper calls its data "web-scraped data collected from public domain
+    sources".
+- So on what I can see, the rule's condition is not met. The current terms may
+  differ, and I have not seen them.
+
+*Options:*
+1. **Ask Serper in writing** whether reselling search results per call
+   inside our tools is permitted. No cost and no commitment, but it is
+   vendor contact on behalf of Moonlighter AB, so it is yours.
+2. **Move the eight tools to a per-call search vendor whose terms
+   explicitly permit resale.** No subscription, in line with "no fixed
+   costs before revenue". Candidates to check first: DataForSEO
+   (pay-as-you-go) and Brave Search API (its own index rather than
+   Google's). SerpApi is out: it is a defendant in the Reddit and Google
+   cases, and the rule excludes a vendor sued over how it collects.
+3. **Stop using Serper** until 1 or 2 resolves: switch off the seven tools
+   that depend on it entirely, and remove the backup search from
+   adverse-media-check, which runs on Dilisense first and keeps working
+   without it.
+
+*What each option costs:*
+- *Option 1:* nothing, and a wait of days to weeks.
+- *Option 2:* engineering time, plus a per-call price that may differ from
+  Serper's. Results may differ where the new vendor is not Google-based.
+- *Option 3:* at least €46 a month in revenue (google-search, serp-analyze
+  and brand-mention-search alone earned €138 in 90 days). Agents calling
+  those tools get errors until a replacement exists.
+
+*My recommendation:*
+- **Today:** do option 1, ask Serper.
+- **Meanwhile:** strictly, the rule says unverified vendor data should not be
+  resold. Keeping the eight tools running while we wait is therefore an
+  exception only you can grant. I recommend granting it, time-boxed to two
+  weeks. Option 3 has a real cost, the tools have run this way for months,
+  and no claim, complaint or demand has arrived (the rule acts at once on
+  a site owner's demand, and revisits the vendor lane if a claim reaches us
+  as a vendor's customer). If you'd rather apply the rule strictly, choose
+  option 3 now.
+- **If Serper says no or doesn't answer within two weeks:** do option 2, and
+  switch off only the tools with no replacement.
+- **Option 2 groundwork:** I can prepare it in the meantime without
+  contacting anyone, since that part is technical.
+
+*Why it is yours:* contacting a vendor and relying on its permission binds
+Moonlighter AB. Switching off revenue earners is also your call
+(DEC-20260812-A).
+
+*If you do nothing:* the eight tools keep using Serper data whose terms we have
+not confirmed. Under the rule you adopted, that is the "never" lane
+(reselling against vendor terms) if the terms turn out to forbid it.
+
+*How you'd reverse it:* a vendor change is per tool and reversible; a
+switch-off is one line in the deactivation list.
+
 **DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology
 (`/v1/web3-assurance/methodology`) that are false, and they are more serious

@@ -100,8 +100,8 @@ registerCapability("google-news-search", async (input: CapabilityInput) => {
     provenance: {
       source: "serper.dev (Google News)",
       fetched_at: new Date().toISOString(),
-      acquisition_method: "direct_api" as const,
-      upstream_vendor: "Serper.dev",
+      acquisition_method: "vendor_api" as const,
+      upstream_vendor: "serper",
     },
   };
 });

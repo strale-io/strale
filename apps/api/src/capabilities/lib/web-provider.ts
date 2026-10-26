@@ -2,26 +2,59 @@
  * Web provider abstraction layer — retry, caching, and resilience for all
  * Browserless-dependent capabilities.
  *
- * Three-tier fallback chain:
+ * Two-route chain:
  *   1. Plain HTTP fetch (free, ~100ms, works for server-rendered pages)
- *   2. Jina Reader (free tier 200 RPM, handles JS rendering)
- *   3. Browserless.io (paid, full headless Chrome — last resort)
+ *   3. Browserless (headless Chrome) — for pages that need JavaScript
+ * (The numbering keeps the historical tier names used across comments and
+ * tests; tier 2, Jina Reader, was removed — see "Data-access rule" below.)
+ *
+ * ## Data-access rule (DEC-20261023-A)
+ *
+ * This is the "customer-directed fetch of one public page" and "per-call read
+ * of a public source" path, so it carries the rule's checks:
+ *
+ *   - robots.txt is consulted before the first request (`lib/robots-txt.ts`);
+ *     a `Disallow` for the path is a refusal.
+ *   - Every route identifies as Strale (`STRALE_USER_AGENT`): the plain fetch
+ *     in its header, Browserless through `userAgent` in the request body.
+ *   - A block STOPS the chain. HTTP 401/403/407/429 from the target, or an
+ *     anti-bot challenge page, is answered with a `SiteAccessRefusedError`
+ *     (`lib/site-access.ts`) at the route that saw it. Before this rule the
+ *     plain-fetch tier treated 400/403/429 as routine bot-gating and fell
+ *     through to Jina and then Browserless, and a challenge page was handed to
+ *     the real browser precisely so it would execute the challenge: retrying
+ *     around a block, which the rule puts in the never lane.
+ *   - Escalating from the plain fetch to Browserless is still allowed when the
+ *     plain fetch got a NON-block answer that is not usable — a JavaScript
+ *     shell, a non-HTML body, a 5xx, a timeout. Rendering a page the site
+ *     served freely is not getting around a block.
+ *   - Jina Reader is off this path. Its hosted reader, unless told otherwise,
+ *     retries a non-200 fetch through its own rotating proxy pool, and it does
+ *     not report the target's status back, so Strale could neither see a block
+ *     on that route nor promise not to route around one (checked against the
+ *     reader's source, jina-ai/reader `src/api/crawler.ts`, 2026-10-24).
+ *     Browserless reports the target's status in `X-Response-Code` — both
+ *     the production image (`browserless/chrome:1.61.1`, `functions/content.js`)
+ *     and v2 set it, and both accept `userAgent` in the request body.
+ *   - A redirect is checked again: if the fetch ended on another URL, that
+ *     URL's robots.txt must allow it too.
+ *   - Who chose the page decides who the block belongs to. A caller's URL
+ *     blocking Strale is a refusal (exempt from health accounting); a source
+ *     Strale chose blocking Strale (`source: "strale"`) is a capability fault
+ *     (`SourceBlockedError`), so a dead source cannot stay listed unnoticed.
  *
  * All 47+ capability files call fetchRenderedHtml() and get the resilience
  * upgrade without any code changes.
  *
  * F-0-006: tier 1 (plain fetch of the user URL) goes through `safeFetch`
  * so DNS rebinding and redirect-to-private-IP attacks are blocked.
- * Tier 2 (Jina r.jina.ai) is a hardcoded public prefix so raw `fetch`
- * is safe — `targetUrl` is embedded in the path and Jina fetches it
- * from its own network. Tier 3 (Browserless) goes to our internal
- * Railway URL; the user URL is forwarded in the body but Browserless
- * fetches it from its own network. `validateUrl` at the top of
- * `fetchPage` is the only layer we own for tiers 2 and 3.
+ * Tier 3 (Browserless) goes to our internal Railway URL; the user URL is
+ * forwarded in the body but Browserless fetches it from its own network.
+ * `validateUrl` at the top of `fetchPage` is the only layer we own for it.
  *
  * ## Resource bounds (#428) — what is and is not bounded
  *
- * All three tiers read their body through `readPageHtml`, capped at
+ * Both tiers read their body through `readPageHtml`, capped at
  * `MAX_FETCHED_HTML_BYTES`; the cache carries a total byte budget as well as
  * an entry count. Precisely:
  *
@@ -32,16 +65,16 @@
  *   size — the earlier measure could understate residency by 2x for a page
  *   with a single non-Latin-1 character, which made this line optimistic.
  *
- *   NOT BOUNDED — the process's global footprint under concurrency. Tiers 1
- *   and 2 sit outside `withBrowserLimit`, so N simultaneous requests can each
+ *   NOT BOUNDED — the process's global footprint under concurrency. Tier 1
+ *   sits outside `withBrowserLimit`, so N simultaneous requests can each
  *   hold up to the cap; the real ceiling is (concurrent requests x cap) +
  *   cache budget, plus transport chunk overhead, the string built by the
  *   streaming decoder as it grows, and whatever a downstream parser allocates
  *   from the returned HTML. Turning "unbounded" into "bounded per response and
  *   per cache" is the claim here; global containment is not.
  *
- *   NOT BOUNDED, per request — a request that falls through all three tiers
- *   can transiently hold up to three capped bodies before GC reclaims the
+ *   NOT BOUNDED, per request — a request that falls through both tiers
+ *   can transiently hold up to two capped bodies before GC reclaims the
  *   earlier ones. The realistic shape of that is narrow: a large body is
  *   ACCEPTED at tier 1, so falling through means the page was short, a
  *   challenge, or an error — all small. The exception is a huge script-only
@@ -55,19 +88,31 @@
  *
  * Oversize is TERMINAL, not a fallback trigger: a page too large on one tier
  * is not re-fetched by the next. See the ResourceLimitError re-throws below.
+ * So is a block (see "Data-access rule" above): SiteAccessRefusedError is
+ * re-thrown the same way.
  */
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { discardBody, safeFetch } from "../../lib/safe-fetch.js";
 import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../../lib/robots-txt.js";
+import {
+  STRALE_USER_AGENT,
+  SiteAccessRefusedError,
+  asSourceBlocked,
+  isBlockStatus,
+  siteAccessRefusal,
+} from "../../lib/site-access.js";
 import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
  * and enough bytes to pass the "substantial content" heuristics. Observed
  * live: EUR-Lex's "verify that you're not a robot … Enable JavaScript and
- * then reload" shell (2KB, HTTP 200/202). Markers are deliberately narrow —
+ * then reload" shell (2KB, HTTP 200/202). Under DEC-20261023-A a challenge is
+ * a block: the fetch path refuses on it rather than handing it to a real
+ * browser to solve. Markers are deliberately narrow —
  * a real article MENTIONING robots must not trip this — so each pattern
  * targets interstitial phrasing, not topic words.
  */
@@ -98,9 +143,8 @@ export interface WebProviderOptions {
   /** Skip the response cache (default: false). */
   skipCache?: boolean;
   /**
-   * Skip the plain-fetch and Jina Reader tiers and go straight to Browserless
-   * (default: false). Tiers 1/2 substitute non-rendered HTML (tier 1) or a
-   * reformatted document (Jina, tier 2) for what a real headless-Chrome
+   * Skip the plain-fetch tier and go straight to Browserless (default: false).
+   * Tier 1 substitutes non-rendered HTML for what a real headless-Chrome
    * render would produce. Callers whose output contract promises actual
    * rendered-DOM content (e.g. web-extract's "full JavaScript rendering")
    * must set this so a JS-heavy page never silently falls back to a plain
@@ -115,6 +159,13 @@ export interface WebProviderOptions {
    * shared default.
    */
   minHtmlLength?: number;
+  /**
+   * Who chose this URL (default "caller"). Pass "strale" when the capability
+   * reads a source Strale selected — a registry, a carrier, a price index —
+   * so a block there is reported as a capability fault (`SourceBlockedError`)
+   * rather than as the caller's refusal. See "Data-access rule" above.
+   */
+  source?: "caller" | "strale";
 }
 
 export interface WebProviderResult {
@@ -180,8 +231,8 @@ const cache = new Map<string, CacheEntry>();
  *     skipFallback is set, so they can never populate this namespace);
  *   - a call with a non-default `waitUntil` never reads/writes an entry
  *     produced under a different `waitUntil`.
- * Tiers 1 (plain fetch) and 2 (Jina) only ever run for the default
- * `networkidle0`/unset case with `skipFallback` false, so they always land
+ * Tier 1 (plain fetch) only ever runs for the default
+ * `networkidle0`/unset case with `skipFallback` false, so it always lands
  * in the same namespace as a same-shaped Browserless render — preserving
  * the pre-existing "any tier is interchangeable for an equivalent call"
  * caching behavior for the 47+ non-skipFallback callers.
@@ -420,6 +471,20 @@ export async function fetchPage(
   targetUrl: string,
   options?: WebProviderOptions,
 ): Promise<WebProviderResult> {
+  try {
+    return await fetchPageOnce(targetUrl, options);
+  } catch (err) {
+    if (options?.source === "strale" && err instanceof SiteAccessRefusedError) {
+      throw asSourceBlocked(err, targetUrl);
+    }
+    throw err;
+  }
+}
+
+async function fetchPageOnce(
+  targetUrl: string,
+  options?: WebProviderOptions,
+): Promise<WebProviderResult> {
   const {
     waitUntil = "networkidle0",
     pageTimeout = 25000,
@@ -436,7 +501,7 @@ export async function fetchPage(
   const renderMode = cacheNamespace(skipFallback, waitUntil);
 
   // Per-source ToS policy enforced at the pipeline entry (P2, 2026-08-12):
-  // tiers 2/3 (Jina, Browserless) never touch safeFetch, so its gate alone
+  // tier 3 (Browserless) never touches safeFetch, so its gate alone
   // would leave the rendering path open. Pure string check, runs before DNS.
   assertTargetAllowed(targetUrl);
 
@@ -461,12 +526,21 @@ export async function fetchPage(
     }
   }
 
+  // DEC-20261023-A: robots.txt before the first request on ANY route. After
+  // the cache read, because a cached page was fetched under a verdict that is
+  // itself cached for longer than the page.
+  await assertRobotsAllowed(targetUrl);
+
   // ── Fast-path: try plain HTTP fetch first ──────────────────────────────────
   // Many pages serve full HTML without JavaScript rendering. This avoids
   // Browserless entirely — faster, cheaper, more reliable. Falls through to
   // Browserless if the response looks like an SPA shell or is too short.
   // IMPORTANT: DNS failures and connection refused are fatal — don't waste
   // 30+ seconds on Browserless for a URL that doesn't resolve.
+  // Whether a plain request has seen the site's first answer (and so its
+  // block or challenge) before Chrome is asked; if not, the preflight below
+  // takes that look (DEC-20261023-A).
+  let sawFirstAnswer = false;
   if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
@@ -475,11 +549,20 @@ export async function fetchPage(
       // transparently (maxRedirects defaults to 3).
       const plainResp = await safeFetch(targetUrl, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)",
+          "User-Agent": STRALE_USER_AGENT,
           "Accept": "text/html,application/xhtml+xml",
         },
         signal: AbortSignal.timeout(8000),
       });
+
+      // safeFetch followed any redirects; the page it landed on needs the
+      // same robots.txt permission as the one that was asked for.
+      try {
+        await assertRedirectAllowed(targetUrl, plainResp.url);
+      } catch (err) {
+        await discardBody(plainResp, "plain-fetch redirect target disallowed by robots.txt");
+        throw err;
+      }
 
       if (plainResp.ok) {
         const contentType = plainResp.headers.get("content-type") ?? "";
@@ -506,10 +589,16 @@ export async function fetchPage(
               : "";
           };
           // A JS-challenge interstitial ("enable JavaScript and reload") is
-          // not content — a real browser (tier 3) executes the JS and gets
-          // the actual page. Accepting it here is how eu-regulation-search
-          // silently returned "no results" for weeks (P2 triage, 2026-08-12).
-          if (html.length > 2000 && !looksLikeJsChallenge(html) && visibleText().length > 200) {
+          // not content. Accepting it is how eu-regulation-search silently
+          // returned "no results" for weeks (P2 triage, 2026-08-12). It used
+          // to be handed to the real browser (tier 3) to execute; under
+          // DEC-20261023-A that is solving the site's block, so it ends here.
+          if (looksLikeJsChallenge(html)) {
+            throw siteAccessRefusal(targetUrl, { kind: "challenge" });
+          }
+          // The whole body was read and is not a challenge.
+          sawFirstAnswer = true;
+          if (html.length > 2000 && visibleText().length > 200) {
             const fetchTimeMs = Date.now() - start;
             if (!skipCache) setCache(renderMode, targetUrl, html);
             return { html, cached: false, fetchTimeMs, attempt: 0 };
@@ -517,92 +606,83 @@ export async function fetchPage(
         } else {
           // Not HTML at all — nothing here will be read, so release it (#428).
           await discardBody(plainResp, `plain-fetch content-type ${contentType || "(none)"}`);
+          // Not a page, so not a challenge page: the status was the answer.
+          sawFirstAnswer = true;
         }
-        // HTTP response received but not usable HTML — fall through to Browserless
+        // HTTP response received but not usable HTML (a JavaScript shell, a
+        // non-HTML body) — not a block, so rendering it is allowed.
       } else {
-        // Nothing below reads this body, whichever way the status goes (#428).
-        await discardBody(plainResp, `plain-fetch HTTP ${plainResp.status}`);
-        if ([404, 410, 401, 407].includes(plainResp.status)) {
-          // Genuinely permanent 4xx: missing (404/410) or auth-gated (401/407) —
-          // don't waste a 30s+ Browserless render. Prefix with "URL returned
-          // HTTP" so the catch block below recognizes it as fatal.
+        // DEC-20261023-A: the site's own refusal ends the chain here. Until
+        // 2026-10-24 400/403/429 fell through to Jina and Browserless as
+        // "routine bot-gating" — retrying a blocked request through another
+        // route, which the rule forbids.
+        if (isBlockStatus(plainResp.status)) {
+          await discardBody(plainResp, `plain-fetch HTTP ${plainResp.status} (site block)`);
+          throw siteAccessRefusal(targetUrl, { kind: "http", status: plainResp.status });
+        }
+        if (plainResp.status >= 400 && plainResp.status < 500) {
+          await discardBody(plainResp, `plain-fetch HTTP ${plainResp.status}`);
+          // Every other 4xx is the target's final answer about this URL —
+          // missing (404/410), or a request it will not serve (400, which
+          // EUR-Lex sends datacenter IPs as bot-gating). No other route.
+          // Prefix with "URL returned HTTP" so the catch block below
+          // recognizes it as fatal.
           throw new Error(`URL returned HTTP ${plainResp.status}. ${humanizeBrowserlessStatus(plainResp.status, targetUrl)}`);
         }
-        // Other 4xx (400/403/429) are routinely BOT-GATING, not permanent:
-        // EUR-Lex serves HTTP 400 to datacenter IPs and a 202-empty challenge
-        // to residential ones (observed live, Railway US East vs Sweden,
-        // 2026-08-12) — a rendered browser still succeeds. Fall through to
-        // Jina/Browserless like 5xx (server might render differently).
+        // 5xx: the server failed rather than refused, and may render
+        // differently. A challenge page served with a 5xx (Cloudflare uses
+        // 503) is still a block, so read the start of the body to tell.
+        const errText = await readErrorTextTruncated(plainResp);
+        if (looksLikeJsChallenge(errText)) {
+          throw siteAccessRefusal(targetUrl, { kind: "challenge" });
+        }
+        // An empty read may be a body that broke off (the reader swallows
+        // that), so only a body actually seen counts as the first answer.
+        if (errText) sawFirstAnswer = true;
       }
     } catch (err) {
       // #428: an oversized page is TERMINAL, never a reason to fall through.
-      // Letting it cascade would have Jina fetch the same huge resource and
-      // then Browserless render it — three transfers of a page already judged
-      // too big. A different tier is a different representation, not a smaller
-      // one: Jina reformats the same content and a rendered DOM is typically
-      // LARGER than the raw HTML.
+      // Letting it cascade would have Browserless render the same huge
+      // resource — a second transfer of a page already judged too big. A
+      // different tier is a different representation, not a smaller one: a
+      // rendered DOM is typically LARGER than the raw HTML.
       if (err instanceof ResourceLimitError) throw err;
-      const msg = err instanceof Error ? err.message : String(err);
-      // Helpful 4xx message already constructed upstream — propagate as-is.
-      if (msg.includes("URL returned HTTP 4")) {
-        throw err;
-      }
-      // DNS failures, connection refused, and SSL errors are fatal — no point
-      // sending to Browserless, the domain simply doesn't resolve.
-      if (
-        msg.includes("ENOTFOUND") ||
-        msg.includes("ECONNREFUSED") ||
-        msg.includes("ERR_TLS") ||
-        msg.includes("getaddrinfo")
-      ) {
+      // A block is terminal too — never a reason to try the next route.
+      if (err instanceof SiteAccessRefusedError) throw err;
+      // A connection-time SSRF refusal is Strale's own, not a transport blip.
+      const ssrf = ssrfRefusalIn(err);
+      if (ssrf) throw ssrf;
+      // A refusal Strale made itself (validateUrl or the blocklist on a
+      // redirect hop), or the 4xx message built above: never a reason to have
+      // Chrome visit the same place.
+      if (!isPreflightTransportFailure(err)) throw readableRedirectError(err, targetUrl);
+      // A name that does not resolve, or a refused connection (a firewall
+      // refusing this network is a block), will not render either; no point
+      // paying Browserless for it. undici's message is always "fetch failed";
+      // the reason is the cause's code. TLS failures fall through: Node is
+      // stricter than Chrome about legacy servers and incomplete chains.
+      const code = (err as { cause?: { code?: unknown } }).cause?.code;
+      if (code === "ENOTFOUND" || code === "ECONNREFUSED") {
         const hostname = new URL(targetUrl).hostname;
         throw new Error(
-          `Could not reach ${hostname}. The domain may not exist or is not responding. Check the URL and try again.`,
+          code === "ENOTFOUND"
+            ? `Could not reach ${hostname} (or a site it redirects to): the domain name does not resolve. Check the URL and try again.`
+            : `Could not reach ${hostname} (or a site it redirects to): the connection was refused. Check the URL and try again.`,
         );
       }
-      // Timeouts and other transient errors: fall through to Browserless
+      // Timeouts, a long redirect chain, other transport failures: fall
+      // through to Browserless, after the plain look below.
     }
   }
 
-  // ── Jina Reader path (free tier, handles JS rendering) ────────────────────
-  // Jina converts URLs to clean text/HTML. Free at 200 RPM with API key.
-  // Skip Jina for non-default waitUntil (caller needs specific rendering behavior)
-  // and for URLs that need full browser features (screenshot, PDF, cookie analysis).
-  if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
-    try {
-      const start = Date.now();
-      const jinaUrl = `https://r.jina.ai/${targetUrl}`;
-      const jinaHeaders: Record<string, string> = {
-        Accept: "text/html",
-        "X-Return-Format": "html",
-        "X-No-Cache": "true",
-      };
-      const jinaKey = process.env.JINA_API_KEY;
-      if (jinaKey) jinaHeaders.Authorization = `Bearer ${jinaKey}`;
-
-      const jinaResp = await fetch(jinaUrl, {
-        headers: jinaHeaders,
-        signal: AbortSignal.timeout(15000),
-      });
-
-      if (jinaResp.ok) {
-        // #428: bounded read under the same shared cap as the other tiers.
-        const html = await readPageHtml(jinaResp);
-        if (html.length > 500 && !looksLikeJsChallenge(html)) {
-          const fetchTimeMs = Date.now() - start;
-          if (!skipCache) setCache(renderMode, targetUrl, html);
-          return { html, cached: false, fetchTimeMs, attempt: 0 };
-        }
-      } else {
-        await discardBody(jinaResp, `jina HTTP ${jinaResp.status}`);
-      }
-      // Jina returned empty/short content or error — fall through to Browserless
-    } catch (err) {
-      // #428: oversize is terminal here too — see the tier-1 note. Jina's
-      // reformat of a 16 MiB+ page is not a smaller representation, and
-      // rendering it in Browserless afterwards is strictly more work.
-      if (err instanceof ResourceLimitError) throw err;
-      // Jina timeout or network error — fall through to Browserless
+  // When no plain request saw the site's first answer (no tier 1, or tier 1
+  // failed in transport), look at it plainly before Chrome runs its scripts.
+  if (!sawFirstAnswer) {
+    const status = await assertPlainPreflightAllowed(targetUrl);
+    // As in tier 1, any other 4xx is the target's final answer about this
+    // URL; 416 is the one a ranged GET can draw by itself.
+    if (status !== undefined && status >= 400 && status < 500 && status !== 416) {
+      throw new Error(`URL returned HTTP ${status}. ${humanizeBrowserlessStatus(status, targetUrl)}`);
     }
   }
 
@@ -634,6 +714,10 @@ export async function fetchPage(
           },
           body: JSON.stringify({
             url: targetUrl,
+            // DEC-20261023-A: identify as Strale on this route too. Browserless
+            // (v1.61.1 in production, and v2) applies it with
+            // page.setUserAgent before navigating.
+            userAgent: STRALE_USER_AGENT,
             gotoOptions: { waitUntil, timeout: pageTimeout },
           }),
           signal: AbortSignal.timeout(fetchTimeout),
@@ -675,7 +759,13 @@ export async function fetchPage(
           throw new Error(humanMsg);
         }
 
-        // #428: bounded read, then decode — same cap as tiers 1 and 2, so a
+        // DEC-20261023-A: Browserless answers 200 for a rendered page whatever
+        // the target said, and reports the target's own status in
+        // X-Response-Code. A block there ends the chain — no retry, no other
+        // route.
+        await assertRenderedTargetAllowed(targetUrl, response);
+
+        // #428: bounded read, then decode — same cap as tier 1, so a
         // page too large to fetch plainly is not silently accepted when a
         // rendered DOM (typically LARGER than the raw HTML) comes back here.
         const html = await readPageHtml(response);
@@ -689,15 +779,10 @@ export async function fetchPage(
           throw new Error("Browserless returned empty or too-short HTML response.");
         }
 
-        // If even a real rendered browser gets the anti-bot interstitial, the
-        // site is actively refusing automation. Fail honestly — Strale does
-        // not attempt to defeat bot walls (same posture as the ToS blocklist).
+        // An anti-bot interstitial in the rendered page is the site refusing
+        // automation. Strale does not attempt to defeat bot walls.
         if (looksLikeJsChallenge(html)) {
-          throw new Error(
-            `${new URL(targetUrl).hostname} served an anti-bot challenge to the rendered ` +
-              `browser as well. The site is refusing automated access; this is not retryable. ` +
-              `If an official API exists for this source, that is the correct path.`,
-          );
+          throw siteAccessRefusal(targetUrl, { kind: "challenge" });
         }
 
         // Cache the result
@@ -711,6 +796,8 @@ export async function fetchPage(
         // is — so it must not consume a retry. Re-rendering it would transfer
         // 16 MiB+ again to reach the identical answer.
         if (err instanceof ResourceLimitError) throw err;
+        // A block is the site's answer; re-asking is what the rule forbids.
+        if (err instanceof SiteAccessRefusedError) throw err;
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < maxRetries - 1) {
           const msg = lastError.message.toLowerCase();
@@ -730,6 +817,122 @@ export async function fetchPage(
 
     throw lastError ?? new Error("fetchPage: all retries exhausted");
   });
+}
+
+/**
+ * Apply the data-access rule to a Browserless response for `targetUrl`, on any
+ * route (/content, /screenshot, /pdf). Browserless answers 200 whatever the
+ * target said and reports the target's own status in `X-Response-Code` and
+ * its final URL in `X-Response-URL` (browserless/chrome 1.61.1, the
+ * production image, and v2 alike). A block status is a site-access refusal;
+ * a redirect to a URL robots.txt disallows is one too. The body is released
+ * before throwing. A missing header passes: there is nothing to read.
+ */
+export async function assertRenderedTargetAllowed(targetUrl: string, response: Response): Promise<void> {
+  const targetStatus = Number(response.headers.get("x-response-code"));
+  if (isBlockStatus(targetStatus)) {
+    await discardBody(response, `browserless target HTTP ${targetStatus} (site block)`);
+    throw siteAccessRefusal(targetUrl, { kind: "http", status: targetStatus });
+  }
+  const finalUrl = response.headers.get("x-response-url");
+  try {
+    // Chrome followed the redirects itself, so the blocklist safeFetch applies
+    // to every hop has not seen where it landed.
+    if (finalUrl) assertTargetAllowed(finalUrl);
+    await assertRedirectAllowed(targetUrl, finalUrl);
+  } catch (err) {
+    await discardBody(response, "browserless redirect target refused");
+    throw err;
+  }
+}
+
+/** The bytes the preflight reads: looksLikeJsChallenge looks at the first 6000 characters. */
+export const PREFLIGHT_RANGE = "bytes=0-8191";
+
+/** Chrome follows up to 20 redirects; the preflight follows the same chain. */
+const PREFLIGHT_MAX_REDIRECTS = 20;
+
+/**
+ * The connection-time SSRF refusal inside an undici "fetch failed", if that is
+ * what `err` is. Rethrown as itself so its own message ("restricted address")
+ * reaches the failure taxonomy, which excuses it as caller input.
+ */
+function ssrfRefusalIn(err: unknown): Error | null {
+  const cause = (err as { cause?: unknown } | null)?.cause;
+  return cause instanceof Error && (cause as { code?: unknown }).code === "ESSRFBLOCKED" ? cause : null;
+}
+
+/**
+ * Whether a preflight error is a transport failure the render may still get
+ * past, and will report in its own terms. undici reports every transport
+ * failure (DNS, connect, TLS, a malformed response) as a TypeError "fetch
+ * failed" with the reason in `cause`; a timeout is a TimeoutError. A refusal
+ * Strale makes itself (validateUrl, the blocklist on a redirect hop) is a
+ * plain Error and is never one; the SSRF refusal is handled before this.
+ */
+function isPreflightTransportFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === "AbortError" || err.name === "TimeoutError") return true;
+  // undici: "fetch failed" before the response, "terminated" while reading
+  // the body (a reset, a corrupt encoding), each with the reason in `cause`.
+  if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated" || err.cause instanceof Error)) {
+    return true;
+  }
+  // safeFetch's own message names the cap first and the caller's URL last.
+  return err.message.startsWith("Too many redirects");
+}
+
+/**
+ * A redirect whose Location is not a URL surfaces as a bare TypeError
+ * "Invalid URL" from safeFetch's redirect loop. Chrome fails on it too, so it
+ * is the call's end; this gives it a sentence the caller can act on.
+ */
+function readableRedirectError(err: unknown, targetUrl: string): unknown {
+  if (err instanceof TypeError && (err as { code?: unknown }).code === "ERR_INVALID_URL") {
+    return new Error(`${new URL(targetUrl).hostname} redirected to an address that is not a valid URL, so the page could not be loaded.`);
+  }
+  return err;
+}
+
+/**
+ * A plain look at `targetUrl` before a rendered route that has no plain tier
+ * (web-provider with skipFallback, /screenshot, /pdf). Chrome can run a
+ * JavaScript challenge to completion before the page is read, which the rule
+ * forbids (DEC-20261023-A: getting around blocks); the plain response shows
+ * the block or the challenge before any script runs. Refuses a block status,
+ * a challenge page (on any status), and a redirect robots.txt disallows;
+ * safeFetch refuses a blocklisted host on every hop. Returns the status, so a
+ * caller that ends on other 4xx answers (fetchPage, as in tier 1) can. A
+ * transport failure is left to the rendered route and returns undefined.
+ */
+export async function assertPlainPreflightAllowed(targetUrl: string): Promise<number | undefined> {
+  let res: Response;
+  try {
+    res = await safeFetch(targetUrl, {
+      // Only the start of the body is read, so ask for only that.
+      headers: { "User-Agent": STRALE_USER_AGENT, "Accept": "text/html,application/xhtml+xml", "Range": PREFLIGHT_RANGE },
+      maxRedirects: PREFLIGHT_MAX_REDIRECTS,
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (err) {
+    const ssrf = ssrfRefusalIn(err);
+    if (ssrf) throw ssrf;
+    if (isPreflightTransportFailure(err)) return undefined;
+    throw readableRedirectError(err, targetUrl);
+  }
+  try {
+    await assertRedirectAllowed(targetUrl, res.url);
+  } catch (err) {
+    await discardBody(res, "preflight redirect target disallowed by robots.txt");
+    throw err;
+  }
+  if (isBlockStatus(res.status)) {
+    await discardBody(res, `preflight HTTP ${res.status} (site block)`);
+    throw siteAccessRefusal(targetUrl, { kind: "http", status: res.status });
+  }
+  const head = await readErrorTextTruncated(res, 8192);
+  if (looksLikeJsChallenge(head)) throw siteAccessRefusal(targetUrl, { kind: "challenge" });
+  return res.status;
 }
 
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────
@@ -762,6 +965,8 @@ export async function fetchCompanyPage(targetUrl: string): Promise<string> {
   const result = await fetchPage(targetUrl, {
     waitUntil: "domcontentloaded",
     maxRetries: 3,
+    // Registries are always sources Strale chose.
+    source: "strale",
   });
   return result.html;
 }

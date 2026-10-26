@@ -129,3 +129,8 @@ output_field_reliability:
   response_generated_at: guaranteed
   joint_liability_risk: guaranteed
 geography: eu
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

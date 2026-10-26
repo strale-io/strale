@@ -163,3 +163,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Resolve the company to an OIB via an upstream name-resolver, then pass the OIB.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

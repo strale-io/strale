@@ -128,3 +128,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Check the provider's current pricing page for models showing unexpected costs, especially after major releases
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

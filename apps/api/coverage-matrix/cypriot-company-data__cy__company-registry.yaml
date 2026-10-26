@@ -17,8 +17,8 @@ provider_tos_notes: >-
   Tier-1 identity via Openapi WW-Top (subject to Openapi addendum still pending countersignature — gated by
   OPENAPI_ENABLED flag). Tier-2 legal_representatives[] sourced from data.gov.cy DRCOR open-data CSV
   (organisation_officials_83.csv) under CC BY 4.0 — attribution preserved in handler provenance per
-  DEC-20260518-F constraint (d). cost_class=paid_per_call (Openapi €0.16/call passthrough).
-doctrine_reference: "DEC-20260518-E (Phase 6 exhaustive enumeration); DEC-20260518-A (canonical legal_representatives shape); DEC-20260518-F (attribution); DEC-20260428-A (Tier 1 direct gov open data)"
+  DEC-20260518-F constraint (d), kept by DEC-20261023-A. cost_class=paid_per_call (Openapi €0.16/call passthrough).
+doctrine_reference: "DEC-20260518-E (Phase 6 exhaustive enumeration); DEC-20260518-A (canonical legal_representatives shape); DEC-20260518-F (attribution, kept by DEC-20261023-A); DEC-20261023-A preferred lane for the DRCOR open-data officials leg; the Openapi identity leg is vendor data (formerly DEC-20260428-A)"
 notes: >-
   2026-05-19: legal_representatives[] populated from data.gov.cy DRCOR open data via monthly bulk CSV
   (organisation_officials_83.csv, 120 MB, CC BY 4.0, monthly refresh). Weekly ingest job

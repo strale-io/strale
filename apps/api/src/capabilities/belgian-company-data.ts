@@ -11,7 +11,8 @@ import { firstString } from "./lib/input-aliases.js";
  * statutory data published by FPS Economy.
  *
  * The Browserless fallback against kbopub.economie.fgov.be was removed
- * 2026-04-29 per DEC-20260428-A Tier 1: Strale itself never operates
+ * 2026-04-29 per DEC-20260428-A Tier 1 (superseded 2026-10-24 by DEC-20261023-A,
+ * under which this vendor path is the "allowed with checks" vendor lane): Strale itself never operates
  * scrapers, even as a fallback.
  *
  * Long-term migration target: direct ingest of FPS Economy's KBO Open
@@ -199,7 +200,7 @@ registerCapability("belgian-company-data", async (input: CapabilityInput) => {
       attribution:
         "Data sourced from CBEAPI.be, a third-party JSON wrapper of the Belgian KBO/BCE Crossroads Bank for Enterprises. Underlying records are public-register data published by FPS Economy under Belgian re-use law.",
       source_note:
-        "Tier-2 vendor-mediated public records (DEC-20260428-A). Migration to first-party ingest of FPS Economy KBO Open Data is queued.",
+        "Vendor-mediated public records. CBEAPI.be's resale terms are not yet recorded by Strale. Migration to first-party ingest of FPS Economy KBO Open Data is queued.",
     },
   };
 });

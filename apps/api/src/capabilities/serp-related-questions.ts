@@ -71,8 +71,8 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
     provenance: {
       source: "serper.dev (Google SERP)",
       fetched_at: new Date().toISOString(),
-      acquisition_method: "direct_api" as const,
-      upstream_vendor: "Serper.dev",
+      acquisition_method: "vendor_api" as const,
+      upstream_vendor: "serper",
     },
   };
 });
