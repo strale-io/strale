@@ -4,8 +4,10 @@
 // route; the console shows the agent's question, the call with its live price, and the tool's
 // published example result. Server-rendered with the first call complete, so the page reads
 // the same with no script, with reduced motion, and in a thumbnail; switchboard.ts animates it.
-// Lines are drawn by the script from measured positions; below 1280px the tools become a row
-// of buttons above the console and no lines are drawn.
+// From 1280px the hero fills the screen under the header (--viewport-height minus --nav-h, capped
+// for very tall windows): the board takes the height left under the copy, and the script scales the
+// console and tiles (--_s) to it, then draws every line from the same geometry the CSS places the
+// tiles with. Below 1280px the tools become a row of buttons above the console and no lines are drawn.
 import type { Tool } from "../lib/site-data";
 import { formatEur, plural } from "../lib/format";
 
@@ -95,7 +97,7 @@ const words = headline.split(/\s+/).filter(Boolean);
         <svg class="sb-lines" aria-hidden="true"></svg>
         <div class="sb-ports" role="group" aria-label="Example tools. Choose one to see it called.">
           {ports.map((p, i) => (
-            <button type="button" class:list={["sb-port", p.x < 0.5 ? "is-left" : "is-right", { on: i === start }]} style={`--_x: ${p.x * 100}%; --_y: ${p.y * 100}%`} data-port={i} aria-pressed={i === start ? "true" : "false"}>
+            <button type="button" class:list={["sb-port", { on: i === start }]} style={`--_x: ${p.x * 100}%; --_y: ${p.y * 100}%`} data-port={i} aria-pressed={i === start ? "true" : "false"}>
               <span class={`sb-glyph g-${p.glyph}`} aria-hidden="true"><svg viewBox="0 0 24 24"><path d={GLYPH_PATH[p.glyph]} /></svg></span>
               <span class="sb-name" aria-hidden="true">{p.label}</span>
               <span class="sb-tag" aria-hidden="true">{p.label}<small>{p.price}</small></span>
@@ -121,14 +123,16 @@ const words = headline.split(/\s+/).filter(Boolean);
 <script>import "../scripts/switchboard.ts";</script>
 
 <style>
-  .sb { position: relative; overflow: hidden; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
+  .sb { --_s: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
   .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-16); padding-block: var(--space-24) 0; }
   .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-h-sm); padding: var(--space-4) var(--space-20) var(--space-4) var(--space-16); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-compact-size); box-shadow: var(--shadow-1); }
   .sb-eyebrow strong { color: var(--text); font-weight: var(--type-ui-weight); }
   .sb-pulse { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--success); box-shadow: 0 0 0 0 var(--success-bg); animation: sb-ping var(--duration-reveal-atmosphere) var(--ease-standard) infinite; }
   @keyframes sb-ping { 70% { box-shadow: 0 0 0 var(--space-8) var(--success-bg); } 100% { box-shadow: 0 0 0 0 var(--success-bg); } }
   .sb-title { font-family: var(--type-hero-family); font-weight: var(--type-hero-weight); letter-spacing: var(--type-hero-tracking); line-height: var(--type-section-line); font-size: var(--type-campaign-size); max-width: 26ch; text-wrap: balance; }
-  @media (min-width: 1280px) { .sb-title { font-size: calc(var(--type-campaign-size) + var(--space-4)); } }
+  /* From 1280px the headline sizes with the window's height as well as its width: 7.5% of the height, between the
+     campaign and hero sizes, so a short laptop screen keeps room for the board and a tall monitor gets a bigger line. */
+  @media (min-width: 1280px) { .sb-title { font-size: clamp(var(--type-campaign-size), calc(var(--viewport-height) * 0.075), var(--type-hero-size)); line-height: var(--type-hero-line); } }
   .sb-word { --_i: 0; display: inline-block; animation: sb-rise var(--duration-reveal-signature) var(--ease-enter) both; animation-delay: calc(var(--_i) * var(--duration-fast) / 2); }
   @keyframes sb-rise { from { opacity: 0; transform: translateY(var(--space-12)); filter: blur(var(--space-4)); } to { opacity: 1; transform: none; filter: none; } }
   .sb-lead { color: var(--text-muted); max-width: 64ch; }
@@ -139,13 +143,15 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-go:hover { background: var(--action); color: var(--text-on-action); }
 
   /* Board: a quiet surface with a faint grid and a glow behind the console. */
-  .sb-board-wrap { position: relative; margin-top: var(--space-32); background: var(--surface-sunken); isolation: isolate; }
-  .sb-board-wrap::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0.4;
-    background-image: repeating-linear-gradient(0deg, transparent 0 calc(var(--space-32) + var(--space-2)), var(--border) calc(var(--space-32) + var(--space-2)) calc(var(--space-32) + var(--space-4))),
-      repeating-linear-gradient(90deg, transparent 0 calc(var(--space-32) + var(--space-2)), var(--border) calc(var(--space-32) + var(--space-2)) calc(var(--space-32) + var(--space-4)));
+  /* The grid sits behind the connectors: hairlines in --circuit-grid, a step off the board colour, while the
+     connectors are --circuit, which meets 3:1 on the board (CONTRAST.md). */
+  .sb-board-wrap { position: relative; flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; margin-top: var(--space-32); background: var(--surface-sunken); isolation: isolate; }
+  .sb-board-wrap::before { content: ""; position: absolute; inset: 0; z-index: -1;
+    background-image: repeating-linear-gradient(0deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4))),
+      repeating-linear-gradient(90deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4)));
     mask-image: linear-gradient(to bottom, transparent, black 30%); }
   .sb-board-wrap::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 40% 60% at 50% 55%, var(--action-subtle), transparent 70%); opacity: 0.7; }
-  .sb-board { position: relative; margin-inline: auto; max-width: var(--container-wide); padding: var(--space-24) var(--gutter); display: grid; gap: var(--space-16); }
+  .sb-board { position: relative; width: 100%; margin-inline: auto; max-width: var(--container-wide); padding: var(--space-24) var(--gutter); display: grid; gap: var(--space-16); }
   .sb-lines { display: none; }
   .sb-ports { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); max-width: calc(var(--space-160) * 3); margin-inline: auto; width: 100%; }
   @media (min-width: 768px) {
@@ -162,12 +168,12 @@ const words = headline.split(/\s+/).filter(Boolean);
   .g-web { background: var(--brand-blue); }
   .g-ref { background: var(--brand-violet); }
   .g-dev { background: var(--brand-ink); }
-  .sb-tag { position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: -50% var(--space-4); white-space: nowrap; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
+  .sb-tag { --_dx: 0px; position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); white-space: nowrap; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
   .sb-tag small { margin-left: var(--space-8); font-family: var(--type-code-family); font-weight: var(--type-body-weight); opacity: 0.75; }
   .sb-name { font-family: var(--type-ui-family); font-size: var(--type-label-size); line-height: var(--type-label-line); text-align: center; }
-  .sb-tag::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: calc(-1 * var(--space-4)); border: var(--space-4) solid transparent; border-top-color: var(--surface-inverse); }
+  .sb-tag::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--_dx)); margin-left: calc(-1 * var(--space-4)); border: var(--space-4) solid transparent; border-top-color: var(--surface-inverse); }
   .sb-tag { display: none; }
-  .sb-port.on .sb-tag, .sb-port:hover .sb-tag, .sb-port:focus-visible .sb-tag { opacity: 1; translate: -50% 0; }
+  .sb-port.on .sb-tag, .sb-port:hover .sb-tag, .sb-port:focus-visible .sb-tag { opacity: 1; translate: calc(-50% + var(--_dx)) 0; }
 
   .sb-desk { position: relative; z-index: 2; width: min(100%, calc(var(--space-160) * 3 + var(--space-48))); margin-inline: auto; background: var(--code-bg); color: var(--code-text); border: var(--border-width) solid var(--code-border); border-radius: var(--radius-card); box-shadow: var(--shadow-3); overflow: hidden; font-family: var(--type-code-family); font-size: var(--type-small-size); line-height: var(--type-code-line); text-align: left; }
   .sb-bar { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8) var(--space-16); border-bottom: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
@@ -186,25 +192,29 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-foot { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-8) var(--space-20); border-top: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
   .sb-foot b { color: var(--code-string); font-weight: var(--type-body-weight); }
 
-  /* From 1280px: the circuit board. Ports sit at their board positions; lines are drawn by the script. */
+  /* From 1280px: the circuit board, one screen tall. The hero fills the small viewport height under the header
+     (and its bottom border; capped at nine --space-160 for very tall windows); the board fills what the copy
+     leaves, up to a height that grows with the scale, and sits centred in its field. switchboard.ts sets --_s from that space (the console
+     and tiles grow or shrink together, never the type alone), places each label clear of the console, and draws
+     the lines from the geometry below: a tile's centre is exactly (--_x, --_y) of the board. */
   @media (min-width: 1280px) {
-    .sb-board { display: block; height: calc(var(--space-160) * 2); padding: 0; }
+    .sb { min-height: min(calc(var(--viewport-height) - var(--nav-h) - var(--border-width)), calc(var(--space-160) * 9)); }
+    .sb-copy { gap: clamp(var(--space-12), calc(var(--viewport-height) * 0.016), var(--space-24)); padding-top: clamp(var(--space-24), calc(var(--viewport-height) * 0.05), var(--space-64)); }
+    .sb-board-wrap { margin-top: clamp(var(--space-24), calc(var(--viewport-height) * 0.04), var(--space-48)); min-height: calc(var(--space-160) + var(--space-128)); }
+    .sb-board { display: block; position: absolute; inset: 0; margin: auto; padding: 0; width: min(100%, calc(var(--container-wide) * var(--_s))); height: min(100%, calc(var(--space-160) * 4 * var(--_s))); max-width: none; }
     .sb-lines { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
     .sb-ports { display: contents; }
     .sb-name { display: none; }
-    .sb-port { position: absolute; left: var(--_x); top: var(--_y); width: calc(var(--space-48) + var(--space-8)); height: calc(var(--space-48) + var(--space-8)); padding: 0; margin: calc(-1 * (var(--space-24) + var(--space-4))) 0 0 calc(-1 * (var(--space-24) + var(--space-4))); z-index: 2; }
-    .sb-desk { position: absolute; left: 50%; top: var(--space-24); translate: -50% 0; }
+    .sb-port { position: absolute; left: var(--_x); top: var(--_y); width: calc(var(--space-48) + var(--space-8)); height: calc(var(--space-48) + var(--space-8)); padding: 0; margin: calc(-1 * (var(--space-24) + var(--space-4))) 0 0 calc(-1 * (var(--space-24) + var(--space-4))); z-index: 2; scale: var(--_s); }
+    .sb-desk { position: absolute; left: 50%; top: 50%; translate: -50% -50%; scale: var(--_s); }
+    /* A fixed console height keeps every route's end still while the calls change. */
+    .sb-rows { height: var(--space-160); min-height: 0; }
     .sb-tag { display: block; }
-    .sb-port.is-left .sb-tag { left: 0; translate: 0 var(--space-4); }
-    .sb-port.is-right .sb-tag { left: auto; right: 0; translate: 0 var(--space-4); }
-    .sb-port.is-left.on .sb-tag, .sb-port.is-left:hover .sb-tag, .sb-port.is-left:focus-visible .sb-tag,
-    .sb-port.is-right.on .sb-tag, .sb-port.is-right:hover .sb-tag, .sb-port.is-right:focus-visible .sb-tag { translate: 0 0; }
-    .sb-port.is-left .sb-tag::after { left: var(--space-24); margin-left: 0; }
-    .sb-port.is-right .sb-tag::after { left: auto; right: var(--space-24); margin-left: 0; }
   }
-  .sb-lines :global(.rest) { fill: none; stroke: var(--border); stroke-width: 1.5; }
-  .sb-lines :global(.rest.out) { opacity: 0.6; }
-  .sb-lines :global(.node) { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; }
+  .sb-lines :global(.rest) { fill: none; stroke: var(--circuit); stroke-width: 1.5; }
+  .sb-lines :global(.rest.out) { opacity: 0.5; }
+  .sb-lines :global(.node) { fill: var(--surface-sunken); stroke: var(--circuit); stroke-width: 1.5; }
+  .sb-lines :global(.node.on) { fill: var(--action); stroke: var(--action); }
   .sb-lines :global(.live) { fill: none; stroke: var(--action); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
   .sb-lines :global(.packet) { fill: var(--action); filter: drop-shadow(0 0 var(--space-4) var(--brand-blue)); }
 
