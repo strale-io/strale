@@ -557,7 +557,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "0ef5086d8676f62e786bb10af99f3383c9a32375f8dba513a7ff1331fe2893e5",
+      "sha256": "f703eb11c6919d2b7f3e4c75ab21c6db0002275561e049e59da37e08a05d246c",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -637,6 +637,7 @@
         "docs/remediation/packages/WP17.yaml",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/research/2026-10-23-delegate-competitive-analysis.md",
+        "docs/research/2026-10-26-serp-vendor-replacement.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
