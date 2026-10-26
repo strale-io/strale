@@ -24,7 +24,7 @@ async function buildCatalog() {
     publisher: {
       name: "Strale",
       url: "https://strale.dev",
-      description: "One API call. Verified data your agent can trust.",
+      description: "Give your agent a new tool without opening another provider account.",
       contact: "hello@strale.io",
     },
     services: [
@@ -32,7 +32,7 @@ async function buildCatalog() {
         id: "strale-mcp",
         type: "mcp",
         name: "Strale MCP Server",
-        description: `${capCount}+ independently tested and scored business data capabilities accessible via MCP. EU/Nordic focus, ${countryCount} countries.`,
+        description: `${capCount} tools for AI agents accessible via MCP, paid per call. Company data across ${countryCount} countries.`,
         server_card: "https://api.strale.io/.well-known/mcp.json",
         endpoint: "https://api.strale.io/mcp",
         transport: "streamable-http",
