@@ -9,13 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-352 files (325 with a recorded intent, 27 without).
+353 files (326 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | Correct existing paid NO/PL/CZ/GR/FI registry status outputs and their narrative consumer; local implementation, reco... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-entity-resolve.md`](_general/from-code/2026-10-26-feat-entity-resolve.md) | Built entity-resolve on the assigned isolated clone/branch, tested public GLEIF lookups, and prepared files for a loc... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md`](_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md) | Retire API agent-facing trust/score framing and serve live-facts SKILL.md; build, verify and commit locally for orche... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-dq40-swiss-register-terms.md`](_general/from-code/2026-10-26-dq40-swiss-register-terms.md) | build the Swiss UID / VAT check (portfolio plan 1.12). Stopped at the data-access terms gate before any code; raised... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md`](_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md) | close the documentation follow-ups from the 2026-10-26 independent reviews of PR #728 and PR #705. |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-company-status-check.md`](_general/from-code/2026-10-26-company-status-check.md) | build `company-status-check` ("Is this company still alive?", portfolio plan item 1C.1, DEC-20261024-B) as a draft PR... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-checkin-morning.md`](_general/from-code/2026-10-26-checkin-morning.md) | run the 2026-10-26 operating session under DAILY-RUN.md — close week |
