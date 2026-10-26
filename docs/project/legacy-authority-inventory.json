@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "43a7a7aa3b08202dd57283963830635c737abedf72a985cd3211271c17a9b21e",
+      "sha256": "380b3ff9bc6340d1bb32cdb35720b492a5f5e771585824128f5f1c7a46254e9e",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -122,7 +122,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "12fa5fdad68a6cc340ed1eb0549ec6be180b336635a42ddab2fcd6c9406d9b0d",
+      "sha256": "106dc553d95d86a665e2e4f7096b03fc9289ff2f66f714c439b18742e586c077",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -823,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "2ad021b9f5c885237533933415f2f5b6066bf74f8199c242cc2d77ae6dc4cfb4",
+      "sha256": "c98394e5c10ee23cefbdc8c2bf354f9e5cf180941e09b90151b681f29e602c90",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -929,6 +929,7 @@
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
+        "archive/sessions/2026-10-26-agent-surfaces-messaging-review.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",
