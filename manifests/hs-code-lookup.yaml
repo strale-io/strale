@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: hs-code-lookup
-name: HS Code Lookup
-description: >-
-  AI-suggested HS commodity codes for a product description, with alternatives and confidence.
-  Not an official customs classification.
+name: "HS Code Lookup"
+description: "Suggest HS commodity codes for a product description, with alternatives and confidence. A suggestion, not an official customs classification."
 category: trade
 cost_class: paid_prepaid
 quota_window: none

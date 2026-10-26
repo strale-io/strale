@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: finnish-company-data
-name: Finnish Company Data
-description: >-
-  Look up Finnish company data from PRH (Patent and Registration Office). Accepts Business ID (e.g. 0112038-9) or fuzzy
-  company name.
+name: "Finnish Company Data"
+description: "Look up a Finnish company at the Finnish Patent and Registration Office (PRH) by business ID or name."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

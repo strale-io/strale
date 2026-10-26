@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: forex-history
-name: Forex History
-description: Get historical exchange rates between two currencies. Returns daily rates, average, min, max, change percentage.
+name: "Exchange Rate History"
+description: "Get daily exchange rates between two currencies over a period, with the average, low, high and change."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

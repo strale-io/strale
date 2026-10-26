@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: email-validate
-name: Email Validation
-description: >-
-  Validate an email address. Checks format, MX records, disposable domain detection, and role-based address detection.
-  No email is sent.
+name: "Email Validation"
+description: "Check an email address: syntax, mail servers, disposable and role addresses, free providers and likely typos such as gmial.com. Returns a deliverability verdict with each check. No email is sent."
 category: validation
 cost_class: free_unlimited
 quota_window: none

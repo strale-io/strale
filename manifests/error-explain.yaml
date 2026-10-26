@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: error-explain
-name: Error Explain
-description: Explain an error message or stack trace in plain English. Identifies root cause, suggests fixes with code examples.
+name: "Error Explainer"
+description: "Explain an error message or stack trace in plain English: the likely cause and fixes with code."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

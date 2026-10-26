@@ -1,8 +1,6 @@
 slug: paper-details
-name: Paper Details
-description: >-
-  Look up one scholarly work by DOI or OpenAlex id: full author list with institutions, venue, open-access
-  status and PDF, citations, topics and abstract.
+name: "Paper Details"
+description: "Look up one scholarly work by DOI or OpenAlex id: authors and institutions, venue, open-access status and PDF, citations, topics and abstract."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

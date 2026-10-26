@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: csv-to-json
-name: CSV to JSON
-description: Convert CSV string to JSON array with auto-detected delimiter and type inference. Algorithmic.
+name: "CSV to JSON"
+description: "Turn CSV text into a JSON array, detecting the delimiter and value types."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

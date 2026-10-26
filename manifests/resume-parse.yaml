@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: resume-parse
-name: Resume Parse
-description: >-
-  Extract structured data from a CV/resume. Accepts PDF URL, base64, or text. Returns name, contact, experience,
-  education, skills, certifications.
+name: "CV Parser"
+description: "Read a CV from a PDF, file or text: name, contact details, experience, education, skills and certifications."
 category: document-extraction
 cost_class: paid_prepaid
 quota_window: none

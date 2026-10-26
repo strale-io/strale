@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: port-lookup
-name: Port Lookup
-description: Look up world ports by name or UN/LOCODE. Returns coordinates, country, timezone. 175+ major ports.
+name: "Port Lookup"
+description: "Look up a port by name or UN/LOCODE: coordinates, country and time zone, for 175+ major ports."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

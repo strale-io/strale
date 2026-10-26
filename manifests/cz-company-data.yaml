@@ -1,8 +1,6 @@
 slug: cz-company-data
-name: Czech Company Data
-description: >-
-  Look up Czech company data from ARES (Czech Ministry of Finance registry). Accepts IČO (8-digit identifier) or fuzzy
-  company name via LLM name-resolution.
+name: "Czech Company Data"
+description: "Look up a Czech company in ARES, the Ministry of Finance register, by IČO or company name."
 category: company-data
 cost_class: paid_prepaid
 quota_window: none

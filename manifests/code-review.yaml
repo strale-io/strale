@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: code-review
-name: Code Review
-description: >-
-  AI code review. Returns issues with severity, line numbers, fix suggestions. Focus on security, performance,
-  readability, or bugs.
+name: "Code Review"
+description: "Review code with AI and get issues with severity, line numbers and suggested fixes. Focus on security, performance, readability or bugs."
 category: agent-tooling
 cost_class: paid_prepaid
 quota_window: none

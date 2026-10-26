@@ -1,8 +1,6 @@
 slug: nl-housing-price-index
-name: NL Housing Price Index
-description: >-
-  Dutch national housing price index and average sale prices from CBS/Kadaster. Returns monthly price index (2020=100),
-  year-over-year trends, homes sold, and average sale price.
+name: "Dutch Housing Price Index"
+description: "Get the Dutch national house price index (2020 = 100) and average sale prices from CBS and Kadaster, monthly, with year-on-year change and homes sold."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

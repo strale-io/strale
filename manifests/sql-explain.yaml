@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: sql-explain
-name: SQL Explain
-description: >-
-  Explain a SQL query in plain language. Identifies tables, joins, filters, aggregations, and potential performance
-  issues.
+name: "SQL Explainer"
+description: "Explain a SQL query in plain English: tables, joins, filters, aggregations and likely performance problems."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

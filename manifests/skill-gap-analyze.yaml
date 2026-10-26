@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: skill-gap-analyze
-name: Skill Gap Analyze
-description: >-
-  Compare required skills against candidate skills with fuzzy matching. Returns matched, missing, extra, and match
-  score.
+name: "Skill Gap Analysis"
+description: "Compare the skills a role needs with a candidate's, with fuzzy matching. Returns matched, missing and extra skills and a match score."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

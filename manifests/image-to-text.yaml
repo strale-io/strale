@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: image-to-text
-name: Image to Text (OCR)
-description: >-
-  OCR on any image via Claude vision. Works on screenshots, photos of documents, handwritten notes. Returns text with
-  confidence.
+name: "Image to Text (OCR)"
+description: "Read the text in any image with AI vision: screenshots, photos of documents and handwriting. Returns the text with a confidence level."
 category: file-conversion
 cost_class: paid_prepaid
 quota_window: none

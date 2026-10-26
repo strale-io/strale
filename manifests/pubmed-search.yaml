@@ -1,8 +1,6 @@
 slug: pubmed-search
-name: PubMed Search
-description: >-
-  Search PubMed biomedical literature via NCBI: title, authors, journal, publication date, DOI, PMC id and link.
-  Supports PubMed field syntax and date ranges.
+name: "PubMed Search"
+description: "Search PubMed biomedical literature: title, authors, journal, date, DOI, PMC id and link. Supports PubMed field syntax and date ranges."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

@@ -1,8 +1,6 @@
 slug: clinical-trials-search
-name: Clinical Trials Search
-description: >-
-  Search registered clinical trials on ClinicalTrials.gov: phase, recruitment status, conditions,
-  interventions, enrollment, sponsor and dates. Filter by recruitment status.
+name: "Clinical Trials Search"
+description: "Search registered trials on ClinicalTrials.gov: phase, recruitment status, conditions, interventions, enrolment, sponsor and dates."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

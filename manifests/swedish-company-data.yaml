@@ -1,8 +1,6 @@
 slug: swedish-company-data
-name: Swedish Company Data
-description: >-
-  Look up Swedish company registry data via Bolagsverket's Värdefulla datamängder API. Returns name, legal form, status,
-  registered address, SNI industry codes, registration date, and ongoing insolvency/liquidation procedures.
+name: "Swedish Company Data"
+description: "Look up a Swedish company at Bolagsverket: name, legal form, status, registered address, SNI industry codes, registration date and any insolvency or liquidation proceedings."
 category: company-data
 cost_class: free_quota
 quota_window: daily

@@ -5,8 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: wallet-balance-lookup
-name: Wallet Balance Lookup
-description: "Get a wallet's ETH balance and the ERC-20 tokens it most recently sent or received, on Ethereum mainnet."
+name: "Wallet Balance Lookup"
+description: "Get a wallet's ETH balance on Ethereum mainnet and the ERC-20 tokens it most recently sent or received."
 category: web3
 cost_class: free_quota
 quota_window: daily

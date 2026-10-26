@@ -1,8 +1,6 @@
 slug: address-geocode
-name: Address Geocode
-description: >-
-  Convert an address to geographic coordinates (latitude/longitude). Also returns structured
-  address components and bounding box via OpenStreetMap Nominatim.
+name: "Address Geocoding"
+description: "Turn an address into latitude and longitude, with its components and bounding box, from OpenStreetMap."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

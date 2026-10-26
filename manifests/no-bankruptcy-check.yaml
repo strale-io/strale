@@ -1,9 +1,6 @@
 slug: no-bankruptcy-check
-name: Norwegian Bankruptcy Check
-description: >-
-  Check Norwegian entity bankruptcy and dissolution status via Brønnøysundregistrene Enhetsregisteret. Returns
-  structured signals: has_bankruptcy_filing, bankruptcy_date, is_under_dissolution, is_under_compulsory_dissolution,
-  plus official registry annotations. NLOD 2.0 license.
+name: "Norwegian Bankruptcy Check"
+description: "Check a Norwegian company for bankruptcy and dissolution in the Brønnøysund registers: any bankruptcy filing and its date, voluntary or forced dissolution, and the register's notes."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: data-protection-authority-lookup
-name: Data Protection Authority Lookup
-description: Find the data protection authority (DPA) for any EU/EEA country. Returns name, website, complaint URL, contact info.
+name: "Data Protection Authority Lookup"
+description: "Find the data protection authority for any EU or EEA country: name, website, where to complain, and contact details."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

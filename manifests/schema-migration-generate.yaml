@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: schema-migration-generate
-name: Schema Migration Generate
-description: Generate database migration code from current→desired schema description. Supports Drizzle, Prisma, Knex, and raw SQL.
+name: "Schema Migration Generator"
+description: "Generate database migration code from a current and a desired schema. Supports Drizzle, Prisma, Knex and plain SQL."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

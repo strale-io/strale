@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: url-health-check
-name: URL Health Check
-description: >-
-  Check if a URL is alive. Returns status code, response time, redirect chain, SSL validity, content type, server
-  header.
+name: "URL Health Check"
+description: "Check whether a URL is alive: status code, response time, redirects, SSL validity, content type and server."
 category: validation
 cost_class: free_unlimited
 quota_window: none

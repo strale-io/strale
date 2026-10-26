@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: contract-extract
-name: Contract Extract
-description: >-
-  Extract key terms from a contract/legal document. Returns parties, dates, obligations, payment terms, liability caps,
-  termination clauses. Not legal advice.
+name: "Contract Extraction"
+description: "Pull the key terms out of a contract: parties, dates, obligations, payment terms, liability caps and termination clauses. Not legal advice."
 category: document-extraction
 cost_class: paid_prepaid
 quota_window: none

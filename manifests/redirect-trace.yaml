@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: redirect-trace
-name: Redirect Trace
-description: Trace the full HTTP redirect chain for a URL. Shows each hop with status code, location header, server, and latency.
+name: "Redirect Trace"
+description: "Follow a URL's redirects and show every hop with its status code, location, server and latency."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none

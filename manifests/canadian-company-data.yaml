@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: canadian-company-data
-name: Canadian Company Data
-description: Look up Canadian company data from Corporations Canada. Accepts corporation number or fuzzy company name.
+name: "Canadian Company Data"
+description: "Look up a Canadian federal corporation at Corporations Canada by corporation number or name."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: landing-page-roast
-name: Landing Page Roast
-description: >-
-  AI conversion expert analyzes any landing page. Returns overall score, headline effectiveness, CTA clarity, value
-  proposition, trust signals, issues, and suggestions.
+name: "Landing Page Roast"
+description: "Get an AI critique of a landing page: an overall score, the headline, call to action, value proposition and trust signals, with issues and fixes."
 category: competitive-intelligence
 cost_class: paid_prepaid
 quota_window: none
