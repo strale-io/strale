@@ -196,11 +196,15 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .choice-group legend { padding: 0; margin-bottom: var(--space-8); }
 
 /* ---------- tabs ---------- */
-.tabs { display: flex; gap: var(--space-4); border-bottom: var(--border-width) solid var(--border); overflow-x: auto; }
+/* The rule under the tabs is an inset shadow and the selected indicator sits inside the tab, so nothing overflows the
+   row vertically: with overflow-x: auto, a 1px vertical overflow gave Windows a scrollbar with arrow buttons. The row
+   still scrolls sideways when the tabs genuinely do not fit, without a visible bar. */
+.tabs { display: flex; gap: var(--space-4); box-shadow: inset 0 calc(-1 * var(--border-width)) 0 var(--border); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tab { position: relative; display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--target-min); padding-inline: var(--space-12); background: none; border: 0; color: var(--text-muted); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); cursor: pointer; border-radius: var(--radius-control) var(--radius-control) 0 0; white-space: nowrap; }
 .tab:hover { color: var(--text); background: var(--action-subtle); }
 .tab[aria-selected="true"] { color: var(--text); }
-.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: calc(-1 * var(--border-width)); height: var(--focus-width); background: var(--indicator); }
+.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--focus-width); background: var(--indicator); }
 .tab:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: calc(-1 * var(--focus-width)); }
 .tab:disabled { opacity: 0.45; cursor: not-allowed; background: none; }
 .tab-panel { padding-top: var(--space-20); }
@@ -227,7 +231,9 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .notice-danger { --_c: var(--danger); --_bg: var(--danger-bg); }
 
 /* ---------- cards ---------- */
-.card { position: relative; display: grid; gap: var(--space-12); align-content: start; background: var(--surface); color: var(--text); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); padding: var(--space-24); box-shadow: var(--shadow-1); }
+/* Cards are a flex column so a closing link, button or meta row can take the free space (margin-top: auto) and land
+   on the card's bottom edge; cards in one grid row are stretched to the row's height, so a row ends level. */
+.card { position: relative; display: flex; flex-direction: column; gap: var(--space-12); background: var(--surface); color: var(--text); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); padding: var(--space-24); box-shadow: var(--shadow-1); }
 .card-link { text-decoration: none; transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
 .card-link:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); }
 .card-link:hover .card-title { color: var(--link); }
@@ -235,7 +241,9 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .card-body { font-size: var(--type-compact-size); line-height: var(--type-compact-line); color: var(--text-muted); }
 .card-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-8); margin-top: auto; padding-top: var(--space-12); border-top: var(--border-width) solid var(--border); }
 .card-icon { display: inline-grid; place-items: center; width: var(--space-48); height: var(--space-48); border-radius: var(--radius-control); background: var(--surface-blue); color: var(--link); }
-.card > .tag, .card-content > .tag, .result-state > .tag, .tool-pane > .tag, .card > .card-icon { justify-self: start; }
+.card > .tag, .card-content > .tag, .result-state > .tag, .tool-pane > .tag, .card > .card-icon { justify-self: start; align-self: flex-start; }
+:is(.grid-2, .grid-3, .grid-4) > li { display: grid; }
+:is(.grid-2, .grid-3, .grid-4) > li > .card { height: 100%; }
 .card-icon.teal { background: var(--surface-teal); color: var(--text); }
 .card-icon.soft { background: var(--surface-soft); color: var(--text); }
 .card-media { padding: 0; overflow: hidden; }
@@ -262,7 +270,10 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .code-title { color: var(--code-muted); font-family: var(--type-label-family); font-size: var(--type-label-size); font-weight: var(--type-label-weight); letter-spacing: var(--type-label-tracking); }
 .code pre { margin: 0; padding: var(--space-16); overflow-x: auto; tab-size: 2; }
 .code-wrap pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-.code .tabs { border-bottom-color: var(--code-border); }
+/* In a code block the tabs fill the head's height, so the indicator lands on the head's own bottom rule (one line, not two). */
+.code-head:has(> .tabs) { padding-block: 0; }
+.code .tabs { box-shadow: none; align-self: stretch; }
+.code .tabs .tab { min-height: calc(var(--target-min) + 2 * var(--space-4)); }
 .code .tab { color: var(--code-muted); min-height: var(--control-h-sm); }
 .code .tab:hover { color: var(--code-text); background: var(--code-border); }
 .code .tab[aria-selected="true"] { color: var(--code-text); }
