@@ -109,6 +109,8 @@
         "light.code-number": "#ffb86b",
         "light.code-property": "#f0a0d8",
         "light.skeleton": "#efe4f2",
+        "light.circuit": "#8a8398",
+        "light.circuit-grid": "#ebeaf0",
         "dark.canvas": "#130d21",
         "dark.surface": "#1c1530",
         "dark.surface-sunken": "#0f0a1b",
@@ -149,6 +151,8 @@
         "dark.code-number": "#ffb86b",
         "dark.code-property": "#f0a0d8",
         "dark.skeleton": "#2a2142",
+        "dark.circuit": "#6b6085",
+        "dark.circuit-grid": "#1d1730",
         "chart.light.1": "#3027ff",
         "chart.light.2": "#0a9a8f",
         "chart.light.3": "#7a3cff",
@@ -228,11 +232,15 @@
             "use": "Card and sub-section heading (h3)."
           },
           "detail": {
-            "source": "kit-06",
+            "source": "derived",
+            "kit_size_px": {
+              "min": 17,
+              "max": 20
+            },
             "family": "body",
             "weight": 600,
-            "min": 17,
-            "max": 20,
+            "min": 16,
+            "max": 18,
             "line": 1.35,
             "tracking": 0,
             "measure": "42ch",
@@ -242,30 +250,38 @@
             "source": "derived",
             "family": "body",
             "weight": 400,
-            "min": 18,
-            "max": 21,
+            "min": 17,
+            "max": 19,
             "line": 1.5,
             "tracking": 0,
             "measure": "52ch",
             "use": "Introductory paragraph under a page or section heading."
           },
           "body": {
-            "source": "kit-06",
+            "source": "derived",
+            "kit_size_px": {
+              "min": 16,
+              "max": 19
+            },
             "family": "body",
             "weight": 400,
             "min": 16,
-            "max": 19,
+            "max": 17,
             "line": 1.6,
             "tracking": 0,
             "measure": "62ch",
             "use": "Reading text. Never below 16px."
           },
           "compact": {
-            "source": "kit-06",
+            "source": "derived",
+            "kit_size_px": {
+              "min": 16,
+              "max": 17
+            },
             "family": "body",
             "weight": 400,
             "min": 16,
-            "max": 17,
+            "max": 16,
             "line": 1.5,
             "tracking": 0,
             "measure": "58ch",
@@ -286,7 +302,7 @@
             "source": "derived",
             "family": "body",
             "weight": 400,
-            "min": 14,
+            "min": 13,
             "max": 14,
             "line": 1.45,
             "tracking": 0,
@@ -823,6 +839,12 @@
             "bg": "code-bg",
             "min": 4.5,
             "use": "Code keys"
+          },
+          {
+            "fg": "circuit",
+            "bg": "surface-sunken",
+            "min": 3,
+            "use": "Switchboard connector lines on the board (non-text)"
           }
         ],
         "contrast_avoid": [
@@ -851,12 +873,15 @@
           "sm": 16,
           "md": 20,
           "lg": 24
+        },
+        "viewport": {
+          "height": "100svh"
         }
       },
       "provenance": {
         "source": "design/tokens/candidates/open-flow.json",
-        "captured_at": "2026-10-25",
-        "note": "Open Flow website system 0.2, Daylight (0.1 adopted by DEC-20261024-B, revised by DEC-20261025-A; BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file)."
+        "captured_at": "2026-10-26",
+        "note": "Open Flow website system 0.3, Daylight (0.1 adopted by DEC-20261024-B, revised to 0.2 by DEC-20261025-A and to 0.3 under Petter's type-size direction of 2026-10-26; BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file)."
       },
       "adopted_by": "DEC-20261025-A",
       "adopted_at": "2026-10-25",

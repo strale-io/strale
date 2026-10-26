@@ -2,6 +2,8 @@
 
 > **Revised to 0.2, Daylight, on 2026-10-25 by Petter (DEC-20261025-A).** The light canvas is white and the light tinted surfaces are paler and cooler, so colour appears only in the artwork, the primary action and illustrations. The kit's no-loop rule is narrowed to ambient-only: a slow loop is allowed in the home Switchboard hero and the pulsing status dots, and lists and copy stay still. Spot illustrations live in `apps/web/src/assets/illustrations/` with their briefs in `provenance.json`. Kit colours, type, spacing and the dark theme are unchanged.
 
+> **Revised to 0.3 on 2026-10-26, on Petter's direction that day** ("some of the fonts … especially for ordinary text, should be slightly smaller … revisit our entire font sizing framework"). Running text is one step smaller: body 16–17px (kit 16–19), lead 17–19, compact 16 (kit 16–17), detail 16–18 (kit 17–20), small 13–14. The kit's 16px floor for reading text is kept, so phones read as before and the change shows from tablet width up. Headings, label, UI, code and stat sizes are unchanged. Resized kit roles are tagged `derived` with the kit's sizes kept in `kit_size_px`. 0.3 also adds the Switchboard `circuit` and `circuit-grid` roles (connector lines stand clear of the board grid; the connector meets 3:1 on the board in both themes) and `layout.viewport.height` (`--viewport-height`, the small viewport height the home hero fills).
+
 # Open Flow — Strale website design system
 
 **Status: candidate 0.1, proposed for founder review.** Not adopted. Production still runs [`design/tokens/active.json`](../../tokens/active.json). The website will be built in `apps/web` (DEC-20260902-A) once a decision adopts this system.
@@ -21,7 +23,7 @@ It replaces [Quiet Material](../README.md) as the visual direction. Quiet Materi
 
 ## What came from the kit and what is new
 
-**Carried over unchanged from kit-06:** the eleven kit colours (`brand.*`, except `brand.image-ground`, which is sampled from the artwork), Space Grotesk and Instrument Sans, the type roles hero, campaign, section, detail, body, compact and label (sizes, weights, leading, tracking, measure), the 8px control radius, the 1600ms and 2200ms reveal durations, the no-loop and reduced-motion rules, the artwork, and the reading regions the kit declared for it.
+**Carried over unchanged from kit-06:** the eleven kit colours (`brand.*`, except `brand.image-ground`, which is sampled from the artwork), Space Grotesk and Instrument Sans, the type roles hero, campaign, section, detail, body, compact and label (sizes, weights, leading, tracking, measure; 0.3 made body, compact and detail smaller, see above), the 8px control radius, the 1600ms and 2200ms reveal durations, the no-loop and reduced-motion rules, the artwork, and the reading regions the kit declared for it.
 
 **Derived here (the kit doesn't have them):** the whole dark theme; interaction, status, code and chart colours; the subhead, lead, ui, small, code, stat and numeric type roles; IBM Plex Mono for code; the spacing scale, radius scale, elevation, grid, containers and breakpoints; motion easings and short durations; every component and section pattern. The kit calls its component specimens "a starting point, not a complete interactive library". It has no dark theme, and its logo rule records no reversed or dark-background logo asset. Those gaps are filled here.
 
@@ -81,18 +83,18 @@ Six categorical slots, assigned in fixed order and never cycled. Light: `#3027ff
 | `campaign` | Space Grotesk 600 | 30–52 | Inner-page h1, major statement |
 | `section` | Space Grotesk 600 | 26–36 | h2 |
 | `subhead` | Space Grotesk 600 | 20–24 | h3, card titles |
-| `detail` | Instrument Sans 600 | 17–20 | h4, group headings |
-| `lead` | Instrument Sans 400 | 18–21, 52ch | Intro paragraph |
-| `body` | Instrument Sans 400 | 16–19, lh 1.6, 62ch | Reading text, never below 16 |
-| `compact` | Instrument Sans 400 | 16–17 | Cards, tables, reference |
+| `detail` | Instrument Sans 600 | 16–18 (kit 17–20, revised 0.3) | h4, group headings |
+| `lead` | Instrument Sans 400 | 17–19, 52ch (0.2: 18–21) | Intro paragraph |
+| `body` | Instrument Sans 400 | 16–17, lh 1.6, 62ch (kit 16–19, revised 0.3) | Reading text, never below 16 |
+| `compact` | Instrument Sans 400 | 16 (kit 16–17, revised 0.3) | Cards, tables, reference |
 | `ui` | Instrument Sans 500 | 16 | Buttons, nav, tabs, labels |
-| `small` | Instrument Sans 400 | 14 | Helper text, metadata, legal. Never the only carrier of essential content |
+| `small` | Instrument Sans 400 | 13–14 (0.2: 14) | Helper text, metadata, legal. Never the only carrier of essential content |
 | `label` | Instrument Sans 600 | 12–13, +0.06em | Eyebrows, badges. Sentence case |
 | `code` | IBM Plex Mono 400 | 14–15 | Code, identifiers |
 | `stat` | Space Grotesk 600, tabular | 36–56 | A single headline number |
 | `numeric` | Instrument Sans 500, tabular | 16 | Prices, counts, latency. Right-aligned in columns |
 
-Space Grotesk introduces and Instrument Sans explains. Use at most two weights in one composition. Sustained reading is left-aligned. Only a short, self-contained statement may be centred. Never typeset the logo in either font. `small` (14px) is a derived deviation from the kit's 16px floor. It is allowed only for metadata and helper text, never for reading text.
+Space Grotesk introduces and Instrument Sans explains. Use at most two weights in one composition. Sustained reading is left-aligned. Only a short, self-contained statement may be centred. Never typeset the logo in either font. `small` (13–14px) is a derived deviation from the kit's 16px floor. It is allowed only for metadata and helper text, never for reading text.
 
 ## Space, radii, elevation, layout
 
