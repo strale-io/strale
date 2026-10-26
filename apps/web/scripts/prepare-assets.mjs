@@ -27,4 +27,7 @@ for (const [from, to] of copies) {
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(resolve(kit, from), dest);
 }
-console.log(`prepared ${copies.length} brand files in public/`);
+// Subset WOFF2 copies of the fonts, served before the TTF masters (see static/fonts/README.md).
+const woff2 = ["SpaceGrotesk", "InstrumentSans", "IBMPlexMono-Regular"];
+for (const f of woff2) copyFileSync(resolve(web, "static/fonts", `${f}.woff2`), resolve(web, "public/fonts", `${f}.woff2`));
+console.log(`prepared ${copies.length + woff2.length} brand files in public/`);

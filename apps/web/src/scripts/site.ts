@@ -118,4 +118,42 @@ if (finePointer) {
   }, { passive: true });
 }
 
+// Scroll reveals. Content is visible without script; only blocks that start below the fold wait,
+// then rise in once as they arrive, siblings in a [data-reveal-group] a beat apart. Never under
+// reduced motion. Timing and distance come from the motion and spacing tokens.
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!calm && "IntersectionObserver" in window) {
+  const css = getComputedStyle(root);
+  const ms = (name: string) => parseFloat(css.getPropertyValue(name)) || 0;
+  const rise = `${ms("--space-24")}px`;
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const el = e.target as HTMLElement;
+      io.unobserve(el);
+      el.classList.remove("is-pending");
+      el.animate([{ opacity: 0, translate: `0 ${rise}` }, { opacity: 1, translate: "0 0" }], {
+        duration: 2 * ms("--duration-slow"),
+        delay: Number(el.dataset.revealIndex ?? 0) * ms("--duration-fast"),
+        easing: css.getPropertyValue("--ease-enter").trim() || "ease-out",
+      });
+    }
+  }, { rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll<HTMLElement>("[data-reveal], [data-reveal-group] > *").forEach((el) => {
+    if (el.getBoundingClientRect().top < innerHeight) return;
+    const group = el.parentElement?.hasAttribute("data-reveal-group") ? el.parentElement : null;
+    if (group) el.dataset.revealIndex = String(Math.min(3, [...group.children].indexOf(el)));
+    el.classList.add("is-pending");
+    io.observe(el);
+  });
+}
+
+// The bar turns translucent with a shadow once the page has scrolled under it.
+const nav = document.querySelector<HTMLElement>(".site-nav");
+if (nav) {
+  const mark = () => nav.toggleAttribute("data-scrolled", scrollY > 4);
+  mark();
+  addEventListener("scroll", mark, { passive: true });
+}
+
 export {};

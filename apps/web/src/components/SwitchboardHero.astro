@@ -104,7 +104,7 @@ const words = headline.split(/\s+/).filter(Boolean);
           ))}
         </div>
         <div class="sb-desk">
-          <div class="sb-bar"><i></i><i></i><i></i><span>your agent · example call</span><button class="sb-pause" type="button" data-pause hidden>Pause</button></div>
+          <div class="sb-bar"><i></i><i></i><i></i><span>your agent · example call</span><button class="sb-pause" type="button" data-pause hidden aria-label="Pause the example"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-pause" /></svg></button></div>
           <div class="sb-rows" aria-live="off" data-live>
             <div class="sb-r show" data-row="ask"><em>Asks</em><pre>{s0.ask}</pre></div>
             <div class="sb-r show" data-row="call"><em>Calls</em><pre set:html={callHtml}></pre></div>
@@ -123,7 +123,7 @@ const words = headline.split(/\s+/).filter(Boolean);
 <style>
   .sb { position: relative; overflow: hidden; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
   .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-16); padding-block: var(--space-24) 0; }
-  .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); padding: var(--space-4) var(--space-16) var(--space-4) var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-small-size); box-shadow: var(--shadow-1); }
+  .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-h-sm); padding: var(--space-4) var(--space-20) var(--space-4) var(--space-16); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-compact-size); box-shadow: var(--shadow-1); }
   .sb-eyebrow strong { color: var(--text); font-weight: var(--type-ui-weight); }
   .sb-pulse { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--success); box-shadow: 0 0 0 0 var(--success-bg); animation: sb-ping var(--duration-reveal-atmosphere) var(--ease-standard) infinite; }
   @keyframes sb-ping { 70% { box-shadow: 0 0 0 var(--space-8) var(--success-bg); } 100% { box-shadow: 0 0 0 0 var(--success-bg); } }
@@ -173,7 +173,7 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-bar { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8) var(--space-16); border-bottom: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
   .sb-bar i { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--code-border); }
   .sb-bar span { margin-left: auto; }
-  .sb-pause { min-height: var(--space-24); padding: 0 var(--space-8); border: var(--border-width) solid var(--code-border); border-radius: var(--radius-tag); background: transparent; color: var(--code-muted); font: inherit; cursor: pointer; }
+  .sb-pause { display: inline-grid; place-items: center; width: var(--space-24); height: var(--space-24); padding: 0; border: var(--border-width) solid var(--code-border); border-radius: var(--radius-pill); background: transparent; color: var(--code-muted); font: inherit; cursor: pointer; }
   .sb-pause:hover { color: var(--code-text); border-color: var(--code-muted); }
   .sb-pause:focus-visible { outline: var(--focus-width) solid var(--focus-code); outline-offset: var(--focus-offset); }
   .sb-rows { display: grid; align-content: start; gap: var(--space-8); padding: var(--space-16) var(--space-20) var(--space-8); min-height: calc(var(--space-160) + var(--space-8)); }

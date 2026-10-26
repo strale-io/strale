@@ -180,7 +180,8 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
     pauseBtn.hidden = false;
     pauseBtn.addEventListener("click", () => {
       paused = !paused;
-      pauseBtn.textContent = paused ? "Play" : "Pause";
+      pauseBtn.setAttribute("aria-label", paused ? "Play the example" : "Pause the example");
+      pauseBtn.querySelector("use")?.setAttribute("href", paused ? "#i-play" : "#i-pause");
       if (paused) { ++cycleTk; bar.getAnimations().forEach((a) => a.cancel()); }
       else play((cur + 1) % data.length, false);
     });

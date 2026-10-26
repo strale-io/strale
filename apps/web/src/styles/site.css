@@ -78,7 +78,11 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 }
 
 /* ---------- navigation ---------- */
-.site-nav { position: sticky; top: 0; z-index: var(--z-nav); background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
+.site-nav { position: sticky; top: 0; z-index: var(--z-nav); isolation: isolate; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard); }
+/* Scrolled: a translucent bar over the page with a soft shadow; site.ts sets data-scrolled. */
+.site-nav::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--canvas); opacity: 0; transition: opacity var(--duration-base) var(--ease-standard); }
+.site-nav[data-scrolled] { background: transparent; border-bottom-color: transparent; box-shadow: var(--shadow-2); -webkit-backdrop-filter: blur(var(--space-16)) saturate(1.4); backdrop-filter: blur(var(--space-16)) saturate(1.4); }
+.site-nav[data-scrolled]::before { opacity: 0.86; }
 .site-nav-bar { display: flex; align-items: center; gap: var(--space-16); height: var(--nav-h); }
 .site-nav .brand { display: inline-flex; align-items: center; margin-right: auto; padding-block: var(--space-8); border-radius: var(--radius-control); }
 .site-nav .brand img { height: var(--space-24); width: auto; }
@@ -102,7 +106,7 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
   .nav-actions { display: flex; gap: var(--space-8); align-items: center; }
   .menu-button, .mobile-menu { display: none; }
   .site-nav .brand { margin-right: var(--space-24); }
-  .nav-links { margin-right: auto; }
+  .site-nav-bar > nav { margin-right: auto; }
 }
 .theme-switch { display: inline-flex; padding: var(--space-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); }
 .theme-switch button { display: inline-grid; place-items: center; width: var(--control-h-sm); height: var(--control-h-sm); border: 0; border-radius: var(--radius-pill); background: none; color: var(--text-muted); cursor: pointer; }
@@ -332,7 +336,7 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .footer-col a:hover { color: var(--link); text-decoration: underline; text-underline-offset: var(--space-4); }
 .footer-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-12); margin-top: var(--space-48); padding-top: var(--space-24); border-top: var(--border-width) solid var(--border); color: var(--text-muted); font-size: var(--type-small-size); }
 @media (min-width: 1024px) {
-  .footer-grid { grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr)); }
+  .footer-grid { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-48); }
   .footer-brand { grid-column: auto; }
 }
 
@@ -348,8 +352,9 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .feature-list .icon { color: var(--link); margin-top: var(--space-2); }
 /* illustration plate (Open Flow 0.2): spot illustrations have a near-white ground, so they sit on paper in both
    themes and multiply into it; no grey box shows on the white canvas, and dark mode gets a deliberate light tile. */
-.plate { background: var(--brand-paper); border-radius: var(--radius-media); overflow: hidden; aspect-ratio: 1; isolation: isolate; }
-.plate img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; transition: transform var(--duration-slow) var(--ease-standard); }
+/* Illustration frame. The v2 art is transparent, so it stands on any surface in either theme. */
+.plate { aspect-ratio: 1; }
+.plate img { width: 100%; height: 100%; object-fit: contain; transition: transform var(--duration-slow) var(--ease-standard); }
 @media (prefers-reduced-motion: reduce) { .plate img { transition: none; } }
 /* catalogue */
 .catalogue-bar { display: grid; gap: var(--space-16); }
@@ -413,3 +418,7 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .price-list { list-style: none; margin: 0; padding: 0; }
 .table td, .small, .t-compact { overflow-wrap: anywhere; }
 .table th[scope="row"] code { white-space: nowrap; }
+
+/* ---------- scroll reveals (site.ts) ---------- */
+/* Set only on blocks below the fold at load, and never under reduced motion; site.ts animates them in. */
+[data-reveal].is-pending, [data-reveal-group] > .is-pending { opacity: 0; translate: 0 var(--space-24); }

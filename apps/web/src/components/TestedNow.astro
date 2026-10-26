@@ -1,8 +1,8 @@
 ---
 // Home "tested" panel: the most recently tested tools from the public trust projection
 // (/v1/public/ops/trust/capabilities/batch), as of the build. pass_rate there is the share of
-// a tool's test suites whose latest run passed, so a row says "N% of its tests passed on their
-// latest run" and shows a pass mark only at 100%. The list is still: only the status dot moves.
+// a tool's test suites whose latest run passed, so a row says "all tests passed" only at 100%, with a
+// pass mark, and "N% of tests passed" otherwise. The list is still: only the status dot moves.
 import type { Tool } from "../lib/site-data";
 import type { Trust } from "../lib/types";
 import { formatDate, formatEur } from "../lib/format";
@@ -23,7 +23,7 @@ const { rows, loadedAt } = Astro.props;
           <span class:list={["mark", all ? "is-pass" : "is-partial"]} aria-hidden="true"><svg class="icon icon-sm"><use href={all ? "#i-check" : "#i-alert"} /></svg></span>
           <span class="who">
             <a class="link-quiet" href={`/tools/${t.slug}`}>{t.name}</a>
-            <span class="when">tested <time datetime={tr.last_tested_at!} data-rel>{formatDate(tr.last_tested_at!)}</time> · {tr.pass_rate}% of its tests passed on their latest run</span>
+            <span class="when">tested <time datetime={tr.last_tested_at!} data-rel>{formatDate(tr.last_tested_at!)}</time> · {all ? "all tests passed" : `${tr.pass_rate}% of tests passed`}</span>
           </span>
           <span class="num">{t.free ? "free" : formatEur(t.price_cents)}</span>
         </li>
