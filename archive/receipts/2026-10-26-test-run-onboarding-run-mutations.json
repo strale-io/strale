@@ -1,0 +1,138 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4391f45047d62f41d826de5e8e607d3a096410b0"
+  },
+  "at": "2026-10-26T22:26:47.685Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "mutations_caught": 4,
+    "mutations_survived": 0,
+    "route_tests_passed": 38
+  },
+  "topic": "onboarding-run-mutations",
+  "raw": {
+    "summary": {
+      "mutations_caught": 4,
+      "mutations_survived": 0,
+      "route_tests_passed_after_fixture_strengthening": 38
+    },
+    "inputs": {
+      "candidate_commit": "b063dd60",
+      "target": "apps/api/src/routes/internal-onboarding.ts",
+      "method": "repository mutation harness: green baseline, mutated red, restored green; no stash"
+    },
+    "cases": [
+      {
+        "name": "secret-floor",
+        "command": [
+          "node",
+          "apps/api/scripts/mutation-test.mjs",
+          "--file",
+          "apps/api/src/routes/internal-onboarding.ts",
+          "--find",
+          "if (!secret || secret.length < ADMIN_SECRET_MIN_LENGTH) {",
+          "--replace",
+          "if (!secret) {",
+          "--test",
+          "cd apps/api && npx vitest run src/routes/internal-onboarding-run.test.ts"
+        ],
+        "exit_code": 0,
+        "log": "<local>",
+        "caught": true,
+        "output_tail": [
+          "",
+          "",
+          "MUTATION CAUGHT — green → red → green. The test discriminates."
+        ]
+      },
+      {
+        "name": "busy-lock",
+        "command": [
+          "node",
+          "apps/api/scripts/mutation-test.mjs",
+          "--file",
+          "apps/api/src/routes/internal-onboarding.ts",
+          "--find",
+          "if (activeId) {",
+          "--replace",
+          "if (false && activeId) {",
+          "--test",
+          "cd apps/api && npx vitest run src/routes/internal-onboarding-run.test.ts"
+        ],
+        "exit_code": 0,
+        "log": "<local>",
+        "caught": true,
+        "output_tail": [
+          "",
+          "",
+          "MUTATION CAUGHT — green → red → green. The test discriminates."
+        ]
+      },
+      {
+        "name": "timeout-abort",
+        "command": [
+          "node",
+          "apps/api/scripts/mutation-test.mjs",
+          "--file",
+          "apps/api/src/routes/internal-onboarding.ts",
+          "--find",
+          "controller.abort();",
+          "--replace",
+          "/* mutation: omitted budget abort */",
+          "--test",
+          "cd apps/api && npx vitest run src/routes/internal-onboarding-run.test.ts"
+        ],
+        "exit_code": 0,
+        "log": "<local>",
+        "caught": true,
+        "output_tail": [
+          "",
+          "",
+          "MUTATION CAUGHT — green → red → green. The test discriminates."
+        ]
+      },
+      {
+        "name": "status-auth",
+        "command": [
+          "node",
+          "apps/api/scripts/mutation-test.mjs",
+          "--file",
+          "apps/api/src/routes/internal-onboarding.ts",
+          "--find",
+          "route.get(\"/run/:id\", runAuth, (c) => {",
+          "--replace",
+          "route.get(\"/run/:id\", (c) => {",
+          "--test",
+          "cd apps/api && npx vitest run src/routes/internal-onboarding-run.test.ts"
+        ],
+        "exit_code": 0,
+        "log": "<local>",
+        "caught": true,
+        "output_tail": [
+          "",
+          "",
+          "MUTATION CAUGHT — green → red → green. The test discriminates."
+        ]
+      }
+    ],
+    "followup": {
+      "command": "npm --workspace=apps/api test -- src/routes/internal-onboarding-run.test.ts",
+      "exit_code": 0,
+      "output_tail": [
+        " RUN  v4.1.4 <local>",
+        "",
+        "",
+        " Test Files  1 passed (1)",
+        "      Tests  38 passed (38)",
+        "   Start at  22:23:53",
+        "   Duration  1.07s (transform 241ms, setup 31ms, import 757ms, tests 124ms, environment 0ms)",
+        ""
+      ],
+      "note": "Strengthened admin-token rejection test to use the same configured token captured by module auth helpers, instead of replacing it after import."
+    }
+  }
+}

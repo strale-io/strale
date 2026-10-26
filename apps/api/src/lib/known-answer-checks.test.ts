@@ -65,7 +65,7 @@ describe("diffChecks", () => {
 
 describe("one mapping, both writers", () => {
   const API = resolve(import.meta.dirname, "../..");
-  const WRITERS = ["scripts/onboard.ts", "scripts/sync-known-answer-fixtures.ts"];
+  const WRITERS = ["src/lib/onboarding-pipeline.ts", "scripts/sync-known-answer-fixtures.ts"];
   for (const rel of WRITERS) {
     it(`${rel} calls the shared mapping and keeps no private copy`, () => {
       const src = readFileSync(resolve(API, rel), "utf8");

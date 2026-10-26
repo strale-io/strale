@@ -1,0 +1,51 @@
+name: Onboard capability
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: Capability slug, or up to 50 slugs separated by commas
+        required: true
+        type: string
+      mode:
+        description: Create a capability or backfill an existing one
+        type: choice
+        options: [onboard, backfill]
+        default: onboard
+      discover:
+        description: Discover fixtures from live output (normally off for a limitations-only backfill)
+        type: boolean
+        default: true
+      fix:
+        description: Correct high-confidence fixture mismatches
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: production-onboarding
+  cancel-in-progress: false
+jobs:
+  onboard:
+    if: github.ref == 'refs/heads/main'
+    environment: production-onboarding
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run onboarding sequentially
+        env:
+          ONBOARDING_RUN_SECRET: ${{ secrets.ONBOARDING_RUN_SECRET }}
+          STRALE_API_URL: ${{ vars.STRALE_API_URL || 'https://api.strale.io' }}
+          INPUT_SLUGS: ${{ inputs.slug }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_DISCOVER: ${{ inputs.discover }}
+          INPUT_FIX: ${{ inputs.fix }}
+        run: node .github/scripts/onboard-capability.mjs
+      - name: Save full results and discovered manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: onboarding-results
+          path: onboarding-results/
+          if-no-files-found: warn
+          retention-days: 14

@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-357 files (330 with a recorded intent, 27 without).
+358 files (331 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | make live registry lookups report deleted, deregistered and liquidating companies correctly (NO, PL, CZ, FI, GR), and... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-search-rebuild.md`](_general/from-code/2026-10-26-feat-search-rebuild.md) | Rebuilt catalogue search locally on feat/search-rebuild from origin/main 42e71dcc; orchestrator reviews, pushes, open... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-onboarding-run-endpoint.md`](_general/from-code/2026-10-26-feat-onboarding-run-endpoint.md) | Build a one-click capability onboarding/backfill runner inside the deployed API, verify it without production credent... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-invoice-counterparty-check.md`](_general/from-code/2026-10-26-feat-invoice-counterparty-check.md) | Build the approved invoice-counterparty-check evidence composite for portfolio 1C.3; production onboarding, authentic... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-entity-resolve.md`](_general/from-code/2026-10-26-feat-entity-resolve.md) | Built entity-resolve on the assigned isolated clone/branch, tested public GLEIF lookups, and prepared files for a loc... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md`](_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md) | Retire API agent-facing trust/score framing and serve live-facts SKILL.md; build, verify and commit locally for orche... |

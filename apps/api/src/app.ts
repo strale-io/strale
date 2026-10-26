@@ -36,7 +36,7 @@ import { internalLimitationsRoute } from "./routes/internal-limitations.js";
 import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
-import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
+import { internalOnboardingRoute, onboardingRunRoute } from "./routes/internal-onboarding.js";
 import { publicTrustRoute } from "./routes/public-trust.js";
 import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenApiPaths } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
@@ -637,6 +637,8 @@ app.route("/v1/public/ops/trust", publicTrustRoute);
 // `Authorization: Bearer $ADMIN_SECRET` — enforced at the mount, not by
 // each handler. The per-handler isValidAdminAuth checks inside the route
 // files are kept as defence-in-depth but are no longer load-bearing.
+// Dedicated narrow onboarding auth; these exact handlers terminate before the admin wall.
+app.route("/v1/internal/onboarding", onboardingRunRoute);
 app.use("/v1/internal/*", adminOnly);
 
 // /v1/internal/quality and /v1/internal/trust retired with the SQS engine

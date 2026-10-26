@@ -1375,3 +1375,14 @@
     - railway
     - .env
   cost_note: Free public registry, register at zefix.admin.ch/ZefixPublicREST.
+
+- name: ONBOARDING_RUN_SECRET
+  purpose: Dedicated bearer secret for running reviewed capability manifests inside the deployed API; at least 32 characters. Configure the same value in Railway and the GitHub production-onboarding environment secret.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  cost_note: Pending Petter setup in Railway and GitHub environment production-onboarding; endpoint is disabled until configured.
+  docs: docs/operations/run-onboarding.md

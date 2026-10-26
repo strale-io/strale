@@ -48,7 +48,11 @@ export interface PersistCapabilityInput {
   limitations?: Omit<CapabilityLimitationInsert, "capabilitySlug">[];
 }
 
+export type LimitationChangeObserver = (action: "created" | "updated" | "deleted", names: string[]) => void;
+
 export interface PersistCapabilityOpts {
+  /** Called after commit, before the hook, with actual limitation changes. */
+  onLimitationsChanged?: LimitationChangeObserver;
   mode: PersistMode;
   /** Optional. On upsert, columns to refresh when a row already exists
    *  (`onConflictDoUpdate.set`). If omitted, defaults to spreading the
@@ -203,6 +207,7 @@ export async function diffAndUpdateLimitations(
   queryable: DrizzleQueryable,
   capabilitySlug: string,
   manifestLimitations: ReadonlyArray<Omit<CapabilityLimitationInsert, "capabilitySlug">>,
+  onChange?: LimitationChangeObserver,
 ): Promise<DiffLimitationsResult> {
   // 0. Sanitize titles before anything else touches them — the hash, the
   //    diff, and the eventual INSERT/UPDATE all read from this sanitized
@@ -257,6 +262,7 @@ export async function diffAndUpdateLimitations(
     await (queryable as ReturnType<typeof getDb>)
       .delete(capabilityLimitations)
       .where(inArray(capabilityLimitations.id, orphanIds));
+    onChange?.("deleted", existing.filter(row => orphanIds.includes(row.id)).map(row => row.title ?? row.limitationText));
   }
 
   // 4. INSERT new + UPDATE sort_order on moved rows.
@@ -273,12 +279,14 @@ export async function diffAndUpdateLimitations(
           sortOrder: index,
         });
       inserted++;
+      onChange?.("created", [lim.title ?? lim.limitationText]);
     } else if (existingRow.sortOrder !== index) {
       await (queryable as ReturnType<typeof getDb>)
         .update(capabilityLimitations)
         .set({ sortOrder: index, updatedAt: new Date() })
         .where(eq(capabilityLimitations.id, existingRow.id));
       reordered++;
+      onChange?.("updated", [lim.title ?? lim.limitationText]);
     }
   }
 
@@ -336,6 +344,9 @@ export async function persistCapability(
     throw new Error("persistCapability: capability.slug is required");
   }
 
+  const limitationChanges: Array<Parameters<LimitationChangeObserver>> = [];
+  const observe: LimitationChangeObserver = (...change) => { limitationChanges.push(change); };
+
   // ── Phase 1: transactional write ────────────────────────────────────────
   await db.transaction(async (tx) => {
     // DEC-20260423-B Stage B.2: set the transaction-local GUC so the
@@ -360,7 +371,7 @@ export async function persistCapability(
       // idempotency parity. If the capability row already has limitations
       // (e.g. prior aborted create), the diff handles orphan cleanup.
       if (input.limitations) {
-        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations);
+        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations, observe);
       }
     } else if (opts.mode === "update") {
       // Deliberately does not touch capability_limitations: `input.limitations`
@@ -398,10 +409,12 @@ export async function persistCapability(
       // Previously INSERTed each row without an existence check, creating
       // duplicates on re-seed. Diff helper no-ops when content matches.
       if (input.limitations) {
-        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations);
+        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations, observe);
       }
     }
   });
+
+  for (const [action, names] of limitationChanges) opts.onLimitationsChanged?.(action, names);
 
   // ── Phase 2: post-commit hook (outside the transaction) ─────────────────
   let hookFailed = false;
