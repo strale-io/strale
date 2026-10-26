@@ -98,7 +98,7 @@
         "exit_code": 1,
         "output": [
           "Manifest validation: all checks passed",
-          "Fatal error: ProductionAuthorityError: No production write credential is available to this process. This is the default and correct state for an autonomous session: DATABASE_URL is a read-only role. A founder-gated mutation is run by supplying DATABASE_URL_WRITE and STRALE_FOUNDER_GRANT for that one invocation."
+          "Fatal error: ProductionAuthorityError: No production write credential is available to this process. This is the default and correct state for an autonomous session: DATABASE_URL is a read-only role. A founder-gated mutation needs production write authority (credential names redacted)."
         ],
         "result": "unavailable without database access/authority"
       },
