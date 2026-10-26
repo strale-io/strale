@@ -1,0 +1,62 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/01819062",
+    "captured_at": "2026-10-26T11:32:29.641747+00:00",
+    "http_status": 200,
+    "raw_sha256": "323997e837812146c3490e6db7b67f846cc033950dd00f20779171a6235e60de",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "ico": "01819062",
+    "obchodniJmeno": "KRS Stavby cz s.r.o. v likvidaci",
+    "sidlo": {
+      "kodStatu": "CZ",
+      "nazevStatu": "Česká republika",
+      "kodKraje": 116,
+      "nazevKraje": "Jihomoravský kraj",
+      "kodOkresu": 3702,
+      "nazevOkresu": "Brno-město",
+      "kodObce": 582786,
+      "nazevObce": "Brno",
+      "kodMestskeCastiObvodu": 551147,
+      "kodUlice": 30139,
+      "nazevMestskeCastiObvodu": "Brno-Kohoutovice",
+      "nazevUlice": "Potocká",
+      "cisloDomovni": 58,
+      "kodCastiObce": 411779,
+      "cisloOrientacni": 7,
+      "nazevCastiObce": "Kohoutovice",
+      "kodAdresnihoMista": 19379781,
+      "psc": 62300,
+      "textovaAdresa": "Potocká 58/7, Kohoutovice, 62300 Brno",
+      "standardizaceAdresy": true,
+      "typCisloDomovni": 1
+    },
+    "pravniForma": "112",
+    "datumVzniku": "2016-12-02",
+    "datumAktualizace": "2023-08-10",
+    "dic": "CZ01819062",
+    "czNace2008": [
+      "4120"
+    ],
+    "primarniZdroj": "ros",
+    "seznamRegistraci": {
+      "stavZdrojeRos": "AKTIVNI",
+      "stavZdrojeVr": "AKTIVNI",
+      "stavZdrojeRes": "AKTIVNI",
+      "stavZdrojeRzp": "HISTORICKY",
+      "stavZdrojeNrpzs": "NEEXISTUJICI",
+      "stavZdrojeRpsh": "NEEXISTUJICI",
+      "stavZdrojeRcns": "NEEXISTUJICI",
+      "stavZdrojeSzr": "NEEXISTUJICI",
+      "stavZdrojeDph": "ZANIKLY",
+      "stavZdrojeSkDph": "NEEXISTUJICI",
+      "stavZdrojeSd": "NEEXISTUJICI",
+      "stavZdrojeIr": "NEEXISTUJICI",
+      "stavZdrojeCeu": "NEEXISTUJICI",
+      "stavZdrojeRs": "NEEXISTUJICI",
+      "stavZdrojeRed": "NEEXISTUJICI",
+      "stavZdrojeMonitor": "NEEXISTUJICI"
+    }
+  }
+}

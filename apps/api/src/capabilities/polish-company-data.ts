@@ -27,7 +27,7 @@ async function fetchByKrs(krsNumber: string): Promise<Record<string, unknown>> {
   // Try P register (companies) first
   const url = `${KRS_API}/OdpisPelny/${krsNumber}?rejestr=P&format=json`;
   const response = await fetch(url, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(15000),
   });
 
@@ -39,7 +39,7 @@ async function fetchByKrs(krsNumber: string): Promise<Record<string, unknown>> {
     // Try S register (entrepreneurs/associations) as fallback
     const url2 = `${KRS_API}/OdpisPelny/${krsNumber}?rejestr=S&format=json`;
     const r2 = await fetch(url2, {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
       signal: AbortSignal.timeout(15000),
     });
     if (!r2.ok) throw new Error(`Polish entity with KRS ${krsNumber} not found in either P or S register.`);
@@ -103,7 +103,19 @@ function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Re
   const rejestracja = dzial1?.danePodmiotu?.dataRejestracji || null;
 
   // Status
-  const czyWykreslony = dane?.czyWykreslony || false;
+  // OdpisPelny is a history, not a current-state boolean. The official
+  // semantic JSON records registry deletion in naglowekP.wpis[].opis.
+  // Use the latest registration/deletion event, not historical field removals
+  // (nrWpisuWykr), which also occur on perfectly live companies.
+  const header = odpis.naglowekP ?? odpis.naglowekS;
+  const statusEvents = (header?.wpis ?? []).filter((w: any) =>
+    ["WYKREŚLENIE Z KRAJOWEGO REJESTRU SĄDOWEGO", "REJESTRACJA W KRAJOWYM REJESTRZE SĄDOWYM"]
+      .includes(w.opis?.trim().toUpperCase()),
+  );
+  const latest = statusEvents.reduce((a: any, b: any) =>
+    !a || Number(b.numerWpisu) > Number(a.numerWpisu) ? b : a, null);
+  const status = latest?.opis?.trim().toUpperCase() === "WYKREŚLENIE Z KRAJOWEGO REJESTRU SĄDOWEGO"
+    ? "deregistered" : latest ? "active" : "unknown";
 
   // Capital
   const kapitalRaw = dzial1?.kapital?.wysokoscKapitaluZakladowego;
@@ -135,7 +147,7 @@ function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Re
     legal_form: forma,
     address: address || null,
     registration_date: rejestracja,
-    status: czyWykreslony ? "deregistered" : "active",
+    status,
     share_capital: kapital ? `${kapital} ${waluta}` : null,
     jurisdiction: "PL",
   };

@@ -1,0 +1,888 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/00177041",
+    "captured_at": "2026-10-26T11:31:05.919065+00:00",
+    "http_status": 200,
+    "raw_sha256": "aea66bc6b31d8641fca3912ffee7b1c42242aa833f9a4a83b889f19ca7680587",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "zaznamy": [
+      {
+        "primarniZaznam": true,
+        "stavSubjektu": "AKTIVNI",
+        "statutarniOrgany": [
+          {
+            "typOrganu": "STATUTARNI_ORGAN",
+            "clenoveOrganu": [
+              {
+                "datumVymazu": "2021-10-13",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2016-08-01",
+                    "zanikClenstvi": "2021-09-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2010-04-28",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2010-04-01",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2016-11-10",
+                "clenstvi": {
+                  "clenstvi": {
+                    "zanikClenstvi": "2016-07-31"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2010-04-01",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2023-08-29",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2010-08-01",
+                    "zanikClenstvi": "2023-08-31"
+                  },
+                  "funkce": {
+                    "zanikFunkce": "2023-08-31",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2012-09-25",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2010-09-01",
+                    "zanikClenstvi": "2012-08-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2019-09-21",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2011-01-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2016-02-05",
+                "clenstvi": {
+                  "clenstvi": {
+                    "zanikClenstvi": "2015-11-30"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2012-09-01",
+                    "zanikFunkce": "2015-11-30",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2017-09-27",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2012-09-01",
+                    "zanikClenstvi": "2017-08-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2016-02-05",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2010-09-01",
+                    "zanikClenstvi": "2015-10-31"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2010-09-01",
+                    "zanikFunkce": "2015-10-31",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2024-03-11",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2021-03-01",
+                    "zanikClenstvi": "2024-02-29"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2024-03-11",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2021-03-01",
+                    "zanikClenstvi": "2024-02-29"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2023-05-30",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2021-10-01",
+                    "zanikClenstvi": "2023-04-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2022-08-05",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2022-07-01"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2022-07-01",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2024-03-11",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2021-01-01",
+                    "zanikClenstvi": "2023-12-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1991-04-24",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1991-04-24",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "místopředseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1991-04-24",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1994-11-11",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "místopředseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1991-07-03",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1991-07-03",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1994-11-11",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1994-11-11",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1997-07-14",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1995-11-30",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "místopředseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1995-11-30",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1995-11-30",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1997-07-16",
+                "clenstvi": {
+                  "textZaOsobu": "nar.:21.4.1943",
+                  "funkce": {
+                    "nazev": "místopředseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1996-04-23",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1996-09-26",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2023-06-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2021-01-26",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2015-12-01",
+                    "zanikClenstvi": "2020-12-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2021-03-19",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2011-01-01",
+                    "zanikClenstvi": "2021-02-28"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2022-08-05",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2020-08-01",
+                    "zanikClenstvi": "2022-06-30"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2020-08-03",
+                    "zanikFunkce": "2022-06-30",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2021-03-19",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2017-09-01",
+                    "zanikClenstvi": "2021-02-28"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2020-09-04",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2015-11-01",
+                    "zanikClenstvi": "2020-07-31"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2015-11-02",
+                    "zanikFunkce": "2020-07-31",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1998-05-27",
+                "clenstvi": {
+                  "textZaOsobu": "nar.:31.1.1947",
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1997-07-16",
+                "clenstvi": {
+                  "textZaOsobu": "nar.:2.6.1942",
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1998-02-06",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "1998-02-06",
+                "clenstvi": {
+                  "textZaOsobu": "nar.:9.2.1942",
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2000-10-27",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2000-10-27",
+                "clenstvi": {
+                  "textZaOsobu": "nar.:2.6.1942",
+                  "funkce": {
+                    "nazev": "místopředseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2001-07-17",
+                "clenstvi": {
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2001-07-17",
+                "clenstvi": {
+                  "textZaOsobu": "datum narození: 11. července 1944\nadresa pobytu v České republice: Praha 1, U Nemocenské\npojišťovny 4",
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2004-03-16",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v České republice: Praha 5, PSČ 150 00,\nJanáčkovo nábřeží 23/1101",
+                  "clenstvi": {
+                    "vznikClenstvi": "2001-01-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2003-10-01",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v České republice: Praha 1, Štupartská 11/746",
+                  "clenstvi": {
+                    "vznikClenstvi": "2000-07-01",
+                    "zanikClenstvi": "2003-06-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2003-09-01",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "1997-04-16"
+                  },
+                  "funkce": {
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2002-08-10",
+                "clenstvi": {
+                  "textZaOsobu": "nar.:9.2.1942",
+                  "clenstvi": {
+                    "vznikClenstvi": "1997-04-16",
+                    "zanikClenstvi": "2002-02-28"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2005-07-22",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v České republice: Praha 6, Austova 62, PSČ: 16000",
+                  "clenstvi": {
+                    "vznikClenstvi": "2001-01-01",
+                    "zanikClenstvi": "2005-06-15"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2005-01-13",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "1997-04-16",
+                    "zanikClenstvi": "2004-09-30"
+                  },
+                  "funkce": {
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2007-10-11",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v České republice: Zalužanská 1267, 293 01 Mladá Boleslav",
+                  "clenstvi": {
+                    "vznikClenstvi": "2004-10-01",
+                    "zanikClenstvi": "2007-09-30"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2004-10-04",
+                    "zanikFunkce": "2007-09-30",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2005-04-04",
+                "clenstvi": {
+                  "textZaOsobu": "nar.: 23.10.1941",
+                  "clenstvi": {
+                    "vznikClenstvi": "1998-01-01",
+                    "zanikClenstvi": "2004-12-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2002-03-07",
+                "clenstvi": {
+                  "textZaOsobu": "datum narození: 19. března 1942\nadresa pobytu v České republice: Mladá Boleslav, Hotel\nŠkoda, U Stadionu 794",
+                  "clenstvi": {
+                    "vznikClenstvi": "2000-07-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2002-10-18",
+                "clenstvi": {
+                  "textZaOsobu": "datum narození: 19. března 1942\nadresa pobytu v ČR: Praha 1, Pařížská 22, PSČ 110 00",
+                  "clenstvi": {
+                    "vznikClenstvi": "2000-07-01",
+                    "zanikClenstvi": "2002-07-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2008-02-21",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2007-10-01"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2007-10-05",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2010-10-11",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2007-10-01",
+                    "zanikClenstvi": "2010-08-31"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2007-10-05",
+                    "zanikFunkce": "2010-08-31",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2009-04-27",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2005-01-01",
+                    "zanikClenstvi": "2009-03-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2005-08-04",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v ČR: Praha 6, U Páté baterie 7/761,\nPSČ 160 00",
+                  "clenstvi": {
+                    "vznikClenstvi": "2002-08-01",
+                    "zanikClenstvi": "2005-06-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2004-07-15",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v České republice: Kosmonosy, Pod Koupalištěm 881, PSČ: 29306",
+                  "clenstvi": {
+                    "vznikClenstvi": "2004-01-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2009-06-17",
+                "clenstvi": {
+                  "textZaOsobu": "adresa pobytu v České republice: Praha 2, Belgická 12, PSČ: 12000",
+                  "clenstvi": {
+                    "vznikClenstvi": "2004-01-01",
+                    "zanikClenstvi": "2009-05-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2007-06-20",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2005-04-01",
+                    "zanikClenstvi": "2007-03-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2010-04-28",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2005-09-01",
+                    "zanikClenstvi": "2010-03-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2008-04-07",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2006-02-23",
+                    "zanikFunkce": "2008-03-31",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2011-11-09",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2010-09-01"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2010-09-01",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2011-01-17",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2008-04-01",
+                    "zanikClenstvi": "2010-12-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2015-10-19",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2010-09-01"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2010-09-01",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2012-09-25",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2007-04-01",
+                    "zanikClenstvi": "2012-08-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2010-10-11",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2009-06-01",
+                    "zanikClenstvi": "2010-08-31"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2014-12-11",
+                "clenstvi": {
+                  "clenstvi": {
+                    "zanikClenstvi": "2014-09-30"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2010-01-01",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2023-08-29",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2020-07-01",
+                    "zanikClenstvi": "2023-06-30"
+                  },
+                  "funkce": {
+                    "zanikFunkce": "2023-06-30",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2026-10-12",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2022-07-01",
+                    "zanikClenstvi": "2026-09-21"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2022-07-01",
+                    "zanikFunkce": "2026-09-21",
+                    "nazev": "předseda představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2020-07-14",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2014-10-01",
+                    "zanikClenstvi": "2020-06-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2026-07-28",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2023-09-01",
+                    "zanikClenstvi": "2026-06-30"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2023-09-01",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2026-04-01",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2023-07-01",
+                    "zanikClenstvi": "2025-12-31"
+                  },
+                  "funkce": {
+                    "vznikFunkce": "2023-07-01",
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2026-07-28",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2024-01-01",
+                    "zanikClenstvi": "2026-06-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2024-03-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2026-10-12",
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2024-03-01",
+                    "zanikClenstvi": "2026-09-30"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              },
+              {
+                "clenstvi": {
+                  "clenstvi": {
+                    "vznikClenstvi": "2026-10-01"
+                  },
+                  "funkce": {
+                    "nazev": "člen představenstva"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "typOrganu": "PROKURA",
+            "clenoveOrganu": [
+              {
+                "clenstvi": {}
+              },
+              {
+                "clenstvi": {}
+              },
+              {
+                "clenstvi": {}
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

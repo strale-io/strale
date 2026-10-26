@@ -1,0 +1,44 @@
+{
+  "capture": {
+    "url": "https://data.brreg.no/enhetsregisteret/api/enheter/923609016",
+    "captured_at": "2026-10-26T11:31:05.696887+00:00",
+    "http_status": 200,
+    "raw_sha256": "9f6ef1a648ec913936f89379f0f24dce15b9994c1a43a69d301e8fa236e4928b",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "organisasjonsnummer": "923609016",
+    "respons_klasse": "Enhet",
+    "konkurs": false,
+    "underAvvikling": false,
+    "underTvangsavviklingEllerTvangsopplosning": false,
+    "paategninger": [],
+    "navn": "EQUINOR ASA",
+    "organisasjonsform": {
+      "_links": {
+        "self": {
+          "href": "https://data.brreg.no/enhetsregisteret/api/organisasjonsformer/ASA"
+        }
+      },
+      "beskrivelse": "Allmennaksjeselskap",
+      "kode": "ASA"
+    },
+    "naeringskode1": {
+      "beskrivelse": "Utvinning av råolje",
+      "kode": "06.100"
+    },
+    "registreringsdatoEnhetsregisteret": "1995-03-12",
+    "antallAnsatte": 21231,
+    "forretningsadresse": {
+      "adresse": [
+        "Forusbeen 50"
+      ],
+      "kommune": "STAVANGER",
+      "kommunenummer": "1103",
+      "land": "Norge",
+      "landkode": "NO",
+      "postnummer": "4035",
+      "poststed": "STAVANGER"
+    }
+  }
+}

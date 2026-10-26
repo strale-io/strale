@@ -1,6 +1,6 @@
 slug: greek-company-data
 name: "Greek Company Data"
-description: "Look up a Greek company in GEMI, the General Commercial Registry, by GEMI number or 9-digit tax ID (AFM). Returns name, legal form, address, status, main activity, directors and VAT number."
+description: "Look up a Greek company in GEMI by registry number or tax ID (AFM), returning its name, legal form, address and status."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -127,6 +127,14 @@ output_field_reliability:
   directors: common
   is_branch: guaranteed
 limitations:
+  - title: Official registry data access
+    text: "Official per-entity API terms read on 2026-10-26: https://opendata.businessportal.gr/license/. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Known GEMI descriptions map to active, inactive, dissolved, bankrupt or liquidation. Unrecognised descriptions are preserved verbatim; missing descriptions return unknown. No live GEMI status validation was possible without a key."
+    category: coverage
+    severity: info
   - title: GEMI rate limit is 8 requests per minute
     text: >-
       The GEMI Open Data API enforces a maximum of 8 requests per minute per API key. Requests exceeding this limit

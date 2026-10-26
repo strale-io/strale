@@ -186,7 +186,12 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     return { file: rel(f), code, slug: code.match(/registerCapability\(\s*["'`]([^"'`]+)["'`]/)?.[1] };
   });
   const callsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
-    record.hosts.some((h) => code.includes(h)) || code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
+    record.hosts.some((h) => code.includes(h) ||
+      // Brreg executors share the audited helper outside capabilities/.
+      (code.includes('"../lib/brreg-fetch.js"') &&
+        codeOnly(readFileSync(join(SRC, "lib/brreg-fetch.ts"), "utf8")).includes(h)) ||
+      (code.includes('"./lib/vat-providers/brreg.js"') &&
+        codeOnly(readFileSync(join(CAPS, "lib/vat-providers/brreg.ts"), "utf8")).includes(h))) || code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
 
   for (const record of VENDOR_TERMS_RECORDS) {
     it(`${record.vendor}: lists exactly the executors that call it`, () => {
@@ -202,7 +207,16 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
       // callers from the check above, so any such client fails here and must
       // be handled explicitly.
       const shared = files.filter((f) => !f.slug && callsVendor(f.code, record)).map((f) => f.file);
-      expect(shared).toEqual([]);
+      // These two Brreg adapters are explicitly traced: the company-data
+      // provider delegates to its executor; the VAT provider is imported by
+      // vat-validate (included in the callers calculation above).
+      const auditedShared = record.hosts.includes("data.brreg.no")
+        ? ["capabilities/lib/vat-providers/brreg.ts", "capabilities/providers/norwegian-company-data.ts"] : [];
+      expect(shared.sort()).toEqual(auditedShared.sort());
+      if (auditedShared.length) {
+        expect(readFileSync(join(CAPS, "providers/norwegian-company-data.ts"), "utf8"))
+          .toContain('getDirectExecutor("norwegian-company-data")');
+      }
     });
 
     it(`${record.vendor}: carries its evidence`, () => {

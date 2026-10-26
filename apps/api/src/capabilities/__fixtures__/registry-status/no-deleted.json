@@ -1,0 +1,14 @@
+{
+  "capture": {
+    "url": "https://data.brreg.no/enhetsregisteret/api/enheter/930663530",
+    "captured_at": "2026-10-26T11:31:05.806711+00:00",
+    "http_status": 200,
+    "raw_sha256": "f0eea32539e2fd7d1a967b7e06a020b30cc6a88fa018a4497b41e0963ea4c655",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "organisasjonsnummer": "930663530",
+    "respons_klasse": "SlettetEnhet",
+    "slettedato": "2026-10-20"
+  }
+}

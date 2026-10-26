@@ -1,6 +1,6 @@
 slug: no-bankruptcy-check
 name: "Norwegian Bankruptcy Check"
-description: "Check a Norwegian company for bankruptcy and dissolution in the Brønnøysund registers: any bankruptcy filing and its date, voluntary or forced dissolution, and the register's notes."
+description: "Check Norwegian registry bankruptcy, voluntary or compulsory dissolution and deletion signals by organisation number or company name."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -36,6 +36,10 @@ output_schema:
       type:
         - string
         - "null"
+    is_deleted:
+      type: boolean
+    deletion_date:
+      type: [string, "null"]
     has_bankruptcy_filing:
       type: boolean
     bankruptcy_date:
@@ -97,6 +101,8 @@ test_fixtures:
   health_check_input:
     org_number: "923609016"
 output_field_reliability:
+  is_deleted: guaranteed
+  deletion_date: common
   org_number: guaranteed
   has_bankruptcy_filing: guaranteed
   is_under_dissolution: guaranteed
@@ -107,6 +113,14 @@ output_field_reliability:
   company_name: common
   bankruptcy_date: rare
 limitations:
+  - title: Official registry data access
+    text: "Official per-entity API terms read on 2026-10-26: https://www.brreg.no/en/use-of-data-from-the-bronnoysund-register-centre/datasets-and-api/. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Deleted-unit tombstones set is_deleted and deletion_date and count in has_any_distress_signal. Deletion alone does not imply bankruptcy; bankruptcy and dissolution flags remain separate."
+    category: coverage
+    severity: info
   - title: Coverage limited to entities in Brønnøysundregistrene Enhetsregisteret
     text: >-
       Only Norwegian entities registered in Enhetsregisteret are covered. Foreign entities and informal businesses

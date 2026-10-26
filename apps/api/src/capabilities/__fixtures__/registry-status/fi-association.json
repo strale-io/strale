@@ -1,0 +1,124 @@
+{
+  "capture": {
+    "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0101279-1",
+    "captured_at": "2026-10-26T11:31:05.949070+00:00",
+    "http_status": 200,
+    "raw_sha256": "048d579a3d31b3d31aef1cc624174e867caeb9bb38d7d865d5213115529cc66d",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "companies": [
+      {
+        "businessId": {
+          "value": "0101279-1",
+          "registrationDate": "1978-03-15",
+          "source": "3"
+        },
+        "names": [
+          {
+            "name": "FC Honka ry",
+            "type": "1",
+            "registrationDate": "2010-10-01",
+            "version": 1,
+            "source": "1"
+          },
+          {
+            "name": "Football Club Honka ry",
+            "type": "1",
+            "registrationDate": "1976-09-16",
+            "endDate": "2010-09-30",
+            "version": 2,
+            "source": "1"
+          }
+        ],
+        "addresses": [
+          {
+            "type": 1,
+            "street": "Urheilupuistontie",
+            "postCode": "02200",
+            "postOffices": [
+              {
+                "city": "ESBO",
+                "languageCode": "2",
+                "municipalityCode": "049"
+              },
+              {
+                "city": "ESPOO",
+                "languageCode": "1",
+                "municipalityCode": "049"
+              }
+            ],
+            "buildingNumber": "2",
+            "registrationDate": "2011-04-01",
+            "source": "0"
+          },
+          {
+            "type": 2,
+            "street": "Urheilupuistontie",
+            "postCode": "02200",
+            "postOffices": [
+              {
+                "city": "ESBO",
+                "languageCode": "2",
+                "municipalityCode": "049"
+              },
+              {
+                "city": "ESPOO",
+                "languageCode": "1",
+                "municipalityCode": "049"
+              }
+            ],
+            "buildingNumber": "2",
+            "registrationDate": "2011-04-01",
+            "source": "0"
+          }
+        ],
+        "companyForms": [
+          {
+            "type": "6",
+            "descriptions": [
+              {
+                "languageCode": "1",
+                "description": "Aatteellinen yhdistys"
+              },
+              {
+                "languageCode": "2",
+                "description": "Ideell förening"
+              },
+              {
+                "languageCode": "3",
+                "description": "Non-profit association"
+              }
+            ],
+            "registrationDate": "1976-09-16",
+            "version": 1,
+            "source": "1"
+          }
+        ],
+        "mainBusinessLine": {
+          "type": "93120",
+          "descriptions": [
+            {
+              "languageCode": "3",
+              "description": "Activities of sports clubs"
+            },
+            {
+              "languageCode": "1",
+              "description": "Liikunta- ja urheiluseurojen toiminta"
+            },
+            {
+              "languageCode": "2",
+              "description": "Sportklubbars och idrottsföreningars verksamhet"
+            }
+          ],
+          "typeCodeSet": "TOIMI4",
+          "registrationDate": "2026-01-01",
+          "source": "2"
+        },
+        "status": "2",
+        "tradeRegisterStatus": "3",
+        "companySituations": []
+      }
+    ]
+  }
+}

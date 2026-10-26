@@ -58,6 +58,7 @@ output_schema:
   properties:
     status:
       type: string
+      enum: ["active", "inactive", "bankrupt", "liquidation", "restructuring", "pending", "unknown"]
     address:
       type: string
     business_id:
@@ -126,6 +127,14 @@ output_field_reliability:
   match_confidence: rare
   matched_registry_name: rare
 limitations:
+  - title: Official registry data access
+    text: "Official per-entity API terms read on 2026-10-26: https://avoindata.prh.fi/en. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Status uses Business ID status and dissolution endDate, not Trade Register membership. Current KONK, SELTILA and SANE situations distinguish bankruptcy, liquidation and restructuring; ended situations are ignored."
+    category: coverage
+    severity: info
   - title: Does not cover sole traders without a separate business ID — about 10%
     text: Does not cover sole traders (toiminimi) without separate business ID
     category: coverage

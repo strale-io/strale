@@ -1,0 +1,73 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/01485377",
+    "captured_at": "2026-10-26T11:31:05.657536+00:00",
+    "http_status": 200,
+    "raw_sha256": "bf149e768ea95497ce99799696ce975cfef7f0d9f1cb6c900520abc8bd8f7f3d",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "ico": "01485377",
+    "obchodniJmeno": "TIKA stavby s.r.o. v likvidaci",
+    "sidlo": {
+      "kodStatu": "CZ",
+      "nazevStatu": "Česká republika",
+      "kodKraje": 60,
+      "nazevKraje": "Ústecký kraj",
+      "kodOkresu": 3502,
+      "nazevOkresu": "Děčín",
+      "kodObce": 562335,
+      "nazevObce": "Děčín",
+      "kodUlice": 87203,
+      "nazevUlice": "Želenická",
+      "cisloDomovni": 1543,
+      "kodCastiObce": 407275,
+      "cisloOrientacni": 24,
+      "nazevCastiObce": "Děčín VI-Letná",
+      "kodAdresnihoMista": 233714,
+      "psc": 40502,
+      "textovaAdresa": "Želenická 1543/24, Děčín VI-Letná, 40502 Děčín",
+      "standardizaceAdresy": true,
+      "typCisloDomovni": 1
+    },
+    "pravniForma": "112",
+    "datumVzniku": "2013-03-13",
+    "datumAktualizace": "2024-02-03",
+    "dic": "CZ01485377",
+    "czNace2008": [
+      "00",
+      "251",
+      "256",
+      "4120",
+      "46900",
+      "471",
+      "47790",
+      "49399",
+      "49410",
+      "620",
+      "63910",
+      "68310",
+      "7112",
+      "772"
+    ],
+    "primarniZdroj": "ros",
+    "seznamRegistraci": {
+      "stavZdrojeRos": "AKTIVNI",
+      "stavZdrojeVr": "AKTIVNI",
+      "stavZdrojeRes": "AKTIVNI",
+      "stavZdrojeRzp": "AKTIVNI",
+      "stavZdrojeNrpzs": "NEEXISTUJICI",
+      "stavZdrojeRpsh": "NEEXISTUJICI",
+      "stavZdrojeRcns": "NEEXISTUJICI",
+      "stavZdrojeSzr": "NEEXISTUJICI",
+      "stavZdrojeDph": "ZANIKLY",
+      "stavZdrojeSkDph": "NEEXISTUJICI",
+      "stavZdrojeSd": "NEEXISTUJICI",
+      "stavZdrojeIr": "NEEXISTUJICI",
+      "stavZdrojeCeu": "NEEXISTUJICI",
+      "stavZdrojeRs": "NEEXISTUJICI",
+      "stavZdrojeRed": "AKTIVNI",
+      "stavZdrojeMonitor": "NEEXISTUJICI"
+    }
+  }
+}

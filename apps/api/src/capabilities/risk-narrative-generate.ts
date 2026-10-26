@@ -93,6 +93,15 @@ Respond ONLY with valid JSON matching this schema:
   "data_sources_consulted": ["list of data sources"]
 }`;
 
+/** Only registry checks carry company lifecycle status; other checks use
+ * status for unrelated purposes (HTTP, DNS, etc.). Treat an unfamiliar
+ * registry value as requiring review, never as evidence of active trading. */
+function registryNeedsReview(checkName: string, result: any): boolean {
+  if (checkName === "no-bankruptcy-check") return result?.has_any_distress_signal === true || result?.is_deleted === true;
+  return checkName.endsWith("-company-data") &&
+    typeof result?.status === "string" && result.status.toLowerCase() !== "active";
+}
+
 /** Algorithmic fallback when Sonnet is unavailable */
 function algorithmicAssessment(
   checkResults: Record<string, any>,
@@ -101,7 +110,7 @@ function algorithmicAssessment(
   const checks = Object.entries(checkResults);
   const passed: string[] = [];
   const failed: string[] = [];
-  const flags: Array<{ severity: string; finding: string; recommendation: string }> = [];
+  const flags: Array<{ severity: string; finding: string; recommendation: string; source_check?: string }> = [];
 
   for (const [checkName, result] of checks) {
     // Determine pass/fail from the step result shape:
@@ -122,15 +131,25 @@ function algorithmicAssessment(
     if (isError) {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "medium",
         finding: `${checkName.replace(/-/g, " ")} could not be completed`,
         recommendation: result?.skipped
           ? "This check was skipped because required inputs were not available. Provide additional data to enable this check."
           : "Review the error and retry. Manual verification may be needed.",
       });
+    } else if (registryNeedsReview(checkName, result)) {
+      failed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        source_check: checkName,
+        severity: "high",
+        finding: `${checkName} reports registry status ${result.status ?? (result.is_deleted ? "deleted" : "distress signal")}`,
+        recommendation: "Review the official registry record before proceeding; this result does not establish an active company.",
+      });
     } else if (isSanctioned) {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "critical",
         finding: `Sanctions screening returned a positive match`,
         recommendation: "Do not proceed without compliance review. Verify the match against official sanctions lists.",
@@ -139,6 +158,7 @@ function algorithmicAssessment(
       // PEP is a flag, not necessarily a failure
       passed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "medium",
         finding: `Politically Exposed Person (PEP) match detected`,
         recommendation: "Enhanced due diligence may be required under AML regulations.",
@@ -146,6 +166,7 @@ function algorithmicAssessment(
     } else if (isInvalid) {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "high",
         finding: `${checkName.replace(/-/g, " ")} validation failed`,
         recommendation: "Verify the input data is correct and retry.",
@@ -153,6 +174,7 @@ function algorithmicAssessment(
     } else if (isHighRisk) {
       passed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: result?.risk_level === "critical" ? "high" : "medium",
         finding: `${checkName.replace(/-/g, " ")} flagged elevated risk`,
         recommendation: "Review the detailed findings before proceeding.",
@@ -162,6 +184,7 @@ function algorithmicAssessment(
     } else {
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
+        source_check: checkName,
         severity: "low",
         finding: `${checkName.replace(/-/g, " ")} returned no data`,
         recommendation: "This may indicate a data gap. Consider manual verification.",
@@ -188,6 +211,15 @@ function algorithmicAssessment(
     riskScore = 90;
   }
 
+  if (checks.some(([name, result]) => registryNeedsReview(name, result))) {
+    // A populated dead-company record is an answer, not a passed KYB check.
+    if (riskScore < 75) { riskLevel = "high"; riskScore = 75; }
+  }
+
+  if (flags.some((flag) => flag.severity === "critical")) {
+    riskLevel = "critical"; riskScore = Math.max(riskScore, 90);
+  }
+
   const contextLabel = context === "kyb" ? "entity verification" : "invoice fraud detection";
   const summary =
     failed.length === 0
@@ -201,7 +233,7 @@ function algorithmicAssessment(
     flags,
     passed_checks: passed,
     checks_performed: checks.length,
-    data_sources_consulted: ["algorithmic assessment"],
+    data_sources_consulted: checks.map(([name]) => name),
     note: "AI narrative was unavailable — algorithmic fallback used",
   };
 }
@@ -218,12 +250,22 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    // Fallback to algorithmic assessment
+  const preserveRegistryStatus = Object.entries(checkResults).some(([name, result]) => registryNeedsReview(name, result));
+  if (!apiKey || preserveRegistryStatus) {
+    // Preserve registry lifecycle findings deterministically, including when
+    // AI synthesis is available; do not let a model turn them into a pass.
     const output = algorithmicAssessment(checkResults, context);
     return {
-      output: { ...output, raw_checks: checkResults },
-      provenance: { source: "algorithmic-fallback", fetched_at: new Date().toISOString() },
+      output: {
+        ...output,
+        ...(preserveRegistryStatus ? { note: "Registry lifecycle findings preserved by deterministic assessment" } : {}),
+        raw_checks: checkResults,
+      },
+      provenance: {
+        source: "algorithmic-fallback",
+        fallback_reason: preserveRegistryStatus ? "registry_status_preservation" : "missing_ai_credential",
+        fetched_at: new Date().toISOString(),
+      },
     };
   }
 

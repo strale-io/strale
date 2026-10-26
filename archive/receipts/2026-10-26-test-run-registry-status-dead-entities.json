@@ -1,0 +1,420 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "vitest registry status regression suites and local verification commands",
+    "commit": "9999aa3d4d030f2e86d263c7220eda76279dafca"
+  },
+  "at": "2026-10-26T11:46:09.396Z",
+  "inputs": {
+    "source": "/tmp/registry-status/evidence.json"
+  },
+  "summary": {
+    "passed": 189,
+    "failed": 0,
+    "skipped": 4,
+    "test_files": 7,
+    "fail_before_executors": 7,
+    "live_captures": 13,
+    "required_root_checks_passed": 6,
+    "database_verification": "unavailable",
+    "upstream_hosts_added": 0
+  },
+  "topic": "registry-status-dead-entities",
+  "raw": {
+    "summary": {
+      "passed": 189,
+      "failed": 0,
+      "skipped": 4,
+      "test_files": 7,
+      "fail_before_executors": 7,
+      "live_captures": 13,
+      "required_root_checks_passed": 6,
+      "database_verification": "unavailable",
+      "upstream_hosts_added": 0
+    },
+    "tests": {
+      "command": "cd apps/api && npx vitest run src/capabilities/registry-status.test.ts src/capabilities/registry-status.consumers.test.ts src/capabilities/risk-narrative-generate.registry-status.test.ts src/capabilities/finnish-company-data.test.ts src/lib/vendor-terms.test.ts src/lib/solution-executor.test.ts src/lib/execution-outcome.test.ts",
+      "success": true,
+      "files": [
+        {
+          "file": "src/capabilities/finnish-company-data.test.ts",
+          "status": "passed",
+          "assertions": 5
+        },
+        {
+          "file": "src/capabilities/registry-status.consumers.test.ts",
+          "status": "passed",
+          "assertions": 10
+        },
+        {
+          "file": "src/capabilities/registry-status.test.ts",
+          "status": "passed",
+          "assertions": 40
+        },
+        {
+          "file": "src/capabilities/risk-narrative-generate.registry-status.test.ts",
+          "status": "passed",
+          "assertions": 15
+        },
+        {
+          "file": "src/lib/execution-outcome.test.ts",
+          "status": "passed",
+          "assertions": 40
+        },
+        {
+          "file": "src/lib/solution-executor.test.ts",
+          "status": "passed",
+          "assertions": 32
+        },
+        {
+          "file": "src/lib/vendor-terms.test.ts",
+          "status": "passed",
+          "assertions": 51
+        }
+      ]
+    },
+    "fail_before": [
+      {
+        "executor": "norwegian-company-data",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  4 failed | 36 passed (40)",
+        "failing_cases": [
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Norway no-deleted → 930663530 deleted",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Norway {\"underTvangsavviklingEllerTvangsopplosning\":true}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Norway {\"slettedato\":\"2026-10-20\",\"konkurs\":true}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Norway {\"respons_klasse\":\"SlettetEnhet\"}"
+        ]
+      },
+      {
+        "executor": "no-bankruptcy-check",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  2 failed | 38 passed (40)",
+        "failing_cases": [
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Norway bankruptcy check no-deleted preserves deletion",
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Norway bankruptcy check no-active preserves deletion"
+        ]
+      },
+      {
+        "executor": "polish-company-data",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  2 failed | 38 passed (40)",
+        "failing_cases": [
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Poland pl-deleted",
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Poland pl-active"
+        ]
+      },
+      {
+        "executor": "cz-company-data",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  4 failed | 36 passed (40)",
+        "failing_cases": [
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Czechia cz-liquidation",
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Czechia cz-01819062",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Czechia does not claim active when VR status evidence is unavailable",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Czech insolvency source AKTIVNI"
+        ]
+      },
+      {
+        "executor": "greek-company-data",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  3 failed | 37 passed (40)",
+        "failing_cases": [
+          "src/capabilities/registry-status.test.ts > GEMI status strings — synthetic only; no GEMI credential available > Ανενεργή → inactive",
+          "src/capabilities/registry-status.test.ts > GEMI status strings — synthetic only; no GEMI credential available > Λύση → dissolved",
+          "src/capabilities/registry-status.test.ts > GEMI status strings — synthetic only; no GEMI credential available > Πτώχευση → bankrupt"
+        ]
+      },
+      {
+        "executor": "finnish-company-data",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  7 failed | 33 passed (40)",
+        "failing_cases": [
+          "src/capabilities/registry-status.test.ts > recorded live registry status regressions > Finland fi-association",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Finland situation {\"type\":\"KONK\"}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Finland situation {\"type\":\"SANE\"}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Finland lifecycle {\"status\":\"5\"}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Finland lifecycle {\"endDate\":\"2020-01-01\"}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Finland lifecycle {\"status\":\"1\"}",
+          "src/capabilities/registry-status.test.ts > status precedence and missing signals (synthetic variants) > Finland lifecycle {\"status\":\"9\"}"
+        ]
+      },
+      {
+        "executor": "risk-narrative-generate",
+        "exit_code": 1,
+        "failed_before": true,
+        "test_summary": "Tests  14 failed | 1 passed (15)",
+        "failing_cases": [
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > norwegian-company-data deleted is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > norwegian-company-data compulsory_dissolution is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > norwegian-company-data dissolving is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > polish-company-data deregistered is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > cz-company-data liquidation is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > cz-company-data insolvency is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > greek-company-data inactive is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > greek-company-data unrecognised registry description is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > finnish-company-data bankrupt is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > finnish-company-data restructuring is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > finnish-company-data pending is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > finnish-company-data unknown is not a passed company check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > Norway deleted-unit distress is not a passed bankruptcy check",
+          "src/capabilities/risk-narrative-generate.registry-status.test.ts > registry lifecycle consumers in KYB and invoice narratives > preserves critical sanctions and cites every mixed-result finding"
+        ]
+      }
+    ],
+    "captures": [
+      {
+        "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/01819062",
+        "captured_at": "2026-10-26T11:32:29.641747+00:00",
+        "http_status": 200,
+        "raw_sha256": "323997e837812146c3490e6db7b67f846cc033950dd00f20779171a6235e60de",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/00177041",
+        "captured_at": "2026-10-26T11:31:05.611508+00:00",
+        "http_status": 200,
+        "raw_sha256": "d9273480242a599e97543ce0af2ea7e2483ff34f80e8b475731b00e80dbe2a4a",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/01485377",
+        "captured_at": "2026-10-26T11:31:05.657536+00:00",
+        "http_status": 200,
+        "raw_sha256": "bf149e768ea95497ce99799696ce975cfef7f0d9f1cb6c900520abc8bd8f7f3d",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/01819062",
+        "captured_at": "2026-10-26T11:32:29.683218+00:00",
+        "http_status": 200,
+        "raw_sha256": "a0189ea4799faa6a6e0a32c509fabcbd121cf3dc9531125e7fb4de406f314826",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/00177041",
+        "captured_at": "2026-10-26T11:31:05.919065+00:00",
+        "http_status": 200,
+        "raw_sha256": "aea66bc6b31d8641fca3912ffee7b1c42242aa833f9a4a83b889f19ca7680587",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/01485377",
+        "captured_at": "2026-10-26T11:31:05.638847+00:00",
+        "http_status": 200,
+        "raw_sha256": "927a49421b5c70321664f99c0cd3c675fc8f3a89ddfdbebeabc9fce515e5e8fa",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0112038-9",
+        "captured_at": "2026-10-26T11:31:05.385198+00:00",
+        "http_status": 200,
+        "raw_sha256": "e79eac1b388ff3dfef21da986e87453fb1719229d218bb1ce9d6473f8980dc06",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0101279-1",
+        "captured_at": "2026-10-26T11:31:05.949070+00:00",
+        "http_status": 200,
+        "raw_sha256": "048d579a3d31b3d31aef1cc624174e867caeb9bb38d7d865d5213115529cc66d",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://data.brreg.no/enhetsregisteret/api/enheter/923609016",
+        "captured_at": "2026-10-26T11:31:05.696887+00:00",
+        "http_status": 200,
+        "raw_sha256": "9f6ef1a648ec913936f89379f0f24dce15b9994c1a43a69d301e8fa236e4928b",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://data.brreg.no/enhetsregisteret/api/enheter/930663530",
+        "captured_at": "2026-10-26T11:31:05.806711+00:00",
+        "http_status": 200,
+        "raw_sha256": "f0eea32539e2fd7d1a967b7e06a020b30cc6a88fa018a4497b41e0963ea4c655",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://api-krs.ms.gov.pl/api/krs/OdpisPelny/0000033945?rejestr=P&format=json",
+        "captured_at": "2026-10-26T11:31:05.997178+00:00",
+        "http_status": 200,
+        "raw_sha256": "65c89083f6b60190e26ee9737a4bcd59ee4319847daf72823510175f97a8d4ca",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://api-krs.ms.gov.pl/api/krs/OdpisPelny/0000106150?rejestr=P&format=json",
+        "captured_at": "2026-10-26T11:31:06.413511+00:00",
+        "http_status": 200,
+        "raw_sha256": "fa599dbd3254b65a7a1965778ca90714a569cefe6f0b127cac5e4782770b3c12",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      },
+      {
+        "url": "https://api-krs.ms.gov.pl/api/krs/OdpisPelny/0000028860?rejestr=P&format=json",
+        "captured_at": "2026-10-26T11:32:30.571539+00:00",
+        "http_status": 200,
+        "raw_sha256": "3f862ffb66ed5c2b3e7a54de9cfd493d2feb4101399f6849acb46543f31e958b",
+        "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+      }
+    ],
+    "checks": [
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      }
+    ],
+    "build": {
+      "mcp_server_exit": 0,
+      "api_typecheck_exit": 0
+    },
+    "database_commands": [
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/norwegian-company-data.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug norwegian-company-data",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug norwegian-company-data --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/no-bankruptcy-check.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug no-bankruptcy-check",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug no-bankruptcy-check --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/polish-company-data.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug polish-company-data",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug polish-company-data --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/cz-company-data.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug cz-company-data",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug cz-company-data --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/greek-company-data.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug greek-company-data",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug greek-company-data --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/finnish-company-data.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug finnish-company-data",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug finnish-company-data --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/risk-narrative-generate.yaml --backfill --dry-run",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug risk-narrative-generate",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug risk-narrative-generate --dry-run",
+        "exit_code": 1
+      }
+    ],
+    "readiness": [
+      "{\"slug\":\"norwegian-company-data\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}",
+      "{\"slug\":\"no-bankruptcy-check\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}",
+      "{\"slug\":\"polish-company-data\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}",
+      "{\"slug\":\"cz-company-data\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}",
+      "{\"slug\":\"greek-company-data\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}",
+      "{\"slug\":\"finnish-company-data\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}",
+      "{\"slug\":\"risk-narrative-generate\",\"ready\":null,\"unavailable\":\"Error: DATABASE_URL environment variable is required\"}"
+    ],
+    "initial_failure": "First vendor-terms suite failed because the new Brreg record exposed two untraced shared adapters; added explicit adapter-to-executor coverage and reran successfully.",
+    "reviews": {
+      "technical": "GO, rounds 2, separate read-only context",
+      "product": "GO with nits, rounds 2; remaining manifest documentation nit resolved"
+    },
+    "limits": [
+      "GEMI synthetic only; no key.",
+      "Production DB unavailable; readiness not asserted.",
+      "No upstream host added; newly appearing strale.dev URLs are honest User-Agent contact details only.",
+      "User forbids push, PR, merge, branch switching and production writes."
+    ]
+  }
+}

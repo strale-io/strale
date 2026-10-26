@@ -72,7 +72,7 @@ async function gemiFetch(path: string): Promise<unknown> {
   }
   const url = `${GEMI_BASE_URL}${path}`;
   const response = await fetch(url, {
-    headers: { api_key: apiKey, Accept: "application/json" },
+    headers: { api_key: apiKey, Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(15000),
   });
   if (response.status === 401) {
@@ -155,12 +155,13 @@ function summariseDirectors(persons: GemiPerson[] | undefined): string[] {
 }
 
 function deriveStatus(company: GemiCompany): string {
-  const descr = company.status?.descr?.toLowerCase() ?? "";
+  const descr = company.status?.descr?.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim() ?? "";
   if (!descr) return "unknown";
-  if (descr.includes("ενεργ")) return "active"; // Ενεργή
-  if (descr.includes("διαγραφ") || descr.includes("λυσ")) return "dissolved"; // Διαγραφή / Λύση
+  if (descr.startsWith("ανενεργ")) return "inactive"; // Ανενεργή
   if (descr.includes("πτωχ")) return "bankrupt"; // Πτώχευση
   if (descr.includes("εκκαθ")) return "liquidation"; // Εκκαθάριση
+  if (descr.includes("διαγραφ") || descr.includes("λυσ")) return "dissolved"; // Διαγραφή / Λύση
+  if (/^ενεργ(?:η|ο|ος)$/.test(descr)) return "active"; // Ενεργή / Ενεργό
   return company.status?.descr ?? "unknown";
 }
 

@@ -1,0 +1,69 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/01485377",
+    "captured_at": "2026-10-26T11:31:05.638847+00:00",
+    "http_status": 200,
+    "raw_sha256": "927a49421b5c70321664f99c0cd3c675fc8f3a89ddfdbebeabc9fce515e5e8fa",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "zaznamy": [
+      {
+        "primarniZaznam": true,
+        "stavSubjektu": "AKTIVNI",
+        "statutarniOrgany": [
+          {
+            "typOrganu": "LIKVIDATOR",
+            "clenoveOrganu": [
+              {
+                "clenstvi": {}
+              }
+            ]
+          },
+          {
+            "typOrganu": "STATUTARNI_ORGAN",
+            "clenoveOrganu": [
+              {
+                "datumVymazu": "2019-05-16",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2013-03-13",
+                    "zanikFunkce": "2019-04-18",
+                    "nazev": "Jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2015-11-03",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2013-03-13",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2015-11-03",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2013-03-13",
+                    "zanikFunkce": "2015-10-30",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2019-04-18",
+                    "nazev": "Jednatel"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

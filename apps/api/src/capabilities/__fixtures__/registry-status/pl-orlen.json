@@ -1,0 +1,1166 @@
+{
+  "capture": {
+    "url": "https://api-krs.ms.gov.pl/api/krs/OdpisPelny/0000028860?rejestr=P&format=json",
+    "captured_at": "2026-10-26T11:32:30.571539+00:00",
+    "http_status": 200,
+    "raw_sha256": "3f862ffb66ed5c2b3e7a54de9cfd493d2feb4101399f6849acb46543f31e958b",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "odpis": {
+      "naglowekP": {
+        "wpis": [
+          {
+            "numerWpisu": 1,
+            "opis": "REJESTRACJA W KRAJOWYM REJESTRZE SĄDOWYM",
+            "dataWpisu": "19.07.2001"
+          },
+          {
+            "numerWpisu": 2,
+            "opis": "INNY WPIS",
+            "dataWpisu": "06.11.2001"
+          },
+          {
+            "numerWpisu": 3,
+            "opis": "INNY WPIS",
+            "dataWpisu": "09.04.2002"
+          },
+          {
+            "numerWpisu": 4,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.07.2002"
+          },
+          {
+            "numerWpisu": 5,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.04.2003"
+          },
+          {
+            "numerWpisu": 6,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "15.05.2003"
+          },
+          {
+            "numerWpisu": 7,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "12.09.2003"
+          },
+          {
+            "numerWpisu": 8,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "20.11.2003"
+          },
+          {
+            "numerWpisu": 9,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "19.03.2004"
+          },
+          {
+            "numerWpisu": 10,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.04.2004"
+          },
+          {
+            "numerWpisu": 11,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "21.05.2004"
+          },
+          {
+            "numerWpisu": 12,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.08.2004"
+          },
+          {
+            "numerWpisu": 13,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.09.2004"
+          },
+          {
+            "numerWpisu": 14,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "13.10.2004"
+          },
+          {
+            "numerWpisu": 15,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.11.2004"
+          },
+          {
+            "numerWpisu": 16,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.12.2004"
+          },
+          {
+            "numerWpisu": 17,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.03.2005"
+          },
+          {
+            "numerWpisu": 18,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.05.2005"
+          },
+          {
+            "numerWpisu": 19,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.06.2005"
+          },
+          {
+            "numerWpisu": 20,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.07.2005"
+          },
+          {
+            "numerWpisu": 21,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.08.2005"
+          },
+          {
+            "numerWpisu": 22,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "05.12.2005"
+          },
+          {
+            "numerWpisu": 23,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "25.01.2006"
+          },
+          {
+            "numerWpisu": 24,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.02.2006"
+          },
+          {
+            "numerWpisu": 25,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "21.04.2006"
+          },
+          {
+            "numerWpisu": 26,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "05.09.2006"
+          },
+          {
+            "numerWpisu": 27,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "18.10.2006"
+          },
+          {
+            "numerWpisu": 28,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.11.2006"
+          },
+          {
+            "numerWpisu": 29,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.12.2006"
+          },
+          {
+            "numerWpisu": 30,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.01.2007"
+          },
+          {
+            "numerWpisu": 31,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.02.2007"
+          },
+          {
+            "numerWpisu": 32,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.04.2007"
+          },
+          {
+            "numerWpisu": 33,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "24.05.2007"
+          },
+          {
+            "numerWpisu": 34,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "20.07.2007"
+          },
+          {
+            "numerWpisu": 35,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.08.2007"
+          },
+          {
+            "numerWpisu": 36,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.10.2007"
+          },
+          {
+            "numerWpisu": 37,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "31.12.2007"
+          },
+          {
+            "numerWpisu": 38,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.03.2008"
+          },
+          {
+            "numerWpisu": 39,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.04.2008"
+          },
+          {
+            "numerWpisu": 40,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.07.2008"
+          },
+          {
+            "numerWpisu": 41,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "25.07.2008"
+          },
+          {
+            "numerWpisu": 42,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.10.2008"
+          },
+          {
+            "numerWpisu": 43,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "05.12.2008"
+          },
+          {
+            "numerWpisu": 44,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "22.09.2009"
+          },
+          {
+            "numerWpisu": 45,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.03.2010"
+          },
+          {
+            "numerWpisu": 46,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.08.2010"
+          },
+          {
+            "numerWpisu": 47,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.01.2011"
+          },
+          {
+            "numerWpisu": 48,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "12.08.2011"
+          },
+          {
+            "numerWpisu": 49,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "22.12.2011"
+          },
+          {
+            "numerWpisu": 50,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.01.2012"
+          },
+          {
+            "numerWpisu": 51,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.03.2012"
+          },
+          {
+            "numerWpisu": 52,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "30.03.2012"
+          },
+          {
+            "numerWpisu": 53,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "20.04.2012"
+          },
+          {
+            "numerWpisu": 54,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.06.2012"
+          },
+          {
+            "numerWpisu": 55,
+            "opis": "SPROSTOWANIE WPISU",
+            "dataWpisu": "22.05.2013"
+          },
+          {
+            "numerWpisu": 56,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.08.2013"
+          },
+          {
+            "numerWpisu": 57,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.06.2014"
+          },
+          {
+            "numerWpisu": 58,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.05.2015"
+          },
+          {
+            "numerWpisu": 59,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "15.01.2016"
+          },
+          {
+            "numerWpisu": 60,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "15.01.2016"
+          },
+          {
+            "numerWpisu": 61,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "25.02.2016"
+          },
+          {
+            "numerWpisu": 62,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.03.2016"
+          },
+          {
+            "numerWpisu": 63,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "19.09.2016"
+          },
+          {
+            "numerWpisu": 64,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "30.11.2016"
+          },
+          {
+            "numerWpisu": 65,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.10.2017"
+          },
+          {
+            "numerWpisu": 66,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.10.2017"
+          },
+          {
+            "numerWpisu": 67,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "01.02.2018"
+          },
+          {
+            "numerWpisu": 68,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.03.2018"
+          },
+          {
+            "numerWpisu": 69,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.04.2018"
+          },
+          {
+            "numerWpisu": 70,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 71,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 72,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 73,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 74,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 75,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 76,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 77,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 78,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2018"
+          },
+          {
+            "numerWpisu": 79,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "14.08.2018"
+          },
+          {
+            "numerWpisu": 80,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.10.2018"
+          },
+          {
+            "numerWpisu": 81,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 82,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 83,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 84,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 85,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 86,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 87,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 88,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 89,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2019"
+          },
+          {
+            "numerWpisu": 90,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.07.2019"
+          },
+          {
+            "numerWpisu": 91,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.08.2019"
+          },
+          {
+            "numerWpisu": 92,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.08.2019"
+          },
+          {
+            "numerWpisu": 93,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "14.01.2020"
+          },
+          {
+            "numerWpisu": 94,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "22.01.2020"
+          },
+          {
+            "numerWpisu": 95,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "13.05.2020"
+          },
+          {
+            "numerWpisu": 96,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "13.05.2020"
+          },
+          {
+            "numerWpisu": 97,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 98,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 99,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 100,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 101,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 102,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 103,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 104,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 105,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2020"
+          },
+          {
+            "numerWpisu": 106,
+            "opis": "SPROSTOWANIE WPISU",
+            "dataWpisu": "23.06.2020"
+          },
+          {
+            "numerWpisu": 107,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.07.2020"
+          },
+          {
+            "numerWpisu": 108,
+            "opis": "SPROSTOWANIE WPISU",
+            "dataWpisu": "24.08.2020"
+          },
+          {
+            "numerWpisu": 109,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.12.2020"
+          },
+          {
+            "numerWpisu": 110,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.03.2021"
+          },
+          {
+            "numerWpisu": 111,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.06.2021"
+          },
+          {
+            "numerWpisu": 112,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.06.2021"
+          },
+          {
+            "numerWpisu": 113,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.06.2021"
+          },
+          {
+            "numerWpisu": 114,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.06.2021"
+          },
+          {
+            "numerWpisu": 115,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.06.2021"
+          },
+          {
+            "numerWpisu": 116,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.06.2021"
+          },
+          {
+            "numerWpisu": 117,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.06.2021"
+          },
+          {
+            "numerWpisu": 118,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.06.2021"
+          },
+          {
+            "numerWpisu": 119,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "19.11.2021"
+          },
+          {
+            "numerWpisu": 120,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.11.2021"
+          },
+          {
+            "numerWpisu": 121,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "25.04.2022"
+          },
+          {
+            "numerWpisu": 122,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 123,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 124,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 125,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 126,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 127,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 128,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 129,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 130,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 131,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.06.2022"
+          },
+          {
+            "numerWpisu": 132,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "01.08.2022"
+          },
+          {
+            "numerWpisu": 133,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "20.10.2022"
+          },
+          {
+            "numerWpisu": 134,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.11.2022"
+          },
+          {
+            "numerWpisu": 135,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.11.2022"
+          },
+          {
+            "numerWpisu": 136,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.11.2022"
+          },
+          {
+            "numerWpisu": 137,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.12.2022"
+          },
+          {
+            "numerWpisu": 138,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "14.03.2023"
+          },
+          {
+            "numerWpisu": 139,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.04.2023"
+          },
+          {
+            "numerWpisu": 140,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.05.2023"
+          },
+          {
+            "numerWpisu": 141,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "01.06.2023"
+          },
+          {
+            "numerWpisu": 142,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 143,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 144,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 145,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 146,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 147,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 148,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 149,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 150,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "29.06.2023"
+          },
+          {
+            "numerWpisu": 151,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.07.2023"
+          },
+          {
+            "numerWpisu": 152,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2023"
+          },
+          {
+            "numerWpisu": 153,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.07.2023"
+          },
+          {
+            "numerWpisu": 154,
+            "opis": "SPROSTOWANIE WPISU",
+            "dataWpisu": "07.07.2023"
+          },
+          {
+            "numerWpisu": 155,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "31.08.2023"
+          },
+          {
+            "numerWpisu": 156,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "18.09.2023"
+          },
+          {
+            "numerWpisu": 157,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.11.2023"
+          },
+          {
+            "numerWpisu": 158,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.01.2024"
+          },
+          {
+            "numerWpisu": 159,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.03.2024"
+          },
+          {
+            "numerWpisu": 160,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "05.03.2024"
+          },
+          {
+            "numerWpisu": 161,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.03.2024"
+          },
+          {
+            "numerWpisu": 162,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "11.03.2024"
+          },
+          {
+            "numerWpisu": 163,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.04.2024"
+          },
+          {
+            "numerWpisu": 164,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.04.2024"
+          },
+          {
+            "numerWpisu": 165,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "15.05.2024"
+          },
+          {
+            "numerWpisu": 166,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.06.2024"
+          },
+          {
+            "numerWpisu": 167,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.06.2024"
+          },
+          {
+            "numerWpisu": 168,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.06.2024"
+          },
+          {
+            "numerWpisu": 169,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.06.2024"
+          },
+          {
+            "numerWpisu": 170,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2024"
+          },
+          {
+            "numerWpisu": 171,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "27.06.2024"
+          },
+          {
+            "numerWpisu": 172,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 173,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 174,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 175,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 176,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 177,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 178,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.07.2024"
+          },
+          {
+            "numerWpisu": 179,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.08.2024"
+          },
+          {
+            "numerWpisu": 180,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.08.2024"
+          },
+          {
+            "numerWpisu": 181,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.09.2024"
+          },
+          {
+            "numerWpisu": 182,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.09.2024"
+          },
+          {
+            "numerWpisu": 183,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.10.2024"
+          },
+          {
+            "numerWpisu": 184,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.11.2024"
+          },
+          {
+            "numerWpisu": 185,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "13.01.2025"
+          },
+          {
+            "numerWpisu": 186,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "31.03.2025"
+          },
+          {
+            "numerWpisu": 187,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "12.05.2025"
+          },
+          {
+            "numerWpisu": 188,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 189,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 190,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 191,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 192,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 193,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 194,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 195,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 196,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.06.2025"
+          },
+          {
+            "numerWpisu": 197,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "05.09.2025"
+          },
+          {
+            "numerWpisu": 198,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.09.2025"
+          },
+          {
+            "numerWpisu": 199,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.10.2025"
+          },
+          {
+            "numerWpisu": 200,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "20.10.2025"
+          },
+          {
+            "numerWpisu": 201,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "31.10.2025"
+          },
+          {
+            "numerWpisu": 202,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.11.2025"
+          },
+          {
+            "numerWpisu": 203,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.11.2025"
+          },
+          {
+            "numerWpisu": 204,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "15.12.2025"
+          },
+          {
+            "numerWpisu": 205,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "03.02.2026"
+          },
+          {
+            "numerWpisu": 206,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "20.02.2026"
+          },
+          {
+            "numerWpisu": 207,
+            "opis": "SPROSTOWANIE WPISU",
+            "dataWpisu": "24.02.2026"
+          },
+          {
+            "numerWpisu": 208,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.04.2026"
+          },
+          {
+            "numerWpisu": 209,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 210,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 211,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 212,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 213,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 214,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 215,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 216,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 217,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.06.2026"
+          },
+          {
+            "numerWpisu": 218,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.08.2026"
+          },
+          {
+            "numerWpisu": 219,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "26.08.2026"
+          },
+          {
+            "numerWpisu": 220,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.09.2026"
+          },
+          {
+            "numerWpisu": 221,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "06.10.2026"
+          },
+          {
+            "numerWpisu": 222,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "09.10.2026"
+          }
+        ]
+      },
+      "dane": {
+        "dzial1": {
+          "danePodmiotu": {
+            "nazwa": [
+              {
+                "nazwa": "POLSKI KONCERN NAFTOWY ORLEN SPÓŁKA AKCYJNA",
+                "nrWpisuWykr": "151",
+                "nrWpisuWprow": "1"
+              },
+              {
+                "nazwa": "ORLEN SPÓŁKA AKCYJNA",
+                "nrWpisuWprow": "151"
+              }
+            ],
+            "formaPrawna": [
+              {
+                "formaPrawna": "SPÓŁKA AKCYJNA",
+                "nrWpisuWprow": "1"
+              }
+            ],
+            "identyfikatory": [
+              {
+                "identyfikatory": {
+                  "regon": "61018820100000"
+                },
+                "nrWpisuWykr": "34",
+                "nrWpisuWprow": "1"
+              },
+              {
+                "identyfikatory": {
+                  "regon": "61018820100000",
+                  "nip": "7740001454"
+                },
+                "nrWpisuWprow": "34"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

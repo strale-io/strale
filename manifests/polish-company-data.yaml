@@ -20,7 +20,7 @@ input_schema:
 output_schema:
   type: object
   example:
-    status: active
+    status: deregistered
     address: null
     krs_number: "0000033945"
     legal_form: SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ
@@ -35,6 +35,7 @@ output_schema:
         - "null"
     status:
       type: string
+      enum: ["active", "deregistered", "unknown"]
     address:
       type: string
     krs_number:
@@ -74,7 +75,7 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      krs_number: "0000033945"
+      krs_number: "0000028860"
     expected_fields:
       - field: status
         operator: not_null
@@ -128,6 +129,14 @@ output_field_reliability:
   share_capital: guaranteed
   jurisdiction: guaranteed
 limitations:
+  - title: Official registry data access
+    text: "Official per-entity API terms read on 2026-10-26: https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie. Terms verdict and attribution obligations are recorded in apps/api/src/lib/vendor-terms.ts."
+    category: coverage
+    severity: info
+  - title: Registry status interpretation
+    text: "Status reflects the latest registration or registry-deletion entry in the full KRS extract header; unknown when neither is present. Historical field removal is not entity deregistration. It does not classify liquidation or bankruptcy."
+    category: coverage
+    severity: info
   - title: Covers KRS-registered entities only — Polish sole traders registered in CEIDG are not included
     text: >-
       Data from KRS — coverage limited to entities registered in the National Court Register; sole traders (CEIDG) not

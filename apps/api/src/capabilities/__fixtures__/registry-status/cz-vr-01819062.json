@@ -1,0 +1,110 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/01819062",
+    "captured_at": "2026-10-26T11:32:29.683218+00:00",
+    "http_status": 200,
+    "raw_sha256": "a0189ea4799faa6a6e0a32c509fabcbd121cf3dc9531125e7fb4de406f314826",
+    "note": "Live read-only official registry response; projection of executor fields. Personal identity and representative details omitted."
+  },
+  "response": {
+    "zaznamy": [
+      {
+        "primarniZaznam": true,
+        "stavSubjektu": "AKTIVNI",
+        "statutarniOrgany": [
+          {
+            "typOrganu": "STATUTARNI_ORGAN",
+            "clenoveOrganu": [
+              {
+                "datumVymazu": "2018-06-09",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2016-12-02",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2020-09-15",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2020-05-16",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2019-11-29",
+                    "nazev": "jednatelka"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2019-07-02",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2018-09-06",
+                    "zanikFunkce": "2019-06-11",
+                    "nazev": "Jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2019-12-28",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2019-09-09",
+                    "zanikFunkce": "2019-11-29",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2018-09-17",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2016-12-02",
+                    "zanikFunkce": "2018-09-06",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2019-09-09",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2019-06-11",
+                    "zanikFunkce": "2019-09-09",
+                    "nazev": "jednatel"
+                  }
+                }
+              },
+              {
+                "datumVymazu": "2020-11-19",
+                "clenstvi": {
+                  "funkce": {
+                    "vznikFunkce": "2019-11-29",
+                    "zanikFunkce": "2020-09-15",
+                    "nazev": "jednatelka"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "typOrganu": "LIKVIDATOR",
+            "clenoveOrganu": [
+              {
+                "clenstvi": {
+                  "textZaOsobu": "provozovna Kopečná 231/10, 602 00 Brno"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
