@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: employment-cost-estimate
-name: Employment Cost Estimate
-description: >-
-  Calculate total employer cost and net salary estimate for 20+ countries. Includes social contributions, pension,
-  income tax.
+name: "Employment Cost Estimate"
+description: "Estimate the total employer cost and the net salary for a role in 20+ countries, including social contributions, pension and income tax."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

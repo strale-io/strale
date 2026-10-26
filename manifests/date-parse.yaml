@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: date-parse
-name: Date Parse
-description: >-
-  Parse ambiguous date strings into ISO 8601. Handles '3/4/25', 'March 4th', '4. mars 2025', '2025-W14'. Detects
-  ambiguity.
+name: "Date Parser"
+description: "Turn ambiguous dates such as '3/4/25', 'March 4th', '4. mars 2025' or '2025-W14' into ISO 8601, and flag the ambiguous ones."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

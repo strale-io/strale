@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: robots-txt-parse
-name: Robots.txt Parse
-description: >-
-  Fetch and parse a website's robots.txt. Returns rules per user-agent, sitemaps, crawl delays, and whether all crawlers
-  are blocked.
+name: "Robots.txt Parser"
+description: "Fetch and read a site's robots.txt: rules for each crawler, sitemaps, crawl delays, and whether all crawlers are blocked."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none

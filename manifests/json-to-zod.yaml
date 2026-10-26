@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: json-to-zod
-name: JSON to Zod
-description: Convert JSON to Zod validation schemas. Auto-detects emails, URLs, UUIDs, dates for refined validators. Algorithmic.
+name: "JSON to Zod"
+description: "Turn JSON into Zod validation schemas, with refined checks for emails, URLs, UUIDs and dates."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none

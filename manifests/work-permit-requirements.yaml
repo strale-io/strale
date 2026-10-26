@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: work-permit-requirements
-name: Work Permit Requirements
-description: Check work permit requirements by nationality and destination. Covers EU free movement, Schengen, Nordic rules.
+name: "Work Permit Requirements"
+description: "Check work permit rules by nationality and destination, covering EU free movement, Schengen and Nordic rules."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

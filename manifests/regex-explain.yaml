@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: regex-explain
-name: Regex Explain
-description: Explain a regular expression in plain English with token-by-token breakdown. Optionally test against sample strings.
+name: "Regex Explainer"
+description: "Explain a regular expression in plain English, piece by piece, and optionally test it against sample strings."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

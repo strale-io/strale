@@ -1,8 +1,6 @@
 slug: cz-bank-account-validate
-name: Czech Bank Account Validator
-description: >-
-  Validate Czech bank account in domestic BBAN format '[prefix-]account/bank_code' using mod-11 weighted checksums on
-  prefix and account parts.
+name: "Czech Bank Account Validation"
+description: "Check a Czech domestic bank account number ([prefix-]account/bank code) with the mod-11 checksums on its prefix and account parts."
 category: validation
 cost_class: free_unlimited
 quota_window: none

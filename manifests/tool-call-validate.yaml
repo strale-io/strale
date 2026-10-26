@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: tool-call-validate
-name: Tool Call Validate
-description: Validate an LLM tool call against a JSON Schema. Auto-fixes type mismatches (string '42' → number 42). Algorithmic.
+name: "Tool Call Validation"
+description: "Check an LLM's tool call against its JSON Schema and fix type mismatches, such as the string '42' where a number belongs."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none

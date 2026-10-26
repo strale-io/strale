@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: job-posting-analyze
-name: Job Posting Analyze
-description: >-
-  Analyze a job posting. Extracts title, skills, salary range, remote policy, benefits, red flags, culture signals.
-  Accepts URL or text.
+name: "Job Posting Analysis"
+description: "Read a job posting from a URL or text: title, skills, salary range, remote policy, benefits, culture signals and red flags."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

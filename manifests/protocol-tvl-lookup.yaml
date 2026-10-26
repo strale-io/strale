@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: protocol-tvl-lookup
-name: Protocol TVL Lookup
-description: >-
-  Get the current Total Value Locked (TVL), chain distribution, category, audit status, and metadata for any DeFi
-  protocol. Covers 7,000+ protocols across 500+ chains via DeFi Llama.
+name: "Protocol TVL Lookup"
+description: "Get a DeFi protocol's total value locked, its split across chains, category and audit status. Covers 7,000+ protocols on 500+ chains, from DeFi Llama."
 category: web3
 cost_class: free_unlimited
 quota_window: none

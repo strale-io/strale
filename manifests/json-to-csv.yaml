@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: json-to-csv
-name: JSON to CSV
-description: Convert a JSON array of objects to CSV format. Supports custom delimiters. Pure algorithmic — instant and cheap.
+name: "JSON to CSV"
+description: "Turn a JSON array of objects into CSV, with the delimiter you choose."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

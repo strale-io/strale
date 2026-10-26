@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: sql-optimize
-name: SQL Optimize
-description: >-
-  Analyze and optimize a SQL query for performance. Returns rewritten query, index recommendations, and explanation of
-  improvements.
+name: "SQL Optimiser"
+description: "Analyse a SQL query for performance. Returns a rewritten query, index suggestions and what each change improves."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: stablecoin-flow-check
-name: Stablecoin Flow Check
-description: >-
-  Check stablecoin supply and flows. Query by chain (stablecoin supply on Ethereum, Base, etc.), by stablecoin (USDC
-  market cap and circulation), or get the overall market summary. Data from DeFi Llama.
+name: "Stablecoin Flow Check"
+description: "Get stablecoin supply and flows by chain, by stablecoin (such as USDC's market cap and circulation) or for the whole market, from DeFi Llama."
 category: web3
 cost_class: free_unlimited
 quota_window: none

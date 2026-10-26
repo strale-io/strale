@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: xml-to-json
-name: XML to JSON
-description: Parse XML string to JSON. Preserves attributes (as @attr), handles CDATA, auto-types values. Algorithmic.
+name: "XML to JSON"
+description: "Turn XML into JSON, keeping attributes (as @attr), handling CDATA and typing values."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

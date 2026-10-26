@@ -1,8 +1,6 @@
 slug: hacker-news-search
-name: Hacker News Search
-description: >-
-  Search Hacker News stories and comments via the official Algolia API: title, URL, points, author, comment
-  count, date and text, by relevance or date.
+name: "Hacker News Search"
+description: "Search Hacker News stories and comments: title, link, points, author, comment count, date and text, by relevance or date."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

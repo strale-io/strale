@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: google-search
-name: Google Search
-description: Perform a Google search and return structured results. Returns title, URL, snippet, position for each result.
+name: "Google Search"
+description: "Search Google and get structured results: title, link, snippet and position for each."
 category: web-scraping
 cost_class: paid_prepaid
 quota_window: none

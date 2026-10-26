@@ -1,8 +1,6 @@
 slug: company-news
-name: Company News
-description: >-
-  Search global news for a company. Returns recent articles with source, date, and sentiment analysis. Covers 100+
-  languages via GDELT, updating every 15 minutes.
+name: "Company News"
+description: "Search news about a company in 100+ languages, updated every 15 minutes. Returns recent articles with source, date and sentiment."
 category: company-data
 cost_class: free_quota
 quota_window: daily

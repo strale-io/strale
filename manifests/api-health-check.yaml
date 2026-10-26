@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: api-health-check
-name: API Health Check
-description: "Test an API endpoint: send request, validate response status and schema. Integration testing as a service."
+name: "API Health Check"
+description: "Call an API endpoint and check the response status and schema."
 category: validation
 cost_class: free_unlimited
 quota_window: none

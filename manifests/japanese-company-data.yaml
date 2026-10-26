@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: japanese-company-data
-name: Japanese Company Data
-description: >-
-  Look up Japanese company data from the National Tax Agency corporate number system. Accepts 13-digit corporate number
-  or fuzzy company name.
+name: "Japanese Company Data"
+description: "Look up a Japanese company in the National Tax Agency's corporate number system by its 13-digit number or name."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: link-extract
-name: Link Extract
-description: Extract all links from a page with context. Filter by internal/external. Returns URL, anchor text, rel attributes.
+name: "Link Extraction"
+description: "List every link on a page with its anchor text and rel attributes, internal or external."
 category: web-scraping
 cost_class: free_unlimited
 quota_window: none

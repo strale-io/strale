@@ -1,8 +1,6 @@
 slug: croatian-company-data
-name: Croatian Company Data
-description: >-
-  Look up Croatian company data from the Sudski registar (Ministry of Justice Court Register). Accepts OIB (11 digits)
-  or MBS (court registry number). Returns company name, status, address, legal form, VAT.
+name: "Croatian Company Data"
+description: "Look up a Croatian company in the Court Register (Sudski registar) by OIB or MBS. Returns name, status, address, legal form and VAT number."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

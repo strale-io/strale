@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: http-to-curl
-name: HTTP to cURL
-description: >-
-  Convert HTTP request parameters to curl command + equivalent fetch/axios code. Supports auth, headers, body.
-  Algorithmic.
+name: "HTTP to cURL"
+description: "Turn HTTP request details into a curl command, with the same request as fetch and axios code. Handles auth, headers and body."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none

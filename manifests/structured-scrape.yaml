@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: structured-scrape
-name: Structured Scrape
-description: >-
-  Extract structured data from any URL using a caller-defined JSON schema. Browserless renders the page, AI maps content
-  to your schema.
+name: "Structured Page Extraction"
+description: "Pull data from a page into the JSON schema you define. The page is rendered, then AI maps its content to your fields."
 category: web-scraping
 cost_class: paid_prepaid
 quota_window: none
