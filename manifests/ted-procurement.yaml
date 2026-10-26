@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: ted-procurement
-name: EU Procurement Tender Search
-description: >-
-  Search EU public procurement tenders on TED (Tenders Electronic Daily). Filter by keyword, country, and CPV code.
-  Returns tender titles, authorities, values, deadlines, and links.
+name: "EU Tender Search"
+description: "Search EU public tenders on TED by keyword, country and CPV code: title, contracting authority, value, deadline and link."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

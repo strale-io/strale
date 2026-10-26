@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: api-docs-generate
-name: API Docs Generate
-description: >-
-  Generate markdown API documentation from an OpenAPI spec or natural language description. Returns documentation with
-  parameters, examples, error codes.
+name: "API Docs Generator"
+description: "Write Markdown API documentation from an OpenAPI spec or a description, with parameters, examples and error codes."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

@@ -1,8 +1,6 @@
 slug: domain-age-check
-name: Domain Age Check
-description: >-
-  Quick domain registration age lookup. Returns creation date, age in days, registrar, and
-  expiry date. Useful for fraud detection — newly registered domains are higher risk.
+name: "Domain Age Check"
+description: "Find when a domain was registered: creation date, age in days, registrar and expiry. A newly registered domain is a common fraud signal."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

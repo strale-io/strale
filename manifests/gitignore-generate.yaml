@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: gitignore-generate
-name: Gitignore Generate
-description: >-
-  Generate .gitignore from language/framework/IDE combinations. Covers TypeScript, Python, Go, Rust, Java, React,
-  Next.js, Django, VSCode, IntelliJ. Algorithmic.
+name: "Gitignore Generator"
+description: "Generate a .gitignore for your languages, frameworks and editors, from TypeScript, Python, Go and Rust to Next.js, Django, VS Code and IntelliJ."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none

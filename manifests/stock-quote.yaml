@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: stock-quote
-name: Stock Quote
-description: >-
-  Get real-time stock quote data for any publicly traded company. Accepts ticker symbols (e.g. AAPL, VOLV-B.ST). Returns
-  price, change, volume, market state.
+name: "Stock Quote"
+description: "Get a live quote for a listed company by ticker, such as AAPL or VOLV-B.ST: price, change, volume and market status."
 category: financial
 cost_class: free_unlimited
 quota_window: none

@@ -1,9 +1,6 @@
 slug: beneficial-ownership-lookup
-name: Beneficial Ownership Lookup (UK)
-description: >-
-  Look up UK beneficial ownership (UBO / PSC) information for a company. Returns individuals who ultimately own or
-  control the entity, their ownership percentage, and the ownership chain. Uses Companies House Persons of Significant
-  Control. UK-only — non-GB inputs return a clear coverage notice rather than a fabricated result.
+name: "UK Beneficial Ownership"
+description: "Find the people with significant control of a UK company, from Companies House: who ultimately owns or controls it, their share, and the ownership chain. UK companies only."
 category: compliance
 cost_class: free_quota
 quota_window: daily

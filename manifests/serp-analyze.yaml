@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: serp-analyze
-name: SERP Analyze
-description: >-
-  Analyze Google search results for a keyword. Returns organic results, featured snippet, People Also Ask, SERP
-  features.
+name: "Search Results Analysis"
+description: "Analyse Google results for a keyword: organic results, featured snippet, People Also Ask and other result features."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

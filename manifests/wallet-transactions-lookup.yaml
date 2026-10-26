@@ -5,8 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: wallet-transactions-lookup
-name: Wallet Transactions Lookup
-description: "Get recent ETH transfers to and from a wallet on Ethereum mainnet: up to 50 with hash, value, counterparty, timestamp and direction."
+name: "Wallet Transactions Lookup"
+description: "Get a wallet's recent ETH transfers on Ethereum mainnet: up to 50, with hash, value, counterparty, time and direction."
 category: web3
 cost_class: free_quota
 quota_window: daily

@@ -111,6 +111,49 @@ export function hashBlockSource(sourceText) {
   return createHash("sha256").update(normalizeNewlines(sourceText), "utf8").digest("hex");
 }
 
+// ---------------------------------------------------------------------------
+// Migration data files. A block whose rows live in a separate module declares
+// it inside its own body with a line comment:
+//
+//   // migration-data: apps/api/src/lib/catalogue-copy-0123.ts
+//
+// (path relative to the repo root). The block's hash then covers the block
+// text AND each declared file's content, so editing the data fails
+// BLOCK_HASH_MISMATCH exactly as editing the block would. The declaration is
+// itself inside the hashed block text, so removing it is also a hash change.
+// A block with no declaration hashes exactly as before (hashBlockSource of
+// its text alone), so every existing ledger row is unaffected.
+// ---------------------------------------------------------------------------
+
+const MIGRATION_DATA_RE = /^\s*\/\/\s*migration-data:\s*(\S+)\s*$/gm;
+
+/** Repo-relative paths a block declares with `// migration-data: <path>`, in order. */
+export function declaredDataFiles(sourceText) {
+  return [...normalizeNewlines(sourceText).matchAll(MIGRATION_DATA_RE)].map((m) => m[1]);
+}
+
+/**
+ * The block's ledger hash: its source text alone when it declares no data
+ * file, otherwise its text followed by each declared file's path and content.
+ * Returns the missing paths too, so the checker can report them.
+ */
+export function hashBlockWithData(root, sourceText) {
+  const files = declaredDataFiles(sourceText);
+  if (files.length === 0) return { sha256: hashBlockSource(sourceText), dataFiles: [], missing: [] };
+  let text = normalizeNewlines(sourceText);
+  const missing = [];
+  for (const file of files) {
+    const abs = resolve(root, file);
+    if (!existsSync(abs)) {
+      missing.push(file);
+      text += `\n// migration-data ${file}\n<missing>`;
+      continue;
+    }
+    text += `\n// migration-data ${file}\n${normalizeNewlines(readFileSync(abs, "utf8"))}`;
+  }
+  return { sha256: hashBlockSource(text), dataFiles: files, missing };
+}
+
 /**
  * Best-effort title: the nearest contiguous `//` banner comment
  * immediately preceding the block's start line, if it matches the
@@ -284,11 +327,14 @@ export function computeCurrentBlocks(root) {
   return ranges.map((range) => {
     const sourceText = blockSourceText(lines, range);
     const { columns_written } = extractColumnsWritten(sourceText);
+    const { sha256, dataFiles, missing } = hashBlockWithData(root, sourceText);
     return {
       functionName: range.functionName,
       title: extractTitle(lines, range),
       columns_written,
-      sha256: hashBlockSource(sourceText),
+      sha256,
+      dataFiles, // declared `// migration-data:` files; covered by sha256
+      missingDataFiles: missing,
       startLine: range.startLine, // 0-based; for git-blame date lookup only, never serialized into the ledger
     };
   });
@@ -332,6 +378,13 @@ export function checkLedger(root) {
   }
 
   for (const cur of current) {
+    for (const file of cur.missingDataFiles ?? []) {
+      findings.push({
+        code: "MIGRATION_DATA_MISSING",
+        block: ledgerByFn.get(cur.functionName)?.id ?? cur.functionName,
+        detail: `${cur.functionName} declares \`// migration-data: ${file}\` but that file does not exist — the block's data cannot be hashed (or imported)`,
+      });
+    }
     if (!ledgerByFn.has(cur.functionName)) {
       findings.push({
         code: "UNLEDGERED_BLOCK",

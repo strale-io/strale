@@ -1,8 +1,6 @@
 slug: postal-code-lookup
-name: Postal Code Lookup
-description: >-
-  Look up location information from a postal/ZIP code. Returns city, region/state, and
-  approximate coordinates. Covers 60+ countries via Zippopotam.us.
+name: "Postal Code Lookup"
+description: "Look up a postal or ZIP code in 60+ countries: city, region and approximate coordinates."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: ticker-lookup
-name: Ticker Lookup
-description: Find stock ticker symbols by company name. Returns matches with symbol, exchange, and type.
+name: "Ticker Lookup"
+description: "Find a company's stock ticker by name: symbol, exchange and security type."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

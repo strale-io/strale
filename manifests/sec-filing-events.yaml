@@ -1,8 +1,6 @@
 slug: sec-filing-events
-name: SEC Filing Events
-description: >-
-  Get recent 8-K filing events for US public companies from SEC EDGAR. Returns leadership changes, funding events,
-  acquisitions, material agreements, and financial results.
+name: "SEC Filing Events"
+description: "Get recent 8-K events for a US listed company from SEC EDGAR: leadership changes, financing, acquisitions, material agreements and results."
 category: company-data
 cost_class: free_quota
 quota_window: daily

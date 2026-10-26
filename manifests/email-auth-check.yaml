@@ -1,8 +1,6 @@
 slug: email-auth-check
-name: Email Authentication Check
-description: >-
-  A domain's email authentication posture from live DNS: SPF, DMARC policy, MX hosts, and DKIM selector probing — the
-  pre-send deliverability check for outreach agents.
+name: "Email Authentication Check"
+description: "Check a domain's email authentication from live DNS: SPF, DMARC policy, mail servers and DKIM selectors. The check to run before sending outreach."
 category: validation
 cost_class: free_unlimited
 quota_window: none

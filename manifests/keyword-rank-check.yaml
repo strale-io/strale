@@ -1,8 +1,6 @@
 slug: keyword-rank-check
-name: Keyword Rank Check
-description: >-
-  Check where a domain ranks in Google search results for a keyword. Returns the position, page, matching
-  result, and the competitors ranking above it within the scanned depth.
+name: "Keyword Rank Check"
+description: "Find where a domain ranks on Google for a keyword: position, page, the matching result, and the competitors ranking above it. Scans the top 10 results by default (up to 100), so a domain not found may still rank lower."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

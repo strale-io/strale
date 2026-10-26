@@ -1,8 +1,6 @@
 slug: eth-address-validate
-name: Ethereum Address Validation
-description: >-
-  Validate an Ethereum address. Checks 0x-prefixed 40-hex format and EIP-55 mixed-case checksum to catch
-  single-character typos. Returns checksummed (canonical) form. Pure algorithmic — fast and cheap.
+name: "Ethereum Address Validation"
+description: "Check an Ethereum address: the 0x format and the EIP-55 checksum that catches one-character typos. Returns the checksummed form."
 category: validation
 cost_class: free_unlimited
 quota_window: none

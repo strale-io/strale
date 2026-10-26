@@ -1,8 +1,6 @@
 slug: us-product-recall-search
-name: US Product Recall Search
-description: >-
-  Search official US CPSC consumer product recalls by keyword or manufacturer. Returns recall title, date,
-  hazard description, affected products, and manufacturer for supplier and product due-diligence checks.
+name: "US Product Recall Search"
+description: "Search US CPSC product recalls by keyword or manufacturer: title, date, hazard, affected products and manufacturer."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

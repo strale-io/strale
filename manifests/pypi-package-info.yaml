@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: pypi-package-info
-name: PyPI Package Info
-description: "Fetch Python package metadata from PyPI: version, dependencies, Python compatibility, release history, license."
+name: "PyPI Package Info"
+description: "Get a Python package's details from PyPI: version, dependencies, supported Python versions, release history and licence."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

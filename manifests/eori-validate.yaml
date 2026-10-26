@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: eori-validate
-name: EORI Validation
-description: >-
-  Validate an EORI (Economic Operators Registration and Identification) number against the EU customs validation
-  service. Returns trader name and address if valid.
+name: "EORI Validation"
+description: "Check an EORI customs number against the EU validation service. Returns the trader's name and address when it is valid."
 category: validation
 cost_class: free_unlimited
 quota_window: none

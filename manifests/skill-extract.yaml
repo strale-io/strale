@@ -1,8 +1,6 @@
 slug: skill-extract
-name: Skill Extract
-description: >-
-  Extract skills from job descriptions or CVs. Categorizes 500+ skills into technical, soft skills, tools,
-  certifications, languages.
+name: "Skill Extraction"
+description: "Pull skills out of a job description or CV and sort them into technical skills, soft skills, tools, certifications and languages."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

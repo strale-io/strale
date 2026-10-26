@@ -5,10 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: ens-resolve
-name: ENS Resolve
-description: >-
-  Resolve an ENS name to its Ethereum address. Supports all ENS names including .eth, DNS names on ENS, and subdomains.
-  Also returns avatar URL and resolver contract.
+name: "ENS Resolver"
+description: "Resolve an ENS name, including .eth names, DNS names on ENS and subdomains, to its Ethereum address, avatar and resolver."
 category: web3
 cost_class: free_unlimited
 quota_window: none

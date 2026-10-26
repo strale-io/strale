@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: customs-duty-lookup
-name: Customs Duty Lookup
-description: >-
-  Look up EU customs duty rates by HS code and origin country. Returns duty rate, preferential rates, anti-dumping
-  status.
+name: "Customs Duty Lookup"
+description: "Look up EU customs duty by HS code and origin country: the duty rate, preferential rates and anti-dumping status."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

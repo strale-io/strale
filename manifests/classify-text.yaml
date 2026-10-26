@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: classify-text
-name: Text Classification
-description: >-
-  Classify text into categories. Optionally provide custom categories. Returns primary category, confidence scores,
-  topic keywords, and summary.
+name: "Text Classification"
+description: "Sort text into categories, your own or general ones. Returns the main category, confidence scores, topic keywords and a summary."
 category: text-processing
 cost_class: paid_prepaid
 quota_window: none

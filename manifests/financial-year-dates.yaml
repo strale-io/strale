@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: financial-year-dates
-name: Financial Year Dates
-description: Get fiscal year start/end, tax filing deadlines, VAT filing frequency for 42+ countries.
+name: "Financial Year Dates"
+description: "Get a country's financial year, tax filing deadlines and VAT filing frequency, for 42+ countries."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

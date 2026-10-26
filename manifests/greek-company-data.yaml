@@ -1,9 +1,6 @@
 slug: greek-company-data
-name: Greek Company Data
-description: >-
-  Look up Greek company data from the GEMI Open Data API (Γενικό Εμπορικό Μητρώο). Accepts a GEMI registry number or
-  Greek tax ID (AFM, 9 digits). Returns name, legal form, address, status, primary activity, directors, and the derived
-  VAT number (EL + AFM).
+name: "Greek Company Data"
+description: "Look up a Greek company in GEMI, the General Commercial Registry, by GEMI number or 9-digit tax ID (AFM). Returns name, legal form, address, status, main activity, directors and VAT number."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
