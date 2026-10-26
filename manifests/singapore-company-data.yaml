@@ -160,3 +160,8 @@ limitations:
       published as open data but should not be reused for direct marketing per the Singapore Open Data Licence.
     category: legal
     severity: warning
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

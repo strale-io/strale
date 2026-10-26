@@ -23,7 +23,7 @@ async function lookupCompany(query: string, isNumber: boolean): Promise<Record<s
     ? `https://www.houjin-bangou.nta.go.jp/henkorireki-johoto.html?selHouzinNo=${query}`
     : `https://www.houjin-bangou.nta.go.jp/kensaku-kekka.html?selHouzinNm=${encodeURIComponent(query)}`;
 
-  const html = await fetchRenderedHtml(searchUrl);
+  const html = await fetchRenderedHtml(searchUrl, { source: "strale" });
   const text = htmlToText(html);
 
   if (text.includes("該当する") && text.includes("ありません") || text.length < 200) {

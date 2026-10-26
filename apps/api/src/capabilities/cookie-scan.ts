@@ -1,6 +1,9 @@
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { STRALE_USER_AGENT, assertNotBlockStatus } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
@@ -139,6 +142,8 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   }
   // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
   assertTargetAllowed(url);
+  // DEC-20261023-A: robots.txt before either request.
+  await assertRobotsAllowed(url);
 
   const parsedUrl = new URL(url);
   const domain = parsedUrl.hostname;
@@ -151,18 +156,26 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
       // safeFetch follows up to 3 hops with per-hop re-validation
       signal: AbortSignal.timeout(15000),
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        // DEC-20261023-A: honest identification. This was a spoofed
+        // desktop-Chrome user agent until 2026-10-24.
+        "User-Agent": STRALE_USER_AGENT,
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     });
+    // Only the headers are read here; release the body (#428).
+    await discardBody(httpResponse, "cookie-scan: header-only fetch");
+    // A block ends the scan: the render below would be the same request
+    // through another route, which the data-access rule forbids.
+    assertNotBlockStatus(url, httpResponse.status);
 
     // Parse Set-Cookie headers
     const setCookieHeaders = httpResponse.headers.getSetCookie?.() ?? [];
     for (const header of setCookieHeaders) {
       cookies.push(parseSetCookieHeader(header));
     }
-  } catch {
-    // HTTP fetch failed — we'll still try Browserless
+  } catch (err) {
+    if (isCapabilityRefusal(err)) throw err;
+    // HTTP fetch failed (transport error, timeout) — we'll still try Browserless
   }
 
   // Step 2: Render with Browserless and analyze with Claude

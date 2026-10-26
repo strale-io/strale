@@ -169,7 +169,7 @@ const INPUT_REJECTION_PATTERNS = [
 // sent an unsupported input and the executor correctly refused it — but the
 // phrasing doesn't contain "required"/"invalid input"/"must provide", so it
 // needs its own pattern set. Not a capability bug and not an upstream
-// failure: a correct refusal per DEC-20260428-A must not trip breakers or
+// failure: a correct refusal per DEC-20261023-A (formerly DEC-20260428-A) must not trip breakers or
 // count against quality signal (feedback_refusal_is_not_a_fault.md).
 //
 // Phase-4 tail fix (2026-08-17 review, LOW-7): anchored on the fuller real

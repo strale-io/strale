@@ -148,3 +148,11 @@ limitations:
       company is counted three times; it is not a distinct-person figure.
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: haveibeenpwned
+  checks: pending
+  checks_note: "Pending: resale is recorded as permitted in vendor-terms.ts (CC BY 4.0, attribution); the rule's other vendor conditions (no logins, vendor not sued over circumvention) are not yet recorded."

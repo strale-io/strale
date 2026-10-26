@@ -1,4 +1,7 @@
 #!/bin/sh
-# Fast structural handoff checks before every commit (any tool, any worktree).
+# Regenerate the generated indexes from the staged tree and stage them
+# (archive/README.md, handoff/README.md, and the legacy-authority inventory
+# when an inventory target is staged), then the fast structural handoff checks.
 # Installed by `npm run hooks:install` (also `npm ci` via prepare): git config core.hooksPath .githooks
+node scripts/handoff/regenerate-indexes.mjs || exit 1
 exec node scripts/handoff/handoff-check.mjs --mode pre-commit

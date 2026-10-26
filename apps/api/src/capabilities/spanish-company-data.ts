@@ -7,7 +7,7 @@
 // BOE): free tier 200 req/day without auth, officers ("cargos") included —
 // the leg Openapi ES-Advanced never carried.
 //
-// DEC-20260428-A Tier 2 compliance:
+// Vendor lane of DEC-20261023-A (formerly DEC-20260428-A Tier 2) compliance:
 //   - underlying data is statutorily public (BORME, Ley 37/2007 reuse)
 //   - vendor publishes machine-readable licence + attribution requirements
 //     in-band (_source_catalog on every response; verified live 2026-08-12)
@@ -258,7 +258,8 @@ registerCapability("spanish-company-data", async (input: CapabilityInput) => {
     // officers" is an affirmative claim this response cannot make then.
     legal_representatives: representatives,
     total_legal_representatives: representatives?.length ?? null,
-    // Per-fact primary-source provenance (DEC-20260428-A Tier 2): the most
+    // Per-fact primary-source provenance (required by DEC-20260428-A Tier 2;
+    // DEC-20261023-A dropped the requirement but this keeps it): the most
     // recent BORME acts with their registral references, so every officer or
     // status fact can be traced to a specific gazette publication.
     recent_borme_acts: (data.events ?? []).slice(0, 5).map((e) => ({

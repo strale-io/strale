@@ -117,3 +117,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Specify the cron implementation (Quartz, AWS EventBridge, systemd) for accurate explanation of non-standard fields
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

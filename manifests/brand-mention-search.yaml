@@ -151,3 +151,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Reduce max_results to shrink the number of search results analyzed per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: serper
+  checks: pending
+  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."

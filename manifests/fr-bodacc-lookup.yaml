@@ -135,3 +135,8 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Read most_recent_insolvency.judgment_nature and judgment_date to determine current status.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

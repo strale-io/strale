@@ -89,3 +89,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide samples with null values for optional fields, or manually adjust Field(default=None) after generation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

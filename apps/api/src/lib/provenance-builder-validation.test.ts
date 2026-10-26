@@ -58,7 +58,7 @@ describe("validateProvenanceAtBoundary — CRIT-10 / F-AUDIT-17", () => {
     });
   });
 
-  describe("DEC-20260428-A Tier-2 completeness", () => {
+  describe("vendor-lane disclosure completeness (DEC-20261023-A; formerly DEC-20260428-A Tier 2)", () => {
     it("accepts vendor_scraping when upstream_vendor + primary_source_reference both present", () => {
       const provenance = {
         source: "vendor-name",

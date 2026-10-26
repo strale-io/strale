@@ -80,7 +80,7 @@ const FIXED_UPSTREAM_SLUGS: Record<string, string[]> = {
  *   - A third, separately-flagged case (irish/latvian/lithuanian-company-data,
  *     swiss-company-data) turned out to be stale rather than a gap: those
  *     four were migrated off Browserless entirely onto direct-API executors
- *     under DEC-20260428-A (commits incl. 7311319) and no longer import
+ *     under DEC-20260428-A, since superseded by DEC-20261023-A (commits incl. 7311319) and no longer import
  *     browserless-extract.js at all. They are correctly capability_type=
  *     'stable_api' today and must NOT be added to any Browserless list.
  *

@@ -147,7 +147,7 @@ registerCapability("country-economic-indicators", async (input: CapabilityInput)
       source: "api.worldbank.org",
       fetched_at: new Date().toISOString(),
       upstream_vendor: "The World Bank Group",
-      acquisition_method: "official_api",
+      acquisition_method: "direct_api",
       primary_source_reference: "https://data.worldbank.org/",
     },
   };

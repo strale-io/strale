@@ -126,3 +126,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For complete officer history, use the filing_history endpoint at Companies House with the company number
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

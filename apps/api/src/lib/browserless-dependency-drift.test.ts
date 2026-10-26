@@ -10,7 +10,7 @@
  * credential-health.ts used to carry its OWN hand-maintained 52-slug array.
  * By the time this was audited, at least 15 of those 52 slugs had migrated
  * off Browserless entirely (irish/latvian/lithuanian/swiss-company-data per
- * DEC-20260428-A, plus austrian/belgian/danish/dutch/eu-regulation-search/
+ * DEC-20260428-A, since superseded by DEC-20261023-A, plus austrian/belgian/danish/dutch/eu-regulation-search/
  * german/italian/portuguese/spanish/swedish-company-data/tech-stack-detect —
  * never reconciled after their own migrations) and 4 more had no executor at
  * all (credit-report-summary deactivated, custom-scrape never built,
@@ -146,12 +146,14 @@ describe("dependency-manifest.ts browserless.capabilities — drift detector", (
   // redundant). Update this alongside dependency-manifest.ts's
   // browserless.capabilities with a reason in the commit message if the
   // set legitimately changes.
+  // estonian-company-data left the set 2026-10-24: its Browserless "EU proxy"
+  // fallback retried the registry's 403 through another route, which
+  // DEC-20261023-A forbids, so it now calls the registry API directly only.
   it("matches the audited 2026-08-18 hard-require set exactly", () => {
     expect([...CURATED_BROWSERLESS_SLUGS].sort()).toEqual(
       [
         "annual-report-extract",
         "company-enrich",
-        "estonian-company-data",
         "html-to-pdf",
         "landing-page-roast",
         "screenshot-url",

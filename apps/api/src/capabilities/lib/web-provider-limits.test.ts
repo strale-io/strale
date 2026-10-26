@@ -3,7 +3,8 @@
  * its response cache.
  *
  * `fetchPage` is the fetch path for 37 capability files. Before this change
- * all three tiers called `.text()` with no ceiling — plain fetch, Jina, and
+ * all three tiers called `.text()` with no ceiling — plain fetch, Jina (removed
+ * from the chain 2026-10-24, DEC-20261023-A), and
  * Browserless alike — and the results went into a cache limited to 200
  * entries with no byte budget at all. One caller URL pointing at a large page
  * could materialise it in full, three times over as the tiers fell through,
@@ -39,9 +40,16 @@ const browserlessFetchMock = vi.fn();
 // a stand-in. (A factory returning just `{ safeFetch }` silently made
 // `discardBody` undefined, which is how the cancellation tests started
 // throwing instead of asserting.)
+// The rendered routes' plain preflight (web-provider, DEC-20261023-A) is its
+// own suite's concern (web-provider-access.test.ts). It asks for a byte range,
+// so it is answered with an ordinary page and never reaches this suite's mock.
+const isPreflight = (init: unknown) =>
+  new Headers((init as RequestInit | undefined)?.headers).get("range") === "bytes=0-8191";
+const preflightPage = () =>
+  new Response("<html><body>ordinary page</body></html>", { status: 200, headers: { "content-type": "text/html" } });
 vi.mock("../../lib/safe-fetch.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  safeFetch: (...args: unknown[]) => safeFetchMock(...args),
+  safeFetch: (...args: unknown[]) => (isPreflight(args[1]) ? preflightPage() : safeFetchMock(...args)),
 }));
 
 vi.mock("../../lib/metered-vendor-fetch.js", () => ({
@@ -52,6 +60,12 @@ vi.mock("../../lib/metered-vendor-fetch.js", () => ({
 
 // The URLs below are fake hosts; the SSRF validator's own behaviour is covered
 // by its suite. Same pattern as web-extract-resilience.test.ts.
+// robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
+// the robots request does not consume this suite's queued fetch responses.
+vi.mock("../../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
 vi.mock("../../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
 import {
@@ -104,11 +118,6 @@ const URL_UNDER_TEST = "https://example.test/page";
 
 /** Drive tier 1 only (plain fetch succeeds or refuses). */
 const plainTier = (handle: { response: Response }) => safeFetchMock.mockResolvedValue(handle.response);
-
-/** Make tier 1 fall through with a transient error so tier 2 (Jina) runs. */
-function plainTierFallsThrough(): void {
-  safeFetchMock.mockRejectedValue(new Error("network timeout"));
-}
 
 beforeEach(() => {
   safeFetchMock.mockReset();
@@ -172,10 +181,9 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
 
   it("an empty body falls through rather than being accepted as a page", async () => {
     // Empty is not oversize — it is "no usable HTML", the pre-existing
-    // fall-through condition. Tier 2 must therefore still run.
+    // fall-through condition. The render tier must therefore still run.
     plainTier(streamingResponseOf(Buffer.alloc(0), { contentType: "text/html" }));
-    const jina = streamingResponseOf(htmlOfBytes(5_000));
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(jina.response);
+    browserlessFetchMock.mockResolvedValue(streamingResponseOf(htmlOfBytes(5_000)).response);
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(5_000);
   });
@@ -202,8 +210,7 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
   it("a non-HTML content-type releases the body and falls through", async () => {
     const handle = streamingResponseOf(htmlOfBytes(10_000), { contentType: "application/json" });
     plainTier(handle);
-    const jina = streamingResponseOf(htmlOfBytes(5_000));
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(jina.response);
+    browserlessFetchMock.mockResolvedValue(streamingResponseOf(htmlOfBytes(5_000)).response);
     await fetchPage(URL_UNDER_TEST);
     expect(handle.cancelled(), "unread non-HTML body was left open").toBe(true);
   });
@@ -214,48 +221,11 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
   });
 });
 
-// ─── Tier 2: Jina ────────────────────────────────────────────────────────────
-
-describe("tier 2 (Jina) HTML is stream-bounded", () => {
-  beforeEach(plainTierFallsThrough);
-  const jinaFetch = () => globalThis.fetch as ReturnType<typeof vi.fn>;
-
-  it("accepts a body of exactly the limit", async () => {
-    jinaFetch().mockResolvedValue(streamingResponseOf(htmlOfBytes(LIMIT)).response);
-    const r = await fetchPage(URL_UNDER_TEST);
-    expect(r.html.length).toBe(LIMIT);
-  });
-
-  it("refuses limit + 1", async () => {
-    jinaFetch().mockResolvedValue(streamingResponseOf(htmlOfBytes(LIMIT + 1)).response);
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(
-      /'url' must be a page whose HTML is 16\.0MB or less/,
-    );
-  });
-
-  it("refuses a declared over-limit length without pulling, and cancels", async () => {
-    const handle = streamingResponseOf(htmlOfBytes(10_000), { declare: LIMIT + 1 });
-    jinaFetch().mockResolvedValue(handle.response);
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(/it declared/);
-    expect(handle.pulls()).toBe(0);
-    expect(handle.cancelled()).toBe(true);
-  });
-
-  it("a Jina error response releases its body and falls through to Browserless", async () => {
-    const handle = streamingResponseOf(Buffer.from("upstream said no"), {});
-    jinaFetch().mockResolvedValue(new Response(handle.response.body, { status: 502 }));
-    browserlessFetchMock.mockResolvedValue(
-      streamingResponseOf(htmlOfBytes(9_000)).response,
-    );
-    const r = await fetchPage(URL_UNDER_TEST);
-    expect(r.html.length).toBe(9_000);
-  });
-});
-
 // ─── Tier 3: Browserless ─────────────────────────────────────────────────────
 
 describe("tier 3 (Browserless) HTML is stream-bounded", () => {
-  // skipFallback goes straight to Browserless, isolating the tier.
+  // skipFallback skips the plain tier (its ranged preflight is stubbed above),
+  // isolating the Browserless tier.
   const render = () => fetchPage(URL_UNDER_TEST, { skipFallback: true });
 
   it("accepts a body of exactly the limit", async () => {
@@ -322,23 +292,13 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
 // ─── Oversize is terminal: no cross-tier amplification ───────────────────────
 
 describe("oversize does not cascade through the tiers", () => {
-  it("an oversized plain fetch does NOT trigger Jina or Browserless", async () => {
+  it("an oversized plain fetch does NOT trigger Browserless", async () => {
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
     await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ResourceLimitError);
-    expect(globalThis.fetch, "Jina re-fetched a page already judged too large").not.toHaveBeenCalled();
     expect(
       browserlessFetchMock,
       "Browserless re-rendered a page already judged too large",
     ).not.toHaveBeenCalled();
-  });
-
-  it("an oversized Jina response does NOT trigger Browserless", async () => {
-    plainTierFallsThrough();
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(htmlOfBytes(LIMIT + 1)).response,
-    );
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ResourceLimitError);
-    expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
   it("an oversized Browserless render is not retried", async () => {
@@ -349,38 +309,15 @@ describe("oversize does not cascade through the tiers", () => {
     expect(browserlessFetchMock, "an oversize refusal consumed a retry").toHaveBeenCalledTimes(1);
   });
 
-  // ── the fallbacks that MUST still work ──
-  it("POSITIVE CONTROL: a too-short plain response still falls through to Jina", async () => {
+  // ── the fallback that MUST still work ──
+  it("POSITIVE CONTROL: a too-short plain response still falls through to Browserless", async () => {
     plainTier(streamingResponseOf(Buffer.from("<html><body>tiny</body></html>"), {
       contentType: "text/html",
     }));
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(htmlOfBytes(6_000)).response,
-    );
+    browserlessFetchMock.mockResolvedValue(streamingResponseOf(htmlOfBytes(6_000)).response);
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(6_000);
-    expect(globalThis.fetch).toHaveBeenCalled();
-  });
-
-  it("POSITIVE CONTROL: a JS-challenge plain response still falls through", async () => {
-    const challenge = Buffer.from(
-      `<html><body>${"x".repeat(2500)} In order to continue, we need to verify that you're not a robot. Enable JavaScript and then reload the page.</body></html>`,
-    );
-    plainTier(streamingResponseOf(challenge, { contentType: "text/html" }));
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(htmlOfBytes(6_000)).response,
-    );
-    const r = await fetchPage(URL_UNDER_TEST);
-    expect(r.html.length).toBe(6_000);
-  });
-
-  it("POSITIVE CONTROL: a bot-gating 403 still falls through to Jina", async () => {
-    safeFetchMock.mockResolvedValue(new Response("denied", { status: 403 }));
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(htmlOfBytes(6_000)).response,
-    );
-    const r = await fetchPage(URL_UNDER_TEST);
-    expect(r.html.length).toBe(6_000);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("a small plain-fetch success short-circuits — no fallback at all", async () => {
@@ -589,13 +526,19 @@ describe("failure taxonomy", () => {
     expect(categorizeError(err)).not.toBe("capability_refusal");
   });
 
-  it("NEGATIVE CONTROL: an anti-bot challenge at tier 3 is not rebadged caller_input", async () => {
+  it("an anti-bot challenge at tier 3 is a site-access refusal, not caller input (DEC-20261023-A)", async () => {
+    // Until 2026-10-24 this pinned the challenge as counting against the
+    // capability. Under the data-access rule the fetch path STOPS at a
+    // challenge on purpose, so it is the site's policy answer: tos_policy,
+    // floor-exempt — and still not rebadged as the caller's input.
     const challenge = Buffer.from(
       `<html><body>${"x".repeat(300)} Checking your browser before accessing example.test</body></html>`,
     );
     browserlessFetchMock.mockResolvedValue(streamingResponseOf(challenge).response);
     const err = await fetchPage(URL_UNDER_TEST, { skipFallback: true }).catch((e: Error) => e);
-    expect(classifyTransactionFailure((err as Error).message)).not.toBe("caller_input");
+    const cls = classifyTransactionFailure((err as Error).message);
+    expect(cls).toBe("tos_policy");
+    expect(countsAgainstCapability(cls)).toBe(false);
   });
 });
 

@@ -122,3 +122,8 @@ limitations:
       results are returned as-is and truncated to 25 records here.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

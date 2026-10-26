@@ -145,3 +145,8 @@ limitations:
       empty list rather than an error, so a no-match query is not billed as a failure.
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

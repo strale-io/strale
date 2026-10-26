@@ -33,8 +33,9 @@
  * smoke scripts that mock fetch() with a captured response (exactly the
  * #135 pattern), session captures, audit notes, research docs. That genre
  * is NOT narrow: it's full of legitimate synthetic names ("MARIO ROSSI"),
- * real company names, code identifiers, and — per DEC-20260428-A — real
- * named company officers that a capability is *designed* to return in
+ * real company names, code identifiers, and real named company officers
+ * (court- or registry-published personal data, returned as published under
+ * DEC-20261023-A) that a capability is *designed* to return in
  * production (public commercial-registry data). A name-shaped heuristic
  * applied to that genre would either miss real names or flag constantly on
  * legitimate content, and get disabled. See the docstring above PII_FIELDS

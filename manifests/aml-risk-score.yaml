@@ -103,3 +103,8 @@ limitations:
     text: FATF grey/black lists and EU high-risk lists are updated periodically — may not reflect latest changes immediately
     category: freshness
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

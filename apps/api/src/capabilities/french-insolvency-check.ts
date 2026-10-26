@@ -124,7 +124,7 @@ registerCapability("french-insolvency-check", async (input: CapabilityInput) => 
       source: "bodacc.fr",
       fetched_at: new Date().toISOString(),
       upstream_vendor: "DILA (Direction de l'information légale et administrative, French government)",
-      acquisition_method: "official_api",
+      acquisition_method: "direct_api",
       primary_source_reference: "https://www.data.gouv.fr/en/datasets/bodacc/",
     },
   };

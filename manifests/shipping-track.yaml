@@ -90,3 +90,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If tracking fails, use the tracking number format to identify the carrier and check their website directly
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed
