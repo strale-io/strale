@@ -13,13 +13,13 @@ Branch `feat/company-status-check` from `origin/main` `beafcb6`. Draft PR only; 
 
 ## Decisions worth knowing
 
-- 12 countries routed: AT AU EE FI FR GB GR HR IE LV SE SG. The other thirteen in production's `company_data_active_iso` are excluded with a stated reason in `EXCLUDED_COUNTRIES` (NO PL CZ: the executors' status does not report deleted / struck-off / liquidating entities, fix in a separate PR then re-add; checks pending: BE BR DE ES JP; no usable status: US SI SK; vocabulary not verifiable here: CA CH).
+- 11 countries routed: AT AU EE FI FR GB HR IE LV SE SG. The other fourteen in production's `company_data_active_iso` are excluded with a stated reason in `EXCLUDED_COUNTRIES` (NO PL CZ GR: the executors' status does not report deleted / struck-off / liquidating entities, fix in a separate PR then re-add; checks pending: BE BR DE ES JP; no usable status: US SI SK; vocabulary not verifiable here: CA CH).
 - `getExecutor`, not `getDirectExecutor`: keeps provider chains (FI, NO, CH) and the data-access stamp. Billing and the breaker record live above it. Underlying breakers are read-only peeked, never written.
 - External cost is 0 cents on every routed path (identifier lookups only; no executor name-resolution/LLM step reachable). `external_cost_cents` is a DB column, not a manifest field, so the PR states 0.
 
 ## After the independent review (NO-GO on 27ea39e9, fixed on this branch)
 
-NO PL CZ excluded; not-found / invalid-identifier answers become refusals (no per-country breaker marker exists, so a manifest limitation says one registry outage can pause all countries); SE status from open proceedings and `checked:false` when none listed; FI only "active" mapped; GR bankrupt and GEMI-only identifiers; AT dissolved is in_liquidation; composite is `screening_signal` with financial and sensitive_special data; recorded live fixtures in `apps/api/src/lib/company-status/__fixtures__/dead-entities.json`.
+NO PL CZ GR excluded; not-found (matchers anchored to each executor's exact wording); JSON-number identifiers accepted for AU only; not-found / invalid-identifier answers become refusals (no per-country breaker marker exists, so a manifest limitation says one registry outage can pause all countries); SE status from open proceedings and `checked:false` when none listed; FI only "active" mapped; GR bankrupt row kept for the follow-up; AT dissolved is in_liquidation; composite is `screening_signal` with financial and sensitive_special data; recorded live fixtures in `apps/api/src/lib/company-status/__fixtures__/dead-entities.json`.
 
 ## Found on the way (not fixed here)
 

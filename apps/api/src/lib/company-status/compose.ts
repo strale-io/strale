@@ -155,30 +155,49 @@ const shorten = (s: string): string => s.replace(/\s+/g, " ").slice(0, 200);
  * The breaker and the quality floor are keyed on the slug the caller invoked, so
  * every failure here counts against company-status-check for ALL countries. An
  * executor's "this company does not exist" or "this identifier is invalid" is the
- * caller's answer, not ill health, and must not count. The wording below is the
- * real not-found / invalid text of each routed executor (company-status-errors.test.ts
- * holds one string per executor); anything else stays a plain error.
+ * caller's answer, not ill health, and must not count.
+ *
+ * Each pattern is anchored to the exact wording of one executor (review-fixes.test.ts holds
+ * the real string for every routed country). Nothing is matched by a bare keyword: an upstream
+ * "Invalid API key" or "Invalid ABR response" is an outage and stays a plain error.
  */
-const NOT_FOUND_RE = /not found|^No .* found|no current registration data/i;
-const INVALID_RE = /not a valid|checksum|invalid/i;
-// "Invalid ABR response: no <response> element" is the upstream breaking, not the caller's input.
-const UPSTREAM_FAULT_RE = /invalid .*response|HTTP [45]\d\d/i;
+const NOT_FOUND_PATTERNS: readonly RegExp[] = [
+  /^ABN not found or invalid\.$/, // au-company-data
+  /^Firmenbuch returned no current registration data for /, // austrian-company-data (a refusal there already)
+  /^No Estonian company found /, // estonian-company-data
+  /^Finnish company with business ID .+ not found\.$/, // finnish-company-data
+  /^No Finnish company found /,
+  /^No French company found /, // french-company-data
+  /^UK company with number .+ not found\.$/, // uk-company-data
+  /^No UK company found /,
+  /^No Croatian entity found /, // croatian-company-data
+  /^No Irish company found /, // irish-company-data
+  /^No Latvian company found /, // latvian-company-data
+  /^No Swedish organisation found /, // swedish-company-data
+  /^No Singapore entity found /, // singapore-company-data
+  /^No BODACC announcement found /, // fr-bodacc-lookup
+];
+const INVALID_IDENTIFIER_PATTERNS: readonly RegExp[] = [
+  /^Invalid ABN format: /, // au-company-data
+  /^'.+' is not a valid Austrian Firmenbuchnummer/, // austrian-company-data
+  /^Sudreg rejected (OIB|MBS) /, // croatian-company-data
+  /^'.+' is not a valid Croatian OIB/,
+  /^Bolagsverket rejected org number .+ as invalid\.$/, // swedish-company-data
+  /^'.+' is not a valid Swedish organisationsnummer/,
+  /^Invalid SIREN: /, // fr-bodacc-lookup
+];
 
 export function classifyUpstreamMessage(msg: string): "not_found" | "invalid_identifier" | "failure" {
-  if (UPSTREAM_FAULT_RE.test(msg)) return "failure";
-  if (NOT_FOUND_RE.test(msg)) return "not_found";
-  if (INVALID_RE.test(msg)) return "invalid_identifier";
+  if (NOT_FOUND_PATTERNS.some((re) => re.test(msg))) return "not_found";
+  if (INVALID_IDENTIFIER_PATTERNS.some((re) => re.test(msg))) return "invalid_identifier";
   return "failure";
 }
 
 function upstreamError(route: CountryRoute, slug: string, label: string, err: unknown): Error {
   const msg = err instanceof Error ? err.message : String(err);
+  const kind = classifyUpstreamMessage(msg);
   // The wording of these two refusals is what recordFailure and the failure taxonomy recognise
   // from the message alone ("not found" substring; "'field' ... must be" house style).
-  if (err instanceof CapabilityRefusalError) {
-    return new CapabilityRefusalError(`${label} lookup for ${route.iso} (${slug}) was refused: ${shorten(msg)}`);
-  }
-  const kind = classifyUpstreamMessage(msg);
   if (kind === "not_found") {
     return new CapabilityRefusalError(
       `${route.registry.name} has no record that was found for this ${route.iso} identifier (not found): ${shorten(msg)}`,
@@ -188,6 +207,11 @@ function upstreamError(route: CountryRoute, slug: string, label: string, err: un
     return new CapabilityRefusalError(
       `'identifier' must be a valid ${route.iso} identifier; ${route.registry.name} rejected it: ${shorten(msg)}`,
     );
+  }
+  // Any other refusal from the executor stays one, with its own wording first so a recogniser that
+  // matches on the start of the message still sees it.
+  if (err instanceof CapabilityRefusalError) {
+    return new CapabilityRefusalError(`${shorten(msg)} (${label.toLowerCase()} lookup for ${route.iso}, ${slug})`);
   }
   return new Error(`${label} lookup failed for ${route.iso}: ${route.registry.name} via ${slug} did not answer (${shorten(msg)}). No status is returned.`);
 }
@@ -207,13 +231,17 @@ export async function runCompanyStatusCheck(input: CapabilityInput, deps: Compos
       `'country' must be one of the supported countries; '${country}' is not. Supported: ${SUPPORTED_COUNTRIES.join(", ")}.`,
     );
   }
-  // A JSON number is a plausible way to send a numeric identifier; leading zeros are lost, which the strict validators then refuse.
-  const rawIdentifier =
-    typeof input.identifier === "string"
-      ? input.identifier.trim()
-      : typeof input.identifier === "number" && Number.isSafeInteger(input.identifier) && input.identifier >= 0
-        ? String(input.identifier)
-        : "";
+  // A JSON number is accepted only where it cannot lose a leading zero or hide a length (route.numeric_ok).
+  const numeric =
+    typeof input.identifier === "number" && Number.isSafeInteger(input.identifier) && input.identifier >= 0 && route.numeric_ok
+      ? String(input.identifier)
+      : null;
+  if (typeof input.identifier === "number" && numeric === null) {
+    throw new CapabilityRefusalError(
+      `'identifier' must be sent as a string for ${route.iso}: ${route.identifier_help}. A JSON number can drop a leading zero.`,
+    );
+  }
+  const rawIdentifier = typeof input.identifier === "string" ? input.identifier.trim() : (numeric ?? "");
   const identifier = rawIdentifier === "" ? null : route.normalise_identifier(rawIdentifier);
   if (identifier === null) {
     throw new CapabilityRefusalError(`'identifier' must be ${route.identifier_help} for ${route.iso}.`);

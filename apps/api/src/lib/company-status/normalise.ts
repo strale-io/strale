@@ -234,8 +234,10 @@ function openProcedures(output: Record<string, unknown>): Procedure[] {
 }
 
 /**
- * Bolagsverket procedure codes seen in its published examples (docs/research/bolagsverket-hvd-swagger.json):
- * KK = Konkurs (bankruptcy), LI = Likvidation. Matched on code or on the Swedish text.
+ * Bolagsverket procedure codes that appear in the example payloads of its API description
+ * (docs/research/bolagsverket-hvd-swagger.json): KK = Konkurs (bankruptcy), LI = Likvidation. That file
+ * does not list every code, so matching also uses the Swedish text (konkurs, rekonstruktion,
+ * likvidation, avveckling); anything else is unclassified.
  */
 function procedureStatus(p: Procedure): CompanyStatus | null {
   if (p.code === "KK" || /konkurs|rekonstruktion/.test(p.description)) return "in_insolvency";
@@ -250,22 +252,25 @@ function procedureStatus(p: Procedure): CompanyStatus | null {
  * Sweden (swedish-company-data.ts): `verksam = JA` is "active" even while a
  * konkurs or likvidation is open, so an open proceeding overrides it (a proceeding the table
  * cannot classify makes the status unknown rather than active). "deregistered" is also what the
- * executor emits for `verksam = NEJ` with no avregistreringsdatum; without a deregistration
- * date that is inactive, not struck_off.
+ * executor emits for `verksam = NEJ` with no avregistreringsdatum: that is inactive, not
+ * struck_off, unless a konkurs or likvidation is open, which takes the same override as for
+ * active. With a deregistration date it stays struck_off.
  */
 export function normaliseRegistryOutput(slug: string, output: Record<string, unknown>): NormalisedStatus {
   const base = normaliseStatus(slug, output.status);
-  if (slug !== SE) return base;
-  if (base.mapped && base.status === "active") {
+  if (slug !== SE || !base.mapped) return base;
+  const date = output.deregistered_date;
+  const hasDeregDate = typeof date === "string" && date.trim() !== "";
+  // A deregistered organisation (with a date) is struck off whatever its old proceedings were.
+  if (base.status === "struck_off" && hasDeregDate) return base;
+  if (base.status === "active" || base.status === "struck_off") {
+    // Here: active, or verksam = NEJ with no deregistration date. An open proceeding decides either.
     const procedures = openProcedures(output);
     const statuses = procedures.map(procedureStatus);
     if (statuses.includes("in_insolvency")) return { ...base, status: "in_insolvency" };
     if (statuses.includes("in_liquidation")) return { ...base, status: "in_liquidation" };
-    if (procedures.length > 0) return { ...base, status: "unknown", mapped: false };
-  }
-  if (base.mapped && base.status === "struck_off") {
-    const date = output.deregistered_date;
-    if (typeof date !== "string" || date.trim() === "") return { ...base, status: "inactive" };
+    if (base.status === "active" && procedures.length > 0) return { ...base, status: "unknown", mapped: false };
+    if (base.status === "struck_off") return { ...base, status: "inactive" };
   }
   return base;
 }

@@ -7,8 +7,8 @@ category: company-data
 # name-resolution step. External cost per routed country is therefore 0 cents,
 # so external_cost_cents is 0 (the maximum over all routed countries). It is a
 # database column, not a manifest field. cost_class is free_quota because AU,
-# GR, HR and SE are quota-limited registries; quota_cap is the smallest of
-# their daily caps (500, GR and HR).
+# HR and SE are quota-limited registries; quota_cap is the smallest of
+# their daily caps (500, HR).
 cost_class: free_quota
 quota_window: daily
 quota_cap: 500
@@ -30,7 +30,7 @@ input_schema:
       description: ISO 3166-1 alpha-2 country code of the registry (UK is accepted as GB). The supported list is returned in the error for an unsupported code.
     identifier:
       type: string
-      description: The company's identifier in that country's registry, for example 556703-7485 (SE), 00445790 (GB) or 923609016 (NO). The error for a malformed identifier says which format the country expects.
+      description: The company's identifier in that country's registry, for example 556703-7485 (SE), 00445790 (GB) or 513174 (IE). The error for a malformed identifier says which format the country expects.
 output_schema:
   type: object
   example:
@@ -149,10 +149,10 @@ limitations:
     workaround: Read registry_status_raw when status is "unknown".
   - title: Countries covered
     text: >-
-      Austria, Australia, Estonia, Finland, France, United Kingdom, Greece, Croatia, Ireland, Latvia, Sweden and
-      Singapore. The error for any other country names the supported list. Left out for now: Norway, Poland and
-      Czechia, whose underlying registry lookups do not report deleted, struck-off or liquidating entities (a fix is
-      tracked separately); Belgium, Brazil, Germany, Spain and Japan, whose data-access checks are still pending;
+      Austria, Australia, Estonia, Finland, France, United Kingdom, Croatia, Ireland, Latvia, Sweden and
+      Singapore. The error for any other country names the supported list. Left out for now: Norway, Poland, Czechia
+      and Greece, whose underlying registry lookups do not report deleted, struck-off or liquidating entities (a fix
+      is tracked separately); Belgium, Brazil, Germany, Spain and Japan, whose data-access checks are still pending;
       the United States, Slovakia and Slovenia, which publish no usable status; and Canada and Switzerland, whose
       status vocabulary could not be checked.
     category: coverage
@@ -161,8 +161,7 @@ limitations:
   - title: Lookup by registry identifier only
     text: >-
       The input is the company's identifier in its country's registry. There is no name search, so a name cannot
-      resolve to the wrong company. Sweden accepts organisation numbers only, not personal identity numbers; Greece
-      accepts the GEMI number, not the tax ID.
+      resolve to the wrong company. Sweden accepts organisation numbers only, not personal identity numbers.
     category: input
     severity: info
     workaround: Resolve the identifier first with the country's company-data capability or VAT validation.

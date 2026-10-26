@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CapabilityExecutor, CapabilityResult } from "../../capabilities/index.js";
 import { CapabilityRefusalError, isCapabilityRefusal } from "../capability-refusal.js";
 import { isUserInputError } from "../circuit-breaker.js";
@@ -31,7 +31,6 @@ const REAL_NOT_FOUND: Array<[string, string]> = [
   ["FI", "Finnish company with business ID 0112038-9 not found."],
   ["FR", 'No French company found matching "542051180".'],
   ["GB", "UK company with number 00445790 not found."],
-  ["GR", "No Greek company found with GEMI number 123456789012."],
   ["HR", "No Croatian entity found for OIB '81793146560'."],
   ["IE", "No Irish company found for CRO number 513174."],
   ["LV", "No Latvian company found for registration number 40003245752."],
@@ -52,6 +51,10 @@ const TRANSIENT = [
   "The operation was aborted due to timeout",
   "fetch failed",
   "French API returned HTTP 503",
+  "Invalid API key",
+  "Invalid API key for Firmenbuch (JUSTIZONLINE_API_KEY)",
+  "Invalid credentials",
+  "Companies House: invalid authorization header",
 ];
 
 describe("not-found and invalid-identifier answers are refusals", () => {
@@ -61,9 +64,11 @@ describe("not-found and invalid-identifier answers are refusals", () => {
 
   it.each(REAL_NOT_FOUND)("%s: %j", async (iso, message) => {
     const route = COUNTRY_ROUTES.find((r) => r.iso === iso)!;
-    const identifier = { AT: "FN 93363 z", AU: "51824753556", EE: "10137025", FI: "0112038-9", FR: "542051180", GB: "00445790", GR: "123456789012", HR: "81793146560", IE: "513174", LV: "40003245752", SE: "556703-7485", SG: "197200078R" }[iso]!;
+    const identifier = { AT: "FN 93363 z", AU: "51824753556", EE: "10137025", FI: "0112038-9", FR: "542051180", GB: "00445790", HR: "81793146560", IE: "513174", LV: "40003245752", SE: "556703-7485", SG: "197200078R" }[iso]!;
+    // The Austrian executor throws this one as a CapabilityRefusalError; the others throw a plain Error.
+    const thrown = () => (iso === "AT" ? new CapabilityRefusalError(message) : new Error(message));
     const d = deps({
-      [route.registry.slug]: async () => { throw new Error(message); },
+      [route.registry.slug]: async () => { throw thrown(); },
       "fr-bodacc-lookup": async () => ok({}),
       "insolvency-check": async () => ok({}),
     });
@@ -105,6 +110,15 @@ describe("outages and transient failures still count against the capability", ()
     expect(err.message).toMatch(/via swedish-company-data did not answer/);
   });
 
+  it("a synthetic upstream 'Invalid API key' fault from the Austrian registry is an outage, not a refusal", async () => {
+    const d = deps({ "austrian-company-data": async () => { throw new Error("Invalid API key"); } });
+    const err = await run(d, { country: "AT", identifier: "FN 93363 z" }).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(CapabilityRefusalError);
+    expect(err.message).toMatch(/via austrian-company-data did not answer \(Invalid API key\)/);
+    expect(isUserInputError(err.message)).toBe(false);
+  });
+
   it("no per-country marker exists in the breaker, so the manifest says one registry can pause the check for all", () => {
     const m = yaml.load(readFileSync(resolve(import.meta.dirname, "..", "..", "..", "..", "..", "manifests", "company-status-check.yaml"), "utf8")) as any;
     const lim = m.limitations.find((l: any) => l.title === "A failing registry can pause the check for every country");
@@ -137,6 +151,14 @@ describe("Sweden status and insolvency", () => {
     expect(se({ status: "deregistered", deregistered_date: null }).status).toBe("inactive");
     expect(se({ status: "deregistered" }).status).toBe("inactive");
     expect(se({ status: "deregistered", deregistered_date: "2023-05-05" }).status).toBe("struck_off");
+  });
+  it("verksam = NEJ with no deregistration date and an open konkurs or likvidation takes the proceeding override, not inactive", () => {
+    expect(se({ status: "deregistered", deregistered_date: null, ongoing_procedures: [{ code: "KK", description: "Konkurs" }] }).status).toBe("in_insolvency");
+    expect(se({ status: "deregistered", deregistered_date: null, ongoing_procedures: [{ code: "LI", description: "Likvidation" }] }).status).toBe("in_liquidation");
+    expect(se({ status: "deregistered", ongoing_procedures: [{ code: "ZZ", description: "Något nytt" }] }).status).toBe("inactive");
+  });
+  it("a deregistration date wins over old proceedings: struck_off", () => {
+    expect(se({ status: "deregistered", deregistered_date: "2024-06-01", ongoing_procedures: [{ code: "KK", description: "Konkurs" }] }).status).toBe("struck_off");
   });
   it("other registries ignore these rules", () => {
     expect(normaliseRegistryOutput("irish-company-data", { status: "Normal", ongoing_procedures: [{ code: "KK" }] }).status).toBe("active");
@@ -186,12 +208,27 @@ describe("GB notices carry the proceeding status; numeric identifiers are accept
     expect((r.output.insolvency as any).notices[0]).toMatchObject({ type: "company-voluntary-arrangement", status: "completed" });
   });
 
-  it("a JSON number for the identifier is coerced; a fractional or negative one is refused", async () => {
-    const d = deps({ "irish-company-data": async () => ok({ company_name: "X", status: "Normal" }) });
-    expect((await run(d, { country: "IE", identifier: 513174 })).output.identifier).toBe("513174");
-    for (const bad of [513174.5, -513174, Number.NaN]) {
-      await expect(run(d, { country: "IE", identifier: bad })).rejects.toBeInstanceOf(CapabilityRefusalError);
+  it("a JSON number is coerced only where it cannot lose a leading zero (AU); fractional and negative numbers are refused", async () => {
+    const d = deps({ "au-company-data": async () => ok({ company_name: "X", status: "Active" }) });
+    expect((await run(d, { country: "AU", identifier: 51824753556 })).output.identifier).toBe("51824753556");
+    for (const bad of [51824753556.5, -51824753556, Number.NaN]) {
+      await expect(run(d, { country: "AU", identifier: bad })).rejects.toBeInstanceOf(CapabilityRefusalError);
     }
+  });
+
+  it("every other routed country refuses a JSON number, because it can drop a leading zero or hide a length", async () => {
+    for (const route of COUNTRY_ROUTES.filter((r) => !r.numeric_ok)) {
+      const executor = vi.fn(async () => ok({ status: "active" }));
+      const d = deps({ [route.registry.slug]: executor, "fr-bodacc-lookup": executor, "insolvency-check": executor });
+      const err = await run(d, { country: route.iso, identifier: 513174 }).catch((e) => e);
+      expect(err, route.iso).toBeInstanceOf(CapabilityRefusalError);
+      expect(err.message, route.iso).toMatch(/^'identifier' must be sent as a string/);
+      expect(executor, route.iso).not.toHaveBeenCalled();
+    }
+  });
+
+  it("only AU opts in, and its identifier is fixed-length with no leading zero", () => {
+    expect(COUNTRY_ROUTES.filter((r) => r.numeric_ok).map((r) => r.iso)).toEqual(["AU"]);
   });
 });
 
@@ -260,13 +297,25 @@ describe("dead entities in the excluded countries (NO, PL, CZ)", () => {
     expect(err.message).toContain(`'${country}' is not`);
   });
 
+  it("GR is excluded for the same reason: its executor reports an inactive company as active", async () => {
+    expect(SUPPORTED_COUNTRIES).not.toContain("GR");
+    expect(EXCLUDED_COUNTRIES.GR).toMatch(/does not report deleted \/ deregistered \/ liquidating entities/);
+    const spy = vi.fn(async () => ok({ status: "active" }));
+    const err = await run(deps({ "greek-company-data": spy }), { country: "GR", identifier: "123456789012" }).catch((e) => e);
+    expect(err).toBeInstanceOf(CapabilityRefusalError);
+    expect(err.message).toContain("'GR' is not");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("the normaliser keeps its rows for NO, PL and CZ so the follow-up only has to re-route", async () => {
     expect(normaliseRegistryOutput("norwegian-company-data", { status: "bankrupt" }).status).toBe("in_insolvency");
     expect(normaliseRegistryOutput("polish-company-data", { status: "deregistered" }).status).toBe("struck_off");
     expect(normaliseRegistryOutput("cz-company-data", { status: "dissolved" }).status).toBe("dissolved");
   });
 
-  it("the fixture for a natural person carries no personal name", () => {
-    expect(JSON.stringify(fixture("NO-deleted"))).not.toMatch(/DAHLEN/i);
+  it("the fixture for a natural person carries a placeholder, not a personal name", () => {
+    const o = fixture("NO-deleted").executor_output;
+    expect(o.company_name).toBe("[sole trader: personal name removed from this fixture]");
+    expect(o.legal_name).toBe(o.company_name);
   });
 });

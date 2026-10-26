@@ -42,6 +42,12 @@ export interface CountryRoute {
   };
   /** Human description of the accepted identifier, used in refusals. */
   identifier_help: string;
+  /**
+   * True when a JSON number may stand for the identifier: fixed length and never a
+   * leading zero, so String(n) is the identifier. Everywhere else a number would
+   * silently drop a leading zero or hide a length, so it is refused.
+   */
+  numeric_ok?: boolean;
   /** Returns the normalised identifier, or null when it is not valid for this registry. */
   normalise_identifier: (raw: string) => string | null;
   insolvency?: InsolvencySource;
@@ -71,6 +77,7 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
   {
     iso: "AU",
     registry: { slug: "au-company-data", name: "Australian Business Register (ABR)", input_field: "abn" },
+    numeric_ok: true, // an ABN is 11 digits and its first digit is never 0
     identifier_help: "an 11-digit ABN",
     normalise_identifier: exactDigits(11),
   },
@@ -106,16 +113,6 @@ export const COUNTRY_ROUTES: readonly CountryRoute[] = [
       return /^(SC|NI|OC|SO|NC|R|IP|SP|RS|NO|NP)?\d{6,8}$/.test(cleaned) ? cleaned.padStart(8, "0") : null;
     },
     insolvency: { kind: "separate", slug: "insolvency-check", name: "Companies House insolvency register" },
-  },
-  {
-    iso: "GR",
-    registry: { slug: "greek-company-data", name: "GEMI (Greek General Commercial Registry)", input_field: "gemi_number" },
-    identifier_help: "a GEMI number (6 to 14 digits, but not exactly 9); a 9-digit tax ID (AFM) is not accepted",
-    normalise_identifier: (raw) => {
-      const d = digits(raw);
-      // greek-company-data reads a 9-digit value as an AFM (tax ID) and a longer one as a GEMI number.
-      return /^\d{6,14}$/.test(d) && d.length !== 9 ? d : null;
-    },
   },
   {
     iso: "HR",
@@ -175,6 +172,7 @@ export const EXCLUDED_COUNTRIES: Readonly<Record<string, string>> = {
   JP: "the Japanese source is a page scrape with checks recorded as pending",
   CZ: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
   NO: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
+  GR: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities (deriveStatus tests the Greek word for active before the one for inactive, so an inactive company is reported active); fix tracked separately",
   PL: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities; fix tracked separately",
   SI: "the Slovenian open dataset carries no status column",
   SK: "the Slovak register publishes no status flag; the executor infers one from validity dates",
