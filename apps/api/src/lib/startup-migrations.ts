@@ -6501,10 +6501,13 @@ export async function runMigration0122_correctSanctionsSourceCopy(
 // Rewrites the public name and description of 296 tools (capabilities) to the
 // final catalogue copy the manifests now carry, and corrects three
 // bundled-check (solution) copy problems: web-extract-clean's claim that it
-// fetches pages "even behind anti-bot walls" (false under DEC-20261023-A: the
-// fetch path stops at blocks), ai-act-assess's stale "before the August 2026
-// deadline", and the kyb-essentials/kyb-complete/invoice-verify families'
-// "... for United Kingdom" template. Copy only: no price, step or flag moves.
+// gets past blocked pages ("even behind anti-bot walls" in description, "pages
+// that block direct requests" in long_description, "page blocked need content"
+// and "web scraping with anti-bot" in agent_description; false under
+// DEC-20261023-A: the fetch path stops at blocks), ai-act-assess's stale
+// "before the August 2026 deadline", and the kyb-essentials/kyb-complete/
+// invoice-verify families' "... for United Kingdom" template in description and
+// long_description. Copy only: no price, step or flag moves.
 //
 // The per-row data lives in ./catalogue-copy-0123.ts (old and new value per
 // slug). The `// migration-data:` line inside the block makes the migration
@@ -6512,10 +6515,11 @@ export async function runMigration0122_correctSanctionsSourceCopy(
 // caught exactly like editing the block.
 //
 // Every write is guarded on the exact value production held in the
-// 2026-10-26 snapshot (GET /v1/capabilities, GET /v1/solutions): a value
-// someone changed since is never overwritten. Name and description are
-// independent UPDATEs, so a tool whose name was edited still gets its new
-// description and vice versa. Each UPDATE joins a VALUES list built with
+// 2026-10-26 snapshot (GET /v1/capabilities, GET /v1/solutions, and
+// GET /v1/solutions/:slug for long_description and agent_description): a
+// value someone changed since is never overwritten. Every column is its own
+// UPDATE, so a tool whose name was edited still gets its new description and
+// vice versa. Each UPDATE joins a VALUES list built with
 // sql.join, never ANY(${array}) (that crash-loops boot; see block 0092). The
 // block records itself and runs once. Rows chained from 0121 and 0122 (the
 // five narrowed descriptions and sanctions-check) are guarded on those
@@ -6570,9 +6574,13 @@ export async function runMigration0123_catalogueCopy(
   const descriptionChanges: Change[] = data.capabilities
     .filter((r) => r.old_description !== r.description)
     .map((r) => [r.slug, r.old_description, r.description] as const);
-  const solutionChanges: Change[] = data.solutions
-    .filter((r) => r.old_description !== r.description)
-    .map((r) => [r.slug, r.old_description, r.description] as const);
+  const solutionChanges = (column: CatalogueCopySolutionRow["column"]): Change[] =>
+    data.solutions
+      .filter((r) => r.column === column && r.old_value !== r.value)
+      .map((r) => [r.slug, r.old_value, r.value] as const);
+  const solutionDescriptionChanges = solutionChanges("description");
+  const solutionLongChanges = solutionChanges("long_description");
+  const solutionAgentChanges = solutionChanges("agent_description");
 
   const names = nameChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE capabilities AS c
@@ -6594,17 +6602,39 @@ export async function runMigration0123_catalogueCopy(
      RETURNING c.slug
   `)) as unknown as Array<{ slug: string }>);
 
-  const solutionDescriptions = solutionChanges.length === 0 ? [] : ((await tx.execute(sql`
+  const solutionDescriptions = solutionDescriptionChanges.length === 0 ? [] : ((await tx.execute(sql`
     UPDATE solutions AS s
        SET description = v.new_value,
            updated_at = now()
-      FROM (VALUES ${values(solutionChanges)}) AS v (slug, old_value, new_value)
+      FROM (VALUES ${values(solutionDescriptionChanges)}) AS v (slug, old_value, new_value)
      WHERE s.slug = v.slug
        AND s.description = v.old_value
      RETURNING s.slug
   `)) as unknown as Array<{ slug: string }>);
 
-  const total = names.length + descriptions.length + solutionDescriptions.length;
+  const solutionLongDescriptions = solutionLongChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE solutions AS s
+       SET long_description = v.new_value,
+           updated_at = now()
+      FROM (VALUES ${values(solutionLongChanges)}) AS v (slug, old_value, new_value)
+     WHERE s.slug = v.slug
+       AND s.long_description = v.old_value
+     RETURNING s.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const solutionAgentDescriptions = solutionAgentChanges.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE solutions AS s
+       SET agent_description = v.new_value,
+           updated_at = now()
+      FROM (VALUES ${values(solutionAgentChanges)}) AS v (slug, old_value, new_value)
+     WHERE s.slug = v.slug
+       AND s.agent_description = v.old_value
+     RETURNING s.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  const total =
+    names.length + descriptions.length +
+    solutionDescriptions.length + solutionLongDescriptions.length + solutionAgentDescriptions.length;
 
   // Written last: if anything above throws, boot aborts with nothing recorded and the next boot retries.
   await tx.execute(sql`
@@ -6619,7 +6649,9 @@ export async function runMigration0123_catalogueCopy(
     outcome:
       `capabilities: ${names.length}/${nameChanges.length} name(s)${left(names.length, nameChanges.length)}, ` +
       `${descriptions.length}/${descriptionChanges.length} description(s)${left(descriptions.length, descriptionChanges.length)}; ` +
-      `solutions: ${solutionDescriptions.length}/${solutionChanges.length} description(s)${left(solutionDescriptions.length, solutionChanges.length)}`,
+      `solutions: ${solutionDescriptions.length}/${solutionDescriptionChanges.length} description(s)${left(solutionDescriptions.length, solutionDescriptionChanges.length)}, ` +
+      `${solutionLongDescriptions.length}/${solutionLongChanges.length} long_description(s)${left(solutionLongDescriptions.length, solutionLongChanges.length)}, ` +
+      `${solutionAgentDescriptions.length}/${solutionAgentChanges.length} agent_description(s)${left(solutionAgentDescriptions.length, solutionAgentChanges.length)}`,
     rows_affected: total,
     duration_ms: Date.now() - startedAt,
   };

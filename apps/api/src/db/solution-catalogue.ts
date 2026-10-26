@@ -725,9 +725,9 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Fetch a web page, convert it to clean markdown, and strip PII automatically. Ready for your RAG pipeline.",
     longDescription:
-      "Uses a headless browser to fetch JavaScript-rendered pages that block direct requests, converts the content to clean markdown, then automatically detects and redacts PII (names, emails, phone numbers, addresses) before returning. Ready to drop into your RAG pipeline, knowledge base, or agent context window.",
+      "Uses a headless browser to fetch JavaScript-rendered pages, converts the content to clean markdown, then automatically detects and redacts PII (names, emails, phone numbers, addresses) before returning. Ready to drop into your RAG pipeline, knowledge base, or agent context window.",
     agentDescription:
-      "scrape this page, get content from URL, extract web page for RAG, page blocked need content, convert URL to markdown, fetch website content, web scraping with anti-bot",
+      "scrape this page, get content from URL, extract web page for RAG, convert URL to markdown, fetch website content",
     category: "data-research",
     priceCents: 30,
     componentSumCents: 20,

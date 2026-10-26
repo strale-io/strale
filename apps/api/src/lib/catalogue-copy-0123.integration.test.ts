@@ -51,14 +51,15 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
           (slug, name, description, category, input_schema, output_schema, price_cents, lifecycle_state, visible, x402_enabled)
         VALUES (${s}, ${name}, ${description}, 'validation', '{}'::jsonb, '{}'::jsonb, 7, 'active', true, false)`;
     }
-    for (const [s, description] of [
-      [slug("bundle-fresh"), "Quick company verification for United Kingdom. Rest."],
-      [slug("bundle-edited"), "Hand-edited since the snapshot."],
+    for (const [s, description, agent] of [
+      [slug("bundle-fresh"), "Quick company verification for United Kingdom. Rest.", "fetch page, page blocked need content"],
+      [slug("bundle-edited"), "Hand-edited since the snapshot.", "fetch page, page blocked need content"],
     ]) {
       await client`
         INSERT INTO solutions
-          (slug, name, description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, input_schema, is_active)
-        VALUES (${s}, ${s}, ${description}, 'compliance-verification', 150, 100, 'standard', 'low', 'eu', '{}'::jsonb, false)`;
+          (slug, name, description, long_description, agent_description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, input_schema, is_active)
+        VALUES (${s}, ${s}, ${description}, 'Performs 4 automated checks for United Kingdom companies: rest.', ${agent},
+                'compliance-verification', 150, 100, 'standard', 'low', 'eu', '{}'::jsonb, false)`;
     }
   });
 
@@ -80,12 +81,30 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
       name: n === "same-name" ? "Kept Name" : "New Name",
       description: "New description.",
     })),
-    solutions: ["bundle-fresh", "bundle-edited"].map((n) => ({
-      slug: slug(n),
-      old_description: "Quick company verification for United Kingdom. Rest.",
-      description: "Quick verification of a UK company. Rest.",
-      source: "snapshot" as const,
-    })),
+    solutions: [
+      ...["bundle-fresh", "bundle-edited"].map((n) => ({
+        slug: slug(n),
+        column: "description" as const,
+        old_value: "Quick company verification for United Kingdom. Rest.",
+        value: "Quick verification of a UK company. Rest.",
+        source: "snapshot" as const,
+      })),
+      // long_description is its own guarded UPDATE: it lands on the edited bundle too.
+      ...["bundle-fresh", "bundle-edited"].map((n) => ({
+        slug: slug(n),
+        column: "long_description" as const,
+        old_value: "Performs 4 automated checks for United Kingdom companies: rest.",
+        value: "Performs 4 automated checks for UK companies: rest.",
+        source: "snapshot" as const,
+      })),
+      {
+        slug: slug("bundle-fresh"),
+        column: "agent_description" as const,
+        old_value: "fetch page, page blocked need content",
+        value: "fetch page",
+        source: "snapshot" as const,
+      },
+    ],
   });
 
   async function capability(name: string) {
@@ -105,24 +124,39 @@ describeMaybe("block 0123 (catalogue copy) against a real database", () => {
     // Copy only: price and flags untouched.
     expect(await capability("fresh")).toMatchObject({ price_cents: 7, x402_enabled: false });
 
-    const solutions = await client<{ slug: string; description: string; is_active: boolean; price_cents: number }[]>`
-      SELECT slug, description, is_active, price_cents FROM solutions WHERE slug LIKE ${`${run}-%`} ORDER BY slug`;
+    const solutions = await client<{
+      slug: string; description: string; long_description: string; agent_description: string; is_active: boolean; price_cents: number;
+    }[]>`
+      SELECT slug, description, long_description, agent_description, is_active, price_cents
+        FROM solutions WHERE slug LIKE ${`${run}-%`} ORDER BY slug`;
     expect(solutions).toEqual([
-      { slug: slug("bundle-edited"), description: "Hand-edited since the snapshot.", is_active: false, price_cents: 150 },
-      { slug: slug("bundle-fresh"), description: "Quick verification of a UK company. Rest.", is_active: false, price_cents: 150 },
+      {
+        slug: slug("bundle-edited"), description: "Hand-edited since the snapshot.",
+        long_description: "Performs 4 automated checks for UK companies: rest.",
+        agent_description: "fetch page, page blocked need content", // not in this run's data for this slug
+        is_active: false, price_cents: 150,
+      },
+      {
+        slug: slug("bundle-fresh"), description: "Quick verification of a UK company. Rest.",
+        long_description: "Performs 4 automated checks for UK companies: rest.",
+        agent_description: "fetch page",
+        is_active: false, price_cents: 150,
+      },
     ]);
 
     // names: fresh + redescribed (renamed is guarded out; same-name is not a name change);
-    // descriptions: fresh + renamed + same-name; solutions: bundle-fresh.
-    expect(result.rows_affected).toBe(2 + 3 + 1);
+    // descriptions: fresh + renamed + same-name; solution description: bundle-fresh only;
+    // long_description: both (independent of the edited description); agent_description: bundle-fresh.
+    expect(result.rows_affected).toBe(2 + 3 + 1 + 2 + 1);
     expect(result.outcome).toBe(
       "capabilities: 2/3 name(s) (1 left alone: changed since the snapshot or absent), " +
         "3/4 description(s) (1 left alone: changed since the snapshot or absent); " +
-        "solutions: 1/2 description(s) (1 left alone: changed since the snapshot or absent)",
+        "solutions: 1/2 description(s) (1 left alone: changed since the snapshot or absent), " +
+        "2/2 long_description(s), 1/1 agent_description(s)",
     );
     const [ledger] = await client<{ rows_affected: number }[]>`
       SELECT rows_affected FROM startup_migration_ledger WHERE block = ${BLOCK}`;
-    expect(ledger.rows_affected).toBe(6);
+    expect(ledger.rows_affected).toBe(9);
 
     // Second boot: the ledger row stops it, even with a row put back to its snapshot value.
     await client`UPDATE capabilities SET name = 'Old Name' WHERE slug = ${slug("fresh")}`;

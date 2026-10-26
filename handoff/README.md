@@ -13,7 +13,7 @@
 
 | date | file | intent |
 | --- | --- | --- |
-| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-catalogue-copy.md`](_general/from-code/2026-10-26-catalogue-copy.md) | Rewrite the public names and descriptions of the catalogue's tools, fix three bundled-check copy problems, and make p... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-catalogue-copy.md`](_general/from-code/2026-10-26-catalogue-copy.md) | Rewrite the public names and descriptions of the catalogue's tools, fix the bundled-check copy problems, and make pro... |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step4-review-md.md`](_general/from-code/2026-10-24-wow-step4-review-md.md) | Apply step 4 of the way-of-working review (DEC-20261024-A): one reviewer brief and a capability-onboarding skill. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md`](_general/from-code/2026-10-24-wow-step1-quick-wins.md) | Apply step 1 of the way-of-working review (DEC-20261024-A): fewer paperwork failures in CI, same product checks. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md`](_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md) | Carry out DQ-38 — remove false web3 regulatory claims from the public methodology. |

@@ -3201,17 +3201,30 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
 describe("startup-migrations: block 0123 (catalogue copy)", () => {
   const nameRows = CATALOGUE_COPY_0123_CAPABILITIES.filter((r) => r.old_name !== r.name);
   const descriptionRows = CATALOGUE_COPY_0123_CAPABILITIES.filter((r) => r.old_description !== r.description);
-  const solutionRows = CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => r.old_description !== r.description);
+  const solutionRows = (column: string) =>
+    CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => r.column === column && r.old_value !== r.value);
+  const solDesc = solutionRows("description");
+  const solLong = solutionRows("long_description");
+  const solAgent = solutionRows("agent_description");
   const slugs = (n: number) => Array.from({ length: n }, (_, i) => ({ slug: `s${i}` })) as unknown[];
-  // CREATE, ledger SELECT, name UPDATE, description UPDATE, solution UPDATE, ledger INSERT.
-  const fullQueue = (names = nameRows.length, descriptions = descriptionRows.length, solutions = solutionRows.length) => [
-    {}, [], slugs(names), slugs(descriptions), slugs(solutions), {},
+  // CREATE, ledger SELECT, the five UPDATEs (name, description, solution description,
+  // long_description, agent_description), ledger INSERT.
+  const fullQueue = (n: Partial<Record<"names" | "descriptions" | "solDesc" | "solLong" | "solAgent", number>> = {}) => [
+    {}, [],
+    slugs(n.names ?? nameRows.length),
+    slugs(n.descriptions ?? descriptionRows.length),
+    slugs(n.solDesc ?? solDesc.length),
+    slugs(n.solLong ?? solLong.length),
+    slugs(n.solAgent ?? solAgent.length),
+    {},
   ];
   const updates = (stub: ReturnType<typeof makeStub>) =>
     stub.captured
       .map((q) => dialect.sqlToQuery(q))
       .filter((q) => /^\s*update/i.test(q.sql))
       .map((q) => ({ ...q, flat: q.sql.toLowerCase().replace(/\s+/g, " ") }));
+  const solutionRow = (slug: string, column: string) =>
+    CATALOGUE_COPY_0123_SOLUTIONS.find((r) => r.slug === slug && r.column === column)!;
 
   it("runs once: a ledgered block makes no writes on a second boot", async () => {
     const stub = makeStub({ queue: [{}, [{ block: "0123_catalogueCopy" }]] });
@@ -3221,23 +3234,27 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     expect(stub.renderedSql.some((q) => /^\s*(update|delete|insert)/i.test(q))).toBe(false);
   });
 
-  it("rewrites names, descriptions and solution descriptions, reports each count, and records itself last", async () => {
+  it("rewrites names, descriptions and solution copy, reports each count, and records itself last", async () => {
     const stub = makeStub({ queue: fullQueue() });
     const result = await runMigration0123_catalogueCopy(stub);
-    expect(result.rows_affected).toBe(nameRows.length + descriptionRows.length + solutionRows.length);
+    expect(result.rows_affected).toBe(
+      nameRows.length + descriptionRows.length + solDesc.length + solLong.length + solAgent.length,
+    );
     expect(result.outcome).toBe(
       `capabilities: ${nameRows.length}/${nameRows.length} name(s), ` +
         `${descriptionRows.length}/${descriptionRows.length} description(s); ` +
-        `solutions: ${solutionRows.length}/${solutionRows.length} description(s)`,
+        `solutions: ${solDesc.length}/${solDesc.length} description(s), ` +
+        `${solLong.length}/${solLong.length} long_description(s), ` +
+        `${solAgent.length}/${solAgent.length} agent_description(s)`,
     );
-    expect(updates(stub)).toHaveLength(3);
+    expect(updates(stub)).toHaveLength(5);
     expect(stub.renderedSql[stub.renderedSql.length - 1]).toMatch(/insert into startup_migration_ledger/i);
   });
 
   it("only updates rows still holding the snapshot value: each UPDATE is guarded on its own column's exact prior value", async () => {
     const stub = makeStub({ queue: fullQueue() });
     await runMigration0123_catalogueCopy(stub);
-    const [names, descriptions, solutions] = updates(stub);
+    const [names, descriptions, solutions, longs, agents] = updates(stub);
 
     expect(names.flat).toContain("update capabilities as c set name = v.new_value, updated_at = now() from (values");
     expect(names.flat).toContain("where c.slug = v.slug and c.name = v.old_value");
@@ -3247,26 +3264,35 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     expect(descriptions.flat).not.toMatch(/\bname\b/);
     expect(solutions.flat).toContain("update solutions as s set description = v.new_value, updated_at = now() from (values");
     expect(solutions.flat).toContain("where s.slug = v.slug and s.description = v.old_value");
+    expect(longs.flat).toContain("update solutions as s set long_description = v.new_value, updated_at = now() from (values");
+    expect(longs.flat).toContain("where s.slug = v.slug and s.long_description = v.old_value");
+    expect(agents.flat).toContain("update solutions as s set agent_description = v.new_value, updated_at = now() from (values");
+    expect(agents.flat).toContain("where s.slug = v.slug and s.agent_description = v.old_value");
     // Copy only: no price, step or flag column is ever written.
-    for (const u of [names, descriptions, solutions]) {
+    for (const u of [names, descriptions, solutions, longs, agents]) {
       expect(u.flat.slice(0, u.flat.indexOf(" from "))).not.toMatch(/price|is_active|x402|visible|step/);
     }
 
     // The bound rows are exactly (slug, snapshot value, new value) triples from the data module.
     expect(names.params).toEqual(nameRows.flatMap((r) => [r.slug, r.old_name, r.name]));
     expect(descriptions.params).toEqual(descriptionRows.flatMap((r) => [r.slug, r.old_description, r.description]));
-    expect(solutions.params).toEqual(solutionRows.flatMap((r) => [r.slug, r.old_description, r.description]));
+    expect(solutions.params).toEqual(solDesc.flatMap((r) => [r.slug, r.old_value, r.value]));
+    expect(longs.params).toEqual(solLong.flatMap((r) => [r.slug, r.old_value, r.value]));
+    expect(agents.params).toEqual(solAgent.flatMap((r) => [r.slug, r.old_value, r.value]));
     // A tool whose name is not changing is not in the name UPDATE at all.
     const unchanged = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.old_name === r.name)!;
     expect(names.params).not.toContain(unchanged.slug);
   });
 
   it("reports rows the guard left alone instead of claiming them", async () => {
-    const stub = makeStub({ queue: fullQueue(nameRows.length - 2, descriptionRows.length, solutionRows.length - 13) });
+    const stub = makeStub({ queue: fullQueue({ names: nameRows.length - 2, solDesc: solDesc.length - 13, solLong: solLong.length - 13 }) });
     const result = await runMigration0123_catalogueCopy(stub);
-    expect(result.rows_affected).toBe(nameRows.length - 2 + descriptionRows.length + solutionRows.length - 13);
+    expect(result.rows_affected).toBe(
+      nameRows.length - 2 + descriptionRows.length + solDesc.length - 13 + solLong.length - 13 + solAgent.length,
+    );
     expect(result.outcome).toContain(`${nameRows.length - 2}/${nameRows.length} name(s) (2 left alone`);
-    expect(result.outcome).toContain(`solutions: ${solutionRows.length - 13}/${solutionRows.length} description(s) (13 left alone`);
+    expect(result.outcome).toContain(`solutions: ${solDesc.length - 13}/${solDesc.length} description(s) (13 left alone`);
+    expect(result.outcome).toContain(`${solLong.length - 13}/${solLong.length} long_description(s) (13 left alone`);
   });
 
   it("binds no array, Date or Buffer parameter and never uses ANY() (the boot crash-loop class)", async () => {
@@ -3297,6 +3323,11 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     expect(sanctions.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
     expect(sanctions.description).not.toBe(DQ36_OLD_SANCTIONS_DESCRIPTION);
     expect(sanctions.description).not.toMatch(/OFSI/);
+    // kyb-complete-se's long_description: 0121 wrote it; 0123 is guarded on 0121's target.
+    const se = solutionRow("kyb-complete-se", "long_description");
+    expect(se.source).toBe("block-0121-target");
+    expect(se.old_value).toBe(KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION);
+    expect(se.value).not.toBe(KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION);
   });
 
   it("every manifest carries the block's target name and description; refused and excluded tools are absent", async () => {
@@ -3316,32 +3347,65 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     // password-strength's offered copy says the password is never stored; inputs are kept 90 days.
     expect(slugsSeen.has("password-strength")).toBe(false);
     expect(slugsSeen.has("social-profile-check")).toBe(false);
+    const solutionSlugs = new Set(CATALOGUE_COPY_0123_SOLUTIONS.map((r) => `${r.slug}:${r.column}`));
+    expect(solutionSlugs.size, "one row per slug and column").toBe(CATALOGUE_COPY_0123_SOLUTIONS.length);
   });
 
-  it("the solution copy drops the anti-bot claim, the stale deadline and the 'for <Country>' template, and matches its sources", async () => {
+  it("web-extract-clean no longer claims to get past blocked pages in any copy column, and the source matches", async () => {
+    const { SOLUTIONS } = await import("../db/solution-catalogue.js");
+    const source = SOLUTIONS.find((s) => s.slug === "web-extract-clean")!;
+    const blocked = /anti-bot|block|bypass|captcha/i;
+    for (const [column, field] of [
+      ["description", "description"],
+      ["long_description", "longDescription"],
+      ["agent_description", "agentDescription"],
+    ] as const) {
+      const row = solutionRow("web-extract-clean", column);
+      expect(row.source, column).toBe("snapshot");
+      expect(row.old_value, column).toMatch(blocked);
+      expect(row.value, column).not.toMatch(blocked);
+      expect(source[field], column).toBe(row.value);
+    }
+    // Narrowing only: the new text is the old text with the claim removed, nothing added.
+    for (const column of ["long_description", "agent_description"]) {
+      const row = solutionRow("web-extract-clean", column);
+      const kept = row.value.split(/[ ,]+/).filter(Boolean);
+      const before = new Set(row.old_value.split(/[ ,]+/));
+      expect(kept.filter((w) => !before.has(w)), column).toEqual([]);
+    }
+  });
+
+  it("the bundle copy drops the stale deadline and the 'for <Country>' template in description and long_description, and matches its sources", async () => {
     const { readFileSync } = await import("node:fs");
     const { SOLUTIONS } = await import("../db/solution-catalogue.js");
-    const bySlug = new Map(CATALOGUE_COPY_0123_SOLUTIONS.map((r) => [r.slug, r]));
-    for (const slug of ["web-extract-clean", "ai-act-assess"]) {
-      const source = SOLUTIONS.find((s) => s.slug === slug)!;
-      expect(source.description, slug).toBe(bySlug.get(slug)!.description);
-    }
-    expect(bySlug.get("web-extract-clean")!.old_description).toMatch(/anti-bot/);
-    expect(bySlug.get("ai-act-assess")!.old_description).toMatch(/August 2026 deadline/);
+    expect(SOLUTIONS.find((s) => s.slug === "ai-act-assess")!.description).toBe(solutionRow("ai-act-assess", "description").value);
+    expect(solutionRow("ai-act-assess", "description").old_value).toMatch(/August 2026 deadline/);
     for (const r of CATALOGUE_COPY_0123_SOLUTIONS) {
-      expect(r.description, r.slug).not.toMatch(/anti-bot|deadline|\bfor (the )?[A-Z][a-z]+( [A-Z][a-z]+)?\./);
+      expect(r.value, `${r.slug}:${r.column}`).not.toMatch(/deadline|\bfor (the )?[A-Z][a-z]+( [A-Z][a-z]+)?\./);
     }
-    const families = CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => /^(kyb-essentials|kyb-complete|invoice-verify)-[a-z]{2}$/.test(r.slug));
-    expect(families).toHaveLength(66);
-    for (const r of families) {
-      expect(r.old_description, r.slug).toMatch(/^(Quick company verification|Comprehensive company verification|Invoice fraud detection) for [A-Z]/);
-      expect(r.description, r.slug).toMatch(/^(Quick verification of an? |Comprehensive verification of an? |Fraud detection for invoices from )[A-Z][A-Za-z]+ compan(y|ies)\. /);
+    const family = /^(kyb-essentials|kyb-complete|invoice-verify)-[a-z]{2}$/;
+    const descriptions = CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => family.test(r.slug) && r.column === "description");
+    const longs = CATALOGUE_COPY_0123_SOLUTIONS.filter((r) => family.test(r.slug) && r.column === "long_description");
+    expect(descriptions).toHaveLength(66);
+    expect(longs).toHaveLength(66);
+    for (const r of descriptions) {
+      expect(r.old_value, r.slug).toMatch(/^(Quick company verification|Comprehensive company verification|Invoice fraud detection) for [A-Z]/);
+      expect(r.value, r.slug).toMatch(/^(Quick verification of an? |Comprehensive verification of an? |Fraud detection for invoices from )[A-Z][A-Za-z]+ compan(y|ies)\. /);
     }
-    expect(bySlug.get("kyb-essentials-uk")!.description).toMatch(/^Quick verification of a UK company\. /);
-    expect(bySlug.get("kyb-complete-at")!.description).toMatch(/^Comprehensive verification of an Austrian company\. /);
-    expect(bySlug.get("invoice-verify-us")!.description).toMatch(/^Fraud detection for invoices from US companies\. /);
-    // The seed generator no longer produces the old template either.
+    for (const r of longs) {
+      expect(r.old_value, r.slug).toMatch(/^Performs \d+ automated checks for (invoices from )?[A-Z][a-z]+( [A-Z][a-z]+)?( companies)?: /);
+      expect(r.value, r.slug).toMatch(/^Performs \d+ automated checks for (invoices from )?[A-Z][A-Za-z]+ companies: /);
+      // Only the country phrase changes; the step count and everything after the colon are kept.
+      expect(r.value.slice(r.value.indexOf(": ")), r.slug).toBe(r.old_value.slice(r.old_value.indexOf(": ")));
+      expect(r.value.match(/^Performs (\d+)/)![1], r.slug).toBe(r.old_value.match(/^Performs (\d+)/)![1]);
+    }
+    expect(solutionRow("kyb-essentials-uk", "description").value).toMatch(/^Quick verification of a UK company\. /);
+    expect(solutionRow("kyb-complete-at", "description").value).toMatch(/^Comprehensive verification of an Austrian company\. /);
+    expect(solutionRow("invoice-verify-us", "description").value).toMatch(/^Fraud detection for invoices from US companies\. /);
+    expect(solutionRow("invoice-verify-uk", "long_description").value).toMatch(/^Performs 14 automated checks for invoices from UK companies: /);
+    expect(solutionRow("kyb-essentials-at", "long_description").value).toMatch(/^Performs 4 automated checks for Austrian companies: /);
+    // The seed generator no longer produces the old templates either.
     const seed = readFileSync(new URL("../../scripts/seed-kyb-solutions.ts", import.meta.url), "utf8");
-    expect(seed).not.toMatch(/verification for \$\{c\.name\}|fraud detection for \$\{c\.name\}/);
+    expect(seed).not.toMatch(/verification for \$\{c\.name\}|fraud detection for \$\{c\.name\}|checks for \$\{c\.name\} companies|invoices from \$\{c\.name\}/);
   });
 });

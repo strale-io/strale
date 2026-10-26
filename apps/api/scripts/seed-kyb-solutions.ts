@@ -174,7 +174,7 @@ function buildKybEssentials(c: Country): SolutionDef {
     name: `KYB Essentials — ${c.name}`,
     marketingName: `KYB Essentials — ${c.name}`,
     description: `Quick verification of ${companyPhrase(c)}. Confirms the company exists in the official registry, ${c.isEU ? "validates VAT registration (from registry data or a VAT number you provide), " : ""}screens against international sanctions lists, and checks LEI status.`,
-    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup via ${c.companyDataSlug}, ${c.isEU ? "EU VAT validation via VIES (using the registry's VAT number where the registry publishes one — some registries, e.g. the Austrian Firmenbuch and Slovak RPO, do not — otherwise the optional vat_number input; the step is skipped when neither is available), " : ""}sanctions screening against OFAC/EU/UN lists, and LEI (Legal Entity Identifier) lookup. Returns structured check results with a disclaimer.`,
+    longDescription: `Performs ${checkCount} automated checks for ${c.adjective} companies: official registry lookup via ${c.companyDataSlug}, ${c.isEU ? "EU VAT validation via VIES (using the registry's VAT number where the registry publishes one — some registries, e.g. the Austrian Firmenbuch and Slovak RPO, do not — otherwise the optional vat_number input; the step is skipped when neither is available), " : ""}sanctions screening against OFAC/EU/UN lists, and LEI (Legal Entity Identifier) lookup. Returns structured check results with a disclaimer.`,
     agentDescription: `verify ${c.name.toLowerCase()} company, kyb ${c.code}, check ${c.name.toLowerCase()} business, ${c.code} company verification, onboard ${c.name.toLowerCase()} customer`,
     category: "compliance-verification",
     priceCents: 150,
@@ -371,7 +371,7 @@ function buildKybComplete(c: Country): SolutionDef {
     name: `KYB Complete — ${c.name}`,
     marketingName: `KYB Complete — ${c.name}`,
     description: `Comprehensive verification of ${companyPhrase(c)}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
-    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation (registry-derived or caller-provided), " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
+    longDescription: `Performs ${checkCount} automated checks for ${c.adjective} companies: official registry lookup, ${c.isEU ? "VAT validation (registry-derived or caller-provided), " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
       c.code === "fr" ? " plus BODACC commercial-registry and insolvency events" :
       c.code === "no" ? " plus Brreg bankruptcy / dissolution detail" :
       c.code === "uk" ? " plus Companies House insolvency cases" : ""
@@ -559,7 +559,7 @@ function buildInvoiceVerify(c: Country): SolutionDef {
     name: `Invoice Verify — ${c.name}`,
     marketingName: `Invoice Verify — ${c.name}`,
     description: `Fraud detection for invoices from ${c.adjective} companies. Verifies the invoicing company exists, validates payment details (IBAN, BIC${c.isEU ? ", VAT" : ""}), screens for sanctions and adverse media, analyzes sender domain trustworthiness, and produces a plain-language fraud assessment.`,
-    longDescription: `Performs ${checkCount} automated checks for invoices from ${c.name}: company registry verification, ${c.isEU ? "VAT validation, " : ""}IBAN and BIC validation, sanctions screening, adverse media search, invoice format validation, domain reputation, WHOIS, email validation, DNS check, and redirect tracing. Returns a dual-output response with structured checks and a human-readable fraud assessment.`,
+    longDescription: `Performs ${checkCount} automated checks for invoices from ${c.adjective} companies: company registry verification, ${c.isEU ? "VAT validation, " : ""}IBAN and BIC validation, sanctions screening, adverse media search, invoice format validation, domain reputation, WHOIS, email validation, DNS check, and redirect tracing. Returns a dual-output response with structured checks and a human-readable fraud assessment.`,
     agentDescription: `verify ${c.name.toLowerCase()} invoice, invoice fraud check ${c.code}, is this ${c.name.toLowerCase()} invoice legitimate, validate ${c.name.toLowerCase()} payment, ${c.code} invoice verification`,
     category: "compliance-verification",
     priceCents: 250,
