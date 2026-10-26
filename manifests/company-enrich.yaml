@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: company-enrich
-name: Company Enrichment
-description: >-
-  Enrich company data from a domain, email, or company name. Scrapes the company website to extract: industry, employee
-  estimate, HQ location, description, social links, tech stack.
+name: "Company Enrichment"
+description: "Build a company profile from a domain, email or name, read from its website: industry, size estimate, headquarters, description, social links and tech stack."
 category: data-extraction
 search_tags:
   - company info

@@ -1,8 +1,6 @@
 slug: iso-country-lookup
-name: ISO Country Lookup
-description: >-
-  Look up any country by name, ISO code (alpha-2/3/numeric). Returns region, capital, currency, EU/Schengen/Eurozone
-  membership.
+name: "Country Lookup"
+description: "Look up a country by name or ISO code: region, capital, currency, and EU, Schengen and euro membership."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

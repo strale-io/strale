@@ -1,9 +1,6 @@
 slug: age-verify
-name: Age Verify
-description: >-
-  Verify if a person meets a minimum age requirement based on their date of birth. Returns exact
-  age, whether the threshold is met, and days until the threshold (if not met). Accounts for
-  leap years.
+name: "Age Check"
+description: "Check whether a date of birth meets a minimum age. Returns the exact age, whether the threshold is met, and the days until it is."
 category: validation
 cost_class: free_unlimited
 quota_window: none

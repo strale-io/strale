@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: job-board-search
-name: Job Board Search
-description: "Search job listings from Sweden's public employment service (Arbetsförmedlingen). Returns title, company, location, salary and URL."
+name: "Job Board Search"
+description: "Search job listings at Arbetsförmedlingen, Sweden's public employment service. Returns title, employer, location, salary and link."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

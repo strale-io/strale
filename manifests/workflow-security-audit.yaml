@@ -1,9 +1,6 @@
 slug: workflow-security-audit
-name: Workflow Security Audit
-description: >-
-  Audit GitHub Actions workflow YAML for supply chain security risks. Checks action pinning (SHA vs mutable tags),
-  permission scopes, secret exposure, trusted publishers, and dangerous trigger patterns like pull_request_target. Pure
-  static analysis, no external API calls.
+name: "Workflow Security Audit"
+description: "Audit a GitHub Actions workflow for supply-chain risks: unpinned actions, broad permissions, exposed secrets, trusted publishing and risky triggers such as pull_request_target."
 category: security
 cost_class: free_unlimited
 quota_window: none

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: timezone-meeting-find
-name: Timezone Meeting Finder
-description: >-
-  Find optimal meeting times across time zones. Returns ranked slots by fairness, with local times for each participant.
-  Algorithmic.
+name: "Meeting Time Finder"
+description: "Find the fairest meeting times across time zones, ranked, with each participant's local time."
 category: utility
 cost_class: free_unlimited
 quota_window: none

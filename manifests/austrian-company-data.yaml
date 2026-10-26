@@ -1,8 +1,6 @@
 slug: austrian-company-data
-name: Austrian Company Data
-description: >-
-  Official Austrian Firmenbuch lookup via the JustizOnline HVD API: company core data, current officers, and registry
-  legal facts, by Firmenbuchnummer or name.
+name: "Austrian Company Data"
+description: "Look up an Austrian company in the official Firmenbuch by register number or name: core company data, current officers and registered facts."
 category: company-data
 cost_class: free_unlimited
 price_cents: 5

@@ -1,8 +1,6 @@
 slug: credit-score-band
-name: Credit Score Band
-description: >-
-  Convert and interpret credit scores between different scoring systems. Maps FICO, VantageScore,
-  Experian, Equifax scores to universal risk bands with percentile estimates.
+name: "Credit Score Band"
+description: "Translate a FICO, VantageScore, Experian or Equifax score into a common risk band with an estimated percentile."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

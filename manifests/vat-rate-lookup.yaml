@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: vat-rate-lookup
-name: VAT Rate Lookup
-description: >-
-  Look up VAT rates for EU/EEA countries. Returns standard, reduced, zero-rated categories. Supports category-specific
-  queries.
+name: "VAT Rate Lookup"
+description: "Look up VAT rates in EU and EEA countries: standard, reduced and zero rates, and the rate for a given category."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

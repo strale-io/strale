@@ -1,8 +1,6 @@
 slug: company-industry-classify
-name: Company Industry Classify
-description: >-
-  Classify a company's industry using standard codes. Given a company name, description, or
-  website URL, returns SIC, NAICS, and NACE codes with confidence levels.
+name: "Company Industry Classification"
+description: "Classify a company's industry from its name, description or website. Returns SIC, NAICS and NACE codes with confidence levels."
 category: data-processing
 cost_class: paid_prepaid
 quota_window: none

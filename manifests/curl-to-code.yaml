@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: curl-to-code
-name: cURL to Code
-description: Convert a curl command to equivalent code in TypeScript, Python, Go, Rust, Java, or PHP.
+name: "cURL to Code"
+description: "Turn a curl command into TypeScript, Python, Go, Rust, Java or PHP."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

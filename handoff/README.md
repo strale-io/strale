@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-344 files (317 with a recorded intent, 27 without).
+345 files (318 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md`](_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md) | Carry out the 2026-10-25 visual review's fix order on apps/web (homepage first, then the catalogue), and leave the wo... |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-catalogue-copy.md`](_general/from-code/2026-10-26-catalogue-copy.md) | Rewrite the public names and descriptions of the catalogue's tools, fix the bundled-check copy problems, and make pro... |
 | 2026-10-25 | [`handoff/_general/from-code/2026-10-25-website-daylight-switchboard.md`](_general/from-code/2026-10-25-website-daylight-switchboard.md) | Carry out Petter's 2026-10-25 design pass on the apps/web site — off the pink, illustrated, alive, with the Switchboa... |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step4-review-md.md`](_general/from-code/2026-10-24-wow-step4-review-md.md) | Apply step 4 of the way-of-working review (DEC-20261024-A): one reviewer brief and a capability-onboarding skill. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md`](_general/from-code/2026-10-24-wow-step1-quick-wins.md) | Apply step 1 of the way-of-working review (DEC-20261024-A): fewer paperwork failures in CI, same product checks. |

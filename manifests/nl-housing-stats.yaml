@@ -1,8 +1,6 @@
 slug: nl-housing-stats
-name: NL Housing Statistics
-description: >-
-  Dutch housing statistics by municipality from CBS OpenData. Returns average sale prices, number of homes sold, housing
-  stock breakdown (owner-occupied vs rental), and historical trends.
+name: "Dutch Housing Statistics"
+description: "Get Dutch housing statistics by municipality from CBS: average sale prices, homes sold, owner-occupied and rental stock, and trends over time."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

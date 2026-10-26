@@ -10,9 +10,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   checkLedger,
+  declaredDataFiles,
   extractColumnsWritten,
   extractTitle,
   hashBlockSource,
+  hashBlockWithData,
   humanizeFunctionName,
   parseBlockRanges,
   SOURCE_PATH,
@@ -309,5 +311,69 @@ test("a column with no known_overlaps entry at all still fails every writer, sam
     const findings = checkLedger(root).findings.filter((f) => f.code === "DUPLICATE_COLUMN_WRITER");
     const blocksNamed = findings.map((f) => f.block).sort();
     assert.deepEqual(blocksNamed, ["M001", "M002"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Migration data files (`// migration-data: <path>` inside a block)
+// ---------------------------------------------------------------------------
+
+const DATA_PATH = "apps/api/src/lib/widget-data-0003.ts";
+const DATA_BLOCK_SOURCE = `${TWO_BLOCK_SOURCE}
+export async function runMigration0003_widgetCopy(
+  tx: MigrationExecutor,
+): Promise<unknown> {
+  // migration-data: ${DATA_PATH}
+  await tx.execute(sql\`
+    UPDATE widgets SET label = 'x' WHERE label = 'y'
+  \`);
+  return { block: "0003_widget_copy" };
+}
+`;
+
+/** Writes `dataText` and a ledger for DATA_BLOCK_SOURCE whose block-3 hash covers it (as --update would compute it). */
+function ledgerWithData(root, dataText) {
+  const ledger = computeLedgerFor(DATA_BLOCK_SOURCE);
+  writeFileSync(join(root, DATA_PATH), dataText, "utf8");
+  const lines = DATA_BLOCK_SOURCE.split("\n");
+  const range = parseBlockRanges(lines).find((r) => r.functionName === "runMigration0003_widgetCopy");
+  const row = ledger.blocks.find((b) => b.function === "runMigration0003_widgetCopy");
+  row.sha256 = hashBlockWithData(root, lines.slice(range.startLine, range.endLine + 1).join("\n")).sha256;
+  writeFileSync(join(root, LEDGER_PATH), JSON.stringify(ledger, null, 2), "utf8");
+}
+
+test("declaredDataFiles reads `// migration-data:` lines; a block without one hashes exactly as before", () => {
+  assert.deepEqual(declaredDataFiles(`  // migration-data: ${DATA_PATH}\n  const x = 1;`), [DATA_PATH]);
+  assert.deepEqual(declaredDataFiles("  const x = 1; // not a declaration"), []);
+  const plain = "export async function runMigration0009_x() {\n}";
+  assert.equal(hashBlockWithData(tmpdir(), plain).sha256, hashBlockSource(plain));
+});
+
+test("editing a block's declared data file fails BLOCK_HASH_MISMATCH; the unedited file passes", () => {
+  withFixture(DATA_BLOCK_SOURCE, null, (root) => {
+    ledgerWithData(root, 'export const ROWS = [{ slug: "a", old: "y", next: "x" }];\n');
+    assert.deepEqual(codes(root), []);
+    // CRLF vs LF is not an edit (autocrlf checkouts must not trip the check).
+    writeFileSync(join(root, DATA_PATH), 'export const ROWS = [{ slug: "a", old: "y", next: "x" }];\r\n', "utf8");
+    assert.deepEqual(codes(root), []);
+    writeFileSync(join(root, DATA_PATH), 'export const ROWS = [{ slug: "a", old: "y", next: "z" }];\n', "utf8");
+    assert.deepEqual(codes(root), ["BLOCK_HASH_MISMATCH"]);
+  });
+});
+
+test("removing the `// migration-data:` declaration from the block is itself a hash change", () => {
+  withFixture(DATA_BLOCK_SOURCE, null, (root) => {
+    ledgerWithData(root, "export const ROWS = [];\n");
+    writeFileSync(join(root, SOURCE_PATH), DATA_BLOCK_SOURCE.replace(`  // migration-data: ${DATA_PATH}\n`, ""), "utf8");
+    assert.deepEqual(codes(root), ["BLOCK_HASH_MISMATCH"]);
+  });
+});
+
+test("a declared data file that does not exist fails MIGRATION_DATA_MISSING", () => {
+  withFixture(DATA_BLOCK_SOURCE, null, (root) => {
+    ledgerWithData(root, "export const ROWS = [];\n");
+    rmSync(join(root, DATA_PATH));
+    const found = codes(root);
+    assert.ok(found.includes("MIGRATION_DATA_MISSING"), found.join(", "));
   });
 });

@@ -1,9 +1,6 @@
 slug: aml-risk-score
-name: AML Risk Score
-description: >-
-  Calculate a composite Anti-Money Laundering (AML) risk score for a person or company.
-  Aggregates sanctions screening, PEP status, and jurisdiction risk into a single 0-100
-  risk score with risk level classification.
+name: "AML Risk Score"
+description: "Score a person or company for anti-money-laundering risk from 0 to 100, combining sanctions screening, PEP status and jurisdiction risk into one level."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

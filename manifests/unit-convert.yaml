@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: unit-convert
-name: Unit Convert
-description: "Convert between units: length, weight, volume, temperature, area, speed, data storage. Algorithmic — instant."
+name: "Unit Converter"
+description: "Convert length, weight, volume, temperature, area, speed and data size."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

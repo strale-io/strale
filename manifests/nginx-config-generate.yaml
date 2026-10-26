@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: nginx-config-generate
-name: Nginx Config Generate
-description: >-
-  Generate production nginx server blocks with SSL, proxy_pass, WebSocket support, security headers, gzip, rate
-  limiting.
+name: "Nginx Config Generator"
+description: "Generate production nginx server blocks with SSL, proxy_pass, WebSocket support, security headers, gzip and rate limiting."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

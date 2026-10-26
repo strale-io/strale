@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: norwegian-company-data
-name: Norwegian Company Data
-description: >-
-  Look up Norwegian company data from the Brønnøysund Register Centre. Accepts org number (9 digits) or fuzzy company
-  name.
+name: "Norwegian Company Data"
+description: "Look up a Norwegian company in the Brønnøysund Register Centre by its 9-digit organisation number or name."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

@@ -1,8 +1,6 @@
 slug: breach-exposure-check
-name: Breach Exposure Check
-description: >-
-  Known data breaches of a company's own domain: date, accounts exposed, what data classes leaked,
-  and whether credentials were among them. Takes a domain only — no personal data, no secrets.
+name: "Breach Exposure Check"
+description: "Find known data breaches of a company's own domain: when, how many accounts, which kinds of data leaked, and whether passwords were among them. Takes a domain only."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

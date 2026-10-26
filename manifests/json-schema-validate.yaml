@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: json-schema-validate
-name: JSON Schema Validate
-description: >-
-  Validate a JSON object against a JSON Schema. Returns validation result with detailed error paths and messages.
-  Algorithmic.
+name: "JSON Schema Validation"
+description: "Validate JSON against a JSON Schema and get each error with its path and message."
 category: validation
 cost_class: free_unlimited
 quota_window: none

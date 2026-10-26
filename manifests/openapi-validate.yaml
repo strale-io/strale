@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: openapi-validate
-name: OpenAPI Validate
-description: Validate an OpenAPI 3.x specification. Checks required fields, endpoint definitions, schema references. Algorithmic.
+name: "OpenAPI Validation"
+description: "Validate an OpenAPI 3.x specification: required fields, endpoint definitions and schema references."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none

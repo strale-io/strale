@@ -1,8 +1,6 @@
 slug: c2pa-inspect
-name: C2PA Content Credentials Inspect
-description: >-
-  Inspect a media URL for C2PA Content Credentials. Parses the embedded manifest, verifies the cryptographic signature,
-  and extracts claim generator, signer, edit assertions, and AI-generation flags. Pure parsing — no external API.
+name: "C2PA Content Credentials"
+description: "Read the C2PA Content Credentials in a media file: verify the signature and show the tool that made it, the signer, edits, and any AI-generation flags."
 category: media
 cost_class: free_unlimited
 quota_window: none

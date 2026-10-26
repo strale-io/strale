@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: summarize
-name: Summarize Text
-description: >-
-  Summarize text into a concise format. Supports paragraph, bullet points, or one-sentence styles. Configurable max
-  length.
+name: "Text Summary"
+description: "Summarise text as a paragraph, bullet points or a single sentence, up to the length you set."
 category: text-processing
 cost_class: paid_prepaid
 quota_window: none

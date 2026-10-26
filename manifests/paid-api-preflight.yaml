@@ -1,10 +1,6 @@
 slug: paid-api-preflight
-name: Paid API Pre-flight Check
-description: >-
-  Verify any paid API endpoint before your agent spends money. Checks reachability, SSL, response
-  time, and validates the payment protocol handshake (L402, x402, MPP). Returns a
-  proceed/caution/avoid recommendation with parsed payment details. Use this before calling any paid
-  external API to avoid wasting funds on broken, misconfigured, or fraudulent endpoints.
+name: "Paid API Pre-flight Check"
+description: "Check a paid API before your agent spends money on it: reachability, SSL, response time and the payment handshake (L402, x402, MPP). Returns proceed, caution or avoid, with the payment details."
 category: validation
 cost_class: free_unlimited
 quota_window: none

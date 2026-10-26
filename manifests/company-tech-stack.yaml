@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: company-tech-stack
-name: Company Tech Stack
-description: >-
-  Deep tech stack analysis of any domain. Analyzes HTTP headers, HTML source, JS libraries, DNS records, meta tags.
-  Returns frontend, analytics, CDN, hosting, CMS, and more.
+name: "Company Tech Stack"
+description: "Analyse the technology behind a domain from its headers, HTML, scripts, DNS and meta tags: frontend, analytics, CDN, hosting, CMS and more."
 category: competitive-intelligence
 cost_class: paid_prepaid
 quota_window: none

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: backlink-check
-name: Backlink Check
-description: >-
-  Check backlinks for a domain via CommonCrawl and Google search. Returns linking domains, anchor text,
-  dofollow/nofollow counts.
+name: "Backlink Check"
+description: "Find backlinks to a domain from Common Crawl and Google search: linking domains, anchor text, and follow and nofollow counts."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
