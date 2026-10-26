@@ -30,7 +30,7 @@ input_schema:
       description: ISO 3166-1 alpha-2 country code of the registry (UK is accepted as GB). The supported list is returned in the error for an unsupported code.
     identifier:
       type: string
-      description: The company's identifier in that country's registry, for example 556703-7485 (SE), 00445790 (GB) or 513174 (IE). The error for a malformed identifier says which format the country expects.
+      description: The company's identifier in that country's registry, for example 556703-7485 (SE), 00445790 (GB), 513174 (IE), 923609016 (NO), 0000028860 (PL) or 00177041 (CZ, mod-11 checksum required). Keep leading zeros for PL and CZ; send these identifiers as strings. The error for a malformed identifier says which format the country expects.
 output_schema:
   type: object
   example:
@@ -149,10 +149,11 @@ limitations:
     workaround: Read registry_status_raw when status is "unknown".
   - title: Countries covered
     text: >-
-      Austria, Australia, Estonia, Finland, France, United Kingdom, Croatia, Ireland, Latvia, Sweden and
-      Singapore. The error for any other country names the supported list. Left out for now: Norway, Poland, Czechia
-      and Greece, whose underlying registry lookups do not report deleted, struck-off or liquidating entities (a fix
-      is tracked separately); Belgium, Brazil, Germany, Spain and Japan, whose data-access checks are still pending;
+      14 countries: Austria (AT), Australia (AU), Czechia (CZ), Estonia (EE), Finland (FI), France (FR),
+      United Kingdom (GB), Croatia (HR), Ireland (IE), Latvia (LV), Norway (NO), Poland (PL), Sweden (SE) and
+      Singapore (SG). The error for any other country names the supported list. Greece stays excluded because
+      live status behaviour could not be checked without a GEMI key. Also left out: Belgium, Brazil, Germany,
+      Spain and Japan, whose data-access checks are still pending;
       the United States, Slovakia and Slovenia, which publish no usable status; and Canada and Switzerland, whose
       status vocabulary could not be checked.
     category: coverage
@@ -167,11 +168,13 @@ limitations:
     workaround: Resolve the identifier first with the country's company-data capability or VAT validation.
   - title: Insolvency notices only where an official source is connected
     text: >-
-      Insolvency notices come from Companies House (GB), BODACC (FR) and Bolagsverket's pending proceedings (SE).
-      For every other country the insolvency block says checked false. For Sweden, notices are reported when
+      Insolvency notices come from Companies House (GB), BODACC (FR), Brønnøysundregistrene (NO) and Bolagsverket's pending proceedings (SE).
+      For every other country the insolvency block says checked false; Czech registry insolvency status still
+      maps to in_insolvency. Norway reports bankruptcy and dissolution flags as notices, with dates only where
+      supplied; deletion alone is not an insolvency notice. For Sweden, notices are reported when
       Bolagsverket lists a pending proceeding and an open konkurs or likvidation sets the status; when none is
       listed the block says checked false, because the answer cannot show whether that part of the record loaded.
-      An empty notices list for GB or FR means the source lists none for this company, not that none exist elsewhere.
+      An empty notices list for GB, FR or NO means the source lists none for this company, not that none exist elsewhere.
       Sole-trader notices can be personal financial data.
     category: coverage
     severity: warning
