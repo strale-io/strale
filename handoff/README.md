@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-348 files (321 with a recorded intent, 27 without).
+349 files (322 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md`](_general/from-code/2026-10-26-docs-review-follow-ups-2026-10-26.md) | close the documentation follow-ups from the 2026-10-26 independent reviews of PR #728 and PR #705. |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-company-status-check.md`](_general/from-code/2026-10-26-company-status-check.md) | build `company-status-check` ("Is this company still alive?", portfolio plan item 1C.1, DEC-20261024-B) as a draft PR... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-checkin-morning.md`](_general/from-code/2026-10-26-checkin-morning.md) | run the 2026-10-26 operating session under DAILY-RUN.md — close week |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-catalogue-copy.md`](_general/from-code/2026-10-26-catalogue-copy.md) | Rewrite the public names and descriptions of the catalogue's tools, fix the bundled-check copy problems, and make pro... |
