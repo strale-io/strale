@@ -74,7 +74,7 @@ classification table.
 | subtree | files | newest (by filename date) |
 | --- | --- | --- |
 | `archive/growth-ops/` | 23 | _(no dated filenames)_ |
-| `archive/receipts/` | 70 | `2026-10-26-test-run-registry-status-dead-entities.json` (2026-10-26) |
+| `archive/receipts/` | 70 | `2026-10-26-test-run-registry-status-dead-entities-round-3.json` (2026-10-26) |
 | `archive/sessions/` | 301 | `2026-10-26-agent-surfaces-messaging-review.md` (2026-10-26) |
 | `archive/submissions/` | 12 | _(no dated filenames)_ |
 | `archive/superseded/` | 6 | _(no dated filenames)_ |

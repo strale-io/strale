@@ -121,9 +121,14 @@ const NON_ACTIVE_REGISTRY_STATUSES: Readonly<Record<string, readonly string[]>> 
   "estonian-company-data": ["in_liquidation", "deleted", "in_bankruptcy"],
   // lithuanian-company-data.ts:231 (other classifier labels pass through).
   "lithuanian-company-data": ["Išregistruotas"],
-  // irish-company-data.ts:187 passes CRO status through; Dissolved is recorded
-  // in irish-company-data.test.ts:21-22, alongside the live Normal fixture.
-  "irish-company-data": ["Dissolved"],
+  // CRO passes descriptions through: https://services.cro.ie/companystatuses.aspx/1000
+  // Strike Off Listed is a pending notice: review at high, never infer deletion.
+  "irish-company-data": ["Dissolved", "Dissolved-20 years", "Dissolved PostMerger", "Dissolved by Divis",
+    "Liquidation", "Liquidation(Receivership)", "Liquidation stayed", "Liquidation (UK)", "Struck Off",
+    "Strike Off Listed", "Ceased", "Ceased IRL", "Administration", "Administration (UK)", "Examinership",
+    "Deleted CB Merger", "Deleted per SE merge", "Deleted as per SE Tr", "Deleted CB Conversion",
+    "De-Registered ICAV", "De-Registered Investment Company", "InActive",
+    "Normal (Form E8 (Notice of Appointment of Receiver) Per S436 CA 2014 has been filed with the CRO in respect of part or all of the property of the company, which property may or may not be beneficially owned by the company. Please refer to the relevant E8 form(s) for further information)"],
   // latvian-company-data.ts:227-230
   "latvian-company-data": ["Likvidēts", "Slēgts"],
   // croatian-company-data.ts:92-95
@@ -160,10 +165,20 @@ const NON_ACTIVE_REGISTRY_STATUSES: Readonly<Record<string, readonly string[]>> 
   // lib/browserless-extract.ts:66's explicit extraction vocabulary.
   "australian-company-data": ["inactive", "dissolved"],
   "japanese-company-data": ["inactive", "dissolved"],
-  // No known non-active vocabulary in singapore-company-data.ts:139,
-  // au-company-data.ts:138, brazilian-company-data.ts:55,
-  // canadian-company-data.ts:148 or providers/swiss-company-data.ts:83.
-  // slovenian-company-data.ts:144-156 has no status output at all.
+  // Receita Federal IN RFB 2119/2022 art. 9; executor passes situacao through.
+  // https://normas.receita.fazenda.gov.br/sijut2consulta/link.action?idAto=127567
+  "brazilian-company-data": ["BAIXADA", "INAPTA", "SUSPENSA", "NULA"],
+  // ABR entity status: https://abr.business.gov.au/FAQ/ABNLookup
+  "au-company-data": ["Cancelled"],
+  // ACRA restoration guidance and official dataset uen_status_desc:
+  // https://www.acra.gov.sg/resources/guides-forms/applying-to-restore-a-business-entity/
+  // https://data.gov.sg/datasets/d_1cd970d8351b42be4a308d628a6dd9d3/explorer
+  "singapore-company-data": ["Struck Off", "Struck Off - Early Dissolution", "Dissolved",
+    "Dissolved - Members Voluntary Winding Up", "Dissolved - Creditors Voluntary Winding Up",
+    "Dissolved - Compulsory Winding Up (Insolvency)", "Ceased", "Ceased Registration", "Cancelled", "Terminated"],
+  // No known non-active vocabulary for canadian-company-data or Swiss provider.
+  // slovenian-company-data has no status output at all.
+
 };
 
 function registryNeedsReview(checkName: string, result: any): boolean {
@@ -172,10 +187,40 @@ function registryNeedsReview(checkName: string, result: any): boolean {
     (NON_ACTIVE_REGISTRY_STATUSES[checkName]?.includes(result.status) ?? false);
 }
 
+/** A terminal registration differs from distress while the company still exists. */
+function registryIsTerminal(result: any): boolean {
+  return result?.is_deleted === true || (typeof result?.status === "string" &&
+    /^(?:deleted(?: .*)?|deregistered|de-registered(?: .*)?|struck off(?: - early dissolution)?|dissolved(?:[- ].*)?|ceased(?: .*)?|closed|terminated|cancelled|baixada|nula|Išregistruotas|Likvidēts|Slēgts)$/i.test(result.status));
+}
+
+function registryFinding(checkName: string, result: any): string {
+  const country = ({ "cz": "Czech", "au": "Australian", "uk": "United Kingdom", "no-bankruptcy-check": "Norwegian" } as Record<string, string>)[checkName === "no-bankruptcy-check" ? checkName : checkName.split("-")[0]] ??
+    checkName.replace(/-company-data$/, "").replace(/^./, c => c.toUpperCase());
+  const status = typeof result.status === "string" ? result.status : result.is_deleted ? "deleted" : "showing signs of financial distress";
+  const plainStatus = ({
+    BAIXADA: "deregistered", INAPTA: "ineligible for active registration", SUSPENSA: "suspended", NULA: "registration annulled",
+    Išregistruotas: "deregistered", Likvidēts: "liquidated", Slēgts: "closed",
+    compulsory_dissolution: "being compulsorily dissolved", dissolving: "being wound up",
+    in_liquidation: "in liquidation", in_bankruptcy: "bankrupt",
+    voluntary_arrangement: "in an arrangement with its creditors",
+    "Strike Off Listed": "listed for possible removal from the register (a pending notice)",
+    "Liquidation(Receivership)": "in liquidation with a receiver appointed",
+    "Liquidation (UK)": "in liquidation in the United Kingdom",
+    "Administration (UK)": "in administration in the United Kingdom",
+    "Deleted CB Merger": "deleted from the register", "Deleted per SE merge": "deleted from the register",
+    "Deleted as per SE Tr": "deleted from the register", "Deleted CB Conversion": "deleted from the register",
+    "Dissolved by Divis": "dissolved", "Dissolved PostMerger": "dissolved after a merger",
+    "Dissolved-20 years": "dissolved", "Ceased IRL": "having ceased registration in Ireland",
+    "De-Registered ICAV": "deregistered", "De-Registered Investment Company": "deregistered",
+  } as Record<string, string>)[status] ?? (status.startsWith("Normal (Form E8") ? "subject to a notice of appointment of a receiver" : status.replace(/_/g, " ").replace(/\(/g, " (").toLowerCase());
+  return `The ${country} company registry lists this company as ${plainStatus}.`;
+}
+
 /** Algorithmic fallback when Sonnet is unavailable */
 function algorithmicAssessment(
   checkResults: Record<string, any>,
   context: string,
+  preserveRegistryStatus = false,
 ): Record<string, unknown> {
   const checks = Object.entries(checkResults);
   const passed: string[] = [];
@@ -212,8 +257,8 @@ function algorithmicAssessment(
       failed.push(checkName.replace(/-/g, " "));
       flags.push({
         source_check: checkName,
-        severity: "high",
-        finding: `${checkName} reports registry status ${result.status ?? (result.is_deleted ? "deleted" : "distress signal")}`,
+        severity: registryIsTerminal(result) ? "critical" : "high",
+        finding: registryFinding(checkName, result),
         recommendation: "Review the official registry record before proceeding; this result does not establish an active company.",
       });
     } else if (isSanctioned) {
@@ -245,7 +290,7 @@ function algorithmicAssessment(
       passed.push(checkName.replace(/-/g, " "));
       flags.push({
         source_check: checkName,
-        severity: result?.risk_level === "critical" ? "high" : "medium",
+        severity: preserveRegistryStatus && result?.risk_level === "critical" ? "critical" : result?.risk_level === "critical" ? "high" : "medium",
         finding: `${checkName.replace(/-/g, " ")} flagged elevated risk`,
         recommendation: "Review the detailed findings before proceeding.",
       });
@@ -281,9 +326,12 @@ function algorithmicAssessment(
     riskScore = 90;
   }
 
-  if (checks.some(([name, result]) => registryNeedsReview(name, result))) {
+  if (preserveRegistryStatus) {
     // A populated dead-company record is an answer, not a passed KYB check.
-    if (riskScore < 75) { riskLevel = "high"; riskScore = 75; }
+    if (flags.some(flag => flag.severity === "critical")) {
+      riskLevel = "critical";
+      riskScore = Math.max(90, riskScore);
+    } else if (riskScore < 75) { riskLevel = "high"; riskScore = 75; }
   }
 
   const contextLabel = context === "kyb" ? "entity verification" : "invoice fraud detection";
@@ -320,7 +368,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
   if (!apiKey || preserveRegistryStatus) {
     // Preserve registry lifecycle findings deterministically, including when
     // AI synthesis is available; do not let a model turn them into a pass.
-    const output = algorithmicAssessment(checkResults, context);
+    const output = algorithmicAssessment(checkResults, context, preserveRegistryStatus);
     return {
       output: {
         ...output,

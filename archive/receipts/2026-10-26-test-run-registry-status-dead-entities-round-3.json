@@ -1,0 +1,147 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b81da359cce91bc3f58f047cd65c232c5b480941"
+  },
+  "at": "2026-10-26T13:05:16.714Z",
+  "inputs": {
+    "source": "structured local verification summaries"
+  },
+  "summary": {
+    "production_writes": false,
+    "commits_created": false,
+    "shipping_attempted": false
+  },
+  "topic": "registry-status-dead-entities-round-3",
+  "raw": {
+    "summary": {
+      "passed": 4978,
+      "failed": 0,
+      "skipped": 321,
+      "passed_test_files": 316,
+      "skipped_test_files": 31,
+      "focused_passed": 259,
+      "production_guard_passed": true,
+      "production_guard_tests_passed": 10,
+      "api_typecheck_passed": true,
+      "mcp_build_passed": true
+    },
+    "checks": [
+      {
+        "command": "cd apps/api && npx vitest run",
+        "result": "passed",
+        "passed": 4978,
+        "failed": 0,
+        "skipped": 321
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/vendor-terms.test.ts src/capabilities/risk-narrative-generate.registry-status.test.ts src/capabilities/registry-status.test.ts src/capabilities/registry-status.consumers.test.ts",
+        "result": "passed",
+        "passed": 259
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "result": "passed",
+        "unauthorised_references": 0
+      },
+      {
+        "command": "cd apps/api && npx vitest run test/guard-production-write-access.test.ts",
+        "result": "passed",
+        "passed": 10
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "result": "passed"
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "result": "passed"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "result": "passed"
+      },
+      {
+        "command": "npm run handoff:orient",
+        "result": "passed"
+      },
+      {
+        "command": "npm run handoff:check",
+        "result": "failed",
+        "reason": "dirty, branch, ahead, merged-branch findings; supplied clone must remain uncommitted and unpushed under explicit orchestrator instructions; remote fetch unavailable"
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/risk-narrative-generate.yaml --backfill --dry-run",
+        "result": "unavailable",
+        "local_manifest_validation": "passed",
+        "reason": "operator database preview requires unavailable write authority"
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug risk-narrative-generate",
+        "result": "unavailable",
+        "reason": "no database connection"
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug risk-narrative-generate --dry-run",
+        "result": "unavailable",
+        "reason": "no database connection"
+      },
+      {
+        "command": "checkReadiness(\"risk-narrative-generate\")",
+        "result": "unavailable",
+        "reason": "no database connection"
+      }
+    ],
+    "fail_before": {
+      "method": "Disposable source copies with old runtime or detector, keeping current regression tests. Working tree source was never overwritten. An initial test-binary relative path typo was corrected before the test runs.",
+      "narrative": {
+        "failed": 92,
+        "passed": 54
+      },
+      "vendor_detector": {
+        "failed": 4,
+        "passed": 59
+      }
+    },
+    "review": {
+      "technical": "GO after confirmation of request-client detection fix",
+      "product": "GO after confirmation of CRO plain-language fix"
+    },
+    "live_observations": {
+      "PRH": "Schema info.license names Creative Commons Nimeä 4.0 and links CC BY 4.0",
+      "CRO": "Official vocabulary distinguishes pending Strike Off Listed from terminal Struck Off",
+      "ABR": "Official guidance distinguishes active from cancelled",
+      "ACRA": "Official restoration guidance covers cancelled, ceased, struck-off and dissolved entities",
+      "ARES": "Operating conditions declare no reuse licence; resale remains unverified under DQ-40",
+      "KRS": "Corrected terms URL serves an application shell; retained previously extracted statutory statement"
+    },
+    "production_writes": false,
+    "commits_created": false,
+    "shipping_attempted": false
+  }
+}

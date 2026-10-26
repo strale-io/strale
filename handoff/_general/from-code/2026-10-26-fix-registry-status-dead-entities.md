@@ -96,7 +96,7 @@ enrichment and outcomes. Narrative tests cover KYB and invoice contexts.
 
 ## Verification and evidence
 
-Evidence receipt: [registry status verification](../../../archive/receipts/2026-10-26-test-run-registry-status-dead-entities.json).
+Evidence receipt: [registry status verification](../../../archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-1-sanitized.json).
 
 - Final targeted Vitest run: 189 passed, 4 existing skipped, zero failures in
   seven files: registry-status, registry-status.consumers,
@@ -231,7 +231,7 @@ done
 - `apps/api/src/lib/vendor-terms.test.ts`
 - `apps/api/src/lib/vendor-terms.ts`
 - `archive/README.md`
-- `archive/receipts/2026-10-26-test-run-registry-status-dead-entities.json`
+- `archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-1-sanitized.json`
 - `docs/project/legacy-authority-inventory.json`
 - `handoff/README.md`
 - `handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`
@@ -296,7 +296,7 @@ no commits, pushes, PRs, merges, branch switches or production writes were made.
 
 ### Round 2 verification
 
-Evidence: [Round 2 verification receipt](../../../archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-2.json).
+Evidence: [Round 2 verification receipt](../../../archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json).
 
 - Focused Vitest: **220 passed** across vendor-terms, data-access-manifests,
   registry-status, registry-status.consumers and the narrative registry tests.
@@ -373,4 +373,111 @@ steps remain with the orchestrator. No production readiness is claimed.
 - `manifests/finnish-company-data.yaml`
 - `manifests/greek-company-data.yaml`
 - This handoff (Round 2 section appended; historical Round 1 retained).
-- `archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-2.json`
+- `archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json`
+
+
+## Round 3
+
+Intent: Resolve the independent Round 2 NO-GO within the supplied feature clone;
+leave the candidate uncommitted for orchestrator review and shipping.
+
+Evidence: [Round 3 verification receipt](../../../archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json).
+The original branch-only Round 1 and Round 2 receipts were deleted because they
+contained local paths and/or a write-credential variable name. Round 1 now has
+a tool-written sanitized summary receipt. The Round 2 evidence link above now
+points to this round's replacement; the historical Round 2 results remain
+historical and are not represented as successful Round 3 checks. No tracked
+receipt was edited in place.
+
+- Vendor detection again uses host substrings, including host constants and
+  template URLs with an interpolated path. Only delegation through
+  `getDirectExecutor(` without an HTTP client call suppresses provenance-only
+  references. In-memory probes exercise both reported escapes, mixed delegation
+  with fetch, and a bare imported HTTP request; the import/re-export/dynamic
+  import regressions remain.
+- ARES resale is `unverified`, citing OPEN / `your_call` DQ-40. The EU high-value
+  datasets point is context pending applicability assessment, not permission.
+  KRS links its official API terms, states the statutory basis and excludes
+  personal extract data from output. PRH links the schema's `info.license`.
+- Added pass-through lifecycle values from Receita Federal, ABR, CRO and ACRA.
+  Official vocabularies read: [Receita Federal art. 9](https://normas.receita.fazenda.gov.br/sijut2consulta/link.action?idAto=127567),
+  [ABR](https://abr.business.gov.au/FAQ/ABNLookup),
+  [CRO status table](https://services.cro.ie/companystatuses.aspx/1000),
+  [ACRA restoration guidance](https://www.acra.gov.sg/resources/guides-forms/applying-to-restore-a-business-entity/)
+  and [official Singapore dataset](https://data.gov.sg/datasets/d_1cd970d8351b42be4a308d628a6dd9d3/explorer).
+  CRO `Strike Off Listed` is a pending notice: it triggers high manual review
+  with explicit pending wording, never a terminal-company inference. `Struck Off`
+  is critical. Normal, ATIVA, Active, Registered and Live Company remain clear.
+- Living cases derive statuses from recorded executor outputs or manifest
+  output examples, with the German archived output retained. Poland now invokes
+  its executor against the recorded ORLEN response rather than copying an
+  expected `active` value; the obsolete MARTOM fixture is not used as living.
+- On the registry-preservation path, terminal registration findings and any
+  critical flag produce overall critical / score at least 90. Liquidation,
+  insolvency, inactive and pending strike-off stay high in isolation. The
+  sanctions-only no-key fallback retains its previous aggregate (low / 25).
+- Findings name the country's company registry in plain language. Source slugs
+  stay in `source_check`; snake_case and CRO abbreviations are translated.
+  The manifest now states that recognised statuses bypass AI, while unfamiliar
+  statuses still use synthesis when a key is available, otherwise fallback.
+- Czech liquidation fixtures retain only identifiers and lifecycle inputs;
+  registered addresses and unrelated company details were removed.
+- The go skill's local verification/review stages were applied. No simplify
+  skill is installed; the author simplified the explicit status mappings and
+  plain-language formatter locally. Fresh technical and product reviewers both
+  returned GO after confirmation reads of their corrected findings. They did
+  not claim to run the tests. Orchestrator review and shipping remain separate.
+
+### Round 3 verification
+
+- Full API Vitest (including `apps/api/test/`): **4978 passed, zero failures,
+  321 skipped**, across 316 passed and 31 skipped files. The earlier full run
+  also passed; the final run includes the last guard and wording corrections.
+- Focused four-file run: **259 passed**. Production-write guard: zero
+  unauthorised references; its dedicated regression suite: **10 passed**.
+- MCP-server build and API `tsc --noEmit`: passed, with a final typecheck after
+  all source corrections. Root claims, models, env, docs, programs and receipts
+  checks: passed. `git diff --check`: passed.
+- Fail-before in disposable source copies: the old narrative runtime produces
+  **92 failures / 54 passes** against the new tests; the old URL detector
+  produces **4 failures / 59 passes**. These are expected regression evidence,
+  not failures of the final candidate. An initial relative-path typo in the
+  disposable test runner was corrected before these runs.
+- `handoff:orient`: passed. `handoff:check`: failed on dirty, branch, ahead and
+  merged-branch findings (remote fetch also unavailable). Applying its suggested
+  commit/push/branch/remote-deletion actions conflicts with this build-agent
+  contract, so the findings are handed to the orchestrator.
+
+Final results are recorded in the receipt linked above. No production readiness
+is claimed. Database-backed validation, smoke and readiness remain unavailable;
+the manifest dry-run validates locally before the database preview is refused.
+The receipt stores structured summaries only, without raw error logs, credential
+variable names or local absolute paths.
+
+### Round 3 production steps and limitations
+
+No production database or settings were changed, no credential discovery was
+performed, and no commit, push, PR, merge or package publication was attempted.
+The earlier production steps in this handoff remain for the authorised
+orchestrator: deploy the source change, synchronize the affected manifests and
+Polish known-answer fixture, then run validation, smoke and readiness with the
+normal authorised operator workflow. For this round's changed manifest:
+
+```bash
+cd apps/api
+npx tsx scripts/onboard.ts --manifest ../../manifests/risk-narrative-generate.yaml --backfill --dry-run
+npx tsx scripts/onboard.ts --manifest ../../manifests/risk-narrative-generate.yaml --backfill
+npx tsx scripts/validate-capability.ts --slug risk-narrative-generate
+npx tsx scripts/smoke-test.ts --slug risk-narrative-generate
+```
+
+Readiness must return `ready: true` with zero issues via the authorised internal
+onboarding readiness route. DQ-40 remains Petter's legal/reuse decision; this
+patch neither closes it nor asserts ARES resale permission. No registry request
+or parsing code changed this round, so no new entity lookup was needed. Trimmed
+live documentation observations: PRH schema `info.license` = Creative Commons
+Nimeä 4.0 / CC BY 4.0; CRO table distinguishes `Strike Off Listed` from `Struck Off`;
+ABR distinguishes active from cancelled; ACRA restoration covers cancelled,
+ceased, struck-off and dissolved entities; ARES publishes operating conditions
+without a declared reuse licence. KRS serves an application shell at the corrected
+terms URL; the prior extracted statutory statement is retained in the record.

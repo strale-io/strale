@@ -3,10 +3,11 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parse } from "yaml";
 import { getDirectExecutor } from "./index.js";
 import "./risk-narrative-generate.js";
+import "./polish-company-data.js";
 
 const { messageCreate } = vi.hoisted(() => ({ messageCreate: vi.fn(async () => { throw new Error("No network in registry consumer tests"); }) }));
 vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: messageCreate }; } }));
-afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 describe("registry lifecycle consumers in KYB and invoice narratives", () => {
   // Independent expected cases: use emitted values, not upstream statusMap keys.
   const deadStatuses: Record<string, string[]> = {
@@ -22,7 +23,11 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     "uk-company-data": ["dissolved", "in_liquidation", "receivership", "closed", "voluntary_arrangement", "insolvency", "administration"],
     "estonian-company-data": ["in_liquidation", "deleted", "in_bankruptcy"],
     "lithuanian-company-data": ["Išregistruotas"],
-    "irish-company-data": ["Dissolved"],
+    "irish-company-data": ["Dissolved", "Dissolved-20 years", "Dissolved PostMerger", "Dissolved by Divis", "Struck Off", "Liquidation", "Liquidation(Receivership)", "Liquidation stayed", "Liquidation (UK)", "Strike Off Listed", "Ceased", "Ceased IRL", "Administration", "Administration (UK)", "Examinership", "Deleted CB Merger", "Deleted per SE merge", "Deleted as per SE Tr", "Deleted CB Conversion", "De-Registered ICAV", "De-Registered Investment Company", "InActive",
+      "Normal (Form E8 (Notice of Appointment of Receiver) Per S436 CA 2014 has been filed with the CRO in respect of part or all of the property of the company, which property may or may not be beneficially owned by the company. Please refer to the relevant E8 form(s) for further information)"],
+    "brazilian-company-data": ["BAIXADA", "INAPTA", "SUSPENSA", "NULA"],
+    "au-company-data": ["Cancelled"],
+    "singapore-company-data": ["Struck Off", "Struck Off - Early Dissolution", "Dissolved", "Dissolved - Members Voluntary Winding Up", "Dissolved - Creditors Voluntary Winding Up", "Dissolved - Compulsory Winding Up (Insolvency)", "Ceased", "Ceased Registration", "Cancelled", "Terminated"],
     "latvian-company-data": ["Likvidēts", "Slēgts"],
     "croatian-company-data": ["inactive"],
     "slovak-company-data": ["inactive"],
@@ -50,8 +55,13 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
         });
         expect(messageCreate).not.toHaveBeenCalled();
         expect(output.passed_checks).toEqual([]);
-        expect(output.risk_level).toBe("high");
-        expect(output.flags).toEqual([expect.objectContaining({ source_check: slug, finding: expect.stringContaining(status) })]);
+        const terminal = ["deleted", "deregistered", "dissolved", "ceased", "closed", "terminated", "Išregistruotas", "Likvidēts", "Slēgts", "Cancelled", "BAIXADA", "NULA", "Dissolved", "Dissolved-20 years", "Dissolved PostMerger", "Dissolved by Divis", "Struck Off", "Struck Off - Early Dissolution", "Dissolved - Members Voluntary Winding Up", "Dissolved - Creditors Voluntary Winding Up", "Dissolved - Compulsory Winding Up (Insolvency)", "Ceased", "Ceased IRL", "Ceased Registration", "Terminated", "Deleted CB Merger", "Deleted per SE merge", "Deleted as per SE Tr", "Deleted CB Conversion", "De-Registered ICAV", "De-Registered Investment Company"].includes(status);
+        expect(output.risk_level).toBe(terminal ? "critical" : "high");
+        expect(output.risk_score).toBeGreaterThanOrEqual(terminal ? 90 : 75);
+        expect(output.flags).toEqual([expect.objectContaining({ source_check: slug, severity: terminal ? "critical" : "high" })]);
+        const finding = (output.flags as any[])[0].finding;
+        expect(finding).toMatch(/^The .+ company registry lists this company as /);
+        expect(finding).not.toMatch(/company-data|_|\b(?:SE|CB|ICAV|Tr|Divis)\b/i);
         expect(output.summary).not.toContain("All 1 automated checks passed");
       }
     },
@@ -63,7 +73,6 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
   // response and the mapping regression in registry-status.test.ts:45-48.
   const recordedGerman = JSON.parse(readFileSync(new URL("../../../../archive/sessions/bosch-kyb-response-final.json", import.meta.url), "utf8"));
   const fixtureStatuses: Record<string, { status: string | undefined; evidence: string }> = {
-    "polish-company-data": { status: "active", evidence: "registry-status.test.ts:45-48; recorded pl-orlen (manifest known_answer)" },
     "german-company-data": { status: recordedGerman.result.steps["german-company-data"].status, evidence: "archive/sessions/bosch-kyb-response-final.json result.steps.german-company-data.status" },
   };
   const companyFiles = readdirSync(import.meta.dirname).filter(f => f.endsWith("-company-data.ts")).sort();
@@ -90,6 +99,13 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     }
   });
   it.each(living)("$slug living fixture status $status retains both narrative routes", async ({ slug, status }) => {
+    if (slug === "polish-company-data") {
+      const record = JSON.parse(readFileSync(new URL("./__fixtures__/registry-status/pl-orlen.json", import.meta.url), "utf8"));
+      vi.stubGlobal("fetch", vi.fn(async () => Response.json(record.response)));
+      const result = await getDirectExecutor(slug)!({ krs_number: "0000028860" });
+      status = result.output.status as string;
+      expect(status).toBe("active");
+    }
     const checkResults = { [slug]: { company_name: "Synthetic company", status } };
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     const fallback = await getDirectExecutor("risk-narrative-generate")!({ check_results: checkResults, context: "kyb" });
@@ -105,7 +121,7 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
   it.each([
     ["greek-company-data", "unrecognised registry description"],
     ["finnish-company-data", "pending"], ["finnish-company-data", "unknown"],
-    ["singapore-company-data", "Live Company"], ["austrian-company-data", "aufrecht"],
+    ["singapore-company-data", "Live Company"], ["singapore-company-data", "Registered"], ["austrian-company-data", "aufrecht"],
     ["estonian-company-data", "R"], ["norwegian-company-data", "unfamiliar"],
     ["unknown-company-data", "deleted"], ["dns-lookup", "deleted"], ["toString", "deleted"],
   ])("%s unfamiliar/non-distress %s does not trigger registry review", async (slug, status) => {
@@ -113,6 +129,15 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     const { output } = await getDirectExecutor("risk-narrative-generate")!({ check_results: { [slug]: { status } }, context: "kyb" });
     expect(output.flags).toEqual([]);
     expect(output.risk_level).toBe("none");
+  });
+  it("unrecognised registry statuses still reach AI synthesis when a key is available", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "synthetic-no-network-key");
+    messageCreate.mockResolvedValueOnce({ content: [{ type: "text", text: JSON.stringify({ risk_level: "none", risk_score: 0 }) }], model: "synthetic" } as never);
+    const { provenance } = await getDirectExecutor("risk-narrative-generate")!({
+      check_results: { "irish-company-data": { status: "unrecognised" } }, context: "kyb",
+    });
+    expect(messageCreate).toHaveBeenCalledOnce();
+    expect(provenance.source).toBe("claude-sonnet");
   });
   it.each([
     { is_deleted: true, has_any_distress_signal: false, has_bankruptcy_filing: false },
@@ -129,14 +154,14 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "synthetic-no-network-key");
     const { output, provenance } = await getDirectExecutor("risk-narrative-generate")!({
       check_results: {
-        "norwegian-company-data": { status: "deleted" },
+        "norwegian-company-data": { status: "dissolving" },
         "sanctions-check": { is_sanctioned: true },
         "pep-check": { is_pep: true },
       }, context: "kyb",
     });
     expect(messageCreate).not.toHaveBeenCalled();
-    expect(output.risk_level).toBe("high");
-    expect(output.risk_score).toBe(75);
+    expect(output.risk_level).toBe("critical");
+    expect(output.risk_score).toBeGreaterThanOrEqual(90);
     expect(output.flags).toEqual([
       expect.objectContaining({ source_check: "norwegian-company-data" }),
       expect.objectContaining({ source_check: "sanctions-check", severity: "critical" }),
@@ -145,6 +170,28 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     expect(output.note).toBe("Registry lifecycle findings preserved by deterministic assessment");
     expect(output.data_sources_consulted).toEqual(["norwegian-company-data", "sanctions-check", "pep-check"]);
     expect(provenance.fallback_reason).toBe("registry_status_preservation");
+  });
+  it("uses plain language for deletion and explains a pending strike-off notice", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "synthetic-no-network-key");
+    const deleted = await getDirectExecutor("risk-narrative-generate")!({
+      check_results: { "norwegian-company-data": { status: "deleted" } }, context: "kyb",
+    });
+    expect(deleted.output.flags).toEqual([expect.objectContaining({
+      finding: "The Norwegian company registry lists this company as deleted.", severity: "critical",
+    })]);
+    const pending = await getDirectExecutor("risk-narrative-generate")!({
+      check_results: { "irish-company-data": { status: "Strike Off Listed" } }, context: "kyb",
+    });
+    expect(pending.output.risk_level).toBe("high");
+    expect((pending.output.flags as any[])[0].finding).toContain("pending notice");
+  });
+  it("preserves critical input flags on the forced deterministic path", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "synthetic-no-network-key");
+    const { output } = await getDirectExecutor("risk-narrative-generate")!({
+      check_results: { "finnish-company-data": { status: "liquidation" }, "other-check": { risk_level: "critical" } }, context: "kyb",
+    });
+    expect(output.risk_level).toBe("critical");
+    expect(output.risk_score).toBeGreaterThanOrEqual(90);
   });
   it("keeps the pre-round-1 aggregate risk for a sanctions-only fallback", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "");

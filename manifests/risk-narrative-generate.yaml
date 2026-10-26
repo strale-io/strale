@@ -129,7 +129,8 @@ output_field_reliability:
 limitations:
   - title: Registry lifecycle findings use deterministic assessment
     text: >-
-      Nonactive or unrecognised company registry statuses and Norwegian registry distress signals bypass AI synthesis.
+      Recognised nonactive company registry statuses and Norwegian registry distress signals bypass AI synthesis.
+      Unrecognised statuses retain AI synthesis when an API key is available, otherwise using the algorithmic fallback.
       The deterministic assessment preserves source-cited manual-review findings; it does not establish an active company.
     category: accuracy
     severity: info

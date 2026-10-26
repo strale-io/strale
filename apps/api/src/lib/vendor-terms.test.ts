@@ -186,9 +186,14 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     return { path, file: rel(path), code, slug: code.match(/registerCapability\(\s*["'`]([a-z0-9-]+)["'`]/)?.[1] };
   }
   const files = walk(CAPS).map(f => sourceFile(f));
-  const directlyCallsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
-    // A bare provenance label is not a request (delegating providers keep it).
-    record.hosts.some(h => new RegExp(`https?://${h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=[/:'"\\s\\x60?#]|$)`).test(code)) || code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
+  const directlyCallsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) => {
+    // Delegating providers carry provenance labels but make no HTTP request.
+    // Keep substring detection: hosts may be constants or interpolated URLs.
+    const httpCall = /\b(?:fetch|request|get|post|put|patch|delete|head|meteredVendorFetch|safeFetch|brregFetch|https?\.(?:get|request)|axios(?:\.(?:get|post|put|patch|delete|head|request))?|got(?:\.(?:get|post|put|patch|delete|head|stream))?|undici\.(?:fetch|request))\s*\(/;
+    if (code.includes("getDirectExecutor(") && !httpCall.test(code)) return false;
+    return record.hosts.some(host => code.includes(host)) ||
+      code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
+  };
   // Follow literal imports and re-exports into capability helpers and reachable
   // src/lib helpers. Do not scan unrelated lib clients (e.g. health probes).
   const byPath = new Map(files.map(f => [f.path, f]));
@@ -270,6 +275,26 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     importCache.delete(extra.path);
   });
 
+  it.each([
+    'const HOST = "data.brreg.no"; fetch(`https://${HOST}/x`);',
+    'fetch(`https://data.brreg.no${path}`);',
+    'getDirectExecutor("other"); fetch(`https://data.brreg.no${path}`);',
+    'import { request } from "undici"; getDirectExecutor("other"); request("https://data.brreg.no/x");',
+  ])("rejects an unrecorded executor constructing a vendor URL: %s", code => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+    const extra = sourceFile(join(CAPS, "unrecorded-url-probe.ts"),
+      `${code} registerCapability("unrecorded-url-probe", handler);`);
+    // Direct probes must participate in the same reachability/exact-callers guard.
+    files.push(extra);
+    try {
+      expect(exactCallers(record)).toContain("unrecorded-url-probe");
+      expect(() => assertExactCallers(record)).toThrow();
+    } finally {
+      files.splice(files.indexOf(extra), 1);
+      importCache.delete(extra.path);
+    }
+  });
+
   function unrecordedShared(record: (typeof VENDOR_TERMS_RECORDS)[number], candidates = files) {
     return candidates.filter(f => !f.slug && directlyCallsVendor(f.code, record)
       && !candidates.some(caller => caller.slug && record.capabilities.includes(caller.slug) && reaches(caller, f)))
@@ -280,7 +305,7 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
     const orphan = sourceFile(join(CAPS, "lib/orphan-brreg-fixture.ts"), 'fetch("https://data.brreg.no/enhetsregisteret/api/enheter/123456789");');
     expect(unrecordedShared(record, [...files, orphan])).toEqual([orphan.file]);
-    expect(directlyCallsVendor('source: "data.brreg.no"', record)).toBe(false);
+    expect(directlyCallsVendor('getDirectExecutor("norwegian-company-data"); source: "data.brreg.no"', record)).toBe(false);
     expect(directlyCallsVendor('fetch("https://dataXbrregYno/")', record)).toBe(false);
   });
 
