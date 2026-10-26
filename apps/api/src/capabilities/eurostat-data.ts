@@ -9,15 +9,30 @@ export const EUROSTAT_LICENCE_NOTE = "Reused under Commission Decision 2011/833/
 // https://enlargement.ec.europa.eu/enlargement-policy/candidate-countries-and-potential-candidates_en
 // https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=LEGISSUM:enlargement
 // Commercial-country restriction: https://ec.europa.eu/eurostat/help/copyright-notice
-export const EUROSTAT_ALLOWED_GEOS: readonly string[] = Object.freeze([
+export const EUROSTAT_ALLOWED_COUNTRIES: readonly string[] = Object.freeze([
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "EL", "HU",
   "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
   "IS", "LI", "NO", "CH", "AL", "BA", "GE", "MD", "ME", "MK", "RS", "TR", "UA",
-  "EU27_2020", "EA20", "EA19", "EU28", "EA",
 ]);
+// Geo codelist checked 2026-10-26 (EA21 is euro area from 2026):
+// https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/codelist/ESTAT/GEO?format=TSV&lang=en
+export const EUROSTAT_ALLOWED_AGGREGATES: readonly string[] = Object.freeze([
+  "EA", ...Array.from({ length: 11 }, (_, i) => `EA${i + 11}`),
+  "EU", "EU_V", "EU_V_NO", "EU6", "EU9", "EU10", "EU12", "EU15", "EU25",
+  "EU27_2007", "EU27_2020", "EU28", "EFTA", "EEA", "EEA18", "EEA28", "EEA30_2007", "EEA31", "EEA30_2020",
+  "EU27_2020_EFTA", "EU28_EFTA",
+]);
+export const EUROSTAT_ALLOWED_GEOS: readonly string[] = Object.freeze([...EUROSTAT_ALLOWED_COUNTRIES, ...EUROSTAT_ALLOWED_AGGREGATES]);
+// JSON-stat ids checked against migration, BoP and tourism tables on 2026-10-26.
+export const EUROSTAT_COUNTRY_DIMENSIONS = ["geo", "partner", "citizen", "c_birth", "c_resid", "c_orig", "c_dest", "counterp", "c_work"] as const;
+function countryDimension(key: string): boolean { return (EUROSTAT_COUNTRY_DIMENSIONS as readonly string[]).includes(key.toLowerCase()); }
+export function allowedEurostatCountry(value: string): boolean {
+  const code = value.toUpperCase();
+  return EUROSTAT_ALLOWED_GEOS.includes(code) || (/^[A-Z]{2}[0-9A-Z]{1,3}$/.test(code) && EUROSTAT_ALLOWED_COUNTRIES.includes(code.slice(0, 2)));
+}
 // Deliberately exclude ALL trade datasets, covering both Swiss/Liechtenstein
 // post-1995 commodity data (exception c) and Austrian CN8 declaring-country data.
-export const EUROSTAT_REFUSED_DATASET_PREFIXES = ["ext_", "ds-", "comext", "itgs_", "trade_"] as const;
+export const EUROSTAT_REFUSED_DATASET_PREFIXES = ["ext_", "ds-", "comext", "itgs_", "trade_", "tet", "teiet", "tipsex", "cult_trd_", "sprt_trd_", "enpe_ext_", "bop_its", "for_trop", "ei_etea"] as const;
 const TOKEN = /^[A-Za-z0-9_.-]{1,40}$/;
 const PERIOD = /^\d{4}(?:-Q[1-4]|-(?:0[1-9]|1[0-2]))?$/;
 const MAX_OBSERVATIONS = 5000;
@@ -35,7 +50,7 @@ function refuse(code: string, message: string, details: Record<string, unknown> 
   throw new EurostatError(code, message, details);
 }
 function refuseTrade(dataset: string): never {
-  return refuse("commercial_reuse_restricted", `Dataset '${sanitise(dataset)}' is excluded: all Comext/international-trade data are refused under Eurostat copyright exception (c), including Swiss/Liechtenstein trade and Austrian CN8 restrictions. Choose a non-trade dataset.`, { dataset, terms_url: TERMS });
+  return refuse("commercial_reuse_restricted", `Dataset '${sanitise(dataset)}' is excluded: all trade data are refused under Eurostat copyright exception (c), including Swiss/Liechtenstein trade and Austrian CN8 restrictions. Choose a non-trade dataset.`, { dataset, terms_url: TERMS });
 }
 
 export function validateEurostatInput(input: CapabilityInput): URL {
@@ -48,20 +63,24 @@ export function validateEurostatInput(input: CapabilityInput): URL {
   const url = new URL(dataset, API);
   url.searchParams.set("lang", "EN");
   let count = 0;
-  for (const [key, raw] of entries) {
+  const seen = new Set<string>();
+  for (const [rawKey, raw] of entries) {
+    const key = rawKey.toLowerCase();
+    if (seen.has(key)) refuse("invalid_request", `Duplicate filter dimension '${key}' (keys are case-insensitive).`);
+    seen.add(key);
     // These are request options, not dimension filters; prevent query overrides.
-    if (!TOKEN.test(key) || ["lang", "format", "sinceTimePeriod", "untilTimePeriod", "lastTimePeriod"].includes(key)) refuse("invalid_request", "Invalid filter dimension; use a dimension code matching ^[A-Za-z0-9_.-]{1,40}$, not a request option.");
+    if (!TOKEN.test(key) || ["lang", "format", "sincetimeperiod", "untiltimeperiod", "lasttimeperiod"].includes(key)) refuse("invalid_request", "Invalid filter dimension; use a dimension code matching ^[A-Za-z0-9_.-]{1,40}$, not a request option.");
     const values = Array.isArray(raw) ? raw : [raw];
     if (!values.length) refuse("invalid_request", `Filter '${key}' needs at least one value.`);
     count += values.length;
     if (count > 50) refuse("invalid_request", "At most 50 filter values are allowed.");
     for (const value of values) {
       if (typeof value !== "string" || !TOKEN.test(value)) refuse("invalid_request", `Filter '${key}' values must match ^[A-Za-z0-9_.-]{1,40}$.`);
-      if (key === "geo" && !EUROSTAT_ALLOWED_GEOS.includes(value)) refuse("commercial_reuse_restricted", `Eurostat's terms do not permit commercial reuse of data for country '${value}'. Choose an allowed EU, EFTA or official candidate country, or supported EU/euro-area aggregate.`, { geo: value, terms_url: TERMS });
-      url.searchParams.append(key, value);
+      if (countryDimension(key) && !allowedEurostatCountry(value)) refuse("commercial_reuse_restricted", `Eurostat's terms do not permit commercial reuse of data for country '${value}'. Choose an allowed EU, EFTA or official candidate country, or supported EU/euro-area aggregate.`, { dimension: key, geo: value, terms_url: TERMS });
+      url.searchParams.append(key, countryDimension(key) ? value.toUpperCase() : value);
     }
   }
-  if (!Object.hasOwn(filters, "geo")) refuse("invalid_request", "The 'geo' filter is required for commercial reuse.");
+  if (!seen.has("geo")) refuse("invalid_request", "The 'geo' filter is required for commercial reuse.");
   for (const [key, value] of [["sinceTimePeriod", since_period], ["untilTimePeriod", until_period]] as const) {
     if (value !== undefined) {
       if (typeof value !== "string" || !PERIOD.test(value)) refuse("invalid_request", "Periods must be YYYY, YYYY-Q1…Q4 or YYYY-MM (01…12).");
@@ -96,11 +115,20 @@ export function checkEurostatMetadata(data: Metadata, dataset: string): boolean 
       refuse("commercial_reuse_restricted", `Dataset '${dataset}' identifies a source other than Eurostat or an unrecognised source declaration. Commercial reuse is refused under exception (a).`, { dataset, terms_url: TERMS });
     }
   }
-  function visit(value: unknown) {
-    if (Array.isArray(value)) { value.forEach(visit); return; }
+  function tradeLabels(value: unknown) {
+    if (typeof value === "string" && /\b(?:trade|imports?|exports?)\b/i.test(value)) refuseTrade(dataset);
+    if (Array.isArray(value)) value.forEach(tradeLabels);
+    else if (record(value)) Object.values(value).forEach(tradeLabels);
+  }
+  // Dimension category labels (e.g. citizen "European Free Trade Association") describe values,
+  // not the dataset: the trade-word rule applies to dataset-level metadata only.
+  function visit(value: unknown, datasetLevel = true) {
+    if (Array.isArray(value)) { value.forEach((v) => visit(v, datasetLevel)); return; }
     if (!record(value)) return;
     const type = String(value.type ?? "");
-    if (/source|copyright|rights|licen[cs]e|owner/i.test(type)) {
+    // A source DATASET is a lineage link, not a source institution.
+    if (/^DISSEMINATION_SOURCE_DATASET$/i.test(type) && typeof value.title === "string" && /^(?:ext_|ds-|comext)/i.test(value.title)) refuseTrade(dataset);
+    if (/^(?:source|sources|source_institutions|data_source|copyright_holder|owner|copyright|rights|licen[cs]e)$/i.test(type)) {
       const declaration = value.text ?? value.title ?? value.value;
       if (declaration !== undefined) {
         if (/source|owner/i.test(type)) source(declaration);
@@ -111,14 +139,17 @@ export function checkEurostatMetadata(data: Metadata, dataset: string): boolean 
     }
     for (const [key, child] of Object.entries(value)) {
       if (/^(?:source|sources|source_institutions|data_source|copyright_holder|owner)$/i.test(key) && child !== undefined && child !== null) source(child);
-      if (/^(?:theme|label|title|category|subject|text)$/i.test(key) && typeof child === "string" && /\b(?:comext|international trade|trade in goods|trade in services|external trade)\b/i.test(child)) refuseTrade(dataset);
+      if (datasetLevel && /^(?:theme|label|title|category|subject|text)$/i.test(key)) tradeLabels(child);
       if (/^(?:copyright|rights|licen[cs]e)$/i.test(key) && child !== undefined && child !== null && !/^(?:Eurostat|ESTAT|European Union|© European Union)$/i.test(String(child).trim())) {
         refuse("commercial_reuse_restricted", `Dataset '${dataset}' carries a rights notice requiring separate assessment; commercial reuse is refused.`, { dataset, terms_url: TERMS });
       }
-      visit(child);
+      visit(child, datasetLevel);
     }
   }
-  visit({ source: data.source, label: data.label, extension: data.extension, annotation: data.annotation, annotations: data.annotations, dimension: data.dimension });
+  visit({ source: data.source, title: data.title, theme: data.theme, category: data.category, label: data.label, extension: data.extension, annotation: data.annotation, annotations: data.annotations });
+  visit({ dimension: data.dimension }, false);
+  // Structural marker: trade tables carry a stk_flow (imports / exports) dimension.
+  if (record(data.dimension) && Object.keys(data.dimension).some((id) => id.toLowerCase() === "stk_flow")) refuseTrade(dataset);
   return sourceFound;
 }
 
@@ -157,7 +188,7 @@ export function flattenEurostat(data: JsonStat) {
       row[data.id[dim]] = codes[dim][remainder % data.size[dim]];
       remainder = Math.floor(remainder / data.size[dim]);
     }
-    if (!EUROSTAT_ALLOWED_GEOS.includes(String(row.geo))) { dropped++; continue; }
+    if (data.id.some(id => countryDimension(id) && !allowedEurostatCountry(String(row[id])))) { dropped++; continue; }
     row.period = row.time;
     const value = Array.isArray(data.value) ? data.value[index] : data.value[String(index)];
     if (value !== undefined && value !== null && (typeof value !== "number" || !Number.isFinite(value))) refuse("upstream_invalid_response", "Eurostat returned a non-numeric observation.");
@@ -184,24 +215,31 @@ export async function executeEurostat(input: CapabilityInput) {
     let body: Metadata;
     try { body = await response.json() as Metadata; } catch (error) {
       if (error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name)) throw error;
+      if (response.status === 413) refuse("observation_limit_exceeded", "Eurostat extraction is too big. Narrow filters or period bounds.", { dataset, upstream_status: 413 });
       refuse("upstream_invalid_response", `Eurostat returned a non-JSON response for '${dataset}' (HTTP ${response.status}).`);
     }
-    if (!record(body)) refuse("upstream_invalid_response", "Eurostat returned an invalid response.");
+    if (!record(body)) {
+      if (response.status === 413) refuse("observation_limit_exceeded", "Eurostat extraction is too big. Narrow filters or period bounds.", { dataset, upstream_status: 413 });
+      refuse("upstream_invalid_response", "Eurostat returned an invalid response.");
+    }
     if (!response.ok || body.error) {
-      const error = record(body.error) ? body.error : body;
-      const message = sanitise(error.message ?? error.label ?? body.message);
+      const errors = Array.isArray(body.error) ? body.error.filter(record) : record(body.error) ? [body.error] : [body];
+      const error = errors[0] ?? body;
+      const message = sanitise(errors.map(e => e.label ?? e.message).filter(v => v !== undefined).join("; ") || body.message);
+      if (response.status === 413 || /EXTRACTION_TOO_BIG|ASYNCHRONOUS_RESPONSE/i.test(message)) refuse("observation_limit_exceeded", `Eurostat: ${message}. Narrow filters or period bounds.`, { dataset, upstream_status: response.status });
       const unknown = Number(error.status) === 404 || /not found|unknown dataset|invalid dataset|does not exist|ERR_DATA_NOT_FOUND/i.test(message);
       refuse(unknown ? "not_found" : "upstream_error", `Eurostat dataset '${dataset}': ${message}`, { dataset, upstream_status: response.status });
     }
     const sourceFound = checkEurostatMetadata(body, dataset);
     const flat = flattenEurostat(body as unknown as JsonStat);
+    if (!flat.observations.some(row => row.value !== null)) refuse("no_observations", "No observations for these filters. Choose different filters or period bounds.", { dataset, dropped_observation_count: flat.dropped_observation_count });
     const asOf = new Date().toISOString();
     const updatedDate = typeof body.updated === "string" ? new Date(body.updated) : null;
     const units = flat.dimensions.find(d => d.id === "unit")?.categories;
     return {
       output: { dataset, label: typeof body.label === "string" ? body.label : dataset, updated: updatedDate && Number.isFinite(updatedDate.getTime()) ? updatedDate.toISOString() : null,
         ...(units?.length === 1 ? { unit: units[0].code } : {}), ...flat, observation_count: flat.observations.length,
-        source: "Eurostat", licence_note: EUROSTAT_LICENCE_NOTE, source_url: url.toString(), as_of: asOf,
+        source: "Eurostat", licence_note: EUROSTAT_LICENCE_NOTE, source_url: url.toString(), dataset_doi: `10.2908/${dataset.toUpperCase()}`, accessed_at: asOf.slice(0, 10), as_of: asOf,
         metadata_limitations: sourceFound ? "Source declarations checked in the returned JSON-stat metadata; separately linked ESMS documents and catalogue rights notices are not inspected." : "No source declaration exposed in the returned JSON-stat metadata. Third-party restrictions may be unexposed; separately linked ESMS documents and catalogue rights notices are not inspected. Explicit dataset-prefix and trade-theme refusals still apply.",
       },
       provenance: { source: "Eurostat", fetched_at: asOf, upstream_vendor: "Eurostat", acquisition_method: "direct_api", source_url: url.toString() },

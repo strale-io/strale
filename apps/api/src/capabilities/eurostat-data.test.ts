@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkEurostatMetadata, EUROSTAT_ALLOWED_GEOS, EUROSTAT_LICENCE_NOTE, EurostatError, executeEurostat, flattenEurostat, type JsonStat, validateEurostatInput } from "./eurostat-data.js";
+import { checkEurostatMetadata, EUROSTAT_ALLOWED_GEOS, EUROSTAT_ALLOWED_COUNTRIES, EUROSTAT_ALLOWED_AGGREGATES, EUROSTAT_COUNTRY_DIMENSIONS, EUROSTAT_REFUSED_DATASET_PREFIXES, EUROSTAT_LICENCE_NOTE, EurostatError, executeEurostat, flattenEurostat, type JsonStat, validateEurostatInput } from "./eurostat-data.js";
 import { VENDOR_TERMS_RECORDS } from "../lib/vendor-terms.js";
+
+function recorded(name: string) { return JSON.parse(readFileSync(new URL(`./__fixtures__/eurostat/${name}.json`, import.meta.url), "utf8")); }
 
 const input = { dataset: "nama_10_gdp", filters: { geo: ["SE", "DE"], unit: "CP_MEUR", na_item: "B1GQ" }, since_period: "2020" };
 function fixture(): JsonStat {
@@ -56,7 +59,8 @@ describe("Eurostat JSON-stat flattening", () => {
 
 describe("Eurostat input and reuse restrictions", () => {
   it("allows EU27, EFTA, nine candidates and explicit aggregates only", () => {
-    expect(EUROSTAT_ALLOWED_GEOS).toHaveLength(45);
+    expect(EUROSTAT_ALLOWED_GEOS).toEqual([...EUROSTAT_ALLOWED_COUNTRIES, ...EUROSTAT_ALLOWED_AGGREGATES]);
+    expect(new Set(EUROSTAT_ALLOWED_GEOS).size).toBe(EUROSTAT_ALLOWED_GEOS.length);
     for (const geo of EUROSTAT_ALLOWED_GEOS) expect(() => validateEurostatInput({ dataset: "une_rt_m", filters: { geo } })).not.toThrow();
   });
   it.each(["US", "JP", "CN", "UK", "XK", "WORLD"])("refuses commercial reuse for %s before any fetch", async geo => {
@@ -64,7 +68,7 @@ describe("Eurostat input and reuse restrictions", () => {
     await expect(executeEurostat({ ...input, filters: { geo } })).rejects.toMatchObject({ code: "commercial_reuse_restricted", details: { geo } });
     expect(fetch).not.toHaveBeenCalled();
   });
-  it.each(["ext_lt_intertrd", "DS-045409", "ds-045409", "comext_data", "trade_goods", "itgs_m"])("refuses trade prefix %s before fetching", async dataset => {
+  it.each(["ext_lt_intertrd", "DS-045409", "ds-045409", "comext_data", "trade_goods", "itgs_m", "cult_trd_prd", "cult_trd_prt", "sprt_trd_prd", "sprt_trd_prt", "for_trop", "enpe_ext_bal", "bop_its6_tot", "bop_its_tot", "tet00038", "teiet001", "tipsex001", "ei_etea_m", ...EUROSTAT_REFUSED_DATASET_PREFIXES.map(p => `${p}test`)])("refuses trade prefix %s before fetching", async dataset => {
     const fetch = mock();
     await expect(executeEurostat({ ...input, dataset })).rejects.toThrow(/exception \(c\)/);
     expect(fetch).not.toHaveBeenCalled();
@@ -122,7 +126,7 @@ describe("Eurostat input and reuse restrictions", () => {
 describe("Eurostat executor", () => {
   it("returns canonical fields, exact URL, attribution and modification disclaimer", async () => {
     const fetch = mock(); const result = await executeEurostat(input);
-    expect(result.output).toMatchObject({ dataset: "nama_10_gdp", source: "Eurostat", licence_note: EUROSTAT_LICENCE_NOTE, unit: "CP_MEUR", observation_count: 4, dropped_observation_count: 0, updated: "2026-10-22T21:00:00.000Z" });
+    expect(result.output).toMatchObject({ dataset: "nama_10_gdp", source: "Eurostat", licence_note: EUROSTAT_LICENCE_NOTE, dataset_doi: "10.2908/NAMA_10_GDP", accessed_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), unit: "CP_MEUR", observation_count: 4, dropped_observation_count: 0, updated: "2026-10-22T21:00:00.000Z" });
     expect(result.output.source_url).toBe(fetch.mock.calls[0][0]);
     expect(fetch.mock.calls[0][1]).toMatchObject({ headers: { "User-Agent": "Strale/1.0 (+https://strale.dev)" }, signal: expect.any(AbortSignal), redirect: "error" });
     expect(result.provenance).toMatchObject({ source: "Eurostat", acquisition_method: "direct_api" });
@@ -134,8 +138,8 @@ describe("Eurostat executor", () => {
   });
   it("normalises absent update to null", async () => { const data = fixture(); delete data.updated; mock(data); expect((await executeEurostat(input)).output.updated).toBeNull(); });
   it("handles unknown dataset HTTP 404 without reflecting HTML", async () => { mock("<html>secret</html>", 404); await expect(executeEurostat(input)).rejects.toMatchObject({ code: "not_found", details: { dataset: "nama_10_gdp" } }); });
-  it("handles error JSON naming an unknown dataset", async () => { mock({ error: { message: "Dataset does not exist" } }); await expect(executeEurostat(input)).rejects.toMatchObject({ code: "not_found" }); });
-  it("passes sanitised upstream dimension errors", async () => { mock({ error: { message: "<b>Unknown dimension</b>\nfoo" } }, 400); await expect(executeEurostat(input)).rejects.toThrow("Unknown dimension foo"); });
+  it("handles error JSON naming an unknown dataset", async () => { mock(recorded("unknown-dataset"), 404); await expect(executeEurostat(input)).rejects.toMatchObject({ code: "not_found" }); });
+  it("passes sanitised upstream dimension errors", async () => { mock(recorded("unknown-dimension"), 400); await expect(executeEurostat(input)).rejects.toThrow('INVALID_QUERY_DIMENSION: Query is invalid as per its structure'); });
   it("rejects non-JSON and non-dataset responses", async () => { vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("<html>secret</html>")); await expect(executeEurostat(input)).rejects.toMatchObject({ code: "upstream_invalid_response" }); });
   it("returns a structured over-cap error", async () => { const data = fixture(); data.size = [2, 1, 3000]; mock(data); await expect(executeEurostat(input)).rejects.toMatchObject({ code: "observation_limit_exceeded" }); });
   it("preserves timeout classification while reading the response body", async () => {
@@ -152,5 +156,110 @@ describe("Eurostat executor", () => {
       expect(JSON.parse(JSON.stringify(error))).toMatchObject({ error_code: "upstream_unavailable", source: "Eurostat", licence_note: EUROSTAT_LICENCE_NOTE });
       expect(JSON.stringify(error)).not.toContain("private stack");
     }
+  });
+});
+
+
+describe("Eurostat round-two restrictions", () => {
+  it.each(["nama_10_gdp", "une_rt_m"])("permits non-trade dataset %s", async dataset => {
+    mock(); expect((await executeEurostat({ ...input, dataset })).output.observation_count).toBe(4);
+  });
+  it("accepts recorded derived-table metadata without confusing lineage with ownership", async () => {
+    const data = recorded("tec00013");
+    expect(checkEurostatMetadata(data, "tec00013")).toBe(true);
+    mock(data); expect((await executeEurostat({ dataset: "tec00013", filters: { geo: "SE" } })).output.observation_count).toBeGreaterThan(0);
+  });
+  it("refuses a non-Eurostat source on an otherwise permitted derived table", async () => {
+    const data = recorded("tec00013");
+    data.extension.annotation.find((a: {type: string}) => a.type === "SOURCE_INSTITUTIONS").text = "OECD";
+    mock(data); await expect(executeEurostat(input)).rejects.toMatchObject({ code: "commercial_reuse_restricted" });
+  });
+  it.each(["ext_trade", "DS-123", "CoMeXt_table"])("refuses trade lineage %s", async title => {
+    mock({ ...fixture(), extension: { annotation: [{ type: "DISSEMINATION_SOURCE_DATASET", title }] } });
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "commercial_reuse_restricted" });
+  });
+  it.each(["Trade balance", "IMPORT prices", "Exports of products"])("refuses trade title/theme/category %s", label => {
+    for (const data of [{ title: label }, { extension: { theme: label } }]) {
+      expect(() => checkEurostatMetadata(data, "example")).toThrow(/exception \(c\)/);
+    }
+    // Dimension category labels describe values, not the dataset.
+    expect(() => checkEurostatMetadata({ dimension: { category: { label: { X: label } } } }, "example")).not.toThrow();
+  });
+  it("refuses a dataset with a stk_flow (imports/exports) dimension", () => {
+    expect(() => checkEurostatMetadata({ title: "Energy flows", dimension: { stk_flow: {}, geo: {} } } as never, "example")).toThrow(/exception \(c\)/);
+  });
+  it("uses word boundaries in trade labels", () => {
+    expect(() => checkEurostatMetadata({ label: "Important economic indicators" }, "example")).not.toThrow();
+  });
+  it.each(["GEO", "Geo", "geo"])("normalises %s and lowercase countries", key => {
+    const url = validateEurostatInput({ ...input, filters: { [key]: "se" } });
+    expect(url.searchParams.get("geo")).toBe("SE");
+  });
+  it.each(["LANG", "Format", "SinceTimePeriod", "UNTILTIMEPERIOD", "LastTimePeriod"])("rejects reserved option %s", key => {
+    expect(() => validateEurostatInput({ ...input, filters: { geo: "SE", [key]: "x" } })).toThrow(/Invalid filter dimension/);
+  });
+  it.each([{ geo: "SE", GEO: "SE" }, { geo: "SE", unit: "X", UNIT: "Y" }])("rejects duplicate normalised keys %j", filters => {
+    expect(() => validateEurostatInput({ ...input, filters })).toThrow(/Duplicate/);
+  });
+  it.each(EUROSTAT_COUNTRY_DIMENSIONS)("enforces %s before and after fetch, including regions and aggregates", async dimension => {
+    const fetch = mock();
+    await expect(executeEurostat({ ...input, filters: { ...(dimension === "geo" ? {} : { geo: "SE" }), [dimension.toUpperCase()]: "US" } })).rejects.toMatchObject({ code: "commercial_reuse_restricted" });
+    expect(fetch).not.toHaveBeenCalled();
+    for (const value of ["se", "SE1", "SE11", "SE110", ...EUROSTAT_ALLOWED_AGGREGATES]) {
+      expect(() => validateEurostatInput({ ...input, filters: { geo: "SE", [dimension]: value } })).not.toThrow();
+    }
+    for (const value of ["US1", "UK123", "XK1", "SE1234", "TOTAL", "WORLD"]) {
+      expect(() => validateEurostatInput({ ...input, filters: { geo: "SE", [dimension]: value } })).toThrow();
+    }
+    const data = fixture();
+    if (dimension !== "geo") {
+      data.id[0] = dimension; data.id.splice(1, 0, "geo"); data.size.splice(1, 0, 1);
+      data.dimension[dimension] = data.dimension.geo;
+      data.dimension.geo = { category: { index: ["SE"] } };
+    }
+    data.dimension[dimension].category.index = ["SE110", "US"];
+    const flat = flattenEurostat(data);
+    expect(flat.dropped_observation_count).toBe(2);
+    expect(flat.observations).toHaveLength(2);
+    expect(JSON.stringify(flat.dimensions)).not.toContain('"US"');
+  });
+  it.each([{}, { "0": null }, []])("refuses an empty extraction without returning billable output %j", async value => {
+    mock({ ...fixture(), value });
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "no_observations", message: expect.stringMatching(/No observations for these filters/) });
+  });
+  it("refuses when every returned country is excluded", async () => {
+    const data = fixture(); data.dimension.geo.category.index = ["US", "JP"]; mock(data);
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "no_observations", details: { dropped_observation_count: 4 } });
+  });
+  it.each([200, 400, 413])("maps the recorded size error at HTTP %s", async status => {
+    mock(recorded("extraction-too-big"), status);
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "observation_limit_exceeded", message: expect.stringMatching(/EXTRACTION_TOO_BIG.*Narrow filters/) });
+  });
+  it("maps a bare HTTP 413", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("too big", { status: 413 }));
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "observation_limit_exceeded" });
+  });
+  it("maps HTTP 413 even with an unexpected JSON body", async () => {
+    mock("too big", 413);
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "observation_limit_exceeded" });
+  });
+  it("maps an asynchronous response to a narrowing refusal", async () => {
+    mock(recorded("asynchronous-response"), 202);
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "observation_limit_exceeded", message: expect.stringMatching(/Narrow filters/) });
+  });
+  it("sanitises real error label fields", async () => {
+    const data = recorded("unknown-dimension"); data.error[0].label += "<b>hidden markup</b>\n";
+    mock(data, 400);
+    await expect(executeEurostat(input)).rejects.toMatchObject({ code: "upstream_error", message: expect.not.stringMatching(/<b>|\n/) });
+  });
+});
+
+describe("trade-word rule scope", () => {
+  it("does not refuse a dataset because a dimension category is labelled European Free Trade Association", () => {
+    const metadata = { title: "Immigration by citizenship", dimension: { citizen: { label: "Country of citizenship", category: { label: { EFTA: "European Free Trade Association", DE: "Germany" } } } } };
+    expect(() => checkEurostatMetadata(metadata as never, "migr_imm1ctz")).not.toThrow();
+  });
+  it("still refuses a dataset whose own title is about trade", () => {
+    expect(() => checkEurostatMetadata({ title: "Intra and extra-EU trade in cultural goods" } as never, "x_cultural")).toThrow();
   });
 });

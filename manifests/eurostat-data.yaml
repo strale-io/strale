@@ -15,10 +15,9 @@ input_schema:
     dataset:
       type: string
       pattern: '^[a-z0-9_]{3,40}$'
-      description: Eurostat dataset code, for example nama_10_gdp or une_rt_m. All international-trade datasets are excluded.
+      description: Eurostat dataset code, for example nama_10_gdp or une_rt_m. Trade datasets are excluded by code and returned metadata rules described in limitations.
     filters:
       type: object
-      required: [geo]
       minProperties: 1
       maxProperties: 10
       propertyNames:
@@ -34,8 +33,10 @@ input_schema:
               type: string
               pattern: '^[A-Za-z0-9_.-]{1,40}$'
       description: >-
-        Dimension codes to one value or an array; at most 50 values total. geo is required,
-        limited to EU27 (EL for Greece), EFTA, official EU candidates and supported EU/euro-area aggregates.
+        Dimension codes to one value or an array; at most 50 values total. Keys are case-insensitive;
+        duplicate key variants and reserved options are refused. geo is required. Country values
+        are uppercased and restricted in every country dimension listed in limitations, including
+        permitted NUTS regions and supported EU/EFTA/euro-area aggregates.
         Example: {geo: [SE, DE], unit: CP_MEUR, na_item: B1GQ}.
     since_period:
       type: string
@@ -79,11 +80,13 @@ output_schema:
           status: {type: string}
         additionalProperties: true
     observation_count: {type: integer}
-    dropped_observation_count: {type: integer, description: Cells removed because upstream returned a geo outside the commercial allowlist.}
+    dropped_observation_count: {type: integer, description: Cells removed because any country-valued dimension is outside the commercial allowlist.}
     source: {type: string}
     licence_note: {type: string}
     metadata_limitations: {type: string}
     source_url: {type: string}
+    dataset_doi: {type: string, description: Dataset DOI in the form 10.2908/CODE.}
+    accessed_at: {type: string, format: date, description: Access date in ISO 8601.}
     as_of: {type: string}
 data_source: Eurostat dissemination statistics API (JSON-stat 2.0)
 data_source_type: api
@@ -127,6 +130,8 @@ output_field_reliability:
   licence_note: guaranteed
   metadata_limitations: guaranteed
   source_url: guaranteed
+  dataset_doi: guaranteed
+  accessed_at: guaranteed
   as_of: guaranteed
 limitations:
   - title: Historical observations can be revised
@@ -134,29 +139,42 @@ limitations:
     category: accuracy
     severity: info
   - title: Requests must fit within 5,000 cells
-    text: The full dimension-size product, including missing cells, must not exceed 5,000. Sparse datasets may need narrower filters even if few values are reported.
+    text: The full dimension-size product, including missing cells, must not exceed 5,000. Sparse datasets may need narrower filters even if few values are reported. Empty or entirely null results raise an unbilled no_observations refusal.
     category: coverage
     severity: warning
   - title: Dataset and dimension codes must be known
-    text: This tool does not search datasets. Find dataset and dimension codes in the Eurostat data browser at https://ec.europa.eu/eurostat/databrowser/.
+    text: This tool does not search datasets. Find dataset and dimension codes in the Eurostat data browser at https://ec.europa.eu/eurostat/databrowser/. A geo filter on a dataset without a geo dimension returns Eurostat's dimension error.
     category: coverage
     severity: info
   - title: Commercial reuse is restricted by geography and dataset
     text: >-
       https://ec.europa.eu/eurostat/help/copyright-notice permits commercial reuse under Commission
-      Decision 2011/833/EU with attribution and modification/non-responsibility notices. geo is required;
-      only EU27, EFTA, nine official candidates and explicitly supported EU/euro-area aggregates are
-      allowed. All Comext/international-trade datasets are refused, covering Swiss/Liechtenstein
-      post-1995 commodity restrictions and Austrian CN8 restrictions. Returned third-party source
-      declarations and unrecognised rights notices are refused. No logos or third-party documents are returned.
+      Decision 2011/833/EU with DOI, access date, attribution and modification/non-responsibility notices.
+      geo is required. The country allowlist reflects EU27, EFTA and the official candidate list checked
+      on 2026-10-26 at https://enlargement.ec.europa.eu/enlargement-policy/candidate-countries-and-potential-candidates_en
+      (Kosovo is a potential candidate and excluded). The same allowlist is applied before fetching and
+      to every returned row in geo, partner, citizen, c_birth, c_resid, c_orig, c_dest, counterp and c_work.
+      NUTS regional codes matching an allowed two-letter country followed by 1–3 uppercase letters/digits
+      are allowed. Supported aggregates are EA, EA11–EA21 (EA21 from 2026), EU, EU_V, EU_V_NO, EU6, EU9,
+      EU10, EU12, EU15, EU25, EU27_2007, EU27_2020, EU28, EFTA, EEA, EEA18, EEA28, EEA30_2007, EEA31,
+      EEA30_2020, EU27_2020_EFTA and EU28_EFTA, checked against the Eurostat geo codelist at
+      https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/codelist/ESTAT/GEO?format=TSV&lang=en.
+      EA14 is accepted by policy but absent from the checked codelist; an allowed code does not guarantee upstream observations.
+      Returned rows outside the allowlist in any listed country dimension are dropped and counted.
+      Returned third-party source declarations and unrecognised rights notices are refused.
+      DISSEMINATION_SOURCE_DATASET is lineage, not a source declaration. No logos or third-party documents are returned.
     category: coverage
     severity: warning
   - title: Metadata may not expose every dataset-specific restriction
     text: >-
-      The executor checks source and rights declarations plus trade titles/themes exposed in JSON-stat
-      source, extension and annotations. It does not inspect separately linked ESMS documents or catalogue
-      notices; missing source declarations are explicitly reported in metadata_limitations. The explicit
-      refusal prefixes are ext_, DS- (case-insensitive), comext, itgs_ and trade_. No blanket rights
-      clearance of every catalogue dataset is implied.
+      Trade datasets are conservatively refused by case-insensitive code prefixes ext_, ds-, comext,
+      itgs_, trade_, tet, teiet, tipsex, cult_trd_, sprt_trd_, enpe_ext_, bop_its, for_trop and ei_etea;
+      by the words trade, import/imports or export/exports (case-insensitive, word boundaries) in returned
+      dataset titles or theme/category labels; and by DISSEMINATION_SOURCE_DATASET annotation titles
+      starting with ext_, ds- or comext (case-insensitive). This covers Swiss/Liechtenstein post-1995
+      commodity and Austrian CN8 restrictions. The executor checks source/rights anchors including
+      SOURCE_INSTITUTIONS in returned JSON-stat source, extension and annotations. Separately linked
+      ESMS documents and catalogue notices are not inspected; absent source declarations are reported
+      in metadata_limitations. No blanket rights clearance of every catalogue dataset is implied.
     category: coverage
     severity: warning
