@@ -74,6 +74,8 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
         const finding = (output.flags as any[])[0].finding;
         expect(finding).toMatch(/^The .+ company registry lists this company as /);
         expect(finding).not.toMatch(/company-data|_|\b(?:SE|CB|ICAV|Tr|Divis)\b/i);
+        // A bare state noun after "as" is ungrammatical ("lists this company as receivership").
+        expect(finding).not.toMatch(/lists this company as (?:receivership|insolvency|liquidation|administration|examinership|restructuring|bankruptcy|liquidation stayed)\./i);
         expect(output.summary).not.toContain("All 1 automated checks passed");
       }
     },
@@ -93,7 +95,7 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     expect(messageCreate).not.toHaveBeenCalled();
   }
   it.each([
-    ["norwegian-company-data", "no-deleted", { org_number: "930663530" }, "deleted"],
+    ["norwegian-company-data", "no-deleted", { org_number: "994387057" }, "deleted"],
     ["polish-company-data", "pl-deleted", { krs_number: "0000106150" }, "deregistered"],
     ["cz-company-data", "cz-liquidation", { ico: "01485377" }, "liquidation"],
     ["finnish-company-data", "fi-distress", { business_id: "0112038-9" }, "liquidation"],

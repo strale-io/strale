@@ -199,7 +199,7 @@ function registryIsTerminal(result: any): boolean {
 export const REGISTRY_STATUS_PHRASES = {
   CANCELLED: "deleted from the register", BEING_CANCELLED: "in liquidation",
   insolvency: "in insolvency proceedings", liquidation: "in liquidation",
-  administration: "in administration", examinership: "in examinership",
+  administration: "in administration", examinership: "in examinership", receivership: "in receivership",
   restructuring: "undergoing restructuring",
   "Liquidation stayed": "in liquidation (stayed)",
   "Inactive - Amalgamated": "merged into another corporation",

@@ -6,7 +6,7 @@ Only lifecycle inputs are retained: no natural-person identities, birth dates,
 residential locations or registered locations. Full bodies are not committed.
 Membership end/deletion dates describe appointments, not birth dates.
 
-- Brreg: HTTP 200 `respons_klasse: SlettetEnhet`, `slettedato: 2026-10-20`.
+- Brreg: HTTP 200 `respons_klasse: SlettetEnhet`, `slettedato: 2026-10-15` (a deleted limited company, AS).
   [Official API documentation](https://data.brreg.no/enhetsregisteret/api/dokumentasjon/no/index.html).
 - KRS: `odpis.naglowekP.wpis[]` contains numbered registry events; entry 148
   records registry deletion on 2022-08-12. The official

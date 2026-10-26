@@ -24,17 +24,17 @@ async function run(slug: string, input: Record<string, unknown>) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("recorded live registry status regressions", () => {
-  it.each([["no-deleted", "930663530", "deleted"], ["no-active", "923609016", "active"]])(
+  it.each([["no-deleted", "994387057", "deleted"], ["no-active", "923609016", "active"]])(
     "Norway %s → %s %s", async (file, id, status) => {
       mockFetch({ [`/enheter/${id}/roller`]: { rollegrupper: [] }, [`/enheter/${id}`]: fixture(file) });
       expect((await run("norwegian-company-data", { org_number: id })).status).toBe(status);
     },
   );
-  it.each([["no-deleted", "930663530", true], ["no-active", "923609016", false]] as const)(
+  it.each([["no-deleted", "994387057", true], ["no-active", "923609016", false]] as const)(
     "Norway bankruptcy check %s preserves deletion", async (file, id, deleted) => {
       mockFetch({ [`/enheter/${id}`]: fixture(file) });
       expect(await run("no-bankruptcy-check", { org_number: id })).toMatchObject({
-        is_deleted: deleted, deletion_date: deleted ? "2026-10-20" : null,
+        is_deleted: deleted, deletion_date: deleted ? "2026-10-15" : null,
         has_bankruptcy_filing: false, has_any_distress_signal: deleted,
       });
     },
@@ -66,7 +66,7 @@ describe("status precedence and missing signals (synthetic variants)", () => {
     [{ konkurs: true }, "bankrupt"],
     [{ underAvvikling: true }, "dissolving"],
     [{ underTvangsavviklingEllerTvangsopplosning: true }, "compulsory_dissolution"],
-    [{ slettedato: "2026-10-20", konkurs: true }, "deleted"],
+    [{ slettedato: "2026-10-15", konkurs: true }, "deleted"],
     [{ respons_klasse: "SlettetEnhet" }, "deleted"],
   ])("Norway %j", async (flags, status) => {
     mockFetch({ "/roller": {}, "/enheter/": { organisasjonsnummer: "923609016", ...flags } });

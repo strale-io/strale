@@ -279,9 +279,9 @@ describe("recorded real executor responses give the expected composite status", 
 describe("dead entities in the excluded countries (NO, PL, CZ)", () => {
   // The underlying executors still report these as "active" (their defect, tracked separately), so the
   // countries are not routed. When the executors are fixed and the countries re-added, these fixtures
-  // are the cases to flip: NO deleted 2026-10-20, PL struck off 2022, CZ "v likvidaci".
+  // are the cases to flip: NO deleted limited company (2026-10-15), PL struck off 2022, CZ "v likvidaci".
   const DEAD: Array<[string, string, string]> = [
-    ["NO-deleted", "NO", "930663530"],
+    ["NO-deleted", "NO", "994387057"],
     ["PL-struck-off", "PL", "0000106150"],
     ["CZ-v-likvidaci", "CZ", "01485377"],
   ];
@@ -315,7 +315,7 @@ describe("dead entities in the excluded countries (NO, PL, CZ)", () => {
 
   it("the fixture for a natural person carries a placeholder, not a personal name", () => {
     const o = fixture("NO-deleted").executor_output;
-    expect(o.company_name).toBe("[sole trader: personal name removed from this fixture]");
+    expect(o.company_name).toBe("[company name omitted from this fixture]");
     expect(o.legal_name).toBe(o.company_name);
   });
 });

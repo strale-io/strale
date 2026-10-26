@@ -584,7 +584,6 @@
         "archive/receipts/2026-09-05-check-brand-direction-review-fixes.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
         "archive/receipts/2026-09-06-check-brand-editorial-readiness.json",
-        "archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-4.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
@@ -824,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "07cbec26b61ea3d1a864b75cc8130021800fc37695dd8d9ebcc8edf49194eae5",
+      "sha256": "7925f54058ec229b9f37d32e86c5d513cb4485a6d521c5388f18fd634bbb1413",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

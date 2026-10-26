@@ -133,19 +133,19 @@
   {
     "id": "NO-deleted",
     "registry_slug": "norwegian-company-data",
-    "label": "deleted 2026-10-20 (excluded country)",
+    "label": "deleted limited company, 2026-10-15 (excluded country)",
     "executor_input": {
-      "org_number": "930663530"
+      "org_number": "994387057"
     },
     "captured_at": "2026-10-26T11:31:34.850Z",
     "executor_output": {
       "status": "active",
-      "company_name": "[sole trader: personal name removed from this fixture]",
-      "legal_name": "[sole trader: personal name removed from this fixture]",
-      "org_number": "930663530",
+      "company_name": "[company name omitted from this fixture]",
+      "legal_name": "[company name omitted from this fixture]",
+      "org_number": "994387057",
       "registration_date": null
     },
-    "note": "Name removed (natural person). Registry: deleted 2026-10-20; executor still reports active."
+    "note": "A deleted limited company (AS); name omitted. Registry: deleted 2026-10-15; the executor on main before the status fix reported active."
   },
   {
     "id": "PL-struck-off",

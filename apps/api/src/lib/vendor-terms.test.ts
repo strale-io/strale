@@ -194,7 +194,10 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     const cached = withoutMetadata.get(code);
     if (cached !== undefined) code = cached;
     else {
-      const labels = new Set(["source", "source_url", "upstream_vendor", "primary_source_reference", "label", "name"]);
+      // A label is stripped only if this file never reads that property back:
+      // a value that is read (cfg.source_url, t["label"]) may feed a request.
+      const labels = new Set(["source", "source_url", "upstream_vendor", "primary_source_reference", "label", "name"]
+        .filter(p => !new RegExp(`\\.${p}\\b|\\[\\s*["'\x60]${p}["'\x60]\\s*\\]`).test(code)));
       const tree = ts.createSourceFile("vendor-client.ts", code, ts.ScriptTarget.Latest, true);
       const spans: Array<[number, number]> = [];
       function visit(node: ts.Node) {
@@ -340,6 +343,13 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
       const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
       expect(directlyCallsVendor(`const metadata = { "${property}": "data.brreg.no" };`, record)).toBe(false);
       expect(directlyCallsVendor(`const metadata = { ${property}: "data.brreg.no" }; fetchPage("https://data.brreg.no/x")`, record)).toBe(true);
+    },
+  );
+  it.each(["source", "source_url", "upstream_vendor", "primary_source_reference", "label", "name"])(
+    "counts a %s value that the file reads back, since it may feed a request", property => {
+      const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Brønnøysundregistrene")!;
+      expect(directlyCallsVendor(`const cfg = { ${property}: "https://data.brreg.no/x" }; fetch(cfg.${property});`, record)).toBe(true);
+      expect(directlyCallsVendor(`const t = { ${property}: "data.brreg.no" }; fetch(\`https://\${t["${property}"]}/x\`);`, record)).toBe(true);
     },
   );
 
