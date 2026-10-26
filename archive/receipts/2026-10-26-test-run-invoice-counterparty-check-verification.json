@@ -1,0 +1,524 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "737c10e51b03219e90317bd47405cead62ef68e0"
+  },
+  "at": "2026-10-26T20:28:37.081Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "ci_commands_passed": 57,
+    "focused_passed": 376,
+    "new_tests_passed": 105,
+    "full_api_passed": 5612,
+    "full_api_skipped": 321,
+    "full_api_failed": 0,
+    "typecheck": "npx tsc --noEmit: exit 0",
+    "scope": "Tests ran against the uncommitted implementation based on 737c10e5; production DB integration and authenticated sanctions unavailable."
+  },
+  "topic": "invoice-counterparty-check-verification",
+  "raw": {
+    "ok": true,
+    "ci_commands_passed": 57,
+    "focused_passed": 376,
+    "new_tests_passed": 105,
+    "full_api_passed": 5612,
+    "full_api_skipped": 321,
+    "full_api_failed": 0,
+    "root_commands": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0,
+        "duration_s": 2.44,
+        "log": "root-00.log",
+        "log_sha256": "d65d3e0d3125ecab32b3c96ec984120737a991214f25c9ba920cdcdab0e4f68f"
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0,
+        "duration_s": 1.53,
+        "log": "root-01.log",
+        "log_sha256": "29a9de7fe4fd80ac352d1aa546db3c9942d4d9c632951f724bc9416065fb59bb"
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "duration_s": 39.06,
+        "log": "root-02.log",
+        "log_sha256": "7e183b6b437e37506fa965221a26539762a8598fe39de4f5ef9a16b1e2edc419"
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "duration_s": 1.48,
+        "log": "root-03.log",
+        "log_sha256": "aa3f63c06e4ffbeda7746fbf666cce61be14245340927a08ac2dd35c544c567b"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "duration_s": 0.43,
+        "log": "root-04.log",
+        "log_sha256": "0b62c317e91b01715e627e61445b6a711ea36a4da1448da0a34268328f3e287b"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "duration_s": 0.32,
+        "log": "root-05.log",
+        "log_sha256": "ce3d7ecec6be264aff23c97c6c04876b234f8a8c3e3dce86b146e766dc6cf24a"
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "duration_s": 0.11,
+        "log": "root-06.log",
+        "log_sha256": "0e96162c9937a97fd56f8d74f07933d6cea3ad7623ededce4379317adac915b0"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "duration_s": 0.47,
+        "log": "root-07.log",
+        "log_sha256": "be5e1ce8e79a42818b2a052f602619fe48cdbc03211056ad91c3ca9b3376da0b"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "duration_s": 0.22,
+        "log": "root-08.log",
+        "log_sha256": "807be70b60fe57b1e393417e15a02f7a39c6d1e8d9c4c9421df22f48ed3560fb"
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "duration_s": 0.06,
+        "log": "root-09.log",
+        "log_sha256": "ff166fc4821598aa8edc1c91cc7ede8322fb1a4685a9b8699c9eaeade6da4a98"
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "duration_s": 0.82,
+        "log": "root-10.log",
+        "log_sha256": "565906a972445909eee9f66e78e880b1af46b2a29d6aaf73e61a18e047bc2415"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "duration_s": 1.82,
+        "log": "root-11.log",
+        "log_sha256": "61541fae806741bb5f92d4e1de6cbe747db5a4f9152e630bf8e8a7c970ae1707"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "duration_s": 0.88,
+        "log": "root-12.log",
+        "log_sha256": "49dbf78642f2c3e85041449e38c39a123eba6b112b2f990ecd82cdaaf0ecff61"
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "duration_s": 0.22,
+        "log": "root-13.log",
+        "log_sha256": "5267e778115f5e85f3058c5f972ac9299170b75cc0d9a202fec7a5fd324c73c5"
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "duration_s": 0.33,
+        "log": "root-14.log",
+        "log_sha256": "12b852cede02c558fc7136cfcbac0d8e79e0117ccb6655c78e1fe6c75815ecd5"
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "duration_s": 0.57,
+        "log": "root-15.log",
+        "log_sha256": "8742d0bebc7e964c4fc129d3b225ce8cabb40c240ea3f94e222f550f4ec85f2d"
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "duration_s": 0.3,
+        "log": "root-16.log",
+        "log_sha256": "21fb12f67bb183a99bf6514b3919c6e136a8cbda084281691361dc0d555f67aa"
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "duration_s": 0.32,
+        "log": "root-17.log",
+        "log_sha256": "9bd454e0f8c743c6e010f7a9b2b7ac8dd3d2ebd78b6f419a7f3b6f61b2e8a574"
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "duration_s": 0.07,
+        "log": "root-18.log",
+        "log_sha256": "8f13c1f73cbb9a00505aa2981ecf639b400ddad43086a319e87450c62ef85e0a"
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "duration_s": 0.37,
+        "log": "root-19.log",
+        "log_sha256": "99d9e23cb3e22b6fc7a29f113655855458a15bfae4ed4c9906b61dccd145a0c8"
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "duration_s": 0.22,
+        "log": "root-20.log",
+        "log_sha256": "d91a2f6532a808143549013bb08d0c3f8e5818b52c393d55609fd0fa1f740938"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "duration_s": 0.52,
+        "log": "root-21.log",
+        "log_sha256": "e1c1a78c590218752e0bc9ae7f24ee5643e9fcc0506d121f0d4257b7795051f2"
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "duration_s": 3.05,
+        "log": "root-22.log",
+        "tests": 30,
+        "passed": 30,
+        "log_sha256": "8048e095f14b92889f239837f76c40ec224e0cd913448989fe3d7512522ee061"
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "duration_s": 1.44,
+        "log": "root-23.log",
+        "log_sha256": "9a719b98721598b1e4c22a9662764949d1fd5919e4bf5e463205cd51ca534e72"
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "duration_s": 5.56,
+        "log": "root-24.log",
+        "tests": 31,
+        "passed": 31,
+        "log_sha256": "ecd833603f7c514b4732952c6ae7e9e94c40234cbf609df2397394b4ee9bbe07"
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "duration_s": 1.54,
+        "log": "root-25.log",
+        "log_sha256": "93829f0fb3fd118d4e78f9e6ce4de54f5f2a09cc22ee6961cb3834269b6b3165"
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "duration_s": 11.46,
+        "log": "root-26.log",
+        "tests": 84,
+        "passed": 84,
+        "log_sha256": "7edaa731d2be4e9ba4b370978656037b14ab3fda8534ee05513010022238fa6f"
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "duration_s": 0.82,
+        "log": "root-27.log",
+        "log_sha256": "6b91ea53931524583020311d0acb4a8d1c8cf5cc0bf06ec42b6604e843befc28"
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "duration_s": 1.43,
+        "log": "root-28.log",
+        "tests": 24,
+        "passed": 24,
+        "log_sha256": "7c84ab9f65398e5a968893deb8ce0df580619e9f2b8b10186964ee0ce22b41c8"
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "duration_s": 2.16,
+        "log": "root-29.log",
+        "log_sha256": "a9d9477b73ca61296349ddfec704f3f5c4d0ff3b9efcf1b7224b5876909379b5"
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "duration_s": 4.55,
+        "log": "root-30.log",
+        "tests": 78,
+        "passed": 78,
+        "log_sha256": "c200cd75b0e37005132fec838869e42856b59776cf1d013be31dfd2ce923c1ef"
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "duration_s": 0.42,
+        "log": "root-31.log",
+        "log_sha256": "274334e808caf2bc11b6fb8b0a063a63fbf1b179b981ca454aea700578361bea"
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "duration_s": 0.77,
+        "log": "root-32.log",
+        "tests": 15,
+        "passed": 15,
+        "log_sha256": "06e6a3b9de935c7d9430b9bc7a9689d87c53e06ad093167a2cfdcd17325a6f9b"
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "duration_s": 0.47,
+        "log": "root-33.log",
+        "tests": 20,
+        "passed": 20,
+        "log_sha256": "35dcfc5e2bea52216324a7df990bb90cd8e347314fe0034c7dfea3d88bd2d70d"
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "duration_s": 0.37,
+        "log": "root-34.log",
+        "tests": 3,
+        "passed": 3,
+        "log_sha256": "2a9843e964053d9a0d3547c23cffa7f78c43504b1b5b00f5ff864cbbb2d72350"
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "duration_s": 0.32,
+        "log": "root-35.log",
+        "log_sha256": "27cb2403502b36ff2d54439bb1a7c42cedc651abedfed4a8ceab261ef1c9382e"
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "duration_s": 0.52,
+        "log": "root-36.log",
+        "tests": 12,
+        "passed": 12,
+        "log_sha256": "aa66dd29b8fadbc6e19af7729d2d2b058bd3577c2b926577276ed005d17a0273"
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "duration_s": 0.49,
+        "log": "root-37.log",
+        "log_sha256": "79c6c1a59e32ba1d16dc62256a910ccedc7a396262e4b77dbcb7898f630d02be"
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "duration_s": 1.22,
+        "log": "root-38.log",
+        "tests": 16,
+        "passed": 16,
+        "log_sha256": "454bd748efb63a0d2b6eee11938c370f78d34ec8329681b00bc74081aa6cf34a"
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "duration_s": 0.47,
+        "log": "root-39.log",
+        "log_sha256": "80c0a1b5573ff7914b8320f01be3da34be1e07d32f31ef2c4ee7f269c4de12d3"
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "duration_s": 1.03,
+        "log": "root-40.log",
+        "tests": 43,
+        "passed": 43,
+        "log_sha256": "f393447102f7270d1246306270e91c34fa92904e4b13ef5476d51655185dd33e"
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "duration_s": 1.48,
+        "log": "root-41.log",
+        "tests": 24,
+        "passed": 24,
+        "log_sha256": "1d913ed314649dc3a25247ef5915512c4f3bd2e1b78683512378cb429c373bc8"
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "duration_s": 0.37,
+        "log": "root-42.log",
+        "log_sha256": "2090fd4d6a18e634fb5a10bd910203b5d80d5800fe65efd9ee433af3cd01b5ae"
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "duration_s": 0.57,
+        "log": "root-43.log",
+        "tests": 14,
+        "passed": 14,
+        "log_sha256": "2c4905432810abe724f61da36537d375455c3e6d2223e4a55c23a31eadfbc8c2"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "duration_s": 1.43,
+        "log": "root-44.log",
+        "log_sha256": "1d997d1f1d6f00dab198d3ed305b31e75b649094765d488950c0339b0aca6d8f"
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "duration_s": 2.39,
+        "log": "root-45.log",
+        "tests": 18,
+        "passed": 18,
+        "log_sha256": "00aec7e675d5c63d8b2afc89a7d1096e0ef09f7d67967a706f6f4a3f86bc3ffb"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "duration_s": 0.43,
+        "log": "root-46.log",
+        "log_sha256": "09fa0b728ac4ccb15a2482e7a8af95140cdcc2b0035195ef62b7b5353fbb093e"
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "duration_s": 0.37,
+        "log": "root-47.log",
+        "tests": 6,
+        "passed": 6,
+        "log_sha256": "8bc9ff4d0a686f49287742154a4759ad0f1fb98d36986043edbbb7d54e9d1935"
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0,
+        "duration_s": 0.12,
+        "log": "root-48.log",
+        "log_sha256": "defafeb7337cb5ee191ba82dc06943c6c533c6d70bd2b04007dea87a23a5a31c"
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "duration_s": 0.42,
+        "log": "root-49.log",
+        "tests": 12,
+        "passed": 12,
+        "log_sha256": "2862b9024e5114dc753cce47c4e6d679faf98eca6c71c6732c0ce5d0314aebdd"
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "duration_s": 14.44,
+        "log": "root-50.log",
+        "log_sha256": "83c6028aeee81881c891978511a2bdef3beeedbd35bd279b0c8117d6935862c1"
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "duration_s": 4.83,
+        "log": "root-51.log",
+        "tests": 25,
+        "passed": 25,
+        "log_sha256": "5b95bf898470cf03d536cd920efe1d1d4478ebb0326854f8c3983fb6f39c2379"
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "duration_s": 0.27,
+        "log": "root-52.log",
+        "log_sha256": "43fbc4828157c64855323071651a541ff7ac2935013e2922901441dd3899d790"
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "duration_s": 0.42,
+        "log": "root-53.log",
+        "tests": 23,
+        "passed": 23,
+        "log_sha256": "cdb51cf3a42405d154dc887b5515497990899d96ddfa9dc08b1ed085ab6e3d5f"
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "duration_s": 12.63,
+        "log": "root-54.log",
+        "tests": 46,
+        "passed": 46,
+        "log_sha256": "37b41e09862b3c7672ad01c470d185060005a1d251af38b4ac7fc30a6a1e67f2"
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "duration_s": 5.54,
+        "log": "root-55.log",
+        "log_sha256": "8e6d48268d03aeda171a935a3250ceae0ae046712e0a178ca51446bf342faee0"
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "duration_s": 118.64,
+        "log": "root-56.log",
+        "tests": 180,
+        "passed": 180,
+        "log_sha256": "cf5b083c57fb10bd21f24d8ea1532b577cefe5bb56357f819ef8c9682af5447b"
+      }
+    ],
+    "focused": {
+      "numTotalTests": 376,
+      "numPassedTests": 376,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "success": true
+    },
+    "full_api": {
+      "numTotalTests": 5933,
+      "numPassedTests": 5612,
+      "numFailedTests": 0,
+      "numPendingTests": 321,
+      "success": true
+    },
+    "focused_files": [
+      {
+        "file": "lib/composite-breaker.test.ts",
+        "tests": 7
+      },
+      {
+        "file": "lib/company-status/company-status-routing.test.ts",
+        "tests": 51
+      },
+      {
+        "file": "lib/company-status/compose.test.ts",
+        "tests": 48
+      },
+      {
+        "file": "lib/company-status/normalise.test.ts",
+        "tests": 87
+      },
+      {
+        "file": "lib/company-status/review-fixes.test.ts",
+        "tests": 85
+      },
+      {
+        "file": "lib/invoice-counterparty/compose.test.ts",
+        "tests": 97
+      },
+      {
+        "file": "lib/invoice-counterparty/sanctions-contract.test.ts",
+        "tests": 1
+      }
+    ],
+    "typecheck": "npx tsc --noEmit: exit 0",
+    "structure": {
+      "errors": [],
+      "structure": [],
+      "ok": true
+    },
+    "scope": "Tests ran against the uncommitted implementation based on 737c10e5; production DB integration and authenticated sanctions unavailable."
+  }
+}

@@ -1,0 +1,252 @@
+slug: invoice-counterparty-check
+name: Invoice Counterparty Check
+description: "Check a supplier's tax ID, official company status and sanctions screening before invoice payment, returning evidence for each check."
+# invoice-verify-* solutions use compliance-verification, which the capability
+# validator disallows. compliance is the supported screening category.
+category: compliance
+price_cents: 75
+is_free_tier: false
+cost_class: paid_prepaid
+quota_window: none
+# One Dilisense call (1 cent, the platform's conservative paid-vendor cost
+# classification in runMigration0062_paidVendorCosts), plus VIES/tax format (0)
+# and official identifier-only registry/insolvency calls (0). No LLM calls.
+# This explicit estimate does not claim to know the private vendor agreement.
+external_cost_cents: 1
+avg_latency_ms: 2500
+transparency_tag: algorithmic
+freshness_category: live-fetch
+gdpr_art_22_classification: screening_signal
+maintenance_class: commercial-stable-api
+data_source: VIES; tax-id-validate format rules; company-status-check official registries; Dilisense via sanctions-check
+data_source_type: api
+processes_personal_data: true
+personal_data_categories: [name, professional, financial, sensitive_special]
+geography: global
+input_schema:
+  type: object
+  required: [tax_id]
+  properties:
+    tax_id:
+      type: string
+      description: EU VAT number including country prefix, or a national tax/company ID supported by tax-id-validate. Non-EU validation is format-only.
+    country:
+      type: string
+      description: ISO 3166-1 alpha-2; required without a tax ID prefix and must agree with the prefix when supplied.
+    company_id:
+      type: string
+      description: Registry identifier; overrides VAT-to-registry derivation. This supplied identifier is not independently linked to the VAT number.
+    company_name:
+      type: string
+      description: Name printed on the invoice; compared as a string with a registered name and used for screening only if neither registry nor VIES supplies one.
+output_schema:
+  type: object
+  required: [tax_id, registry_status, sanctions, checks_completed, checks_not_available, findings]
+  properties:
+    tax_id:
+      type: object
+      properties:
+        status: {type: string, enum: [completed, not_available, error]}
+        source: {type: string}
+        reason: {type: string}
+        valid: {type: boolean}
+        verification: {type: string, enum: [vies, format_only]}
+        tax_id: {type: string}
+        country: {type: string}
+        registered_name: {type: string}
+        registered_address: {type: string}
+        checked_at: {type: string, format: date-time}
+    registry_status:
+      type: object
+      properties:
+        status: {type: string, enum: [completed, not_available, error]}
+        source: {type: string}
+        reason: {type: string}
+        company_status: {type: string, enum: [active, inactive, dissolved, in_liquidation, in_insolvency, struck_off, unknown]}
+        registry_status_raw: {type: [string, 'null']}
+        registered_name: {type: [string, 'null']}
+        identifier: {type: string}
+        identifier_source: {type: string, enum: [company_id, tax_id_mapping]}
+        registry:
+          type: object
+          properties:
+            name: {type: string}
+            slug: {type: string}
+        insolvency:
+          type: object
+          properties:
+            checked: {type: boolean}
+            reason: {type: string}
+            source: {type: string}
+            notices_found: {type: integer}
+            notices:
+              type: array
+              items:
+                type: object
+                properties:
+                  date: {type: [string, 'null']}
+                  type: {type: string}
+                  source_url: {type: [string, 'null']}
+                  status: {type: string}
+            window_note: {type: string}
+        checked_at: {type: string, format: date-time}
+    sanctions:
+      type: object
+      properties:
+        status: {type: string, enum: [completed, not_available, error]}
+        source: {type: string}
+        reason: {type: string}
+        screened_name: {type: string}
+        name_source: {type: string, enum: [registry_status, tax_id, company_name]}
+        potential_match_count: {type: integer}
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              entity_id: {type: string}
+              datasets: {type: array, items: {type: string}}
+              countries: {type: array, items: {type: string}}
+              sanction_details: {type: array, items: {type: string}}
+              last_updated_at: {type: [string, 'null']}
+        matches_truncated: {type: boolean}
+        lists_queried:
+          type: object
+          properties:
+            collection: {type: string}
+            source_count: {type: integer}
+            major_lists: {type: array, items: {type: string}}
+            freshness_note: {type: string}
+            source_catalog_url: {type: string}
+            version: {type: [string, 'null']}
+            last_updated_at: {type: [string, 'null']}
+        checked_at: {type: string, format: date-time}
+    name_match:
+      type: object
+      properties:
+        status: {type: string, enum: [completed, not_available, error]}
+        source: {type: string}
+        reason: {type: string}
+        match: {type: string, enum: [exact, equivalent, different]}
+        invoice_name: {type: string}
+        registered_name: {type: string}
+    checks_completed: {type: array, items: {type: string}}
+    checks_not_available: {type: array, items: {type: string}}
+    findings: {type: array, items: {type: string}}
+test_fixtures:
+  # Nokia Oyj: VIES valid and PRH active, checked live 2026-10-26.
+  # Sanctions result intentionally not asserted zero: fuzzy results change.
+  known_answer:
+    input: {tax_id: FI01120389, company_name: Nokia Oyj}
+    expected_fields:
+      - {field: tax_id, operator: not_null, reliability: guaranteed}
+      - {field: registry_status, operator: not_null, reliability: guaranteed}
+      - {field: sanctions, operator: not_null, reliability: guaranteed}
+      - {field: checks_completed, operator: not_null, reliability: guaranteed}
+      - {field: checks_not_available, operator: not_null, reliability: guaranteed}
+      - {field: findings, operator: not_null, reliability: guaranteed}
+  health_check_input: {tax_id: FI01120389, company_name: Nokia Oyj}
+# Nested paths are conservatively common/rare: the platform's guaranteed-field
+# consistency/sentinel gates consume top-level property names, not dotted paths.
+output_field_reliability:
+  tax_id: guaranteed
+  registry_status: guaranteed
+  sanctions: guaranteed
+  name_match: common
+  checks_completed: guaranteed
+  checks_not_available: guaranteed
+  findings: guaranteed
+  tax_id.status: common
+  tax_id.source: common
+  tax_id.reason: rare
+  tax_id.valid: common
+  tax_id.verification: common
+  tax_id.tax_id: common
+  tax_id.country: common
+  tax_id.checked_at: common
+  tax_id.registered_name: common
+  tax_id.registered_address: common
+  registry_status.status: common
+  registry_status.source: common
+  registry_status.reason: common
+  registry_status.company_status: common
+  registry_status.registry_status_raw: common
+  registry_status.registered_name: common
+  registry_status.identifier: common
+  registry_status.identifier_source: common
+  registry_status.registry: common
+  registry_status.registry.name: common
+  registry_status.registry.slug: common
+  registry_status.insolvency: common
+  registry_status.insolvency.checked: common
+  registry_status.insolvency.reason: common
+  registry_status.insolvency.source: rare
+  registry_status.insolvency.notices_found: rare
+  registry_status.insolvency.notices: rare
+  registry_status.insolvency.notices[].date: rare
+  registry_status.insolvency.notices[].type: rare
+  registry_status.insolvency.notices[].source_url: rare
+  registry_status.insolvency.notices[].status: rare
+  registry_status.insolvency.window_note: rare
+  registry_status.checked_at: common
+  sanctions.status: common
+  sanctions.source: common
+  sanctions.reason: rare
+  sanctions.screened_name: common
+  sanctions.name_source: common
+  sanctions.potential_match_count: common
+  sanctions.matches: common
+  sanctions.matches[].name: rare
+  sanctions.matches[].entity_id: rare
+  sanctions.matches[].datasets: rare
+  sanctions.matches[].countries: rare
+  sanctions.matches[].sanction_details: rare
+  sanctions.matches[].last_updated_at: rare
+  sanctions.matches_truncated: common
+  sanctions.lists_queried: common
+  sanctions.lists_queried.collection: common
+  sanctions.lists_queried.source_count: common
+  sanctions.lists_queried.major_lists: common
+  sanctions.lists_queried.freshness_note: common
+  sanctions.lists_queried.source_catalog_url: common
+  sanctions.lists_queried.version: rare
+  sanctions.lists_queried.last_updated_at: rare
+  sanctions.checked_at: common
+  name_match.status: common
+  name_match.source: common
+  name_match.reason: rare
+  name_match.match: common
+  name_match.invoice_name: common
+  name_match.registered_name: common
+limitations:
+  - title: Tax coverage and freshness
+    text: VIES covers EU VAT numbers only here. Non-EU tax-id-validate checks are format-only; its current rules implement no checksums. Format validity is never registry confirmation. VAT answers may be cached for 48 hours; checked_at preserves the source timestamp. Stale fallback evidence is refused.
+    category: coverage
+    severity: warning
+  - title: Registry coverage and identifier linkage
+    text: Registry status is limited to company-status-check's supported countries and deterministic mappings for SE organisation VAT, FI and NO MVA. BE maps to an enterprise number but its registry is not covered. DK VAT can be an SE administrative-unit number rather than CVR, and NL BTW is not KVK. No name-based entity resolution is used. company_id is supplied evidence and is not independently linked to tax_id. Registry errors are reported without blocking a completed tax and sanctions check.
+    category: coverage
+    severity: warning
+  - title: Single screening vendor
+    text: Screening uses Dilisense through sanctions-check. Potential name matches are evidence, not a sanction-status assertion. The vendor returns no match score or per-list version timestamp; neither is fabricated. At most ten match records are returned; potential_match_count retains the full count and matches_truncated discloses the cap. country is passed to sanctions-check but its present Dilisense adapter does not filter the upstream query by country.
+    category: accuracy
+    severity: warning
+  - title: Name normalisation and source order
+    text: Registry name precedes VIES name, then the invoice name. Name equivalence removes case, diacritics, punctuation and selected trailing legal forms. It cannot establish entity identity, translate names, detect impersonation or compare bank ownership. Without a registered name, name_match is not_available.
+    category: accuracy
+    severity: warning
+  - title: Evidence without a verdict
+    text: By design there is no overall verdict, risk level, recommendation or safe-to-pay claim. Only successful tax and sanctions checks are billed; invalid VAT is a completed check, while incomplete required checks throw an unbilled structured error. Registry active means registered status, not trading activity.
+    category: coverage
+    severity: info
+  - title: Existing upstream access conditions
+    text: This composite adds no upstream or fetch path. It preserves the weakest underlying data-access lane and all source provenance. Official registries and VIES are reused through existing executors. Dilisense's existing allowed-with-checks lane remains pending because the reseller agreement is not signed; this build makes no stronger rights claim. Health probes retain the underlying unauthenticated zero-cost connectivity checks; the known-answer fixture is a paid functional test.
+    category: coverage
+    severity: warning
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: dilisense
+  checks: pending
+  checks_note: Existing sanctions-check Dilisense arrangement; no new upstream or reseller-rights assertion. Runtime provenance preserves the weakest composed source lane.
