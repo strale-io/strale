@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-345 files (318 with a recorded intent, 27 without).
+346 files (319 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -37,6 +37,7 @@
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-flaky-source-probes.md`](_general/from-code/2026-10-23-flaky-source-probes.md) | find why USGS, sudreg, VIES, HN search, NVD and arXiv flap in the Health Monitor, and fix what is ours. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-dq37-web3-methodology.md`](_general/from-code/2026-10-23-dq37-web3-methodology.md) | Carry out DQ-37 as approved by Petter — correct the remaining web3 methodology source claims and verify them in produ... |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-dq36-sanctions-copy.md`](_general/from-code/2026-10-23-dq36-sanctions-copy.md) | Carry out DQ-36 as approved by Petter — correct the sanctions and web3 methodology source copy, and verify it in prod... |
+| 2026-10-23 | [`handoff/_general/from-code/2026-10-23-delegate-competitive-analysis.md`](_general/from-code/2026-10-23-delegate-competitive-analysis.md) | give the positioning session and Petter a detailed, public-sources-only |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md`](_general/from-code/2026-10-23-data-access-rule-proposal.md) | Draft a risk-based replacement for the scraping doctrine for Petter's decision. |
 | 2026-10-19 | [`handoff/_general/from-code/2026-10-19-checkin-morning.md`](_general/from-code/2026-10-19-checkin-morning.md) | run the 2026-10-19 operating session under DAILY-RUN.md — close week |
 | 2026-10-18 | [`handoff/_general/from-code/2026-10-18-checkin-morning.md`](_general/from-code/2026-10-18-checkin-morning.md) | run the 2026-10-18 operating session under DAILY-RUN.md — on schedule |
