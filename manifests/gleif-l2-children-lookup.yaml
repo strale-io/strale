@@ -1,9 +1,6 @@
 slug: gleif-l2-children-lookup
-name: GLEIF L2 Children Lookup
-description: >-
-  Direct or ultimate child LEI records for a given entity, via GLEIF Level 2 (Who Owns Whom). Useful for "is this a
-  holding entity?" and "what subsidiaries does this entity own?". Pairs with gleif-l2-ubo-lookup (which goes the other
-  direction). Free, CC0-equivalent license.
+name: "LEI Subsidiaries Lookup"
+description: "List the direct and ultimate subsidiaries of an entity from GLEIF ownership data, to see whether it is a holding company and what it owns."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -154,3 +151,8 @@ limitations:
       enhancement).
     category: coverage
     severity: warning
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

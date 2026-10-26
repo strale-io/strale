@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: container-track
-name: Container Track
-description: Track shipping containers by ISO 6346 number. Validates format, detects carrier, provides tracking status.
+name: "Container Tracking"
+description: "Track a shipping container by its ISO 6346 number: check the number, identify the carrier and get the tracking status."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -106,3 +106,9 @@ limitations:
     category: freshness
     severity: info
     workaround: Check the last_updated timestamp in the response to assess data freshness before making logistics decisions
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: public_page_read
+  checks: pending

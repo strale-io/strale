@@ -1,8 +1,6 @@
 slug: business-day-check
-name: Business Day Check
-description: >-
-  Check if a specific date is a business day in a given country. Accounts for weekends and
-  public holidays. Also returns the next business day if the given date is not one.
+name: "Business Day Check"
+description: "Check whether a date is a business day in a country, counting weekends and public holidays. Returns the next business day when it is not."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -71,3 +69,10 @@ limitations:
     text: Depends on Nager.Date API for holiday data — if the API is unreachable, only weekends are checked
     category: dependency
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: nager-date
+  checks: pending

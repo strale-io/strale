@@ -1,8 +1,6 @@
 slug: hacker-news-search
-name: Hacker News Search
-description: >-
-  Search Hacker News stories and comments via the official Algolia API: title, URL, points, author, comment
-  count, date and text, by relevance or date.
+name: "Hacker News Search"
+description: "Search Hacker News stories and comments: title, link, points, author, comment count, date and text, by relevance or date."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -114,3 +112,10 @@ limitations:
     category: freshness
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: algolia
+  checks: pending

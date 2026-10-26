@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: domain-reputation
-name: Domain Reputation
-description: >-
-  Check domain reputation via DNS, HTTP, and security analysis. Checks SPF, DMARC, HSTS, HTTPS, suspicious TLD, and
-  domain patterns. Score 0-100.
+name: "Domain Reputation"
+description: "Score a domain's reputation from 0 to 100 from its DNS, HTTPS and security setup: SPF, DMARC, HSTS, suspicious TLDs and domain patterns."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -99,3 +97,9 @@ limitations:
     workaround: >-
       Check which specific blocklist flagged the domain in the response details and verify the listing reason before
       blocking
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

@@ -1,8 +1,6 @@
 slug: tax-id-validate
-name: Tax ID Validate
-description: >-
-  Validate tax identification number (TIN) formats for 40+ countries. Checks format rules and
-  checksum algorithms where applicable. Does not verify with tax authorities.
+name: "Tax ID Validation"
+description: "Check tax identification number formats for 40+ countries, including checksums where they exist. Does not check with the tax authority."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -77,3 +75,8 @@ limitations:
     text: Country prefix is auto-detected for EU VAT numbers — non-EU TINs require explicit country_code
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

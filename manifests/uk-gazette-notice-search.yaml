@@ -126,3 +126,8 @@ limitations:
       and is null when the notice doesn't state it in the expected "Company Number: NNNNNNNN" format.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

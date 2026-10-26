@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: address-parse
-name: Address Parse
-description: >-
-  Parse a free-text address into structured components. Returns street, city, postal code, state/province, country.
-  Works with addresses worldwide.
+name: "Address Parser"
+description: "Split a free-text address from anywhere in the world into street, city, postal code, region and country."
 category: data-processing
 cost_class: paid_prepaid
 quota_window: none
@@ -107,3 +105,8 @@ limitations:
     workaround: >-
       Validate parsed components against a postal address database (e.g., Google Address Validation API) for critical
       use cases
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: error-explain
-name: Error Explain
-description: Explain an error message or stack trace in plain English. Identifies root cause, suggests fixes with code examples.
+name: "Error Explainer"
+description: "Explain an error message or stack trace in plain English: the likely cause and fixes with code."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -125,3 +125,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use the suggested causes as debugging hypotheses and verify against your application's logs and configuration
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

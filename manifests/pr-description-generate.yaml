@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: pr-description-generate
-name: PR Description Generate
-description: Generate pull request descriptions from diffs or commit logs. Returns title, summary, changes list, testing steps.
+name: "Pull Request Description Generator"
+description: "Write a pull request description from a diff or commits: title, summary, list of changes and testing steps."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -112,3 +112,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Include the ticket/issue number in the input and review the generated description for completeness
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

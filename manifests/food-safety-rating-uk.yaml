@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: food-safety-rating-uk
-name: Food Safety Rating UK
-description: >-
-  Look up UK food hygiene ratings via the FSA API. Search by business name and optional location. Returns ratings,
-  scores, addresses.
+name: "UK Food Hygiene Rating"
+description: "Look up UK food hygiene ratings from the Food Standards Agency by business name and place. Returns ratings, scores and addresses."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -203,3 +201,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For Scottish establishments, search the Food Standards Scotland website at foodstandards.gov.scot
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

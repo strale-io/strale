@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: regex-generate
-name: Regex Generate
-description: >-
-  Describe what you want to match in natural language, get a tested regex back. Optionally provide test strings for
-  validation.
+name: "Regex Generator"
+description: "Describe what to match in plain English and get a tested regular expression, checked against your examples if you give them."
 category: validation
 cost_class: paid_prepaid
 quota_window: none
@@ -115,3 +113,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Provide fewer test_strings per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

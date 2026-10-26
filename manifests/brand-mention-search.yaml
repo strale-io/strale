@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: brand-mention-search
-name: Brand Mention Search
-description: >-
-  Search Google for brand mentions. Returns URLs, titles, snippets, sentiment, and source type. Every result is a
-  clickable, verifiable URL.
+name: "Brand Mention Search"
+description: "Find mentions of a brand on Google: link, title, snippet, sentiment and type of source for each."
 category: competitive-intelligence
 cost_class: paid_prepaid
 quota_window: none
@@ -151,3 +149,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Reduce max_results to shrink the number of search results analyzed per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: serper
+  checks: pending
+  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: blog-post-outline
-name: Blog Post Outline
-description: >-
-  Generate a structured blog post outline. Returns title options, sections with subsections and key points, estimated
-  word count, SEO keywords. JSON, not prose.
+name: "Blog Post Outline"
+description: "Outline a blog post: title options, sections with key points, an estimated word count and SEO keywords."
 category: content-writing
 cost_class: paid_prepaid
 quota_window: none
@@ -218,3 +216,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide target audience, tone, and key messaging points in the input for more tailored outlines
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

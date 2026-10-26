@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: marketplace-fee-calculate
-name: Marketplace Fee Calculate
-description: Calculate seller fees for Amazon, eBay, Etsy, Shopify. Returns total fees, net revenue, fee breakdown.
+name: "Marketplace Fee Calculator"
+description: "Work out seller fees on Amazon, eBay, Etsy and Shopify. Returns total fees, net revenue and the breakdown."
 category: utility
 cost_class: free_unlimited
 quota_window: none
@@ -116,3 +116,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Verify calculated fees against the marketplace's current seller fee schedule before pricing decisions
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

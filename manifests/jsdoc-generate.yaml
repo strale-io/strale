@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: jsdoc-generate
-name: JSDoc Generate
-description: Add JSDoc comments to JavaScript/TypeScript functions and classes. Infers param types, return types, and throws.
+name: "JSDoc Generator"
+description: "Add JSDoc comments to JavaScript and TypeScript functions and classes, with parameter, return and thrown types."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -84,3 +84,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Validate generated JSDoc with TypeScript compiler type checking to catch annotation mismatches
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

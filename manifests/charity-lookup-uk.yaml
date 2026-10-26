@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: charity-lookup-uk
-name: Charity Lookup UK
-description: >-
-  Look up UK charities via the Charity Commission API. Search by registration number or name. Returns status, income,
-  activities.
+name: "UK Charity Lookup"
+description: "Look up a charity in England and Wales or Scotland by registration number, or search by name, from Find that Charity. A number lookup returns status, registration dates, income, spending and description."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -99,3 +97,10 @@ limitations:
     category: coverage
     severity: info
     workaround: For Scottish charities, query OSCR at oscr.org.uk; for Northern Ireland, use charitycommissionni.org.uk
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: findthatcharity
+  checks: pending

@@ -5,8 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: wallet-transactions-lookup
-name: Wallet Transactions Lookup
-description: "Get recent ETH transfers to and from a wallet on Ethereum mainnet: up to 50 with hash, value, counterparty, timestamp and direction."
+name: "Wallet Transactions Lookup"
+description: "Get a wallet's recent ETH transfers on Ethereum mainnet: up to 50, with hash, value, counterparty, time and direction."
 category: web3
 cost_class: free_quota
 quota_window: daily
@@ -200,3 +200,11 @@ limitations:
     category: coverage
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: alchemy
+  checks: pending
+  checks_note: "Pending: Alchemy's terms (quoted in capabilities/lib/alchemy-client.ts and the 2026-09-10 audit) permit use as a product backend integrated with additional functionality; that judgement is not recorded per tool in vendor-terms.ts."

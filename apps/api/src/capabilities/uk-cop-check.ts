@@ -159,7 +159,8 @@ registerCapability("uk-cop-check", async (input: CapabilityInput) => {
       provenance: {
         source: "wsp.esortcode.com",
         fetched_at: new Date().toISOString(),
-        acquisition_method: "vendor_mediated_scheme" as const,
+        acquisition_method: "vendor_api" as const,
+        upstream_vendor: "esortcode",
       },
     };
   }
@@ -201,7 +202,8 @@ registerCapability("uk-cop-check", async (input: CapabilityInput) => {
       source: "wsp.esortcode.com",
       source_url: `${ESORTCODE_API}/cop`,
       fetched_at: new Date().toISOString(),
-      acquisition_method: "vendor_mediated_scheme" as const,
+      acquisition_method: "vendor_api" as const,
+      upstream_vendor: "esortcode",
       attribution: "Confirmation of Payee scheme participant: eSortcode (Pay.UK)",
     },
   };

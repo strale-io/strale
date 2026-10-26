@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: github-repo-analyze
-name: GitHub Repo Analyze
-description: >-
-  Analyze a public GitHub repository. Returns tech stack, documentation quality, activity level, bus factor, maintenance
-  health score. Uses GitHub API + AI analysis.
+name: "GitHub Repo Analysis"
+description: "Analyse a public GitHub repository: tech stack, documentation, activity, bus factor and a maintenance health score."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -197,3 +195,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Combine with dependency-audit for security insights and code-review for quality assessment of specific files
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

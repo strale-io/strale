@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: brazilian-company-data
-name: Brazilian Company Data
-description: >-
-  Look up Brazilian company data from the Receita Federal CNPJ register via the ReceitaWS JSON wrapper. Requires CNPJ
-  (14 digits). Returns company name, trade name, status, address, activity codes, and partners.
+name: "Brazilian Company Data"
+description: "Look up a Brazilian company in the Receita Federal CNPJ register by its 14-digit CNPJ. Returns name, trade name, status, address, activity codes and partners."
 category: company-data
 cost_class: free_quota
 quota_window: daily
@@ -130,3 +128,10 @@ limitations:
       should not be reused for direct marketing without a separate lawful basis.
     category: legal
     severity: warning
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: receitaws.com.br
+  checks: pending

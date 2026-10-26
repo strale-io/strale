@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: mx-lookup
-name: MX Lookup
-description: >-
-  DNS lookup for MX, A, AAAA, NS, TXT, SOA records. Detects email provider (Google, Microsoft, etc.), SPF, and DMARC
-  records.
+name: "Mail Server Lookup"
+description: "Look up a domain's MX, A, AAAA, NS, TXT and SOA records, identify its email provider, and show its SPF and DMARC records."
 category: monitoring
 cost_class: free_unlimited
 quota_window: none
@@ -119,3 +117,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Combine with port-check on port 25 of the returned MX hosts to verify mail server reachability
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: primary_source

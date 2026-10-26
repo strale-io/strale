@@ -5,11 +5,8 @@
 # Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
 
 slug: vasp-verify
-name: VASP Verification
-description: >-
-  Check if a crypto-asset service provider (CASP/VASP) is authorized under the EU MiCA regulation. Searches ESMA's
-  official register of authorized CASPs. Returns authorization status, licensed services, home country, and passporting
-  rights.
+name: "VASP Verification"
+description: "Check whether a crypto-asset service provider is authorised under MiCA in ESMA's register: status, licensed services, home country and passporting."
 category: web3
 cost_class: free_unlimited
 quota_window: none
@@ -78,3 +75,8 @@ limitations:
     category: availability
     severity: info
     workaround: null
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

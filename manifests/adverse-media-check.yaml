@@ -1,10 +1,6 @@
 slug: adverse-media-check
-name: Adverse Media Check
-description: >-
-  Screens a person or company for adverse news coverage across 235,000+ sources via Dilisense
-  (primary) with Serper Google search fallback. Returns audit-grade evidence: risk level with
-  documented thresholds, FATF-aligned category counts, top article headlines with source URLs and
-  dates, and the rule used to classify severe vs non-severe coverage.
+name: "Adverse Media Check"
+description: "Screen a person or company for adverse news across 235,000+ sources. Returns a risk level with its thresholds, FATF-aligned category counts, and the top headlines with source links and dates."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none
@@ -245,3 +241,11 @@ limitations:
     category: coverage
     severity: warning
     workaround: For high-stakes Italian banking-counterparty screening, supplement with a native-source check.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: dilisense
+  checks: pending
+  checks_note: "Pending: Dilisense is used on an informal starter arrangement with vendor-granted grace (2026-04-29); the reseller service agreement is not signed (docs/research/2026-04-28-payee-assurance-build-vs-buy.md). The fallback is Serper, pending DQ-39."

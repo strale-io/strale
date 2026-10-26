@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: iban-validate
-name: IBAN Validation
-description: >-
-  Validate an IBAN number. Checks format, length, and mod-97 checksum. Extracts country code, bank identifier, and
-  branch code. Pure algorithmic — fast and cheap.
+name: "IBAN Validation"
+description: "Check an IBAN's format, length and checksum, and split out the country, bank code and branch code."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -83,3 +81,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For non-SEPA IBANs, cross-reference the bank code portion against SWIFT's IBAN Plus directory
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

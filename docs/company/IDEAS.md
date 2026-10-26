@@ -20,4 +20,4 @@ Line shape, checked by `npm run research:check`:
 
 ## Inbox
 
-- 2026-09-26 · inbox · US private-company lookup: on 2026-09-18 the largest x402 buyer sent 114 US company names to us-company-data and 103 were correctly refused (SEC EDGAR covers public filers only; the names were mostly private software firms) — find a licensed source for private US company basics that fits DEC-20260428-A
+- 2026-09-26 · inbox · US private-company lookup: on 2026-09-18 the largest x402 buyer sent 114 US company names to us-company-data and 103 were correctly refused (SEC EDGAR covers public filers only; the names were mostly private software firms) — find a licensed source for private US company basics that fits DEC-20261023-A (formerly DEC-20260428-A)

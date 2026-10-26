@@ -11,8 +11,9 @@
  * (strips Solidity 0.8.x metadata block), SHA-256 hashes it, and prints
  * a TS object you can paste into data/known-rug-bytecodes.ts.
  *
- * Per DEC-20260428-A, all entries should be verified manually from public
- * postmortems before adding to the seed.
+ * Every entry should be verified manually from public postmortems before
+ * adding it to the seed (a DEC-20260428-A requirement, which Strale keeps
+ * under DEC-20261023-A).
  */
 
 import { config as loadEnv } from "dotenv";

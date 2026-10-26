@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: summarize
-name: Summarize Text
-description: >-
-  Summarize text into a concise format. Supports paragraph, bullet points, or one-sentence styles. Configurable max
-  length.
+name: "Text Summary"
+description: "Summarise text as a paragraph, bullet points or a single sentence, up to the length you set."
 category: text-processing
 cost_class: paid_prepaid
 quota_window: none
@@ -104,3 +102,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: For critical documents, compare the summary against the original to verify no essential details were lost
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

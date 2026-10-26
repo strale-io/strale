@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: receipt-categorize
-name: Receipt Categorize
-description: >-
-  Extract and categorize receipt data. Returns vendor, date, amount, tax, currency, expense category, line items. Ready
-  for expense reports.
+name: "Receipt Categorisation"
+description: "Read a receipt and file it: supplier, date, amount, tax, currency, expense category and line items, ready for an expense report."
 category: document-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -136,3 +134,9 @@ limitations:
       no charge is taken. Resize or compress the image before submitting.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

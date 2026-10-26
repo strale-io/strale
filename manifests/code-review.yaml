@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: code-review
-name: Code Review
-description: >-
-  AI code review. Returns issues with severity, line numbers, fix suggestions. Focus on security, performance,
-  readability, or bugs.
+name: "Code Review"
+description: "Review code with AI and get issues with severity, line numbers and suggested fixes. Focus on security, performance, readability or bugs."
 category: agent-tooling
 cost_class: paid_prepaid
 quota_window: none
@@ -127,3 +125,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Provide surrounding context or interface definitions in the input to improve review accuracy for coupled code
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

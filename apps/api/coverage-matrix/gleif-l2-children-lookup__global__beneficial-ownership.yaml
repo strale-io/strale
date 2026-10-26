@@ -13,7 +13,7 @@ last_verified: "2026-04-28"
 products: []
 vendor_roster_url: null
 provider_tos_notes: null
-doctrine_reference: DEC-20260428-A Tier 2
+doctrine_reference: DEC-20261023-A preferred lane (GLEIF official API; formerly DEC-20260428-A Tier 2)
 notes: >-
   Who Owns Whom: free + fully redistributable. Direct-children lookup for LEI-bearing parent
   entities globally. Split from combined gleif-l2-ubo-lookup, gleif-l2-children-lookup row

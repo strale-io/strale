@@ -168,3 +168,10 @@ limitations:
     category: coverage
     severity: info
     workaround: Search the CVR register (datacvr.virk.dk) directly using the person's CPR-linked CVR number
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: cvrapi.dk
+  checks: pending

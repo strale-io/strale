@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: eu-ai-act-classify
-name: EU AI Act Classify
-description: >-
-  Classify an AI system's risk level under the EU AI Act. Rule-based analysis against Annex III and Article 5/6/50
-  criteria.
+name: "EU AI Act Classification"
+description: "Classify an AI system's risk level under the EU AI Act, by rules drawn from Article 5, 6 and 50 and Annex III."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -91,3 +89,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Monitor the EU AI Office website for delegated acts and compare against the version_date field in the response
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

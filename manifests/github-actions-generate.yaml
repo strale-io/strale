@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: github-actions-generate
-name: GitHub Actions Generate
-description: >-
-  Generate CI/CD workflow YAML for GitHub Actions. Supports multiple languages, frameworks, and deploy targets (Railway,
-  Vercel, Fly).
+name: "GitHub Actions Workflow Generator"
+description: "Generate a CI/CD workflow for GitHub Actions for your language, framework and deploy target, such as Railway, Vercel or Fly."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -188,3 +186,8 @@ limitations:
     workaround: >-
       Pin action versions to SHAs for security and replace runner references with your organization's self-hosted
       runners if applicable
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

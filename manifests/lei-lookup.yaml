@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: lei-lookup
-name: LEI Lookup
-description: >-
-  Look up a Legal Entity Identifier (LEI) via the GLEIF database. Accepts a 20-character LEI or company name. Returns
-  entity name, jurisdiction, addresses, registration status.
+name: "LEI Lookup"
+description: "Look up a Legal Entity Identifier in the GLEIF database by LEI or company name. Returns name, jurisdiction, addresses and registration status."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -111,3 +109,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If no LEI is found, search by company name and jurisdiction; consider that smaller entities may not have an LEI
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

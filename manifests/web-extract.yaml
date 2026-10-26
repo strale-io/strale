@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: web-extract
-name: Web Page Data Extraction
-description: >-
-  Extract structured data from any web page with full JavaScript rendering. Handles SPAs, dynamic content, and pages
-  that require JS to load.
+name: "Web Page Data Extraction"
+description: "Pull structured data from a web page, rendering JavaScript first, so single-page apps and dynamic content work."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -113,3 +111,10 @@ limitations:
       another render path; no charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

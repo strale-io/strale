@@ -1,8 +1,6 @@
 slug: timezone-lookup
-name: Timezone Lookup
-description: >-
-  Get timezone information for a country code, city name, or coordinates. Returns IANA timezone,
-  current UTC offset, DST status, and current local time.
+name: "Time Zone Lookup"
+description: "Get the time zone for a country, city or coordinates: IANA zone, current UTC offset, daylight saving status and local time."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -75,3 +73,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use a specific city name for other timezones (e.g., "Los Angeles" instead of "US")
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

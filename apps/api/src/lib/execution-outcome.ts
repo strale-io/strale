@@ -342,7 +342,8 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
   // would have crossed the floor within thirty days of the fact epoch —
   // `product-reviews-extract` to 9.3% completion on 39 excused failures (20
   // upstream 403s, 5 target 404s, and 14 Trustpilot ToS refusals, which are
-  // answers the platform is REQUIRED to give under DEC-20260428-A),
+  // answers the platform is REQUIRED to give under DEC-20260428-A, now
+  // DEC-20261023-A),
   // `us-company-data` to 33% on "'cik' or 'company_name' is required" and "no
   // confident SEC EDGAR match", and `url-to-markdown` to 53% on target 404s and
   // 403s — the free-tier front door whose quarantine was reversed on 2026-08-22

@@ -1,9 +1,6 @@
 slug: bitcoin-address-validate
-name: Bitcoin Address Validation
-description: >-
-  Validate a Bitcoin address. Detects address type (P2PKH, P2SH, P2WPKH, P2WSH, P2TR) and network (mainnet, testnet,
-  regtest). Verifies Base58Check or BIP173/BIP350 bech32/bech32m checksum to catch typos. Pure algorithmic — fast and
-  cheap, no on-chain lookup.
+name: "Bitcoin Address Validation"
+description: "Check a Bitcoin address: its type (P2PKH, P2SH, P2WPKH, P2WSH, P2TR), network, and the Base58Check or bech32 checksum that catches typos. No on-chain lookup."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -137,3 +134,8 @@ limitations:
     category: scope
     severity: warning
     workaround: If chain disambiguation matters, validate against the specific chain's expected prefix set before calling.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

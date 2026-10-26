@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: dependency-audit
-name: Dependency Audit
-description: >-
-  Audit npm or Python dependencies. Checks each package against registry for latest version, deprecation,
-  vulnerabilities. Verifiable against actual registries.
+name: "Dependency Audit"
+description: "Check npm or Python dependencies against their registries: latest version, deprecation and known vulnerabilities for each."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none
@@ -120,3 +118,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Supplement with npm audit or pip-audit for vulnerability scanning that includes transitive dependencies
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

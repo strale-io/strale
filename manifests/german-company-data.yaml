@@ -1,8 +1,6 @@
 slug: german-company-data
-name: German Company Data (OpenRegister)
-description: >-
-  Look up German Handelsregister company data via OpenRegister. Returns name, registration number, court, legal form,
-  status, address, directors, capital, LEI, incorporation and termination dates.
+name: "German Company Data"
+description: "Look up a company in the German commercial register (Handelsregister). Returns name, register number, court, legal form, status, address, directors, capital, LEI, and incorporation and closure dates."
 category: company-data
 price_cents: 20
 is_free_tier: false
@@ -196,3 +194,10 @@ limitations:
     workaround: >-
       Prefer 'company_id' (OpenRegister canonical, e.g. "DE-HRB-F1103-267645") when
       known — it skips the autocomplete step and consumes one fewer Free-tier credit.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: openregister
+  checks: pending

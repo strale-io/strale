@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: eu-trademark-search
-name: EU Trademark Search
-description: >-
-  Search the EUIPO trademark database for registered and pending EU trademarks. Returns trademark names, numbers,
-  status, owners.
+name: "EU Trade Mark Search"
+description: "Search EUIPO for registered and pending EU trade marks: names, numbers, status and owners."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -80,3 +78,9 @@ limitations:
     category: coverage
     severity: info
     workaround: Narrow the query or nice_class so fewer trademarks are returned per call
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: public_page_read
+  checks: pending

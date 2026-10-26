@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: country-tax-rates
-name: Country Tax Rates
-description: Get corporate tax, VAT, personal income tax, capital gains, and social security rates for 45+ countries.
+name: "Country Tax Rates"
+description: "Get corporate tax, VAT, personal income tax, capital gains and social security rates for 45+ countries."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -110,3 +110,8 @@ limitations:
     category: freshness
     severity: info
     workaround: Verify rates against the national tax authority's website before using in financial calculations or invoicing
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

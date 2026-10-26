@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: nginx-config-generate
-name: Nginx Config Generate
-description: >-
-  Generate production nginx server blocks with SSL, proxy_pass, WebSocket support, security headers, gzip, rate
-  limiting.
+name: "Nginx Config Generator"
+description: "Generate production nginx server blocks with SSL, proxy_pass, WebSocket support, security headers, gzip and rate limiting."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -222,3 +220,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use the generated config as a base template and add custom directives for your specific nginx modules
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

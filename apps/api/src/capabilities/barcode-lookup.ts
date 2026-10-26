@@ -78,7 +78,12 @@ registerCapability("barcode-lookup", async (input: CapabilityInput) => {
             ean: item.ean ?? null,
             upc: item.upc ?? null,
           },
-          provenance: { source: "api.upcitemdb.com", fetched_at: new Date().toISOString() },
+          provenance: {
+            source: "api.upcitemdb.com",
+            fetched_at: new Date().toISOString(),
+            acquisition_method: "vendor_api",
+            upstream_vendor: "upcitemdb",
+          },
         };
       }
     }

@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: github-repo-compare
-name: GitHub Repo Compare
-description: >-
-  Compare two GitHub repositories side-by-side: stars, forks, activity, language, topics, license. Returns detailed
-  comparison.
+name: "GitHub Repo Comparison"
+description: "Compare two GitHub repositories side by side: stars, forks, activity, language, topics and licence."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -170,3 +168,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For private repos, use the GitHub API directly with a personal access token
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

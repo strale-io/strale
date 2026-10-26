@@ -1,10 +1,6 @@
 slug: uk-cop-check
-name: UK Confirmation of Payee Check
-description: >-
-  Verify that a UK sort code + account number pair matches the account holder name registered at the responding PSP.
-  Returns Pay.UK CoP match status (match / close_match / no_match / no_account / cannot_be_checked), the eSortcode raw
-  cop_code (14 codes), modulus check, bank name, and the registered name when a close_match is returned. Implementation
-  via eSortcode (Pay.UK CoP scheme participant).
+name: "UK Confirmation of Payee"
+description: "Check that a UK sort code and account number belong to the name you expect, through the Pay.UK Confirmation of Payee scheme. Returns the match result, the bank, and the registered name when it is a close match."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none
@@ -242,3 +238,10 @@ limitations:
       match_status is cannot_be_checked.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: esortcode
+  checks: pending

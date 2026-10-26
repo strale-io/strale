@@ -1,8 +1,6 @@
 slug: doi-resolve
-name: DOI Resolve
-description: >-
-  Resolve a DOI to canonical publication metadata: title, authors, journal, publisher, date,
-  volume/issue/pages, ISSN, licence and citation count. Falls back to DataCite for dataset DOIs.
+name: "DOI Resolver"
+description: "Resolve a DOI to its publication details: title, authors, journal, publisher, date, volume and pages, ISSN, licence and citation count. Covers datasets too."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -141,3 +139,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Call citation-graph for the OpenAlex figure and the citing works themselves.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

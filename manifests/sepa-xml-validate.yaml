@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: sepa-xml-validate
-name: SEPA XML Validate
-description: >-
-  Validate SEPA XML files (pain.001 credit transfer, pain.008 direct debit). Checks structure, IBANs, BICs, amounts,
-  transaction counts.
+name: "SEPA XML Validation"
+description: "Validate SEPA XML files (pain.001 credit transfers and pain.008 direct debits): structure, IBANs, BICs, amounts and transaction counts."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -115,3 +113,8 @@ limitations:
     workaround: >-
       Submit a test file to your bank's validation endpoint to verify compatibility with their specific SEPA
       implementation
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

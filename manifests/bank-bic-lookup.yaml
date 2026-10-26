@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: bank-bic-lookup
-name: Bank BIC Lookup
-description: Validate BIC/SWIFT code format and identify the bank. Returns bank name, country, branch info.
+name: "Bank BIC Lookup"
+description: "Check a BIC/SWIFT code and identify the bank: name, country and branch."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -75,3 +75,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If no result is returned, look up the BIC via the national central bank's payment system participant list
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

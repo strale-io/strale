@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: currency-convert
-name: Currency Convert
-description: >-
-  Convert an amount between currencies using ECB exchange rates. Supports all major currencies. Returns converted amount
-  and rate.
+name: "Currency Converter"
+description: "Convert an amount between currencies at European Central Bank rates. Returns the converted amount and the rate."
 category: financial
 cost_class: free_unlimited
 quota_window: none
@@ -113,3 +111,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Apply your payment processor's typical markup (0.5-3%) to the converted amount for realistic cost estimates
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

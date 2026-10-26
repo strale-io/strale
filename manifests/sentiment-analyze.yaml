@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: sentiment-analyze
-name: Sentiment Analysis
-description: >-
-  Analyze the sentiment of text. Returns overall sentiment (positive/negative/neutral/mixed), confidence scores, and
-  aspect-level sentiment.
+name: "Sentiment Analysis"
+description: "Read the sentiment of a text (positive, negative, neutral or mixed) with confidence scores and the sentiment towards each aspect."
 category: text-processing
 cost_class: paid_prepaid
 quota_window: none
@@ -99,3 +97,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use the confidence score in the response and flag low-confidence results for human review in critical applications
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

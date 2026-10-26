@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: vat-format-validate
-name: VAT Format Validation
-description: >-
-  Validate a European VAT number format against country-specific rules. Pure algorithmic — does NOT check VIES. Use
-  vat-validate for full VIES verification. Supports all 27 EU countries + GB, CH, NO.
+name: "VAT Number Format Check"
+description: "Check a European VAT number's format against each country's rules, for the 27 EU countries plus the UK, Switzerland and Norway. Format only: use EU VAT Validation to check it in VIES."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -95,3 +93,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use vat-validate for VIES database confirmation after format validation passes
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

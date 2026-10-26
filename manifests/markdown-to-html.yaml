@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: markdown-to-html
-name: Markdown to HTML
-description: Convert markdown to styled HTML with inline CSS. Supports light, dark, and plain themes. Algorithmic — instant.
+name: "Markdown to HTML"
+description: "Turn Markdown into styled HTML with inline CSS, in a light, dark or plain theme."
 category: file-conversion
 cost_class: free_unlimited
 quota_window: none
@@ -113,3 +113,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Check if your markdown uses GFM extensions and test the output for table and task list rendering
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

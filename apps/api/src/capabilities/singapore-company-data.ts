@@ -11,7 +11,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * entities since the UEN was introduced.
  *
  * Replaces the prior Browserless scrape of opencorporates.com which
- * was a Tier-1 violation per DEC-20260428-A. This implementation is
+ * was a Tier-1 violation per DEC-20260428-A (superseded 2026-10-24 by
+ * DEC-20261023-A, under which an aggregator is never lane item 5). This implementation is
  * `acquisition_method: direct_api`.
  */
 

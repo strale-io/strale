@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: financial-year-dates
-name: Financial Year Dates
-description: Get fiscal year start/end, tax filing deadlines, VAT filing frequency for 42+ countries.
+name: "Financial Year Dates"
+description: "Get a country's financial year, tax filing deadlines and VAT filing frequency, for 42+ countries."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -94,3 +94,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Check if the company has filed for a non-standard financial year in their articles of association
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

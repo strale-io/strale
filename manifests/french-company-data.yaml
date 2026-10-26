@@ -2,10 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: french-company-data
-name: French Company Data
-description: >-
-  Look up French company data from the SIRENE registry. Accepts SIREN (9 digits), SIRET (14 digits), or fuzzy company
-  name. Returns company name, address, activity code, directors.
+name: "French Company Data"
+description: "Look up a French company in SIRENE by SIREN, SIRET or name. Returns name, address, activity code and directors."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -137,3 +135,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use the SIREN/SIRET from the response to look up financial data on pappers.fr or societe.com
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api
