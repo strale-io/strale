@@ -34,7 +34,7 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .t-section { font-family: var(--type-section-family); font-size: var(--type-section-size); font-weight: var(--type-section-weight); line-height: var(--type-section-line); letter-spacing: var(--type-section-tracking); max-width: var(--type-section-measure); }
 .t-subhead, .subhead { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); line-height: var(--type-subhead-line); letter-spacing: var(--type-subhead-tracking); max-width: var(--type-subhead-measure); }
 .t-detail { font-family: var(--type-detail-family); font-size: var(--type-detail-size); font-weight: var(--type-detail-weight); line-height: var(--type-detail-line); max-width: var(--type-detail-measure); }
-.t-lead { font-family: var(--type-lead-family); font-size: var(--type-lead-size); font-weight: var(--type-lead-weight); line-height: var(--type-lead-line); max-width: var(--type-lead-measure); }
+.t-lead { text-wrap: pretty; font-family: var(--type-lead-family); font-size: var(--type-lead-size); font-weight: var(--type-lead-weight); line-height: var(--type-lead-line); max-width: var(--type-lead-measure); }
 .t-body { font-family: var(--type-body-family); font-size: var(--type-body-size); line-height: var(--type-body-line); max-width: var(--type-body-measure); }
 .t-compact { font-family: var(--type-compact-family); font-size: var(--type-compact-size); line-height: var(--type-compact-line); max-width: var(--type-compact-measure); }
 .t-ui { font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); line-height: var(--type-ui-line); }
@@ -105,8 +105,9 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
   .nav-links { display: flex; gap: var(--space-4); align-items: center; padding: 0; margin: 0; list-style: none; }
   .nav-actions { display: flex; gap: var(--space-8); align-items: center; }
   .menu-button, .mobile-menu { display: none; }
-  /* Logo left, actions right, links centred on the bar (and so on the page): equal side columns. */
-  .site-nav-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-24); }
+  /* Logo left, actions right, links centred on the bar (and so on the page): equal side columns, never narrower
+     than what they hold, so on a narrow bar the links give up exact centring rather than overlap the actions. */
+  .site-nav-bar { display: grid; grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr); gap: var(--space-24); }
   .site-nav .brand { margin-right: 0; justify-self: start; }
   .nav-actions { justify-self: end; }
 }
