@@ -69,12 +69,12 @@
         "brand.deep-violet": "#29164b",
         "brand.logo-black": "#000000",
         "brand.image-ground": "#fdf7fe",
-        "light.canvas": "#fdf7fe",
+        "light.canvas": "#ffffff",
         "light.surface": "#ffffff",
-        "light.surface-sunken": "#f6ecf8",
-        "light.surface-soft": "#eecff2",
-        "light.surface-blue": "#e4e8ff",
-        "light.surface-teal": "#d7efeb",
+        "light.surface-sunken": "#f6f6f9",
+        "light.surface-soft": "#f4effa",
+        "light.surface-blue": "#eef0ff",
+        "light.surface-teal": "#e8f5f2",
         "light.surface-inverse": "#29164b",
         "light.text": "#17151c",
         "light.text-muted": "#5c5468",
@@ -82,16 +82,16 @@
         "light.text-on-action": "#ffffff",
         "light.border": "#d2cfd8",
         "light.border-strong": "#7a7287",
-        "light.action": "#3027ff",
-        "light.action-hover": "#2118d6",
-        "light.action-active": "#1a10b0",
+        "light.action": "#17151c",
+        "light.action-hover": "#302c38",
+        "light.action-active": "#0f0d13",
         "light.action-subtle": "#e4e8ff",
         "light.link": "#3027ff",
         "light.link-hover": "#2118d6",
         "light.focus": "#3027ff",
         "light.focus-inverse": "#ffffff",
         "light.focus-code": "#b9b5ff",
-        "light.indicator": "#3027ff",
+        "light.indicator": "#17151c",
         "light.success": "#16703f",
         "light.success-bg": "#e6f4ea",
         "light.warning": "#8a5300",
@@ -109,6 +109,8 @@
         "light.code-number": "#ffb86b",
         "light.code-property": "#f0a0d8",
         "light.skeleton": "#efe4f2",
+        "light.circuit": "#8a8398",
+        "light.circuit-grid": "#ebeaf0",
         "dark.canvas": "#130d21",
         "dark.surface": "#1c1530",
         "dark.surface-sunken": "#0f0a1b",
@@ -119,19 +121,19 @@
         "dark.text": "#f7f3fb",
         "dark.text-muted": "#bdb4cc",
         "dark.text-inverse": "#ffffff",
-        "dark.text-on-action": "#ffffff",
+        "dark.text-on-action": "#17151c",
         "dark.border": "#3a3050",
         "dark.border-strong": "#857a9c",
-        "dark.action": "#3027ff",
-        "dark.action-hover": "#4f47ff",
-        "dark.action-active": "#2118d6",
+        "dark.action": "#f7f3fb",
+        "dark.action-hover": "#ffffff",
+        "dark.action-active": "#e5dfed",
         "dark.action-subtle": "#241f5c",
         "dark.link": "#b9b5ff",
         "dark.link-hover": "#d6d3ff",
         "dark.focus": "#b9b5ff",
         "dark.focus-inverse": "#ffffff",
         "dark.focus-code": "#b9b5ff",
-        "dark.indicator": "#b9b5ff",
+        "dark.indicator": "#f7f3fb",
         "dark.success": "#5fd08f",
         "dark.success-bg": "#10301f",
         "dark.warning": "#f0b44d",
@@ -149,6 +151,8 @@
         "dark.code-number": "#ffb86b",
         "dark.code-property": "#f0a0d8",
         "dark.skeleton": "#2a2142",
+        "dark.circuit": "#6b6085",
+        "dark.circuit-grid": "#1d1730",
         "chart.light.1": "#3027ff",
         "chart.light.2": "#0a9a8f",
         "chart.light.3": "#7a3cff",
@@ -206,33 +210,43 @@
             "use": "Page title (h1) on inner pages; major section statement."
           },
           "section": {
-            "source": "kit-06",
+            "source": "derived",
             "family": "display",
             "weight": 600,
-            "min": 26,
-            "max": 36,
+            "min": 24,
+            "max": 32,
             "line": 1.15,
             "tracking": -0.03,
             "measure": "28ch",
-            "use": "Section heading (h2)."
+            "use": "Section heading (h2).",
+            "kit_original": {
+              "min": 26,
+              "max": 36,
+              "measure": "28ch"
+            }
           },
           "subhead": {
             "source": "derived",
             "family": "display",
             "weight": 600,
-            "min": 20,
-            "max": 24,
+            "min": 18,
+            "max": 22,
             "line": 1.25,
             "tracking": -0.02,
             "measure": "32ch",
             "use": "Card and sub-section heading (h3)."
           },
           "detail": {
-            "source": "kit-06",
+            "source": "derived",
+            "kit_original": {
+              "min": 17,
+              "max": 20,
+              "measure": "42ch"
+            },
             "family": "body",
             "weight": 600,
-            "min": 17,
-            "max": 20,
+            "min": 16,
+            "max": 18,
             "line": 1.35,
             "tracking": 0,
             "measure": "42ch",
@@ -242,41 +256,51 @@
             "source": "derived",
             "family": "body",
             "weight": 400,
-            "min": 18,
-            "max": 21,
+            "min": 16,
+            "max": 18,
             "line": 1.5,
             "tracking": 0,
-            "measure": "52ch",
+            "measure": "44ch",
             "use": "Introductory paragraph under a page or section heading."
           },
           "body": {
-            "source": "kit-06",
+            "source": "derived",
+            "kit_original": {
+              "min": 16,
+              "max": 19,
+              "measure": "62ch"
+            },
             "family": "body",
             "weight": 400,
             "min": 16,
-            "max": 19,
+            "max": 16,
             "line": 1.6,
             "tracking": 0,
-            "measure": "62ch",
+            "measure": "45ch",
             "use": "Reading text. Never below 16px."
           },
           "compact": {
-            "source": "kit-06",
+            "source": "derived",
+            "kit_original": {
+              "min": 16,
+              "max": 17,
+              "measure": "58ch"
+            },
             "family": "body",
             "weight": 400,
-            "min": 16,
-            "max": 17,
+            "min": 15,
+            "max": 15,
             "line": 1.5,
             "tracking": 0,
-            "measure": "58ch",
-            "use": "Card bodies, table cells, dense reference."
+            "measure": "46ch",
+            "use": "Card bodies, table cells, dense reference. Sustained reading uses body (16px minimum)."
           },
           "ui": {
             "source": "derived",
             "family": "body",
             "weight": 500,
-            "min": 16,
-            "max": 16,
+            "min": 15,
+            "max": 15,
             "line": 1.25,
             "tracking": 0,
             "measure": "none",
@@ -286,31 +310,36 @@
             "source": "derived",
             "family": "body",
             "weight": 400,
-            "min": 14,
-            "max": 14,
+            "min": 13,
+            "max": 13,
             "line": 1.45,
             "tracking": 0,
             "measure": "60ch",
             "use": "Helper text, metadata, captions, legal. Never the only carrier of essential content."
           },
           "label": {
-            "source": "kit-06",
+            "source": "derived",
             "family": "body",
             "weight": 600,
             "min": 12,
-            "max": 13,
+            "max": 12,
             "line": 1.5,
             "tracking": 0.06,
             "measure": "40ch",
-            "use": "Eyebrow label, badge text. Sentence case; supports hierarchy, never replaces body copy."
+            "use": "Eyebrow label, badge text. Sentence case; supports hierarchy, never replaces body copy.",
+            "kit_original": {
+              "min": 12,
+              "max": 13,
+              "measure": "40ch"
+            }
           },
           "code": {
             "source": "derived",
             "family": "mono",
             "weight": 400,
-            "min": 14,
-            "max": 15,
-            "line": 1.6,
+            "min": 13,
+            "max": 13,
+            "line": 1.55,
             "tracking": 0,
             "measure": "none",
             "use": "Code blocks, inline code, request/response bodies, identifiers."
@@ -338,6 +367,17 @@
             "measure": "none",
             "features": "\"tnum\" 1",
             "use": "Prices, counts and latencies in tables and rows. Tabular figures, right-aligned in columns."
+          },
+          "home-hero": {
+            "source": "derived",
+            "family": "display",
+            "weight": 600,
+            "min": 44,
+            "max": 56,
+            "line": 1.08,
+            "tracking": -0.045,
+            "measure": "16ch",
+            "use": "Home hero in the two-column layout from 1024px; approved by Petter on 2026-10-26."
           }
         }
       },
@@ -382,7 +422,8 @@
           "base": 200,
           "slow": 320,
           "reveal-signature": 1600,
-          "reveal-atmosphere": 2200
+          "reveal-atmosphere": 2200,
+          "ambient": 9000
         },
         "easing": {
           "standard": "cubic-bezier(0.2, 0, 0, 1)",
@@ -392,9 +433,10 @@
         },
         "rules": {
           "reading_surface_moves": false,
-          "loop": false,
-          "reduced_motion": "All transitions become instant; reveals render their settled final frame.",
-          "source": "reveal durations, no-loop and settled-still reduced motion from kit-06 rule motion-reveal; other durations and easings derived"
+          "loop": "ambient-only",
+          "ambient": "Ambient loops are allowed only in the home Switchboard hero and the pulsing status dots: slow, continuous, never moving text the reader is reading; lists and copy stay still. The home headline may rise in once on load; pointer micro-interactions respond to the pointer and never run on their own. Everything else reveals once and settles. Under prefers-reduced-motion ambient motion stops on its final frame.",
+          "reduced_motion": "All transitions become instant; reveals render their settled final frame; ambient loops stop.",
+          "source": "reveal durations and settled-still reduced motion from kit-06 rule motion-reveal; the kit's no-loop rule is narrowed to ambient-only by DEC-20261025-A; other durations and easings derived"
         }
       },
       "layout": {
@@ -406,7 +448,9 @@
           "sm": 640,
           "md": 768,
           "lg": 1024,
-          "xl": 1280
+          "xl": 1280,
+          "2xl": 1600,
+          "3xl": 1920
         },
         "container_px": {
           "content": 1200,
@@ -431,22 +475,25 @@
           }
         },
         "measure": {
-          "body": "62ch",
-          "lead": "52ch",
+          "body": "45ch",
+          "lead": "44ch",
           "hero": "16ch",
           "section": "28ch"
         },
         "section_rhythm_px": {
           "base": 64,
-          "md": 96,
-          "lg": 128
+          "md": 80,
+          "lg": 96
         },
         "stack_px": {
           "tight": 8,
           "base": 16,
           "loose": 24,
           "group": 32,
-          "block": 48
+          "block": 48,
+          "heading-before": 96,
+          "heading-after": 16,
+          "heading-subsection": 48
         },
         "control": {
           "height_sm_px": 36,
@@ -821,6 +868,12 @@
             "bg": "code-bg",
             "min": 4.5,
             "use": "Code keys"
+          },
+          {
+            "fg": "circuit",
+            "bg": "surface-sunken",
+            "min": 3,
+            "use": "Switchboard connector lines on the board (non-text)"
           }
         ],
         "contrast_avoid": [
@@ -849,15 +902,28 @@
           "sm": 16,
           "md": 20,
           "lg": 24
-        }
+        },
+        "viewport": {
+          "height": "100svh"
+        },
+        "container_steps": [
+          {
+            "min_width": "2xl",
+            "content_px": 1320
+          },
+          {
+            "min_width": "3xl",
+            "content_px": 1440
+          }
+        ]
       },
       "provenance": {
         "source": "design/tokens/candidates/open-flow.json",
-        "captured_at": "2026-10-24",
-        "note": "Open Flow website system 0.1 (BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file)."
+        "captured_at": "2026-10-26",
+        "note": "Open Flow website system 0.3, Daylight (0.1 adopted by DEC-20261024-B, revised to 0.2 by DEC-20261025-A and to 0.3 under Petter's type-size direction of 2026-10-26; BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file). Refined to 0.4 under Petter’s 2026-10-26 website-polish instruction; see the Open Flow README and handoff/_general/from-code/2026-10-26-design-site-polish.md. Petter approved ink/inverse primary actions and the home-hero role on 2026-10-26 (\"go with all three\"); see docs/strategy/2026-10-26-website-identity-and-hero-adoption.md."
       },
-      "adopted_by": "DEC-20261024-B",
-      "adopted_at": "2026-10-24",
+      "adopted_by": "DEC-20261025-A",
+      "adopted_at": "2026-10-25",
       "note": "The website surface is the apps/web build input (DEC-20260902-A). strale.dev itself still serves strale-frontend and its dark Inter theme until the founder-reserved public cutover (FD-20260901-PUBLIC-DOMAIN); this block records the adopted system, not what strale.dev serves today."
     }
   }

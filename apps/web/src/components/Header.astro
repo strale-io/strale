@@ -1,4 +1,5 @@
 ---
+import Wordmark from "./Wordmark.astro";
 // Header: Tools · Company data · Use cases · Pricing · Docs, then one button (SITE-STRUCTURE.md).
 // No login link: there is no login product (claims.yaml sign-in-no-login-product).
 interface Props { current?: string }
@@ -18,9 +19,8 @@ const themes = [
 ---
 <header class="site-nav">
   <div class="container site-nav-bar">
-    <a class="brand" href="/" aria-label="Strale home">
-      <img class="logo-ink" src="/brand/lockup-ink.svg" alt="" width="82" height="24" />
-      <img class="logo-inverse" src="/brand/lockup-inverse.svg" alt="" width="82" height="24" />
+    <a class="brand" href="/" aria-label="Strale">
+      <Wordmark />
     </a>
     <nav aria-label="Main">
       <ul class="nav-links">

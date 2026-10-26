@@ -274,6 +274,7 @@ Decisions DB entry) for the actual text before acting on any of these. The
 IDs every session should know exist, topic only, no numbers:
 
 - **DEC-20261024-A** — Way of working: WoW-Core consumer, T7 re-scoped, codex:check to be retired, daily run by exception (items 2, 4, 5 for Petter to confirm); see CLAUDE.md.
+- **DEC-20261025-A** — Website direction Open Flow 0.2, Daylight: white canvas, ambient motion only in the hero and live-tests panel, generated illustrations; see CLAUDE.md.
 - **DEC-20261024-B** — Website structure/messaging, Open Flow design system and the portfolio plan adopted; see CLAUDE.md.
 - **DEC-20261023-A** — One risk-based data-access rule replaces the three-tier scraping doctrine; see CLAUDE.md.
 - **DEC-20261023-B** — Positioning: global per-call tool library for agents, official-source company/compliance data as flagship; amends DEC-20260905-A. See CLAUDE.md and the linked adoption record.

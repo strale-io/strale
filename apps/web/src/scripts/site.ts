@@ -1,5 +1,6 @@
 // Site behaviour: theme switch, disclosures (mobile menu), tabs, copy buttons.
-// Adapted from the Open Flow specimen script. Toggles classes and attributes only; never sets style values.
+// Adapted from the Open Flow specimen script. Toggles classes and attributes; the only style values it sets
+// are the pointer-position custom properties at the end of this file.
 const root = document.documentElement;
 const THEME_KEY = "strale-theme";
 
@@ -90,5 +91,69 @@ document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) => {
     }
   });
 });
+
+// Pointer micro-interactions (DEC-20261025-A). They set only component-local custom
+// properties (--_mx/--_my, --_sx/--_sy) that site.css turns into motion; fine pointers
+// only, and none under reduced motion.
+const finePointer = matchMedia("(pointer: fine)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (finePointer) {
+  // Magnetic buttons lean a little towards the pointer.
+  // The lean is at most --space-4 each way.
+  const reach = 2 * (parseFloat(getComputedStyle(root).getPropertyValue("--space-4")) || 0);
+  document.querySelectorAll<HTMLElement>("[data-magnet]").forEach((el) => {
+    el.addEventListener("pointermove", (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--_mx", `${((e.clientX - r.left) / r.width - 0.5) * reach}px`);
+      el.style.setProperty("--_my", `${((e.clientY - r.top) / r.height - 0.5) * reach}px`);
+    });
+    el.addEventListener("pointerleave", () => { el.style.removeProperty("--_mx"); el.style.removeProperty("--_my"); });
+  });
+  // Cards light up where the pointer is.
+  document.addEventListener("pointermove", (e) => {
+    const el = (e.target as Element | null)?.closest<HTMLElement>(".card-link, [data-spotlight]");
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--_sx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--_sy", `${e.clientY - r.top}px`);
+  }, { passive: true });
+}
+
+// Scroll reveals. Content is visible without script; only blocks that start below the fold wait,
+// then rise in once as they arrive, siblings in a [data-reveal-group] a beat apart. Never under
+// reduced motion. Timing and distance come from the motion and spacing tokens.
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!calm && "IntersectionObserver" in window) {
+  const css = getComputedStyle(root);
+  const ms = (name: string) => parseFloat(css.getPropertyValue(name)) || 0;
+  const rise = `${ms("--space-24")}px`;
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const el = e.target as HTMLElement;
+      io.unobserve(el);
+      el.classList.remove("is-pending");
+      el.animate([{ opacity: 0, translate: `0 ${rise}` }, { opacity: 1, translate: "0 0" }], {
+        duration: 2 * ms("--duration-slow"),
+        delay: Number(el.dataset.revealIndex ?? 0) * ms("--duration-fast"),
+        easing: css.getPropertyValue("--ease-enter").trim() || "ease-out",
+      });
+    }
+  }, { rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll<HTMLElement>("[data-reveal], [data-reveal-group] > *").forEach((el) => {
+    if (el.getBoundingClientRect().top < innerHeight) return;
+    const group = el.parentElement?.hasAttribute("data-reveal-group") ? el.parentElement : null;
+    if (group) el.dataset.revealIndex = String(Math.min(3, [...group.children].indexOf(el)));
+    el.classList.add("is-pending");
+    io.observe(el);
+  });
+}
+
+// The bar turns translucent with a shadow once the page has scrolled under it.
+const nav = document.querySelector<HTMLElement>(".site-nav");
+if (nav) {
+  const mark = () => nav.toggleAttribute("data-scrolled", scrollY > 4);
+  mark();
+  addEventListener("scroll", mark, { passive: true });
+}
 
 export {};

@@ -1,0 +1,217 @@
+---
+// Docs: SDKs and framework packages (SITE-STRUCTURE.md page 10). Package names come from the
+// package manifests (lib/snippets.ts PACKAGES); the interfaces are those of
+// packages/sdk-typescript/src and packages/sdk-python/straleio. Framework packages are listed only
+// while node apps/api/scripts/check-framework-packages.mjs passes for them (DEC-20260422-A); the
+// deprecated pydantic-ai, google-adk and openai-agents packages are never listed.
+import DocsNav from "../../components/DocsNav.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData } from "../../lib/site-data.ts";
+import { PACKAGES, pyValue } from "../../lib/snippets.ts";
+import { firstCallSnippets, firstCallTool } from "../../content/docs-facts.ts";
+import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+
+const data = await getSiteData();
+const { tool, inputs } = firstCallTool(data);
+const tsInputs = JSON.stringify(inputs);
+const pyInputs = pyValue(inputs).replace(/\s*\n\s*/g, " ");
+const snippets = firstCallSnippets(data);
+const ts = snippets.find((s) => s.label === "TypeScript")!.code + "\nconsole.log(result.output);";
+const py = snippets.find((s) => s.label === "Python")!.code + "\nprint(result.output)";
+
+const errorsTs = [
+  `import { Strale, StraleError, InsufficientBalanceError } from "${PACKAGES.typescript}";`,
+  ``,
+  `const strale = new Strale({ apiKey: process.env.STRALE_API_KEY! });`,
+  ``,
+  `try {`,
+  `  const result = await strale.do({ capability_slug: "${tool.slug}", inputs: ${tsInputs}, max_price_cents: 1 });`,
+  `} catch (err) {`,
+  `  if (err instanceof InsufficientBalanceError) {`,
+  `    console.log(err.walletBalanceCents, err.requiredCents); // top up, then retry`,
+  `  } else if (err instanceof StraleError) {`,
+  `    console.log(err.errorCode, err.statusCode, err.message, err.details);`,
+  `  } else {`,
+  `    throw err;`,
+  `  }`,
+  `}`,
+].join("\n");
+const errorsPy = [
+  `import os`,
+  `from ${PACKAGES.python} import Strale, DoRequest, InsufficientBalanceError, StraleError`,
+  ``,
+  `strale = Strale(api_key=os.environ["STRALE_API_KEY"])`,
+  ``,
+  `try:`,
+  `    result = strale.do(DoRequest(capability_slug="${tool.slug}", inputs=${pyInputs}, max_price_cents=1))`,
+  `except InsufficientBalanceError as err:`,
+  `    print(err.wallet_balance_cents, err.required_cents)  # top up, then retry`,
+  `except StraleError as err:`,
+  `    print(err.error_code, err.status_code, str(err), err.details)`,
+].join("\n");
+const extrasTs = [
+  `import { randomUUID } from "node:crypto";`,
+  ``,
+  `// Retry-safe call: the same key returns the first result instead of running twice.`,
+  `const result = await strale.do({`,
+  `  capability_slug: "${tool.slug}",`,
+  `  inputs: ${tsInputs},`,
+  `  max_price_cents: 1,`,
+  `  idempotency_key: randomUUID(),`,
+  `});`,
+  ``,
+  `const balance = await strale.balance();                          // { balance_cents, currency }`,
+  `const record = await strale.transaction(result.transaction_id);  // a past call`,
+  `const recent = await strale.transactions();                      // your latest calls`,
+  `const tools = await strale.capabilities();                       // the catalogue`,
+].join("\n");
+const extrasPy = [
+  `import uuid`,
+  ``,
+  `# Retry-safe call: the same key returns the first result instead of running twice.`,
+  `result = strale.do(DoRequest(`,
+  `    capability_slug="${tool.slug}",`,
+  `    inputs=${pyInputs},`,
+  `    max_price_cents=1,`,
+  `    idempotency_key=str(uuid.uuid4()),`,
+  `))`,
+  ``,
+  `balance = strale.balance()                          # balance_cents, currency`,
+  `record = strale.transaction(result.transaction_id)  # a past call`,
+  `recent = strale.transactions()                      # your latest calls`,
+  `tools = strale.capabilities()                       # the catalogue`,
+].join("\n");
+
+const frameworks = [
+  {
+    id: "langchain",
+    name: "LangChain",
+    install: "pip install langchain-strale",
+    code: `import os\nfrom langchain_strale import StraleToolkit\n\ntoolkit = StraleToolkit(api_key=os.environ["STRALE_API_KEY"])\ntools = toolkit.get_tools()  # pass categories=["finance"] to filter`,
+    note: "Python 3.10 or later. Each Strale tool becomes a LangChain tool, plus search and balance tools.",
+  },
+  {
+    id: "crewai",
+    name: "CrewAI",
+    install: "pip install crewai-strale",
+    code: `import os\nfrom crewai_strale import StraleToolkit\n\ntoolkit = StraleToolkit(api_key=os.environ["STRALE_API_KEY"])\ntools = toolkit.get_tools()  # pass categories=["finance"] to filter`,
+    note: "Python 3.10 or later. Pass the tools to an Agent with tools=tools.",
+  },
+  {
+    id: "semantic-kernel",
+    name: "Semantic Kernel",
+    install: "npm install strale-semantic-kernel",
+    code: `import { createStralePlugin } from "strale-semantic-kernel";\n\nconst plugin = await createStralePlugin({ apiKey: process.env.STRALE_API_KEY! });\nkernel.addPlugin(plugin);`,
+    note: "Node.js 20 or later, with the semantic-kernel package. Pass categories: [\"finance\"] to filter.",
+  },
+  {
+    id: "composio",
+    name: "Composio",
+    install: "pip install composio-strale",
+    code: `import os\nfrom composio import Composio\nfrom composio_strale import register_strale_tools\n\ncomposio = Composio()\nregister_strale_tools(composio, api_key=os.environ["STRALE_API_KEY"])`,
+    note: "Python 3.10 or later. Registers STRALE_SEARCH, STRALE_EXECUTE and STRALE_BALANCE under the strale toolkit.",
+  },
+];
+
+const toc = [
+  { id: "first-call", label: "Make your first call" },
+  { id: "options", label: "Client options" },
+  { id: "errors", label: "Handle errors" },
+  { id: "more", label: "Retries, balance, history" },
+  { id: "frameworks", label: "Framework packages" },
+];
+---
+<DocsNav
+  title="Use the SDKs"
+  description="Call Strale tools from TypeScript or Python, and use the LangChain, CrewAI, Semantic Kernel and Composio packages."
+  current="sdks"
+  label="Docs · SDKs"
+  heading="Use the SDKs"
+  lead="TypeScript and Python clients for the same calls as the REST API, plus packages for four agent frameworks."
+  toc={toc}
+>
+  <section id="first-call" aria-labelledby="first-call-title">
+    <h2 id="first-call-title" class="t-section">Make your first call</h2>
+    <ol class="steps">
+      <li>
+        <h3 class="t-subhead">Install</h3>
+        <CodeBlock id="sdk-install" title="Install" panels={[
+          { label: "TypeScript", lang: "shell", code: `npm install ${PACKAGES.typescript}` },
+          { label: "Python", lang: "shell", code: `pip install ${PACKAGES.python}` },
+        ]} />
+        <p class="t-compact muted">The TypeScript client needs Node.js 18 or later. The Python client needs Python 3.9 or later.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Get a key</h3>
+        <p class="t-body">The SDKs send your API key with every call, so they need one even for free tools. <a class="link" href="/signup">Sign up</a>, then set <code>STRALE_API_KEY</code> in your environment. Free tools cost nothing with a key, and keyless free calls are limited to {FREE_TIER_DAILY_LIMIT} a day per IP address. To call without a key, use the <a class="link" href="/docs/api">REST API</a>.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Call a free tool</h3>
+        <p class="t-body">This runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>. <code>max_price_cents</code> is required and caps the price of the call.</p>
+        <CodeBlock id="sdk-first" title="First call" panels={[
+          { label: "TypeScript", lang: "plain", code: ts },
+          { label: "Python", lang: "plain", code: py },
+        ]} />
+      </li>
+      <li>
+        <h3 class="t-subhead">Read the result</h3>
+        <p class="t-body"><code>result</code> has the response fields at the top level: <code>output</code>, <code>price_cents</code>, <code>latency_ms</code>, <code>provenance</code>, <code>transaction_id</code> and <code>wallet_balance_cents</code>. <code>result.meta</code> holds the audit record. If a tool runs in the background, the SDK polls until it finishes.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="options" aria-labelledby="options-title">
+    <h2 id="options-title" class="t-section">Client options</h2>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Client options">
+      <table class="table">
+        <thead><tr><th scope="col">TypeScript</th><th scope="col">Python</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>apiKey</code></th><td><code>api_key</code></td><td>required</td><td>Your API key.</td></tr>
+          <tr><th scope="row"><code>baseUrl</code></th><td><code>base_url</code></td><td><code>https://api.strale.io</code></td><td>The API to call.</td></tr>
+          <tr><th scope="row"><code>defaultMaxPriceCents</code></th><td><code>default_max_price_cents</code></td><td>none</td><td>The price ceiling used when a call sets none.</td></tr>
+          <tr><th scope="row"><code>timeout</code></th><td><code>timeout</code></td><td>60 s</td><td>How long to wait for each request. TypeScript takes milliseconds, Python seconds.</td></tr>
+          <tr><th scope="row"><code>pollInterval</code></th><td><code>poll_interval</code></td><td>2 s</td><td>How often to check a background call.</td></tr>
+          <tr><th scope="row"><code>maxPollWait</code></th><td><code>max_poll_wait</code></td><td>120 s</td><td>How long to wait for a background call before raising <code>timeout_exceeded</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="errors" aria-labelledby="errors-title">
+    <h2 id="errors-title" class="t-section">Handle errors</h2>
+    <p class="t-body">A failed call raises <code>StraleError</code>. It carries the API’s <code>error_code</code>, the HTTP status and <code>details</code>. Common codes have their own subclass: <code>InsufficientBalanceError</code>, <code>NoMatchingCapabilityError</code>, <code>CapabilityUnavailableError</code>, <code>ExecutionFailedError</code>, <code>TimeoutExceededError</code>, <code>InvalidRequestError</code>, <code>RateLimitedError</code>, <code>UnauthorizedError</code> and <code>NotFoundError</code>. Which to retry is in <a class="link" href="/docs#errors">Handle errors and retries</a>.</p>
+    <CodeBlock id="sdk-errors" title="Errors" panels={[
+      { label: "TypeScript", lang: "plain", code: errorsTs },
+      { label: "Python", lang: "plain", code: errorsPy },
+    ]} />
+  </section>
+
+  <section id="more" aria-labelledby="more-title">
+    <h2 id="more-title" class="t-section">Retries, balance, history</h2>
+    <p class="t-body">Pass <code>idempotency_key</code> to make a retry safe. The clients also read your balance, fetch a past call by transaction ID and list the catalogue.</p>
+    <CodeBlock id="sdk-more" title="More calls" panels={[
+      { label: "TypeScript", lang: "plain", code: extrasTs },
+      { label: "Python", lang: "plain", code: extrasPy },
+    ]} />
+    <p class="t-compact muted">Spend limits and how idempotency works are in <a class="link" href="/docs#safety">Retry safely and cap spend</a>.</p>
+  </section>
+
+  <section id="frameworks" aria-labelledby="frameworks-title">
+    <h2 id="frameworks-title" class="t-section">Framework packages</h2>
+    <p class="t-body">Each package turns Strale’s tools into the tool type its framework already uses. Every package takes an API key.</p>
+    {frameworks.map((f) => (
+      <div class="stack-tight" id={f.id}>
+        <h3 class="t-subhead">{f.name}</h3>
+        <CodeBlock id={`fw-${f.id}`} title={f.name} panels={[
+          { label: "Install", lang: "shell", code: f.install },
+          { label: "Use", lang: "plain", code: f.code },
+        ]} />
+        <p class="t-compact muted">{f.note}</p>
+      </div>
+    ))}
+    <div class="row">
+      <a class="btn btn-primary" href="/signup">Get an API key</a>
+      <a class="btn btn-secondary" href="/docs">Back to Docs</a>
+    </div>
+  </section>
+</DocsNav>

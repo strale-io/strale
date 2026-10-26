@@ -9,14 +9,13 @@ import { fileURLToPath } from "node:url";
 
 const web = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const kit = resolve(web, "../../design/brand-kit/open-flow");
-// The flowing-S favicon set is the retained logo's existing export (design/brand-kit/quiet-material/foundations/exports).
+// The favicon uses the S mark alone, preserved from its existing export (design/brand-kit/quiet-material/foundations/exports).
 const marks = resolve(web, "../../design/brand-kit/quiet-material/foundations/exports");
 const copies = [
   ["fonts/SpaceGrotesk.ttf", "fonts/SpaceGrotesk.ttf"],
   ["fonts/InstrumentSans.ttf", "fonts/InstrumentSans.ttf"],
   ["fonts/IBMPlexMono-Regular.ttf", "fonts/IBMPlexMono-Regular.ttf"],
-  ["assets/logo/lockup-ink.svg", "brand/lockup-ink.svg"],
-  ["assets/logo/lockup-inverse.svg", "brand/lockup-inverse.svg"],
+  ["assets/logo/wordmark.svg", "brand/wordmark.svg"],
   ["assets/imagery/bands.svg", "brand/bands.svg"],
   [`${marks}/favicon.ico`, "favicon.ico"],
   [`${marks}/mark-ink.svg`, "favicon.svg"],
@@ -27,4 +26,7 @@ for (const [from, to] of copies) {
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(resolve(kit, from), dest);
 }
-console.log(`prepared ${copies.length} brand files in public/`);
+// Subset WOFF2 copies of the fonts, served before the TTF masters (see static/fonts/README.md).
+const woff2 = ["SpaceGrotesk", "InstrumentSans", "IBMPlexMono-Regular"];
+for (const f of woff2) copyFileSync(resolve(web, "static/fonts", `${f}.woff2`), resolve(web, "public/fonts", `${f}.woff2`));
+console.log(`prepared ${copies.length + woff2.length} brand files in public/`);

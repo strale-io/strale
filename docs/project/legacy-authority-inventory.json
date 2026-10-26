@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "380b3ff9bc6340d1bb32cdb35720b492a5f5e771585824128f5f1c7a46254e9e",
+      "sha256": "70ddbf88f63cd391675f8be78604877867fd72f557818edb6015041e69cf8434",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -122,7 +122,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "bedb000e374ce2f37d1ad4595145d9ab193eb1ab4be2c9f6ec83d781967abba7",
+      "sha256": "ac3349e24e17bf12a8b4e5b683032073c390437864e14f6995af413a24f03cfe",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -166,6 +166,7 @@
         "archive/growth-ops/fact-check-audit.md",
         "archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
+        "archive/receipts/2026-10-26-check-site-polish-wordmark-hero.json",
         "archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md",
         "archive/sessions/2026-08-31-m1-parallel-sequencing-review-claude.md",
         "archive/sessions/2026-08-31-repo-native-operating-model-m1-review-claude.md",
@@ -393,6 +394,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
+        "handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -558,7 +560,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "e4b16afde1e83fcd5d34ae8423c8565b399415a6feeb64cf3f81ecdeb0e42e9b",
+      "sha256": "ff96350a92d3323c466329fd97210454187d6798837c5b4e96d7d34adcddfdd6",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -588,6 +590,8 @@
         "archive/receipts/2026-09-05-check-brand-direction-review-fixes.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
         "archive/receipts/2026-09-06-check-brand-editorial-readiness.json",
+        "archive/receipts/2026-10-26-check-site-polish-wordmark-hero.json",
+        "archive/receipts/2026-10-26-check-website-type-spacing-limitations.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
@@ -686,6 +690,7 @@
         "handoff/_general/from-code/2026-10-23-delegate-competitive-analysis.md",
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "handoff/_general/from-code/2026-10-26-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -704,7 +709,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "386b5c75bfb9cf40e97395cd3e48b4202684a030897892447b7aa3893e06e3dc",
+      "sha256": "c8245e12224f9fbe1db64967fd921d4838946cbf19db193f712f30a1940bd6d7",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -752,6 +757,9 @@
         "config/env-manifest.yaml",
         "config/vendors.schema.json",
         "config/vendors.yaml",
+        "design/brand-kit/open-flow/README.md",
+        "design/tokens/active.json",
+        "design/tokens/candidates/open-flow.json",
         "docs/README.md",
         "docs/operations/distribution-registry.md",
         "docs/programs/brand-website/tracks.yaml",
@@ -777,6 +785,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-fetch-path.md",
         "handoff/_general/from-code/2026-10-24-data-access-people-data.md",
         "handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md",
+        "handoff/_general/from-code/2026-10-26-design-site-polish.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
@@ -829,7 +838,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "2d3a8c87b433d0b760db27eed590a57d8d2a17ed1720480ef49e1d65b1adc3d0",
+      "sha256": "b883f103d08c6bad703f9919864e16126f54e6d29b5b75a016f4df4d189e5991",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -888,6 +897,8 @@
         "archive/receipts/2026-09-05-check-quiet-material-kit-index-bound-proof.json",
         "archive/receipts/2026-09-06-check-brand-editorial-readiness.json",
         "archive/receipts/2026-09-11-audit-browserless-credential-outage.json",
+        "archive/receipts/2026-10-26-check-site-polish-wordmark-hero.json",
+        "archive/receipts/2026-10-26-check-website-type-spacing-limitations.json",
         "archive/receipts/2026-10-26-test-run-invoice-counterparty-check-round-2.json",
         "archive/receipts/2026-10-26-test-run-invoice-counterparty-check-verification.json",
         "archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json",
@@ -975,6 +986,7 @@
         "design/brand-kit/quiet-material/hero-copy/README.md",
         "design/brand-kit/quiet-material/opening/README.md",
         "design/explorations/2026-09-01-quiet-material-v0.7/README.md",
+        "design/tokens/active.json",
         "design/tokens/candidates/codex-handoff-round-23.json",
         "design/tokens/candidates/quiet-material-v0.7.json",
         "docs/company/CHARTER.md",
@@ -993,6 +1005,7 @@
         "docs/programs/brand-website/PROOF-QUALIFICATION.md",
         "docs/programs/brand-website/SYSTEM-COMPLETION.md",
         "docs/programs/brand-website/system-completion.json",
+        "docs/programs/brand-website/tracks.yaml",
         "docs/programs/codex-review-backlog.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -1008,6 +1021,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
+        "docs/strategy/2026-10-26-website-identity-and-hero-adoption.md",
         "package.json",
         "scripts/candidates.test.mjs",
         "scripts/check-receipts.mjs",

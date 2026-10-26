@@ -1,0 +1,293 @@
+---
+// Security and data (SITE-STRUCTURE.md page 12): what happens to the data an agent
+// sends, and how Strale knows a tool works. Level L3: precise, plain facts.
+// Every value is read at build time:
+//   processing place      facts.processing_jurisdiction (lib/processing-location.ts)
+//   retention             facts.static.pii_retention_days / retention_days_default
+//                         (apps/api/src/lib/data-retention.ts; columns in lib/customer-content.ts)
+//   vendors               facts.static.vendors (lib/platform-facts.ts STATIC_FACTS)
+//   Art. 22 classes       manifests' gdpr_art_22_classification (default data_lookup)
+//   test results          the trust batch, shown per tool on its page
+// Verified in code: keys are SHA-256 hashed and shown once (apps/api/src/lib/auth.ts,
+// routes/auth.ts); disputes are POST /v1/transactions/:id/dispute with an API key or a
+// signed audit token (routes/dispute.ts); the fetch path honours robots.txt, sends an
+// honest user agent and stops at blocks (DEC-20261023-A, PR #723).
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import { CONTENT_CLEARING_VERIFIED } from "../content/retention";
+import CodeBlock from "../components/CodeBlock.astro";
+import artScreening from "../assets/illustrations/screening.webp";
+import { getSiteData, tools as allTools, API_BASE } from "../lib/site-data.ts";
+import { plural } from "../lib/format.ts";
+
+const data = await getSiteData();
+const facts = data.facts;
+const contact = facts.static.controller?.contact_email;
+const vendors = facts.static.vendors;
+
+const PLACES: Record<string, string> = { US: "the United States", EU: "the European Union", GB: "the United Kingdom" };
+const place = PLACES[facts.processing_jurisdiction];
+const PLACE_SHORT: Record<string, string> = { US: "United States", EU: "European Union", GB: "United Kingdom" };
+
+const days = (n: number) => `${plural(n, "day")}${n % 365 === 0 && n >= 365 ? ` (${n / 365} years)` : ""}`;
+const contentDays = facts.static.pii_retention_days;
+// Content-period statements wait for production verification (content/retention.ts).
+const recordDays = facts.static.retention_days_default;
+
+// What each vendor key does, in words. Names always come from facts; a new key
+// still renders, with its key as the label, rather than dropping off the page.
+const ROLES: Record<string, string> = {
+  sanctions: "Sanctions screening",
+  pep: "Politically exposed person screening",
+  adverse_media_primary: "Adverse-media screening",
+  adverse_media_fallback: "Adverse-media screening, fallback search",
+  embeddings: "Tool search",
+  risk_narrative: "AI risk summaries",
+  headless_browser: "Rendering web pages",
+  payments_card: "Card payments",
+  payments_x402: "x402 payments",
+  log_sink: "Operational logs",
+  us_company_registry: "US company records",
+  us_ein: "US employer ID checks",
+  ubo_supplement_global: "Company ownership links",
+  fr_litigation: "French court and insolvency notices",
+};
+const label = (key: string) => ROLES[key] ?? key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+const vendorRows = Object.entries(vendors).map(([key, name]) => ({ key, role: label(key), name }));
+
+// GDPR Art. 22 classes, from the manifests of the tools in this build.
+const tools = allTools(data);
+const classOf = (slug: string) => data.manifests.get(slug)?.gdpr_art_22_classification ?? "data_lookup";
+const screening = tools.filter((t) => classOf(t.slug) === "screening_signal");
+const synthesis = tools.filter((t) => classOf(t.slug) === "risk_synthesis");
+const lookups = tools.length - screening.length - synthesis.length;
+
+const disputeCall = [
+  `curl -X POST ${API_BASE}/v1/transactions/TRANSACTION_ID/dispute \\`,
+  `  -H "Authorization: Bearer $STRALE_API_KEY" \\`,
+  `  -H "Content-Type: application/json" \\`,
+  `  -d '{"reason": "The register shows this company as dissolved.", "affected_field": "status"}'`,
+].join("\n");
+
+const glance = [
+  { term: "Calls processed in", value: place ? PLACE_SHORT[facts.processing_jurisdiction] : "Named in each call’s audit record" },
+  ...(CONTENT_CLEARING_VERIFIED ? [{ term: "Call content cleared after", value: plural(contentDays, "day") }] : []),
+  { term: "Call records kept for", value: plural(recordDays, "day") },
+  { term: "API keys stored as", value: "SHA-256 hashes" },
+];
+---
+<Base title="Security and data" description="Where Strale processes calls, what it keeps and for how long, where its data comes from, how its tools are tested, and how to dispute a result.">
+  <section class="page-head">
+    <div class="container page-head-grid">
+      <div class="stack">
+        <p class="label">Security and data</p>
+        <h1 class="t-campaign">What happens to the data your agent sends</h1>
+        <p class="t-lead">Where calls run, what Strale keeps and for how long, where the data comes from, and how each tool is checked.</p>
+      </div>
+      <div class="plate page-head-art"><Image src={artScreening} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+    </div>
+  </section>
+
+  <section class="section-tight" aria-label="At a glance">
+    <div class="container">
+      <dl class="glance">
+        {glance.map((g) => (
+          <div class="glance-item">
+            <dt class="label">{g.term}</dt>
+            <dd class="glance-value">{g.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <section class="section section-sunken" id="processing" aria-labelledby="processing-title">
+    <div class="container split">
+      <h2 id="processing-title" class="t-section">Where calls are processed</h2>
+      <div class="stack prose">
+        {place ? (
+          <p class="t-body">Strale’s API and database run in {place}. Every call is processed there, and each call’s audit record names where it ran.</p>
+        ) : (
+          <p class="t-body">Each call’s audit record names where it was processed.</p>
+        )}
+        <p class="t-body">A tool that answers from an outside source sends that source the inputs it needs for the answer. The vendors are <a class="link" href="#vendors">listed below</a>, and each tool’s page names the source of its data.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="retention" aria-labelledby="retention-title">
+    <div class="container split">
+      <h2 id="retention-title" class="t-section">What is kept, and for how long</h2>
+      <div class="stack-loose prose">
+        {CONTENT_CLEARING_VERIFIED ? (
+          <>
+        <p class="t-body">Every call leaves a record, and the record has two parts on two clocks.</p>
+        <div class="grid-2 clocks">
+          <article class="card">
+            <p class="label">Call content</p>
+            <p class="t-stat num">{plural(contentDays, "day")}</p>
+            <p class="card-body">The inputs your agent sent, the answer, any error message, the audit trail and the source details. Cleared after {plural(contentDays, "day")}.</p>
+          </article>
+          <article class="card">
+            <p class="label">The rest of the record</p>
+            <p class="t-stat num">{plural(recordDays, "day")}</p>
+            <p class="card-body">Which tool ran, when, the outcome, the price, how long it took, and the integrity hash that links it to the record before it. Kept for {days(recordDays)}.</p>
+          </article>
+        </div>
+        <p class="t-body">Content is cleared in place, so the chain of integrity hashes stays verifiable after the content is gone. A dispute raised within {plural(contentDays, "day")} can be checked against what the call actually sent and returned; after that, the record still shows that the call ran, when, and with which tool.</p>
+          </>
+        ) : (
+          <p class="t-body">Every call leaves a record: which tool ran, when, the outcome, the price, how long it took, and the integrity hash that links it to the record before it. Records are kept for {days(recordDays)}.</p>
+        )}
+        <p class="small muted">A record under legal hold is kept until the hold ends.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-sunken" id="keys" aria-labelledby="keys-title">
+    <div class="container split">
+      <h2 id="keys-title" class="t-section">Keys and payments</h2>
+      <ul class="feature-list prose" role="list">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>API keys are stored only as SHA-256 hashes.</strong> The full key is shown once, when it is created. Strale cannot show it again: a lost key is replaced, never recovered.</p></li>
+        {vendors.payments_card && <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>Cards are handled by {vendors.payments_card}.</strong> Balance top-ups run through {vendors.payments_card} Checkout, so card details go to {vendors.payments_card} and never reach Strale.</p></li>}
+        {vendors.payments_x402 && <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>x402 payments are settled by the {vendors.payments_x402}.</strong> Your agent’s wallet signs each payment itself; Strale never holds its keys.</p></li>}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="vendors" aria-labelledby="vendors-title">
+    <div class="container split">
+      <div class="stack">
+        <h2 id="vendors-title" class="t-section">Sub-processors and data vendors</h2>
+      </div>
+      <div class="stack prose">
+        <p class="t-body">The services that handle screening, payments, page rendering and logs for Strale, and the vendors behind some company-data tools. Your agent has no account with any of them: Strale holds the relationships.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Vendors by role">
+          <table class="table">
+            <caption class="visually-hidden">Vendors by role</caption>
+            <thead><tr><th scope="col">Used for</th><th scope="col">Vendor</th></tr></thead>
+            <tbody>
+              {vendorRows.map((v) => <tr><th scope="row">{v.role}</th><td>{v.name}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted">The same list is served by the API at <a class="link" href={`${API_BASE}/v1/platform/facts`}><code>/v1/platform/facts</code></a>. Each tool’s page names the source of its own data.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-sunken" id="sources" aria-labelledby="sources-title">
+    <div class="container split">
+      <h2 id="sources-title" class="t-section">Where the data comes from</h2>
+      <div class="stack-loose prose">
+        <p class="t-body">Strale goes to the source of record first: official registers and APIs, then licensed data from vendors whose terms allow resale, then direct reads of public pages, one request at a time. The rules are the same for every tool.</p>
+        <ul class="feature-list" role="list">
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>No logins, no paywalls, no fake or borrowed accounts.</strong> Strale reads what is public, logged out.</p></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>A block is an answer.</strong> A refusal, a challenge page or a robots.txt rule ends the request. Strale never solves CAPTCHAs, rotates addresses or retries a blocked request another way.</p></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>Every request says who it is.</strong> Strale identifies itself by name in each request it sends to a website.</p></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>No harvesting people data.</strong> Strale does not collect profiles or contact details of people. Personal data comes back only where a court or registry publishes it, as published, for the one request that asked. Sanctions, PEP and adverse-media screening runs on licensed data, for compliance checks.</p></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>No sites that forbid automated access.</strong> Platforms that forbid it and enforce it, and commercial data aggregators, are on a blocklist Strale checks before every fetch.</p></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check" /></svg><p class="t-body"><strong>Pages your agent names are read once.</strong> When your agent asks Strale to read a page, Strale fetches that one public page for that one request, under the same rules.</p></li>
+        </ul>
+        <p class="t-body">For each answer, Strale records which source the data came from and how it was obtained.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="testing" aria-labelledby="testing-title">
+    <div class="container split">
+      <h2 id="testing-title" class="t-section">How tools are checked</h2>
+      <div class="stack-loose prose">
+        <p class="t-body">Strale runs its own test suites against its tools. Which suites a tool has depends on what it does:</p>
+        <dl class="defs">
+          <div><dt>Known answer</dt><dd>Calls the tool with an input whose answer is known, and checks the fields that must always be there.</dd></div>
+          <div><dt>Schema</dt><dd>Checks the answer has the shape the tool promises.</dd></div>
+          <div><dt>Negative</dt><dd>Sends bad input and checks the tool refuses it cleanly.</dd></div>
+          <div><dt>Edge case</dt><dd>Sends unusual but valid input and checks the tool still answers correctly.</dd></div>
+          <div><dt>Dependency health</dt><dd>Checks that the tool’s upstream source is reachable.</dd></div>
+        </dl>
+        <p class="t-body">Some suites call the real source; others replay a saved baseline answer to check Strale’s own handling of it. Tools whose source costs nothing to call are tested on a schedule. Tools that pay a vendor per call are watched through their real traffic: the outcome of customers’ calls feeds their health record.</p>
+        <p class="t-body">Each tool’s page shows the date of its last recorded test and the share of its tests that passed on that latest run. A tool with no recorded test says so. A test result tells you what the tool returned on that date; it is not a score.</p>
+        <p class="t-body">When a tool’s real calls fail too often, Strale takes it out of the catalogue, and it comes back once a fix passes its checks.</p>
+        <a class="link-standalone" href="/tools">Browse the tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-sunken" id="disputes" aria-labelledby="disputes-title">
+    <div class="container split">
+      <h2 id="disputes-title" class="t-section">Disputing a result</h2>
+      <div class="stack-loose prose">
+        <p class="t-body">You can ask for a person to review the result of any call made with an API key. Send the reason, and optionally the field you dispute, to the call’s dispute endpoint. A person at Strale reviews every dispute.</p>
+        <CodeBlock id="dispute" title="POST /v1/transactions/:id/dispute" wrap panels={[{ label: "curl", lang: "shell", code: disputeCall }]} />
+        <p class="t-compact muted">The account holder authenticates with the API key. Someone who was given the call’s shareable audit link can dispute with the link’s token instead, and adds a <code>contact_email</code> so Strale can reply.</p>
+
+        <h3 class="t-subhead">GDPR Article 22 classification</h3>
+        <p class="t-body">Every call’s audit record states how the tool’s output relates to automated decisions about people, and gives the dispute endpoint. The customer making the call is the controller for any personal data in it; Strale processes it on the customer’s behalf.</p>
+        <dl class="defs">
+          <div>
+            <dt><code>data_lookup</code></dt>
+            <dd>Returns facts from a source, and is not a decision. {plural(lookups, "tool")} have this class.</dd>
+          </div>
+          <div>
+            <dt><code>screening_signal</code></dt>
+            <dd>Reports matches against lists or databases, such as sanctions lists. The match is a fact about the source; acting on it automatically, without review, is where Article 22 applies.{screening.length > 0 && <> Tools with this class: {screening.map((t, i) => <>{i > 0 && ", "}<a class="link" href={`/tools/${t.slug}`}>{t.name}</a></>)}.</>}</dd>
+          </div>
+          <div>
+            <dt><code>risk_synthesis</code></dt>
+            <dd>An AI model writes a risk summary from other checks’ results. A workflow that acts on it automatically is an automated decision under Article 22.{synthesis.length > 0 && <> Tools with this class: {synthesis.map((t, i) => <>{i > 0 && ", "}<a class="link" href={`/tools/${t.slug}`}>{t.name}</a></>)}.</>}</dd>
+          </div>
+        </dl>
+        <p class="small muted">A bundled check takes the highest class among its steps.</p>
+      </div>
+    </div>
+  </section>
+
+  {contact && (
+    <section class="section" id="contact" aria-labelledby="contact-title">
+      <div class="container split">
+        <h2 id="contact-title" class="t-section">Contact</h2>
+        <div class="stack prose">
+          <p class="t-body">Security reports, data requests and questions about anything on this page go to one address, read by a person.</p>
+          <a class="link-standalone" href={`mailto:${contact}?subject=${encodeURIComponent("Security and data")}`}>Email {contact} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head .t-lead { max-width: var(--measure-body); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
+  .section { padding-block: var(--section-space); }
+  .section-tight { padding-block: var(--space-16) var(--space-48); }
+  .section-sunken { background: var(--surface-sunken); }
+
+  .glance { display: grid; gap: var(--border-width); grid-template-columns: minmax(0, 1fr); margin: 0; background: var(--border); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); overflow: hidden; }
+  .glance-item { display: grid; gap: var(--space-8); align-content: start; padding: var(--space-20) var(--space-24); background: var(--surface); }
+  .glance-value { margin: 0; font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); line-height: var(--type-subhead-line); font-feature-settings: var(--type-numeric-features); }
+  @media (min-width: 768px) { .glance { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1280px) { .glance { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); } }
+
+  .split { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) {
+    .split { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-64); align-items: start; }
+  }
+  .prose { max-width: var(--measure-body); }
+  .prose .t-body { margin-bottom: 0; }
+  .clocks .card { height: 100%; }
+  .clocks .t-stat { margin: 0; }
+
+  .feature-list p { margin-block: 0; }
+  .feature-list .icon { flex: none; }
+  .defs { display: grid; gap: var(--space-16); margin: 0; }
+  .defs > div { display: grid; gap: var(--space-4); padding-left: var(--space-16); border-left: calc(var(--border-width) * 2) solid var(--border-strong); }
+  .defs dt { font-family: var(--type-detail-family); font-weight: var(--type-detail-weight); font-size: var(--type-compact-size); }
+  .defs dd { margin: 0; color: var(--text-muted); font-size: var(--type-compact-size); line-height: var(--type-compact-line); }
+</style>

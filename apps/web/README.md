@@ -22,7 +22,7 @@ Astro, static output. Every catalogue fact on a page — tools, prices, countrie
 
 Styles use tokens only. `src/styles/tokens.generated.css` is generated from the `website` surface of `design/tokens/active.json` (`npm run design:web-tokens` at the repo root). `src/styles/site.css` holds the shared components, derived from the Open Flow specimen. From the repo root, `npm run design:check` refuses hex, px/rem/ms literals, raw font stacks, unknown tokens and non-token breakpoints anywhere in `src/` (`.css`, `<style>` blocks and literal `style=""`), and fails if the generated token file is stale.
 
-Fonts, the flowing-S logo and the vector bands are copied from `design/` into `public/` by `scripts/prepare-assets.mjs` before every dev or build run; raster artwork is imported from `design/` through `astro:assets`, which emits resized WebP.
+Fonts, the adopted kit-06 wordmark and the vector bands are copied from `design/` into `public/` by `scripts/prepare-assets.mjs` before every dev or build run; raster artwork is imported from `design/` through `astro:assets`, which emits resized WebP.
 
 ## Commands
 
@@ -36,6 +36,20 @@ npm test                     # editorial and helper tests
 npm run check                # astro check (types)
 node scripts/review.mjs --playwright <path-to-playwright>   # screenshots 1440/390 × light/dark + axe, into review/latest
 ```
+
+Working notes (2026-10-26):
+
+- `npm run dev` on live data fetches the catalogue on every render and can hang; to look at
+  the site, `npm run build` (about 4.5 minutes, around 440 pages) then
+  `npx astro preview --port 4321`. Stop the preview before rebuilding, and never run two live
+  builds at once: the API answers 429.
+- For a fast look at layout only, `STRALE_SITE_DATA=manifests npm run build`; that build has
+  no bundled checks or test results.
+- Screenshots for review: `scripts/review.mjs`, or Playwright from this folder's
+  `node_modules` with `channel: "msedge"`. Scroll the page once before a full-page shot, or
+  the scroll-reveal blocks below the fold are still waiting.
+- Tool names and descriptions come from `manifests/` (canonical), everything else from the
+  live API.
 
 CI (`.github/workflows/ci.yml`, job `web`) runs the tests, the type check and a preview build on every code PR, then a non-blocking live build whose screenshots and accessibility report are uploaded as the `web-review` artifact. CI never deploys the site.
 

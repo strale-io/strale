@@ -535,3 +535,6 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .do-region img { width: 100%; height: 100%; object-fit: contain; }
 .do-region p { left: var(--region-wide-x); top: var(--region-wide-y); max-width: var(--region-wide-width); padding: var(--space-12); }
 .pair-table td img { width: calc(var(--space-96) + var(--space-24)); height: auto; border-radius: var(--radius-tag); border: var(--border-width) solid var(--border); }
+
+/* Derived home-hero role, approved by Petter on 2026-10-26. */
+.t-home-hero { font-family: var(--type-home-hero-family); font-size: var(--type-home-hero-size); font-weight: var(--type-home-hero-weight); line-height: var(--type-home-hero-line); letter-spacing: var(--type-home-hero-tracking); max-width: var(--type-home-hero-measure); }

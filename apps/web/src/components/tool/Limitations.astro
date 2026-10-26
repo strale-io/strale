@@ -1,24 +1,34 @@
 ---
-// Limitations as the API serves them, shown as written.
+// Both tools and bundled checks use the same, unabridged limitation fields.
 import type { Limitation } from "../../lib/types.ts";
 interface Props { items: Limitation[]; stepName?: (slug: string) => string; empty?: string }
 const { items, stepName, empty = "No limitations are recorded." } = Astro.props;
+const visible = items.map((item) => ({
+  ...item,
+  title: item.title?.trim(),
+  text: item.text?.trim(),
+  workaround: item.workaround?.trim(),
+})).filter((item) => item.title || item.text || item.workaround);
 ---
-{items.length ? (
-  <ul class="limits" role="list">
-    {items.map((l) => (
+{visible.length ? (
+  <ul class:list={["limits", { "limits-columns": visible.length >= 4 }]} role="list">
+    {visible.map((l) => (
       <li class="limit">
-        <p class="limit-title">{l.title ?? l.text}</p>
-        {l.title && l.text !== l.title && <p class="t-compact muted">{l.text}</p>}
+        {l.title && <p class="limit-title t-ui">{l.title}</p>}
+        {l.text && l.text !== l.title && <p class="limit-text t-compact muted">{l.text}</p>}
         {l.step && stepName && <p class="small muted">From step: {stepName(l.step)}</p>}
-        {l.workaround && <p class="t-compact"><span class="muted">What to do instead: </span>{l.workaround}</p>}
+        {l.workaround && <p class="small muted">What to do instead: {l.workaround}</p>}
       </li>
     ))}
   </ul>
 ) : <p class="muted">{empty}</p>}
 
 <style>
-  .limits { display: grid; gap: var(--space-16); margin: 0; padding: 0; }
-  .limit { display: grid; gap: var(--space-4); padding-left: var(--space-16); border-left: var(--focus-width) solid var(--border-strong); }
-  .limit-title { font-weight: var(--type-detail-weight); }
+  .limits { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-24) var(--space-32); padding: 0; }
+  .limit { display: grid; gap: var(--space-8); align-content: start; min-width: 0; padding-top: var(--space-16); border-top: var(--border-width) solid var(--border); overflow-wrap: anywhere; }
+  .limit-title { font-weight: var(--type-ui-weight); }
+  .limit-text { max-width: none; }
+  @media (min-width: 1024px) {
+    .limits-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 </style>

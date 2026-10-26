@@ -25,7 +25,7 @@ const country = countryRows(data).find((c) => c.iso === iso)!;
 const screening = screeningTools(data).filter((t) => SCREENING.includes(t.slug));
 const testOf = (slug: string) => {
   const t = data.trust.get(slug);
-  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of recent runs passed` : ""}` : null;
+  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of its tests passed on their latest run` : ""}` : null;
 };
 ---
 <Base title={`Company records in ${country.inSentence}`} current="company-data" description={`How an AI agent looks up a company in ${country.inSentence}: accepted input, the fields that come back, the source, the price and how to call it.`}>
@@ -63,27 +63,27 @@ const testOf = (slug: string) => {
             </dl>
           </div>
 
-          <div class="stack">
+          <div class="stack tool-subsection">
             <h3 class="t-subhead">What your agent sends</h3>
             <InputsTable schema={t.input_schema} label={`Inputs for ${t.name}`} />
           </div>
 
-          <div class="stack">
+          <div class="stack tool-subsection">
             <h3 class="t-subhead">Example answer</h3>
             {example ? <CodeBlock id={`ex-${t.slug}`} title="Example output (published, not live)" wrap panels={[{ label: "Output", lang: "json", code: json(example) }]} /> : <p class="muted">No published example.</p>}
           </div>
 
-          <div class="stack">
+          <div class="stack tool-subsection">
             <h3 class="t-subhead">Fields that come back</h3>
             <OutputsTable schema={t.output_schema} reliability={extras?.output_field_reliability ?? {}} label={`Output fields for ${t.name}`} />
           </div>
 
-          <div class="stack">
+          <div class="stack tool-subsection">
             <h3 class="t-subhead">How to call it</h3>
             <CodeBlock id={`call-${t.slug}`} title={`How to call ${t.name}`} panels={toolSnippets({ slug: t.slug, inputs: extras?.example_input ?? {}, priceCents: t.price_cents, free: t.free, x402: t.x402 })} />
           </div>
 
-          <div class="stack">
+          <div class="stack tool-subsection">
             <h3 class="t-subhead">Limitations</h3>
             <Limitations items={data.limitations.get(t.slug) ?? []} empty="No limitations are recorded for this tool." />
           </div>
@@ -112,8 +112,9 @@ const testOf = (slug: string) => {
 <style>
   .page-head { padding-block: var(--space-48) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
   .page-head .t-lead { max-width: var(--measure-body); }
-  .tool-block { padding-block: var(--space-64); }
+  .tool-block { padding-block: var(--stack-heading-before) var(--space-64); }
   .tool-block + .tool-block { border-top: var(--border-width) solid var(--border); }
+  .tool-subsection { margin-top: var(--stack-heading-subsection); }
   .block-head { display: grid; gap: var(--space-24); }
   @media (min-width: 1024px) { .block-head { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; } }
   .block-head .t-compact { max-width: var(--measure-body); }
@@ -121,6 +122,6 @@ const testOf = (slug: string) => {
   .facts div { display: grid; gap: var(--space-2); }
   .facts dt { font-family: var(--type-label-family); font-size: var(--type-label-size); font-weight: var(--type-label-weight); letter-spacing: var(--type-label-tracking); color: var(--text-muted); }
   .facts dd { margin: 0; font-size: var(--type-compact-size); overflow-wrap: anywhere; }
-  .section { padding-block: var(--space-64); }
+  .section { padding-block: var(--stack-heading-before) var(--space-64); }
   .section-sunken { background: var(--surface-sunken); }
 </style>

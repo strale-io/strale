@@ -1,0 +1,190 @@
+---
+// Docs overview (SITE-STRUCTURE.md page 10): choose a route, make the first call with a free tool,
+// then the request and response shape, errors, idempotency and spend caps, past calls, reference.
+// Limits come from the API source (content/docs-facts.ts), prices and counts from the catalogue.
+import { CONTENT_CLEARING_VERIFIED } from "../../content/retention";
+import DocsNav from "../../components/DocsNav.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import artDocs from "../../assets/illustrations/developer-jobs.webp";
+import { getSiteData, tools as allTools, API_BASE } from "../../lib/site-data.ts";
+import { formatEur, json, plural } from "../../lib/format.ts";
+import { FREE_TIER_DAILY_LIMIT, MAX_PRICE_CAP_CENTS, MIN_TOPUP_CENTS } from "../../lib/code-facts.ts";
+import { firstCallTool, firstCallSnippets, KEY_REQUESTS_PER_SECOND, IDEMPOTENCY_KEY_MAX, DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS, ASYNC_THRESHOLD_SECONDS, HOURLY_SPEND_CAP_CENTS } from "../../content/docs-facts.ts";
+
+const data = await getSiteData();
+const contact = data.facts.static.controller?.contact_email;
+const { tool, output } = firstCallTool(data);
+const snippets = firstCallSnippets(data);
+const x402Tools = data.x402.capabilities.length;
+const x402Bundles = data.x402.solutions.length;
+const retentionDays = data.facts.static.pii_retention_days;
+
+// A real over-budget refusal for the error example: the cheapest paid tool, called with one cent too little.
+const paid = allTools(data).filter((t) => !t.free && t.price_cents >= 2).sort((a, b) => a.price_cents - b.price_cents || a.slug.localeCompare(b.slug))[0];
+const overBudget = paid && {
+  error_code: "budget_exceeded",
+  message: `Capability '${paid.slug}' costs ${formatEur(paid.price_cents)} (${paid.price_cents} cents) which exceeds your max_price_cents of ${paid.price_cents - 1}.`,
+  details: { capability_slug: paid.slug, actual_price_cents: paid.price_cents, max_price_cents: paid.price_cents - 1 },
+};
+
+const successShape = {
+  result: {
+    transaction_id: "string",
+    status: "completed",
+    capability_used: tool.slug,
+    price_cents: "integer",
+    latency_ms: "integer",
+    wallet_balance_cents: "integer",
+    output: output ?? { "…": "the tool’s fields" },
+    provenance: { source: "string", fetched_at: "ISO 8601 timestamp" },
+  },
+  meta: { audit: { "…": "audit record" } },
+};
+
+const toc = [
+  { id: "routes", label: "Choose a route" },
+  { id: "first-call", label: "Make your first call" },
+  { id: "shape", label: "Request and response" },
+  { id: "errors", label: "Handle errors and retries" },
+  { id: "safety", label: "Retry safely, cap spend" },
+  { id: "past-calls", label: "Retrieve a past call" },
+  { id: "reference", label: "API reference" },
+];
+---
+<DocsNav
+  title="Docs"
+  description="Connect an agent to Strale over MCP, the REST API, the SDKs or x402, and make a first call with a free tool."
+  current="overview"
+  heading="From zero to your first call"
+  lead="Pick a route, run a free tool, and read how requests, errors, retries and spend limits work. The free tools need no key."
+  art={artDocs}
+  toc={toc}
+>
+  <section id="routes" aria-labelledby="routes-title">
+    <h2 id="routes-title" class="t-section">Choose a route</h2>
+    <p class="t-body muted">MCP, the REST API and the SDKs reach every tool. x402 reaches the tools that accept it. MCP and the REST API run the free tools without a key.</p>
+    <ul class="grid-2 plain-list" role="list">
+      <li><a class="card card-link route-card" href="/docs/mcp" data-spotlight><span class="card-title">MCP</span><span class="card-body">Add Strale’s MCP server to Claude Desktop, Claude Code, Cursor or any MCP client. The agent searches and calls tools itself.</span></a></li>
+      <li><a class="card card-link route-card" href="/docs/api" data-spotlight><span class="card-title">REST API</span><span class="card-body">One endpoint, <code>POST /v1/do</code>, from any language. One API key and one wallet balance cover every tool.</span></a></li>
+      <li><a class="card card-link route-card" href="/docs/sdks" data-spotlight><span class="card-title">SDKs</span><span class="card-body">TypeScript and Python clients, and packages for LangChain, CrewAI, Semantic Kernel and Composio.</span></a></li>
+      <li><a class="card card-link route-card" href="/docs/x402" data-spotlight><span class="card-title">x402</span><span class="card-body">No account and no key. Your agent pays in USDC per request on {plural(x402Tools, "eligible tool")}{x402Bundles > 0 ? ` and ${plural(x402Bundles, "eligible bundled check")}` : ""}.</span></a></li>
+    </ul>
+  </section>
+
+  <section id="first-call" aria-labelledby="first-call-title">
+    <h2 id="first-call-title" class="t-section">Make your first call</h2>
+    <p class="t-body">The first call runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>, a free tool. The API and MCP calls need no key. Without a key you get {FREE_TIER_DAILY_LIMIT} free calls a day per IP address, across all free tools. The SDK calls take an API key, and a free tool costs nothing with one.</p>
+    <CodeBlock id="first-call-code" title="First call" panels={snippets} />
+    {output && <CodeBlock id="first-call-out" title={`${tool.name} output`} wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} />}
+    <p class="t-compact muted">The output above is the tool’s published example. A live call returns the same fields for your input. More free tools: <a class="link" href="/tools?free=1">free tools</a>. For a key, <a class="link" href="/signup">sign up</a>.</p>
+  </section>
+
+  <section id="shape" aria-labelledby="shape-title">
+    <h2 id="shape-title" class="t-section">Request and response</h2>
+    <p class="t-body">Every tool runs through <code>POST {API_BASE}/v1/do</code>. Send a JSON body. With a key, add <code>Authorization: Bearer $STRALE_API_KEY</code>.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Request fields">
+      <table class="table">
+        <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Meaning</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>capability_slug</code></th><td>string</td><td>The tool to run, for example <code>{tool.slug}</code>. Send this or <code>task</code>.</td></tr>
+          <tr><th scope="row"><code>task</code></th><td>string</td><td>Describe the job in words and Strale picks the tool. Use <code>capability_slug</code> when you know the tool.</td></tr>
+          <tr><th scope="row"><code>inputs</code></th><td>object</td><td>The tool’s inputs. Each tool page lists them.</td></tr>
+          <tr><th scope="row"><code>max_price_cents</code></th><td>integer</td><td>The most you will pay for this call, in euro cents, from 1 to {MAX_PRICE_CAP_CENTS} ({formatEur(MAX_PRICE_CAP_CENTS)}). Required with an API key. Optional without one, where only free tools run.</td></tr>
+          <tr><th scope="row"><code>timeout_seconds</code></th><td>integer</td><td>How long to wait for the tool. Default {DEFAULT_TIMEOUT_SECONDS}, maximum {MAX_TIMEOUT_SECONDS}.</td></tr>
+          <tr><th scope="row"><code>dry_run</code></th><td>boolean</td><td>Returns the tool that would run and its price. Nothing runs and nothing is charged.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 class="t-subhead">A successful call</h3>
+    <p class="t-body">A success is HTTP 200 with a <code>result</code> and a <code>meta</code> block. Types are shown as words; <code>output</code> is the tool’s own example.</p>
+    <CodeBlock id="success-shape" title="Success response" wrap panels={[{ label: "Response", lang: "json", code: json(successShape) }]} />
+    <ul class="doc-list t-body">
+      <li><code>price_cents</code> is what this call cost, in euro cents. It is <code>0</code> for free tools.</li>
+      <li><code>wallet_balance_cents</code> is your balance after the call. Calls without a key do not carry it; they carry <code>free_tier: true</code> and a <code>usage</code> block with the day’s count.</li>
+      <li><code>provenance</code> names the source that answered and when it was fetched.</li>
+      <li><code>meta.audit</code> is the audit record for the call.</li>
+    </ul>
+    <h3 class="t-subhead">A failed call</h3>
+    <p class="t-body">A failure is a non-200 status with <code>error_code</code>, <code>message</code> and, where there is more to say, <code>details</code>. Branch on <code>error_code</code>; the codes are stable.</p>
+    {overBudget && <CodeBlock id="failure-shape" title="Failure response" wrap panels={[{ label: "Response", lang: "json", code: json(overBudget) }]} />}
+    <h3 class="t-subhead">Slow tools</h3>
+    <p class="t-body">Tools that take longer than {ASYNC_THRESHOLD_SECONDS} seconds run in the background. The call returns HTTP 202 with <code>status: "executing"</code>, the <code>transaction_id</code> and <code>meta.audit.poll_url</code>. Poll <code>GET /v1/transactions/{"{transaction_id}"}</code> until <code>status</code> is <code>completed</code> or <code>failed</code>. The SDKs poll for you.</p>
+  </section>
+
+  <section id="errors" aria-labelledby="errors-title">
+    <h2 id="errors-title" class="t-section">Handle errors and retries</h2>
+    <p class="t-body">You are charged when a call succeeds. A call that fails is not charged, and a bundled check that fails in every step is refunded. A bundled check that returns results for some steps is charged in full.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Error codes">
+      <table class="table">
+        <thead><tr><th scope="col"><code>error_code</code></th><th scope="col">HTTP</th><th scope="col">What happened</th><th scope="col">What to do</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>invalid_request</code></th><td>400</td><td>The body is missing a field or a value is out of range, or the Idempotency-Key is longer than {IDEMPOTENCY_KEY_MAX} characters.</td><td>Fix the request. Do not retry it unchanged.</td></tr>
+          <tr><th scope="row"><code>unauthorized</code></th><td>401</td><td>The key is missing or wrong, or the tool needs a key and the call had none. A paid tool that accepts x402 answers a keyless call with a 402 price quote instead.</td><td>Send <code>Authorization: Bearer</code> with a valid key, or pay over <a class="link" href="/docs/x402">x402</a>.</td></tr>
+          <tr><th scope="row"><code>insufficient_balance</code></th><td>402</td><td>The wallet holds less than the tool costs. <code>details</code> has <code>wallet_balance_cents</code> and <code>required_cents</code>.</td><td>Top up with <code>POST /v1/wallet/topup</code> (minimum {formatEur(MIN_TOPUP_CENTS)}), then retry.</td></tr>
+          <tr><th scope="row"><code>budget_exceeded</code></th><td>402</td><td>The tool costs more than <code>max_price_cents</code>. <code>details.actual_price_cents</code> has the price.</td><td>Raise <code>max_price_cents</code> if the price is acceptable.</td></tr>
+          <tr><th scope="row"><code>no_matching_capability</code></th><td>404</td><td>No tool matches the <code>task</code> or slug within the budget.</td><td>Check the slug on the <a class="link" href="/tools">tools page</a>, or rephrase the task.</td></tr>
+          <tr><th scope="row"><code>rate_limited</code></th><td>429</td><td>A key may send {KEY_REQUESTS_PER_SECOND} requests a second. Without a key, free tools allow {FREE_TIER_DAILY_LIMIT} calls a day per IP address.</td><td>Wait for the <code>Retry-After</code> seconds, then retry. After the daily limit, use a key.</td></tr>
+          <tr><th scope="row"><code>spend_cap_exceeded</code></th><td>429</td><td>The call would take the account past its hourly spend limit. <code>details</code> has <code>spent_cents</code>, <code>requested_cents</code> and <code>limit_cents</code>.</td><td>Wait for the hour to roll over, or ask for a higher limit.</td></tr>
+          <tr><th scope="row"><code>execution_failed</code></th><td>500</td><td>The tool ran and failed, usually because its source did not answer. <code>details.error</code> says why. Not charged.</td><td>Retry with backoff. If the same input fails again, the input is the cause.</td></tr>
+          <tr><th scope="row"><code>capability_unavailable</code></th><td>503</td><td>The tool is switched off for now. Not charged.</td><td>Retry later, or use another tool for the job.</td></tr>
+          <tr><th scope="row"><code>timeout_exceeded</code></th><td>503</td><td>The call ran past its time limit, or waited too long on a busy wallet. Not charged.</td><td>Retry with backoff.</td></tr>
+          <tr><th scope="row"><code>idempotency_key_reused</code></th><td>409</td><td>The Idempotency-Key was already used for a different request.</td><td>Send a new key.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="t-body">Retry only 429, 500 and 503 responses, and wait a little longer after each: one second, then two, then four. Never retry a 400 without changing the request.</p>
+  </section>
+
+  <section id="safety" aria-labelledby="safety-title">
+    <h2 id="safety-title" class="t-section">Retry safely and cap spend</h2>
+    <h3 class="t-subhead">Idempotency</h3>
+    <p class="t-body">Send an <code>Idempotency-Key</code> header on <code>POST /v1/do</code> to make a retry safe. If a call times out on your side, send it again with the same key. Strale returns the first result with <code>meta.idempotency_replay: true</code> and does not run or charge the call twice. Keys work on calls made with an API key, up to {IDEMPOTENCY_KEY_MAX} characters. Use a new key for a new call, and for a deliberate second attempt after a failure.</p>
+    <CodeBlock id="idem" title="Idempotent call" panels={[{ label: "curl", lang: "shell", code: [
+      `curl -X POST ${API_BASE}/v1/do \\`,
+      `  -H "Authorization: Bearer $STRALE_API_KEY" \\`,
+      `  -H "Idempotency-Key: $(uuidgen)" \\`,
+      `  -H 'Content-Type: application/json' \\`,
+      `  -d '{"capability_slug": "${tool.slug}", "inputs": ${JSON.stringify(firstCallTool(data).inputs)}, "max_price_cents": 1}'`,
+    ].join("\n") }]} />
+    <p class="t-compact muted">The SDKs take the same value as <code>idempotency_key</code>.</p>
+    <h3 class="t-subhead">Spend caps</h3>
+    <ul class="doc-list t-body">
+      <li><strong>Per call.</strong> <code>max_price_cents</code> is a ceiling on one call. A tool that costs more is refused with <code>budget_exceeded</code> before it runs.</li>
+      <li><strong>Per hour.</strong> Each account has an hourly spend limit, {formatEur(HOURLY_SPEND_CAP_CENTS)} by default. Calls past it are refused with <code>spend_cap_exceeded</code>.{contact && <> To change it, write to <a class="link" href={`mailto:${contact}`}>{contact}</a>.</>}</li>
+      <li><strong>Your balance.</strong> Calls are paid from a prepaid wallet. When it is empty, calls are refused with <code>insufficient_balance</code>.</li>
+      <li><strong>Preview a price.</strong> Add <code>"dry_run": true</code> to see which tool would run and what it costs.</li>
+    </ul>
+  </section>
+
+  <section id="past-calls" aria-labelledby="past-title">
+    <h2 id="past-title" class="t-section">Retrieve a past call</h2>
+    <p class="t-body">Every call made with an API key has a <code>transaction_id</code>. Fetch the record with it.</p>
+    <CodeBlock id="past" title="Retrieve a call" panels={[
+      { label: "curl", lang: "shell", code: `curl ${API_BASE}/v1/transactions/$TRANSACTION_ID \\\n  -H "Authorization: Bearer $STRALE_API_KEY"` },
+      { label: "TypeScript", lang: "plain", code: `const record = await strale.transaction(transactionId);` },
+      { label: "Python", lang: "plain", code: `record = strale.transaction(transaction_id)` },
+      { label: "MCP", lang: "json", code: json({ tool: "strale_transaction", arguments: { transaction_id: "<transaction_id>" } }) },
+    ]} />
+    <ul class="doc-list t-body">
+      <li>The record has the status, the input and output, the price, the latency, the provenance and the audit record.</li>
+      {CONTENT_CLEARING_VERIFIED && <li>Input, output, error and audit content are cleared {retentionDays} days after the call. The record of the call itself stays.</li>}
+      <li><code>GET /v1/transactions</code> lists your most recent calls.</li>
+      <li>Calls made without a key can be looked up by anyone with the ID, with the content left out.</li>
+      <li>x402 responses carry no transaction ID. The payment details are in <code>_meta.payment</code> of the response.</li>
+    </ul>
+  </section>
+
+  <section id="reference" aria-labelledby="reference-title">
+    <h2 id="reference-title" class="t-section">API reference</h2>
+    <p class="t-body">The full machine-readable reference is the OpenAPI document at <a class="link" href={`${API_BASE}/openapi.json`}>{API_BASE}/openapi.json</a>. Send <code>Accept: text/markdown</code> for a readable version. It also lists the x402 endpoints.</p>
+    <ul class="doc-list t-body">
+      <li><code>GET {API_BASE}/v1/capabilities</code> lists every tool with its inputs, outputs and price.</li>
+      <li>Each <a class="link" href="/tools">tool page</a> shows the inputs, output fields, price and limits for one tool.</li>
+      <li><code>GET {API_BASE}/v1/wallet/balance</code> returns your balance in euro cents.</li>
+    </ul>
+    <div class="row">
+      <a class="btn btn-primary" href="/docs/api">Call the REST API</a>
+      <a class="btn btn-secondary" href="/docs/mcp">Connect over MCP</a>
+    </div>
+  </section>
+</DocsNav>

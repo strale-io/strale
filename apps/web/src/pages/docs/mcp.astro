@@ -1,0 +1,149 @@
+---
+// Docs: connect over MCP (SITE-STRUCTURE.md page 10). Package name, env vars and tool names come
+// from packages/mcp-server (lib/snippets.ts PACKAGES, src/tools.ts); the hosted endpoint is
+// apps/api/src/routes/mcp.ts, mounted at /mcp.
+import DocsNav from "../../components/DocsNav.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData, API_BASE } from "../../lib/site-data.ts";
+import { PACKAGES } from "../../lib/snippets.ts";
+import { formatEur, json } from "../../lib/format.ts";
+import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { firstCallTool, MCP_DEFAULT_MAX_PRICE_CENTS, ASYNC_THRESHOLD_SECONDS } from "../../content/docs-facts.ts";
+
+const data = await getSiteData();
+const { tool, inputs, output } = firstCallTool(data);
+const hosted = `${API_BASE}/mcp`;
+const hostedNoKey = json({ mcpServers: { strale: { type: "streamableHttp", url: hosted } } });
+const hostedKey = json({ mcpServers: { strale: { type: "streamableHttp", url: hosted, headers: { Authorization: "Bearer sk_live_your_key_here" } } } });
+const local = json({ mcpServers: { strale: { command: "npx", args: ["-y", PACKAGES.mcp], env: { STRALE_API_KEY: "sk_live_your_key_here" } } } });
+const claudeCode = [
+  "# Hosted, no key (free tools)",
+  `claude mcp add --transport http strale ${hosted}`,
+  "",
+  "# Hosted, with your key",
+  `claude mcp add --transport http strale ${hosted} --header "Authorization: Bearer $STRALE_API_KEY"`,
+  "",
+  "# Local",
+  `claude mcp add strale --env STRALE_API_KEY=$STRALE_API_KEY -- npx -y ${PACKAGES.mcp}`,
+].join("\n");
+const executeCall = json({ tool: "strale_execute", arguments: { slug: tool.slug, inputs } });
+const prompt = `Use Strale to run ${tool.slug} on ${JSON.stringify(inputs)}.`;
+
+const metaTools = [
+  ["strale_search", "Finds tools by keyword or category. Returns slug, price and input fields.", "No"],
+  ["strale_execute", `Runs a tool by slug with its inputs. Takes an optional max_price_cents, default ${MCP_DEFAULT_MAX_PRICE_CENTS} (${formatEur(MCP_DEFAULT_MAX_PRICE_CENTS)}).`, "Free tools: no. Paid tools: yes"],
+  ["strale_getting_started", "Lists the free tools with example inputs, and the ways to pay.", "No"],
+  ["strale_trust_profile", "Returns a tool’s last test, test history, limitations and source.", "No"],
+  ["strale_methodology", "Returns how Strale tests tools and keeps audit records.", "No"],
+  ["strale_transaction", "Returns a past call by transaction ID.", "Paid calls: yes"],
+  ["strale_balance", "Returns your wallet balance in euro cents.", "Yes"],
+  ["strale_ping", "Checks that the server is up and reports its version and tool counts.", "No"],
+  ["strale_web3_assurance", "Checks an on-chain counterparty (wallet, contract, token, protocol or bridge) in one call.", "See the tool’s page"],
+];
+
+const toc = [
+  { id: "connect", label: "Add the server" },
+  { id: "first-call", label: "Make your first call" },
+  { id: "tools", label: "The tools it adds" },
+  { id: "keys", label: "Use paid tools" },
+];
+---
+<DocsNav
+  title="Connect over MCP"
+  description="Add Strale’s MCP server to Claude Desktop, Claude Code, Cursor or any MCP client and call a free tool without a key."
+  current="mcp"
+  label="Docs · MCP"
+  heading="Connect over MCP"
+  lead="Add one server and your agent can search Strale’s tools and call them. Free tools need no key."
+  toc={toc}
+>
+  <section id="connect" aria-labelledby="connect-title">
+    <h2 id="connect-title" class="t-section">Add the server</h2>
+    <p class="t-body">Strale runs a hosted MCP server at <code>{hosted}</code> (streamable HTTP, no install). You can also run the <code>{PACKAGES.mcp}</code> package on your machine over stdio.</p>
+    <CodeBlock id="mcp-config" title="MCP client config" panels={[
+      { label: "Hosted, no key", lang: "json", code: hostedNoKey },
+      { label: "Hosted, with key", lang: "json", code: hostedKey },
+      { label: "Local (npx)", lang: "json", code: local },
+      { label: "Claude Code", lang: "shell", code: claudeCode },
+    ]} />
+    <ul class="doc-list t-body">
+      <li><strong>Claude Desktop.</strong> For the hosted server, add <code>{hosted}</code> as a custom connector under Settings → Connectors. For the local server, merge the Local (npx) JSON into <code>claude_desktop_config.json</code> and restart the app. On macOS the file is in <code>~/Library/Application Support/Claude/</code>; on Windows it is in <code>%APPDATA%\Claude\</code>.</li>
+      <li><strong>Cursor.</strong> Put the same JSON in <code>.cursor/mcp.json</code>.</li>
+      <li><strong>Any other MCP client.</strong> Point it at <code>{hosted}</code> over streamable HTTP. To use a key, send <code>Authorization: Bearer</code> with it.</li>
+      <li><strong>Local.</strong> Needs Node.js 20 or later. The server reads <code>STRALE_API_KEY</code> from its environment. Leave it out to use free tools only.</li>
+    </ul>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Local server environment variables">
+      <table class="table">
+        <thead><tr><th scope="col">Variable</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>STRALE_API_KEY</code></th><td>none</td><td>Your API key. Needed for paid tools and <code>strale_balance</code>.</td></tr>
+          <tr><th scope="row"><code>STRALE_BASE_URL</code></th><td><code>{API_BASE}</code></td><td>The API the server calls.</td></tr>
+          <tr><th scope="row"><code>STRALE_MAX_PRICE_CENTS</code></th><td><code>{MCP_DEFAULT_MAX_PRICE_CENTS}</code></td><td>The price ceiling, in euro cents, sent with every <code>strale_execute</code> call that does not set its own.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="first-call" aria-labelledby="first-call-title">
+    <h2 id="first-call-title" class="t-section">Make your first call</h2>
+    <ol class="steps">
+      <li>
+        <h3 class="t-subhead">Restart your client</h3>
+        <p class="t-body">Use the “Hosted, no key” config. The client lists Strale’s tools once it reconnects.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Ask for a free tool</h3>
+        <p class="t-body">Type this into the client.</p>
+        <CodeBlock id="mcp-prompt" title="Prompt" wrap panels={[{ label: "Prompt", lang: "plain", code: prompt }]} />
+      </li>
+      <li>
+        <h3 class="t-subhead">Watch the call</h3>
+        <p class="t-body">The agent calls <code>strale_execute</code>. This is what it sends.</p>
+        <CodeBlock id="mcp-call" title="Tool call" wrap panels={[{ label: "strale_execute", lang: "json", code: executeCall }]} />
+      </li>
+      <li>
+        <h3 class="t-subhead">Read the result</h3>
+        <p class="t-body">{output ? <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance. The tool’s published example:</> : <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance.</>}</p>
+        {output && <CodeBlock id="mcp-out" title="Output" wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} />}
+        <p class="t-compact muted">Without a key, free tools allow {FREE_TIER_DAILY_LIMIT} calls a day per IP address across all free tools.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="tools" aria-labelledby="tools-title">
+    <h2 id="tools-title" class="t-section">The tools it adds</h2>
+    <p class="t-body">The server adds {metaTools.length} tools that cover the whole catalogue. The agent finds a tool with <code>strale_search</code> and runs it with <code>strale_execute</code>, so your client’s tool list stays short.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="MCP tools">
+      <table class="table">
+        <thead><tr><th scope="col">Tool</th><th scope="col">What it does</th><th scope="col">Key needed</th></tr></thead>
+        <tbody>
+          {metaTools.map(([name, what, key]) => <tr><th scope="row"><code>{name}</code></th><td>{what}</td><td>{key}</td></tr>)}
+        </tbody>
+      </table>
+    </div>
+    <p class="t-body">A tool that runs longer than {ASYNC_THRESHOLD_SECONDS} seconds returns a <code>transaction_id</code> and a <code>poll_url</code>. Call <code>strale_transaction</code> with the ID until the status is <code>completed</code> or <code>failed</code>.</p>
+  </section>
+
+  <section id="keys" aria-labelledby="keys-title">
+    <h2 id="keys-title" class="t-section">Use paid tools</h2>
+    <ol class="steps">
+      <li>
+        <h3 class="t-subhead">Get a key</h3>
+        <p class="t-body"><a class="link" href="/signup">Sign up</a> for an API key. New accounts start with a small trial balance.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Add it to the config</h3>
+        <p class="t-body">Use the “Hosted, with key” config, or set <code>STRALE_API_KEY</code> for the local server. Restart the client.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Cap what the agent can spend</h3>
+        <p class="t-body">Every <code>strale_execute</code> call carries a price ceiling, {formatEur(MCP_DEFAULT_MAX_PRICE_CENTS)} unless you set <code>max_price_cents</code> or <code>STRALE_MAX_PRICE_CENTS</code>. A tool that costs more is refused before it runs. Account-wide limits are in <a class="link" href="/docs#safety">Retry safely and cap spend</a>.</p>
+      </li>
+    </ol>
+    <p class="t-body">With no key, a paid tool answers with the ways to pay: an API key, or a pay-per-request x402 payment with no signup. See <a class="link" href="/docs/x402">x402</a>.</p>
+    <div class="row">
+      <a class="btn btn-primary" href="/tools">Browse tools</a>
+      <a class="btn btn-secondary" href="/docs">Back to Docs</a>
+    </div>
+  </section>
+</DocsNav>

@@ -1,0 +1,224 @@
+---
+// Home hero, "Switchboard" (DEC-20261025-A; chosen by Petter on 2026-10-25 from the hero lab).
+// Six real tools sit on a circuit board, wired to one console. One call at a time lights its
+// route; the console shows the agent's question, the call with its live price, and the tool's
+// published example result. Server-rendered with the first call complete, so the page reads
+// the same with no script, with reduced motion, and in a thumbnail; switchboard.ts animates it.
+// From 1024px copy and board sit in two columns. The board scales from its own field;
+// below that the text is followed by the existing tool-grid and console variant.
+import type { Tool } from "../lib/site-data";
+import { formatEur, plural } from "../lib/format";
+
+interface Props { tools: Tool[]; libraryCount: number; headline: string; support: string }
+const { tools, libraryCount, headline, support } = Astro.props;
+const bySlug = new Map(tools.map((t) => [t.slug, t]));
+
+type Glyph = "company" | "check" | "card" | "web" | "ref" | "dev";
+interface Port { slug: string; label: string; x: number; y: number; glyph: Glyph; ask: string; input: Record<string, unknown>; fields: string[]; src: string }
+// Editorial: a short label for the port, the question an agent might ask ({key} is filled from the input), and the input.
+// Wherever the published example echoes an input key, the example's own value is used, so question, call and result always agree.
+// x, y place the port on the board (fractions); fields pick which keys of the published example to show.
+const PORTS: Port[] = [
+  { slug: "swedish-company-data", label: "Swedish companies", x: 0.2, y: 0.16, glyph: "company", ask: "Is {org_number} an active company?", input: { org_number: "556703-7485" }, fields: ["company_name", "status", "registered_date"], src: "Bolagsverket" },
+  { slug: "vat-validate", label: "VAT check", x: 0.1, y: 0.5, glyph: "check", ask: "Check this VAT number before we invoice.", input: { vat_number: "SE556703748501" }, fields: ["valid", "company_name", "country_code"], src: "EU VIES" },
+  { slug: "iban-validate", label: "IBAN check", x: 0.22, y: 0.88, glyph: "card", ask: "Is this IBAN well formed?", input: { iban: "SE4550000000058398257466" }, fields: ["valid", "country_code", "bank_code"], src: "ISO 13616 check" },
+  { slug: "url-to-markdown", label: "Web page to text", x: 0.8, y: 0.16, glyph: "web", ask: "Read {url} for me.", input: { url: "https://example.com" }, fields: ["title", "word_count"], src: "fetched live" },
+  { slug: "exchange-rate", label: "Exchange rates", x: 0.9, y: 0.5, glyph: "ref", ask: "What is 1 {from} in {to}?", input: { from: "USD", to: "EUR" }, fields: ["rate", "date"], src: "ECB reference rates" },
+  { slug: "dns-lookup", label: "DNS lookup", x: 0.78, y: 0.88, glyph: "dev", ask: "Does {domain} publish SPF and DMARC?", input: { domain: "google.com" }, fields: ["has_spf", "has_dmarc"], src: "DNS" },
+];
+
+// A port is shown only when its tool is live and publishes an example carrying every field shown.
+// Inputs the example echoes are taken from it; an input it does not echo stays editorial (IBAN), and
+// is then checked against what the example derives from it (the BBAN), or the port is dropped.
+// Free tools say so: no price, nothing charged (tools/[slug].astro shows them the same way).
+const norm = (v: unknown) => String(v).replace(/[\s-]/g, "").toUpperCase();
+const ports = PORTS.flatMap((p) => {
+  const t = bySlug.get(p.slug);
+  const example = (t?.output_schema as { example?: Record<string, unknown> } | undefined)?.example;
+  if (!t || !example || p.fields.some((f) => !(f in example))) return [];
+  const usable = (v: unknown) => (typeof v === "string" && v.trim() !== "") || typeof v === "number";
+  const input = Object.fromEntries(Object.entries(p.input).map(([k, v]) => [k, usable(example[k]) ? example[k] : v]));
+  if ("iban" in input) {
+    // The example does not echo the IBAN; it must at least carry its country, check digits and BBAN.
+    const { country_code: cc, check_digits: cd, bban } = example as Record<string, unknown>;
+    if (!usable(cc) || !usable(cd) || !usable(bban) || norm(input.iban) !== norm(`${cc}${cd}${bban}`)) return [];
+  }
+  const ask = p.ask.replace(/\{(\w+)\}/g, (_, k: string) => String(input[k]));
+  const out = Object.fromEntries(p.fields.map((f) => [f, example[f]]));
+  const price = t.free ? "free" : formatEur(t.price_cents);
+  const charged = t.free ? "nothing, free tool" : formatEur(t.price_cents);
+  return [{ ...p, input, ask, name: t.name, price, charged, out }];
+});
+const first = ports.findIndex((p) => p.slug === "vat-validate");
+const start = first >= 0 ? first : 0;
+
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** One-line JSON with token classes; the same function runs in switchboard.ts. */
+const tint = (o: Record<string, unknown>) =>
+  esc(JSON.stringify(o, null, 1).replace(/\n\s*/g, " "))
+    .replace(/"([^"]+)":/g, '<span class="tk-p">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="tk-s">"$1"</span>')
+    .replace(/: (true|false|[\d.]+)/g, ': <span class="tk-n">$1</span>');
+
+const GLYPH_PATH: Record<Glyph, string> = {
+  company: "M4 20h16M6 20V10l6-5 6 5v10M10 20v-5h4v5",
+  check: "M5 12.5l4.5 4.5L19 7.5",
+  card: "M3.5 6.5h17v11h-17zM3.5 10h17M7 14.5h4",
+  web: "M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM16 16l4.5 4.5",
+  ref: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 7v5l3 2",
+  dev: "M8 8l-4 4 4 4M16 8l4 4-4 4",
+};
+const s0 = ports.length > 0 ? ports[start] : null;
+const callHtml = s0 ? `<span class="tk-s">${esc(s0.slug)}</span> · ${esc(s0.price)}\n${tint(s0.input)}` : "";
+// The headline rises in word by word, once (DEC-20261025-A); the words are real text, so it reads and selects normally.
+const words = headline.split(/\s+/).filter(Boolean);
+---
+<section class="sb" aria-labelledby="hero-title" data-switchboard>
+  <div class="container sb-layout">
+  <div class="sb-copy">
+    <p class="sb-eyebrow"><span class="sb-pulse" aria-hidden="true"></span><strong>{plural(libraryCount, "tool")}</strong><span aria-hidden="true">·</span>one connection<span aria-hidden="true">·</span>pay per call</p>
+    <h1 id="hero-title" class="sb-title">{words.map((w, i) => <><span class="sb-word" style={`--_i: ${i}`}>{w}</span>{i < words.length - 1 ? " " : ""}</>)}</h1>
+    <p class="t-lead sb-lead">{support}</p>
+    <div class="sb-actions">
+      <form class="sb-search" action="/tools" method="get" role="search">
+        <label class="visually-hidden" for="hero-q">Find a tool for a job</label>
+        <input class="input" id="hero-q" name="q" type="search" placeholder="Find a tool for a job" autocomplete="off" />
+        <button class="sb-go" type="submit" aria-label="Search tools"><svg class="icon" aria-hidden="true"><use href="#i-search" /></svg></button>
+      </form>
+      <a class="link-standalone" href="/docs">Read the docs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+    </div>
+  </div>
+
+  {s0 && (
+    <div class="sb-board-wrap" data-ports={JSON.stringify(ports.map((p) => ({ slug: p.slug, x: p.x, y: p.y, ask: p.ask, input: p.input, out: p.out, src: p.src, price: p.price, charged: p.charged })))}>
+      <div class="sb-board">
+        <svg class="sb-lines" aria-hidden="true"></svg>
+        <div class="sb-ports" role="group" aria-label="Example tools. Choose one to see it called.">
+          {ports.map((p, i) => (
+            <button type="button" class:list={["sb-port", { on: i === start }]} style={`--_x: ${p.x * 100}%; --_y: ${p.y * 100}%`} data-port={i} aria-pressed={i === start ? "true" : "false"}>
+              <span class={`sb-glyph g-${p.glyph}`} aria-hidden="true"><svg viewBox="0 0 24 24"><path d={GLYPH_PATH[p.glyph]} /></svg></span>
+              <span class="sb-name" aria-hidden="true">{p.label}</span>
+              <span class="sb-tag" aria-hidden="true">{p.label}<small>{p.price}</small></span>
+              <span class="visually-hidden">{p.name}, {p.price === "free" ? "free" : `${p.price} per call`}</span>
+            </button>
+          ))}
+        </div>
+        <div class="sb-desk">
+          <div class="sb-bar"><i></i><i></i><i></i><span>your agent · example call</span><button class="sb-pause" type="button" data-pause hidden aria-label="Pause the example"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-pause" /></svg></button></div>
+          <div class="sb-rows" aria-live="off" data-live>
+            <div class="sb-r show" data-row="ask"><em>Asks</em><pre>{s0.ask}</pre></div>
+            <div class="sb-r show" data-row="call"><em>Calls</em><pre set:html={callHtml}></pre></div>
+            <div class="sb-r show" data-row="out"><em>Gets</em><pre set:html={tint(s0.out)}></pre></div>
+          </div>
+          <div class="sb-progress" aria-hidden="true"><i></i></div>
+          <div class="sb-foot"><span>charged <b data-f="price">{s0.charged}</b></span><span>source <b data-f="src">{s0.src}</b></span></div>
+        </div>
+      </div>
+    </div>
+  )}
+  </div>
+</section>
+
+<script>import "../scripts/switchboard.ts";</script>
+
+<style>
+  .sb { --_s: 1; position: relative; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
+  .sb-layout { display: grid; align-content: center; min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width)); padding-block: var(--space-32); }
+  .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-16); padding: 0; }
+  .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--space-32); padding: var(--space-4) var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-small-size); box-shadow: var(--shadow-1); }
+  .sb-eyebrow strong { color: var(--text); font-weight: var(--type-ui-weight); }
+  .sb-pulse { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--success); box-shadow: 0 0 0 0 var(--success-bg); animation: sb-ping var(--duration-reveal-atmosphere) var(--ease-standard) infinite; }
+  @keyframes sb-ping { 70% { box-shadow: 0 0 0 var(--space-8) var(--success-bg); } 100% { box-shadow: 0 0 0 0 var(--success-bg); } }
+  .sb-title { font-family: var(--type-hero-family); font-weight: var(--type-hero-weight); letter-spacing: var(--type-hero-tracking); line-height: var(--type-section-line); font-size: var(--type-campaign-size); max-width: 26ch; text-wrap: balance; }
+  .sb-word { --_i: 0; display: inline-block; animation: sb-rise var(--duration-reveal-signature) var(--ease-enter) both; animation-delay: calc(var(--_i) * var(--duration-fast) / 2); }
+  @keyframes sb-rise { from { opacity: 0; transform: translateY(var(--space-12)); filter: blur(var(--space-4)); } to { opacity: 1; transform: none; filter: none; } }
+  .sb-lead { color: var(--text-muted); max-width: 64ch; }
+  .sb-actions { display: grid; justify-items: center; gap: var(--space-12) var(--space-16); margin-top: var(--space-4); width: 100%; }
+  .sb-search { position: relative; width: 100%; max-width: calc(var(--space-160) * 2 + var(--space-80)); }
+  .sb-search .input { min-height: var(--control-h-lg); padding-right: calc(var(--control-h-lg) + var(--space-4)); box-shadow: var(--shadow-1); }
+  .sb-go { position: absolute; right: var(--space-4); top: 50%; translate: 0 -50%; display: grid; place-items: center; width: calc(var(--control-h-lg) - var(--space-8)); height: calc(var(--control-h-lg) - var(--space-8)); border: 0; border-radius: var(--radius-control); background: var(--action-subtle); color: var(--link); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard); }
+  .sb-go:hover { background: var(--action); color: var(--text-on-action); }
+
+  /* Board: a quiet surface with a faint grid and a glow behind the console. */
+  /* The grid sits behind the connectors: hairlines in --circuit-grid, a step off the board colour, while the
+     connectors are --circuit, which meets 3:1 on the board (CONTRAST.md). */
+  .sb-board-wrap { position: relative; flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; margin-top: var(--space-32); background: var(--surface-sunken); isolation: isolate; }
+  .sb-board-wrap::before { content: ""; position: absolute; inset: 0; z-index: -1;
+    background-image: repeating-linear-gradient(0deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4))),
+      repeating-linear-gradient(90deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4)));
+    mask-image: radial-gradient(ellipse, black 30%, transparent 75%); }
+  .sb-board-wrap::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 40% 60% at 50% 55%, var(--action-subtle), transparent 70%); opacity: 0.7; }
+  .sb-board { position: relative; width: 100%; margin-inline: auto; max-width: var(--container-wide); padding: var(--space-24) var(--gutter); display: grid; gap: var(--space-16); }
+  .sb-lines { display: none; }
+  .sb-ports { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); max-width: calc(var(--space-160) * 3); margin-inline: auto; width: 100%; }
+  @media (min-width: 768px) {
+    .sb-ports { grid-template-columns: repeat(6, minmax(0, 1fr)); max-width: none; }
+  }
+  .sb-port { --_x: 50%; --_y: 50%; position: relative; display: grid; justify-items: center; align-content: center; gap: var(--space-4); padding: var(--space-8) var(--space-4); color: var(--text); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); cursor: pointer; transition: border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard); }
+  .sb-port:hover { transform: translateY(calc(-1 * var(--space-2))); border-color: var(--border-strong); }
+  .sb-port.on { border-color: var(--action); box-shadow: 0 0 0 var(--space-4) var(--action-subtle), var(--shadow-2); }
+  .sb-glyph { display: grid; place-items: center; width: calc(var(--space-32) + var(--space-4)); height: calc(var(--space-32) + var(--space-4)); border-radius: var(--radius-8); color: var(--brand-paper); }
+  .sb-glyph svg { width: var(--icon-md); height: var(--icon-md); fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .g-company { background: var(--brand-deep-violet); }
+  .g-check { background: var(--brand-teal); }
+  .g-card { background: var(--brand-blue); }
+  .g-web { background: var(--brand-blue); }
+  .g-ref { background: var(--brand-violet); }
+  .g-dev { background: var(--brand-ink); }
+  .sb-tag { --_dx: 0px; --_max: calc(var(--space-160) + var(--space-32)); position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); width: max-content; max-width: var(--_max); white-space: normal; text-align: center; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
+  .sb-tag small { display: block; margin: 0; font-family: var(--type-code-family); font-weight: var(--type-body-weight); opacity: 0.75; }
+  .sb-name { font-family: var(--type-ui-family); font-size: var(--type-ui-size); line-height: var(--type-label-line); text-align: center; }
+  .sb-tag::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--_dx)); margin-left: calc(-1 * var(--space-4)); border: var(--space-4) solid transparent; border-top-color: var(--surface-inverse); }
+  .sb-tag { display: none; }
+  .sb-port.on .sb-tag, .sb-port:hover .sb-tag, .sb-port:focus-visible .sb-tag { opacity: 1; translate: calc(-50% + var(--_dx)) 0; }
+
+  .sb-desk { position: relative; z-index: 2; width: min(100%, calc(var(--space-160) * 3 + var(--space-48))); margin-inline: auto; background: var(--code-bg); color: var(--code-text); border: var(--border-width) solid var(--code-border); border-radius: var(--radius-card); box-shadow: var(--shadow-3); overflow: hidden; font-family: var(--type-code-family); font-size: var(--type-small-size); line-height: var(--type-code-line); text-align: left; }
+  .sb-bar { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8) var(--space-16); border-bottom: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
+  .sb-bar i { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--code-border); }
+  .sb-bar span { margin-left: auto; }
+  .sb-pause { display: inline-grid; place-items: center; width: var(--space-24); height: var(--space-24); padding: 0; border: var(--border-width) solid var(--code-border); border-radius: var(--radius-pill); background: transparent; color: var(--code-muted); font: inherit; cursor: pointer; }
+  .sb-pause[hidden] { display: none; }
+  .sb-pause:hover { color: var(--code-text); border-color: var(--code-muted); }
+  .sb-pause:focus-visible { outline: var(--focus-width) solid var(--focus-code); outline-offset: var(--focus-offset); }
+  .sb-rows { display: grid; align-content: start; gap: var(--space-8); padding: var(--space-16) var(--space-20) var(--space-8); min-height: calc(var(--space-160) + var(--space-8)); }
+  .sb-r { display: grid; grid-template-columns: calc(var(--space-48) + var(--space-8)) minmax(0, 1fr); gap: var(--space-12); opacity: 0; translate: 0 var(--space-4); transition: opacity var(--duration-slow) var(--ease-enter), translate var(--duration-slow) var(--ease-enter); }
+  .sb-r.show { opacity: 1; translate: 0 0; }
+  .sb-r em { font-style: normal; color: var(--code-muted); font-size: var(--type-label-size); letter-spacing: var(--type-label-tracking); text-transform: uppercase; padding-top: var(--space-2); }
+  .sb-r pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+  .sb-progress { height: var(--space-2); background: var(--code-border); }
+  .sb-progress i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--brand-blue), var(--brand-violet), var(--brand-teal)); }
+  .sb-foot { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-8) var(--space-20); border-top: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
+  .sb-foot b { color: var(--code-string); font-weight: var(--type-body-weight); }
+
+  /* A minimum board height lets short windows scroll instead of squeezing the diagram. */
+  @media (min-width: 1024px) {
+    .sb-layout { grid-template-columns: minmax(0, 0.43fr) minmax(0, 0.57fr); align-items: center; gap: var(--space-32); padding-block: var(--space-32); }
+    .sb-copy { justify-items: start; text-align: left; gap: var(--space-24); }
+    .sb-title { font-size: clamp(calc(var(--space-40) + var(--space-4)), calc(var(--viewport-height) * 0.075), var(--type-home-hero-size)); line-height: var(--type-home-hero-line); max-width: var(--type-home-hero-measure); }
+    .sb-lead { max-width: var(--type-lead-measure); }
+    .sb-actions { justify-items: start; }
+    .sb-search { max-width: none; }
+    .sb-board-wrap { margin: 0; min-width: 0; height: clamp(calc(var(--space-160) * 2 + var(--space-128)), calc(var(--viewport-height) - var(--nav-h) - var(--space-80) - var(--border-width)), calc(var(--space-160) * 4)); border-radius: var(--radius-media); }
+    .sb-board { display: block; position: absolute; inset: 0; margin: auto; padding: 0; width: 100%; height: min(100%, calc((var(--space-160) * 3 + var(--space-80)) * var(--_s))); max-width: none; }
+    .sb-lines { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+    .sb-ports { display: contents; }
+    .sb-name { display: none; }
+    .sb-port { position: absolute; left: var(--_x); top: var(--_y); width: calc(var(--space-48) + var(--space-8)); height: calc(var(--space-48) + var(--space-8)); padding: 0; margin: calc(-1 * (var(--space-24) + var(--space-4))) 0 0 calc(-1 * (var(--space-24) + var(--space-4))); z-index: 2; scale: var(--_s); }
+    .sb-desk { width: calc(var(--space-160) * 2 + var(--space-80)); position: absolute; left: 50%; top: 50%; translate: -50% -50%; scale: var(--_s); }
+    /* A fixed console height keeps every route's end still while the calls change. */
+    .sb-rows { height: calc(var(--space-160) + var(--space-64)); min-height: 0; }
+    .sb-tag { display: block; }
+  }
+  .sb-lines :global(.rest) { fill: none; stroke: var(--circuit); stroke-width: 1.5; }
+  .sb-lines :global(.rest.out) { opacity: 0.5; }
+  .sb-lines :global(.node) { fill: var(--surface-sunken); stroke: var(--circuit); stroke-width: 1.5; }
+  .sb-lines :global(.node.on) { fill: var(--brand-blue); stroke: var(--brand-blue); }
+  .sb-lines :global(.live) { fill: none; stroke: var(--brand-blue); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .sb-lines :global(.packet) { fill: var(--brand-blue); filter: drop-shadow(0 0 var(--space-4) var(--brand-blue)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sb-pulse { animation: none; }
+    .sb-port, .sb-r, .sb-tag { transition: none; }
+    .sb-port:hover { transform: none; }
+  }
+</style>

@@ -69,6 +69,17 @@ If `git worktree remove` refuses, stop and look; never fall back to `rm -rf`.
 On 2026-09-02 exactly that fallback deleted the trunk, `.git` included
 (`docs/company/LESSONS.md`, F12 incident 5).
 
+## Bringing a stack of PRs up to date with main
+
+When PRs are stacked (each one's base is the branch below it), merge `origin/main` into the
+bottom branch, then each branch into the one above it, pushing as you go, all inside your one
+batch worktree. Conflicts in generated files are not real conflicts: for
+`docs/project/legacy-authority-inventory.json`, `handoff/README.md` and `archive/README.md`,
+take the incoming side (`git checkout --theirs <file>`), regenerate
+(`npm run context:generate`, `npm run archive:index`), stage, and finish the merge with
+`git commit --no-edit`. Never `git merge --abort` a merge the regenerate hook has paused.
+Then `npm run design:web-tokens` if `design:check` reports the web tokens stale.
+
 ## Idle state
 
 The trunk is on `main`. The gate also accepts a trunk detached exactly at

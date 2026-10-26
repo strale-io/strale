@@ -1,4 +1,5 @@
 ---
+import Wordmark from "./Wordmark.astro";
 // Footer columns from SITE-STRUCTURE.md. "For platforms" is held until the Terms allow it.
 import { getSiteData } from "../lib/site-data";
 import { SENTENCE } from "../content/positioning";
@@ -14,8 +15,7 @@ const cols = [
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
-        <img class="logo-ink" src="/brand/lockup-ink.svg" alt="Strale" width="82" height="24" />
-        <img class="logo-inverse" src="/brand/lockup-inverse.svg" alt="Strale" width="82" height="24" />
+        <a class="brand" href="/" aria-label="Strale"><Wordmark /></a>
         <p class="small muted">{SENTENCE}</p>
       </div>
       {cols.map((c) => (

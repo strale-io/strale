@@ -40,17 +40,29 @@ test('reading text below 16px violates the kit rule', () => {
   assert.throws(() => validate(t, prov, { checkFiles: false }), /never below 16px/);
 });
 
+test('compact and UI roles retain the founder-requested 15px floor', () => {
+  for (const role of ['compact', 'ui']) {
+    const t = structuredClone(tokens);
+    t.type.scale[role].min = 14;
+    assert.throws(() => validate(t, prov, { checkFiles: false }), /never below 15px/);
+  }
+});
+
 test('kit-06 brand colours are carried over unchanged', () => {
   const kit = { blue: '#3027ff', violet: '#7222ff', teal: '#008c87', soft: '#eecff2', ink: '#17151c', paper: '#ffffff', 'mist-blue': '#e4e8ff', 'mist-teal': '#d7efeb', 'deep-violet': '#29164b', 'logo-black': '#000000' };
   for (const [k, v] of Object.entries({ ...kit, border: '#d2cfd8' })) assert.equal(tokens.palette[`brand.${k}`], v, k);
   // kit-06 typeRoles, verbatim: every role tagged source "kit-06" must match it exactly.
   const kitRoles = { hero: [600, 36, 76, 1.04, -0.045, '16ch', 'display'], campaign: [600, 30, 52, 1.08, -0.04, '20ch', 'display'], section: [600, 26, 36, 1.15, -0.03, '28ch', 'display'], body: [400, 16, 19, 1.6, 0, '62ch', 'body'], compact: [400, 16, 17, 1.5, 0, '58ch', 'body'], label: [600, 12, 13, 1.5, 0.06, '40ch', 'body'], detail: [600, 17, 20, 1.35, 0, '42ch', 'body'] };
+  // A kit role revised later (0.3, 2026-10-26: smaller running text, shorter measures) is tagged derived and keeps
+  // the kit's own sizes and measure in kit_original; everything else about it must still be the kit's.
   for (const [id, r] of Object.entries(tokens.type.scale)) {
-    if (r.source !== 'kit-06') continue;
+    if (r.source !== 'kit-06' && !r.kit_original) continue;
     assert(id in kitRoles, `${id} is tagged kit-06 but kit-06 has no such role`);
-    assert.deepEqual([r.weight, r.min, r.max, r.line, r.tracking, r.measure, r.family], kitRoles[id], `${id} differs from kit-06`);
+    const k = r.source === 'kit-06' ? r : { ...r, ...r.kit_original };
+    if (r.source !== 'kit-06') assert.equal(r.source, 'derived', `${id}: a revised kit role is tagged derived`);
+    assert.deepEqual([k.weight, k.min, k.max, k.line, k.tracking, k.measure, k.family], kitRoles[id], `${id} differs from kit-06`);
   }
-  assert.deepEqual(Object.keys(kitRoles).sort(), Object.entries(tokens.type.scale).filter(([, r]) => r.source === 'kit-06').map(([id]) => id).sort());
+  assert.deepEqual(Object.keys(kitRoles).sort(), Object.entries(tokens.type.scale).filter(([, r]) => r.source === 'kit-06' || r.kit_original).map(([id]) => id).sort());
   assert.equal(tokens.layout.radius_roles.control, 8);
   assert.equal(tokens.motion.duration['reveal-signature'], 1600); assert.equal(tokens.motion.duration['reveal-atmosphere'], 2200);
 });
@@ -84,7 +96,7 @@ test('the candidate must stay adopted and identical to the active.json website s
   drifted.palette['light.canvas'] = '#fdf7ff';
   assert.throws(() => validate(drifted, prov, { checkFiles: false }), /website\.palette differs/);
   const website = { ...structuredClone(tokens), adopted_by: 'DEC-OTHER' };
-  assert.throws(() => validate(tokens, prov, { checkFiles: false, website }), /adopted by DEC-20261024-B/);
+  assert.throws(() => validate(tokens, prov, { checkFiles: false, website }), /adopted by DEC-20261025-A/);
 });
 
 test('renderTokensCss can point fonts at a web path', () => {
