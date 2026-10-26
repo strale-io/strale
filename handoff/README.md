@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-352 files (325 with a recorded intent, 27 without).
+353 files (326 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | Correct existing paid NO/PL/CZ/GR/FI registry status outputs and their narrative consumer; local implementation, reco... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-entity-resolve.md`](_general/from-code/2026-10-26-feat-entity-resolve.md) | Built entity-resolve on the assigned isolated clone/branch, tested public GLEIF lookups, and prepared files for a loc... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md`](_general/from-code/2026-10-26-feat-agent-surfaces-messaging.md) | Retire API agent-facing trust/score framing and serve live-facts SKILL.md; build, verify and commit locally for orche... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-dq40-swiss-register-terms.md`](_general/from-code/2026-10-26-dq40-swiss-register-terms.md) | build the Swiss UID / VAT check (portfolio plan 1.12). Stopped at the data-access terms gate before any code; raised... |

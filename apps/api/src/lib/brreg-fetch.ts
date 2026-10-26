@@ -16,6 +16,8 @@ export const BRREG_ORG_NUMBER_RE = /^\d{9}$/;
 export type BrregEntity = Record<string, unknown> & {
   organisasjonsnummer?: string | number;
   navn?: string;
+  respons_klasse?: string;
+  slettedato?: string;
   konkurs?: boolean;
   konkursdato?: string;
   underAvvikling?: boolean;
@@ -61,7 +63,7 @@ export async function searchBrregByName(name: string): Promise<string> {
   // page of candidates and accept one only if its name actually matches.
   const url = `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=25`;
   const res = await fetch(url, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) {
@@ -112,7 +114,7 @@ export async function searchBrregByName(name: string): Promise<string> {
  */
 export async function fetchBrregEntity(orgNumber: string): Promise<BrregEntity> {
   const res = await fetch(`${BRREG_API}/enheter/${orgNumber}`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(10000),
   });
   if (res.status === 404) {
@@ -160,7 +162,7 @@ export interface BrregRollerResponse {
  */
 export async function fetchBrregRoles(orgNumber: string): Promise<BrregRollerResponse> {
   const res = await fetch(`${BRREG_API}/enheter/${orgNumber}/roller`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": "Strale/1.0 (+https://strale.dev)" },
     signal: AbortSignal.timeout(10000),
   });
   if (res.status === 404) return { rollegrupper: [] };

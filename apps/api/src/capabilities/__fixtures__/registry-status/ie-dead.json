@@ -1,0 +1,19 @@
+{
+  "capture": {
+    "url": "https://opendata.cro.ie/api/3/action/datastore_search?resource_id=3fef41bc-b8f4-4b10-8434-ce51c29b1bba&filters=%7B%22company_status%22%3A+%22Dissolved%22%7D&limit=1",
+    "captured_at": "2026-10-26T13:27:55.931754+00:00",
+    "http_status": 200,
+    "raw_sha256": "05fe8fb6aba5539dbc70832b50dcb5a41eab2da1573f1a5cf3ee59a56a974bea",
+    "note": "Live read-only response projected to lifecycle fields; all identities and locations omitted."
+  },
+  "response": {
+    "success": true,
+    "result": {
+      "records": [
+        {
+          "company_status": "Dissolved"
+        }
+      ]
+    }
+  }
+}

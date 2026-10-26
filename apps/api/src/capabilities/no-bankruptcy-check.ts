@@ -48,6 +48,7 @@ registerCapability("no-bankruptcy-check", async (input: CapabilityInput) => {
 
   const data = await fetchBrregEntity(orgNumber);
 
+  const isDeleted = data.respons_klasse === "SlettetEnhet" || Boolean(data.slettedato);
   const hasBankruptcy = Boolean(data.konkurs);
   const isUnderDissolution = Boolean(data.underAvvikling);
   const isUnderCompulsoryDissolution = Boolean(data.underTvangsavviklingEllerTvangsopplosning);
@@ -57,12 +58,14 @@ registerCapability("no-bankruptcy-check", async (input: CapabilityInput) => {
     output: {
       org_number: orgNumber,
       company_name: data.navn ?? null,
+      is_deleted: isDeleted,
+      deletion_date: data.slettedato ?? null,
       has_bankruptcy_filing: hasBankruptcy,
       bankruptcy_date: data.konkursdato ?? null,
       is_under_dissolution: isUnderDissolution,
       is_under_compulsory_dissolution: isUnderCompulsoryDissolution,
       has_any_distress_signal:
-        hasBankruptcy || isUnderDissolution || isUnderCompulsoryDissolution,
+        isDeleted || hasBankruptcy || isUnderDissolution || isUnderCompulsoryDissolution,
       registry_annotations: annotations,
       data_source: "Brønnøysundregistrene Enhetsregisteret",
     },

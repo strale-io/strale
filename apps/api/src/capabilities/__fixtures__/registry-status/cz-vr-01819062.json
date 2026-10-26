@@ -1,0 +1,81 @@
+{
+  "capture": {
+    "url": "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/01819062",
+    "captured_at": "2026-10-26T11:32:29.683218+00:00",
+    "http_status": 200,
+    "raw_sha256": "a0189ea4799faa6a6e0a32c509fabcbd121cf3dc9531125e7fb4de406f314826",
+    "note": "Live read-only registry response projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "zaznamy": [
+      {
+        "primarniZaznam": true,
+        "stavSubjektu": "AKTIVNI",
+        "statutarniOrgany": [
+          {
+            "typOrganu": "STATUTARNI_ORGAN",
+            "clenoveOrganu": [
+              {
+                "datumVymazu": "2018-06-09",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "datumVymazu": "2020-05-16",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "datumVymazu": "2019-07-02",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "datumVymazu": "2019-12-28",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "datumVymazu": "2018-09-17",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "datumVymazu": "2019-09-09",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              },
+              {
+                "datumVymazu": "2020-11-19",
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              }
+            ]
+          },
+          {
+            "typOrganu": "LIKVIDATOR",
+            "clenoveOrganu": [
+              {
+                "clenstvi": {
+                  "clenstvi": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

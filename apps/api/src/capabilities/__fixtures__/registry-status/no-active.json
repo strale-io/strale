@@ -1,0 +1,16 @@
+{
+  "capture": {
+    "url": "https://data.brreg.no/enhetsregisteret/api/enheter/923609016",
+    "captured_at": "2026-10-26T11:31:05.696887+00:00",
+    "http_status": 200,
+    "raw_sha256": "9f6ef1a648ec913936f89379f0f24dce15b9994c1a43a69d301e8fa236e4928b",
+    "note": "Live read-only registry response projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "organisasjonsnummer": "923609016",
+    "respons_klasse": "Enhet",
+    "konkurs": false,
+    "underAvvikling": false,
+    "underTvangsavviklingEllerTvangsopplosning": false
+  }
+}

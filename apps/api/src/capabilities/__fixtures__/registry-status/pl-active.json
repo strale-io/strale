@@ -1,0 +1,142 @@
+{
+  "capture": {
+    "url": "https://api-krs.ms.gov.pl/api/krs/OdpisPelny/0000033945?rejestr=P&format=json",
+    "captured_at": "2026-10-26T11:31:05.997178+00:00",
+    "http_status": 200,
+    "raw_sha256": "65c89083f6b60190e26ee9737a4bcd59ee4319847daf72823510175f97a8d4ca",
+    "note": "Live read-only registry response projected to lifecycle inputs only; unused details omitted."
+  },
+  "response": {
+    "odpis": {
+      "naglowekP": {
+        "wpis": [
+          {
+            "numerWpisu": 1,
+            "opis": "REJESTRACJA W KRAJOWYM REJESTRZE SĄDOWYM",
+            "dataWpisu": "08.08.2001"
+          },
+          {
+            "numerWpisu": 2,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "12.09.2002"
+          },
+          {
+            "numerWpisu": 3,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "17.07.2003"
+          },
+          {
+            "numerWpisu": 4,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "07.06.2004"
+          },
+          {
+            "numerWpisu": 5,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "23.08.2005"
+          },
+          {
+            "numerWpisu": 6,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "13.07.2006"
+          },
+          {
+            "numerWpisu": 7,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.11.2007"
+          },
+          {
+            "numerWpisu": 8,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "04.07.2008"
+          },
+          {
+            "numerWpisu": 9,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "30.06.2009"
+          },
+          {
+            "numerWpisu": 10,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "24.11.2009"
+          },
+          {
+            "numerWpisu": 11,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "31.08.2010"
+          },
+          {
+            "numerWpisu": 12,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.09.2010"
+          },
+          {
+            "numerWpisu": 13,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "08.07.2011"
+          },
+          {
+            "numerWpisu": 14,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "21.06.2012"
+          },
+          {
+            "numerWpisu": 15,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "01.08.2013"
+          },
+          {
+            "numerWpisu": 16,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "01.07.2014"
+          },
+          {
+            "numerWpisu": 17,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "28.08.2014"
+          },
+          {
+            "numerWpisu": 18,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "10.10.2014"
+          },
+          {
+            "numerWpisu": 19,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "16.01.2015"
+          },
+          {
+            "numerWpisu": 20,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "15.03.2015"
+          },
+          {
+            "numerWpisu": 21,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "09.09.2015"
+          },
+          {
+            "numerWpisu": 22,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "02.03.2016"
+          },
+          {
+            "numerWpisu": 23,
+            "opis": "ZMIANA DANYCH W REJESTRZE",
+            "dataWpisu": "25.09.2018"
+          },
+          {
+            "numerWpisu": 24,
+            "opis": "WPIS DOKONANY W WYNIKU ROZPOZNANIA ŚRODKÓW ZASKARŻENIA",
+            "dataWpisu": "08.02.2022"
+          },
+          {
+            "numerWpisu": 25,
+            "opis": "WYKREŚLENIE Z KRAJOWEGO REJESTRU SĄDOWEGO",
+            "dataWpisu": "27.04.2022"
+          }
+        ]
+      }
+    }
+  }
+}
