@@ -528,5 +528,6 @@ describe("sanitizeSearchText whitespace", () => {
   it("keeps words apart across newlines and tabs", async () => {
     const { sanitizeSearchText } = await import("./smart.js");
     expect(sanitizeSearchText("line one\nline two\tend", 240)).toBe("line one line two end");
+    expect(sanitizeSearchText("h\u0085i", 240)).toBe("h i");
   });
 });

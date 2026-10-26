@@ -76,6 +76,11 @@ function withinOneEdit(a: string, b: string): boolean {
   }
   return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
 }
+// Typo recovery is only attempted next to a company/registry cue, so ordinary
+// English words one edit from a country ("finish", "trench", "hungry") are
+// never read as countries on their own.
+const COMPANY_CUE = /^(company|companies|business|businesses|registry|register|kyb|firm|firms|corporation|corporate|incorporation|supplier|vendor|vat)$/;
+const US_PREV = /^(company|companies|business|registry|register|corporate|incorporation|sec|edgar|filings|data|lookup|search|check|info|information)$/;
 function fuzzyCountry(token: string, isKnownWord?: (t: string) => boolean): string | undefined {
   if (token.length < 6 || !/^[a-z]+$/.test(token) || isKnownWord?.(token)) return undefined;
   const hits = new Set(FUZZY_COUNTRY_TERMS.filter((t) => withinOneEdit(token, t)).map((t) => countryLexicon.get(t)!));
@@ -95,12 +100,17 @@ export function extractCountries(text: string, isKnownWord?: (t: string) => bool
   const remaining: string[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const pair = countryLexicon.get(`${tokens[i]} ${tokens[i + 1]}`);
-    let code = pair ?? countryLexicon.get(tokens[i]) ?? (isKnownWord ? fuzzyCountry(tokens[i], isKnownWord) : undefined);
+    const hasCompanyCue = tokens.some((t, j) => j !== i && COMPANY_CUE.test(t));
+    let code = pair ?? countryLexicon.get(tokens[i]) ??
+      (isKnownWord && hasCompanyCue ? fuzzyCountry(tokens[i], isKnownWord) : undefined);
     // Lowercase pronoun "us" is common in contact/email queries. Require a
     // country cue; uppercase US, "the us" and "united states" stay explicit.
     const companyCue = (t?: string) =>
       /^(company|companies|registry|business|corporate|incorporation|sec|edgar|filings)$/.test(t ?? "");
-    const trailingUs = i === tokens.length - 1 && tokens.slice(0, i).some((t) => companyCue(t));
+    // "company data us": last token, directly after a company/data word, with a
+    // company cue earlier. "business card for us" stays a pronoun.
+    const trailingUs = i === tokens.length - 1 && US_PREV.test(tokens[i - 1] ?? "") &&
+      tokens.slice(0, i).some((t) => companyCue(t));
     if (tokens[i] === "us" && rawTokens[i] !== "US" &&
         tokens[i - 1] !== "the" && !trailingUs &&
         ![tokens[i - 1], tokens[i + 1]].some((t) =>

@@ -15,7 +15,7 @@ export interface SmartRanking {
 /** Model prose is display text, never a URL or a source of control characters. */
 export function sanitizeSearchText(text: string, maxChars: number): string {
   return text
-    .replace(/\s+/g, " ")
+    .replace(/[\s\u0085]+/g, " ")
     .replace(/[\p{Cc}\p{Cf}]/gu, "")
     .replace(/(?:https?:\/\/|www\.)\S*/gi, "")
     .replace(/\s+/g, " ")

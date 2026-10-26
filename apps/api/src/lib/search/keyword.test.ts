@@ -233,6 +233,14 @@ describe("misspelt country names and trailing us", () => {
   ])("%s resolves the country", (q, slug) => {
     expect(index.search(q)[0]?.item.slug).toBe(slug);
   });
+  it.each(["finish", "trench", "vanish", "hungry", "brutish", "germane", "finish the report"])(
+    "does not read the English word in %s as a country", (q) => {
+      expect(extractCountries(q, () => false).codes.size).toBe(0);
+    });
+  it.each(["business card for us", "corporate gifts for us", "tell the company about us"])(
+    "keeps us a pronoun in %s", (q) => {
+      expect(extractCountries(q, () => false).codes.has("US")).toBe(false);
+    });
   it("leaves short words and catalogue words alone", () => {
     expect(extractCountries("malt", () => false).codes.size).toBe(0);
     expect(extractCountries("recipe", () => true).codes.size).toBe(0);
