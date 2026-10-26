@@ -323,6 +323,7 @@ describe("Round 2 counterparty regressions", () => {
   it.each([
     ["SE556703748501", "5567037485"], ["FI01120389", "01120389"],
     ["NO923609016MVA", "923609016"], ["BE0403199702", "0403.199.702"],
+    ["BE0403199702", "BE0403199702"], ["BE0403199702", "BE 0403.199.702"],
   ])("B1: records normalized identifier agreement for %s", async (tax_id, company_id) => {
     const r = await harness().run({ tax_id, company_id, company_name: "Nokia Oyj" });
     expect(r.output.identifiers).toMatchObject({ company_id_matches_tax_id: true });
@@ -377,6 +378,9 @@ describe("Round 2 counterparty regressions", () => {
     expect(r.output.registry_status).toMatchObject({ status: "completed", found: false, identifier: "0112038-9", checked_at: AT });
     expect(r.output.checks_completed).toContain("registry_status");
     expect(r.output.findings).toContain("The registry returned no record for this identifier");
+    // A not-found reply has no provenance of its own: it must not replace the vendor stamp.
+    expect(r.provenance).toMatchObject({ acquisition_method: "vendor_api", upstream_vendor: "dilisense" });
+    expect(r.provenance.signals.map((s: { capability_slug: string }) => s.capability_slug)).not.toContain("company-status-check");
   });
 
   it.each([

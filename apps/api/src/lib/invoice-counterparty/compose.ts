@@ -63,7 +63,8 @@ export async function runInvoiceCounterpartyCheck(input: CapabilityInput, deps: 
         const r: CapabilityResult = { output: { found: false }, provenance: {
           source: slug, fetched_at: deps.now().toISOString(), acquisition_method: "unknown", data_access_lane: "allowed_with_checks", data_access_checks: "pending",
         } };
-        signals.push({ check, capability_slug: slug, provenance: r.provenance });
+        // A not-found reply carries no provenance of its own; adding a
+        // synthetic signal would replace the real weakest-lane stamp.
         return r;
       }
       // Classify, never log arbitrary upstream text: it can contain input, HTML or credentials.
@@ -111,7 +112,7 @@ export async function runInvoiceCounterpartyCheck(input: CapabilityInput, deps: 
   const derived = registryIdFromTaxId(parsed.taxId);
   const identifiers = {
     ...(derived && parsed.companyId ? { company_id_matches_tax_id:
-      (parsed.registryId ?? parsed.companyId.replace(/[ .()-]/g, "")) === (route?.normalise_identifier(derived) ?? derived.replace(/[ .()-]/g, "")) } : {}),
+      (parsed.registryId ?? parsed.companyId.replace(/[ .()-]/g, "").replace(new RegExp(`^${parsed.country}`, "i"), "")) === (route?.normalise_identifier(derived) ?? derived.replace(/[ .()-]/g, "")) } : {}),
   };
   if (identifiers.company_id_matches_tax_id === false) findings.push("The registry number on the invoice does not match the registry number derived from the VAT number");
   const registryId = parsed.registryId ?? (!parsed.companyId && derived ? route?.normalise_identifier(derived) ?? undefined : undefined);
