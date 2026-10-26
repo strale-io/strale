@@ -288,6 +288,7 @@
         "docs/remediation/packages/WP10.yaml",
         "docs/research/2026-04-28-india-kyc-kyb-data-landscape.md",
         "docs/research/2026-04-28-payee-assurance-build-vs-buy.md",
+        "docs/research/2026-10-23-delegate-competitive-analysis.md",
         "docs/strategy/2026-08-05-direction-plan.md",
         "docs/strategy/2026-08-12-platform-readiness-program.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
@@ -633,6 +634,7 @@
         "docs/remediation/REMEDIATION-LEDGER.md",
         "docs/remediation/packages/WP17.yaml",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
+        "docs/research/2026-10-23-delegate-competitive-analysis.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
@@ -676,6 +678,7 @@
         "handoff/_general/from-code/2026-10-18-checkin-morning.md",
         "handoff/_general/from-code/2026-10-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-delegate-competitive-analysis.md",
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "handoff/_general/from-code/2026-10-26-checkin-morning.md",
         "scripts/check-claims.mjs",
@@ -820,7 +823,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "07e3cfc10d7072ace76e7130e60a491081d1059d7de7c4c160f374c85c077289",
+      "sha256": "0fe1c3367716d03f83826df04894ae460b6fb85b904c00cb2e18ce7457a492ff",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
