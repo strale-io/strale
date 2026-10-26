@@ -89,3 +89,13 @@ describe("eurCentsToUsdFixed", () => {
     expect(eurCentsToUsdFixed(2_147_483_647)).toMatch(/^\d+\.\d{6}$/);
   });
 });
+
+// The challenge is public agent-facing copy; the payment fields stay intact.
+it("describes tools per call in the payment challenge", async () => {
+  const { build402Response } = await import("./x402-gateway.js");
+  const result = build402Response({ slug: "example", name: "Example", priceCents: 7 });
+  expect(result.status).toBe(402);
+  const body = JSON.stringify(result.body);
+  expect(body).toContain("Strale: tools for AI agents, paid per call.");
+  expect(body).not.toMatch(/trust layer|can trust|quality[- ]scored|independently tested|verified data/i);
+});

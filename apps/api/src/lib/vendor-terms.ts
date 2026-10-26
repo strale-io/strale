@@ -140,6 +140,18 @@ export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
     how_read: "Official API terms page read via web open; no authenticated company lookup attempted.",
     findings: ["API and open data licensed ODC-BY-1.0, permitting commercial reuse with attribution. Existing API-key access remains required."],
     decision_ref: "DEC-20261023-A (existing official registry API; status correction)",
+    vendor: "GLEIF",
+    hosts: ["api.gleif.org"],
+    capabilities: ["lei-lookup", "entity-resolve", "gleif-l2-ubo-lookup", "gleif-l2-children-lookup"],
+    resale: "permitted",
+    terms_url: "https://www.gleif.org/en/meta/lei-data-terms-of-use",
+    accessed: "2026-10-26",
+    how_read: "Read the actual GLEIF terms page through the web tool on 2026-10-26.",
+    findings: [
+      "Section II permits individual lookups through the Access Service, free of charge; data are licensed CC0 1.0.",
+      "Commercial reuse is permitted. No circumvention or claims of GLEIF endorsement; availability and accuracy are not guaranteed.",
+    ],
+    decision_ref: "DEC-20261023-A",
   },
   {
     vendor: "Serper.dev",
