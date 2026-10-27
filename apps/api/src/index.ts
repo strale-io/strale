@@ -209,6 +209,18 @@ async function main() {
   // This is the single remaining boot-relative timer on the platform, and it
   // deliberately holds no business fact: it only asks `job_schedule` what is
   // due. Every cadence it acts on survives the restart that resets it.
+  const { initializeHeartbeatGrace } = await import("./lib/job-heartbeats.js");
+  // Monitoring only: if the epoch cannot be written, /health/jobs fails safe
+  // (auxiliary jobs read stale instead of graced), so this must never stop boot.
+  try {
+    await withStartupDbRetry("heartbeat-grace", initializeHeartbeatGrace, { startedAt: dbRetryStartedAt });
+  } catch (err) {
+    const { log } = await import("./lib/log.js");
+    log.warn(
+      { label: "heartbeat-grace-init-failed", err: err instanceof Error ? err.message : String(err) },
+      "heartbeat grace epoch not written; job freshness reports without grace",
+    );
+  }
   const { startJobCoordinator } = await import("./lib/job-coordinator.js");
   startJobCoordinator();
 

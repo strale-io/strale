@@ -1,3 +1,4 @@
+import { noteJobFailure } from "../lib/job-run-context.js";
 /**
  * Activation Drip — sends timed nudge emails to users who haven't made their first API call.
  *
@@ -68,6 +69,7 @@ async function runActivationDrip(): Promise<void> {
         // F-0-013: log user.id, not email.
         jobLog.info({ label: "activation-drip-day2-sent", user_id: user.id }, "activation-drip-day2-sent");
       } catch (err) {
+        noteJobFailure();
         jobLog.warn(
           { label: "activation-drip-day2-failed", user_id: user.id, err: err instanceof Error ? err.message : String(err) },
           "activation-drip-day2-failed",
@@ -93,6 +95,7 @@ async function runActivationDrip(): Promise<void> {
         await tx.update(users).set({ activationEmailStage: 2, updatedAt: now }).where(eq(users.id, user.id));
         jobLog.info({ label: "activation-drip-day5-sent", user_id: user.id }, "activation-drip-day5-sent");
       } catch (err) {
+        noteJobFailure();
         jobLog.warn(
           { label: "activation-drip-day5-failed", user_id: user.id, err: err instanceof Error ? err.message : String(err) },
           "activation-drip-day5-failed",

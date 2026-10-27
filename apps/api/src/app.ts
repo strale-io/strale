@@ -1,3 +1,4 @@
+import { createHealthJobsRoute } from "./routes/health-jobs.js";
 import { apiKeysRoute } from "./routes/api-keys.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -386,6 +387,8 @@ app.use("*", async (c, next) => {
     '</.well-known/agent-card.json>; rel="agent-card"',
   );
 });
+
+app.route("/health/jobs", createHealthJobsRoute());
 
 // Health check — shallow (app is running). `commit` surfaces the build SHA
 // (12-char short form, matches `git log --oneline`) for deploy-mechanism

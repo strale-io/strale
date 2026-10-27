@@ -67,7 +67,11 @@ Procedure: `docs/operations/accounts-and-email.md`. If the Microsoft 365 connect
 **B. Overnight health.** First run the Vendor Control Tower report
 (`cd apps/api && npm run vendor:status`, production read-only). Treat every
 `CRITICAL`, `WARNING`, stale balance reading, prepaid-credit expiry, inventory
-gap, and automatic vendor suspension as an overnight-health finding. Then check
+gap, and automatic vendor suspension as an overnight-health finding. Read open GitHub issues labelled `deploy-not-live`, `production-watch` and
+`package-contract` for deploy, background-job and published-package failures;
+these automated checks replace the manual production/main SHA comparison.
+Pending first failures carry `production-watch-pending` and are not confirmed
+alarms. Keep the CEO brief format below. Then check
 open breakers, newly quarantined capabilities, failing CI on main, and invariant
 alerts. For each: is it a defect, a correct refusal, or an instrument fault —
 **and who it actually happened to**? Answering those questions is the run's job,
@@ -165,8 +169,8 @@ durable because the vendor provides no zero-cost evidence.
 **B2. Stale-work sweep.** Every open PR, every branch ahead of main, every
 uncommitted tracked change. Dispose of each *now*: merge if gates pass and it is
 not `approval_required`-gated, finish it if close, close it if dead, otherwise
-write owner and deadline into the record. Confirm the deployed commit equals
-main's tip (`GET /health` against `git log origin/main -1`). "Still open" is not
+write owner and deadline into the record. Read the open `deploy-not-live`, `production-watch` and `package-contract`
+issues and resolve their confirmed findings. "Still open" is not
 an allowed end state — merging and deploying are execution, never questions for
 Petter.
 
