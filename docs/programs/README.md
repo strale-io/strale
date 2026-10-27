@@ -10,6 +10,8 @@ decided. Project truth lives in `docs/project/` (candidate until M4) and
 |---|---|---|
 | [CTO-readiness](cto-readiness/PROGRAM.md) | `cto-readiness/tracks.yaml` | active from 2026-09-02 |
 | [Brand and website](brand-website/PROGRAM.md) | `brand-website/tracks.yaml` | positioning adopted; T4 active: retain Quiet Material and complete its system/asset governance |
+| [Platform hardening](platform-hardening/PROGRAM.md) | `platform-hardening/tracks.yaml` | active from 2026-10-27; H1 watch production |
+| [Distribution](distribution/PROGRAM.md) | `distribution/tracks.yaml` | active from 2026-10-27; D1 active, D0 in the same unmerged PR |
 | [Remediation](../remediation/REMEDIATION-LEDGER.md) | legacy program; per-package YAML under `../remediation/packages/`, not a track register | closure tracked by CTO-readiness track T4 |
 
 Rules:
