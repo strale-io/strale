@@ -1,0 +1,22 @@
+{
+  "info": {
+    "description": "# Requests\n\n**Requests** is a simple, yet elegant, HTTP library.\n\n```python\n>>> import requests\n>>> r = requests.get('https://httpbin.org/basic-auth/user/pass', auth=('user', 'pass'))\n>>> r.status_code\n200\n>>> r.headers['content-type']\n'app",
+    "description_content_type": "text/markdown",
+    "home_page": "https://requests.readthedocs.io",
+    "license": "Apache-2.0",
+    "license_expression": null,
+    "name": "requests",
+    "project_urls": {
+      "Documentation": "https://requests.readthedocs.io",
+      "Homepage": "https://requests.readthedocs.io",
+      "Source": "https://github.com/psf/requests"
+    },
+    "summary": "Python HTTP for Humans.",
+    "version": "2.32.0",
+    "yanked": true,
+    "yanked_reason": "Yanked due to conflicts with CVE-2024-35195 mitigation",
+    "author": "",
+    "maintainer": "Fixture maintainer",
+    "author_email": "author@example.invalid"
+  }
+}

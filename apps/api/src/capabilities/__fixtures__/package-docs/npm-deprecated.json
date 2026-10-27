@@ -1,0 +1,226 @@
+{
+  "name": "request",
+  "dist-tags": {
+    "latest": "2.88.2"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/request/request#readme",
+  "repository": {
+    "url": "git+https://github.com/request/request.git",
+    "type": "git"
+  },
+  "description": "Simplified HTTP request client.",
+  "readme": "# Deprecated!\n\nAs of Feb 11th 2020, request is fully deprecated. No new changes are expected land. In fact, none have landed for some time.\n\nFor more information about why request is deprecated and possible alternatives refer to\n[this issue",
+  "versions": {
+    "2.88.2": {
+      "name": "request",
+      "version": "2.88.2",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/request/request#readme",
+      "deprecated": "request has been deprecated, see https://github.com/request/request/issues/3142",
+      "repository": {
+        "url": "git+https://github.com/request/request.git",
+        "type": "git"
+      },
+      "description": "Simplified HTTP request client.",
+      "author": {
+        "name": "Fixture author",
+        "email": "author@example.invalid",
+        "url": "https://example.invalid/author"
+      },
+      "maintainers": [
+        {
+          "name": "Fixture maintainer 0",
+          "email": "maintainer0@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 1",
+          "email": "maintainer1@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 2",
+          "email": "maintainer2@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 3",
+          "email": "maintainer3@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 4",
+          "email": "maintainer4@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 5",
+          "email": "maintainer5@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 6",
+          "email": "maintainer6@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 7",
+          "email": "maintainer7@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 8",
+          "email": "maintainer8@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 9",
+          "email": "maintainer9@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 10",
+          "email": "maintainer10@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 11",
+          "email": "maintainer11@example.invalid"
+        }
+      ],
+      "readmeFilename": "README.md"
+    },
+    "2.88.0": {
+      "name": "request",
+      "version": "2.88.0",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/request/request#readme",
+      "deprecated": "request has been deprecated, see https://github.com/request/request/issues/3142",
+      "repository": {
+        "url": "git+https://github.com/request/request.git",
+        "type": "git"
+      },
+      "description": "Simplified HTTP request client.",
+      "author": {
+        "name": "Fixture author",
+        "email": "author@example.invalid",
+        "url": "https://example.invalid/author"
+      },
+      "maintainers": [
+        {
+          "name": "Fixture maintainer 0",
+          "email": "maintainer0@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 1",
+          "email": "maintainer1@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 2",
+          "email": "maintainer2@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 3",
+          "email": "maintainer3@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 4",
+          "email": "maintainer4@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 5",
+          "email": "maintainer5@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 6",
+          "email": "maintainer6@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 7",
+          "email": "maintainer7@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 8",
+          "email": "maintainer8@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 9",
+          "email": "maintainer9@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 10",
+          "email": "maintainer10@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 11",
+          "email": "maintainer11@example.invalid"
+        }
+      ],
+      "readmeFilename": "README.md"
+    },
+    "2.87.0": {
+      "name": "request",
+      "version": "2.87.0",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/request/request#readme",
+      "deprecated": "request has been deprecated, see https://github.com/request/request/issues/3142",
+      "repository": {
+        "url": "git+https://github.com/request/request.git",
+        "type": "git"
+      },
+      "description": "Simplified HTTP request client.",
+      "author": {
+        "name": "Fixture author",
+        "email": "author@example.invalid",
+        "url": "https://example.invalid/author"
+      },
+      "maintainers": [
+        {
+          "name": "Fixture maintainer 0",
+          "email": "maintainer0@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 1",
+          "email": "maintainer1@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 2",
+          "email": "maintainer2@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 3",
+          "email": "maintainer3@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 4",
+          "email": "maintainer4@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 5",
+          "email": "maintainer5@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 6",
+          "email": "maintainer6@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 7",
+          "email": "maintainer7@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 8",
+          "email": "maintainer8@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 9",
+          "email": "maintainer9@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 10",
+          "email": "maintainer10@example.invalid"
+        },
+        {
+          "name": "Fixture maintainer 11",
+          "email": "maintainer11@example.invalid"
+        }
+      ],
+      "readmeFilename": "README.md"
+    }
+  },
+  "time": {
+    "2.88.2": "2020-02-11T16:35:36.122Z",
+    "2.88.0": "2018-08-10T16:26:50.936Z",
+    "2.87.0": "2018-05-21T07:35:02.834Z"
+  },
+  "readmeFilename": "README.md"
+}

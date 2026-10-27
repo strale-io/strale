@@ -1,0 +1,78 @@
+{
+  "name": "@babel/code-frame",
+  "dist-tags": {
+    "esm": "7.21.4-esm.4",
+    "next": "8.0.0-rc.6",
+    "latest": "8.0.6"
+  },
+  "license": "MIT",
+  "homepage": "https://babel.dev/docs/en/next/babel-code-frame",
+  "repository": {
+    "url": "https://github.com/babel/babel.git",
+    "type": "git",
+    "directory": "packages/babel-code-frame"
+  },
+  "description": "Generate errors that contain a code frame that point to source locations.",
+  "readme": "",
+  "versions": {
+    "8.0.6": {
+      "name": "@babel/code-frame",
+      "license": "MIT",
+      "version": "8.0.6",
+      "homepage": "https://babel.dev/docs/en/next/babel-code-frame",
+      "repository": {
+        "url": "https://github.com/babel/babel.git",
+        "type": "git",
+        "directory": "packages/babel-code-frame"
+      },
+      "description": "Generate errors that contain a code frame that point to source locations.",
+      "author": "Fixture author <author@example.invalid> (https://example.invalid/author)",
+      "maintainers": [
+        {
+          "name": "Fixture maintainer"
+        }
+      ]
+    },
+    "8.0.0": {
+      "name": "@babel/code-frame",
+      "version": "8.0.0",
+      "license": "MIT",
+      "homepage": "https://babel.dev/docs/en/next/babel-code-frame",
+      "repository": {
+        "url": "https://github.com/babel/babel.git",
+        "type": "git",
+        "directory": "packages/babel-code-frame"
+      },
+      "description": "Generate errors that contain a code frame that point to source locations.",
+      "author": "Fixture author <author@example.invalid> (https://example.invalid/author)",
+      "maintainers": [
+        {
+          "name": "Fixture maintainer"
+        }
+      ]
+    },
+    "7.29.7": {
+      "name": "@babel/code-frame",
+      "version": "7.29.7",
+      "license": "MIT",
+      "homepage": "https://babel.dev/docs/en/next/babel-code-frame",
+      "repository": {
+        "url": "https://github.com/babel/babel.git",
+        "type": "git",
+        "directory": "packages/babel-code-frame"
+      },
+      "description": "Generate errors that contain a code frame that point to source locations.",
+      "author": "Fixture author <author@example.invalid> (https://example.invalid/author)",
+      "maintainers": [
+        {
+          "name": "Fixture maintainer"
+        }
+      ]
+    }
+  },
+  "time": {
+    "8.0.6": "2026-09-18T13:47:35.800Z",
+    "8.0.0": "2026-06-16T13:32:12.341Z",
+    "7.29.7": "2026-05-25T11:15:38.208Z"
+  }
+}

@@ -208,6 +208,9 @@ export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
  */
 export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 
+/** Package packuments include every release; refuse above 20 MiB (portfolio plan 2.7). */
+export const MAX_PACKAGE_REGISTRY_RESPONSE_BYTES = 20 * 1024 * 1024;
+
 /**
  * Largest PageSpeed Insights report the platform will buffer (#434).
  *
