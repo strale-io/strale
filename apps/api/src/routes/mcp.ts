@@ -358,7 +358,7 @@ mcpRoute.all("/", async (c) => {
       new Response(
         JSON.stringify({
           jsonrpc: "2.0",
-          error: {
+          error: { data: { details: {"fix":"Send each MCP request as a new POST to /mcp."} },
             code: -32000,
             message:
               "This MCP endpoint is stateless. Send each request as a new POST to /mcp.",
@@ -373,9 +373,9 @@ mcpRoute.all("/", async (c) => {
   }
 
   return addCorsHeaders(
-    new Response(null, {
+    new Response(JSON.stringify({ details: { fix: "Send each MCP request as a new POST to /mcp." } }), {
       status: 405,
-      headers: { Allow: "GET, POST, DELETE, OPTIONS" },
+      headers: { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json" },
     }),
   );
 });

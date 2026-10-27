@@ -138,7 +138,7 @@ describe("key limits and ledger accounting", () => {
   });
   it("rechecks revocation inside the wallet lock", async () => {
     key.revokedAt = new Date();
-    expect(await keyCapError(policyTx(), user.id, key.id, 5)).toEqual({ error_code: "unauthorized", message: "Invalid API key." });
+    expect(await keyCapError(policyTx(), user.id, key.id, 5)).toEqual({ error_code: "unauthorized", message: "Invalid API key.", details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header; recover a lost key with POST /v1/auth/recover." } });
   });
   it("leaves primary-key and x402 calls out of the additional policy", async () => {
     expect(await keyCapError({}, user.id, null, 100)).toBeNull();

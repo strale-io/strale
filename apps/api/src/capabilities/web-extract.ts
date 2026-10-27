@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
@@ -10,9 +11,7 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   const extract = (input.extract as string) || (input.task as string) || "";
 
   if (!url) {
-    throw new Error(
-      "'url' is required. Provide the URL of the web page to extract data from.",
-    );
+    throw inputRefusal("'url' is required. Provide the URL of the web page to extract data from.", "url", "Send 'url' as an absolute HTTP or HTTPS URL to a web page.");
   }
 
   // Per-source ToS policy applies to EVERY fetch path, not only the purpose-

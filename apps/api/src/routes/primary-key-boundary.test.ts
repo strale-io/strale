@@ -51,7 +51,7 @@ it.each([
   const request = () => app.request(template.replace("ID", id), {method, headers: {Authorization: "Bearer sk_live_synthetic", "Content-Type": "application/json"}, body: JSON.stringify(body)});
   const denied = await request();
   expect(denied.status).toBe(403);
-  expect(await denied.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action"});
+  expect(await denied.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action", details: {fix: "Send the account's primary API key in the Authorization: Bearer <api_key> header."}});
   expect(state.writes).not.toHaveBeenCalled(); expect(state.checkout).not.toHaveBeenCalled();
   state.identity.apiKeyId = null;
   const accepted = await request();

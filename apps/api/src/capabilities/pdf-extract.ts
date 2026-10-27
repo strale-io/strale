@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
@@ -15,9 +16,7 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const extract = (input.extract as string) || (input.task as string) || "";
 
   if (!url && !base64Input) {
-    throw new Error(
-      "'url' or 'base64' is required. Provide a URL to a PDF or a base64-encoded PDF.",
-    );
+    throw inputRefusal("'url' or 'base64' is required. Provide a URL to a PDF or a base64-encoded PDF.", "url", "Send 'url' as an HTTP or HTTPS PDF URL or 'base64' as a base64-encoded PDF.");
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -35,7 +34,7 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
     try {
       parsedUrl = new URL(url);
     } catch {
-      throw new Error(`Invalid URL: "${url}".`);
+      throw inputRefusal(`Invalid URL: "${url}".`, "url", "Send 'url' as an absolute HTTP or HTTPS URL to a PDF.");
     }
 
     const response = await safeFetch(url, {

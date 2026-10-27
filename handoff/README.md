@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-368 files (341 with a recorded intent, 27 without).
+370 files (343 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-secure-random.md`](_general/from-code/2026-10-27-secure-random.md) | Build the paid secure-random capability for portfolio Phase 2 item 2.12; complete offline verification and leave prod... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-package-docs.md`](_general/from-code/2026-10-27-package-docs.md) | Build and revise package-docs using public npm/PyPI registry APIs; leave the uncommitted changes for the orchestrator... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
@@ -22,6 +23,7 @@
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-email-phone-validation-copy.md`](_general/from-code/2026-10-27-email-phone-validation-copy.md) | correct what the email and phone validation tools claim, after an external benchmark showed them reporting made-up ad... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-actionable-error-messages.md`](_general/from-code/2026-10-27-actionable-error-messages.md) | Build additive error recovery guidance for autonomous callers, preserve stable codes and statuses, and hand the verif... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-public-limitations-copy.md`](_general/from-code/2026-10-26-public-limitations-copy.md) | Rewrite public capability limitations while preserving every stated constraint; orchestrator review, push, PR, merge... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | make live registry lookups report deleted, deregistered and liquidating companies correctly (NO, PL, CZ, FI, GR), and... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-search-rebuild.md`](_general/from-code/2026-10-26-feat-search-rebuild.md) | Rebuilt catalogue search locally on feat/search-rebuild from origin/main 42e71dcc; orchestrator reviews, pushes, open... |

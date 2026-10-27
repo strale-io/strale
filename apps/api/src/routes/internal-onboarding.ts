@@ -72,12 +72,12 @@ internalOnboardingRoute.get("/readiness", async (c) => {
 internalOnboardingRoute.post("/fix-latency", async (c) => {
   if (!ADMIN_SECRET) {
     return c.json(
-      apiError("unauthorized", "Admin endpoint is not configured."),
+      apiError("unauthorized", "Admin endpoint is not configured.", { retryable: false, next_step: "Contact the service operator to configure this admin endpoint before retrying." }),
       503
     );
   }
   if (!isValidAdminAuth(c.req.header("Authorization"))) {
-    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
+    return c.json(apiError("unauthorized", "Invalid admin secret.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const db = getDb();

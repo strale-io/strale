@@ -140,6 +140,11 @@ export function classifyError(err: Error): {
   return { error_class: "unknown", ...(wrapped ? { wrapped: true as const } : {}) };
 }
 
+const API_BODY_LIMIT_BYTES = 1024 * 1024;
+const A2A_BODY_LIMIT_BYTES = 256 * 1024;
+const MCP_BODY_LIMIT_BYTES = 512 * 1024;
+const WEBHOOK_BODY_LIMIT_BYTES = 512 * 1024;
+
 /**
  * Fixed client-facing responses for middleware-thrown HTTPExceptions, keyed by
  * status. Deliberately a closed set with constant messages: see the note in
@@ -172,7 +177,7 @@ app.onError((err, c) => {
   if (err instanceof HTTPException) {
     const mapped = HTTP_EXCEPTION_RESPONSES[err.status];
     if (mapped) {
-      return c.json(apiError(mapped.code, mapped.message), err.status);
+      return c.json(apiError(mapped.code, mapped.message, { fix: `Reduce the request body to ${c.req.path.startsWith("/x402/") ? MAX_DECODED_DOCUMENT_BYTES : c.req.path.startsWith("/v1/") ? API_BODY_LIMIT_BYTES : c.req.path === "/a2a" ? A2A_BODY_LIMIT_BYTES : c.req.path.startsWith("/webhooks/") ? WEBHOOK_BODY_LIMIT_BYTES : MCP_BODY_LIMIT_BYTES} bytes or less and resend it.` }), err.status);
     }
     if (err.status < 500) {
       return err.getResponse();
@@ -200,6 +205,7 @@ app.onError((err, c) => {
     {
       error_code: "internal_error" as const,
       message: "An unexpected error occurred. Please try again.",
+      details: { retryable: true, next_step: "Retry with exponential backoff; contact support if the failure continues." },
     },
     500,
   );
@@ -338,9 +344,9 @@ app.use("/a2a", restrictedCors);
 app.use("*", versionMiddleware());
 
 // Body size limits — prevent memory exhaustion from oversized payloads
-app.use("/v1/*", bodyLimit({ maxSize: 1024 * 1024 }));   // 1 MB for API routes
-app.use("/a2a", bodyLimit({ maxSize: 256 * 1024 }));      // 256 KB for A2A
-app.use("/mcp", bodyLimit({ maxSize: 512 * 1024 }));      // 512 KB for MCP
+app.use("/v1/*", bodyLimit({ maxSize: API_BODY_LIMIT_BYTES }));   // 1 MB for API routes
+app.use("/a2a", bodyLimit({ maxSize: A2A_BODY_LIMIT_BYTES }));      // 256 KB for A2A
+app.use("/mcp", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));      // 512 KB for MCP
 
 // The x402 rail had NO body cap at all. Every other entry point above has had
 // one for months; this one was simply never added, so `/x402/:slug` buffered
@@ -488,7 +494,7 @@ app.get("/openapi.json", async (c) => {
 // verification is unaffected (covered by webhook.body-limit.test.ts). 512 KB
 // is far above any real Stripe event (checkout.session.completed is a few KB)
 // while still bounding pre-auth memory.
-app.use("/webhooks/*", bodyLimit({ maxSize: 512 * 1024 }));
+app.use("/webhooks/*", bodyLimit({ maxSize: WEBHOOK_BODY_LIMIT_BYTES }));
 app.route("/webhooks", webhookRoute);
 
 // API v1 routes

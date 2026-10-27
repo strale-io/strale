@@ -221,7 +221,7 @@ export class Strale {
           "execution_failed",
           detail.error ?? "Capability execution failed",
           500,
-          { transaction_id: detail.id },
+          { ...detail.details, transaction_id: detail.id },
         );
       }
 

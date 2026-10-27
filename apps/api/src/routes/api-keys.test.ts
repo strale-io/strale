@@ -99,7 +99,7 @@ it.each([
   state.callerId = keys[0].id;
   const res = await request(path, method, body);
   expect(res.status).toBe(403);
-  expect(await res.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action"});
+  expect(await res.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action", details: {fix: "Send the account's primary API key in the Authorization: Bearer <api_key> header."}});
   expect(keys).toHaveLength(1); expect(keys[0].revokedAt).toBeNull();
   state.callerId = null;
   expect((await request(path, method, body)).status).toBe(status);

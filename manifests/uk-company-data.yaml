@@ -15,12 +15,16 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - company_number
+  anyOf:
+    - required: [company_number]
+    - required: [company_name]
   properties:
     company_number:
       type: string
-      description: UK Companies House number (8 digits) or company name
+      description: UK Companies House number (8 characters, including any letter prefix); company names are also accepted for compatibility
+    company_name:
+      type: string
+      description: Registered company name
 output_schema:
   type: object
   example:

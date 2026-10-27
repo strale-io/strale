@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { logError } from "../lib/log.js";
@@ -248,10 +249,10 @@ registerCapability("adverse-media-check", async (input: CapabilityInput) => {
     ""
   ).trim();
   if (!name) {
-    throw new Error("'name' is required. Provide a person or company name to screen.");
+    throw inputRefusal("'name' is required. Provide a person or company name to screen.", "name", "Send 'name' as a person or company name with at least 2 characters.");
   }
   if (name.length < 2) {
-    throw new Error("Name must be at least 2 characters for adverse media screening.");
+    throw inputRefusal("Name must be at least 2 characters for adverse media screening.", "name", "Send 'name' as a person or company name with at least 2 characters.");
   }
 
   const entityTypeOverride = (input.entity_type as string) ?? undefined;

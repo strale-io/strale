@@ -559,6 +559,7 @@ describe("POST /v1/do — no matching capability", () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error_code).toBe("no_matching_capability");
+    expect(body.details.fix).toContain("GET /v1/capabilities");
     expect(typeof body.message).toBe("string");
     expect(body.details).toMatchObject({ task: "do something nobody offers", max_price_cents: 100 });
     // Pin the documented failure shape: no top-level `error` key.
@@ -606,6 +607,7 @@ describe("POST /v1/do — insufficient balance", () => {
     expect(res.status).toBe(402);
     const body = await res.json();
     expect(body.error_code).toBe("insufficient_balance");
+    expect(body.details.fix).toContain("https://strale.dev/dashboard");
     expect(body.details.wallet_balance_cents).toBe(2);
     expect(body.details.required_cents).toBe(CAPABILITY_FIXTURE.priceCents);
     expect(body.error).toBeUndefined();
@@ -752,6 +754,8 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     // Pin the exact documented shape (MEMORY.md: three false alarms on
     // 2026-08-14 traced to assuming a top-level `error` key on failure).
     expect(body.error_code).toBe("execution_failed");
+    expect(body.details.retryable).toBe(true);
+    expect(body.details.next_step).toContain("Retry");
     expect(typeof body.message).toBe("string");
     expect(body.error).toBeUndefined();
     expect(body.details.error).toBe("mock executor rejected the request");
@@ -1073,4 +1077,19 @@ describe("POST /v1/do — password-strength never persists the password", () => 
     expect(executorFn).toHaveBeenCalledWith({ password: SECRET });
     assertNothingPersistedTheSecret(tx);
   });
+});
+
+it("returns exact field advice from a paid executor refusal without billing or changing the code", async () => {
+  const { inputRefusal } = await import("../lib/capability-refusal.js");
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user]);
+  mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+  mockGetExecutor.mockReturnValue(async () => { throw inputRefusal("'value' must be 13 digits.", "value", "Send 'value' as 13 digits."); });
+  mocks.txRef.current = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10_000 }, transactionId: randomUUID() });
+  const response = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(), body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "x" }, max_price_cents: 100 }) });
+  expect(response.status).toBe(500);
+  expect(await response.json()).toMatchObject({ error_code: "execution_failed", details: { field: "value", fix: "Send 'value' as 13 digits.", retryable: false, wallet_balance_cents: 10_000 } });
+  const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+  expect(tx.__updateCalls.filter(c => c.table === wallets)).toHaveLength(0);
+  expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
 });

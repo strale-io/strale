@@ -50,7 +50,7 @@ async function withManagementLock<T>(c: Context<AppEnv>, write: (tx: WalletTx) =
 
 apiKeysRoute.post("/", async (c) => {
   const parsed = fields.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiError("invalid_request", "Supply a label (1–64 characters, no control characters) and optional non-negative integer caps in cents; null removes a cap."), 400);
+  if (!parsed.success) return c.json(apiError("invalid_request", "Supply a label (1–64 characters, no control characters) and optional non-negative integer caps in cents; null removes a cap.", { fix: "Send 'label' as 1–64 characters without control characters and optional non-negative integer cent caps (or null to remove caps)." }), 400);
   const userId = c.get("user").id;
   const key = generateApiKey();
   const result = await withManagementLock(c, async (tx) => {
@@ -88,7 +88,7 @@ apiKeysRoute.get("/", async (c) => {
 apiKeysRoute.patch("/:id", async (c) => {
   const id = c.req.param("id");
   const parsed = updateFields.safeParse(await c.req.json().catch(() => null));
-  if (!idSchema.safeParse(id).success || !parsed.success) return c.json(apiError("invalid_request", "Supply a key UUID and at least one valid label or cap field. Caps are non-negative integer cents or null."), 400);
+  if (!idSchema.safeParse(id).success || !parsed.success) return c.json(apiError("invalid_request", "Supply a key UUID and at least one valid label or cap field. Caps are non-negative integer cents or null.", { fix: "Send a key UUID in the path and at least one valid 'label', 'max_spend_per_hour_cents', or 'max_spend_total_cents' field." }), 400);
   const userId = c.get("user").id;
   const result = await withManagementLock(c, async (tx) => {
     const [updated] = await tx.update(apiKeys).set({
@@ -106,7 +106,7 @@ apiKeysRoute.patch("/:id", async (c) => {
 
 apiKeysRoute.delete("/:id", async (c) => {
   const id = c.req.param("id");
-  if (!idSchema.safeParse(id).success) return c.json(apiError("invalid_request", "Supply a valid key UUID."), 400);
+  if (!idSchema.safeParse(id).success) return c.json(apiError("invalid_request", "Supply a valid key UUID.", { fix: "Use a key UUID from GET /v1/api-keys as the path ':id'." }), 400);
   const userId = c.get("user").id;
   // Only the primary key may revoke additional keys; it is outside this table.
   const result = await withManagementLock(c, async (tx) => {

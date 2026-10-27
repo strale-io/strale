@@ -66,12 +66,12 @@ export const adminOnly = async (c: Context, next: Next): Promise<Response | void
     // Fail closed if the secret is unset OR too weak to be a credential —
     // never serve admin content on a misconfigured deploy.
     return c.json(
-      apiError("unauthorized", "Admin endpoint is not configured."),
+      apiError("unauthorized", "Admin endpoint is not configured.", { retryable: false, next_step: "Contact the service operator to configure this admin endpoint before retrying." }),
       503,
     );
   }
   if (!isValidAdminAuth(c.req.header("Authorization"))) {
-    return c.json(apiError("unauthorized", "Admin authentication required."), 401);
+    return c.json(apiError("unauthorized", "Admin authentication required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
   return next();
 };

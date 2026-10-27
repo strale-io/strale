@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // ECB Statistical Data Warehouse API — same as exchange-rate but with amount conversion
@@ -9,10 +10,10 @@ registerCapability("currency-convert", async (input: CapabilityInput) => {
   const to = ((input.to as string) ?? "EUR").toUpperCase().trim();
 
   if (isNaN(amount) || amount <= 0) {
-    throw new Error("'amount' must be a positive number.");
+    throw inputRefusal("'amount' must be a positive number.", "amount", "Send 'amount' as a positive number.");
   }
   if (!/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to)) {
-    throw new Error("'from' and 'to' must be valid 3-letter ISO 4217 currency codes.");
+    throw inputRefusal("'from' and 'to' must be valid 3-letter ISO 4217 currency codes.", "from", "Send 'from' and 'to' as valid 3-letter ISO 4217 currency codes.");
   }
 
   if (from === to) {

@@ -58,7 +58,7 @@ export class CapabilityRefusalError extends Error {
    *  module-instance boundaries, which the async execution paths can cross. */
   readonly isCapabilityRefusal = true;
 
-  constructor(message: string) {
+  constructor(message: string, readonly details?: { fix: string; field?: string }) {
     super(message);
     this.name = "CapabilityRefusalError";
   }
@@ -180,4 +180,23 @@ export function isRefusalMessage(message: string): boolean {
   //    `isAccessPolicyRefusal` for why that is safe for these two markers.
   if (isAccessPolicyRefusal(message)) return true;
   return REFUSAL_MESSAGE_PATTERNS.some((p) => message.startsWith(p));
+}
+
+/** Input validation helper; retains the existing message and refusal marker. */
+export function inputRefusal(message: string, field: string, fix: string): CapabilityRefusalError {
+  return new CapabilityRefusalError(message, { field, fix });
+}
+
+/** Safe fallback for rails that retain only a refusal's message. */
+export function refusalDetails(error: unknown): Record<string, unknown> | undefined {
+  if (!isCapabilityRefusal(error)) return undefined;
+  if (error instanceof CapabilityRefusalError && error.details) return { ...error.details, retryable: false };
+  const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  if (isAccessPolicyRefusal(message)) return { retryable: false, fix: "Choose a different URL or source; this site does not permit automated access." };
+  const field = /^'([a-z][a-z0-9_]{0,39})' must be /i.exec(message)?.[1];
+  // Do not copy arbitrary executor text into advice: it may contain source
+  // URLs, fetched HTML or internal diagnostics. Explicit helpers carry exact fixes.
+  return { retryable: false, ...(field ? { field } : {}), fix: field
+    ? `Send '${field}' in the format specified by the tool's input_schema at GET /v1/capabilities/:slug.`
+    : "Use the tool's input_schema at GET /v1/capabilities/:slug to narrow the request or supply an unambiguous identifier." };
 }
