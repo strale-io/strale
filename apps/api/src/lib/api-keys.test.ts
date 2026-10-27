@@ -9,7 +9,7 @@ import { generateApiKey, getKeyPrefix, hashApiKey } from "./auth.js";
 import { log } from "./log.js";
 import { authenticateApiKey, keyCapError, keySpending } from "./api-keys.js";
 import { authMiddleware, optionalAuthMiddleware } from "./middleware.js";
-import { runMigration0124_apiKeys, BLOCKS } from "./startup-migrations.js";
+import { runMigration0125_apiKeys, BLOCKS } from "./startup-migrations.js";
 import { publicKey } from "../routes/api-keys.js";
 import { debit } from "./wallet-service.js";
 import { reserve } from "./wallet-reservations.js";
@@ -158,12 +158,12 @@ describe("key limits and ledger accounting", () => {
     expect(JSON.stringify(result)).not.toContain(hashApiKey(secret));
   });
 });
-describe("migration 0124", () => {
+describe("migration 0125", () => {
   it("guards ALTERs, validates separately, bounds lock waits and builds concurrent indexes", async () => {
     const statements: string[] = [];
     const tx = { execute: async (query: SQL) => { statements.push(checked(query).sql); return []; } };
-    expect(BLOCKS).toContain(runMigration0124_apiKeys);
-    await runMigration0124_apiKeys(tx);
+    expect(BLOCKS).toContain(runMigration0125_apiKeys);
+    await runMigration0125_apiKeys(tx);
     const text = statements.join(" ");
     expect(statements[0]).toContain("SET lock_timeout = '3s'");
     expect(statements.at(-1)).toContain("RESET lock_timeout");
@@ -180,7 +180,7 @@ describe("migration 0124", () => {
       if (text.includes("CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_reference_idx")) throw new Error("lock timeout");
       return [];
     }};
-    await expect(runMigration0124_apiKeys(tx)).rejects.toThrow("lock timeout");
+    await expect(runMigration0125_apiKeys(tx)).rejects.toThrow("lock timeout");
     expect(statements.join(" ")).toContain("DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_reference_idx");
     expect(statements.at(-1)).toContain("RESET lock_timeout");
   });

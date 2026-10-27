@@ -6,7 +6,7 @@
 
 slug: protocol-fees-lookup
 name: "Protocol Fees Lookup"
-description: "Get fees and revenue for a DeFi protocol over 24 hours, 7 days, 30 days and all time. Covers 7,000+ protocols, from DeFi Llama."
+description: "Look up a DeFi protocol's reported fees and revenue over 24 hours, 7 days, 30 days and all time, with available breakdowns."
 category: web3
 cost_class: free_unlimited
 quota_window: none

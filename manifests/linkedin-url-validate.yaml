@@ -3,7 +3,7 @@
 
 slug: linkedin-url-validate
 name: LinkedIn URL Validate
-description: Validate LinkedIn profile/company/job URL format and check accessibility. Returns URL type, slug, normalized URL.
+description: "Currently unavailable. Check a professional-network URL's format and accessibility, returning its type and normalised form."
 category: validation
 price_cents: 3
 is_free_tier: false

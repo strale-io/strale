@@ -3,7 +3,7 @@
 
 slug: employer-review-summary
 name: Employer Review Summary
-description: Get employer review summary from Glassdoor. Returns overall rating, culture/compensation scores, pros/cons themes.
+description: "Currently unavailable. Summarise employer reviews, returning ratings, compensation scores and review themes."
 category: data-extraction
 price_cents: 25
 is_free_tier: false

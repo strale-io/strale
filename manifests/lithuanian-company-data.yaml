@@ -1,9 +1,6 @@
 slug: lithuanian-company-data
 name: Lithuanian Company Data
-description: >-
-  Look up Lithuanian company data from the Centre of Registers (Registrų centras / JAR) via the data.gov.lt open-data
-  Spinta API. Accepts company code (7-9 digits) or fuzzy company name. Returns name, code, legal form, status, and
-  registration dates.
+description: "Currently unavailable. Look up Lithuanian company identity, legal form, status and registration dates by code or name."
 category: company-data
 cost_class: free_unlimited
 quota_window: none

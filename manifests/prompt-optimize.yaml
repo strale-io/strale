@@ -3,7 +3,7 @@
 
 slug: prompt-optimize
 name: "Prompt Optimiser"
-description: "Improve a prompt and see what changed and why, with a before-and-after clarity score and the techniques used."
+description: "Suggest improvements to a prompt for a chosen goal. Returns revised text, an explanation of changes and estimated clarity scores."
 category: agent-tooling
 cost_class: paid_prepaid
 quota_window: none

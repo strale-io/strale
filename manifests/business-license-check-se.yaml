@@ -3,7 +3,7 @@
 
 slug: business-license-check-se
 name: Business License Check SE
-description: Check Swedish company registration status, SNI codes, F-skatt, VAT registration, employer registration.
+description: "Currently unavailable. Look up Swedish company registration, industry codes and reported tax-registration flags."
 category: data-extraction
 price_cents: 15
 is_free_tier: false

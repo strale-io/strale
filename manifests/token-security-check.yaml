@@ -6,9 +6,7 @@
 
 slug: token-security-check
 name: Token Security Check
-description: >-
-  Analyze a token contract for security risks: honeypot detection, sell tax, hidden ownership, mint functions, proxy
-  status, and holder distribution. Uses GoPlus Security covering 30+ blockchains and 10M+ tokens.
+description: "Currently unavailable. Check a token contract for reported honeypot flags, trading taxes and ownership risks."
 category: web3
 cost_class: free_quota
 quota_window: daily

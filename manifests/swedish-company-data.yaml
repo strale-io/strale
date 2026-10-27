@@ -1,6 +1,6 @@
 slug: swedish-company-data
 name: "Swedish Company Data"
-description: "Look up a Swedish company at Bolagsverket: name, legal form, status, registered address, SNI industry codes, registration date and any insolvency or liquidation proceedings."
+description: "Look up a Swedish company at Bolagsverket by organisation number, including identity, status, address and recorded proceedings."
 category: company-data
 cost_class: free_quota
 quota_window: daily

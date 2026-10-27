@@ -3,7 +3,7 @@
 
 slug: barcode-lookup
 name: "Barcode Lookup"
-description: "Look up a product by UPC or EAN barcode: name, brand, nutrition and images, from Open Food Facts and UPC ItemDB."
+description: "Look up a product by UPC or EAN barcode. Returns the product name, brand and available nutrition details and images."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

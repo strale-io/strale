@@ -1,8 +1,6 @@
 slug: fda-safety-search
 name: FDA Safety Search
-description: >-
-  Search FDA enforcement (recall) reports for drugs, medical devices and food: recall class, reason,
-  recalling firm, status, distribution and dates. Filter by product domain and recall classification.
+description: "Search FDA recall reports for drugs, medical devices and food, with classification, recall reason, firm, distribution and dates."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

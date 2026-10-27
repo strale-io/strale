@@ -1,6 +1,6 @@
 slug: name-parse
 name: "Name Parser"
-description: "Split a full name into title, first, middle and last names, suffix and nickname. Gets 'Dr. Karl-Johan von Lindström III' right."
+description: "Split a full name into title, first, middle and last names, suffix and nickname. Returns the parsed name components."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

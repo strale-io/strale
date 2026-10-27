@@ -3,7 +3,7 @@
 
 slug: email-validate
 name: "Email Validation"
-description: "Check an email address: syntax, mail servers, disposable and role addresses, free providers and likely typos such as gmial.com. Returns a deliverability verdict with each check. No email is sent."
+description: "Check email syntax, mail-server records, disposable domains, role addresses and likely typos. Returns checks without confirming a mailbox exists."
 category: validation
 cost_class: free_unlimited
 quota_window: none

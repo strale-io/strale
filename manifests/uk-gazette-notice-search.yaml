@@ -1,8 +1,6 @@
 slug: uk-gazette-notice-search
 name: UK Gazette Insolvency Notice Search
-description: >-
-  Search official UK Gazette insolvency notices by name — corporate winding-up, liquidator appointments, and
-  personal bankruptcy. Returns notice text, dates, and links to the statutory public record.
+description: "Search official UK Gazette insolvency notices by name, returning notice summaries, dates and links to the published record."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

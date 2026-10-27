@@ -6,9 +6,7 @@
 
 slug: phishing-site-check
 name: Phishing Site Check
-description: >-
-  Check if a URL is a known phishing site targeting Web3 users. Detects cloned dApp frontends, fake token claim pages,
-  and wallet drainer sites. Uses GoPlus Security's phishing database.
+description: "Currently unavailable. Check a URL against reported Web3 phishing records, returning a flag and confidence estimate."
 category: web3
 cost_class: free_quota
 quota_window: daily

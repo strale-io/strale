@@ -3,7 +3,7 @@
 
 slug: startup-domain-check
 name: "Startup Name Availability"
-description: "Check whether a startup name is free as a .com, .io, .ai, .co or .dev domain, as a GitHub account name, and as an npm or PyPI package name."
+description: "Check a startup name for domain DNS records and public account or package name signals. Returns candidate names; DNS absence does not prove availability."
 category: utility
 cost_class: free_unlimited
 quota_window: none
@@ -146,7 +146,7 @@ output_field_reliability:
   available: guaranteed
 limitations:
   - title: Country domains and niche platforms are not checked
-    text: Checks .com availability and common social handles — country TLDs and niche platforms are not checked
+    text: Checks .com, .io, .ai, .co and .dev availability and the name on GitHub, npm and PyPI. Country domains and other platforms are not checked
     category: coverage
     severity: info
     workaround: Supplement with whois-lookup for specific TLDs and social-profile-check for additional platform availability

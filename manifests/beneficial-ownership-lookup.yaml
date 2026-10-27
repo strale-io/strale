@@ -1,6 +1,6 @@
 slug: beneficial-ownership-lookup
 name: "UK Beneficial Ownership"
-description: "Find the people with significant control of a UK company, from Companies House: who ultimately owns or controls it, their share, and the ownership chain. UK companies only."
+description: "Look up a UK company's reported persons of significant control in Companies House, including ownership and control details."
 category: compliance
 cost_class: free_quota
 quota_window: daily

@@ -1,6 +1,6 @@
 slug: no-bankruptcy-check
 name: "Norwegian Bankruptcy Check"
-description: "Check a Norwegian company for bankruptcy and dissolution in the Brønnøysund registers: any bankruptcy filing and its date, voluntary or forced dissolution, and the register's notes."
+description: "Read Norwegian registry bankruptcy and dissolution flags, available dates and registry annotations for a company."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

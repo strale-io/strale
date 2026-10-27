@@ -1,6 +1,6 @@
 slug: fr-bodacc-lookup
 name: "French BODACC Announcements"
-description: "Get a French company's announcements in BODACC, the official commercial gazette, by SIREN: insolvency proceedings, changes, sales, strike-offs and incorporations."
+description: "Read a French company's BODACC announcements by SIREN, including insolvency proceedings, sales and registration changes."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

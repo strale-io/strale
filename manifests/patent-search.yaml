@@ -3,9 +3,7 @@
 
 slug: patent-search
 name: Patent Search
-description: >-
-  Search US patents via PatentsView API. Search by keyword, title, or patent number. Returns patent details, inventors,
-  assignees.
+description: "Currently unavailable. Search patent records, returning titles, inventors, assignees and available filing details."
 category: data-extraction
 price_cents: 10
 is_free_tier: false

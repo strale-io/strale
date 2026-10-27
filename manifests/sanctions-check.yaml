@@ -1,6 +1,6 @@
 slug: sanctions-check
 name: "Sanctions Check"
-description: "Check a person or company against sanctions lists: EU, US OFAC, UN, UK, Swiss SECO, BIS, World Bank, EBRD, ADB and 125 national lists. Returns each match with the list and country it comes from."
+description: "Screen a person or company against published sanctions lists, returning potential name matches with their source lists and countries."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

@@ -3,9 +3,7 @@
 
 slug: annual-report-extract
 name: Swedish Annual Report Extraction
-description: >-
-  Download and extract structured financial data from a Swedish company's annual report (årsredovisning). Returns
-  balance sheet, income statement, and key ratios.
+description: "Currently unavailable. Extract available financial figures and key ratios from a Swedish annual report."
 category: data-extraction
 price_cents: 100
 is_free_tier: false

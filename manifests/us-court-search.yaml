@@ -1,9 +1,6 @@
 slug: us-court-search
 name: US Court Search (CourtListener)
-description: >-
-  Search US federal court records (RECAP dockets) by party name. Returns matching cases with court, date filed, docket
-  number, and absolute URL. Elevates bankruptcy filings as top-level signals (has_bankruptcy_filing, bankruptcy_count,
-  most_recent_bankruptcy) for risk decisioning. Federal district + appellate courts; no state-court coverage.
+description: "Currently unavailable. Search US federal RECAP dockets by party name, returning courts, filing dates and case links."
 category: compliance
 cost_class: free_quota
 quota_window: daily

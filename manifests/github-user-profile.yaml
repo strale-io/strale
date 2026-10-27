@@ -3,7 +3,7 @@
 
 slug: github-user-profile
 name: GitHub User Profile
-description: Fetch a GitHub user's profile, stats, and recent repositories. Returns followers, repos, bio, and activity.
+description: "Currently unavailable. Look up a public developer profile, repository counts and recent repositories."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

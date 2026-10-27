@@ -1,10 +1,6 @@
 slug: maltese-company-data
 name: Maltese Company Data
-description: >-
-  Look up Maltese company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts MT VAT (MT + 8 digits).
-  Returns name, registration number, status, registered address, registration date, LEI, primary NACE code, and
-  last-update timestamp. PARTIAL coverage — some major MT entities (Bank of Valletta, HSBC Malta) returned 204 in
-  2026-05-15 v3 probes. MFSA C-prefix company numbers are NOT accepted.
+description: "Look up Maltese company details by MT-format VAT number. Some registered companies are missing; C-prefix company numbers are not accepted."
 category: company-data
 cost_class: paid_per_call
 price_cents: 16

@@ -1,6 +1,6 @@
 slug: uk-cop-check
 name: "UK Confirmation of Payee"
-description: "Check that a UK sort code and account number belong to the name you expect, through the Pay.UK Confirmation of Payee scheme. Returns the match result, the bank, and the registered name when it is a close match."
+description: "Compare a UK bank account's recorded name with the name supplied through Confirmation of Payee. Returns the match result and available bank details."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

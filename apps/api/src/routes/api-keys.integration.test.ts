@@ -9,7 +9,7 @@ import { apiKeyRecoveryTokens, apiKeys, capabilities, solutions, solutionSteps, 
 import { generateApiKey, getKeyPrefix, hashApiKey } from "../lib/auth.js";
 import { keyCapError, keySpending } from "../lib/api-keys.js";
 import * as walletService from "../lib/wallet-service.js";
-import { runMigration0124_apiKeys } from "../lib/startup-migrations.js";
+import { runMigration0125_apiKeys } from "../lib/startup-migrations.js";
 
 vi.mock("../lib/stripe.js", () => ({ getStripe: () => ({checkout: {sessions: {create: async () => ({id: "test-session", url: "https://checkout.example.test"})}}}) }));
 const DATABASE_URL_TEST = useTestDatabase();
@@ -233,7 +233,7 @@ describeDb("additional keys against real Postgres", () => {
     expect((await request("/v1/wallet/balance", primary)).status).toBe(401);
   });
   it("migration re-runs without changing keys, primary hash or ledger attribution", async () => {
-    await runMigration0124_apiKeys(db); await runMigration0124_apiKeys(db);
+    await runMigration0125_apiKeys(db); await runMigration0125_apiKeys(db);
     expect((await db.select().from(users).where(eq(users.id, userId)))[0].apiKeyHash).toBe(hashApiKey(primary));
     expect((await db.select().from(apiKeys).where(eq(apiKeys.id, keyId)))[0].apiKeyHash).toBe(hashApiKey(secret));
   });
