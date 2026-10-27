@@ -1,6 +1,6 @@
 slug: french-insolvency-check
 name: "French Insolvency Check"
-description: "Check a French company for insolvency proceedings (redressement or liquidation judiciaire) in BODACC, the official legal gazette, by SIREN or name. Returns judgment dates, court and type."
+description: "Search BODACC for a French company's collective insolvency proceedings by SIREN or name, with court, date and proceeding type."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

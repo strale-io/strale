@@ -3,7 +3,7 @@
 
 slug: pdf-extract
 name: "PDF Data Extraction"
-description: "Pull structured data out of any PDF, from a URL or a file. Works on contracts, reports and forms, and returns JSON shaped by your instructions."
+description: "Extract structured data from a PDF supplied as a URL or file. Returns JSON fields shaped by your instructions."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

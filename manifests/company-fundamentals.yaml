@@ -1,8 +1,6 @@
 slug: company-fundamentals
 name: Company Fundamentals
-description: >-
-  Latest annual financials for a US-listed company from its own SEC filings: revenue, operating and
-  net income, assets, liabilities, equity, cash, diluted EPS and share count, each with the filing it came from.
+description: "Read available annual financial metrics from a US domestic company's SEC 10-K filings, with source concepts and filing references."
 category: financial
 cost_class: free_quota
 quota_window: daily

@@ -1,0 +1,50 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/scripts/mutation-test.mjs",
+    "commit": "80d289e8eea3d1a5b7607a9fe71a60dd719ef845"
+  },
+  "at": "2026-10-27T08:33:39.821Z",
+  "inputs": {
+    "candidate_commit": "80d289e8",
+    "base_commit": "10f71df8"
+  },
+  "summary": {
+    "mutation_checks": 3,
+    "caught": 3,
+    "ok": true
+  },
+  "topic": "public-descriptions-mutations",
+  "raw": {
+    "summary": {
+      "mutation_checks": 3,
+      "caught": 3,
+      "ok": true
+    },
+    "inputs": {
+      "candidate_commit": "80d289e8",
+      "base_commit": "10f71df8",
+      "tests": [
+        "apps/api/src/lib/public-descriptions.test.ts",
+        "apps/api/src/lib/startup-migrations.test.ts"
+      ]
+    },
+    "raw": [
+      {
+        "mutation": "length",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "unavailable",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "guard",
+        "exit_code": 0,
+        "green_red_green": true
+      }
+    ]
+  }
+}

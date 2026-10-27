@@ -1,6 +1,6 @@
 slug: email-pattern-discover
 name: Email Pattern Discover
-description: Detect likely corporate email format for a domain. Checks MX records, identifies email provider (Google Workspace, Microsoft 365, etc.), and suggests common patterns.
+description: "Suggest likely company email formats from domain-level mail settings and published address patterns. Does not confirm individual mailboxes."
 category: web-intelligence
 cost_class: free_unlimited
 quota_window: none

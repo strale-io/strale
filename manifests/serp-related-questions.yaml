@@ -1,8 +1,6 @@
 slug: serp-related-questions
 name: SERP Related Questions
-description: >-
-  "People Also Ask" questions and related searches for a query, via a licensed SERP API. The
-  content-research primitive for SEO and topic-expansion agents.
+description: "Find related questions and searches for a query. Returns question text, available answer snippets and source links."
 category: web-scraping
 cost_class: paid_prepaid
 quota_window: none

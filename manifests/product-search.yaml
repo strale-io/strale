@@ -3,7 +3,7 @@
 
 slug: product-search
 name: Product Search
-description: Search products on Google Shopping. Returns product listings with title, price, merchant, rating.
+description: "Currently unavailable. Search product listings, returning titles, prices, merchants and available ratings."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

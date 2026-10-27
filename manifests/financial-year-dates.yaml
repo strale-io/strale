@@ -3,7 +3,7 @@
 
 slug: financial-year-dates
 name: "Financial Year Dates"
-description: "Get a country's financial year, tax filing deadlines and VAT filing frequency, for 42+ countries."
+description: "Look up reference financial-year dates, tax filing deadlines and VAT filing frequency for a supported country."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

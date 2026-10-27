@@ -1,6 +1,6 @@
 slug: latvian-company-data
 name: "Latvian Company Data"
-description: "Look up a Latvian company in the Enterprise Register by its 11-digit registration number or name. Returns name, status, type, address, registration date, SEPA creditor ID and administrative code."
+description: "Look up a Latvian company by number or name, returning identity, status, address, registration date and current officers where available."
 category: company-data
 cost_class: free_unlimited
 quota_window: none

@@ -1,10 +1,6 @@
 slug: website-to-company
 name: Website to Company
-description: >-
-  Identify the company behind a website. Extracts company name from website
-  metadata, detects country from TLD, and looks up the company in the
-  appropriate national registry. Returns registry data for 24 supported
-  countries.
+description: "Currently unavailable. Infer a company name from website metadata and try a registry lookup using its domain's country."
 category: company-data
 cost_class: paid_prepaid
 quota_window: none

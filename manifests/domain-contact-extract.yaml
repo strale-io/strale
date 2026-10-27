@@ -1,6 +1,6 @@
 slug: domain-contact-extract
 name: "Domain Contact Extraction"
-description: "Find a company's public contact details on its own website: role email addresses such as info@ and sales@, phone numbers, postal address, contact page and social links. Company contacts only, never a named person's."
+description: "Read published company contact channels from a website: role email addresses, phone numbers, postal address and social links."
 category: web-intelligence
 search_tags:
   - contact info

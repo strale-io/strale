@@ -1,6 +1,6 @@
 slug: slovak-company-data
 name: "Slovak Company Data"
-description: "Look up a Slovak company in RPO, the Statistical Office's register of legal persons. Returns name, address, legal form, registration details and statutory representatives."
+description: "Look up a Slovak company in RPO, including name, address, legal form, registration details and representatives where available."
 category: company-data
 price_cents: 5
 is_free_tier: false

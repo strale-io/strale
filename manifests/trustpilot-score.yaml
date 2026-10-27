@@ -3,7 +3,7 @@
 
 slug: trustpilot-score
 name: Trustpilot Score
-description: Get Trustpilot score and reviews for a domain. Returns trust score, rating distribution, recent reviews.
+description: "Currently unavailable. Read a domain's published review score, rating distribution and recent reviews."
 category: data-extraction
 price_cents: 10
 is_free_tier: false

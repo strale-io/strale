@@ -6,9 +6,7 @@
 
 slug: wallet-risk-score
 name: Wallet Risk Score
-description: >-
-  Check if a wallet address is associated with malicious activity: phishing, money laundering, darknet, blackmail, or
-  other fraud. Uses GoPlus Security's malicious address database covering 30+ blockchains.
+description: "Currently unavailable. Check a wallet address for reported malicious-activity labels and a risk level."
 category: web3
 cost_class: free_quota
 quota_window: daily

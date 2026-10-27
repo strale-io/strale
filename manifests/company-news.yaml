@@ -1,6 +1,6 @@
 slug: company-news
 name: "Company News"
-description: "Search news about a company in 100+ languages, updated every 15 minutes. Returns recent articles with source, date and sentiment."
+description: "Search news about a company. Returns matching articles with headlines, sources, dates and sentiment estimates."
 category: company-data
 cost_class: free_quota
 quota_window: daily

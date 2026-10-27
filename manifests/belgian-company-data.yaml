@@ -1,6 +1,6 @@
 slug: belgian-company-data
 name: "Belgian Company Data"
-description: "Look up a Belgian company in the Crossroads Bank for Enterprises (KBO/BCE) by enterprise number, VAT number or name. Returns name, status, legal form, address, registration date, establishments and VAT number."
+description: "Look up a Belgian company by enterprise number, VAT number or name. Returns identity, status, address and registration details."
 category: company-data
 cost_class: free_quota
 quota_window: daily

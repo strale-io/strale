@@ -1,6 +1,6 @@
 slug: academic-paper-search
 name: "Academic Paper Search"
-description: "Search 250M+ scholarly works in OpenAlex: title, DOI, authors, venue, citations, open-access PDF and abstract. Filter by year and open access."
+description: "Search scholarly works by keyword, year and open-access status. Returns titles, authors, citations, abstracts and available publication links."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

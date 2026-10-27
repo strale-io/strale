@@ -1,9 +1,6 @@
 slug: bulgarian-company-data
 name: Bulgarian Company Data
-description: >-
-  Look up Bulgarian company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts UIC/EIK (9 digits,
-  optionally BG-prefixed). Returns name, registration number, status, registered address, registration date, LEI,
-  primary NACE code, and last-update timestamp. Directors are not returned at the WW-Top tier.
+description: "Look up Bulgarian company identity and registration details by UIC or EIK. Director details are not included."
 category: company-data
 cost_class: paid_per_call
 price_cents: 16

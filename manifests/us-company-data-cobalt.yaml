@@ -1,11 +1,6 @@
 slug: us-company-data-cobalt
 name: US Company Data (Cobalt)
-description: >-
-  US company registry lookup via Cobalt Intelligence — 50-state Secretary of State live SoS data.
-  Covers ~33M+ US private LLCs/corporations. Two input modes: SoS-issued company ID + state, or
-  company name + state. Returns canonical entity info, status, entity type, formed date, address,
-  registered agent, officers, and filings history. Distinct from the SEC-EDGAR-only us-company-data
-  capability.
+description: "Look up a US company in one state's Secretary of State records by company ID or name, with registration, officer and filing details where available."
 category: company-data
 cost_class: paid_prepaid
 quota_window: none

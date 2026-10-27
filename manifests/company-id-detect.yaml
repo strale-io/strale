@@ -1,6 +1,6 @@
 slug: company-id-detect
 name: "Company ID Detection"
-description: "Work out the type and country of a company registration number: Swedish organisation numbers, Finnish business IDs, German HRB numbers, LEIs, DUNS and 20+ other formats."
+description: "Identify possible countries and identifier types from a company registration number's format. Returns candidate matches and confidence levels."
 category: validation
 cost_class: free_unlimited
 quota_window: none
