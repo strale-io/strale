@@ -191,6 +191,7 @@ export async function debit(
     description: string;
     referenceId?: string | null;
     type?: Extract<LedgerEntryType, "purchase">;
+    apiKeyId?: string | null;
   },
 ): Promise<number> {
   const { wallet, amountCents, description, referenceId } = params;
@@ -233,6 +234,7 @@ export async function debit(
   await tx.insert(walletTransactions).values({
     walletId: wallet.id,
     amountCents: -amountCents,
+    apiKeyId: params.apiKeyId ?? null,
     type: params.type ?? "purchase",
     referenceId: referenceId ?? null,
     description,

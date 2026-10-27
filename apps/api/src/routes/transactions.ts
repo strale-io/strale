@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities, transactionQuality } from "../db/schema.js";
-import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
+import { requirePrimaryKey, authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import {
@@ -320,6 +320,7 @@ transactionsRoute.get(
 transactionsRoute.delete(
   "/:id",
   authMiddleware,
+  requirePrimaryKey,
   rateLimitByKey(5, 1000),
   async (c) => {
     const id = c.req.param("id") as string;
@@ -394,6 +395,7 @@ transactionsRoute.delete(
 transactionsRoute.post(
   "/:id/audit-token",
   authMiddleware,
+  requirePrimaryKey,
   rateLimitByKey(5, 1000),
   async (c) => {
     const id = c.req.param("id") as string;

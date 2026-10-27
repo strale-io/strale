@@ -3,7 +3,7 @@
 
 slug: pii-redact
 name: "PII Redaction"
-description: "Find and remove personal data in text: names, email addresses, phone numbers, national ID numbers such as Swedish personnummer, addresses and more."
+description: "Redact personal details from supplied text. Returns redacted text, detected data types and counts; the submitted input is retained for 90 days."
 category: data-processing
 cost_class: paid_prepaid
 quota_window: none

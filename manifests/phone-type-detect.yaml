@@ -1,6 +1,6 @@
 slug: phone-type-detect
 name: "Phone Type Detection"
-description: "Tell whether a phone number is mobile, landline, VoIP, toll-free or premium rate, before you send an SMS or route a call."
+description: "Infer a phone number's line type from numbering-plan data. Returns line-type flags, SMS capability and country where available."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -96,6 +96,12 @@ output_field_reliability:
   country_code: guaranteed
   input: guaranteed
 limitations:
+  - title: Line type does not confirm service or SMS delivery
+    text: >-
+      Line type and SMS capability are inferred from numbering-plan data. They do not
+      show that the number is assigned or in service, or that it can receive an SMS.
+    category: accuracy
+    severity: info
   - title: Type detection depends on number range allocation
     text: Phone type is determined by number range allocation data — ported numbers may show the original type
     category: accuracy

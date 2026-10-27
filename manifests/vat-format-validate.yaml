@@ -3,7 +3,7 @@
 
 slug: vat-format-validate
 name: "VAT Number Format Check"
-description: "Check a European VAT number's format against each country's rules, for the 27 EU countries plus the UK, Switzerland and Norway. Format only: use EU VAT Validation to check it in VIES."
+description: "Check European VAT number formats against country patterns. Returns the country and format result without checking registration or check digits."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -89,7 +89,7 @@ output_field_reliability:
   format_valid: guaranteed
 limitations:
   - title: Format checks do not confirm VAT registration
-    text: Validates format and check digits algorithmically — does not confirm the VAT number is registered or active
+    text: Validates the number format against country patterns only. It does not check check digits or confirm that the number is registered or active
     category: coverage
     severity: info
     workaround: Use vat-validate for VIES database confirmation after format validation passes

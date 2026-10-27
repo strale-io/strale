@@ -3,7 +3,7 @@
 
 slug: eu-court-case-search
 name: EU Court Case Search
-description: Search EU court cases on CURIA (CJEU) or HUDOC (ECHR). Returns case number, title, date, parties, summary.
+description: "Currently unavailable. Search CURIA or HUDOC court records, returning case numbers, titles, dates and summaries."
 category: data-extraction
 price_cents: 30
 is_free_tier: false

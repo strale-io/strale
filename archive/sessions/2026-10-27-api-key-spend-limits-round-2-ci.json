@@ -1,0 +1,290 @@
+{
+  "setup": "npm ci already run by orchestrator, per task precondition; not rerun because prepare modifies read-only Git config.",
+  "checks": [
+    {
+      "command": "npm --workspace=packages/mcp-server run build",
+      "exit_code": 0,
+      "summary": "> strale-mcp@0.2.8 build\n> tsc"
+    },
+    {
+      "command": "npm --workspace=packages/sdk-typescript run build",
+      "exit_code": 0,
+      "summary": "> straleio@0.1.3 build\n> tsc"
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "summary": "\n\n> straleio-langchain@0.1.0 typecheck\n> tsc --noEmit\n\n\n> strale-semantic-kernel@0.1.4 typecheck\n> tsc --noEmit\n\n\n> strale-mcp@0.2.8 typecheck\n> tsc --noEmit"
+    },
+    {
+      "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+      "exit_code": 0,
+      "summary": "[check-mjs-syntax] 36 .mjs file(s) checked (syntax-only — see script header for scope).\n[check-mjs-syntax] All clean."
+    },
+    {
+      "command": "npm --workspace=apps/api run lint:no-bare-catch",
+      "exit_code": 0,
+      "summary": "> @strale/api@0.1.0 lint:no-bare-catch\n> node scripts/check-no-bare-catch.mjs src\n\nF-0-009 guard: no bare `.catch(() => {})` found."
+    },
+    {
+      "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+      "exit_code": 0,
+      "summary": "> @strale/api@0.1.0 lint:no-unguarded-user-fetch\n> node scripts/check-no-unguarded-user-fetch.mjs\n\n[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked."
+    },
+    {
+      "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+      "exit_code": 0,
+      "summary": "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment."
+    },
+    {
+      "command": "npm --workspace=apps/api run lint:no-new-console",
+      "exit_code": 0,
+      "summary": "> @strale/api@0.1.0 lint:no-new-console\n> node scripts/check-no-new-console.mjs\n\nF-0-014 guard: no new `console.*` calls."
+    },
+    {
+      "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+      "exit_code": 0,
+      "summary": "SCF-3 guard: no API access to integrity_hash_status found."
+    },
+    {
+      "command": "node apps/api/scripts/check-framework-packages.mjs",
+      "exit_code": 0,
+      "summary": "ok    composio-strale  (import found in packages/composio-strale/composio_strale/toolkit.py)\nok    crewai-strale  (import found in packages/crewai-strale/crewai_strale/toolkit.py)\nskip  google-adk-strale  (DEPRECATED.md present — yanked, forwarding only)\nok    langchain-strale  (import found in packages/langchain-strale/langchain_strale/toolkit.py)\nskip  openai-agents-strale  (DEPRECATED.md present — yanked, forwarding only)\nskip  pydantic-ai-strale  (DEPRECATED.md present — yanked, forwarding only)\nok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)\n\nframework-packages check: 4 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims."
+    },
+    {
+      "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+      "exit_code": 0,
+      "summary": "2026-09-25.md: clean (539 words)\n2026-09-26.md: clean (545 words)\n2026-09-27.md: clean (543 words)\n2026-10-02.md: clean (562 words)\n2026-10-10.md: clean (557 words)\n2026-10-17.md: clean (463 words)\n2026-10-18.md: clean (371 words)\n2026-10-19.md: clean (357 words)\n2026-10-26.md: clean (589 words)\n2026-10-27.md: clean (411 words)\n\nchecked 29 brief(s): 0 error(s), 15 warning(s)"
+    },
+    {
+      "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+      "exit_code": 0,
+      "summary": "check-no-committed-secrets: clean (3653 tracked files scanned)"
+    },
+    {
+      "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+      "exit_code": 0,
+      "summary": "[lint] No scripts bypass the dispatcher gate."
+    },
+    {
+      "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+      "exit_code": 0,
+      "summary": "fetch-timeout coverage: 4 total offenders, 0 not in allowlist"
+    },
+    {
+      "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+      "exit_code": 0,
+      "summary": "manifest guaranteed-field consistency: 22 total, 0 not in allowlist"
+    },
+    {
+      "command": "node apps/api/scripts/check-pii.mjs --strict",
+      "exit_code": 0,
+      "summary": "PII guard: clean — no unredacted person names or checksum-valid identifiers found."
+    },
+    {
+      "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+      "exit_code": 0,
+      "summary": "  cz-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [legal_name, primary_registration_id, legal_form, registered_address, date_incorporated]\n  estonian-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [legal_name, primary_registration_id, legal_form, registered_address]\n  french-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [vat_number]\n  norwegian-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [legal_name, primary_registration_id, legal_form, registered_address, date_incorporated]\n\nGUARANTEED_EMPTY (4):\n  estonian-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [historical_names]\n  swedish-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [alternative_names, ongoing_procedures]\n  uk-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [tier_2_available, tier_2_available_reason, ubo_availability, ubo_availability_reason]\n  us-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [match_confidence, is_exact_match, resolution_method]\n\nSTRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. Re-capture a fixture after fixing its manifest with: npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>"
+    },
+    {
+      "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+      "exit_code": 0,
+      "summary": "identity fixture-shape sentinel: 0 total, 0 not in allowlist"
+    },
+    {
+      "command": "node apps/api/scripts/check-shape-contracts.mjs",
+      "exit_code": 0,
+      "summary": "Skipping shape-contract check: frontend repo not present at <checkout>/c:/Users/pette/Projects/strale-frontend\n  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)"
+    },
+    {
+      "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+      "exit_code": 0,
+      "summary": "[lint] cost_class coherence: all classified capabilities OK."
+    },
+    {
+      "command": "node scripts/guard-production-write-access.mjs",
+      "exit_code": 0,
+      "summary": "production write credential: 1 authorised reader, 0 unauthorised references"
+    },
+    {
+      "command": "npm run programs:check",
+      "exit_code": 0,
+      "summary": "> programs:check\n> node scripts/check-program-tracks.mjs\n\nok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml"
+    },
+    {
+      "command": "npm run programs:test",
+      "exit_code": 0,
+      "summary": "✔ a rehomed_to target must be a tracked regular file (23.387599ms)\n✔ an unknown field is rejected at both levels (37.695848ms)\n✔ every track declares a gate, and post-m2 tracks require exactly one m2-exit track (85.660846ms)\n✔ program directories must hold both files and a matching slug (51.312441ms)\nℹ tests 30\nℹ suites 0\nℹ pass 30\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2451.541639"
+    },
+    {
+      "command": "npm run research:check",
+      "exit_code": 0,
+      "summary": "> research:check\n> node scripts/check-research.mjs\n\nchecked 44 docs/research/*.md files\nok   research contract\nwarn (5) — research-looking files outside docs/research:\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract"
+    },
+    {
+      "command": "npm run research:test",
+      "exit_code": 0,
+      "summary": "✔ generateIndex --check passes when the README matches, fails when stale (41.582604ms)\n✔ generateIndex --check reports missing when README does not exist yet (27.096501ms)\n✔ check-research.mjs CLI exits 0 against the real, committed docs/research (1035.738175ms)\n✔ positive smoke test (not mutation evidence): the committed docs/research passes with zero findings (897.746395ms)\nℹ tests 31\nℹ suites 0\nℹ pass 31\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4420.752479"
+    },
+    {
+      "command": "npm run design:check",
+      "exit_code": 0,
+      "summary": "\nchecked 15 design/tokens/*.json files, 6 distinct off-token literals (10 raw occurrences) across the internal-report consumers, 6 allowlisted\nok   design tokens contract\n{\"ok\":true,\"assets\":14,\"gradients\":9,\"source_integrity\":\"not-requested\"}\n{\"ok\":true,\"roles\":12,\"fonts\":2,\"production_adopted\":false}\nControls source, output and evidence bindings pass\nPatterns inputs, outputs and evidence pass\nShared-access illustration sources, outputs and evidence pass\nHomepage generated outputs are current.\nHero comparison sources and generated outputs agree.\nOpening study sources and outputs agree.\nok   open-flow design system: 122 contrast pairs pass, specimen on-token, assets match provenance"
+    },
+    {
+      "command": "npm run design:test",
+      "exit_code": 0,
+      "summary": "✔ the specimen stays on-token after a planted inline literal (0.847746ms)\n✔ the hero shell reads its text region from the asset record, not a copied number (1.95761ms)\n✔ dark-theme state indicators and special focus rings are proven, not assumed (1.226156ms)\n✔ specimen.js may not set styles or carry colour/length literals (0.876726ms)\nℹ tests 15\nℹ suites 0\nℹ pass 15\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 185.478699"
+    },
+    {
+      "command": "npm run env:check",
+      "exit_code": 0,
+      "summary": "> env:check\n> node scripts/check-env.mjs\n\nchecked 129 process.env names against 134 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract"
+    },
+    {
+      "command": "npm run env:test",
+      "exit_code": 0,
+      "summary": "✔ stripLineComment leaves code before a real // comment intact (0.11591ms)\n✔ STALE_ENV_EXAMPLE: generate --check reports missing/stale files, and generate fixes them (19.403516ms)\n✔ a variable required only in production/ci is not written to the local example file (27.888731ms)\n✔ real repo: env manifest is currently clean (schema, coverage, dead rows, examples) (452.506254ms)\nℹ tests 24\nℹ suites 0\nℹ pass 24\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1880.715051"
+    },
+    {
+      "command": "npm run vendors:check",
+      "exit_code": 0,
+      "summary": "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: alternative-me: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: openalex: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: arxiv: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: ncbi-eutils: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: hn-algolia: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-edgar: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-ticker-index: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: nvd: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: usgs-earthquake: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: alchemy-eth: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sourcify: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\nok   vendor register contract"
+    },
+    {
+      "command": "npm run vendors:test",
+      "exit_code": 0,
+      "summary": "✔ Self-built disagrees only with rejected, deprecated, or candidate; every other state is clean (0.224002ms)\n✔ real repo: the vendor register is currently clean (527.275969ms)\n✔ real repo: the vendor register passes its own history check against itself as the base (768.526433ms)\n✔ real repo: the committed agent-context view matches what the generator would write (VENDOR_VIEW_STALE) (193.5827ms)\nℹ tests 78\nℹ suites 0\nℹ pass 78\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 7091.703925"
+    },
+    {
+      "command": "npm run distribution:check",
+      "exit_code": 0,
+      "summary": "> distribution:check\n> node scripts/check-distribution.mjs\n\nchecked 59 surfaces in docs/operations/distribution-registry.yaml\nok   distribution register contract"
+    },
+    {
+      "command": "npm run distribution:test",
+      "exit_code": 0,
+      "summary": "✔ compareDistributionSurfaces: counts, and names present on only one side, matched case-insensitively after trimming (0.514342ms)\n✔ repoNativeDistributionSurfaces: maps register rows to { name, status } (6.959357ms)\n✔ checkAllDistribution runs against the live repository with zero findings (98.768394ms)\n✔ repoNativeDistributionSurfaces runs against the live repository without error (26.824358ms)\nℹ tests 15\nℹ suites 0\nℹ pass 15\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 591.06921"
+    },
+    {
+      "command": "npm run digest:shadow:test",
+      "exit_code": 0,
+      "summary": "✔ config/scheduled-mechanisms.yaml declares the m3-digest-shadow-comparison entry (28.305645ms)\n✔ parseDecisionQueue parses the live DECISION-QUEUE.md without error (1.740085ms)\n✔ repoNativePriorities runs against the live repository without error (3.735316ms)\n✔ recentHandoffActivity runs against the live repository without error (2.74919ms)\nℹ tests 20\nℹ suites 0\nℹ pass 20\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 359.693763"
+    },
+    {
+      "command": "npm run candidates:test",
+      "exit_code": 0,
+      "summary": "\n✔ candidate file exists with inactive front matter and an M4 caution block (10.706804ms)\n✔ candidate file names both tools' identities from its per-tool table (0.385503ms)\n✔ neither live end-session file references the candidates directory (0.622191ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 246.12377"
+    },
+    {
+      "command": "npm run protocols:check",
+      "exit_code": 0,
+      "summary": "> protocols:check\n> node scripts/check-protocol-extraction.mjs\n\nchecked 19 candidate protocol mirror(s) under docs/governance/protocols\nok   protocol extraction"
+    },
+    {
+      "command": "npm run protocols:test",
+      "exit_code": 0,
+      "summary": "✔ fails with PROTOCOL_FRONTMATTER_INVALID when authority_active is not false (2.940334ms)\n✔ fails with PROTOCOL_FRONTMATTER_INVALID when source_heading is missing (4.865879ms)\n✔ listCandidateProtocolFiles ignores a .md file with no verbatim markers (4.429932ms)\n✔ checkAllProtocolExtraction runs against the live repository with zero findings (37.317791ms)\nℹ tests 12\nℹ suites 0\nℹ pass 12\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 370.92827"
+    },
+    {
+      "command": "npm run protocols:coverage",
+      "exit_code": 0,
+      "summary": "> protocols:coverage\n> node scripts/check-protocol-coverage.mjs\n\nchecked 20 protocol row(s) in docs/project/protocol-coverage.yaml\n  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20260910-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision\n  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20261024-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision\nok   protocol coverage"
+    },
+    {
+      "command": "npm run protocols:coverage:test",
+      "exit_code": 0,
+      "summary": "✔ ROUTER_STALE: router file missing entirely (38.961115ms)\n✔ DECISION_ID_UNCOVERED: a decision id named inside a covered section is a warning, not a finding (57.432101ms)\n✔ real repository: docs/project/protocol-coverage.yaml and the generated router pass with no findings (293.854458ms)\n✔ real repository: two generations of the router are byte-identical (deterministic) (34.595438ms)\nℹ tests 16\nℹ suites 0\nℹ pass 16\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1336.097578"
+    },
+    {
+      "command": "npm run scheduled:check",
+      "exit_code": 0,
+      "summary": "> scheduled:check\n> node scripts/check-scheduled-reachability.mjs\n\nchecked 9 scheduled mechanisms in config/scheduled-mechanisms.yaml\nok   scheduled mechanism reachability"
+    },
+    {
+      "command": "npm run scheduled:test",
+      "exit_code": 0,
+      "summary": "✔ RUN_UNPARSEABLE: a step working-directory that is not a plain relative path (review finding 1) (38.102413ms)\n✔ SCHEMA_INVALID gates the rest: an invalid register returns only schema findings (18.473401ms)\n✔ SCHEMA_INVALID: a bare list of secret names is no longer a valid shape (review finding 4) (58.703769ms)\n✔ the committed config/scheduled-mechanisms.yaml passes against the real workflows (139.150246ms)\nℹ tests 43\nℹ suites 0\nℹ pass 43\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1187.521917"
+    },
+    {
+      "command": "npm run scheduled:outcomes:test",
+      "exit_code": 0,
+      "summary": "✔ an unreadable register still lets every scheduled workflow be watched (28.196362ms)\n✔ --runs-json with no value is refused rather than silently going to the network (219.897545ms)\n✔ the register's verifiable:false and non-schedule entries are filtered, on a planted register (5.806695ms)\n✔ workflow order does not depend on the order the directory happens to list (2.034205ms)\nℹ tests 24\nℹ suites 0\nℹ pass 24\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2167.169784"
+    },
+    {
+      "command": "npm run models:check",
+      "exit_code": 0,
+      "summary": "> models:check\n> node apps/api/scripts/check-model-literals.mjs\n\nchecked 729 files under apps/api/src (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)\nok   model registry contract"
+    },
+    {
+      "command": "npm run models:test",
+      "exit_code": 0,
+      "summary": "✔ REGISTRY_MISSING_FIELD: a role missing pinned_at (1.793838ms)\n✔ REGISTRY_MISSING_FIELD: a role missing decision (11.353837ms)\n✔ REGISTRY_INVALID_DATE: pinned_at not a calendar date (15.170132ms)\n✔ real repo: model registry is currently clean (192.777933ms)\nℹ tests 14\nℹ suites 0\nℹ pass 14\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 540.885677"
+    },
+    {
+      "command": "npm run claims:check",
+      "exit_code": 0,
+      "summary": "> claims:check\n> node scripts/check-claims.mjs\n\nchecked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract"
+    },
+    {
+      "command": "npm run claims:test",
+      "exit_code": 0,
+      "summary": "✔ INVALID_CLAIM_PATTERN: an unparseable regex claim (20.860527ms)\n✔ a literal (non-regex) claim containing regex special characters matches only literally (34.862576ms)\n✔ real repo: claims register is currently clean against every scanned surface (1846.999163ms)\n✔ a forbidden row written as /pattern/ matches prose on a surface; a literal row matches verbatim (4.775623ms)\nℹ tests 18\nℹ suites 0\nℹ pass 18\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2837.536699"
+    },
+    {
+      "command": "npm run docs:check",
+      "exit_code": 0,
+      "summary": "> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index"
+    },
+    {
+      "command": "npm run docs:test",
+      "exit_code": 0,
+      "summary": "✔ clean pass: every real subtree is listed, every listed subtree is real (9.739622ms)\n✔ PLANTED FAILURE: a new docs/ subtree with no line in docs/README.md must fail (14.12661ms)\n✔ PLANTED FAILURE: a subtree listed in docs/README.md that no longer exists must fail (1.314001ms)\n✔ DOCS_README_MISSING when docs/README.md itself is absent (3.156443ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 248.66229"
+    },
+    {
+      "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+      "exit_code": 0,
+      "summary": "::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\narchive/README.md is stale — fix: npm run archive:index (then commit it)"
+    },
+    {
+      "command": "npm run archive:index:test",
+      "exit_code": 0,
+      "summary": "✔ reverse-chronological: dated entries sort newest first; undated entries follow, sorted by path (2.838842ms)\n✔ clean pass: generateAll writes both files and a subsequent --check reports not stale (3.590835ms)\n✔ PLANTED FAILURE: a new handoff file added after generation must be caught by --check (2.485964ms)\n✔ missing handoff/README.md is reported as stale (missing), not silently created (6.473634ms)\nℹ tests 12\nℹ suites 0\nℹ pass 12\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 314.86969"
+    },
+    {
+      "command": "npm run receipts:check",
+      "exit_code": 0,
+      "summary": "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-04-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-05-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-06-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-06-retention-cadence-and-review-followups.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-24-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it"
+    },
+    {
+      "command": "npm run receipts:test",
+      "exit_code": 0,
+      "summary": "✔ a handoff dated before 2026-09-02 stating a bare test count does not warn (predates the contract) (114.385481ms)\n✔ findBareTestCountHandoffs matches the pass-ratio pattern too (98.231057ms)\n✔ inferSummary reads the repo-wide check-*.mjs --json shape (0.705149ms)\n✔ inferSummary returns null for a shape it cannot read (0.244855ms)\nℹ tests 25\nℹ suites 0\nℹ pass 25\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4974.839653"
+    },
+    {
+      "command": "npm run migrations:check",
+      "exit_code": 0,
+      "summary": "> migrations:check\n> node apps/api/scripts/check-migration-ledger.mjs\n\nchecked 67 migration blocks in apps/api/src/lib/startup-migrations.ts\nok   migration ledger"
+    },
+    {
+      "command": "npm run migrations:test",
+      "exit_code": 0,
+      "summary": "✔ declaredDataFiles reads `// migration-data:` lines; a block without one hashes exactly as before (0.303516ms)\n✔ editing a block's declared data file fails BLOCK_HASH_MISMATCH; the unedited file passes (2.902559ms)\n✔ removing the `// migration-data:` declaration from the block is itself a hash change (10.828831ms)\n✔ a declared data file that does not exist fails MIGRATION_DATA_MISSING (15.065583ms)\nℹ tests 23\nℹ suites 0\nℹ pass 23\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 240.544885"
+    },
+    {
+      "command": "npm run handoff:test",
+      "exit_code": 0,
+      "summary": "✔ unstaged hand edits to a generated file are never overwritten: it refuses with a fix (123.349109ms)\n✔ a CRLF checkout (Git for Windows, autocrlf) is not mistaken for unstaged edits (198.738995ms)\n✔ a commit with a pathspec (temporary next-index) refuses rather than desync the real index (219.857042ms)\n✔ wired as hooks: a commit and a clean merge both land a fresh index (planted failure: the forgotten archive:index) (1418.097199ms)\nℹ tests 46\nℹ suites 0\nℹ pass 46\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 21213.459118"
+    },
+    {
+      "command": "npm run context:check",
+      "exit_code": 0,
+      "summary": "> context:check\n> node scripts/check-project-context.mjs\n\nproject context check: warning-only (M2 candidate foundation)\n  no warnings"
+    },
+    {
+      "command": "npm run context:test",
+      "exit_code": 0,
+      "summary": "✔ a quote present only in a referenced commit's message is found through that source (283.263188ms)\n✔ a quote matching a commit message is NOT found when the sha does not exist in the repo (27.498089ms)\n✔ a quote present only in another record's own Notion row (not its markdown body) is found by naming that record (19.538443ms)\n✔ a quote matching text in an UNRELATED Notion row is reported as a residual, not faithful (10.327452ms)\nℹ tests 180\nℹ suites 0\nℹ pass 180\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 139576.933481"
+    }
+  ]
+}

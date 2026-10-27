@@ -3,9 +3,7 @@
 
 slug: credit-report-summary
 name: Credit Report Summary
-description: >-
-  Get a credit report summary for a Swedish company from Allabolag. Returns credit rating, financial summary, risk
-  indicators, board members. Accepts org number or company name.
+description: "Currently unavailable. Swedish company credit summaries are not served."
 category: financial
 price_cents: 100
 is_free_tier: false

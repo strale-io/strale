@@ -3,7 +3,7 @@
 
 slug: llm-cost-calculate
 name: "LLM Cost Calculator"
-description: "Work out what a prompt and its answer cost across 14 models, with cheaper options and how much each saves."
+description: "Estimate prompt and completion costs using reference prices for supported models. Returns token estimates, costs and cheaper options."
 category: developer-tools
 cost_class: free_unlimited
 quota_window: none

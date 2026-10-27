@@ -3,7 +3,7 @@
 
 slug: public-holiday-lookup
 name: "Public Holiday Lookup"
-description: "Get a country's public holidays for a year, for 200+ countries, with the next one coming up."
+description: "Look up public holidays for a supported country and year. Returns holiday names and dates, with the next upcoming holiday."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

@@ -56,6 +56,14 @@ run the commercial pack (`npx tsx scripts/commercial-brief.ts`). The commercial
 pack is not optional and is not a nice-to-have — the commercial-intelligence
 list below is the minimum the run must be able to answer.
 
+**A2. Inbox (DEC-20261027-A).** Search petter@strale.io, including Junk Email, for replies to every `awaiting_reply` row in `docs/company/OUTBOX.yaml`, and sweep both folders for new mail about Strale's tools, sources, vendors, registries, accounts or listings. Ignore marketing and resellers.
+- Record each reply on its row.
+- Act on it if the action is within delegated authority; otherwise raise it.
+- Send one follow-up when a row's `follow_up_by` has passed, then set the next date. After two unanswered follow-ups, put it to Petter.
+- Close finished rows.
+
+Procedure: `docs/operations/accounts-and-email.md`. If the Microsoft 365 connector is missing on this account, say so in one line and carry on.
+
 **B. Overnight health.** First run the Vendor Control Tower report
 (`cd apps/api && npm run vendor:status`, production read-only). Treat every
 `CRITICAL`, `WARNING`, stale balance reading, prepaid-credit expiry, inventory

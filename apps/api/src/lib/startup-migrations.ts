@@ -36,6 +36,7 @@
  * with the same input is a no-op).
  */
 
+import type { Sql } from "postgres";
 import { sql, type SQL } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log } from "./log.js";
@@ -57,6 +58,10 @@ import {
   type CatalogueCopyCapabilityRow,
   type CatalogueCopySolutionRow,
 } from "./catalogue-copy-0123.js";
+import {
+  PUBLIC_DESCRIPTIONS_0124,
+  type PublicDescriptionRow,
+} from "./public-descriptions-0124.js";
 
 /**
  * Minimal executor surface — matches what `getDb().execute()` returns
@@ -4026,6 +4031,8 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0121_phase0CatalogueRepairs,
   runMigration0122_correctSanctionsSourceCopy,
   runMigration0123_catalogueCopy,
+  runMigration0124_publicDescriptions,
+  runMigration0125_apiKeys,
 ];
 
 /**
@@ -6658,4 +6665,164 @@ export async function runMigration0123_catalogueCopy(
     rows_affected: total,
     duration_ms: Date.now() - startedAt,
   };
+}
+
+// Block 0124 (2026-10-27): remaining public tool descriptions.
+// Copy only, guarded on exact GET /v1/capabilities values read on 2026-10-27.
+// Unlisted manifests are rewritten in the repository only: no production
+// value is guessed for them. Later edits are skipped, never overwritten.
+// Like 0123, this deliberately leaves updated_at untouched: invariant-checker
+// uses that timestamp for stale ground truth and the suspended-tool clock.
+// The optional rows argument permits isolated database tests on synthetic slugs.
+export async function runMigration0124_publicDescriptions(
+  tx: MigrationExecutor,
+  rows: readonly PublicDescriptionRow[] = PUBLIC_DESCRIPTIONS_0124,
+): Promise<BlockResult> {
+  // migration-data: apps/api/src/lib/public-descriptions-0124.ts
+  const startedAt = Date.now();
+  const BLOCK = "0124_publicDescriptions";
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS startup_migration_ledger (
+      block text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now(),
+      rows_affected integer NOT NULL DEFAULT 0
+    )`);
+
+  const prior = (await tx.execute(sql`
+    SELECT block FROM startup_migration_ledger WHERE block = ${BLOCK}
+  `)) as unknown as Array<{ block: string }>;
+  if (prior.length > 0) {
+    return {
+      block: BLOCK,
+      outcome: "no change (already applied once)",
+      rows_affected: 0,
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  const changes = rows.filter((r) => r.old_description !== r.description);
+  const values = sql.join(
+    changes.map((r) => sql`(${r.slug}::text, ${r.old_description}::text, ${r.description}::text)`),
+    sql`, `,
+  );
+  const updated = changes.length === 0 ? [] : ((await tx.execute(sql`
+    UPDATE capabilities AS c
+       SET description = v.new_value
+      FROM (VALUES ${values}) AS v (slug, old_value, new_value)
+     WHERE c.slug = v.slug
+       AND c.description = v.old_value
+     RETURNING c.slug
+  `)) as unknown as Array<{ slug: string }>);
+
+  // Record only after successful writes; failures propagate and are retried at boot.
+  await tx.execute(sql`
+    INSERT INTO startup_migration_ledger (block, rows_affected)
+    VALUES (${BLOCK}, ${updated.length})
+    ON CONFLICT (block) DO NOTHING
+  `);
+  return {
+    block: BLOCK,
+    outcome: `${updated.length}/${changes.length} description(s); ${changes.length - updated.length} left alone (changed since snapshot or absent)`,
+    rows_affected: updated.length,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0125: additional API keys and wallet debit attribution ───────────
+export async function runMigration0125_apiKeys(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  // The runner passes the pool, outside a transaction. Reserve one connection:
+  // SET on a pooled executor could otherwise affect an unrelated session.
+  const client = (tx as MigrationExecutor & { $client?: Sql }).$client;
+  const connection = client ? await client.reserve() : null;
+  // Every statement here is static text. A reserved postgres-js connection is
+  // not a drizzle client (wrapping it fails: it lacks the pool's options), so
+  // run the text directly on it.
+  const run = (text: string): Promise<unknown> =>
+    connection ? connection.unsafe(text) : tx.execute(sql.raw(text));
+  try {
+    await run(`SET lock_timeout = '3s'`);
+    // The pool's 30s statement_timeout could abort a concurrent index build on
+    // a large table; lift it on this reserved connection only.
+    await run(`SET statement_timeout = 0`);
+    await run(`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id),
+        api_key_hash varchar(255) NOT NULL UNIQUE,
+        key_prefix varchar(16) NOT NULL,
+        label varchar(100) NOT NULL,
+        max_spend_per_hour_cents integer CHECK (max_spend_per_hour_cents >= 0),
+        max_spend_total_cents integer CHECK (max_spend_total_cents >= 0),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        revoked_at timestamptz,
+        last_used_at timestamptz
+      )
+    `);
+    await run(`CREATE INDEX IF NOT EXISTS api_keys_prefix_idx ON api_keys(key_prefix)`);
+    await run(`CREATE INDEX IF NOT EXISTS api_keys_user_idx ON api_keys(user_id)`);
+    // Even ADD COLUMN IF NOT EXISTS takes ACCESS EXCLUSIVE. Avoid the ALTER
+    // entirely on later boots, including when the column exists but the FK
+    // has not yet been added/validated after an interrupted first boot.
+    await run(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema() AND table_name = 'wallet_transactions' AND column_name = 'api_key_id'
+        ) THEN
+          ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS api_key_id uuid;
+        END IF;
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'wallet_transactions'::regclass AND conname = 'wallet_transactions_api_key_id_fkey'
+        ) THEN
+          ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_api_key_id_fkey
+            FOREIGN KEY (api_key_id) REFERENCES api_keys(id) NOT VALID;
+        END IF;
+      END $$
+    `);
+    // SHARE UPDATE EXCLUSIVE: validation permits ordinary reads and writes.
+    await run(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'wallet_transactions'::regclass
+            AND conname = 'wallet_transactions_api_key_id_fkey' AND NOT convalidated
+        ) THEN
+          ALTER TABLE wallet_transactions VALIDATE CONSTRAINT wallet_transactions_api_key_id_fkey;
+        END IF;
+      END $$
+    `);
+    // A failed concurrent build can leave an invalid index. Repair only that
+    // state before IF NOT EXISTS, otherwise a retry could silently skip it.
+    const invalid = await run(`
+      SELECT c.relname FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+      WHERE i.indrelid = 'wallet_transactions'::regclass AND NOT i.indisvalid
+        AND c.relname IN ('wallet_transactions_api_key_created_idx', 'wallet_transactions_reference_idx')
+    `) as unknown as Array<{ relname: string }>;
+    for (const { relname } of invalid) {
+      if (relname === "wallet_transactions_api_key_created_idx") {
+        await run(`DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_api_key_created_idx`);
+      } else if (relname === "wallet_transactions_reference_idx") {
+        await run(`DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_reference_idx`);
+      }
+    }
+    await run(`
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_api_key_created_idx ON wallet_transactions(api_key_id, created_at)
+    `);
+    await run(`
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_reference_idx ON wallet_transactions(reference_id)
+    `);
+  } finally {
+    try {
+      await run(`RESET statement_timeout`);
+      await run(`RESET lock_timeout`);
+    } finally {
+      connection?.release();
+    }
+  }
+  return { block: "0125_apiKeys", outcome: "ensured additional keys and debit attribution", duration_ms: Date.now() - startedAt };
 }

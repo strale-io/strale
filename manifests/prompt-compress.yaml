@@ -3,7 +3,7 @@
 
 slug: prompt-compress
 name: "Prompt Compression"
-description: "Shorten a prompt by 10 to 70 percent while keeping its meaning."
+description: "Shorten a prompt towards a requested reduction while aiming to preserve its meaning. Returns the shorter text and estimated savings."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none

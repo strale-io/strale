@@ -1,0 +1,69 @@
+# External email threads awaiting a reply. Procedure: docs/operations/accounts-and-email.md
+# (DEC-20261027-A). Every email a session sends, or drafts for Petter to send, gets a row
+# here in the same session; the daily run checks the inbox (Junk included) for replies.
+# Dates are calendar dates in Swedish local time.
+threads:
+  - id: nta-invoice-app-id
+    to: invoice-web-api@nta.go.jp
+    subject: Request for the invoice-system (T-number) Web-API application ID
+    asked: Whether an invoice-use application ID can be issued on the existing registration, and which usage document to submit
+    unblocks: Japan qualified-invoice-issuer (T-number) check, portfolio plan 1.13
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-10
+    status: awaiting_reply
+  - id: hmrc-production-cns433
+    to: softwaredevelopersupport@service.hmrc.gov.uk
+    subject: Chase on production credentials, support ref 2026-CNS433
+    asked: Status of the production credential request, and whether the sandbox app's deletion affects it
+    unblocks: UK VAT number check and GB EORI, portfolio plan 1.11 and 1.15
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-07
+    status: awaiting_reply
+    note: The sandbox application is due for deletion around 2026-11-12 unless it makes an API call.
+  - id: datacircle-benchmark
+    to: wayne@datacircle.dev
+    subject: Benchmark of Strale on GTM API lists
+    asked: Move email and phone validation out of verification lists; finish company-enrichment and tech-stack runs over x402
+    unblocks: Accurate public benchmark listing
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-10
+    status: awaiting_reply
+  - id: probe402-refusals
+    to: zach@probe402.com
+    subject: Paid x402 calls refused before settlement
+    asked: The routes and request bodies of the six refused September calls
+    unblocks: Diagnosis of the refusals and probe402's public grade
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-10
+    status: awaiting_reply
+  - id: serper-resale-terms
+    to: hello@serper.dev
+    subject: Whether Serper's terms permit per-call resale
+    asked: Written permission for per-call resale of search results
+    unblocks: DQ-39; eight Serper-backed tools run under an exception that ends 2026-11-09
+    sent: 2026-10-26
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-02
+    status: awaiting_reply
+  - id: swiss-uid-reuse
+    to: uid@bfs.admin.ch
+    subject: Per-call commercial reuse of public UID register data
+    asked: Whether per-call reuse with attribution is permitted
+    unblocks: DQ-40; Swiss UID inside vat-validate and portfolio plan 1.12
+    sent: 2026-10-26
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-09
+    status: awaiting_reply
+  - id: czech-ares-reuse
+    to: ares@mfcr.cz
+    subject: Reuse licence for ARES register data
+    asked: Whether per-call commercial reuse with attribution is permitted
+    unblocks: DQ-40; cz-company-data terms record
+    sent: 2026-10-26
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-09
+    status: awaiting_reply

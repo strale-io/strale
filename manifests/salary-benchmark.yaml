@@ -3,7 +3,7 @@
 
 slug: salary-benchmark
 name: Salary Benchmark
-description: Get salary benchmarks for a job title. Returns median, 25th/75th percentile, comparable titles.
+description: "Currently unavailable. Look up salary estimates for a job title, returning a median, percentiles and comparable roles."
 category: data-extraction
 price_cents: 20
 is_free_tier: false

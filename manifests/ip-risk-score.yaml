@@ -1,8 +1,6 @@
 slug: ip-risk-score
 name: IP Risk Score
-description: >-
-  Assess fraud risk for an IP address. Detects VPNs, proxies, Tor exit nodes, hosting/datacenter
-  IPs. Returns risk score and risk factors.
+description: "Currently unavailable. Assess an IP address using reported proxy, VPN and hosting indicators, returning a risk score."
 category: validation
 cost_class: free_quota
 quota_window: daily

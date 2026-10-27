@@ -1,11 +1,6 @@
 slug: italian-company-data
 name: Italian Company Data
-description: >-
-  Look up Italian company data via Openapi.com IT-Advanced (Tier-3 vendor aggregator; richest Openapi product
-  Strale ships in v1). Accepts Italian codice fiscale / P.IVA (11 digits). Returns name, legal form
-  (detailedLegalForm — unique to IT among Openapi-routed countries), registration number, status, registered
-  address, registration date, LEI, primary NACE/ATECO code, share capital, last filing date, and shareholders
-  array (≥10% threshold; empty for widely-held entities like Eni).
+description: "Look up Italian company details by tax or VAT number, including financial and shareholder information where available. Directors are not included."
 category: company-data
 cost_class: paid_per_call
 price_cents: 12

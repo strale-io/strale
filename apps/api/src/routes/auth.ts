@@ -6,7 +6,7 @@ import { users, transactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
 import { logError } from "../lib/log.js";
-import { authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
+import { requirePrimaryKey, authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
@@ -365,7 +365,7 @@ authRoute.post(
   return c.json({
     api_key: result.apiKey, // Shown once — the previous key is now invalid
     key_prefix: result.keyPrefix,
-    message: "Your previous API key has been deactivated.",
+    message: "Your previous primary key has been deactivated. Additional keys remain active and can still spend up to their caps. Use your new primary key to review GET /v1/api-keys and revoke unused or unrecognized keys with DELETE /v1/api-keys/{id}.",
   });
 });
 
@@ -402,7 +402,7 @@ authRoute.post(
 // The response itemises both lists so the user has explicit confirmation
 // of what survived erasure and the legal basis. This is a one-way action;
 // the API key dies the moment this returns 200.
-authRoute.delete("/me", authMiddleware, async (c) => {
+authRoute.delete("/me", authMiddleware, requirePrimaryKey, async (c) => {
   const user = c.get("user");
   const db = getDb();
   const body = await c.req.json().catch(() => ({})) as { reason?: string };
@@ -523,7 +523,7 @@ authRoute.delete("/me", authMiddleware, async (c) => {
 
 // POST /v1/auth/api-key — Regenerate API key
 // Requires auth (old key must still work)
-authRoute.post("/api-key", authMiddleware, async (c) => {
+authRoute.post("/api-key", authMiddleware, requirePrimaryKey, async (c) => {
   const user = c.get("user");
   const db = getDb();
 

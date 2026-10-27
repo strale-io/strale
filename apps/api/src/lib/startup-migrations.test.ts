@@ -81,6 +81,7 @@ import {
   runMigration0121_phase0CatalogueRepairs,
   runMigration0122_correctSanctionsSourceCopy,
   runMigration0123_catalogueCopy,
+  runMigration0124_publicDescriptions,
   DQ36_OLD_SANCTIONS_DESCRIPTION,
   DQ36_NEW_SANCTIONS_DESCRIPTION,
   DQ36_OLD_SANCTIONS_DATA_SOURCE,
@@ -99,6 +100,9 @@ import {
   CATALOGUE_COPY_0123_SOLUTIONS,
 } from "./catalogue-copy-0123.js";
 
+import { PUBLIC_DESCRIPTIONS_0124, UNLISTED_DESCRIPTIONS_0124 } from "./public-descriptions-0124.js";
+
+const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124].map((r) => [r.slug, r.description]));
 const dialect = new PgDialect();
 
 /** Capture SQL chunks issued through the stub. Returns canned values
@@ -1385,7 +1389,7 @@ describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 57 blocks in historical order", () => {
+  it("exports the expected ledgered blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1459,6 +1463,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0121_phase0CatalogueRepairs",
       "runMigration0122_correctSanctionsSourceCopy",
       "runMigration0123_catalogueCopy",
+      "runMigration0124_publicDescriptions",
+      "runMigration0125_apiKeys",
     ]);
   });
 });
@@ -2342,7 +2348,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(123);
+    expect(Math.max(...numbers)).toBe(125);
   });
 });
 
@@ -3186,7 +3192,7 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     ) as { description: string; data_source: string };
     const row0123 = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.slug === "sanctions-check")!;
     expect(row0123.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
-    expect(manifest.description).toBe(row0123.description);
+    expect(manifest.description).toBe(latestDescriptions.get("sanctions-check") ?? row0123.description);
     expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
   });
 
@@ -3373,7 +3379,7 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
         readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8"),
       ) as { name: string; description: string };
       expect(manifest.name, r.slug).toBe(r.name);
-      expect(manifest.description, r.slug).toBe(r.description);
+      expect(manifest.description, r.slug).toBe(latestDescriptions.get(r.slug) ?? r.description);
     }
     expect(CATALOGUE_COPY_0123_CAPABILITIES.length).toBe(296);
     // password-strength's offered copy says the password is never stored; inputs are kept 90 days.
@@ -3439,5 +3445,80 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     // The seed generator no longer produces the old templates either.
     const seed = readFileSync(new URL("../../scripts/seed-kyb-solutions.ts", import.meta.url), "utf8");
     expect(seed).not.toMatch(/verification for \$\{c\.name\}|fraud detection for \$\{c\.name\}|checks for \$\{c\.name\} companies|invoices from \$\{c\.name\}/);
+  });
+});
+
+// Block 0123's SQL remains frozen; only the latest manifest target advances.
+describe("startup-migrations: block 0124 (public descriptions)", () => {
+  it("runs after 0123 and skips all writes on a later boot", async () => {
+    expect(BLOCKS.indexOf(runMigration0124_publicDescriptions)).toBe(BLOCKS.indexOf(runMigration0123_catalogueCopy) + 1);
+    const stub = makeStub({ queue: [{}, [{ block: "0124_publicDescriptions" }]] });
+    const result = await runMigration0124_publicDescriptions(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("already applied once");
+    expect(stub.captured).toHaveLength(2);
+  });
+
+  it("updates description only, matching both slug and exact production text with scalar binds", async () => {
+    const stub = makeStub({ queue: [{}, [], [{ slug: "one" }], []] });
+    const result = await runMigration0124_publicDescriptions(stub);
+    expect(stub.captured).toHaveLength(4);
+    const update = dialect.sqlToQuery(stub.captured[2]);
+    expect(update.sql).toMatch(/UPDATE capabilities AS c\s+SET description = v\.new_value\s+FROM \(VALUES /);
+    expect(update.sql).toMatch(/WHERE c\.slug = v\.slug\s+AND c\.description = v\.old_value\s+RETURNING c\.slug/);
+    expect(update.sql.match(/\bSET\b([\s\S]+?)\bFROM\b/i)?.[1].trim()).toBe("description = v.new_value");
+    expect(update.sql).not.toMatch(/updated_at|\bANY\s*\(/i);
+    expect(update.params).toEqual(PUBLIC_DESCRIPTIONS_0124.flatMap((r) => [r.slug, r.old_description, r.description]));
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(typeof p === "string" || typeof p === "number").toBe(true);
+        expect(Array.isArray(p) || p instanceof Date || Buffer.isBuffer(p)).toBe(false);
+      }
+    }
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toContain(`${PUBLIC_DESCRIPTIONS_0124.length - 1} left alone`);
+    expect(dialect.sqlToQuery(stub.captured[3]).params).toEqual(["0124_publicDescriptions", 1]);
+  });
+
+  it("records zero matching rows and skips an empty change set without invalid VALUES SQL", async () => {
+    const stub = makeStub({ queue: [{}, [], [], []] });
+    expect((await runMigration0124_publicDescriptions(stub)).rows_affected).toBe(0);
+    const empty = makeStub({ queue: [{}, [], []] });
+    expect((await runMigration0124_publicDescriptions(empty, [])).rows_affected).toBe(0);
+    expect(empty.captured).toHaveLength(3);
+    expect(empty.renderedSql.some((q) => /UPDATE capabilities/i.test(q))).toBe(false);
+  });
+
+  it("propagates update errors without recording success", async () => {
+    const stub = makeStub({ queue: [{}, []] });
+    const error = new Error("copy update failed");
+    const original = stub.execute;
+    stub.execute = async (q) => {
+      if (/UPDATE capabilities/.test(dialect.sqlToQuery(q).sql)) throw error;
+      return original(q);
+    };
+    await expect(runMigration0124_publicDescriptions(stub)).rejects.toBe(error);
+    expect(stub.renderedSql.some((q) => /INSERT INTO startup_migration_ledger/i.test(q))).toBe(false);
+  });
+
+  it("pins every changed manifest, keeps frozen 0123 history, and gives unlisted tools no guessed guard", async () => {
+    const { readFileSync } = await import("node:fs");
+    const yaml = (await import("js-yaml")).default;
+    const seen = new Set<string>();
+    for (const r of [...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124]) {
+      expect(seen.has(r.slug), r.slug).toBe(false);
+      seen.add(r.slug);
+      const manifest = yaml.load(readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8")) as { description: string };
+      expect(manifest.description, r.slug).toBe(r.description);
+      expect(r.description.length, r.slug).toBeGreaterThanOrEqual(50);
+      expect(r.description.length, r.slug).toBeLessThanOrEqual(160);
+    }
+    expect(PUBLIC_DESCRIPTIONS_0124.length).toBeGreaterThan(0);
+    for (const r of UNLISTED_DESCRIPTIONS_0124) expect(r).not.toHaveProperty("old_description");
+    for (const r of PUBLIC_DESCRIPTIONS_0124) {
+      expect(r.old_description, r.slug).not.toBe(r.description);
+      const previous = CATALOGUE_COPY_0123_CAPABILITIES.find((p) => p.slug === r.slug);
+      if (previous) expect(r.old_description, r.slug).toBe(previous.description);
+    }
   });
 });

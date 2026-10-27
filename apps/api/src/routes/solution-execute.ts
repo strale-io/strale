@@ -29,6 +29,8 @@ import { solutions, wallets, walletTransactions, transactions } from "../db/sche
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
+import { keyCapError } from "../lib/api-keys.js";
+import { spendCapWouldExceed } from "./do.js";
 import { stepsThatRan, executeSolution } from "../lib/solution-executor.js";
 import {
   aggregateSolutionOutcome,
@@ -180,11 +182,23 @@ solutionExecuteRoute.post(
           .where(eq(wallets.userId, user.id))
           .for("update");
 
+        const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), sol.priceCents);
+        if (keyError) return { ok: false as const, policyError: keyError };
+
         if (!wallet || wallet.balanceCents < sol.priceCents) {
           return {
             ok: false as const,
             balance: wallet?.balanceCents ?? 0,
           };
+        }
+
+        // Additional keys must also pass the existing account policy. Keep
+        // the primary solution path's behaviour unchanged.
+        if (c.get("apiKeyId") && user.maxSpendPerHourCents) {
+          const cap = await spendCapWouldExceed(tx, user.id, sol.priceCents, user.maxSpendPerHourCents);
+          if (cap) return { ok: false as const, policyError: apiError("spend_cap_exceeded",
+            "Account hourly spend limit would be exceeded. Raise the account limit or wait for earlier spending to leave the hourly window.",
+            { spent_cents: cap.spent, limit_cents: user.maxSpendPerHourCents, requested_cents: sol.priceCents }) };
         }
 
         // Insert transaction row at "executing" — two-phase write per /v1/do pattern
@@ -240,6 +254,7 @@ solutionExecuteRoute.post(
           userId: user.id,
           amountCents: sol.priceCents,
           transactionId: txnRecord.id,
+          apiKeyId: c.get("apiKeyId"),
           description: `Solution: ${sol.slug}`,
         });
 
@@ -256,6 +271,10 @@ solutionExecuteRoute.post(
       // WP6: three distinct not-ok shapes now share this branch, and they mean
       // very different things to the caller. Discriminate before assuming the
       // wallet one, or a replay would be reported as insufficient funds.
+      if (!txResult.ok && "policyError" in txResult) {
+        return c.json(txResult.policyError!, txResult.policyError!.error_code === "unauthorized" ? 401 : 429);
+      }
+
       if (!txResult.ok && "keyConflictWith" in txResult) {
         return c.json(
           apiError(

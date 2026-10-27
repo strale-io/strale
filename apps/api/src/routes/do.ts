@@ -38,7 +38,8 @@ import {
   CapabilityInvocationRefusedError,
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
-import { apiError } from "../lib/errors.js";
+import { apiError, type ApiError } from "../lib/errors.js";
+import { keyCapError } from "../lib/api-keys.js";
 import { hasMissingRequiredCredential } from "../lib/dependency-manifest.js";
 import { pgErrorCode } from "../lib/db-error.js";
 import {
@@ -2003,6 +2004,7 @@ async function executeSync(
   const startTime = Date.now();
 
   type TxResult =
+    | { ok: false; errorCode: "key_policy"; keyError: ApiError }
     | {
         ok: true;
         transactionId: string;
@@ -2081,6 +2083,9 @@ async function executeSync(
     // Lock wallet row (WP2: via the wallet service, which owns the lock shape)
     const wallet = await walletService.lockWalletForUser(tx, user.id);
 
+    const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), capability.priceCents);
+    if (keyError) return { ok: false as const, errorCode: "key_policy" as const, keyError };
+
     if (!wallet || wallet.balanceCents < capability.priceCents) {
       return {
         ok: false as const,
@@ -2150,6 +2155,7 @@ async function executeSync(
         wallet,
         amountCents: capability.priceCents,
         referenceId: txnRecord.id,
+        apiKeyId: c.get("apiKeyId"),
         description: `Capability: ${capability.slug}`,
       });
 
@@ -2316,6 +2322,10 @@ async function executeSync(
   }
 
   // ── Return response ───────────────────────────────────────────────────
+  if (!result.ok && result.errorCode === "key_policy") {
+    return c.json(result.keyError, result.keyError.error_code === "unauthorized" ? 401 : 429);
+  }
+
   if (!result.ok && result.errorCode === "insufficient_balance") {
     return c.json(
       apiError(
@@ -2443,6 +2453,7 @@ async function executeAsync(
 ) {
   // Short DB tx: lock wallet → check balance → debit → create record → commit
   type SetupResult =
+    | { ok: false; errorCode: "key_policy"; keyError: ApiError }
     | {
         ok: true;
         transactionId: string;
@@ -2467,6 +2478,9 @@ async function executeAsync(
 
   const setupResult: SetupResult = await db.transaction(async (tx) => {
     const wallet = await walletService.lockWalletForUser(tx, user.id);
+
+    const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), capability.priceCents);
+    if (keyError) return { ok: false as const, errorCode: "key_policy" as const, keyError };
 
     if (!wallet || wallet.balanceCents < capability.priceCents) {
       return {
@@ -2539,6 +2553,7 @@ async function executeAsync(
       userId: user.id,
       amountCents: capability.priceCents,
       transactionId: txnRecord.id,
+      apiKeyId: c.get("apiKeyId"),
       description: `Capability: ${capability.slug}`,
     });
     const newBalance = reservation.balanceAfter;
@@ -2551,6 +2566,10 @@ async function executeAsync(
       reservationId: reservation.id,
     };
   });
+
+  if (!setupResult.ok && setupResult.errorCode === "key_policy") {
+    return c.json(setupResult.keyError, setupResult.keyError.error_code === "unauthorized" ? 401 : 429);
+  }
 
   if (!setupResult.ok && setupResult.errorCode === "spend_cap_exceeded") {
     return c.json(

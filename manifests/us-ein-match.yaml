@@ -1,10 +1,6 @@
 slug: us-ein-match
 name: US EIN Match
-description: >-
-  US Employer Identification Number (EIN) lookup and name search via Liberty Data EINsearch
-  (~24M EIN database, bureau-derived). Two modes: EIN exact lookup, or business name search
-  (optionally constrained by state). Returns business name, status, formed state, address, and
-  match score for name searches.
+description: "Look up a US business by EIN or search by name, returning address, formation state and candidate match scores where available."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

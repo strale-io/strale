@@ -14,10 +14,10 @@ import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { X402_PAYABLE_LIFECYCLE_STATES } from "../lib/x402-eligibility.js";
 import { recordDiscoveryHit } from "../lib/attribution.js";
 import { eq, and, isNull } from "drizzle-orm";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, transactions, users } from "../db/schema.js";
-import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
+import { capabilities, solutions, transactions } from "../db/schema.js";
+import { authenticateApiKey } from "../lib/api-keys.js";
 import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { getClientIp } from "../lib/middleware.js";
@@ -722,23 +722,7 @@ async function handleMessageSend(
 // ─── Resolve API key to user ─────────────────────────────────────────────────
 
 async function resolveApiKeyToUser(apiKey: string) {
-  const db = getDb();
-  const prefix = getKeyPrefix(apiKey);
-  const hash = hashApiKey(apiKey);
-  const hashBuffer = Buffer.from(hash, "utf-8");
-
-  const candidates = await db
-    .select()
-    .from(users)
-    .where(eq(users.keyPrefix, prefix));
-
-  return candidates.find((u) => {
-    const stored = Buffer.from(u.apiKeyHash, "utf-8");
-    return (
-      stored.length === hashBuffer.length &&
-      timingSafeEqual(stored, hashBuffer)
-    );
-  }) ?? null;
+  return (await authenticateApiKey(apiKey))?.user ?? null;
 }
 
 // ─── tasks/get handler ──────────────────────────────────────────────────────

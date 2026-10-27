@@ -1,6 +1,6 @@
 slug: gleif-l2-ubo-lookup
 name: "LEI Parent Lookup"
-description: "Find the direct and ultimate parent companies of any entity with an LEI, from GLEIF ownership data, with the stated reason when a parent is not reported. Fills ownership gaps that national registers leave."
+description: "Find reported direct and ultimate parent companies for an LEI in GLEIF, including reporting exceptions where a parent is not named."
 category: compliance
 cost_class: free_unlimited
 quota_window: none

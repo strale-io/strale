@@ -6,9 +6,7 @@
 
 slug: contract-verify-check
 name: Contract Verification Check
-description: >-
-  Check whether a smart contract's source code is verified on Sourcify, the open verification repository. Returns
-  contract name, compiler version, optimizer and EVM settings, and proxy status. Works across EVM chains by chain id.
+description: "Check whether a smart contract has a published source-code match, with compiler settings and proxy status where available."
 category: web3
 cost_class: free_quota
 quota_window: daily

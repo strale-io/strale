@@ -64,6 +64,23 @@ export const users = pgTable("users", {
     .defaultNow(),
 });
 
+// Additional keys leave the primary users key and account cap unchanged.
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull().unique(),
+  keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  label: varchar("label", { length: 100 }).notNull(),
+  maxSpendPerHourCents: integer("max_spend_per_hour_cents"),
+  maxSpendTotalCents: integer("max_spend_total_cents"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+}, (table) => [
+  index("api_keys_prefix_idx").on(table.keyPrefix),
+  index("api_keys_user_idx").on(table.userId),
+]);
+
 // ─── wallets ────────────────────────────────────────────────────────────────
 export const wallets = pgTable("wallets", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -161,6 +178,7 @@ export const walletTransactions = pgTable(
     walletId: uuid("wallet_id")
       .notNull()
       .references(() => wallets.id),
+    apiKeyId: uuid("api_key_id").references(() => apiKeys.id),
     amountCents: integer("amount_cents").notNull(), // positive = top-up, negative = purchase
     type: varchar("type", { length: 20 }).notNull(), // 'top_up' | 'purchase' | 'refund' | 'trial_credit'
     referenceId: uuid("reference_id"), // links to transactions.id if purchase
@@ -171,6 +189,8 @@ export const walletTransactions = pgTable(
       .defaultNow(),
   },
   (table) => [
+    index("wallet_transactions_api_key_created_idx").on(table.apiKeyId, table.createdAt),
+    index("wallet_transactions_reference_idx").on(table.referenceId),
     uniqueIndex("wallet_transactions_stripe_session_id_unique")
       .on(table.stripeSessionId)
       .where(sql`stripe_session_id IS NOT NULL`),

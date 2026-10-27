@@ -3,7 +3,7 @@
 
 slug: llm-output-validate
 name: "LLM Output Validation"
-description: "Check an LLM's output against a schema and repair common mistakes, without calling another model."
+description: "Parse AI output as JSON, repair common syntax mistakes and check supported schema rules. Returns parsed output and validation errors."
 category: agent-tooling
 cost_class: free_unlimited
 quota_window: none

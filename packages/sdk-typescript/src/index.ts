@@ -2,6 +2,11 @@ export { Strale } from "./client.js";
 
 // Types
 export type {
+  ApiKey,
+  ApiKeyUsage,
+  ApiKeyCreated,
+  ApiKeyCreateOptions,
+  ApiKeyUpdateOptions,
   StraleOptions,
   DoRequest,
   DoResponse,

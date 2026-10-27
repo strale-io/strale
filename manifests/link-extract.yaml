@@ -3,7 +3,7 @@
 
 slug: link-extract
 name: "Link Extraction"
-description: "List every link on a page with its anchor text and rel attributes, internal or external."
+description: "List links found in a page's initial HTML, with anchor text and rel attributes. Links added by JavaScript can be missed."
 category: web-scraping
 cost_class: free_unlimited
 quota_window: none

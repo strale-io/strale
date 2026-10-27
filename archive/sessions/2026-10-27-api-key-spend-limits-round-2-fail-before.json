@@ -1,0 +1,58 @@
+{
+  "base": "4767bab7",
+  "command": "npm --workspace=apps/api exec -- vitest run src/lib/api-keys.test.ts src/routes/api-keys.test.ts src/routes/primary-key-boundary.test.ts",
+  "method": "Source bytes replaced from git show; candidate bytes restored from memory in finally; no Git mutations. Standard mutation runner requires a commit and clean checkout, prohibited by the orchestrator.",
+  "results": [
+    {
+      "phase": "candidate-green",
+      "exit_code": 0,
+      "summary": [
+        "Test Files  3 passed (3)",
+        "Tests  48 passed (48)"
+      ]
+    },
+    {
+      "phase": "exact-4767bab7-red",
+      "exit_code": 1,
+      "summary": [
+        "\u23af\u23af\u23af\u23af\u23af\u23af Failed Tests 26 \u23af\u23af\u23af\u23af\u23af\u23af\u23af",
+        "FAIL  src/routes/api-keys.test.ts > GET key management requires primary authorization and accepts the primary",
+        "FAIL  src/routes/api-keys.test.ts > PATCH key management requires primary authorization and accepts the primary",
+        "FAIL  src/routes/api-keys.test.ts > DELETE key management requires primary authorization and accepts the primary",
+        "FAIL  src/routes/api-keys.test.ts > POST key management requires primary authorization and accepts the primary",
+        "FAIL  src/routes/api-keys.test.ts > allows 25 active keys, refuses the 26th, and reuses a revoked slot",
+        "FAIL  src/routes/api-keys.test.ts > serializes two concurrent creates at 24 using the wallet lock",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"line\\nbreak\" before writing",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"\\tx\" before writing",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"x\\r\" before writing",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"x\\u0000\" before writing",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"x\u007f\" before writing",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"x",
+        "FAIL  src/routes/api-keys.test.ts > rejects invalid label \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" before writing",
+        "FAIL  src/routes/primary-key-boundary.test.ts > POST /v1/auth/api-key denies additional keys before side effects and accepts the primary key",
+        "FAIL  src/routes/primary-key-boundary.test.ts > DELETE /v1/auth/me denies additional keys before side effects and accepts the primary key",
+        "FAIL  src/routes/primary-key-boundary.test.ts > DELETE /v1/transactions/ID denies additional keys before side effects and accepts the primary key",
+        "FAIL  src/routes/primary-key-boundary.test.ts > POST /v1/transactions/ID/audit-token denies additional keys before side effects and accepts the primary key",
+        "FAIL  src/routes/primary-key-boundary.test.ts > POST /v1/wallet/topup denies additional keys before side effects and accepts the primary key",
+        "FAIL  src/routes/primary-key-boundary.test.ts > POST /v1/transactions/ID/dispute denies additional keys before side effects and accepts the primary key",
+        "FAIL  src/routes/primary-key-boundary.test.ts > returns primary_key_required even after additional-key wallet rate saturation",
+        "FAIL  src/routes/primary-key-boundary.test.ts > recovery response tells the owner that additional keys survive and how to revoke them",
+        "FAIL  src/lib/api-keys.test.ts > additional-key authentication > unknown and revoked keys produce identical 401 bodies",
+        "FAIL  src/lib/api-keys.test.ts > key limits and ledger accounting > refuses the hourly cap with a stable code and actionable message",
+        "FAIL  src/lib/api-keys.test.ts > migration 0124 > guards ALTERs, validates separately, bounds lock waits and builds concurrent indexes",
+        "FAIL  src/lib/api-keys.test.ts > migration 0124 > repairs an interrupted concurrent index build and resets timeout even on failure",
+        "FAIL  src/lib/api-keys.test.ts > authenticates when last-used persistence fails and logs the structured failure",
+        "Test Files  3 failed (3)",
+        "Tests  26 failed | 22 passed (48)"
+      ]
+    },
+    {
+      "phase": "restored-candidate-green",
+      "exit_code": 0,
+      "summary": [
+        "Test Files  3 passed (3)",
+        "Tests  48 passed (48)"
+      ]
+    }
+  ]
+}

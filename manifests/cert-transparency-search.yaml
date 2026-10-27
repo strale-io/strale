@@ -1,8 +1,6 @@
 slug: cert-transparency-search
 name: Certificate Transparency Search
-description: >-
-  Search public Certificate Transparency logs for a domain: every certificate issued, the issuing
-  CA, validity window, and the full set of hostnames those certificates cover.
+description: "Search public Certificate Transparency logs for certificates and hostnames associated with a domain."
 category: security
 cost_class: free_quota
 quota_window: daily

@@ -1,4 +1,5 @@
 import type {
+  ApiKey, ApiKeyUsage, ApiKeyCreated, ApiKeyCreateOptions, ApiKeyUpdateOptions,
   StraleOptions,
   DoRequest,
   DoResponse,
@@ -130,6 +131,26 @@ export class Strale {
     return this.request<BalanceResponse>("GET", "/v1/wallet/balance");
   }
 
+  /** Primary key required. Create an additional key (maximum 25 active). Save api_key securely: it is returned once. */
+  async createApiKey(options: ApiKeyCreateOptions): Promise<ApiKeyCreated> {
+    return this.request("POST", "/v1/api-keys", { ...options });
+  }
+
+  /** Primary key required. List up to 25 active keys and their ledger-derived spending. */
+  async apiKeys(): Promise<ApiKeyUsage[]> {
+    return (await this.request<{ keys: ApiKeyUsage[] }>("GET", "/v1/api-keys")).keys;
+  }
+
+  /** Primary key required. null removes a cap; zero prevents paid calls. */
+  async updateApiKey(id: string, options: ApiKeyUpdateOptions): Promise<ApiKey> {
+    return this.request("PATCH", `/v1/api-keys/${encodeURIComponent(id)}`, { ...options });
+  }
+
+  /** Primary key required. Revoke an additional key. The account's primary key remains available. */
+  async revokeApiKey(id: string): Promise<ApiKey> {
+    return this.request("DELETE", `/v1/api-keys/${encodeURIComponent(id)}`);
+  }
+
   // ─── Transactions ──────────────────────────────────────────────────────────
 
   /** List recent transactions */
@@ -223,7 +244,7 @@ export class Strale {
   // ─── HTTP layer ────────────────────────────────────────────────────────────
 
   private async request<T>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     body?: Record<string, unknown>,
     extraHeaders?: Record<string, string>,
