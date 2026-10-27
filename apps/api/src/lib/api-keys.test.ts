@@ -184,6 +184,32 @@ describe("migration 0125", () => {
     expect(statements.join(" ")).toContain("DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_reference_idx");
     expect(statements.at(-1)).toContain("RESET lock_timeout");
   });
+  // Regression for the boot crash CI caught: a reserved postgres-js connection
+  // has no pool options, so the block must run text on it, never wrap it.
+  it("runs on a reserved pool connection, scopes the timeouts to it and always releases it", async () => {
+    for (const failOn of [null, "CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_reference_idx"]) {
+      const sent: string[] = [];
+      let released = 0;
+      const connection = {
+        unsafe: async (text: string) => {
+          sent.push(text);
+          if (failOn && text.includes(failOn)) throw new Error("lock timeout");
+          return [];
+        },
+        release: () => { released++; },
+      };
+      const tx = {
+        execute: async () => { throw new Error("pool executor must not be used while a connection is reserved"); },
+        $client: { reserve: async () => connection },
+      };
+      const run = runMigration0125_apiKeys(tx as never);
+      if (failOn) await expect(run).rejects.toThrow("lock timeout"); else await run;
+      expect(sent[0]).toBe("SET lock_timeout = '3s'");
+      expect(sent).toContain("SET statement_timeout = 0");
+      expect(sent.slice(-2)).toEqual(["RESET statement_timeout", "RESET lock_timeout"]);
+      expect(released).toBe(1);
+    }
+  });
 });
 
 it("attributes both sync debits and async reservations to the authenticating key", async () => {

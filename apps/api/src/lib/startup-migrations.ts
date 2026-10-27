@@ -6745,6 +6745,9 @@ export async function runMigration0125_apiKeys(
     connection ? connection.unsafe(text) : tx.execute(sql.raw(text));
   try {
     await run(`SET lock_timeout = '3s'`);
+    // The pool's 30s statement_timeout could abort a concurrent index build on
+    // a large table; lift it on this reserved connection only.
+    await run(`SET statement_timeout = 0`);
     await run(`
       CREATE TABLE IF NOT EXISTS api_keys (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6815,6 +6818,7 @@ export async function runMigration0125_apiKeys(
     `);
   } finally {
     try {
+      await run(`RESET statement_timeout`);
       await run(`RESET lock_timeout`);
     } finally {
       connection?.release();
