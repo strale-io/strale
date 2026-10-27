@@ -33,3 +33,12 @@ it("a solution step succeeds after one real Anthropic 429", async () => {
   expect(isSuccessfulStepOutput(result?.steps["test-llm"])).toBe(true);
   expect(state.executor).toHaveBeenCalledTimes(2);
 });
+
+it("a solution step does not retry a non-transient Anthropic 400", async () => {
+  state.executor.mockRejectedValueOnce(APIError.generate(400,
+    { type: "error", error: { type: "invalid_request_error" } }, undefined, new Headers()))
+    .mockResolvedValueOnce({ output: { answer: "should not run" }, provenance: { source: "test" } });
+  const result = await executeSolution("test-solution", { text: "hello" }, { userId: null });
+  expect(result?.errors.length).toBeGreaterThan(0);
+  expect(state.executor).toHaveBeenCalledTimes(1);
+});

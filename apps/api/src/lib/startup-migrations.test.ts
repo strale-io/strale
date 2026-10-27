@@ -3555,6 +3555,7 @@ describe("startup-migrations — block 0129 (marginal transaction costs)", () =>
     expect(q.sql).toContain("ADD COLUMN cost_cents numeric(24,9)");
     expect(q.sql).toContain("ADD COLUMN cost_breakdown jsonb");
     expect(q.sql.match(/IF NOT EXISTS/g)).toHaveLength(2);
+    expect(q.sql.match(/set_config\('lock_timeout', '3s', true\)/g)).toHaveLength(2);
     expect(q.sql).not.toMatch(/DEFAULT|NOT NULL|UPDATE transactions/i);
     expect(q.params.some((v) => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
   });
