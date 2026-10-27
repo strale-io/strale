@@ -1392,6 +1392,8 @@
   provider: NTA Corporate Number Web-API
   holder: petter
   cost_class: free
-  required_in: []
-  set_in: [none]
-  cost_note: Free official registry API. Petter holds the ID. Until it is set in Railway, japanese-company-data returns capability_unavailable before any execution or settlement. Never log it.
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Free official registry API. Petter holds the ID; set in Railway on 2026-10-27. Without it, japanese-company-data returns capability_unavailable before any execution or settlement. Never log it.
