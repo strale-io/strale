@@ -961,6 +961,13 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**Old daily digest retired** · `decided` · owner Petter · 2026-10-27
+The old daily-digest email (`apps/api/src/jobs/daily-digest.ts`) is retired rather than restored.
+*What happened:* the new production watch (`/health/jobs`, PR #774) reported on its first run that the digest had last succeeded 196 days earlier, on 2026-04-14. That matches DEC-20260511-F, which in May decided to restore the pipeline; the restoration never happened. Petter decided in session ("retire the old digest"): the CEO morning brief (DEC-20260822-A) already does this job, and restoring it would give him two overlapping morning emails.
+*What changed:* `daily-digest` is removed from `apps/api/src/lib/job-watch-contract.json` and from the freshness query, so the watch no longer expects it. The script and `lib/daily-digest/` stay, because the M3 digest shadow (`m3-digest-shadow.yml`) and the M4 repo-native digest reuse them.
+*What remains:* nothing. DEC-20260511-F's restoration is closed by this decision.
+*How you'd reverse it:* say so. The job script still exists; restoring it means scheduling it and adding it back to the watch contract.
+
 **DEC-20261027-B** · `decided` · owner Petter · 2026-10-27
 Petter approved the platform hardening and distribution plan, with its scoped
 publish and pricing grants.
