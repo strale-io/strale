@@ -64,6 +64,7 @@ import { validateX402Input } from "../lib/x402-input-validation.js";
 import { recordX402Miss } from "../lib/x402-demand.js";
 import { executeWithTransientRetry } from "../lib/retry.js";
 import { createHash } from "node:crypto";
+import { inputForPersistence } from "../lib/never-persist-inputs.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -730,7 +731,9 @@ function buildX402AuditTrail(args: {
     : marker === "hybrid"
       ? "Mixed — LLM-assisted with algorithmic validation"
       : "Fully AI — LLM generates or transforms output";
-  const inputHash = `sha256:${createHash("sha256").update(JSON.stringify(inputs)).digest("hex")}`;
+  // Hash of the PERSISTENCE form: a never-persisted field (lib/never-persist-inputs.ts)
+  // is masked first, because an unsalted hash of a weak password is crackable.
+  const inputHash = `sha256:${createHash("sha256").update(JSON.stringify(inputForPersistence(cap.slug, inputs))).digest("hex")}`;
   // schema_validated: same minimal "object + required fields present" check
   // do.ts uses. False when we can't verify (no schema, or output null on
   // failure path).
@@ -853,7 +856,8 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       solutionSlug: args.solutionSlug,
       status: args.error ? "failed" : "completed",
       clientMeta: args.clientMeta ?? null,
-      input: args.inputs,
+      // Never the raw value of a never-persisted field (lib/never-persist-inputs.ts).
+      input: inputForPersistence(args.slug, args.inputs),
       output: args.output ?? undefined,
       error: args.error ?? null,
       priceCents: args.priceCents,
@@ -949,7 +953,9 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
           payerAddress: args.payerAddress ?? null,
           priceUsd: args.priceUsd.toFixed(4),
           priceCents: args.priceCents,
-          rawArgs: args as unknown as Record<string, unknown>,
+          // `args` carries the caller's inputs; a never-persisted field
+          // (lib/never-persist-inputs.ts) is masked here like everywhere else.
+          rawArgs: { ...args, inputs: inputForPersistence(args.slug, args.inputs) } as unknown as Record<string, unknown>,
           failureReason: err instanceof Error ? err.message.slice(0, 500) : String(err).slice(0, 500),
         });
         logError("x402-orphan-settlement-recorded", new Error(

@@ -23,6 +23,7 @@ import {
   computeIdempotencyFingerprint,
   isReplayable,
 } from "../lib/idempotency-fingerprint.js";
+import { inputForPersistence } from "../lib/never-persist-inputs.js";
 import { extractClientMeta } from "../lib/attribution.js";
 import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
@@ -71,7 +72,7 @@ solutionExecuteRoute.post(
     const idempotencyFingerprint = computeIdempotencyFingerprint({
       rail: "solution",
       capabilitySlug: slug,
-      inputs: inputs as Record<string, unknown> | null,
+      inputs: inputForPersistence(slug, inputs as Record<string, unknown> | null),
     });
     if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) {
       return c.json(
@@ -205,7 +206,7 @@ solutionExecuteRoute.post(
               src: c.req.query("src"),
               ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
             }) ?? null,
-            input: inputs as Record<string, unknown>,
+            input: inputForPersistence(sol.slug, inputs as Record<string, unknown>),
             priceCents: sol.priceCents,
             transparencyMarker: sol.transparencyTag ?? "mixed",
             // F-AUDIT-01 / CCO #3: previously hardcoded "EU" while running in
