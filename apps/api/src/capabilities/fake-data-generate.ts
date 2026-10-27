@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { readArray } from "../lib/capability-input.js";
 
@@ -19,7 +20,7 @@ registerCapability("fake-data-generate", async (input: CapabilityInput) => {
     ? `JSON Schema:\n${JSON.stringify(schema, null, 2).slice(0, 3000)}`
     : `Fields:\n${fields.map((f) => `- ${f.name}: ${f.type}${f.constraints ? ` (${f.constraints})` : ""}`).join("\n")}`;
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

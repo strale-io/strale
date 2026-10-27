@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // F-0-006 Bucket D: user URL is passed to Claude as prose for mock
@@ -21,7 +22,7 @@ registerCapability("api-mock-response", async (input: CapabilityInput) => {
     ? `Response schema:\n${JSON.stringify(responseSchema, null, 2).slice(0, 3000)}`
     : "No schema provided — generate a plausible response based on the URL pattern.";
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

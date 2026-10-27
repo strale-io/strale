@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { readStringArray } from "../lib/capability-input.js";
 
@@ -17,7 +18,7 @@ registerCapability("blog-post-outline", async (input: CapabilityInput) => {
 
   const keywordSection = keywords.length > 0 ? `\nTarget SEO keywords: ${keywords.join(", ")}` : "";
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

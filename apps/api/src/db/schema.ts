@@ -369,6 +369,8 @@ export const transactions = pgTable(
     input: jsonb("input").notNull(),
     output: jsonb("output"),
     error: text("error"),
+    costCents: decimal("cost_cents", { precision: 24, scale: 9 }),
+    costBreakdown: jsonb("cost_breakdown"),
     priceCents: integer("price_cents").notNull(),
     latencyMs: integer("latency_ms"),
     provenance: jsonb("provenance"),

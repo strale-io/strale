@@ -633,6 +633,8 @@ jobs:
       # apps/api/src (outside *.test.ts), or a registry entry missing
       # pinned_at/decision.
       # REGISTER (models:*) — always runs.
+      - run: npm run anthropic:check
+      - run: npm run anthropic:test
       - run: npm run models:check
       - run: npm run models:test
       # Claims register (T14, docs/company/claims.yaml): validates the

@@ -1467,6 +1467,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0125_apiKeys",
       "runMigration0126_signupSource",
       "runMigration0127_integrityHashIndex",
+      "runMigration0128_transactionCost",
     ]);
   });
 });
@@ -2350,7 +2351,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(127);
+    expect(Math.max(...numbers)).toBe(128);
   });
 });
 
@@ -3522,5 +3523,21 @@ describe("startup-migrations: block 0124 (public descriptions)", () => {
       const previous = CATALOGUE_COPY_0123_CAPABILITIES.find((p) => p.slug === r.slug);
       if (previous) expect(r.old_description, r.slug).toBe(previous.description);
     }
+  });
+});
+
+
+describe("startup-migrations — block 0128 (marginal transaction costs)", () => {
+  it("adds only bare nullable columns under schema guards, with no backfill or unsafe binds", async () => {
+    const { runMigration0128_transactionCost } = await import("./startup-migrations.js");
+    const statements: SQL[] = [];
+    await runMigration0128_transactionCost({ execute: async (q: SQL) => { statements.push(q); return []; } });
+    expect(statements).toHaveLength(1);
+    const q = new PgDialect().sqlToQuery(statements[0]!);
+    expect(q.sql).toContain("ADD COLUMN cost_cents numeric(24,9)");
+    expect(q.sql).toContain("ADD COLUMN cost_breakdown jsonb");
+    expect(q.sql.match(/IF NOT EXISTS/g)).toHaveLength(2);
+    expect(q.sql).not.toMatch(/DEFAULT|NOT NULL|UPDATE transactions/i);
+    expect(q.params.some((v) => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
   });
 });

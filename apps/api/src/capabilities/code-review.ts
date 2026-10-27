@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 
 registerCapability("code-review", async (input: CapabilityInput) => {
@@ -17,7 +18,7 @@ registerCapability("code-review", async (input: CapabilityInput) => {
     ? `Focus specifically on: ${focus} (security/performance/readability/bugs)`
     : "Review for security, performance, readability, and bugs.";
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const r = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 1500,

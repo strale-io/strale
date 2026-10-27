@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonObject } from "./lib/llm-json.js";
 import { logError, logWarn } from "../lib/log.js";
 import { MODELS, promptDigest } from "../lib/models.js";
@@ -10,22 +11,11 @@ import { MODELS, promptDigest } from "../lib/models.js";
 // compliance evidence we want "given inputs X, produce output Y" to be
 // reproducible.
 //
-// Status as of 2026-04-30: Anthropic's GET /v1/models endpoint only
-// publishes the alias for Sonnet 4.6 — no dated snapshot
-// ("claude-sonnet-4-6-YYYYMMDD") is available yet. (Sonnet 4 and 4.5
-// DO have dated snapshots; 4.6 doesn't.) Setting RISK_NARRATIVE_MODEL
-// to a fabricated snapshot would 404 on every call and break the
-// capability immediately. So PINNED_MODEL stays on the alias and we
-// rely on provenance.model_resolved (captured below) to identify the
-// snapshot Anthropic actually resolved to per call.
-//
-// When Anthropic publishes a dated snapshot for 4.6, set
-// RISK_NARRATIVE_MODEL on Railway to that snapshot ID — the env
-// override below is wired and will pin it. Run scripts/diag-risk-
-// narrative-model.ts to find the resolved snapshot from recent prod
-// calls before pinning.
-const DEFAULT_MODEL = MODELS.capability_reasoning.id;
-const PINNED_MODEL = process.env.RISK_NARRATIVE_MODEL ?? DEFAULT_MODEL;
+// RISK_NARRATIVE_MODEL was an emergency rollback override, unset in production.
+// Removing it retires that rollback mechanism; rollback now requires a registry deploy.
+// Pin changes belong to MODELS.capability_reasoning. Record the resolved
+// response model below so aliases remain auditable.
+const PINNED_MODEL = MODELS.capability_reasoning.id;
 
 // Cert-audit Y-10 — wording-rule enforcement. The system prompt
 // enumerates phrases the LLM must never use ("This company is clean",
@@ -397,7 +387,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
   }
 
   try {
-    const client = new Anthropic({ apiKey });
+    const client = createAnthropicClient({ apiKey });
     // Sonnet 4.6 for risk-narrative synthesis: judgment-heavy, false-positive cost
     // is high, defamation risk if synthesis is sloppy. Per chat 2026-04-28 + DEC-20260428-B.
     // Effective cost goes from ~EUR 0.05–0.08 to ~EUR 0.15–0.25 per call (3x), still well
@@ -481,8 +471,8 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
       // Cert-audit Y-10: include the actual model version returned by
       // Anthropic so audit replay can identify the snapshot that
       // produced this narrative. PINNED_MODEL is what we asked for;
-      // r.model is what we got (Anthropic's resolution of the alias
-      // or, if RISK_NARRATIVE_MODEL is set, the literal pinned id).
+      // r.model is what we got (Anthropic's resolution of the configured
+      // role id from MODELS.capability_reasoning).
       provenance: {
         source: "claude-sonnet",
         model_requested: PINNED_MODEL,

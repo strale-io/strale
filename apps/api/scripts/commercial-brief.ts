@@ -22,7 +22,7 @@ const REPO = resolve(HERE, "../../..");
 config({ path: resolve(REPO, ".env") });
 
 const {
-  discreteWeeks, growth, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
+  marginPerTool, discreteWeeks, growth, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
   trailingQuietWindow,
   startOfIsoWeek,
 } = await import("../src/lib/metrics/commercial.js");
@@ -63,6 +63,7 @@ async function main() {
   const lastFull = { from: lastFullStart, to: weekStart, label: "last completed week" };
   const priorFull = { from: priorFullStart, to: lastFullStart, label: "the week before that" };
 
+  const margins = await marginPerTool(lastFull);
   const factsM = await payerFacts(lastFull);
   const facts = factsM.status === "unavailable" ? [] : factsM.value.payers;
   const unattributed = factsM.status === "unavailable" ? 0 : factsM.value.unattributedCents;
@@ -109,7 +110,7 @@ async function main() {
 
   if (asJson) {
     console.log(JSON.stringify({
-      weeks, growth: g,
+      margins, weeks, growth: g,
       concentration: conc ? { ...conc, newPayerKeys: [...conc.newPayerKeys] } : null,
       quiet,
       quietNarrowedSince: quietNarrowedSince ? quietNarrowedSince.toISOString() : null,
@@ -118,6 +119,9 @@ async function main() {
     }, null, 2));
     return;
   }
+  console.log("Per-tool marginal upstream cost (EUR estimate, matched known-cost cohort; flags after 20 calls):");
+  console.table(margins);
+
 
   console.log("\n═══ COMMERCIAL PACK ═══\n");
 

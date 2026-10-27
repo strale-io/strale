@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatCZ } from "../lib/vat-derivation.js";
 import { normalizeIco, isValidIcoChecksum } from "../lib/cz-validation.js";
@@ -100,7 +101,7 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const response = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 100,

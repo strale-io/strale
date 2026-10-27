@@ -1,3 +1,4 @@
+import { recordVendorCost } from "./call-cost.js";
 /** Shared fetch wrapper for APIs whose calls consume credits or cash. */
 import {
   assertVendorAvailable,
@@ -23,10 +24,26 @@ export async function meteredVendorFetch(
     process.env.NODE_ENV === "test" &&
     !process.env.DATABASE_URL &&
     process.env.VENDOR_CONTROL_TOWER_FORCE !== "1";
-  if (unitTestWithoutDb) return fetchImpl(url, init);
+  if (unitTestWithoutDb) {
+    try {
+      const response = await fetchImpl(url, init);
+      recordVendorCost(providerName, units, response.ok ? "success" : "failure");
+      return response;
+    } catch (error) {
+      recordVendorCost(providerName, units);
+      throw error;
+    }
+  }
 
   await assertVendorAvailable(providerName);
-  const response = await fetchImpl(url, init);
+  let response: Response;
+  try {
+    response = await fetchImpl(url, init);
+    recordVendorCost(providerName, units, response.ok ? "success" : "failure");
+  } catch (error) {
+    recordVendorCost(providerName, units);
+    throw error;
+  }
   try {
     if (response.ok) await recordVendorUsage(providerName, units);
     else if (classifyHttpFailures) {

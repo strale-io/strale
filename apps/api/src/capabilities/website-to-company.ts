@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput, getExecutor } from "./index.js";
 
 // F-0-006 Bucket D: delegates to other capabilities (meta-extract,
@@ -105,7 +106,7 @@ async function llmExtractCompanyName(text: string, url: string): Promise<string>
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return text.split(/[|–—:]/)[0].trim();
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const r = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 100,

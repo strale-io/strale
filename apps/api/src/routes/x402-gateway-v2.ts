@@ -1,3 +1,4 @@
+import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * x402 Scalable Gateway — DB-driven capability exposure via USDC payments.
  *
@@ -932,6 +933,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
     // customer-facing record must never fail to land because bookkeeping did,
     // and a missed mark leaves an intent the reconciler resolves as
     // already-recorded.
+    persistCallCost(insertedId);
     if (args.settlementId) {
       try {
         await settlementIntent.markRecordedBySettlement(db, {

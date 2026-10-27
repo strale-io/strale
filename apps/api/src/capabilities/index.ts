@@ -1,3 +1,5 @@
+import { PROVIDERS } from "../lib/dependency-manifest.js";
+import { noteUnknownCost, withExpectedLlmUsage } from "../lib/call-cost.js";
 // Capability executor registry
 // Each capability is a TypeScript function that receives structured input
 // and returns structured output + provenance.
@@ -23,6 +25,8 @@ export type CapabilityExecutor = (
 ) => Promise<CapabilityResult>;
 
 // Registry maps slug → executor function
+const anthropicProvider = PROVIDERS.find((provider) => provider.name === "anthropic");
+const llmSlugs = new Set([...(anthropicProvider?.capabilities ?? []), ...(anthropicProvider?.fallbackCapabilities ?? [])]);
 const executors = new Map<string, CapabilityExecutor>();
 
 export function registerCapability(
@@ -52,9 +56,12 @@ export function getExecutor(slug: string): CapabilityExecutor | undefined {
     : executors.get(slug);
   if (!base) return undefined;
   const access = getDataAccess(slug);
-  if (!access) return base;
+
   return async (input) => {
-    const result = await base(input);
+    if (!access || (access.acquisition_method !== "computed" &&
+      !(access.acquisition_method === "vendor_api" && ["serper", "dilisense", "esortcode", "browserless", "openregister"].includes(access.upstream_vendor ?? "")))) noteUnknownCost(`unmetered_upstream:${slug}`);
+    const result = await (llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input));
+    if (!access) return result;
     if (!result || typeof result.provenance !== "object" || result.provenance === null) return result;
     return { ...result, provenance: stampDataAccess(result.provenance, access) };
   };

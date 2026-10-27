@@ -82,10 +82,15 @@ test("migration ledger: empty source and ledger fail", () => runCase(`${api}chec
   const ledger = JSON.parse(readFileSync(join(fixture, path), "utf8"));
   ledger.blocks = []; write(path, JSON.stringify(ledger));
 }));
-test("model literals: empty scan fails even when registry exists", () => runCase(`${api}check-model-literals.mjs`, ["apps/api/src"], () => {
+test("model literals: empty scan fails even when registry exists", () => runCase(`${api}check-model-literals.mjs`, ["apps/api/src", "apps/api/scripts"], () => {
   const models = readFileSync(join(fixture, "apps/api/src/lib/models.ts"));
   emptyDir("apps/api/src"); mkdirSync(join(fixture, "apps/api/src/lib"));
   write("apps/api/src/lib/models.ts", models);
+  // The model guard now scans API TypeScript scripts as well as runtime src.
+  // Keep its .mjs implementation available while emptying both input roots.
+  for (const name of readdirSync(join(fixture, "apps/api/scripts"), { recursive: true })) {
+    if (/\.tsx?$/.test(name)) rmSync(join(fixture, "apps/api/scripts", name));
+  }
 }));
 for (const script of [`${api}check-no-committed-secrets.mjs`, "scripts/guard-production-write-access.mjs"]) {
   test(`${script}: empty git candidate set fails`, () => runCase(script, [], () => {}));

@@ -3,7 +3,7 @@
 // archive/sessions/2026-09-02-t14-cheap-extras-plan.md (part B).
 //
 // apps/api/src/lib/models.ts is the only place a model id we CALL is
-// allowed to live. This scans apps/api/src for a literal matching the
+// allowed to live. This scans apps/api/src and apps/api/scripts for a literal matching the
 // vendor-id shape outside that file and outside *.test.ts.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
@@ -28,6 +28,7 @@ export function repoRootFrom(metaUrl) {
 
 export const MODELS_PATH = "apps/api/src/lib/models.ts";
 export const SCAN_ROOT = "apps/api/src";
+export const SCAN_ROOTS = [SCAN_ROOT, "apps/api/scripts"];
 const SCAN_EXTENSIONS = new Set([".ts", ".tsx"]);
 const SCAN_SKIP_DIRS = new Set(["node_modules", "dist", "build", "coverage"]);
 
@@ -68,11 +69,13 @@ function walkTree(absDir, relDir, out) {
   }
 }
 
-/** Every .ts/.tsx file under apps/api/src, excluding *.test.ts, models.ts, and the data-file allowlist. */
+/** Every .ts/.tsx file under both scan roots, excluding tests, models.ts and the data-file allowlist. */
 export function scanTargets(root) {
   const out = [];
-  const abs = resolve(root, SCAN_ROOT);
-  if (existsSync(abs)) walkTree(abs, SCAN_ROOT, out);
+  for (const dir of SCAN_ROOTS) {
+    const abs = resolve(root, dir);
+    if (existsSync(abs)) walkTree(abs, dir, out);
+  }
   return out
     .filter((f) => !f.endsWith(".test.ts") && !f.endsWith(".test.tsx"))
     .filter((f) => f !== MODELS_PATH)

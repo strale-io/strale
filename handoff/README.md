@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-377 files (350 with a recorded intent, 27 without).
+378 files (351 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -18,6 +18,7 @@
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md`](_general/from-code/2026-10-27-record-dec-20261027-b.md) | Record Petter's confirmed DEC-20261027-B, register platform-hardening and distribution, and leave all changes uncommi... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-production-watch.md`](_general/from-code/2026-10-27-production-watch.md) | Finish H1 production monitoring on `feat/production-watch`, retaining the interrupted implementation, testing it, and... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-per-call-cost.md`](_general/from-code/2026-10-27-per-call-cost.md) | Build H5 per-call marginal upstream cost recording, bounded shared Anthropic clients and the daily margin input. Impl... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-package-docs.md`](_general/from-code/2026-10-27-package-docs.md) | Build and revise package-docs using public npm/PyPI registry APIs; leave the uncommitted changes for the orchestrator... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-nta-env-set-in-railway.md`](_general/from-code/2026-10-27-nta-env-set-in-railway.md) | record that the NTA Corporate Number Web-API application ID is now set in Railway. |

@@ -965,6 +965,17 @@
       "added": "2026-10-27",
       "columns_written": [],
       "sha256": "e9117fc0d93fcbc81780f5a51bef57ad5ab4ff670abdd9f487cbec8c160aa36e"
+    },
+    {
+      "id": "M071",
+      "function": "runMigration0128_transactionCost",
+      "title": "marginal per-call costs, no historical estimates/backfill",
+      "added": "2026-10-27",
+      "columns_written": [
+        "transactions.cost_breakdown",
+        "transactions.cost_cents"
+      ],
+      "sha256": "899d0d0b70613c7224558837a027dac181d24aeb04f8b395a8d0e43aa54530e0"
     }
   ],
   "known_overlaps": [

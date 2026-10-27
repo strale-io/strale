@@ -10,7 +10,7 @@ describe("Anthropic dependency inventory", () => {
       .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
       .filter((name) => {
         const source = readFileSync(resolve(capabilitiesDir, name), "utf8");
-        return source.includes("new Anthropic") || (
+        return source.includes("createAnthropicClient") || (
           source.includes("./lib/browserless-extract.js") &&
           (source.includes("extractCompanyFromText") || source.includes("extractCompanyName"))
         );

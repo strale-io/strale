@@ -1,3 +1,4 @@
+import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * POST /v1/solutions/:slug/execute — Execute a bundled solution.
  *
@@ -597,6 +598,8 @@ solutionExecuteRoute.post(
         500,
       );
     }
+
+    persistCallCost(transactionId);
 
     c.get("log").info(
       {

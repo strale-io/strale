@@ -426,3 +426,5 @@ what is queued for Petter, and what the next session should pick up — at
 proactivity level 5 (solved, contingency stated, next step proposed).
 
 Into the brief: the five sections above, and nothing else.
+
+Per-tool margin is included in `apps/api/scripts/commercial-brief.ts` (`margins` in JSON), and available separately via `apps/api/scripts/margin-per-tool.ts`. Read unknown-cost share alongside margin: margin uses only the matched fully known-cost cohort; flags require 20 known-cost calls and fire below 30%. Costs are marginal upstream costs in EUR using the recorded reporting FX, excluding fixed infrastructure, tax and payment processing; they are not invoice reconciliation.

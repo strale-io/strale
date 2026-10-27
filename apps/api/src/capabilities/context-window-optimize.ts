@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { readArray } from "../lib/capability-input.js";
 
@@ -28,7 +29,7 @@ registerCapability("context-window-optimize", async (input: CapabilityInput) => 
     `ID: ${d.id} | Tokens: ${d.token_count} | Preview: ${(d.text ?? "").slice(0, 200)}`
   ).join("\n\n");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const ranked = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,
