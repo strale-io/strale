@@ -9,13 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-363 files (336 with a recorded intent, 27 without).
+364 files (337 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-email-phone-validation-copy.md`](_general/from-code/2026-10-27-email-phone-validation-copy.md) | correct what the email and phone validation tools claim, after an external benchmark showed them reporting made-up ad... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-public-limitations-copy.md`](_general/from-code/2026-10-26-public-limitations-copy.md) | Rewrite public capability limitations while preserving every stated constraint; orchestrator review, push, PR, merge... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | make live registry lookups report deleted, deregistered and liquidating companies correctly (NO, PL, CZ, FI, GR), and... |

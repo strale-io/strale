@@ -10,7 +10,7 @@
     "design/brand-kit/quiet-material/hero-comparison/tokens.css": "279b4e89cfc9edaad468a56783fd8e4cd27a63ec6c362529a6e38f5ff92327ba",
     "manifests/swedish-company-data.yaml": "8c36ace7f83311da2c8609247fce3dbb571fd54a896cfb2fcc9e6c2dbe9a985a",
     "manifests/invoice-extract.yaml": "f4ced6773c707ffc231b5215ae4f5a0d6f42952e913b6172052178ae87efdd77",
-    "manifests/email-validate.yaml": "f9d209861310f210579d89eb6ad6ed7d94cdfc6378511767472e883debb7fba1"
+    "manifests/email-validate.yaml": "332b92a516dfa629898498c519ab65ee50740bf3c3f45f3b77a8e8e64c9087fd"
   },
   "outputs": {
     "index.html": "d496cad976d1911fcbc94e391931c846f3156f404747b13e27903fe293f60533",

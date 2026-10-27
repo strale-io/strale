@@ -75,6 +75,12 @@ output_field_reliability:
   is_possible: guaranteed
   input: guaranteed
 limitations:
+  - title: A valid result does not prove the number is in service
+    text: >-
+      Valid means the number fits the country's numbering plan. It does not show that
+      the number is assigned or in service.
+    category: accuracy
+    severity: info
   - title: Carrier detection not available
     text: Carrier/operator name detection requires a paid service — returns null
     category: coverage

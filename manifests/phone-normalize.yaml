@@ -91,6 +91,12 @@ output_field_reliability:
   national_format: guaranteed
   international_format: guaranteed
 limitations:
+  - title: A valid result does not prove the number is in service
+    text: >-
+      Valid means the number fits the country's numbering plan. It does not show that
+      the number is assigned or in service.
+    category: accuracy
+    severity: info
   - title: Numbers without a + prefix need country hints
     text: >-
       Normalises to E.164 format — country code detection relies on input hints when the number
