@@ -117,9 +117,9 @@ output_field_reliability:
   shareholders: common
   pec: common
 limitations:
-  - title: Tool is unavailable
+  - title: Tool is currently unavailable
     text: >-
-      This tool is unavailable and returns a capability-unavailable error.
+      This tool is currently unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
   - title: Directors and legal representatives are not included

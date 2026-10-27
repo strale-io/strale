@@ -98,9 +98,9 @@ output_field_reliability:
   source_as_of: guaranteed
   last_filing_date: guaranteed
 limitations:
-  - title: Tool is unavailable
+  - title: Tool is currently unavailable
     text: >-
-      This tool is unavailable and returns a capability-unavailable error.
+      This tool is currently unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
   - title: Legal form is not included

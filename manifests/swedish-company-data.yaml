@@ -206,8 +206,7 @@ limitations:
     workaround: Order an annual report or financial statement extract from Bolagsverket.
   - title: Organisation number required; no name search
     text: >-
-      Looks up companies by organisation number only; it does not search by name. Sole-trader lookups
-      can also accept a personal identity number.
+      Looks up companies by organisation number only; it does not search by name.
     category: coverage
     severity: info
     workaround: >-

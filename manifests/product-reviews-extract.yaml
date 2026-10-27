@@ -107,8 +107,8 @@ output_field_reliability:
 limitations:
   - title: Some review sources are unsupported
     text: >-
-      Unsupported review-site URLs return a policy error before the page is read. Repeating the same
-      request does not return review data.
+      Trustpilot, Glassdoor and LinkedIn pages are not supported and return a policy error before the
+      page is read. Repeating the same request does not return review data.
     category: coverage
     severity: warning
     workaround: >-

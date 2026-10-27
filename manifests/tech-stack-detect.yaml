@@ -84,8 +84,9 @@ output_field_reliability:
 limitations:
   - title: Some website sources are unsupported
     text: >-
-      Unsupported website URLs return a policy error before the page is read. Repeating the same
-      request does not return content.
+      Trustpilot, Glassdoor, LinkedIn, Google Search, Google Patents, Reddit and the major social
+      platforms (Facebook, Instagram, X) are not supported and return a policy error before the page
+      is read. Repeating the same request does not return content.
     category: coverage
     severity: warning
   - title: Niche or custom technologies can be missed

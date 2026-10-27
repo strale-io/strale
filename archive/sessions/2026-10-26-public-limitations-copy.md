@@ -483,3 +483,12 @@ The original `npm run handoff:check` failed on uncommitted files, clone-as-trunk
 The orchestrator can import the local commit without applying a patch:
 
 The separately invoked pre-commit structural gate also fails on `GENERATED_FILE_DRIFT` and `INVENTORY_HASH_DRIFT` for `docs/project/legacy-authority-inventory.json`, because the requested handoff is an inventory target. This is an integration task deliberately left outside the user’s strict file scope, not a passing gate or a pre-existing manifest failure. Regenerate the archive/handoff indexes and context inventory in the integration batch before normal PR checks.
+
+## Review follow-up (2026-10-27)
+
+An independent review of the rewrite found one blocker and three items worth fixing, all applied:
+
+- `patent-search` entry 0 still named the internal headless-browser vendor; it now states only the US, EP and WO coverage.
+- `url-to-markdown`, `web-extract`, `tech-stack-detect` and `product-reviews-extract` again name the sites that return a policy error, so an agent can tell in advance whether its URL is affected. The list matches the refused hosts in `apps/api/src/capabilities/lib/tos-blocklist.ts`; the terms-of-service reasoning stays out.
+- The ten gated or deactivated tools now say "currently unavailable", so the text does not read as permanent.
+- `swedish-company-data` entry 1 no longer leads with personal identity numbers; entry 2 still states the sole-trader behaviour.
