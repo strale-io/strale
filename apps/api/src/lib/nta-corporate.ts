@@ -1,15 +1,17 @@
-import { readTextWithLimit } from "./resource-limits.js";
+import { readTextWithLimit, ResourceLimitError } from "./resource-limits.js";
 import { logWarn } from "./log.js";
 import { JSDOM } from "jsdom";
 import { apiError, type ErrorCode } from "./errors.js";
 import { assertTargetAllowed } from "./tos-blocklist.js";
 import { CapabilityRefusalError } from "./capability-refusal.js";
-import { SourceBlockedError } from "./site-access.js";
+import { SourceBlockedError, STRALE_USER_AGENT } from "./site-access.js";
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const MAX_RECORDS = 50;
 const COOLDOWN_MS = 60_000;
 const MAX_IN_FLIGHT = 4;
+// v4 appendix 2: 040-043 corporate number, 100-103 name; 180 handled apart.
+const CALLER_ERROR_CODES = new Set(["040", "041", "042", "043", "100", "101", "102", "103"]);
 let blockedUntil = 0;
 let inFlight = 0;
 
@@ -103,13 +105,19 @@ export async function fetchNtaCorporations(query: string, byNumber: boolean): Pr
   if (Date.now() < blockedUntil) {
     throw ntaError("capability_unavailable", "NTA source unavailable during access cool-down. Retry after 60 seconds.");
   }
-  if (inFlight >= MAX_IN_FLIGHT) {
-    throw ntaError("capability_unavailable", "NTA source unavailable: lookup capacity reached. Retry shortly.");
+  // Our own self-protection, not a source outage: wait briefly for a slot,
+  // then refuse without counting against the capability.
+  for (let waited = 0; inFlight >= MAX_IN_FLIGHT; waited += 50) {
+    if (waited >= 3_000) {
+      const message = "Too many Japanese company lookups at once. Retry in a few seconds.";
+      throw Object.assign(new CapabilityRefusalError(message), apiError("rate_limited", message));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
   inFlight++;
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": "Strale/1.0 (+https://strale.dev)", Accept: "application/xml" },
+      headers: { "User-Agent": STRALE_USER_AGENT, Accept: "application/xml" },
       signal: AbortSignal.timeout(15_000),
       redirect: "error",
     });
@@ -121,9 +129,12 @@ export async function fetchNtaCorporations(query: string, byNumber: boolean): Pr
         // Overview §5: errors are CSV (code,message), even for type=12.
         // v4 appendix 2: 103 is legal-form-only input; 180 is too many results.
         const errorBody = await readTextWithLimit(response, 16 * 1024, "NTA error response");
-        const errorCode = /^\s*(\d{3}),/.exec(errorBody)?.[1];
+        const errorCode = /^\s*"?(\d{3})"?\s*,/.exec(errorBody)?.[1];
         if (errorCode === "180") throw tooManyMatches();
-        if (errorCode) {
+        // Only codes about the caller's number or name are refusals. Codes
+        // about parameters Strale sets itself (type, mode, target, change,
+        // close) stay counted faults, so a spec change or our bug surfaces.
+        if (errorCode && CALLER_ERROR_CODES.has(errorCode)) {
           const message = errorCode === "103"
             ? "'company_name' must be a registered name including more than the legal form; or provide the 13-digit corporate number."
             : "'corporate_number' or 'company_name' must be a valid 13-digit corporate number or registered name. Check the input and try again.";
@@ -143,7 +154,14 @@ export async function fetchNtaCorporations(query: string, byNumber: boolean): Pr
       }
       throw ntaError(code, `NTA request failed (status ${response.status}). Contact Strale support if this persists.`);
     }
-    const body = await readTextWithLimit(response, MAX_RESPONSE_BYTES, "NTA response");
+    let body: string;
+    try {
+      body = await readTextWithLimit(response, MAX_RESPONSE_BYTES, "NTA response");
+    } catch (err) {
+      // A name search too broad to fit the size cap is the caller's ambiguity.
+      if (!byNumber && err instanceof ResourceLimitError) throw tooManyMatches();
+      throw err;
+    }
     return parseResponse(body);
   } catch (err) {
     if (err instanceof Error && "error_code" in err) throw err;

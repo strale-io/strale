@@ -44,7 +44,7 @@ describe("Japanese company data through the official NTA v4 API", () => {
     expect(url.origin + url.pathname).toBe("https://api.houjin-bangou.nta.go.jp/4/num");
     expect(Object.fromEntries(url.searchParams)).toEqual({ id: "synthetic-test-id", type: "12", history: "0", number: "5111101000006" });
     expect(options.signal).toBeInstanceOf(AbortSignal);
-    expect(options.headers).toMatchObject({ "User-Agent": "Strale/1.0 (+https://strale.dev)" });
+    expect(options.headers).toMatchObject({ "User-Agent": expect.stringContaining("StraleBot/1.0") });
     expect(options.redirect).toBe("error");
     expect(JSON.stringify({ output, provenance })).not.toContain("synthetic-test-id");
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -216,7 +216,10 @@ describe("Japanese company data through the official NTA v4 API", () => {
     }
     const pending = Array.from({ length: 4 }, () => execute({ corporate_number: "5111101000006" }));
     try {
-      await expect(execute({ corporate_number: "5111101000006" })).rejects.toMatchObject({ error_code: "capability_unavailable" });
+      // A fifth call waits briefly for a slot, then is refused as a caller-
+      // neutral rate limit: self-protection must not count as a source fault.
+      await expect(execute({ corporate_number: "5111101000006" })).rejects.toMatchObject({
+        error_code: "rate_limited", isCapabilityRefusal: true });
       expect(fetchMock).toHaveBeenCalledTimes(4);
     } finally {
       for (const controller of controllers) {
@@ -228,6 +231,35 @@ describe("Japanese company data through the official NTA v4 API", () => {
     fetchMock.mockResolvedValue(new Response(fixture("num_0_ver4_x4")));
     expect((await execute({ corporate_number: "5111101000006" })).output.status).toBe("active");
     expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("hands a freed slot to a waiting call instead of refusing it", async () => {
+    let release!: () => void;
+    const controllers: ReadableStreamDefaultController<Uint8Array>[] = [];
+    for (let i = 0; i < 4; i++) {
+      fetchMock.mockImplementationOnce(async () => new Response(new ReadableStream<Uint8Array>({ start(c) { controllers.push(c); } })));
+    }
+    const pending = Array.from({ length: 4 }, () => execute({ corporate_number: "5111101000006" }));
+    fetchMock.mockResolvedValue(new Response(fixture("num_0_ver4_x4")));
+    const waiting = execute({ corporate_number: "5111101000006" });
+    release = () => { for (const c of controllers) { c.enqueue(new TextEncoder().encode(fixture("num_0_ver4_x4"))); c.close(); } };
+    setTimeout(release, 200);
+    await Promise.all(pending);
+    expect((await waiting).output.status).toBe("active");
+  });
+
+  it("refuses an over-size name search as ambiguous, and keeps NTA parameter errors counted", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("x".repeat(1024 * 1024 + 1)));
+    await expect(execute({ company_name: "ヤマダ" })).rejects.toMatchObject({ error_code: "invalid_request", isCapabilityRefusal: true, message: expect.stringMatching(/^Ambiguous /) });
+    fetchMock.mockResolvedValueOnce(new Response('"180","too many"', { status: 400 }));
+    await expect(execute({ company_name: "ヤマダ" })).rejects.toMatchObject({ message: expect.stringMatching(/^Ambiguous /) });
+    fetchMock.mockResolvedValueOnce(new Response("071,応答形式", { status: 400 }));
+    await expect(execute({ company_name: "ヤマダ" })).rejects.toMatchObject({ error_code: "execution_failed" });
+  });
+
+  it("recognises a hyphenated T-number", async () => {
+    await execute({ corporate_number: "T5111-1010-00006" });
+    expect((fetchMock.mock.calls[0][0] as URL).pathname).toBe("/4/num");
   });
 
   it("releases concurrency slots after transport and parse failures", async () => {

@@ -26,8 +26,9 @@ input_schema:
       type: string
       minLength: 2
       maxLength: 150
-      description: Registered Japanese or English company name. Multiple matches
-        require a corporate number.
+      description: Registered Japanese or English company name. It resolves only
+        when it matches one open, current company's full registered name;
+        otherwise provide the corporate number.
     task:
       type: string
       minLength: 2
@@ -195,7 +196,9 @@ limitations:
     severity: info
   - title: Names and addresses follow the register
     text: Japanese and registered English names are supported. English names are
-      optional. Multiple matches require a corporate number. Names or address
+      optional. A name resolves only when it matches one open, current company's
+      full registered name; partial names, several matches, and closed or
+      historical companies need the corporate number. Names or address
       characters supplied only as image references may be incomplete;
       search-excluded records can contain obsolete addresses. Number withdrawal
       records can omit the name.

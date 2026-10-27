@@ -14,7 +14,7 @@ registerCapability("japanese-company-data", async (input: CapabilityInput) => {
   if (numbers.length > 1) {
     throw Object.assign(new CapabilityRefusalError("Ambiguous corporate numbers: provide a single 13-digit corporate number."), { error_code: "invalid_request" });
   }
-  const compact = numbers[0] ?? query.replace(/^T(?=\d{13}$)/i, "").replace(/[\s.-]/g, "");
+  const compact = numbers[0] ?? query.replace(/[\s.\-\u2010\u2011\u2012\u2013\u2212]/g, "").replace(/^T(?=\d{13}$)/i, "");
   const byNumber = /^\d+$/.test(compact);
   if (byNumber && !validCorporateNumber(compact)) {
     throw Object.assign(new CapabilityRefusalError("'corporate_number' must be 13 digits with a valid NTA check digit."), { error_code: "invalid_request" });
