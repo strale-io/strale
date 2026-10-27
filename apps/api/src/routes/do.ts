@@ -7,6 +7,7 @@ import {
   computeIdempotencyFingerprint,
   isReplayable,
 } from "../lib/idempotency-fingerprint.js";
+import { inputForFingerprint, inputForPersistence } from "../lib/never-persist-inputs.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import {
   assertBillableOutput,
@@ -741,7 +742,10 @@ doRoute.post(
     rail: "capability",
     task,
     capabilitySlug,
-    inputs,
+    // Never-persisted fields (e.g. password-strength's password) are masked:
+    // the fingerprint is stored on the row and an unsalted hash of a weak
+    // secret is crackable. See lib/never-persist-inputs.ts.
+    inputs: inputForFingerprint(capabilitySlug, inputs),
     dryRun: body.dry_run === true,
     requireFresh: body.require_fresh === true,
   });
@@ -1554,7 +1558,7 @@ async function executeFreeTier(
       capabilityId: capability.id,
       status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
-      input: executionInput,
+      input: inputForPersistence(capability.slug, executionInput),
       priceCents: 0,
       transparencyMarker: marker,
       dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
@@ -1825,7 +1829,7 @@ async function executeFreeTierAuthenticated(
       idempotencyFingerprint,
       status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
-      input: executionInput,
+      input: inputForPersistence(capability.slug, executionInput),
       priceCents: 0,
       transparencyMarker: marker,
       dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
@@ -2122,7 +2126,7 @@ async function executeSync(
         idempotencyFingerprint,
         status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
-        input: executionInput,
+        input: inputForPersistence(capability.slug, executionInput),
         priceCents: capability.priceCents,
         transparencyMarker: marker,
         dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
@@ -2504,7 +2508,7 @@ async function executeAsync(
         idempotencyFingerprint,
         status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
-        input: executionInput,
+        input: inputForPersistence(capability.slug, executionInput),
         priceCents: capability.priceCents,
         transparencyMarker: marker,
         dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
@@ -2881,8 +2885,12 @@ async function executeInBackground(
 
 // ─── Audit trail helpers ──────────────────────────────────────────────────────
 
-function hashInput(input: Record<string, unknown>): string {
-  return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
+// Hashes the PERSISTENCE form of the input: a never-persisted field (see
+// lib/never-persist-inputs.ts) is replaced by a fixed marker first, because an
+// unsalted hash of a weak password is as good as the password.
+function hashInput(slug: string, input: Record<string, unknown>): string {
+  const persisted = inputForPersistence(slug, input);
+  return `sha256:${createHash("sha256").update(JSON.stringify(persisted)).digest("hex")}`;
 }
 
 // CRIT-3: schema_validated was hardcoded `true` on every successful audit
@@ -3033,7 +3041,7 @@ function buildFullAudit(params: {
     processing_location: getProcessingLocation(),
     execution_mode: executionMode,
     latency_ms: latencyMs,
-    input_hash: hashInput(executionInput),
+    input_hash: hashInput(capability.slug, executionInput),
     request_context: requestContext ?? null,
     // CRIT-3: was hardcoded `true`. Now computed against outputSchema.
     // false on missing schema (we can't verify) or missing required fields.
@@ -3126,7 +3134,7 @@ function buildFailureAudit(params: {
     processing_location: getProcessingLocation(),
     execution_mode: executionMode,
     latency_ms: Date.now() - startTime,
-    input_hash: hashInput(executionInput),
+    input_hash: hashInput(capability.slug, executionInput),
     request_context: requestContext ?? null,
     // SANITISED, and this is the authority for it.
     //

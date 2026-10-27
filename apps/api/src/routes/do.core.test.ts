@@ -904,3 +904,152 @@ describe("POST /v1/do — anonymous, task-based, paid capability", () => {
     expect(mocks.dbTransactionCalls).toBe(0);
   });
 });
+
+// ─── Never-persisted inputs (password-strength) ─────────────────────────────
+//
+// password-strength's public description says the password is not stored.
+// Before lib/never-persist-inputs.ts that was false three ways: the raw value
+// went into transactions.input, an unsalted sha256 of it into the audit
+// trail's input_hash, and another into the idempotency fingerprint column.
+// These tests drive the real executeSync insert path and search EVERY value
+// the route hands the database for the password, while asserting the executor
+// still received it.
+
+import { createHash } from "node:crypto";
+import { computeIdempotencyFingerprint } from "../lib/idempotency-fingerprint.js";
+import { NOT_STORED_MARKER } from "../lib/never-persist-inputs.js";
+
+/** JSON.stringify that survives drizzle's cyclic column/table references. */
+function stringifyForSearch(value: unknown): string {
+  const seen = new WeakSet<object>();
+  return (
+    JSON.stringify(value, (_k, v) => {
+      if (v && typeof v === "object") {
+        if (seen.has(v)) return "[cycle]";
+        seen.add(v);
+      }
+      return v;
+    }) ?? ""
+  );
+}
+
+/** Every Date / Buffer reachable from a bound value (postgres-js bind-shape rule). */
+function findUnbindable(value: unknown, path = "$", seen = new WeakSet<object>()): string[] {
+  if (value instanceof Date) return [path];
+  if (Buffer.isBuffer(value)) return [path];
+  if (!value || typeof value !== "object" || seen.has(value)) return [];
+  seen.add(value);
+  return Object.entries(value).flatMap(([k, v]) => findUnbindable(v, `${path}.${k}`, seen));
+}
+
+const PASSWORD_FIXTURE = {
+  ...CAPABILITY_FIXTURE,
+  id: "22222222-2222-2222-2222-222222222222",
+  slug: "password-strength",
+  name: "Password Strength",
+  priceCents: 2,
+  inputSchema: { type: "object", properties: { password: { type: "string" } }, required: ["password"] },
+};
+
+// Distinctive so a substring hit is unambiguous.
+const SECRET = "Tr0ub4dor&3-never-store-me";
+
+function rawInputHash(input: Record<string, unknown>): string {
+  return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
+}
+
+async function runPasswordStrength(executorFn: ReturnType<typeof vi.fn>) {
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user]); // auth
+  mocks.outerSelectQueue.push([]); // idempotency lookup: no prior row
+  mockGetExecutor.mockReturnValue(executorFn);
+  mockMatchCapability.mockResolvedValue({ capability: PASSWORD_FIXTURE });
+  mocks.txRef.current = buildMockTx({
+    walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10_000 },
+    transactionId: randomUUID(),
+  });
+  const res = await makeApp().request("/v1/do", {
+    method: "POST",
+    headers: authHeaders({ "Idempotency-Key": `pw-${randomUUID()}` }),
+    body: JSON.stringify({
+      capability_slug: "password-strength",
+      inputs: { password: SECRET },
+      max_price_cents: 100,
+    }),
+  });
+  await flushMicrotasks();
+  const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+  return { res, tx };
+}
+
+function assertNothingPersistedTheSecret(tx: ReturnType<typeof buildMockTx>) {
+  const txnInsert = tx.__insertCalls.find((c) => c.table === transactions);
+  expect(txnInsert).toBeTruthy();
+  const vals = txnInsert!.vals as Record<string, unknown>;
+
+  // The row's input carries the marker, not the password.
+  expect(vals.input).toEqual({ password: NOT_STORED_MARKER });
+
+  // The fingerprint is the marker-form fingerprint, not one of the raw value.
+  const fingerprintOf = (password: string) =>
+    computeIdempotencyFingerprint({
+      rail: "capability",
+      capabilitySlug: "password-strength",
+      inputs: { password },
+      dryRun: false,
+      requireFresh: false,
+    });
+  expect(vals.idempotencyFingerprint).toBeTruthy();
+  expect(vals.idempotencyFingerprint).not.toBe(fingerprintOf(SECRET));
+  expect(vals.idempotencyFingerprint).toBe(fingerprintOf(NOT_STORED_MARKER));
+
+  // Bind-shape rule: nothing in the insert is a Date or Buffer.
+  expect(findUnbindable(vals)).toEqual([]);
+
+  // Every write the route made, outer db and tx alike: no password anywhere.
+  const everyWrite = [...tx.__insertCalls, ...tx.__updateCalls, ...mocks.outerInserts]
+    .map((c) => stringifyForSearch(c.vals))
+    .join("\n");
+  expect(everyWrite).not.toContain(SECRET);
+
+  // The audit trail's input_hash is of the marker form, never of the raw input.
+  const audits = tx.__updateCalls
+    .filter((c) => c.table === transactions)
+    .map((c) => (c.vals as { auditTrail?: { input_hash?: string } }).auditTrail)
+    .filter((a): a is { input_hash?: string } => !!a);
+  expect(audits.length).toBeGreaterThan(0);
+  for (const audit of audits) {
+    expect(audit.input_hash).toBeTruthy();
+    expect(audit.input_hash).not.toBe(rawInputHash({ password: SECRET }));
+    expect(audit.input_hash).toBe(rawInputHash({ password: NOT_STORED_MARKER }));
+  }
+}
+
+describe("POST /v1/do — password-strength never persists the password", () => {
+  it("success path: executor gets the real password; row, audit hash and fingerprint never do", async () => {
+    const executorFn = vi.fn(async () => ({
+      output: { score: 80, strength: "strong" },
+      provenance: { source: "algorithmic", fetched_at: new Date().toISOString() },
+    }));
+    const { res, tx } = await runPasswordStrength(executorFn);
+
+    expect(res.status).toBe(200);
+    expect(executorFn).toHaveBeenCalledWith({ password: SECRET });
+    assertNothingPersistedTheSecret(tx);
+
+    // The response's audit block is built from the same helper.
+    const body = await res.json();
+    expect(stringifyForSearch(body)).not.toContain(SECRET);
+  });
+
+  it("failure path: the failure audit's input_hash is of the marker form too", async () => {
+    const executorFn = vi.fn(async () => {
+      throw new Error("mock executor rejected the request");
+    });
+    const { res, tx } = await runPasswordStrength(executorFn);
+
+    expect(res.status).toBe(500);
+    expect(executorFn).toHaveBeenCalledWith({ password: SECRET });
+    assertNothingPersistedTheSecret(tx);
+  });
+});
