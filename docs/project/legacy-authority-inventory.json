@@ -122,7 +122,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "bedb000e374ce2f37d1ad4595145d9ab193eb1ab4be2c9f6ec83d781967abba7",
+      "sha256": "b8d4785890345a4e3c83ef3e66c685c3ba8959540ac042fb9747cf19bc5ef584",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -395,6 +395,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
+        "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -560,7 +561,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "56aee594321ca3becae689d614dd80568a8607643a3358c9a0e8f7ae501d8946",
+      "sha256": "5fa583f26960f090a6c6a487d0d4c64d8a11ed71ec3a90377b671ee6a535a267",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -632,6 +633,7 @@
         "design/brand-kit/quiet-material/registry.json",
         "design/explorations/2026-09-05-quiet-material-refinement/FOUNDATION.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
+        "docs/operations/accounts-and-email.md",
         "docs/operations/distribution-registry.md",
         "docs/operations/distribution-registry.yaml",
         "docs/programs/brand-website/PROGRAM.md",
@@ -691,6 +693,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "handoff/_general/from-code/2026-10-26-checkin-morning.md",
         "handoff/_general/from-code/2026-10-27-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -837,7 +840,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "80346b9bf782d0f58151b584e132692c8c3e31a8af813153daaeabc3afb619d7",
+      "sha256": "e2e6bfbdbfa7aee861b273d9042c784079bffd1254fa2bf9500f82adf6e182ad",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -1005,6 +1008,7 @@
         "docs/company/claims.schema.json",
         "docs/company/claims.yaml",
         "docs/incidents/2026-08-22-production-authorization-failure.md",
+        "docs/operations/accounts-and-email.md",
         "docs/operations/distribution-registry.md",
         "docs/operations/distribution-registry.yaml",
         "docs/operations/run-onboarding.md",
