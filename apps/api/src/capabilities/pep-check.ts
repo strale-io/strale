@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { logError } from "../lib/log.js";
@@ -16,10 +17,10 @@ const DILISENSE_API = "https://api.dilisense.com/v1/checkIndividual";
 registerCapability("pep-check", async (input: CapabilityInput) => {
   const name = ((input.name as string) ?? (input.full_name as string) ?? "").trim();
   if (!name) {
-    throw new Error("'name' is required. Provide a person's full name to screen.");
+    throw inputRefusal("'name' is required. Provide a person's full name to screen.", "name", "Send 'name' as a person's full name with at least 2 characters.");
   }
   if (name.length < 2) {
-    throw new Error("Name must be at least 2 characters for PEP screening.");
+    throw inputRefusal("Name must be at least 2 characters for PEP screening.", "name", "Send 'name' as a person's full name with at least 2 characters.");
   }
 
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;

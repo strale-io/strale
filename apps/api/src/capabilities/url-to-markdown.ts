@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
@@ -252,7 +253,7 @@ function postProcess(md: string, includeLinks: boolean, includeImages: boolean):
 
 registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.link as string) ?? "").trim();
-  if (!url) throw new Error("'url' is required.");
+  if (!url) throw inputRefusal("'url' is required.", "url", "Send 'url' as an absolute HTTP or HTTPS URL to a web page.");
 
   const includeLinks = input.include_links !== false;
   const includeImages = input.include_images !== false;

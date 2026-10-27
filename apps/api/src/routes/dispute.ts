@@ -95,7 +95,7 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
     if (expiresAtRaw != null) {
       const parsed = parseInt(expiresAtRaw, 10);
       if (!Number.isFinite(parsed) || String(parsed) !== expiresAtRaw) {
-        return c.json(apiError("invalid_request", "expires_at must be an integer (unix seconds)."), 400);
+        return c.json(apiError("invalid_request", "expires_at must be an integer (unix seconds).", { fix: "Send 'expires_at' as the integer Unix timestamp from the signed audit URL." }), 400);
       }
       expiresAt = parsed;
     }
@@ -111,17 +111,17 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
   const body = (await c.req.json().catch(() => null)) as DisputeBody | null;
   if (!body || typeof body.reason !== "string") {
     return c.json(
-      apiError("invalid_request", "JSON body required: { reason: string, affected_field?: string, contact_email?: string }"),
+      apiError("invalid_request", "JSON body required: { reason: string, affected_field?: string, contact_email?: string }", { fix: "Send 'reason' as a non-empty string and 'contact_email' as an address where support can reach you." }),
       400,
     );
   }
   const reason = body.reason.trim();
   if (reason.length === 0) {
-    return c.json(apiError("invalid_request", "reason is required."), 400);
+    return c.json(apiError("invalid_request", "reason is required.", { fix: "Send 'reason' as a non-empty string in the JSON request body." }), 400);
   }
   if (reason.length > MAX_REASON_LENGTH) {
     return c.json(
-      apiError("invalid_request", `reason exceeds ${MAX_REASON_LENGTH} chars (got ${reason.length}). Trim and retry.`),
+      apiError("invalid_request", `reason exceeds ${MAX_REASON_LENGTH} chars (got ${reason.length}). Trim and retry.`, { fix: `Shorten 'reason' to at most ${MAX_REASON_LENGTH} characters.` }),
       400,
     );
   }
@@ -137,7 +137,7 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
     return c.json(
       apiError(
         "invalid_request",
-        "contact_email is required when disputing via signed token (no account on file).",
+        "contact_email is required when disputing via signed token (no account on file).", { fix: "Send 'reason' as a non-empty string and 'contact_email' as an address where support can reach you." },
       ),
       400,
     );
@@ -261,7 +261,7 @@ disputeRoute.get("/:transactionId/dispute", async (c) => {
     if (expiresAtRaw != null) {
       const parsed = parseInt(expiresAtRaw, 10);
       if (!Number.isFinite(parsed) || String(parsed) !== expiresAtRaw) {
-        return c.json(apiError("invalid_request", "expires_at must be an integer."), 400);
+        return c.json(apiError("invalid_request", "expires_at must be an integer.", { fix: "Send 'expires_at' as the integer Unix timestamp from the signed audit URL." }), 400);
       }
       expiresAt = parsed;
     }

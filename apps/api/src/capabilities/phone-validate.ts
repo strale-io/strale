@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import {
   parsePhoneNumberFromString,
@@ -18,7 +19,7 @@ const COUNTRY_NAMES: Record<string, string> = {
 registerCapability("phone-validate", async (input: CapabilityInput) => {
   const phoneNumber = ((input.phone_number as string) ?? (input.phone as string) ?? (input.task as string) ?? "").trim();
   if (!phoneNumber) {
-    throw new Error("'phone_number' is required.");
+    throw inputRefusal("'phone_number' is required.", "phone_number", "Send 'phone_number' as a phone-number string, including the country calling code or an ISO 2-letter 'country_code' hint.");
   }
 
   const countryHint = ((input.country_code as string) ?? "").trim().toUpperCase() || undefined;

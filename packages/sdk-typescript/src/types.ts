@@ -136,6 +136,7 @@ export interface TransactionDetail {
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
   error: string | null;
+  details?: Record<string, unknown>;
   price_cents: number;
   latency_ms: number;
   provenance: Provenance | null;

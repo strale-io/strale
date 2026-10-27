@@ -341,7 +341,7 @@ export function build402Response(capability: {
   if (x402ChallengeVersion() === 1) {
     return {
       status: 402,
-      body: { x402Version: 1, accepts: [v1Requirement], error },
+      body: { x402Version: 1, accepts: [v1Requirement], error, details: { fix: "Sign an x402 payment matching 'accepts' and resend this POST /v1/do request with its X-PAYMENT header." } },
     };
   }
 
@@ -365,6 +365,7 @@ export function build402Response(capability: {
     body: {
       x402Version: 2,
       error,
+      details: { fix: "Sign an x402 payment matching 'accepts' and resend this POST /v1/do request with its PAYMENT-SIGNATURE header." },
       resource: { url: "/v1/do", description, mimeType: "application/json" },
       accepts: [mergedRequirement],
       // Legacy mirror in pure v1 shape (bare network name).

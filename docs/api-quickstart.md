@@ -205,3 +205,45 @@ can still spend up to their caps. Use the recovered primary key to review
 `DELETE /v1/api-keys/{id}`. Keeping additional keys active avoids unexpectedly
 stopping every agent when the owner recovers the primary key. Keep that primary
 key secure. The dashboard key UI is follow-up. See `/openapi.json` for schemas.
+
+
+## Recovering from errors
+
+Errors keep the DEC-19 shape `{ error_code, message, details? }`. Branch on
+`error_code`, not message text. Codes, status codes and existing fields are
+unchanged. `details` is extensible; clients should accept unknown fields.
+
+Caller-fixable errors include `details.fix`: an imperative sentence explaining
+what to change. Input refusals may include `field` and `required_fields`;
+alternative-field constraints may include `any_of` or `one_of` schema groups;
+wallet validation includes `min_topup_cents`; discovery guidance may include
+`docs_url`. Rate limits include `retry_after_seconds` when the limiter knows
+the wait, and the fix uses that real wait. Honour the `Retry-After` header.
+Do not retry a spend-cap refusal automatically: wait for rolling usage to fall or contact support to change the account limit;
+per-key limits can be changed by the account owner with PATCH /v1/api-keys/:id.
+
+```json
+{
+  "error_code": "invalid_request",
+  "message": "Missing required input fields: email",
+  "details": {
+    "fix": "Send the missing fields inside 'inputs': email.",
+    "missing_fields": ["email"],
+    "required_fields": ["email"]
+  }
+}
+```
+
+Failures outside the caller's control include `details.retryable` and a
+`details.next_step` explaining whether to back off or contact support.
+`retryable: false` means unchanged retries will not resolve the error.
+Keep the `transaction_id` for support. Follow idempotency and payment rules
+before retrying: a new payment authorization can create a new paid call.
+
+The TypeScript SDK keeps `StraleError.message` unchanged and retains
+`StraleError.details`; `fix`, `retryable` and `nextStep` expose the corresponding
+details fields when present. MCP tool error text includes the fix as well as details.
+x402 retains its payment challenge and legacy `error` fields, adding `details`;
+A2A and HTTP MCP protocol errors carry guidance at `error.data.details`.
+The executor rollout covers the 30 tools listed in the error inventory;
+remaining executors can adopt explicit field-level fixes in a later batch.

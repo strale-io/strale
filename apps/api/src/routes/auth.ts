@@ -60,7 +60,7 @@ authRoute.post(
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json(
-      apiError("invalid_request", "A valid email address is required.", {
+      apiError("invalid_request", "A valid email address is required.", { fix: "Send 'email' as a valid, non-disposable address belonging to your operator.",
         field: "email",
       }),
       400,
@@ -77,7 +77,7 @@ authRoute.post(
   // authority; `name` never reaches it, so it is checked here.
   if (name !== null && name.length > MAX_NAME_LENGTH) {
     return c.json(
-      apiError("invalid_request", `'name' must be at most ${MAX_NAME_LENGTH} characters.`, {
+      apiError("invalid_request", `'name' must be at most ${MAX_NAME_LENGTH} characters.`, { fix: `Shorten 'name' to at most ${MAX_NAME_LENGTH} characters.`,
         field: "name",
       }),
       400,
@@ -91,7 +91,7 @@ authRoute.post(
   // and exists to answer the common case without attempting a write.
   if (await emailIsRegistered(db, email)) {
     return c.json(
-      apiError("invalid_request", "An account with this email already exists."),
+      apiError("invalid_request", "An account with this email already exists.", { fix: "Request a new API key for this email with POST /v1/auth/recover." }),
       409,
     );
   }
@@ -117,7 +117,7 @@ authRoute.post(
 
   if (assessment.decision === "refuse") {
     return c.json(
-      apiError("invalid_request", assessment.message, { reason: assessment.reason }),
+      apiError("invalid_request", assessment.message, { fix: "Send 'email' as a valid, non-disposable address belonging to your operator.", reason: assessment.reason }),
       400,
     );
   }
@@ -141,7 +141,7 @@ authRoute.post(
   } catch (err) {
     if (err instanceof EmailAlreadyRegisteredError) {
       return c.json(
-        apiError("invalid_request", "An account with this email already exists."),
+        apiError("invalid_request", "An account with this email already exists.", { fix: "Request a new API key for this email with POST /v1/auth/recover." }),
         409,
       );
     }
@@ -252,7 +252,7 @@ authRoute.post(
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json(
-      apiError("invalid_request", "A valid email address is required.", {
+      apiError("invalid_request", "A valid email address is required.", { fix: "Send 'email' as a valid, non-disposable address belonging to your operator.",
         field: "email",
       }),
       400,
@@ -330,7 +330,7 @@ authRoute.post(
     body.token.length === 0
   ) {
     return c.json(
-      apiError("invalid_request", "Both 'email' and 'token' are required.", {
+      apiError("invalid_request", "Both 'email' and 'token' are required.", { fix: "Send both 'email' and the unused recovery 'token' from POST /v1/auth/recover.",
         fields: ["email", "token"],
       }),
       400,
@@ -352,6 +352,7 @@ authRoute.post(
       apiError(
         "unauthorized",
         "That recovery code is invalid, expired, or already used. Request a new one with POST /v1/auth/recover.",
+        { fix: "Request a new recovery token with POST /v1/auth/recover and send the unused token with its matching email to POST /v1/auth/recover/confirm." },
       ),
       401,
     );
@@ -554,7 +555,7 @@ export async function agentSignupHandler(c: Context) {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json(
-      apiError("invalid_request", "A valid email address is required. Use your operator's real email — this is where usage reports and low-balance alerts are sent.", {
+      apiError("invalid_request", "A valid email address is required. Use your operator's real email — this is where usage reports and low-balance alerts are sent.", { fix: "Send 'email' as a valid, non-disposable address belonging to your operator.",
         field: "email",
       }),
       400,
@@ -589,7 +590,7 @@ export async function agentSignupHandler(c: Context) {
 
   if (assessment.decision === "refuse") {
     return c.json(
-      apiError("invalid_request", assessment.message, { reason: assessment.reason }),
+      apiError("invalid_request", assessment.message, { fix: "Send 'email' as a valid, non-disposable address belonging to your operator.", reason: assessment.reason }),
       400,
     );
   }
@@ -628,7 +629,7 @@ export async function agentSignupHandler(c: Context) {
           suggested
             ? `Make at least one free-tier API call before signing up. Try: POST /v1/do with capability_slug '${suggested}'.`
             : "Make at least one free-tier API call before signing up.",
-          { free_capabilities: freeSlugs },
+          { free_capabilities: freeSlugs, fix: suggested ? `Make a free-tier POST /v1/do call with 'capability_slug' set to '${suggested}' and its required 'inputs', then retry signup.` : "Choose a free tool from GET /v1/capabilities, execute it with POST /v1/do, then retry signup." },
         ),
         403,
       );
@@ -644,7 +645,7 @@ export async function agentSignupHandler(c: Context) {
 
   if (existing.length > 0) {
     return c.json(
-      apiError("invalid_request", "An account with this email already exists. Use POST /v1/auth/recover to get a new API key."),
+      apiError("invalid_request", "An account with this email already exists. Use POST /v1/auth/recover to get a new API key.", { fix: "Request a new API key for this email with POST /v1/auth/recover." }),
       409,
     );
   }
@@ -683,7 +684,7 @@ export async function agentSignupHandler(c: Context) {
   } catch (err) {
     if (err instanceof EmailAlreadyRegisteredError) {
       return c.json(
-        apiError("invalid_request", "An account with this email already exists. Use POST /v1/auth/recover to get a new API key."),
+        apiError("invalid_request", "An account with this email already exists. Use POST /v1/auth/recover to get a new API key.", { fix: "Request a new API key for this email with POST /v1/auth/recover." }),
         409,
       );
     }

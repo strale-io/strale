@@ -1,0 +1,1005 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "79d645891033d297c53db66bd059ffb61633331c"
+  },
+  "at": "2026-10-27T11:56:14.284Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "local_verification_passed": true,
+    "api_passed": 6248,
+    "api_skipped": 346,
+    "api_files_passed": 344,
+    "api_files_skipped": 33,
+    "focused_api_passed": 297,
+    "root_ci_build_client_commands_passed": 57,
+    "root_node_tests_passed": 704,
+    "sdk_tests_passed": 6,
+    "fail_before_api": 35,
+    "fail_before_sdk": 1,
+    "fail_before_schema": 2,
+    "handoff_gate_passed": false,
+    "db_readiness_verified": false
+  },
+  "topic": "actionable-error-messages-round-2",
+  "raw": {
+    "summary": {
+      "local_verification_passed": true,
+      "api_passed": 6248,
+      "api_skipped": 346,
+      "api_files_passed": 344,
+      "api_files_skipped": 33,
+      "focused_api_passed": 297,
+      "root_ci_build_client_commands_passed": 57,
+      "root_node_tests_passed": 704,
+      "sdk_tests_passed": 6,
+      "fail_before_api": 35,
+      "fail_before_sdk": 1,
+      "fail_before_schema": 2,
+      "handoff_gate_passed": false,
+      "db_readiness_verified": false
+    },
+    "source_sha256": {
+      "apps/api/src/app.ts": "538b855d4e462b7b15c7edda38434ac78775d505d87ab1f5c39b6d8dbfaf295d",
+      "apps/api/src/capabilities/address-parse.ts": "a55fab508b20c46f4b0a09681e2f8f517c9bbcd561e2af9250d23a5415780385",
+      "apps/api/src/capabilities/address-validate.ts": "4735c6462d86a22f55816db031f703279a6e83f775823a312734b341e9b2ffa5",
+      "apps/api/src/capabilities/adverse-media-check.ts": "bb2628886593e4e2d24abeed2cb2778ee5ccd669469a3cdb390cc3cc414611f4",
+      "apps/api/src/capabilities/business-day-check.ts": "d7054ff37a9b4819241329e09ba1e065bf5f6cd86c25c7e59b2cffc10b7a69e7",
+      "apps/api/src/capabilities/company-id-detect.ts": "a160d249c314e75d3d5fe5ff65354be680ca49a7c1faaf7f4238ec32f6971080",
+      "apps/api/src/capabilities/company-news.ts": "b31149c69f84f666521c6edc8e4405cddd14dca5f7d228e5419d7d26fec1fb09",
+      "apps/api/src/capabilities/company-tech-stack.ts": "8ef8e9a379ed41e6c4c6c84c61d9a469a0de31357a6274c9b5369a6629b7b29a",
+      "apps/api/src/capabilities/csv-clean.ts": "8a5c105126f8bf3cd0258f6f086f20f5e57e13f86d7a9c7d19cce2d5fa6e93b0",
+      "apps/api/src/capabilities/csv-to-json.ts": "42772d771696b814fb3c072327dbbda27d1e5239a5a372cf068324421299645e",
+      "apps/api/src/capabilities/currency-convert.ts": "d8f00ad8c6c04b6c0eaadfcff6ffe7168c00d35638a809b510ee494ab4a6be82",
+      "apps/api/src/capabilities/date-parse.ts": "ab1188d4be68ba26e9edc7e5e7539a1c754b2ad094aa401a953f372e4df7b42c",
+      "apps/api/src/capabilities/deduplicate.ts": "3c6d7df513058fdba8a6cbe46c864c81d9404378aa3b5c9804f7a46ac786ff1f",
+      "apps/api/src/capabilities/dns-lookup.ts": "9eb0ff0107ae84b23c3f1f2a8cc523315c565a92efda85b5a1bbbc0b91393e82",
+      "apps/api/src/capabilities/domain-age-check.ts": "239685c79f0a3108890a60974758ddf54c0d0fc74987c110088b89528a862c4f",
+      "apps/api/src/capabilities/email-auth-check.ts": "5a1907b94125f509de6ef193d4dd040c36e4660047db42b97b4207b7ff493ca4",
+      "apps/api/src/capabilities/email-deliverability-check.ts": "3899769f7d3c7487e8f526c44e619d62625d737acceac4b2a9f150654c8a4f05",
+      "apps/api/src/capabilities/email-reputation-score.ts": "4751642d98e386fde566386c12c872f9b1f2c84b033250e22c93d5bc00ab3a8b",
+      "apps/api/src/capabilities/email-validate.ts": "86e581b73c5f18459c686dc01d04f9b83b26be92c74ea552b9a072b0bb7e2be8",
+      "apps/api/src/capabilities/french-company-data.ts": "ea632f6ff6a575a6877726aa2b5d593c3f463dd61be3fa7bda6432abe4da8ac8",
+      "apps/api/src/capabilities/iban-validate.ts": "a1286253a1c6af85e14252409c7675f87e01d01463d44ae274a44876e63a1685",
+      "apps/api/src/capabilities/japanese-company-data.ts": "fc7498e84b3e73a58c4f0100eca970e36f0855fe07702a7b836e0d7ca75a37c2",
+      "apps/api/src/capabilities/pdf-extract.ts": "6868a7eeab72274cb7b6b4ac28ded1469e910d707a60b820942b8e265db94ce4",
+      "apps/api/src/capabilities/pep-check.ts": "a98c95709fe395a95d5b51e51adebf706450be2e6543920f1758d716371631c9",
+      "apps/api/src/capabilities/phone-validate.ts": "5564b21d08afeacd6ffe029116f2888e5286cf2d9a36382e622216a68bac33c9",
+      "apps/api/src/capabilities/sanctions-check.ts": "2e253394e295ad78b4c5bc015fe9c677f0fe8764c77758235398fc7b4a28982e",
+      "apps/api/src/capabilities/ssl-check.ts": "3160b6d14807efe75b358e446ff7341db5aaa8554409dd7762e35df5999930e1",
+      "apps/api/src/capabilities/uk-company-data.ts": "011c10bcec5d144012f3db8591b327d3d3a5d896256499faeff0b645e1999fb7",
+      "apps/api/src/capabilities/url-to-markdown.ts": "a1e569259f95c245fc460c4d463d028a0ba2df89b974f3ea73c3111679ae1f84",
+      "apps/api/src/capabilities/vat-validate.ts": "2db4846134e90b43a90f6a09bfe4557738019628d347e56dfaaa2465195123a3",
+      "apps/api/src/capabilities/web-extract.ts": "820c7292d13339d75214ef4778f56505c0c8873039d6cdf8a1b20e97fa4cbfaf",
+      "apps/api/src/lib/__snapshots__/actionable-errors.test.ts.snap": "0ad5614b4829ab7c7961259a2fba2552b4ac0da703c0a720cff80c90d0246efc",
+      "apps/api/src/lib/actionable-errors-round2.test.ts": "5ee96582b6a5bd53fb1ca4e5f2d59ee1f17aa011e160a0fdf1e4305df07350cc",
+      "apps/api/src/lib/actionable-errors.test.ts": "a7a3aeca478ee573654a13623799c09e907b3409f0218dcbe8bd5c248f7373f1",
+      "apps/api/src/lib/admin-auth.ts": "2533e0f70a4c670dde8fbbb8c4c32144fcc061e3f6ff66f52600dd88cc73065d",
+      "apps/api/src/lib/api-keys.test.ts": "ab50ff4003a99790d442a72ce940f826ce517623658ca2471dc9b3a70b8711b0",
+      "apps/api/src/lib/capability-refusal.ts": "a923dc51aeec51bf56643767c91da20da5dc6e908e7bb667f4d80eb322d986c1",
+      "apps/api/src/lib/db-rate-limit.ts": "912a5e65b2cec64bc24148828cda8c55edc1d2ad7117a76c0b8f91f63aa6f847",
+      "apps/api/src/lib/errors.ts": "9a8208a95a44ea88c06a29f5a0f1b15ef85cef47225cc27c633529430212b7b3",
+      "apps/api/src/lib/x402-gateway.ts": "c0d57c37cda96ba0d9313d05fc7042159fd1900b3ba1ea98c3fb1626e1acc32e",
+      "apps/api/src/openapi.ts": "2764d60ee21f82d12adcb3448a63bce44d710c0ee9c73fed994e22ef8f75d896",
+      "apps/api/src/routes/a2a.ts": "1483621448642420a9e62a9741a76b5bbe3dd864318af436bdb6d4f85df65c75",
+      "apps/api/src/routes/api-keys.integration.test.ts": "5e1fd1731fbe98f93e755a9fb46ee2384c539988a56c5b0db18a7df0f45ce851",
+      "apps/api/src/routes/api-keys.test.ts": "b7e1a8837a7ff75230e76e00468e1aaaa937664c1bcd6a42a2368d120ef129a5",
+      "apps/api/src/routes/api-keys.ts": "352cca046336c263e4bcdb366d7f5e7ef040cbbd1371812708a6c924b6664eeb",
+      "apps/api/src/routes/audit.ts": "f374a71734460bf263a3d471d06246d93d20d2cef9d982116a81c09385d0a5d9",
+      "apps/api/src/routes/auth.ts": "fe25185f93fd982743a677d02a543f077affed902d9d73460e85baeb5a14594e",
+      "apps/api/src/routes/dispute.ts": "2961c9d443cdde03176e2bf68be66ffe7185abf7154e97ac003b515d4919f2f7",
+      "apps/api/src/routes/do.core.test.ts": "d2bd2eeb25551f4ef5903ae4f74cd43016c757f5b15de2b615b3ff2853d53e83",
+      "apps/api/src/routes/do.ts": "716c39f5109522ba1fdcc1caa7cf6b632e1a4423fa64b4523b75dd345a8046b9",
+      "apps/api/src/routes/internal-health-monitor.ts": "222a7e65dd62ebe0e2a23f41d9285a1614d575f0fc280cfd1e1c652bc5085172",
+      "apps/api/src/routes/internal-onboarding.ts": "d36f21e695ec73eb2e56f57c2c2046fbb74fcb67b9c978d2ffb6a1b01c9c387f",
+      "apps/api/src/routes/mcp.ts": "1c2e26ce49f66c2cc8aeeaee48b63160880918bd2e17eae097eecbd573a77bdd",
+      "apps/api/src/routes/primary-key-boundary.test.ts": "358a174dcdc961b6279642fb320466fabc1f86216f32e943df6173e78240e82c",
+      "apps/api/src/routes/solution-execute.ts": "6921d41019c85d8c9a3b385208c7385c158358ab8bfb9750bb7564adc0481727",
+      "apps/api/src/routes/suggest.ts": "924899827514f2fd7e3c004458a821be4274235120a2482bbe58c4d9a2e1d127",
+      "apps/api/src/routes/transactions.ts": "586546f8bf5e8d3bdee5abc50899b2fcd3bb38dc9c16311c8e6266f7429f40e4",
+      "apps/api/src/routes/wallet.ts": "ca79fdbcb6fa539e9c840ea53907ed2863cf55b30ccae08d08fba84ccae09056",
+      "apps/api/src/routes/x402-gateway-v2.ts": "37caa1cc3a5f87845b58feb2e94d28705ef3c1ea535ce164d943fe528858bfdf",
+      "docs/api-quickstart.md": "2819b9d5a9d24eff75db052f9733282f403f1567497c7385921771f060f86fcf",
+      "manifests/french-company-data.yaml": "80f3ecb1b6839033377ef04deea7a0b80db2c2bdeff26c5689c7f93d6dbef7dc",
+      "manifests/uk-company-data.yaml": "a9b98d2a5f48e7cf50e3c2010b6b99c77768410baf905edb3a8c0fe0593b5e8e",
+      "packages/mcp-server/src/tools.ts": "8b7e2376e8d7a691426a21c7992cafd50ac03842c3fc811742cb972dac46e4f1",
+      "packages/sdk-typescript/README.md": "96300ec3d2af9ab8298241213176ee94db79b7d8b0b0207ec6471505a5616348",
+      "packages/sdk-typescript/src/client.ts": "26ba58f4cb936eac4fd8cd4c9a703321631b8644ae4f2f4827d58acb4c25c074",
+      "packages/sdk-typescript/src/errors.ts": "cb3c30e9dfcb8bed6b2e13498863e66a9e3d9fa044a976a4ad7789b8394bc4ea",
+      "packages/sdk-typescript/src/types.ts": "99267ea525c91b00c4f6a8eb7fb7aa89f03339a2cc314e795179094f2b1d7d1b",
+      "packages/sdk-typescript/test/actionable-errors.test.mjs": "d75cabda519b36d1477793e8043573bffc014ac231bb445384d2c4ca04f409d7"
+    },
+    "commands": [
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "",
+          "> strale-mcp@0.2.8 typecheck",
+          "> tsc --noEmit",
+          ""
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "[check-mjs-syntax] 36 .mjs file(s) checked (syntax-only — see script header for scope).",
+          "[check-mjs-syntax] All clean."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "> @strale/api@0.1.0 lint:no-bare-catch",
+          "> node scripts/check-no-bare-catch.mjs src",
+          "",
+          "F-0-009 guard: no bare `.catch(() => {})` found."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "> @strale/api@0.1.0 lint:no-unguarded-user-fetch",
+          "> node scripts/check-no-unguarded-user-fetch.mjs",
+          "",
+          "[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "> @strale/api@0.1.0 lint:no-new-console",
+          "> node scripts/check-no-new-console.mjs",
+          "",
+          "F-0-014 guard: no new `console.*` calls."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "SCF-3 guard: no API access to integrity_hash_status found."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "skip  openai-agents-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "skip  pydantic-ai-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "ok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)",
+          "",
+          "framework-packages check: 4 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims."
+        ]
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "2026-10-19.md: clean (357 words)",
+          "2026-10-26.md: clean (589 words)",
+          "2026-10-27.md: clean (411 words)",
+          "",
+          "checked 29 brief(s): 0 error(s), 15 warning(s)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "check-no-committed-secrets: clean (3684 tracked files scanned)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "[lint] No scripts bypass the dispatcher gate."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "fetch-timeout coverage: 4 total offenders, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "manifest guaranteed-field consistency: 22 total, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "PII guard: clean — no unredacted person names or checksum-valid identifiers found."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "  swedish-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [alternative_names, ongoing_procedures]",
+          "  uk-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [tier_2_available, tier_2_available_reason, ubo_availability, ubo_availability_reason]",
+          "  us-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [match_confidence, is_exact_match, resolution_method]",
+          "",
+          "STRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. Re-capture a fixture after fixing its manifest with: npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "identity fixture-shape sentinel: 0 total, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "[lint] cost_class coherence: all classified capabilities OK."
+        ]
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "production write credential: 1 authorised reader, 0 unauthorised references"
+        ]
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> programs:check",
+          "> node scripts/check-program-tracks.mjs",
+          "",
+          "ok   docs/programs/brand-website/tracks.yaml",
+          "ok   docs/programs/cto-readiness/tracks.yaml"
+        ]
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 30",
+          "ℹ pass 30",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2650.829839"
+        ]
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract"
+        ]
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 31",
+          "ℹ pass 31",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 6036.007831"
+        ]
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "Shared-access illustration sources, outputs and evidence pass",
+          "Homepage generated outputs are current.",
+          "Hero comparison sources and generated outputs agree.",
+          "Opening study sources and outputs agree.",
+          "ok   open-flow design system: 122 contrast pairs pass, specimen on-token, assets match provenance"
+        ]
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 55",
+          "ℹ pass 55",
+          "ℹ fail 0",
+          "ℹ skipped 0",
+          "ℹ tests 9",
+          "ℹ pass 9",
+          "ℹ fail 0",
+          "ℹ skipped 0",
+          "ℹ tests 4",
+          "ℹ pass 4",
+          "ℹ fail 0",
+          "ℹ skipped 0",
+          "ℹ tests 1",
+          "ℹ pass 1",
+          "ℹ fail 0",
+          "ℹ skipped 0",
+          "ℹ tests 15",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 245.138445"
+        ]
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> node scripts/check-env.mjs",
+          "",
+          "checked 130 process.env names against 135 rows in config/env-manifest.yaml",
+          "example files: .env.example, apps/api/.env.example",
+          "ok   environment manifest contract"
+        ]
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 24",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1695.148457"
+        ]
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: nvd: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: usgs-earthquake: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: alchemy-eth: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sourcify: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "ok   vendor register contract"
+        ]
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 78",
+          "ℹ pass 78",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 6312.8236"
+        ]
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> distribution:check",
+          "> node scripts/check-distribution.mjs",
+          "",
+          "checked 59 surfaces in docs/operations/distribution-registry.yaml",
+          "ok   distribution register contract"
+        ]
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 15",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 552.588968"
+        ]
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 20",
+          "ℹ pass 20",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 243.239911"
+        ]
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 3",
+          "ℹ pass 3",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 321.160562"
+        ]
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> protocols:check",
+          "> node scripts/check-protocol-extraction.mjs",
+          "",
+          "checked 19 candidate protocol mirror(s) under docs/governance/protocols",
+          "ok   protocol extraction"
+        ]
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 12",
+          "ℹ pass 12",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 264.043522"
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "checked 20 protocol row(s) in docs/project/protocol-coverage.yaml",
+          "  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20260910-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision",
+          "  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20261024-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision",
+          "ok   protocol coverage"
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 16",
+          "ℹ pass 16",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1342.472193"
+        ]
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> scheduled:check",
+          "> node scripts/check-scheduled-reachability.mjs",
+          "",
+          "checked 9 scheduled mechanisms in config/scheduled-mechanisms.yaml",
+          "ok   scheduled mechanism reachability"
+        ]
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 43",
+          "ℹ pass 43",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1443.231165"
+        ]
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 24",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1734.767146"
+        ]
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> models:check",
+          "> node apps/api/scripts/check-model-literals.mjs",
+          "",
+          "checked 731 files under apps/api/src (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)",
+          "ok   model registry contract"
+        ]
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 14",
+          "ℹ pass 14",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 488.891409"
+        ]
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> claims:check",
+          "> node scripts/check-claims.mjs",
+          "",
+          "checked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present",
+          "ok   claims register contract"
+        ]
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 18",
+          "ℹ pass 18",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2030.215918"
+        ]
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> docs:check",
+          "> node scripts/check-docs-index.mjs",
+          "",
+          "checked 18 docs/ subtrees against docs/README.md",
+          "ok   docs/README.md index"
+        ]
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 6",
+          "ℹ pass 6",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 203.3618"
+        ]
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 12",
+          "ℹ pass 12",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 226.445667"
+        ]
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it"
+        ]
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 25",
+          "ℹ pass 25",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 8688.290686"
+        ]
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "> migrations:check",
+          "> node apps/api/scripts/check-migration-ledger.mjs",
+          "",
+          "checked 68 migration blocks in apps/api/src/lib/startup-migrations.ts",
+          "ok   migration ledger"
+        ]
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 23",
+          "ℹ pass 23",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 527.591968"
+        ]
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 180",
+          "ℹ pass 180",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 164438.971708"
+        ]
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 6",
+          "ℹ pass 6",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ],
+        "tail": [
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 138.963434"
+        ]
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "> strale-mcp@0.2.8 build",
+          "> tsc",
+          ""
+        ]
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "",
+          "> straleio@0.1.3 build",
+          "> tsc",
+          ""
+        ]
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "counts": [
+          "ℹ tests 46",
+          "ℹ pass 46",
+          "ℹ fail 0",
+          "ℹ skipped 0"
+        ]
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "counts": [],
+        "tail": [
+          "project context check: warning-only (M2 candidate foundation)",
+          "no warnings"
+        ]
+      }
+    ],
+    "additional_verification": [
+      {
+        "command": "npm test",
+        "result": "PASS",
+        "passed": 6246,
+        "skipped": 346,
+        "note": "Initial full run before two schema tests were added."
+      },
+      {
+        "command": "npm test",
+        "result": "FAIL",
+        "passed": 6247,
+        "failed": 1,
+        "skipped": 346,
+        "note": "Existing verify short-chain test timed out at 10000ms during concurrent verification; no source or timeout changed."
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/verify.test.ts",
+        "result": "PASS",
+        "passed": 17
+      },
+      {
+        "command": "npm test",
+        "result": "PASS",
+        "passed": 6248,
+        "skipped": 346,
+        "note": "Final source and tests, without concurrent verification."
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "result": "PASS"
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "result": "PASS",
+        "note": "Repeated after final MCP text correction."
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/actionable-errors-round2.test.ts src/lib/actionable-errors.test.ts",
+        "result": "PASS",
+        "passed": 297
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/actionable-errors.test.ts src/lib/actionable-errors-round2.test.ts src/routes/do.core.test.ts src/routes/api-keys.test.ts src/routes/api-keys.integration.test.ts src/routes/primary-key-boundary.test.ts src/lib/api-keys.test.ts src/routes/mcp.test.ts src/routes/mcp-conversion.test.ts src/routes/mcp-trust-contract.test.ts",
+        "result": "PASS",
+        "passed": 373,
+        "skipped": 24,
+        "note": "Before two schema tests were added; final full run covers them."
+      },
+      {
+        "command": "git diff --check",
+        "result": "PASS"
+      },
+      {
+        "command": "npm run handoff:orient",
+        "result": "PASS"
+      },
+      {
+        "command": "npm run handoff:check",
+        "result": "FAIL",
+        "note": "Expected under explicit keep-uncommitted/no-push/no-switch contract; dirty tree, topology, upstream and existing merged branches."
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/french-company-data.yaml --dry-run",
+        "result": "BLOCKED",
+        "note": "ProductionAuthorityError: no production write credential available; no override, database access or production write."
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/uk-company-data.yaml --dry-run",
+        "result": "BLOCKED",
+        "note": "ProductionAuthorityError: no production write credential available; no override, database access or production write."
+      }
+    ],
+    "fail_before": {
+      "api": {
+        "cases": 77,
+        "failed": 35,
+        "passed": 42,
+        "groups": [
+          "admin auth (3)",
+          "free-tier reset/signup",
+          "MCP anonymous signup and authenticated telemetry (2)",
+          "access-policy refusals (2)",
+          "caller-domain field inference",
+          "legacy caller-input execution failure",
+          "solution full/partial advice (2)",
+          "account spend cap",
+          "unknown client IP",
+          "x402 doubled period",
+          "executor wording (20)"
+        ]
+      },
+      "sdk": {
+        "failed": 1,
+        "passed": 5
+      },
+      "schema": {
+        "failed_on_head": 2,
+        "passed_on_candidate": 2,
+        "method": "Read original manifests with git show; assert schema alternatives in memory, without checkout mutation."
+      },
+      "accounting_guards": {
+        "passed_on_round1": 9,
+        "note": "Preservation tests, not claimed as fail-before failures."
+      }
+    },
+    "live_checks": [
+      {
+        "method": "GET",
+        "url": "https://api.strale.io/v1/capabilities/actionable-errors-no-such-capability",
+        "status": 404,
+        "error_code": "not_found",
+        "details": null
+      },
+      {
+        "method": "GET",
+        "url": "https://api.strale.io/v1/wallet/balance",
+        "status": 401,
+        "error_code": "unauthorized",
+        "details": null
+      }
+    ],
+    "limitations": [
+      "No production credentials, DB-backed readiness or live executor smoke.",
+      "No post-fix independent verdict claimed; orchestrator reviews and ships.",
+      "No commits, pushes, branch switches, PRs, merges, package publication or production mutations."
+    ],
+    "local_verification_passed": true,
+    "api_passed": 6248,
+    "api_skipped": 346,
+    "api_files_passed": 344,
+    "api_files_skipped": 33,
+    "focused_api_passed": 297,
+    "root_ci_build_client_commands_passed": 57,
+    "root_node_tests_passed": 704,
+    "sdk_tests_passed": 6,
+    "fail_before_api": 35,
+    "fail_before_sdk": 1,
+    "fail_before_schema": 2,
+    "handoff_gate_passed": false,
+    "db_readiness_verified": false
+  }
+}

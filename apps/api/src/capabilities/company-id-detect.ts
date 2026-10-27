@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // Company ID detection — identifies the type and country of a company registration number
@@ -68,7 +69,7 @@ function detectId(input: string): Array<{ pattern: IdPattern; matched: string }>
 registerCapability("company-id-detect", async (input: CapabilityInput) => {
   const raw = (input.id as string) ?? (input.company_id as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'id' is required. Provide a company registration number to identify.");
+    throw inputRefusal("'id' is required. Provide a company registration number to identify.", "id", "Send 'id' as a company registration number string.");
   }
 
   const trimmed = raw.trim();

@@ -141,7 +141,7 @@ describeDb("additional keys against real Postgres", () => {
     const path = template.replace("KEY", keyId).replace("TX", id);
     const refused = await request(path, secret, method, body);
     expect(refused.status).toBe(403);
-    expect(await refused.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action"});
+    expect(await refused.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action", details: {fix: "Send the account's primary API key in the Authorization: Bearer <api_key> header."}});
     expect((await request(path, primary, method, body)).status).toBe(status);
   });
   it("serializes two concurrent creates at 24 active keys", async () => {

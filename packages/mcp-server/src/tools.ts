@@ -284,6 +284,7 @@ export async function executeCapability(
             type: "text",
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
+              details: { fix: `Pay per call at ${opts.baseUrl}/x402/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
               // Ordering is deliberate. This message is read by an autonomous
               // agent, and the only path it used to offer was a web signup
               // form — something an agent cannot complete. In the seven days
@@ -337,16 +338,21 @@ export async function executeCapability(
     };
   }
 
-  if (status === 429) {
-    const retryAfter = (data as any).retry_after_seconds;
-    emitFunnelEvent(opts, { type: "rate_limited", tool: "strale_execute", slug });
+  if (status === 429) emitFunnelEvent(opts, { type: "rate_limited", tool: "strale_execute", slug });
+
+  if (status === 429 && !opts.apiKey && (data as any).error_code === "rate_limited") {
+    const details = (data as any).details;
+    const retryAfter = details?.retry_after_seconds ?? (data as any).retry_after_seconds;
     return {
       content: [
         {
           type: "text",
           text: JSON.stringify({
             error: "Free tier rate limit reached (10 executions/day).",
-            fix: "Sign up at https://strale.dev/signup for unlimited access with €2 free credits.",
+            fix: typeof details?.fix === "string" && details.fix.includes("https://strale.dev/signup")
+              ? details.fix
+              : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for €2 of free credits and send an API key.`,
+            ...(details ? { details } : {}),
             ...(retryAfter != null ? { retry_after_seconds: retryAfter } : {}),
           }),
         },
@@ -370,6 +376,7 @@ export async function executeCapability(
     }
 
     let errorText = `Error (${errorCode}): ${message}`;
+    if (typeof details?.fix === "string" && details.fix.trim()) errorText += `\nFix: ${details.fix}`;
     if (isInsufficientBalance) {
       errorText += `\n\nTop up your wallet at: ${opts.baseUrl}/v1/wallet/topup`;
     }

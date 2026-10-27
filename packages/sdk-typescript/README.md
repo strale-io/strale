@@ -168,3 +168,11 @@ primary key, or use another key. x402 is unchanged.
 Email recovery rotates only the primary key. Additional keys survive and can
 still spend up to their caps. Configure the client with the recovered primary
 key, call `apiKeys()`, and `revokeApiKey(id)` for unused or unrecognized keys.
+
+### Error recovery
+
+`StraleError.message` contains the API's original message unchanged. Use
+`error.fix` for caller guidance, `error.retryable` to decide whether to retry,
+and `error.nextStep` for the next action when the failure is outside your control.
+These optional properties read `details.fix`, `details.retryable`, and
+`details.next_step`; the full response details remain on `error.details`.
