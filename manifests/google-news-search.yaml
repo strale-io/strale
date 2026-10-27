@@ -100,7 +100,7 @@ limitations:
       article.
     category: accuracy
     severity: info
-  - title: Result mix depends on Google News ranking, not a stable corpus
+  - title: Results vary with Google News rankings
     text: >-
       Coverage and ordering follow Google News's own ranking for the query/locale; re-running the
       same query can return different results. This is a discovery surface, not an archive.

@@ -91,7 +91,7 @@ output_field_reliability:
   mx_records: guaranteed
   ns_records: guaranteed
 limitations:
-  - title: DNS results reflect current propagation — recent record changes may take up to 48 hours to appear
+  - title: DNS changes can take up to 48 hours to appear
     text: Results reflect current DNS propagation — recent changes may take up to 48 hours to appear
     category: freshness
     severity: info

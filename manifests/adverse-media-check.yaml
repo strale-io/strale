@@ -191,53 +191,47 @@ output_field_reliability:
   period: guaranteed
   fallback_reason: rare
 limitations:
-  - title: Adverse-media language coverage on Dilisense path is not publicly documented per language
+  - title: Language coverage is not fully documented
     text: >-
-      Dilisense aggregates 235k+ sources globally but does not publish a per-language source breakdown.
-      Marketing materials name English, French, and German explicitly; native-language coverage for other
-      EU27 + UK + NO + CH languages (Polish, Italian, Spanish, Dutch, Swedish, etc.) is not verified
-      from public docs. For non-DE/FR/EN counterparties, treat results as a floor, not a ceiling.
+      Dilisense lists over 235,000 sources and explicitly names English, French and German coverage,
+      but does not publish a breakdown by language. Coverage in other EU, UK, Norwegian and Swiss
+      languages is not confirmed by its public documentation; relevant articles may be missing.
     category: coverage
     severity: warning
     workaround: For high-stakes screening of a non-DE/FR/EN payee, supplement with a native-language source check or accept residual risk explicitly.
   - title: Risk-level rule is heuristic, not regulatory
     text: >-
-      The risk_level field is computed from total hits and severe-category counts (see risk_level_thresholds in
-      output). It is a defensible heuristic, not a regulatory definition. A "high" output means dense severe-category
-      coverage in the last 12 months — interpretation requires human review of the underlying articles.
+      `risk_level` uses total hits and severe-category counts, with thresholds in
+      `risk_level_thresholds`; it is not a regulatory classification. A high level indicates dense
+      severe-category coverage within 12 months and requires human review of the articles.
     category: accuracy
     severity: warning
     workaround: Always review top_articles for context before deciding to block a payment or onboard a counterparty.
-  - title: Fallback path uses Google index and keyword classification, not Dilisense data
+  - title: Fallback results have lower coverage and accuracy
     text: >-
-      When Dilisense is unavailable (quota exhausted, 5xx, or no API key), the fallback uses Serper.dev
-      (Google search) with hardcoded keyword-based categorization. Output sets source="serper" and includes
-      fallback_reason. Coverage breadth and category accuracy are materially lower on the fallback path.
+      If Dilisense is unavailable, Serper.dev supplies Google search results classified by keywords,
+      with materially lower coverage and category accuracy. These responses identify serper in
+      `source` and include `fallback_reason`.
     category: coverage
     severity: info
-    workaround: Treat serper-sourced calls as adequate but lower-evidence for audit purposes.
+    workaround: Review fallback articles individually and supplement them with other sources for audit decisions.
   - title: Recency window is fixed at last 12 months
     text: Both paths filter to the last 12 months of articles. Older adverse coverage is not surfaced.
     category: freshness
     severity: info
-  - title: Entity name must match the corporate filing form, not consumer brand or descriptor
+  - title: Search requires the registered corporate name
     text: >-
-      Dilisense indexes coverage against the corporate filing name. Querying with a consumer brand
-      name or a country-descriptor suffix (e.g. "Folli Follie" misses; "FF Group" returns 12 hits.
-      "Danske Bank Estonia" misses; "Danske Bank" returns 11k+ hits including Estonian-branch
-      laundering coverage). For parent-branch entities, query the parent name. For
-      brand-vs-corporate, use the corporate filing name. We do NOT auto-rewrite the query
-      — audit trail must reflect what was actually asked.
+      Brand names, branch names and added country suffixes can miss coverage indexed under the
+      registered corporate name. The tool searches the name supplied without rewriting it; try the
+      parent company name for branch-related coverage.
     category: accuracy
     severity: warning
     workaround: When total_hits=0 for a major entity, retry with the parent corporate name (drop country suffixes; drop consumer brand names in favour of the registered corporate name).
   - title: Coverage gap for some major regional bank failures
     text: >-
-      Empirically confirmed gap (2026-04-29 variant test): "Banca Popolare di Vicenza" — a major
-      2017 Italian bank failure — returns zero adverse-media hits across all reasonable name
-      variants (BPVi, Banca Popolare di Vicenza Scpa, Popolare di Vicenza). Dilisense's index
-      depth is uneven by country; Italian non-headline banking coverage appears materially weaker
-      than UK/DE/FR/EN equivalents.
+      Coverage varies by country and can miss major regional bank failures, including Banca Popolare
+      di Vicenza under several name variants. Italian regional banking coverage may be weaker than UK,
+      German, French and English-language coverage.
     category: coverage
     severity: warning
     workaround: For high-stakes Italian banking-counterparty screening, supplement with a native-source check.

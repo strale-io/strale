@@ -93,19 +93,17 @@ output_field_reliability:
   company_size: common
   source_as_of: guaranteed
 limitations:
-  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+  - title: Tool is currently unavailable
     text: >-
-      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
-      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
-      capability-unavailable.
+      This tool is currently unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
-  - title: Legal form not returned at WW-Top tier
-    text: Openapi WW-Top does not return Bulgarian legal form. Customers needing legal form must derive it from the registered name suffix.
+  - title: Legal form is not included
+    text: The company’s legal form is not returned. A registered name suffix may indicate the form but is not a separate registry confirmation.
     category: coverage
     severity: info
-  - title: Directors not available at WW-Top tier
-    text: Openapi WW-Top does not return directors / legal representatives. Directors-gap closure is IT-only via Openapi IT-Full.
+  - title: Directors are not included
+    text: Director and legal representative details are not included.
     category: coverage
     severity: info
 

@@ -145,7 +145,7 @@ output_field_reliability:
   domains: guaranteed
   available: guaranteed
 limitations:
-  - title: Checks .com availability and common social handles only — country TLDs and niche platforms are not checked
+  - title: Country domains and niche platforms are not checked
     text: Checks .com availability and common social handles — country TLDs and niche platforms are not checked
     category: coverage
     severity: info

@@ -106,7 +106,7 @@ output_field_reliability:
   tracking_scripts: guaranteed
   consent_banner_detected: guaranteed
 limitations:
-  - title: Only scans cookies set on initial page load — cookies set after interaction or on sub-pages may be missed
+  - title: Only cookies set on initial page load are captured
     text: Scans cookies set on initial page load — cookies set after user interaction or on sub-pages may not be captured
     category: coverage
     severity: info

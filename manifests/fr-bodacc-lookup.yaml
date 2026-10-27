@@ -112,9 +112,9 @@ output_field_reliability:
 limitations:
   - title: Coverage limited to French registered entities
     text: >-
-      BODACC only contains announcements for entities registered in the French commercial register (RCS). Foreign
-      entities operating in France without RCS registration are not covered. SIREN is the unique identifier — entities
-      without a SIREN cannot be looked up.
+      Covers announcements for entities registered in the French commercial register (RCS) with a
+      SIREN identifier. Foreign entities without RCS registration and entities without SIREN
+      identifiers cannot be looked up.
     category: coverage
     severity: info
   - title: Annual-accounts deposits ("dpc") dominate the corpus
@@ -126,9 +126,9 @@ limitations:
     severity: info
   - title: Recovery from insolvency is not auto-detected
     text: >-
-      has_insolvency_filing is true if any procédure collective announcement exists in history. It does not distinguish
-      active proceedings from closed/recovered ones. Inspect most_recent_insolvency.judgment_nature to read the latest
-      court action (e.g. "Jugement de clôture" indicates closure).
+      `has_insolvency_filing` is true for any recorded collective proceeding and does not distinguish
+      current proceedings from closed ones or recovery. Check `most_recent_insolvency.judgment_nature`
+      for the latest action, such as Jugement de clôture for closure.
     category: accuracy
     severity: warning
     workaround: Read most_recent_insolvency.judgment_nature and judgment_date to determine current status.

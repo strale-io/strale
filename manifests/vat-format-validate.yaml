@@ -88,7 +88,7 @@ output_field_reliability:
   country_name: guaranteed
   format_valid: guaranteed
 limitations:
-  - title: Validates VAT number format and check digits only — does not confirm the number is registered or active
+  - title: Format checks do not confirm VAT registration
     text: Validates format and check digits algorithmically — does not confirm the VAT number is registered or active
     category: coverage
     severity: info

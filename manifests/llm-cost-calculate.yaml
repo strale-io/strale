@@ -121,8 +121,8 @@ output_field_reliability:
   output_tokens: guaranteed
   cheaper_alternatives: guaranteed
 limitations:
-  - title: LLM pricing uses a built-in model table — new models or recent pricing changes may not be reflected
-    text: Pricing data based on built-in model table — new models or pricing changes may not be reflected immediately
+  - title: New models and price changes may be missing
+    text: Prices come from a stored reference table. New models or recent price changes may be missing.
     category: freshness
     severity: info
     workaround: Check the provider's current pricing page for models showing unexpected costs, especially after major releases

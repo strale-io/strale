@@ -94,7 +94,7 @@ output_field_reliability:
   key_count: guaranteed
   max_depth_found: guaranteed
 limitations:
-  - title: Circular references or extremely deep nesting beyond 50 levels may cause flattening errors
+  - title: Circular references or nesting over 50 levels can fail
     text: >-
       Flattens nested objects using dot notation — circular references or extremely deep nesting (>50 levels) may cause
       errors

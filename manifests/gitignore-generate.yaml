@@ -124,10 +124,10 @@ output_field_reliability:
   gitignore: guaranteed
   total_rules: guaranteed
 limitations:
-  - title: Generates patterns for common tools and frameworks — project-specific build artifacts may need manual additions
+  - title: Project-specific build files may need extra patterns
     text: >-
-      Generates patterns for common tools and frameworks — project-specific build artifacts or custom tooling may need
-      manual additions
+      Generates patterns for common tools and frameworks — project-specific build artefacts or custom
+      tooling may need manual additions
     category: coverage
     severity: info
     workaround: Review the generated .gitignore against your actual build output directory and add project-specific patterns

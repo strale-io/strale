@@ -90,20 +90,18 @@ output_field_reliability:
   annual_co2_kg: guaranteed
   co2_grams_per_view: guaranteed
 limitations:
-  - title: Carbon estimates based on page weight only — actual emissions depend on server location and energy grid mix
+  - title: Emissions depend on more than page weight
     text: >-
       Carbon estimates based on page weight and transfer size — actual emissions depend on server location, CDN, and
       energy grid mix
     category: accuracy
     severity: info
     workaround: >-
-      Use as a relative benchmark for comparing pages; for certified carbon reporting, use tools like Green Web
-      Foundation or Ecograder
+      Compare estimates between pages; obtain a separate assessment for formal carbon reporting.
   - title: Pages transferring more than 100 MiB are not measured
     text: >-
-      Page weight is counted while streaming (nothing is buffered), so heavy
-      pages measure fine — but the count stops at 100 MiB and returns a
-      caller_input refusal rather than a measurement. No charge is taken.
+      Pages transferring more than 100 MiB are refused with a caller_input error rather than measured.
+      The call is not charged.
     category: coverage
     severity: info
 

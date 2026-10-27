@@ -68,19 +68,15 @@ output_field_reliability:
   average_price: guaranteed
   highest_price: guaranteed
 limitations:
-  - title: Nordic countries only — the former Google Shopping fallback is retired
+  - title: Only Nordic countries are supported
     text: >-
-      Coverage is Sweden, Norway, Denmark and Finland via PriceRunner. The former Google Shopping
-      fallback for other countries was removed 2026-08-12: Google Search is on the ToS blocklist
-      (DEC-20260427-H-4), and serving it would violate the per-source policy the platform enforces
-      at the fetch layer. Non-Nordic requests return a clear unsupported-country error and are not
-      billed. Other countries return when a licensed price source is added.
+      Covers Sweden, Norway, Denmark and Finland through PriceRunner. Other countries return an
+      unsupported-country error and are not billed.
     category: coverage
     severity: warning
-  - title: Prices scraped from retailer websites do not include personalized pricing or member discounts
+  - title: Personal and member prices are not included
     text: >-
-      Prices scraped from retailer websites — results may not include personalized pricing, member discounts, or
-      real-time promotions
+      Returned prices may exclude personalised pricing, member discounts and live promotions.
     category: accuracy
     severity: info
     workaround: >-
@@ -88,9 +84,9 @@ limitations:
       decisions
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~4k output tokens) are refused
-      rather than returned truncated — for example a shopping results page with an unusually long offer list.
-      Retrying the identical request will not help.
+      Structured output is limited to about 4000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Retry with a smaller or more focused request — fewer offers per call

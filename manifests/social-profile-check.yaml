@@ -86,24 +86,19 @@ output_field_reliability:
   unknown_count: guaranteed
   available_platforms: guaranteed
 limitations:
-  - title: Developer registries only — no social platforms or personal profiles
+  - title: Developer registries only; no personal profiles
     text: >-
-      Checks npm packages, PyPI projects and GitHub organisations through their official APIs. Social platforms and
-      personal profiles (TikTok, Reddit, YouTube, Pinterest, personal GitHub, npm or PyPI accounts) are not probed:
-      Strale's data-access rule rules out harvesting profiles of people, and those platforms restrict automated access
-      outside their own APIs.
+      Checks npm packages, PyPI projects and GitHub organisations through their official APIs. Social
+      platforms and personal accounts, including personal GitHub, npm and PyPI profiles, are not
+      checked.
     category: coverage
     severity: info
     workaround: >-
       To check a social handle, use that platform's official API, or ask the account owner to confirm it.
-  - title: "Data access: preferred lane (official registry APIs)"
+  - title: "Checks registry HTTP status only"
     text: >-
-      DEC-20261023-A lane: preferred. Each registry is read through its own documented public API — the npm registry
-      (registry.npmjs.org), PyPI's JSON API (pypi.org/pypi/<name>/json) and the GitHub REST API (api.github.com/orgs) —
-      one request per registry per call, with an honest StraleBot user agent, reading only the HTTP status. No page is
-      scraped and no personal account is looked up. Terms of each API (docs.npmjs.com/policies/open-source-terms,
-      pypi.org/policy/terms-of-use, docs.github.com/site-policy/github-terms) were not re-read in the 2026-10-24
-      session, whose network policy blocked them; re-verify before any change of use.
+      Each call checks only HTTP status through the npm, PyPI and GitHub organisation APIs, with one
+      request per registry. It does not inspect page content or look up personal accounts.
     category: coverage
     severity: info
   - title: A missing GitHub organisation does not mean the name is free
@@ -116,9 +111,9 @@ limitations:
     workaround: Try registering the organisation on GitHub to confirm availability.
   - title: "\"Available\" means not found, not guaranteed registrable"
     text: >-
-      A 404 means the registry has no package, project or organisation by that name. Registration can still be refused:
-      npm rejects names that differ from an existing package only by punctuation or case, and PyPI blocks prohibited
-      names and names too similar to an existing project, and returns 404 for some registered projects with no releases.
+      A 404 means no package, project or organisation was found, but does not guarantee the name can
+      be registered. npm and PyPI can reject prohibited or similar names, and PyPI can return 404 for
+      registered projects without releases.
     category: accuracy
     severity: info
     workaround: Confirm by attempting the registration before relying on the name.

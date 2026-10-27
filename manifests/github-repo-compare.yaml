@@ -163,7 +163,7 @@ output_field_reliability:
   comparison: guaranteed
   common_topics: guaranteed
 limitations:
-  - title: Compares public GitHub repositories only — private repos require authenticated GitHub API access
+  - title: Only public repositories are compared
     text: Compares public GitHub repositories only — private repos require authenticated GitHub API access
     category: coverage
     severity: info

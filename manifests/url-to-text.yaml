@@ -85,7 +85,7 @@ output_field_reliability:
   language: guaranteed
   meta_description: guaranteed
 limitations:
-  - title: Extracted text includes navigation, footers, and other boilerplate content alongside the main page content
+  - title: Text includes navigation and page boilerplate
     text: >-
       Extracts text from the rendered page — navigation, footers, and boilerplate content are included alongside main
       content
@@ -94,11 +94,9 @@ limitations:
     workaround: Use url-to-markdown for cleaner output that better separates main content from page chrome
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
-      rather than after buffering. That is ~5x the heaviest ordinary web page, so
-      normal targets are unaffected. An oversized page returns a caller_input
-      refusal naming the field, and is not retried through another fetch path; no
-      charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

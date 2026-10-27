@@ -90,7 +90,7 @@ output_field_reliability:
   language: guaranteed
   dependencies_needed: guaranteed
 limitations:
-  - title: Supports major languages like Python and Go — less common target languages may produce suboptimal output
+  - title: Less common languages may need more manual correction
     text: >-
       Supports conversion to major languages (Python, JavaScript, Go, etc.) — less common languages may have suboptimal
       output

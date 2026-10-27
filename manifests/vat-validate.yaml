@@ -75,37 +75,36 @@ output_field_reliability:
   country_code: guaranteed
   company_address: guaranteed
 limitations:
-  - title: VIES has periodic outages and an undocumented per-member-state concurrency limit
+  - title: VIES can be unavailable or limit requests
     text: >-
-      VIES (EU VAT validation service) experiences periodic outages and throttles requests per member state with limits
-      that are not publicly disclosed. Strale retries on transient SOAP faults; the 48h substrate cache plus stale-fallback
-      keeps responses available when VIES is down.
+      VIES can be unavailable or throttle requests under unpublished per-member-state limits.
+      Transient faults are retried, and cached results, including older fallback results, can be
+      returned during outages.
     category: availability
     severity: warning
-    workaround: Same-VAT lookups within 48h are served from cache. On VIES outage with no cache, the call fails with a
-      structured error.
-  - title: VAT registration status may lag national registry changes by up to 48h
+    workaround: Lookups within 48 hours can use cached results; if VIES is unavailable and no cached result exists, retry later.
+  - title: Registration changes and cached results can lag
     text: >-
-      Strale's substrate cache is 48h. National registries themselves typically lag VIES by a further 24h. For same-day
-      verification (especially deregistration), bypass the cache by querying the national authority directly.
+      Results can be cached for 48 hours, and national registry changes can take a further 24 hours to
+      appear in VIES. Check the national tax authority directly for same-day registration or
+      deregistration confirmation.
     category: freshness
     severity: info
     workaround: For real-time same-day verification, contact the national tax authority directly.
   - title: Swiss UID public-tier VAT lookup is boolean only
     text: >-
-      The free Swiss UID register endpoint returns valid/invalid only — no company name or address. Full enrichment for
-      Swiss entities requires a separate UID register call (counted against a tight 20 req/min public-tier limit) which
-      Strale does not call from this capability today.
+      Swiss UID validation returns valid or invalid only, without a company name or address. This tool
+      does not perform the separate enrichment lookup, whose public service is limited to 20 requests
+      per minute.
     category: coverage
     severity: info
     workaround: For Swiss company name + address, call the swiss-company-data capability.
-  - title: UK VAT validation requires HMRC credentials to be configured
+  - title: UK VAT checks are unavailable without HMRC access
     text: >-
-      The HMRC Check a UK VAT Number API v2 is registration-gated and uses OAuth2. Until production credentials land,
-      GB VAT numbers return a structured "credentials pending" error.
+      GB VAT numbers return a credentials-pending error when the HMRC connection is not configured.
     category: availability
     severity: info
-    workaround: Use vat-format-validate for GB structural validation while HMRC credentials are pending.
+    workaround: Use vat-format-validate for GB format checks; it does not confirm VAT registration.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

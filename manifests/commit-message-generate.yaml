@@ -87,7 +87,7 @@ output_field_reliability:
   conventional: guaranteed
   full_message: guaranteed
 limitations:
-  - title: AI-generated commit messages from diff content may not capture the intent or reason behind changes
+  - title: Diffs alone may not explain the reason for a change
     text: AI-generated messages based on diff content — may not capture the 'why' behind changes without additional context
     category: accuracy
     severity: info

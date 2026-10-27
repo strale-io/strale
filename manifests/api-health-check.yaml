@@ -87,20 +87,15 @@ output_field_reliability:
   response_body: guaranteed
   response_time_ms: guaranteed
 limitations:
-  - title: Checks endpoint reachability and HTTP status only — business logic correctness and data integrity are not verified
+  - title: Business logic and data integrity are not checked
     text: Checks endpoint reachability and response status — cannot verify business logic correctness or data integrity
     category: coverage
     severity: info
     workaround: >-
-      Combine with expected response schema validation to verify the API is returning correct data, not just a 200
-      status
+      Validate the expected response schema and test business rules separately.
   - title: API responses are limited to 4 MiB
     text: >-
-      A response body above 4 MiB from the upstream endpoint is refused rather than
-      parsed, enforced while streaming. The limit sits below the 16 MiB page limit
-      deliberately: JSON is materialised into an object graph costing several times
-      its source bytes. Observed real responses for this source are well under
-      100 KiB.
+      API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info
 

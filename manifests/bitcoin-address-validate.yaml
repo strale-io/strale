@@ -117,7 +117,7 @@ limitations:
       on-chain, or whether it controls any funds.
     category: coverage
     severity: info
-    workaround: Use blockchain-explorer or wallet-balance-lookup-style capabilities for on-chain state.
+    workaround: Query a Bitcoin node or block explorer for balances and transaction history.
   - title: Witness versions above 1 are accepted but not classified
     text: >-
       SegWit witness versions 2-16 are reserved for future upgrades. Addresses with these versions and valid bech32m
@@ -127,10 +127,9 @@ limitations:
     severity: info
   - title: Mainnet/testnet inferred from prefix only
     text: >-
-      Network is inferred from the address prefix (version byte for legacy, HRP for bech32). Does not detect chain forks
-      (e.g. Bitcoin Cash, Litecoin) that share Bitcoin's address shapes — those will either fail checksum (different
-      prefix) or, if they happen to share the prefix, be classified as Bitcoin. Only Bitcoin mainnet/testnet/regtest are
-      first-class.
+      Network is inferred from the legacy version byte or bech32 prefix, with Bitcoin mainnet, testnet
+      and regtest supported. Forks sharing address formats are not distinguished: they can fail the
+      checksum or be classified as Bitcoin when the prefix matches.
     category: scope
     severity: warning
     workaround: If chain disambiguation matters, validate against the specific chain's expected prefix set before calling.

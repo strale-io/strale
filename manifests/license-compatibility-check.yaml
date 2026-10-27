@@ -84,7 +84,7 @@ output_field_reliability:
   warnings: guaranteed
   summary: guaranteed
 limitations:
-  - title: Covers 30+ common licenses
+  - title: Covers 30+ common licences
     text: Unknown SPDX identifiers are flagged as 'unknown' and treated conservatively.
     category: coverage
     severity: info

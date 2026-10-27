@@ -95,14 +95,13 @@ output_field_reliability:
   departure: guaranteed
   flight_number: guaranteed
 limitations:
-  - title: AviationStack free tier has limited requests and may not include real-time gate or delay information
+  - title: Live gate and delay details may be missing
     text: Uses AviationStack API — free tier has limited requests and may not include real-time gate or delay information
     category: availability
     severity: info
-    workaround: For real-time gate changes, check the airline's official app or FlightAware directly
+    workaround: Check the airline’s official website or app for current gate and delay information.
   - title: >-
-      Coverage is best for major airlines and international routes — regional carriers and charters may have limited
-      data
+      Regional and charter flight coverage is limited
     text: >-
       Coverage best for major airlines and international routes — regional carriers and charter flights may have limited
       data

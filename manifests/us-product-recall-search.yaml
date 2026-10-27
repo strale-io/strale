@@ -114,7 +114,7 @@ limitations:
       have their own separate recall systems not covered by this capability.
     category: coverage
     severity: info
-  - title: Results capped at 25 per call, most-relevant-first ordering is the API's own
+  - title: Results are capped at 25 with no guaranteed sort order
     text: >-
       The CPSC API does not document a stable relevance or recency sort order for its default response;
       results are returned as-is and truncated to 25 records here.

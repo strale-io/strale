@@ -103,7 +103,7 @@ output_field_reliability:
   missing: guaranteed
   match_score_percent: guaranteed
 limitations:
-  - title: Skill gap analysis is based on descriptions only — actual proficiency and certifications are not measured
+  - title: Proficiency and certifications are not measured
     text: >-
       Gap analysis based on AI assessment of skill descriptions — does not measure actual proficiency or certification
       status

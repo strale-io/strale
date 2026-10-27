@@ -105,12 +105,12 @@ output_field_reliability:
   market_cap_usd: guaranteed
   price_change_24h_percent: guaranteed
 limitations:
-  - title: CoinGecko prices may have a 1-5 minute delay compared to real-time exchange prices
+  - title: Prices can lag exchanges by 1–5 minutes
     text: Prices from CoinGecko API — may have a 1-5 minute delay from real-time exchange prices
     category: freshness
     severity: info
     workaround: For trading decisions, use the exchange's native API; treat CoinGecko prices as indicative market data
-  - title: Covers tokens listed on CoinGecko only — very new or delisted tokens may not return data
+  - title: New or delisted tokens can be missing
     text: Covers tokens listed on CoinGecko — very new or delisted tokens may not return data
     category: coverage
     severity: info

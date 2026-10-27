@@ -73,7 +73,7 @@ output_field_reliability:
   human_readable: guaranteed
   cron_expression: guaranteed
 limitations:
-  - title: Generates standard cron expressions — non-standard extensions like seconds field may not work in all schedulers
+  - title: Cron extensions may not work in every scheduler
     text: >-
       Generates standard cron expressions — non-standard extensions (e.g., seconds field, @reboot) may not be supported
       by all schedulers

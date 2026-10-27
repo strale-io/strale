@@ -154,28 +154,24 @@ output_field_reliability:
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
 limitations:
-  - title: Estonian e-Business Register (ariregister) may block requests from certain external IP ranges
+  - title: Registry access can fail from some IP ranges
     text: Estonian e-Business Register (ariregister) may block requests from certain IP ranges
     category: availability
     severity: info
     workaround: If lookup fails, use the registry code to search directly at ariregister.rik.ee
-  - title: legal_representatives.date_of_birth is always null for EE
-    text: Estonian Personal Identification Codes (isikukood) and Date of Birth are redacted upstream by RIK in the Open Data dump since 2024-11-01 per data-protection policy. The legal_representatives[] array preserves the date_of_birth field for canonical-shape parity with peer jurisdictions, but it is always null for EE entries.
+  - title: Officer dates of birth are always null
+    text: "`date_of_birth` is always null in `legal_representatives` for Estonian companies. RIK’s open dataset omits personal identification codes and dates of birth."
     category: completeness
     severity: info
-    workaround: Use the RIK contract-gated API (`detailandmed_v2` / `esindus_v1`) for non-redacted personal codes when needed. Contract is free; ~5 working day approval lead time.
-  - title: legal_representatives reflects state as of last nightly ingest (≤24h stale)
-    text: legal_representatives[] is populated from a daily-refreshed bulk dump (~10:37 UTC), not real-time. New appointments / resignations may not appear for up to 24 hours after they are filed.
+    workaround: Ask the Estonian e-Business Register about access to a certified extract when additional officer details are needed.
+  - title: Officer details can be up to 24 hours old
+    text: "`legal_representatives` comes from a daily snapshot rather than a live officer lookup. New appointments or resignations can take up to 24 hours to appear."
     category: freshness
     severity: info
-    workaround: For real-time accuracy, query the RIK contract API (`esindus_v1` Rights of Representation) directly.
+    workaround: Request current representation details directly from the Estonian e-Business Register.
   - title: API responses are limited to 4 MiB
     text: >-
-      A response body above 4 MiB from the upstream endpoint is refused rather than
-      parsed, enforced while streaming. The limit sits below the 16 MiB page limit
-      deliberately: JSON is materialised into an object graph costing several times
-      its source bytes. Observed real responses for this source are well under
-      100 KiB.
+      API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info
 

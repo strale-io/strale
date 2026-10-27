@@ -160,16 +160,15 @@ output_field_reliability:
   country_code: guaranteed
   attribution: guaranteed
 limitations:
-  - title: Countries covered — Sweden, France, US federal jobs; each needs its own source
+  - title: Only Swedish, French and US federal jobs are covered
     text: >-
-      country_code "se" (default) reads Arbetsförmedlingen's JobTech data; "fr" reads France Travail and "us" reads
-      USAJOBS (US federal government jobs only, not the private market). France and the US need credentials; until
-      they are configured those countries are refused. France returns France Travail's own offers only, not those
-      relayed from partner sites, and refuses remote_only. Contact persons named in ads are never returned. Company
-      career pages and other job boards are not covered.
+      `country_code` se (default) reads JobTech, fr reads France Travail’s own offers without partner
+      listings, and us reads USAJOBS federal jobs; French and US searches are refused if source access
+      is not configured, and France does not support `remote_only`. Named contact persons, company
+      career pages, other job boards and US private-sector jobs are not included.
     category: coverage
     severity: info
-    workaround: For comprehensive results, supplement with google-search scoped to the target company's careers page
+    workaround: Check the employer’s official careers page for jobs outside this coverage.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

@@ -102,7 +102,7 @@ output_field_reliability:
   indicators: guaranteed
   indicator_codes: guaranteed
 limitations:
-  - title: Different indicators report for different years — check each indicator's own 'year' field
+  - title: Indicators can cover different years
     text: >-
       World Bank indicators are collected on independent national reporting schedules (GDP may be 2025,
       unemployment 2024, population 2023 for the same country). Each indicator entry carries its own 'year';
@@ -111,12 +111,12 @@ limitations:
     severity: info
   - title: Some indicator/country/year combinations have no data
     text: >-
-      Smaller economies and territories often have gaps in specific series (especially labor and FDI
+      Smaller economies and territories often have gaps in specific series (especially labour and FDI
       indicators). An indicator with value:null and an unavailable_reason means the World Bank has no
       observation for that country/period — not that the value is zero.
     category: coverage
     severity: warning
-  - title: Curated indicator set, not the full ~16,000-indicator WDI catalog
+  - title: Only 10 selected indicators are supported
     text: >-
       Only 10 KYB-relevant indicator keys are exposed via the 'indicators' parameter. The World Bank publishes
       far more series; this capability does not expose arbitrary WDI indicator codes.

@@ -95,7 +95,7 @@ output_field_reliability:
   target_language: guaranteed
   dependencies_needed: guaranteed
 limitations:
-  - title: AI code conversion may need manual adjustment for language-specific idioms and library differences
+  - title: Converted code can need manual adjustment
     text: >-
       AI-powered code conversion — language-specific idioms, standard library differences, and edge cases may require
       manual adjustment

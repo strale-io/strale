@@ -118,7 +118,7 @@ output_field_reliability:
   total_cases: guaranteed
   coverage_notes: guaranteed
 limitations:
-  - title: AI-generated tests cover common paths — edge cases specific to your business logic require manual authoring
+  - title: Business-specific edge cases need manual tests
     text: >-
       AI-generated test cases cover common paths — edge cases specific to your business logic may require manual test
       authoring
@@ -127,9 +127,9 @@ limitations:
     workaround: Use generated tests as a starting coverage baseline and add domain-specific edge cases manually
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a complex function description with include_edge_cases
-      producing an unusually large test_cases list. Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Request fewer test cases per call, or set include_edge_cases to false

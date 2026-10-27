@@ -135,7 +135,7 @@ output_field_reliability:
   cases: guaranteed
   total_results: guaranteed
 limitations:
-  - title: Searches CURIA database only — covers CJEU and General Court, not national courts or ECHR
+  - title: National courts and the ECHR are not covered
     text: Searches CURIA database — covers CJEU and General Court only, not national courts or ECHR
     category: coverage
     severity: info
@@ -144,9 +144,9 @@ limitations:
       database
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a broad search term returning many cases.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Narrow the search query so fewer cases are returned per call

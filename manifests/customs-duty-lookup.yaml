@@ -76,8 +76,8 @@ output_field_reliability:
   anti_dumping: guaranteed
   preferential_rates: guaranteed
 limitations:
-  - title: Duty rates from TARIC depend on correct HS code classification and declared country of origin
-    text: Duty rates extracted via TARIC web scraping — rates depend on correct HS code classification and country of origin
+  - title: Rates depend on the HS code and country of origin
+    text: Duty rates come from TARIC and depend on the correct HS code classification and declared country of origin.
     category: accuracy
     severity: warning
     workaround: >-
@@ -85,12 +85,12 @@ limitations:
       classifications
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example an HS code with an unusually long list of preferential rates
-      or additional duties. Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This HS code's duty page produced more preferential-rate entries than fit in one call — no direct workaround
+    workaround: Check the duty page directly in the official TARIC database.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

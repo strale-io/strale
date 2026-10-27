@@ -130,11 +130,11 @@ output_field_reliability:
   # class fix, 2026-08-14.
   match_confidence: rare
 limitations:
-  - title: Data from INSEE/SIRENE via api.gouv.fr — financial statements require separate access to INPI
-    text: Data from api.gouv.fr (INSEE/SIRENE) — financial statements require separate access to INPI or Societe.com
+  - title: Financial statements require separate registry access
+    text: Returns INSEE/SIRENE data through api.gouv.fr. Financial statements require separate access through INPI.
     category: coverage
     severity: info
-    workaround: Use the SIREN/SIRET from the response to look up financial data on pappers.fr or societe.com
+    workaround: Use the returned SIREN or SIRET to request financial statements from INPI.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

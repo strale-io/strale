@@ -77,13 +77,13 @@ output_field_reliability:
   plain_english: guaranteed
   potential_issues: guaranteed
 limitations:
-  - title: SQL performance explanations depend on your specific database engine, indexes, and data distribution
+  - title: Performance depends on the database and its data
     text: >-
       AI explanation of SQL queries — performance implications depend on your specific database engine, indexes, and
       data distribution
     category: accuracy
     severity: info
-    workaround: Run EXPLAIN ANALYZE on your actual database to see the real execution plan alongside the AI explanation
+    workaround: Run EXPLAIN ANALYZE on your database to compare the actual execution plan with the explanation.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

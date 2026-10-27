@@ -106,7 +106,7 @@ output_field_reliability:
   total_employer_cost: guaranteed
   employer_contributions: guaranteed
 limitations:
-  - title: AI-generated estimates based on general knowledge — actual employment costs vary by industry and benefits
+  - title: Actual employment costs can differ from estimates
     text: >-
       AI-generated estimates based on general knowledge — actual costs vary by industry, company size, and specific
       benefits packages

@@ -89,13 +89,13 @@ output_field_reliability:
   parsed: guaranteed
   fixes_applied: guaranteed
 limitations:
-  - title: Repairs common JSON errors like trailing commas and unquoted keys — severely malformed input may not recover
+  - title: Severely malformed JSON may not be recoverable
     text: >-
       Repairs common JSON errors (trailing commas, unquoted keys, single quotes) — severely malformed input may not be
       recoverable
     category: coverage
     severity: info
-    workaround: If repair fails, extract the valid JSON segments manually or use an LLM to reconstruct the intended structure
+    workaround: If repair fails, extract valid JSON segments manually and reconstruct the intended structure.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

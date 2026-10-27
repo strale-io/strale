@@ -87,9 +87,8 @@ output_field_reliability:
 limitations:
   - title: Fetched files are limited to 8 MiB
     text: >-
-      The fetch is refused above 8 MiB of body bytes (streamed enforcement, not a
-      timeout). Oversized input returns a caller_input refusal naming the field;
-      no charge is taken.
+      Files above 8 MiB are refused during download with a caller_input error naming the input field.
+      The call is not charged.
     category: coverage
     severity: info
     workaround: For larger files, download locally and use a native base64 encoder instead of fetching through the API

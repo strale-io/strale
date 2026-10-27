@@ -160,17 +160,15 @@ limitations:
     severity: info
   - title: Status is derived, not explicit
     text: >-
-      RPO does not publish an explicit active/dissolved flag at the entity root. Status is derived from whether the
-      current address, legal form, and identifier records are still open (no validTo). An entity with all three open
-      is reported as active; otherwise inactive. Name is excluded because rebrands close the prior name without
-      dissolving the company.
+      Status is derived rather than explicitly published: it is active only when the current address,
+      legal form and identifier records are all open, and inactive otherwise. Name changes do not
+      affect this assessment.
     category: accuracy
     severity: info
-  - title: Internal id is required for full detail
+  - title: Each company lookup uses two registry requests
     text: >-
-      RPO's lookup is a two-step pattern — search by IČO returns a lightweight match with the internal id, which is then
-      used to fetch the full entity. Each call counts against the 60 rpm limit, so effective throughput per IČO lookup
-      is 30/min.
+      Each IČO lookup uses two RPO requests, so the 60-request-per-minute allowance supports at most
+      30 company lookups per minute.
     category: coverage
     severity: info
 output_field_reliability:

@@ -100,8 +100,8 @@ output_field_reliability:
   moms_registered: guaranteed
   registration_status: guaranteed
 limitations:
-  - title: Checks Swedish business licenses via web scraping — only licenses in public registries are covered
-    text: Checks Swedish business licenses via web scraping — coverage limited to licenses published in public registries
+  - title: Only publicly registered Swedish licences are covered
+    text: Covers Swedish business licences published in public registries only.
     category: coverage
     severity: info
     workaround: >-

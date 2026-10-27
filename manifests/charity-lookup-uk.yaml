@@ -90,7 +90,7 @@ output_field_reliability:
   charity_name: guaranteed
   charity_number: guaranteed
 limitations:
-  - title: Covers charities registered in England and Wales only — Scottish and Northern Irish charities are not included
+  - title: Only charities in England and Wales are covered
     text: >-
       Covers charities registered with the Charity Commission for England and Wales — Scottish (OSCR) and Northern Irish
       charities not included

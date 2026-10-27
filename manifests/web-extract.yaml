@@ -76,39 +76,36 @@ output_field_reliability:
   data: guaranteed
   page_title: guaranteed
 limitations:
-  - title: Sources whose Terms of Service forbid automated access are rejected
+  - title: Some website sources are unsupported
     text: >-
-      URLs on sites whose Terms of Service prohibit automated access (Trustpilot, Glassdoor,
-      LinkedIn, Google Search and the major social platforms) are rejected before any fetch is
-      attempted, returning a policy error with compliant alternatives where they exist. Retrying
-      will not succeed. Strale adds a source back only under a licensed API agreement.
+      Trustpilot, Glassdoor, LinkedIn, Google Search, Google Patents, Reddit and the major social
+      platforms (Facebook, Instagram, X) are not supported and return a policy error before the page
+      is read. Repeating the same request does not return content.
     category: coverage
     severity: warning
-  - title: Pages requiring login, CAPTCHA, or multi-step navigation cannot be accessed via headless browser
+  - title: Login, CAPTCHA and multi-step pages are inaccessible
     text: Renders pages via headless browser — pages requiring login, CAPTCHA, or multi-step navigation cannot be accessed
     category: coverage
     severity: info
-    workaround: For authenticated content, pre-fetch the HTML and pass it directly as input instead of a URL
-  - title: AI extraction may lose structural context in complex data tables or deeply nested page layouts
+    workaround: Use an accessible public page containing the information you need.
+  - title: Complex layouts can lose structural context
     text: AI extraction interprets page content — complex data tables or deeply nested layouts may lose structural context
     category: accuracy
     severity: info
-    workaround: Use structured-scrape with CSS selectors for precise extraction when you know the page structure
+    workaround: Use structured-scrape with CSS selectors when you know the page structure, and review complex tables against the original.
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~16k output tokens) are refused
-      rather than returned truncated — for example a page listing 100+ items when 'extract' asks for every one
-      of them in detail. Retrying the identical request will not help.
+      Structured output is limited to about 16000 output tokens per call; requests exceeding this
+      limit are refused rather than returned truncated. Requests with large results can exceed this
+      limit, and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Narrow the 'extract' instruction, or split the request into multiple calls (e.g. one page or one section at a time)
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The shared fetch layer refuses a page whose HTML exceeds 16 MiB, enforced
-      while streaming rather than after buffering. That is ~5x the heaviest
-      ordinary web page, so normal targets are unaffected. An oversized page
-      returns a caller_input refusal naming the field and is not retried through
-      another render path; no charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

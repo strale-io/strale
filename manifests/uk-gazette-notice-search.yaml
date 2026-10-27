@@ -104,15 +104,14 @@ output_field_reliability:
   returned_count: guaranteed
   notices: guaranteed
 limitations:
-  - title: UK insolvency notices only — not a full-text search across all Gazette content
+  - title: Only UK insolvency notices are searched
     text: >-
-      Scoped to the Gazette's "insolvency" publication service (corporate winding-up, liquidator appointments,
-      personal bankruptcy). Deceased-estate notices (wills and probate) and general Gazette notices are out of
-      scope. Coverage is UK only.
+      Covers UK corporate winding-up, liquidator appointments and personal bankruptcy notices only.
+      Wills, probate and general Gazette notices are excluded.
     category: coverage
     severity: info
-    workaround: Use insolvency-check for a structured, company-number-scoped view of open UK insolvency proceedings
-  - title: Free-text relevance ranking is the Gazette's own, not Strale's
+    workaround: Check Companies House directly for company-number-based insolvency records.
+  - title: Relevance ranking comes from the Gazette
     text: >-
       Results are returned in the order the Gazette API provides them (typically publish-date recency within the
       matched set), not re-ranked by name-match quality. A common name can surface unrelated notices — verify the
@@ -120,7 +119,7 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Narrow with date_from/date_to, or cross-check the returned company_number against a company-data lookup
-  - title: company_number extraction is best-effort text parsing, not a structured field
+  - title: Company numbers extracted from text can be missed
     text: >-
       The Gazette API returns notice text as free-form HTML; company_number is extracted via regex from that text
       and is null when the notice doesn't state it in the expected "Company Number: NNNNNNNN" format.

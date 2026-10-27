@@ -119,8 +119,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Search by title with academic-paper-search and pass the returned openalex_id.
-  - title: Abstract and venue are absent when the publisher withholds them
-    text: Many publishers do not license abstracts to OpenAlex; `abstract` and occasionally `venue` are then null.
+  - title: Abstracts and venue details can be missing
+    text: Many publishers do not licence abstracts to OpenAlex; `abstract` and occasionally `venue` are then null.
     category: coverage
     severity: info
     workaround: Follow landing_page_url or pdf_url for the full record.

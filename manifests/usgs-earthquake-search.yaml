@@ -108,14 +108,14 @@ output_field_reliability:
   count: guaranteed
   earthquakes: guaranteed
 limitations:
-  - title: Magnitudes and locations are revised for hours after an event
+  - title: Magnitudes and locations can change after an event
     text: >-
       USGS publishes automatic solutions first and reviewed ones later; status distinguishes them and
       magnitude can change by a few tenths.
     category: freshness
     severity: info
     workaround: Re-query later for reviewed values; treat status=automatic as provisional.
-  - title: Small events are complete only where USGS has dense station coverage
+  - title: Small-event coverage is sparse outside the US
     text: Below roughly magnitude 4.5 the catalogue is complete for the US and sparse elsewhere.
     category: coverage
     severity: info

@@ -112,15 +112,14 @@ output_field_reliability:
 limitations:
   - title: US only
     text: >-
-      EIN is a US tax identifier. For non-US business identifiers (VAT number, registration number),
-      use the country-specific company-data capabilities.
+      EIN is a US tax identifier. Non-US business identifiers are not supported.
     category: coverage
     severity: info
   - title: Bureau-derived data may lag IRS updates
     text: >-
-      The EINsearch database is sourced from filings and bureau records, not directly from the IRS.
-      Newly-formed entities may not appear for 30-90 days; recently-dissolved entities may still
-      appear active. Cross-reference with state SOS data via us-company-data-cobalt for active status.
+      EINsearch uses filings and bureau records rather than direct IRS data, so new entities can be
+      missing for 30–90 days and dissolved entities can still appear active. Check current state
+      registration through us-company-data-cobalt.
     category: freshness
     severity: warning
 

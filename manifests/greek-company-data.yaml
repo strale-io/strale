@@ -132,7 +132,7 @@ limitations:
     category: coverage
     severity: info
   - title: Registry status interpretation
-    text: "Known GEMI descriptions map to active, inactive, dissolved, bankrupt or liquidation. Unrecognised descriptions are preserved verbatim; missing descriptions return unknown. No live GEMI status validation was possible without a key."
+    text: "Known GEMI status descriptions map to active, inactive, dissolved, bankrupt or liquidation; unrecognised descriptions are preserved and missing descriptions return unknown. These mappings are not independently confirmed against live GEMI responses."
     category: coverage
     severity: info
   - title: GEMI rate limit is 8 requests per minute
@@ -141,8 +141,8 @@ limitations:
       return HTTP 429.
     category: rate-limit
     severity: info
-    workaround: Request a higher rate limit from support@uhc.gr describing the use case and expected volume.
-  - title: AFM (tax ID) field is occasionally absent for older or special-status entities
+    workaround: Space requests to stay within 8 per minute.
+  - title: AFM tax identifiers can be missing
     text: >-
       When AFM is missing the derived vat_number is null; vat-validate downstream steps will soft-fail for those
       entities.

@@ -119,7 +119,7 @@ output_field_reliability:
   original_url: guaranteed
   redirect_count: guaranteed
 limitations:
-  - title: Follows HTTP 301/302/307/308 redirects only — JavaScript-based redirects and meta refresh tags are not traced
+  - title: JavaScript and meta refresh redirects are not traced
     text: Follows HTTP redirects (301, 302, 307, 308) — JavaScript-based redirects and meta refresh tags are not traced
     category: coverage
     severity: info

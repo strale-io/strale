@@ -145,14 +145,13 @@ output_field_reliability:
   recent_releases: guaranteed
 limitations:
   - title: >-
-      Queries the public PyPI registry only — private packages and alternative indexes like Artifactory are not
-      accessible
+      Private packages and alternative indexes are excluded
     text: >-
       Queries the public PyPI registry — private packages and packages hosted on alternative indexes (e.g., Artifactory)
       are not accessible
     category: coverage
     severity: info
-    workaround: For private packages, query your organization's Python package index directly
+    workaround: For private packages, query your organisation's Python package index directly
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

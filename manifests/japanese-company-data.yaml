@@ -76,7 +76,7 @@ output_field_reliability:
   business_type: guaranteed
   registration_number: guaranteed
 limitations:
-  - title: Japan NTA database provides corporate numbers only — financial data and officer details are not included
+  - title: Financial figures and officer details are not included
     text: Extracted from National Tax Agency corporate number database — financial data and officer details are not included
     category: coverage
     severity: info

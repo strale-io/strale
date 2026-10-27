@@ -115,7 +115,7 @@ output_field_reliability:
   key_obligations: guaranteed
   termination_clauses: guaranteed
 limitations:
-  - title: AI extraction of contract terms does not replace qualified legal review of interpretation or enforceability
+  - title: Legal interpretation requires qualified review
     text: >-
       AI extraction of contract terms — legal interpretation and enforceability assessment require qualified legal
       review
@@ -124,9 +124,9 @@ limitations:
     workaround: Use extracted terms for initial screening and route flagged clauses to legal counsel for review
   - title: Input documents are limited to 8 MiB decoded
     text: >-
-      Both url/pdf_url fetches and base64 payloads are refused above 8 MiB of decoded
-      document bytes. Oversized input returns a caller_input refusal naming the field;
-      no charge is taken. Shrink or split the document before submitting.
+      Documents supplied by URL or base64 are refused above 8 MiB of decoded data, with a caller_input
+      error naming the input field and no charge. Reduce the document size or split it before
+      submitting.
     category: coverage
     severity: info
 

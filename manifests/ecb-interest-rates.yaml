@@ -70,8 +70,8 @@ output_field_reliability:
 limitations:
   - title: Data routed through FRED mirror
     text: >-
-      Values come from FRED, which mirrors ECB publications. FRED's update cadence (typically same-day) introduces
-      a small lag versus fetching directly from ECB. Authoritative source remains the European Central Bank.
+      Values come from FRED’s mirror of ECB publications, typically updated the same day, which can
+      introduce a small delay. The European Central Bank remains the authoritative source.
     category: dependency
     severity: info
   - title: Data freshness tied to ECB publication schedule

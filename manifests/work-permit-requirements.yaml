@@ -101,8 +101,7 @@ output_field_reliability:
   eu_blue_card_eligible: guaranteed
 limitations:
   - title: >-
-      AI-generated immigration guidance changes frequently and varies by individual circumstances — verify with
-      authorities
+      Immigration guidance needs official confirmation
     text: AI-generated guidance on immigration rules — requirements change frequently and vary by individual circumstances
     category: accuracy
     severity: warning

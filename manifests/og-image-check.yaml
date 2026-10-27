@@ -107,18 +107,16 @@ output_field_reliability:
   issues: guaranteed
   twitter_card: guaranteed
 limitations:
-  - title: Checks Open Graph and Twitter Card meta tags — OG tags injected via JavaScript may not be captured
+  - title: JavaScript-generated social tags can be missed
     text: Checks Open Graph and Twitter Card meta tags — dynamically injected OG tags via JavaScript may not be captured
     category: coverage
     severity: info
-    workaround: For JavaScript-rendered OG tags, use meta-extract which renders the page via headless browser
+    workaround: Inspect the rendered page in a browser for Open Graph tags added by JavaScript.
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
-      rather than after buffering. That is ~5x the heaviest ordinary web page, so
-      normal targets are unaffected. An oversized page returns a caller_input
-      refusal naming the field, and is not retried through another fetch path; no
-      charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

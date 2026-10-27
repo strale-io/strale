@@ -286,7 +286,7 @@ output_field_reliability:
   suggestions: guaranteed
   total_suggestions: guaranteed
 limitations:
-  - title: Google Autocomplete suggestions reflect search popularity, not commercial intent or conversion potential
+  - title: Suggestions do not measure commercial intent
     text: >-
       Uses Google Autocomplete API — suggestions reflect search popularity, not commercial intent or conversion
       potential

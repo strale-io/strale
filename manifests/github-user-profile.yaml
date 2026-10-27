@@ -179,7 +179,7 @@ output_field_reliability:
   public_repos: guaranteed
   recent_repos: guaranteed
 limitations:
-  - title: Returns public profile and repository data only — private repository contributions are not visible
+  - title: Private contribution details are not visible
     text: Returns public profile and repository data only — contribution details for private repositories are not visible
     category: coverage
     severity: info

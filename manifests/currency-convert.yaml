@@ -106,7 +106,7 @@ output_field_reliability:
   amount: guaranteed
   converted_amount: guaranteed
 limitations:
-  - title: Uses mid-market exchange rates — actual bank and payment processor conversion rates include spread and fees
+  - title: Bank rates include spreads and fees
     text: Uses mid-market exchange rates — actual conversion rates from banks and payment processors include spread and fees
     category: accuracy
     severity: info

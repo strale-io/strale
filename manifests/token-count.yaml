@@ -93,13 +93,13 @@ output_field_reliability:
   fits_context_window: guaranteed
   max_context_for_model: guaranteed
 limitations:
-  - title: Token counts use character-based heuristics and may vary 5-15% from the model's actual tokenizer
+  - title: Estimated token counts can differ by 5–15%
     text: >-
       Token counts are estimated using character-based heuristics — actual counts vary by 5-15% depending on the
       tokenizer
     category: accuracy
     severity: info
-    workaround: For exact counts, use the model provider's official tokenizer (tiktoken for OpenAI, Anthropic's token counter)
+    workaround: Use the target model provider’s official tokenizer for exact counts.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

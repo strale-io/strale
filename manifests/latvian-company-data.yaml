@@ -195,29 +195,28 @@ output_field_reliability:
   registered_address: guaranteed
   date_incorporated: guaranteed
 limitations:
-  - title: Officer data lists current representation-entitled persons only — no historical officers, no birth data
+  - title: Only current officers are listed; no birth dates
     text: >-
-      The UR officers dataset (data.gov.lv, CC0 1.0) lists persons currently entitled to represent the
-      entity (board members, chair). Resigned or historical officers are not included. The upstream dataset
-      publishes birth dates and masked personal codes, but Strale deliberately never reads them (data
-      minimization) — date_of_birth is always null by choice, not upstream absence.
+      Lists persons currently entitled to represent the entity, including board members and chairs,
+      from the Latvian Enterprise Register’s open dataset. Historical and resigned officers are
+      excluded, and `date_of_birth` is always null.
     category: coverage
     severity: info
     workaround: For historical officer data, order an extract from the Latvian Enterprise Register (info.ur.gov.lv)
-  - title: Daily snapshot — sub-day filings may not be reflected immediately
+  - title: New filings can take a day to appear
     text: >-
       The Latvian Open Data Portal publishes a daily snapshot. Filings submitted today may not be reflected in the API
       response until the next daily refresh.
     category: freshness
     severity: info
-  - title: Open data covers core register only — beneficial owners and financials require separate datasets
+  - title: Owners and financial statements are not included
     text: >-
       This capability returns the structured register record only. Beneficial owners (Patiesie labuma guvēji) and
       financial statements (Gada pārskatu finanšu dati) are published as separate data.gov.lv datasets and are not
       included in this response.
     category: coverage
     severity: info
-  - title: SEPA creditor ID and postal index are not present for all entities
+  - title: Creditor identifiers and postal indexes can be missing
     text: >-
       The SEPA creditor identifier and postal index fields are populated for most actively registered legal entities but
       may be missing for older or terminated records.

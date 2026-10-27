@@ -85,12 +85,12 @@ output_field_reliability:
   issues: guaranteed
   reputation_score: guaranteed
 limitations:
-  - title: Blocklist data refreshes daily, so resolved issues may still show negative reputation for 24-48 hours
+  - title: Resolved issues can remain flagged for 24–48 hours
     text: Blocklist data refreshed daily — recently resolved issues may still show negative reputation for 24-48 hours
     category: freshness
     severity: info
     workaround: If a domain was recently cleaned, re-check after 48 hours and use the trend direction to assess improvement
-  - title: A single blocklist appearance may not indicate actual malicious activity
+  - title: A single listing does not prove malicious activity
     text: Reputation scores aggregate multiple blocklists — a single listing may not indicate actual malicious activity
     category: accuracy
     severity: info

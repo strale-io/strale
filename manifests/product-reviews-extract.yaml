@@ -105,18 +105,15 @@ output_field_reliability:
   average_rating: guaranteed
   rating_distribution: guaranteed
 limitations:
-  - title: Trustpilot, Glassdoor and LinkedIn are not supported — their Terms of Service forbid automated access
+  - title: Some review sources are unsupported
     text: >-
-      Review sites whose Terms of Service prohibit automated access are rejected before any fetch is attempted,
-      and return a policy error rather than review data. This currently covers Trustpilot, Glassdoor, LinkedIn,
-      Google Search and the major social platforms. Retrying will not succeed. Strale will add a source back
-      only under a licensed API agreement.
+      Trustpilot, Glassdoor and LinkedIn pages are not supported and return a policy error before the
+      page is read. Repeating the same request does not return review data.
     category: coverage
     severity: warning
     workaround: >-
-      Use a first-party product page, or a review platform that permits automated access such as Reviews.io,
-      Feefo or Yotpo.
-  - title: Extracts visible product page reviews only — hidden, filtered, or paginated reviews may not be captured
+      Supply a first-party product page with publicly visible reviews.
+  - title: Hidden or paginated reviews can be missed
     text: >-
       Extracts reviews visible on the product page — filtered/hidden reviews and reviews behind 'load more' may not be
       captured
@@ -125,9 +122,9 @@ limitations:
     workaround: Request the direct product review page URL rather than the main product page for more complete review coverage
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~8k output tokens) are refused rather
-      than returned truncated — for example a page with an unusually large number of long reviews. Retrying the
-      identical request will not help.
+      Structured output is limited to about 8000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Try a page with fewer reviews — this capability extracts up to ~10 recent reviews per call

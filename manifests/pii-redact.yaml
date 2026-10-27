@@ -76,25 +76,23 @@ output_field_reliability:
   entity_counts: guaranteed
   redacted_text: guaranteed
 limitations:
-  - title: Names and other PII without surrounding context may occasionally be missed during redaction
+  - title: Personal details without context can be missed
     text: Context-dependent PII (e.g., names without surrounding context) may occasionally be missed
     category: accuracy
     severity: warning
     workaround: Run a second pass with an explicit entity list of known names from your dataset to catch context-free occurrences
-  - title: Optimized for English and Nordic languages — other languages have lower PII detection accuracy
-    text: Optimized for English and Nordic languages — other languages may have lower detection accuracy
+  - title: Accuracy is lower outside English and Nordic languages
+    text: Optimised for English and Nordic languages — other languages may have lower detection accuracy
     category: coverage
     severity: info
     workaround: >-
       For non-supported languages, pre-tag known PII patterns (e.g., national ID formats) with regex before calling
       pii-redact
-  - title: The text you submit is recorded on the transaction for 90 days
+  - title: Submitted text is retained for 90 days
     text: >-
-      Redaction happens in-process and the text reaches no third party, but capability inputs are written to the
-      transaction record like every other capability's, and are cleared on the standard 90-day schedule. This
-      capability is submitted text that is known to contain personal data — that is its purpose — so the retention
-      applies to exactly the material you are asking to have removed, including the special-category identifiers
-      named above. The output is redacted; the stored input is not.
+      Submitted text, including any sensitive identifiers it contains, is stored unredacted in the
+      transaction record for 90 days before clearing. Processing sends the text to no third party, and
+      the returned output is redacted; the stored input remains unchanged during retention.
     category: privacy
     severity: warning
     workaround: >-

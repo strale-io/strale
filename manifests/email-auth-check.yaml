@@ -201,7 +201,7 @@ output_field_reliability:
   dmarc_effective_policy: common
   dmarc_inherited_from: rare
 limitations:
-  - title: DKIM probing covers common selectors only — a miss is not proof of absence
+  - title: Custom DKIM selectors can be missed
     text: >-
       Without a dkim_selector input, only common selectors (default, google, selector1/2, k1, s1, dkim) are probed. DKIM
       published under a custom selector will not be found; the output says "not found via common selectors", never

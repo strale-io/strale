@@ -125,7 +125,7 @@ output_field_reliability:
   location: guaranteed
   forecast_7day: guaranteed
 limitations:
-  - title: Open-Meteo forecast accuracy decreases beyond 3 days and varies by geographic region
+  - title: Forecast accuracy decreases beyond three days
     text: Current weather from Open-Meteo — forecast accuracy decreases beyond 3 days and varies by geographic region
     category: accuracy
     severity: info

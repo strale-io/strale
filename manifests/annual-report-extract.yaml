@@ -109,12 +109,12 @@ output_field_reliability:
   company_name: guaranteed
   total_assets_sek: guaranteed
 limitations:
-  - title: AI extraction from PDF reports may not fully capture complex tables, charts, or footnotes
+  - title: Complex tables, charts and footnotes can be missed
     text: AI extraction from PDF reports — complex tables, charts, and footnotes may not be fully captured
     category: accuracy
     severity: warning
     workaround: Cross-reference extracted financial figures against the original PDF for any values used in financial decisions
-  - title: Best results with English and Nordic-language reports — other languages have reduced extraction accuracy
+  - title: Accuracy is lower outside English and Nordic languages
     text: >-
       Best results with English and Nordic-language reports — reports in other languages may have reduced extraction
       accuracy

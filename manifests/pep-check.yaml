@@ -175,20 +175,21 @@ output_field_reliability:
   country_filter: common
   birth_date_filter: common
 limitations:
-  - title: National-PEP coverage is asserted by the publisher, not verified per call
+  - title: National coverage is not verified for each call
     text: >-
-      Dilisense aggregates national parliament, government, central-bank, judiciary, and state-owned-enterprise
-      board sources for 230+ territories. Per-country source attribution is published at the source_catalog_url.
-      For jurisdiction-critical screening, supplement with the national source directly.
+      Dilisense reports coverage of parliament, government, central-bank, judiciary and
+      state-owned-enterprise board sources across over 230 territories, with per-country sources at
+      `source_catalog_url`. This coverage is not independently confirmed on each call; check national
+      sources for jurisdiction-critical screening.
     category: coverage
     severity: info
     workaround: For high-stakes screening, cross-reference with the national parliament or central-bank website.
-  - title: Fuzzy name matching can produce false positives for common names
+  - title: Common names can produce false matches
     text: Common names may produce false-positive matches. Provide date_of_birth for disambiguation.
     category: accuracy
     severity: warning
     workaround: Provide date_of_birth and an ISO country code.
-  - title: Per-list version timestamps are not exposed by the upstream API
+  - title: Per-list update timestamps are not available
     text: >-
       Dilisense refreshes the consolidated PEP index multiple times daily, but the screening API does not return
       a per-list last_updated_at value per call. Output sets lists_queried.last_updated_at = null with a

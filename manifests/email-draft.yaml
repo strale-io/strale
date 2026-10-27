@@ -127,7 +127,7 @@ output_field_reliability:
   key_phrases_used: guaranteed
   subject_line_options: guaranteed
 limitations:
-  - title: Generated drafts follow standard templates and may miss nuances of existing threads or relationships
+  - title: Drafts can miss relationship or thread context
     text: >-
       Generated drafts follow standard professional templates — may not capture nuances of existing email threads or
       relationships

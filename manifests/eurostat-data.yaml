@@ -146,54 +146,34 @@ limitations:
     category: accuracy
     severity: info
   - title: Requests must fit within 5,000 cells
-    text: The full dimension-size product, including missing cells, must not exceed 5,000. Sparse datasets may need narrower filters even if few values are reported. Empty or entirely null results raise an unbilled no_observations refusal.
+    text: The product of all dimension sizes, including missing cells, must not exceed 5,000, so sparse datasets can still need narrower filters. Empty or entirely null results return an unbilled no_observations error.
     category: coverage
     severity: warning
   - title: Dataset and dimension codes must be known
-    text: This tool supports only EUROSTAT_ALLOWED_DATASETS, curated against live metadata recorded on 2026-10-26. Unsupported datasets return dataset_not_supported with the supported list. Request additions through Strale support with the code and intended filters; each addition requires a source, geographic-dimension and terms review.
+    text: Only the selected datasets listed in the dataset_not_supported error are supported; other dataset codes are refused. Dataset and dimension codes must be supplied explicitly.
     category: coverage
     severity: info
-  - title: Commercial reuse is restricted by geography and dataset
+  - title: Coverage is limited by dataset and geography
     text: >-
-      https://ec.europa.eu/eurostat/help/copyright-notice permits commercial reuse under Commission
-      Decision 2011/833/EU with DOI, access date, attribution and modification/non-responsibility notices.
-      Only curated Eurostat-sourced datasets whose sole geographic dimension is geo are supported.
-      Partner, citizenship, birthplace, residence, load/unload, origin/destination, control,
-      counterpart and vessel-nationality tables are excluded. The recorded metadata audit rejects a
-      dataset when any dimension other than geo has a geographic id, a category whose label names
-      the country its ISO code denotes, or five or more ISO country codes whatever their labels.
-      Codes that merely look like country codes (unit NR "Number", s_adj SA "Seasonally adjusted")
-      do not exclude a dataset. The audit read the latest period only. The dataset list is
-      intentionally narrower than the Eurostat catalogue; non-geo values are not country-checked
-      at runtime.
-      geo is required and restricted to EU27, EFTA and official candidates, checked on 2026-10-26 at
-      https://enlargement.ec.europa.eu/enlargement-policy/candidate-countries-and-potential-candidates_en.
-      Kosovo is a potential candidate and excluded. Exact country codes, the regional codes of
-      those countries recorded in the allowlisted datasets on 2026-10-26 (EUROSTAT_ALLOWED_REGIONS:
-      NUTS 1-3 and "not regionalised" buckets) and EUROSTAT_ALLOWED_AGGREGATES (including EA11–EA21)
-      pass. EA14 is accepted by policy but absent from the checked codelist. All other geo codes,
-      including region-shaped non-territories such as MEL (Melanesia) or NOECD, are refused before
-      fetch or dropped after fetch. Eurostat codes Greece EL; GR is refused with that hint.
-      Dropped geo cells are counted and their labels omitted. These restrictions enforce Eurostat's
-      commercial-reuse country exception without guessing whether non-geo category codes are countries.
-      Returned third-party source declarations and unrecognised rights notices are refused as defence
-      in depth. DISSEMINATION_SOURCE_DATASET is lineage, not a source declaration.
-      No logos or third-party documents are returned.
+      Covers selected Eurostat-sourced datasets with `geo` as the sole geographic dimension,
+      restricted to EU27, EFTA and official candidate countries, their supported NUTS 1–3 and
+      not-regionalised codes, and selected EU, EFTA and euro-area aggregates including EA11–EA21;
+      Kosovo, partner, citizenship, birthplace, residence, load/unload, origin/destination, control,
+      counterpart and vessel-nationality tables are excluded. Other geographic codes are refused or
+      dropped with cells counted and labels omitted, Greece requires EL rather than GR, non-geo values
+      are not country-checked during a call, third-party source declarations and unrecognised rights
+      notices are refused, and logos and third-party documents are not returned.
     category: coverage
     severity: warning
-  - title: Metadata may not expose every dataset-specific restriction
+  - title: Some dataset restrictions may be missing from metadata
     text: >-
-      The curated list excludes international trade; as defence in depth, such datasets are refused by case-insensitive code prefixes ext_, ds-, comext,
-      itgs_, trade_, tet, teiet, tipsex, cult_trd_, sprt_trd_, enpe_ext_, bop_its, for_trop and ei_etea;
-      by the words trade, import/imports or export/exports (case-insensitive, word boundaries) in returned
-      dataset titles or theme/category labels, except domestic retail trade, wholesale trade, distributive
-      trade and trade sector phrases (international/foreign/extra-EU/intra-EU trade remains refused);
-      by a stk_flow dimension (this conservatively also refuses nrg_stk_gas); and by DISSEMINATION_SOURCE_DATASET annotation titles
-      starting with ext_, ds- or comext (case-insensitive). This covers Swiss/Liechtenstein post-1995
-      commodity and Austrian CN8 restrictions. The executor checks source/rights anchors including
-      SOURCE_INSTITUTIONS in returned JSON-stat source, extension and annotations, never dimension ids
-      or category codes (owner is a valid dimension). Separately linked
-      ESMS documents and catalogue notices are not inspected; absent source declarations are reported
-      in metadata_limitations. No blanket rights clearance of every catalogue dataset is implied.
+      International trade datasets are excluded, including Swiss and Liechtenstein commodity data and
+      Austrian CN8 data; domestic retail, wholesale, distributive trade and trade-sector statistics
+      are exempt, while stock-flow datasets can also be refused. Source and rights checks use returned
+      metadata without inspecting separately linked ESMS documents or catalogue notices, and missing
+      source declarations appear in `metadata_limitations`, so the checks do not establish rights
+      clearance for every dataset; reuse must preserve the dataset DOI, access date, source
+      attribution and notices describing modifications and Eurostat’s non-responsibility for the
+      rendering.
     category: coverage
     severity: warning

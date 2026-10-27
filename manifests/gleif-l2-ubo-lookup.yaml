@@ -147,14 +147,14 @@ output_field_reliability:
 limitations:
   - title: Coverage is limited to entities that have an LEI
     text: >-
-      GLEIF L2 only contains relationship data for entities registered in the GLEIF system. Approximately 2.6M entities
-      globally have LEIs, primarily large or regulated entities. SMEs without LEIs return no L2 data — pair with
-      country-registry beneficial ownership lookups for full SME coverage.
+      GLEIF relationship data covers only entities with LEIs, approximately 2.6 million mainly large
+      or regulated entities worldwide. Small and medium-sized businesses without LEIs return no
+      relationship data.
     category: coverage
     severity: info
     workaround: >-
-      For SMEs without an LEI, use country-specific UBO sources such as Companies House PSC for UK companies (exposed via the
-      beneficial-ownership-lookup capability).
+      For UK ownership records, use beneficial-ownership-lookup; for other countries, check the
+      national beneficial-ownership register.
   - title: Reporting exceptions are common
     text: >-
       Many entities report a structured "reporting exception" instead of naming a parent (NATURAL_PERSONS,
@@ -163,10 +163,10 @@ limitations:
       it does not name an ultimate beneficiary.
     category: coverage
     severity: warning
-  - title: Parent relationships are self-reported and refreshed annually
+  - title: Parent relationships are self-reported
     text: >-
-      Entities self-report parent relationships in their annual LEI renewal. Stale data is possible for restructurings
-      between renewal cycles. The lastUpdateDate on the underlying LEI record indicates currency.
+      Entities report parent relationships during annual LEI renewal, so restructurings between
+      renewals can be missing. Check the source LEI record’s update date when assessing freshness.
     category: freshness
     severity: info
 

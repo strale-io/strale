@@ -203,8 +203,8 @@ output_field_reliability:
   # registries; see the field-reliability rules in CLAUDE.md.
   featured_snippet: common
 limitations:
-  - title: SERP analysis is a point-in-time snapshot — rankings change frequently with Google algorithm updates
-    text: Analyzes search results at a point in time — SERP rankings change frequently based on Google algorithm updates
+  - title: Search rankings change over time
+    text: Analyses search results at a point in time — SERP rankings change frequently based on Google algorithm updates
     category: accuracy
     severity: info
     workaround: Track SERP positions over time rather than relying on a single snapshot for SEO strategy decisions

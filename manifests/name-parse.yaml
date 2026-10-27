@@ -85,7 +85,7 @@ output_field_reliability:
   suffix: common
   nickname: common
 limitations:
-  - title: Compound surnames, non-Western naming conventions, and honorifics may be split incorrectly
+  - title: Compound and unfamiliar name formats can be misread
     text: AI-powered name parsing — compound surnames, cultural naming conventions, and honorifics may be split incorrectly
     category: accuracy
     severity: info

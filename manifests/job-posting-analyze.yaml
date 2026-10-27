@@ -114,20 +114,18 @@ output_field_reliability:
   culture_signals: guaranteed
   required_skills: guaranteed
 limitations:
-  - title: Job posting salary estimates and seniority are inferred from language patterns, not verified data
+  - title: Salary and seniority are inferred from wording
     text: >-
       AI analysis of job posting text — salary estimates and seniority inference are based on language patterns, not
       verified data
     category: accuracy
     severity: info
-    workaround: Cross-reference inferred salary ranges with salary-benchmark results for the same role and location
+    workaround: Compare inferred salary ranges with current local compensation surveys.
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
-      rather than after buffering. That is ~5x the heaviest ordinary web page, so
-      normal targets are unaffected. An oversized page returns a caller_input
-      refusal naming the field, and is not retried through another fetch path; no
-      charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

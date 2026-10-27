@@ -105,8 +105,8 @@ output_field_reliability:
 limitations:
   - title: Legacy address formats only — no SegWit
     text: >-
-      Dogecoin has not adopted SegWit, so all addresses are Base58Check (P2PKH or P2SH). If the network ever activates
-      SegWit/bech32, this validator will need to be extended.
+      Supports Base58Check P2PKH and P2SH addresses only. SegWit and bech32 addresses are not
+      supported.
     category: scope
     severity: info
   - title: Format and checksum only — no on-chain check

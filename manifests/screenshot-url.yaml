@@ -97,23 +97,22 @@ output_field_reliability:
   size_bytes: guaranteed
   content_type: guaranteed
 limitations:
-  - title: Captures pages from a US-based server — geo-restricted or localized content may appear differently than expected
+  - title: US-based rendering can change localised content
     text: >-
-      Captures the page as rendered from a US-based server — geo-restricted content or localized pages may show
-      differently
+      Captures the page as rendered from a US-based server — geo-restricted content or localised pages
+      may show differently
     category: coverage
     severity: info
     workaround: Include the target URL with explicit locale parameters (e.g., ?lang=en-GB) to control the rendered content
-  - title: Pages taking longer than 25 seconds to fully render will be captured in their current loading state
+  - title: Slow pages are captured after 25 seconds
     text: Pages that take longer than 25 seconds to fully render will be captured in their current loading state
     category: performance
     severity: info
     workaround: Use the wait_for parameter to target a specific CSS selector if the page loads progressively
   - title: Screenshots are limited to 32 MiB
     text: >-
-      A page whose screenshot renders to more than 32 MiB is refused (streamed
-      enforcement; full_page renders of very long pages are the usual cause).
-      The refusal is caller_input and no charge is taken.
+      Screenshots above 32 MiB are refused during download with a caller_input error and no charge.
+      Full-page screenshots of very long pages can exceed this limit.
     category: coverage
     severity: info
 

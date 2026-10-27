@@ -95,12 +95,11 @@ output_field_reliability:
   credit_rating: guaranteed
   risk_indicator: guaranteed
 limitations:
-  - title: Data from Allabolag.se covers Swedish companies only — credit ratings are indicative, not an official check
+  - title: Swedish companies only; ratings are indicative
     text: >-
-      Data from Allabolag.se — covers Swedish companies only; credit ratings are indicative, not an official credit
-      check
+      Covers Swedish companies only. Credit ratings are indicative and do not constitute an official
+      credit check.
     category: coverage
     severity: info
     workaround: >-
-      For official credit decisions, use a licensed credit bureau (UC, Creditsafe, Bisnode) with the org number from the
-      response
+      Ask a licensed credit bureau for a report using the returned organisation number.

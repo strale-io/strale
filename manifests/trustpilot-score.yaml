@@ -118,16 +118,16 @@ output_field_reliability:
   review_count: guaranteed
   rating_distribution: guaranteed
 limitations:
-  - title: Scrapes Trustpilot directly — companies not listed on Trustpilot will return no results
-    text: Scrapes Trustpilot — companies not listed on Trustpilot will return no results
+  - title: Unlisted companies return no results
+    text: Companies without a profile on the requested review platform return no results.
     category: coverage
     severity: info
-    workaround: If no Trustpilot profile exists, check Google Business Profile or use google-search for alternative review sources
+    workaround: Check reviews published on the company’s own product pages.
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a company with an unusually large number of reviews or
-      rating detail. Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This company's Trustpilot page produced more content than fits in one call — no direct workaround
+    workaround: Read the original review page directly for details that exceed the output limit.

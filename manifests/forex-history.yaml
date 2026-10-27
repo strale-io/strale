@@ -596,7 +596,7 @@ output_field_reliability:
   average: guaranteed
   change_percent: guaranteed
 limitations:
-  - title: Frankfurter API provides ECB reference rates published daily at 16:00 CET — no intraday data available
+  - title: Daily reference rates only; no intraday data
     text: Historical rates from Frankfurter API (ECB reference rates) — published daily around 16:00 CET, no intraday data
     category: freshness
     severity: info

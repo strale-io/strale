@@ -77,8 +77,8 @@ output_field_reliability:
   currency: guaranteed
   median_salary: guaranteed
 limitations:
-  - title: Salary data from public sources tends to skew toward larger companies and tech-heavy markets
-    text: Salary data scraped from public sources — samples may skew toward larger companies and tech-heavy markets
+  - title: Salary samples can favour large technology employers
+    text: Public salary samples may skew towards larger companies and technology-heavy markets.
     category: accuracy
     severity: info
     workaround: >-
@@ -86,9 +86,9 @@ limitations:
       surveys
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a job title page with an unusually long list of comparable
-      titles. Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This job title's salary page produced more content than fits in one call — no direct workaround
+    workaround: Check the original salary source directly for comparisons that exceed the output limit.

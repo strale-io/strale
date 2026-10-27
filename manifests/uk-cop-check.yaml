@@ -214,24 +214,24 @@ output_field_reliability:
 limitations:
   - title: UK only
     text: >-
-      Pay.UK Confirmation of Payee covers UK domestic accounts only (sort code + 8-digit account number pairs). For EU
-      SEPA IBAN-based name matching, see the SEPA VoP capability (Digiteal).
+      Covers UK domestic accounts identified by sort code and 8-digit account number only. EU SEPA
+      IBAN-based name checks are not included.
     category: coverage
     severity: info
   - title: CoP is a scheme attestation, not an identity proof
     text: >-
-      A "match" indicates the responding PSP returned that the name on file matches the provided name under their
-      fuzzy-matching rules. It does NOT prove the named person controls the account or that the account is the right
-      account for a payment. Use alongside other risk signals.
+      A match means the responding bank or payment provider reports that the supplied name matches its
+      account record under its matching rules. It does not prove that the named person controls the
+      account or that it is the right destination for a payment.
     category: accuracy
     severity: warning
   - title: BIC is not returned by the eSortcode CoP API
     text: >-
-      The eSortcode CoP response includes bank name and branch details but not the BIC/SWIFT code. The bic field is
-      always null. To obtain BIC for a UK account, supplement with bank-bic-lookup.
+      The response includes bank name and branch details but no BIC or SWIFT code, so `bic` is always
+      null. Use bank-bic-lookup for BIC information.
     category: coverage
     severity: info
-  - title: ACCOUNT_NOT_SUPPORTED / NO_RESPONSE / NOT_ENROLLED edge cases
+  - title: Some accounts return no confirmation
     text: >-
       A small fraction of UK PSPs do not respond to CoP queries — these surface as match_status = cannot_be_checked with
       cop_code naming the specific reason. Verify account details carefully via Open Banking AIS before proceeding when

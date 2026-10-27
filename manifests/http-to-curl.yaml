@@ -96,7 +96,7 @@ output_field_reliability:
   equivalent_axios: guaranteed
   equivalent_fetch: guaranteed
 limitations:
-  - title: Binary payloads and multipart uploads may produce simplified curl equivalents that need manual adjustment
+  - title: Binary and multipart requests may need manual adjustment
     text: >-
       Converts standard HTTP request formats — binary payloads or multipart uploads may produce simplified curl
       equivalents

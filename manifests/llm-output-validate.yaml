@@ -102,8 +102,8 @@ output_field_reliability:
   # exist on the happy path; the manifest was wrong to declare it guaranteed.
   auto_fixed_output: common
 limitations:
-  - title: Validates LLM output structure and format only — cannot verify factual correctness of content
-    text: Validates output structure and format — cannot verify factual correctness of LLM-generated content
+  - title: Factual correctness is not checked
+    text: Checks output structure and format only. It does not verify that the content is factually correct.
     category: accuracy
     severity: info
     workaround: Combine with domain-specific validation (e.g., schema checks, reference lookups) for factual verification

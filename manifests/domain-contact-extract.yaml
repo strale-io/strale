@@ -104,40 +104,32 @@ output_field_reliability:
   contact_page_url: rare
   postal_address: rare
 limitations:
-  - title: Organisation-level contacts only — personnel discovery is out of scope
+  - title: Company contact channels only
     text: >-
-      This capability extracts contact channels a company publishes about itself (info@, sales@, support@, phone,
-      address, social links). It does not accept a person's name as input, does not generate or guess candidate personal
-      email addresses, and does not enumerate employees. Personal-looking addresses (firstname.lastname@) are never
-      returned, even when the company published them: only their count, in `personal_addresses_withheld`. Strale's
-      data-access rule (DEC-20261023-A) rules out reselling contact details about identifiable people. See
-      email-pattern-discover (currently suspended) for the boundary this capability stays inside of.
+      Returns published company contact channels such as role email addresses, phone numbers, postal
+      addresses and social links; it does not accept a person’s name, enumerate employees or guess
+      personal email addresses. Personal-looking addresses are withheld even when published, with only
+      their count returned in `personal_addresses_withheld`.
     category: coverage
     severity: info
-  - title: No JavaScript rendering — client-rendered content is invisible
+  - title: JavaScript-generated contacts are not visible
     text: >-
-      This is a plain HTTP fetch of the raw HTML response, not a headless browser. Contact details injected client-side
-      by a JavaScript framework (React/Vue SPA footers, cookie-gated contact widgets, etc.) will not be seen. Sites that
-      render their contact info this way will return empty or partial results even though a human visiting the page
-      would see it.
+      Only the initial HTML response is read. Contact details added by JavaScript or shown through
+      interactive widgets can be missing, leaving empty or partial results.
     category: coverage
     severity: warning
-  - title: Contact-page discovery is a single best-effort follow, not a crawl
+  - title: Only one linked contact page is checked
     text: >-
-      At most one additional page is fetched — the first link on the homepage whose href or link text matches
-      /contact|kontakt|contact-us|get-in-touch/i, and only if it resolves to the same hostname. Sites that bury their
-      contact page deeper in navigation, behind a menu that requires JS to expand, or under an unmatched URL/label will
-      show has_contact_page: false even if a contact page exists.
+      At most one additional page is read: the first same-host link whose URL or text matches contact,
+      kontakt, contact-us or get-in-touch, regardless of case. Deeper pages, JavaScript-only links and
+      other labels can be missed, so `has_contact_page` can be false even when a contact page exists.
     category: coverage
     severity: info
-  - title: Phone numbers come only from explicit markup — plain-text numbers are not extracted
+  - title: Phone numbers require explicit phone markup
     text: >-
-      A phone number is returned only when the site declares it as one: a tel: link, or a schema.org telephone value in
-      JSON-LD or microdata. A number that appears only as visible text is NOT extracted, so phones can be empty on a
-      page a human would say clearly shows a phone number. This is deliberate. An earlier version inferred numbers from
-      digit shape and returned fabricated values in production (digit sequences that appeared nowhere on the page),
-      because sites serve different markup to bots and the response is truncated at 300KB mid-document. An empty result
-      you can act on is worth more than a plausible wrong number you cannot detect.
+      Phone numbers are returned only from tel: links or schema.org telephone values in JSON-LD or
+      microdata. Plain-text numbers are not extracted, so `phones` can be empty even when a number is
+      visible on the page.
     category: coverage
     severity: warning
   - title: Postal address requires structured markup
@@ -148,10 +140,8 @@ limitations:
     severity: info
   - title: Only the first 300 KB of each page is scanned
     text: >-
-      Each fetched page is scanned up to 300 KB and the remainder ignored. Contact
-      markup (tel: links, mailto: links, schema.org properties) lives near the top of
-      a document, so this rarely changes the result — but a contact detail placed
-      only in the tail of a very long page will not be found.
+      Only the first 300 KB of each page is scanned. Contact details appearing later in a longer page
+      are not found.
     category: coverage
     severity: info
 

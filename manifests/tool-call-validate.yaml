@@ -93,7 +93,7 @@ output_field_reliability:
   errors: guaranteed
   corrected_input: common
 limitations:
-  - title: Validates tool call structure and parameter types only — semantic correctness of parameter values is not checked
+  - title: Parameter meaning and correctness are not checked
     text: >-
       Validates tool call structure and parameter types — cannot verify whether parameter values are semantically
       correct

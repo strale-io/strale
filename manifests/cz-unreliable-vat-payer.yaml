@@ -97,7 +97,7 @@ test_fixtures:
   health_check_input:
     dic: CZ00177041
 limitations:
-  - title: DIČ must be syntactically valid — does not resolve IČO→DIČ automatically
+  - title: DIČ is required; it is not inferred from IČO
     text: >-
       Input is treated as DIČ (with or without CZ prefix). Natural-person DIČs may be 9-10 digits (based on rodné číslo)
       and are not derivable from IČO alone.

@@ -302,10 +302,10 @@ output_field_reliability:
   star_count: guaranteed
   recent_tags: guaranteed
 limitations:
-  - title: Queries Docker Hub's public API only — private repositories and other registries like GitHub CR are not accessible
+  - title: Only public Docker Hub repositories are covered
     text: >-
       Queries Docker Hub's public API — private repositories and other registries (GitHub CR, AWS ECR) are not
       accessible
     category: coverage
     severity: info
-    workaround: For private registries, use their respective APIs; for GitHub Container Registry, use github-repo-analyze
+    workaround: Query private or other container registries directly through their APIs with authorised access.

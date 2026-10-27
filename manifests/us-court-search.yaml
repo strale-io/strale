@@ -136,15 +136,14 @@ output_field_reliability:
 limitations:
   - title: Federal courts only
     text: >-
-      RECAP covers US federal courts (district + appellate + bankruptcy). State court records are NOT included. For
-      state-level coverage, supplement with Docket Alarm (PAYG) — separate capability.
+      RECAP covers US federal district, appellate and bankruptcy courts only. State court records are
+      not included.
     category: coverage
     severity: warning
   - title: Common-name false positives
     text: >-
-      Searching "Acme Corp" returns every matching docket regardless of which Acme Corp is the actual party.
-      Disambiguate using the address or jurisdiction context. The structured cases array includes court, jurisdiction,
-      and date for each match so the calling code can filter further.
+      A party-name search can return unrelated entities with the same name. Use the court,
+      jurisdiction and date in `cases`, together with address context, to distinguish them.
     category: accuracy
     severity: warning
   - title: RECAP coverage varies per court

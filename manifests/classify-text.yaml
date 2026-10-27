@@ -99,7 +99,7 @@ output_field_reliability:
   topic_keywords: guaranteed
   primary_category: guaranteed
 limitations:
-  - title: Ambiguous text may be assigned to the wrong category without sufficient category descriptions as context
+  - title: Ambiguous text can be assigned to the wrong category
     text: >-
       AI-powered classification — ambiguous text may be assigned to multiple categories or the wrong category without
       sufficient context

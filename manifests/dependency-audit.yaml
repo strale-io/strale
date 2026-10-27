@@ -110,8 +110,7 @@ output_field_reliability:
   outdated_count: guaranteed
 limitations:
   - title: >-
-      AI audit covers declared dependencies only — transitive vulnerability chains and runtime dependencies are not
-      detected
+      Transitive and runtime dependencies are not checked
     text: >-
       AI-based audit of declared dependencies — cannot detect transitive vulnerability chains or runtime-only
       dependencies

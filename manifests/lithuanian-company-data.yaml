@@ -116,18 +116,17 @@ output_field_reliability:
 limitations:
   - title: Address is not included in this response
     text: >-
-      The Lithuanian JAR open-data API splits company addresses into a separate dataset (buveines/Buveine) keyed by
-      legal-entity UUID. This capability returns the structured register record only. Company address requires a
-      follow-up query to the address registry and is not currently included in the response.
+      Company addresses are not included in the returned Lithuanian register record. They are
+      published in a separate address dataset.
     category: coverage
     severity: info
-  - title: Open data covers core register only — financials and management bodies require separate datasets
+  - title: Financial and management details are not included
     text: >-
       Beneficial owners, share capital, board composition, and financial statements are published as separate
       data.gov.lt datasets and are not included in this response.
     category: coverage
     severity: info
-  - title: Daily refresh — sub-day filings may not be reflected immediately
+  - title: New filings can take a day to appear
     text: >-
       The Lithuanian Open Data Portal publishes Centre of Registers data on a daily refresh cadence. Filings submitted
       today may not be reflected in the API response until the next daily refresh.

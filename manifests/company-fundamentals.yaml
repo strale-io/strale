@@ -108,32 +108,27 @@ limitations:
     severity: warning
   - title: As-reported XBRL, not normalised financials
     text: >-
-      Values are the concept tags the filer chose. Different companies tag the same economic line
-      differently, so figures are not directly comparable across filers the way a commercial
-      aggregator's normalised statements are. The concept field names the tag each value came from.
+      Values use the XBRL concept tags selected by each filer, identified in `concept`. Different
+      companies can tag equivalent figures differently, so comparisons may require normalisation.
     category: accuracy
     severity: warning
   - title: Latest annual period only
     text: >-
-      One value per metric, from the most recently ended fiscal year reported on a 10-K. There is no
-      history, no quarterly data and no trend. Restatements are followed — the latest filed value
-      for the latest period wins.
+      Returns one value per metric from the latest fiscal year reported on a 10-K, using the latest
+      filed value when restated. Historical periods, quarters and trends are not included.
     category: coverage
     severity: info
   - title: Metrics a filer does not tag come back null
     text: >-
-      Revenue is resolved through a fallback chain because tags change over time — Apple stopped
-      reporting under the Revenues tag in 2018. Where no tag in a chain matches, the metric is null
-      and its key is listed in metrics_unavailable rather than being silently omitted.
+      A metric is null when none of the supported XBRL tags matches the filer’s report. Its key is
+      listed in `metrics_unavailable`.
     category: coverage
     severity: info
-  - title: Requests are rate-gated, which costs about 1.5 seconds
+  - title: SEC request limits add lookup time
     text: >-
-      One call issues 9-13 requests to the SEC, and the SEC blocks clients exceeding roughly 10 per
-      second. All requests from this capability are therefore spaced by a shared gate that holds the
-      ceiling across concurrent calls, not just within one. Typical latency is about 2.3 seconds
-      rather than the ~0.8 seconds the raw fetches take; a company whose filings need the full
-      fallback chain sits at the upper end.
+      Each lookup makes 9–13 SEC requests, subject to a shared limit of roughly 10 requests per second
+      across concurrent calls. Typical lookup time is about 2.3 seconds, including about 1.5 seconds
+      of waiting, and can increase when more alternative tags need checking.
     category: performance
     severity: info
   - title: Metric periods can differ within one response
