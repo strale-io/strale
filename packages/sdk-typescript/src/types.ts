@@ -184,6 +184,8 @@ export type ErrorCode =
   | "spend_cap_exceeded"
   | "key_hourly_cap_exceeded"
   | "key_total_cap_exceeded"
+  | "primary_key_required"
+  | "active_key_limit_exceeded"
   | "unauthorized"
   | "not_found";
 

@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { apiKeys, users } from "../db/schema.js";
 import { generateApiKey, getKeyPrefix, hashApiKey } from "./auth.js";
+import { log } from "./log.js";
 import { authenticateApiKey, keyCapError, keySpending } from "./api-keys.js";
 import { authMiddleware, optionalAuthMiddleware } from "./middleware.js";
 import { runMigration0124_apiKeys, BLOCKS } from "./startup-migrations.js";
@@ -80,7 +81,8 @@ describe("additional-key authentication", () => {
   it("unknown and revoked keys produce identical 401 bodies", async () => {
     const app = new Hono<AppEnv>();
     app.get("/", authMiddleware, (c) => c.json({ ok: true }));
-    additionalRows = []; // SQL excludes revoked rows (asserted above); real DB test covers it.
+    key.revokedAt = new Date(); // Keep a real matching revoked row in the double.
+    additionalRows = [{ key, user }];
     const revoked = await app.request("/", { headers: { Authorization: `Bearer ${secret}` } });
     const unknown = await app.request("/", { headers: { Authorization: `Bearer ${generateApiKey()}` } });
     expect(revoked.status).toBe(401); expect(unknown.status).toBe(401);
@@ -119,7 +121,8 @@ describe("key limits and ledger accounting", () => {
     key.maxSpendPerHourCents = 25;
     const error = await keyCapError(policyTx(), user.id, key.id, 6);
     expect(error).toMatchObject({ error_code: "key_hourly_cap_exceeded", details: { spent_cents: 20, requested_cents: 6, limit_cents: 25 } });
-    expect(error!.message).toContain("Raise this key's limit");
+    expect(error!.message).toContain("primary key");
+    expect(error!.details).toMatchObject({retryable: false});
   });
   it("refuses the total cap with its own stable code", async () => {
     key.maxSpendTotalCents = 100;
@@ -156,17 +159,30 @@ describe("key limits and ledger accounting", () => {
   });
 });
 describe("migration 0124", () => {
-  it("is reachable, idempotent by DDL and has primitive binds", async () => {
+  it("guards ALTERs, validates separately, bounds lock waits and builds concurrent indexes", async () => {
     const statements: string[] = [];
     const tx = { execute: async (query: SQL) => { statements.push(checked(query).sql); return []; } };
     expect(BLOCKS).toContain(runMigration0124_apiKeys);
     await runMigration0124_apiKeys(tx);
-    const first = [...statements];
-    await runMigration0124_apiKeys(tx);
-    expect(statements.slice(first.length)).toEqual(first);
-    expect(first).toHaveLength(6);
-    expect(first.every((s) => /IF NOT EXISTS/.test(s))).toBe(true);
-    expect(first.join(" ")).toContain("api_key_id uuid REFERENCES api_keys(id)");
+    const text = statements.join(" ");
+    expect(statements[0]).toContain("SET lock_timeout = '3s'");
+    expect(statements.at(-1)).toContain("RESET lock_timeout");
+    expect(text).toMatch(/IF NOT EXISTS[\s\S]*information_schema.columns[\s\S]*ALTER TABLE wallet_transactions ADD COLUMN/);
+    expect(text).toContain("NOT VALID");
+    expect(text).toMatch(/NOT convalidated[\s\S]*VALIDATE CONSTRAINT/);
+    expect(statements.filter(s => s.includes("CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions"))).toHaveLength(2);
+  });
+  it("repairs an interrupted concurrent index build and resets timeout even on failure", async () => {
+    const statements: string[] = [];
+    const tx = {execute: async (q: SQL) => {
+      const text = checked(q).sql; statements.push(text);
+      if (text.includes("SELECT c.relname")) return [{relname: "wallet_transactions_reference_idx"}];
+      if (text.includes("CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_reference_idx")) throw new Error("lock timeout");
+      return [];
+    }};
+    await expect(runMigration0124_apiKeys(tx)).rejects.toThrow("lock timeout");
+    expect(statements.join(" ")).toContain("DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_reference_idx");
+    expect(statements.at(-1)).toContain("RESET lock_timeout");
   });
 });
 
@@ -203,4 +219,19 @@ it("validates a revoked key before returning wallet balance after waiting for th
   }
   const solution = readFileSync(new URL("../routes/solution-execute.ts", import.meta.url), "utf8");
   expect(solution.indexOf("await keyCapError(tx, user.id")).toBeLessThan(solution.indexOf("if (!wallet || wallet.balanceCents < sol.priceCents)"));
+});
+
+it("authenticates when last-used persistence fails and logs the structured failure", async () => {
+  key.lastUsedAt = null;
+  const failure = new Error("synthetic update failure");
+  state.db.update = () => ({set: () => ({where: async () => {throw failure;}})});
+  const logged = vi.spyOn(log, "error").mockImplementation(() => {});
+  try {
+    const app = new Hono<AppEnv>();
+    app.get("/", authMiddleware, (c) => c.json({id: c.get("apiKeyId")}));
+    const res = await app.request("/", {headers: {Authorization: `Bearer ${secret}`}});
+    expect(res.status).toBe(200); expect(await res.json()).toEqual({id: key.id});
+    expect(logged).toHaveBeenCalledWith(expect.objectContaining({label: "api-key-last-used-update-failed", api_key_id: key.id, err: expect.objectContaining({message: failure.message})}), "api-key-last-used-update-failed");
+    expect(JSON.stringify(logged.mock.calls)).not.toContain(secret);
+  } finally { logged.mockRestore(); }
 });

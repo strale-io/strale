@@ -3,7 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { wallets, walletTransactions } from "../db/schema.js";
 import { getStripe } from "../lib/stripe.js";
-import { authMiddleware } from "../lib/middleware.js";
+import { authMiddleware, requirePrimaryKey } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { MIN_TOPUP_CENTS } from "../lib/pricing-constants.js";
@@ -25,6 +25,7 @@ export const walletRoute = new Hono<AppEnv>();
 
 // All wallet routes require auth + DEC-21: 5 req/sec per key
 walletRoute.use("*", authMiddleware);
+walletRoute.use("/topup", requirePrimaryKey);
 walletRoute.use("*", rateLimitByKey(5, 1000));
 
 // POST /v1/wallet/topup — Create Stripe Checkout session

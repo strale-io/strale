@@ -9,9 +9,10 @@ import type { AppEnv } from "../types.js";
 
 const state = vi.hoisted(() => ({ db: null as any, user: null as any, callerId: null as string | null }));
 vi.mock("../db/index.js", () => ({ getDb: () => state.db }));
-vi.mock("../lib/middleware.js", () => ({ authMiddleware: async (c: any, next: any) => {
+vi.mock("../lib/middleware.js", async (importOriginal) => ({ ...await importOriginal<typeof import("../lib/middleware.js")>(), authMiddleware: async (c: any, next: any) => {
   c.set("user", state.user); c.set("apiKeyId", state.callerId); await next();
 } }));
+vi.mock("../lib/rate-limit.js", () => ({ rateLimitByKey: () => async (_c: any, next: any) => next() }));
 const dialect = new PgDialect();
 let keys: any[], writes: any[], events: string[], closed: boolean, app: Hono<AppEnv>;
 beforeEach(() => {
@@ -45,7 +46,7 @@ beforeEach(() => {
         return q;
       },
       for: (mode: string) => { expect(mode).toBe("update"); events.push("lock"); return q; },
-      returning: () => q, orderBy: () => q,
+      returning: () => q, orderBy: () => q, limit: (n: number) => { rows = rows.slice(0, n); return q; },
       then: (resolve: any, reject: any) => Promise.resolve(rows).then(resolve, reject),
     };
     return q;
@@ -87,23 +88,73 @@ it("updates only supplied fields under the lock; null removes caps and zero is p
   expect(await response.json()).toMatchObject({ label: "New", max_spend_total_cents: null });
   expect(events).toEqual(["lock", "insert", "lock", "update", "lock", "update"]);
 });
-it("self-revocation leaves primary recovery available and cannot revoke the primary ID", async () => {
+it.each([
+  ["GET", "", undefined, 200],
+  ["POST", "", {label: "Replacement"}, 201],
+  ["PATCH", "/ID", {label: "Replacement"}, 200],
+  ["DELETE", "/ID", undefined, 200],
+] as const)("%s key management requires primary authorization and accepts the primary", async (method, template, body, status) => {
   await request("", "POST", { label: "Agent" });
+  const path = template.replace("ID", keys[0].id);
   state.callerId = keys[0].id;
-  const revoked = await request(`/${state.callerId}`, "DELETE");
-  expect(revoked.status).toBe(200);
-  expect((await revoked.json() as any).revoked_at).not.toBeNull();
+  const res = await request(path, method, body);
+  expect(res.status).toBe(403);
+  expect(await res.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action"});
+  expect(keys).toHaveLength(1); expect(keys[0].revokedAt).toBeNull();
   state.callerId = null;
-  expect((await request(`/${state.user.id}`, "DELETE")).status).toBe(404);
-  expect((await request()).status).toBe(200);
+  expect((await request(path, method, body)).status).toBe(status);
 });
-it("rechecks revoked callers and closed accounts after the wallet lock", async () => {
-  await request("", "POST", { label: "Agent" });
-  state.callerId = keys[0].id; keys[0].revokedAt = new Date();
-  const revoked = await request("", "POST", { label: "Replacement" });
-  expect(revoked.status).toBe(401); expect(keys).toHaveLength(1);
-  state.callerId = null; closed = true;
-  expect((await request(`/${keys[0].id}`, "PATCH", { label: "Replacement" })).status).toBe(401);
+it("cannot revoke the primary id through additional-key management", async () => {
+  expect((await request(`/${state.user.id}`, "DELETE")).status).toBe(404);
+});
+it("rechecks closed accounts after the wallet lock", async () => {
+  await request("", "POST", {label: "Agent"});
+  closed = true;
+  expect((await request(`/${keys[0].id}`, "PATCH", {label: "Replacement"})).status).toBe(401);
+});
+it("allows 25 active keys, refuses the 26th, and reuses a revoked slot", async () => {
+  for (let i = 0; i < 25; i++) expect((await request("", "POST", {label: `Agent ${i}`})).status).toBe(201);
+  const refused = await request("", "POST", {label: "Overflow"});
+  expect(refused.status).toBe(409);
+  expect(await refused.json()).toMatchObject({error_code: "active_key_limit_exceeded", message: expect.stringContaining("Revoke an unused key first")});
+  await request(`/${keys[0].id}`, "DELETE");
+  expect((await request("", "POST", {label: "Replacement"})).status).toBe(201);
+  const listed = await (await request()).json() as any;
+  expect(listed.keys).toHaveLength(25);
+  expect(listed.keys.every((k: any) => k.revoked_at === null)).toBe(true);
+});
+it("serializes two concurrent creates at 24 using the wallet lock", async () => {
+  for (let i = 0; i < 24; i++) await request("", "POST", {label: `Agent ${i}`});
+  let tail = Promise.resolve();
+  state.db.transaction = async (run: any) => {
+    let release: (() => void) | undefined;
+    const tx = {...state.db, select: () => {
+      const q = state.db.select();
+      const originalFor = q.for, originalThen = q.then;
+      let pending = Promise.resolve();
+      q.for = (mode: string) => {
+        originalFor(mode);
+        pending = tail;
+        tail = new Promise<void>(resolve => {release = resolve;});
+        return q;
+      };
+      q.then = async (resolve: any, reject: any) => {await pending; return originalThen(resolve, reject);};
+      return q;
+    }};
+    try {return await run(tx);} finally {release?.();}
+  };
+  const results = await Promise.all([request("", "POST", {label: "25"}), request("", "POST", {label: "26"})]);
+  expect(results.map(r => r.status).sort()).toEqual([201,409]);
+  expect(keys).toHaveLength(25);
+});
+it.each(["line\nbreak", "\tx", "x\r", "x\u0000", "x\u007f", "x\u0085", "x".repeat(65)])("rejects invalid label %j before writing", async (label) => {
+  expect((await request("", "POST", {label})).status).toBe(400);
+  expect((await request(`/${randomUUID()}`, "PATCH", {label})).status).toBe(400);
+  expect(writes).toHaveLength(0);
+});
+it("accepts trimmed labels through 64 characters", async () => {
+  const res = await request("", "POST", {label: `  ${"x".repeat(64)}  `});
+  expect(res.status).toBe(201); expect(keys[0].label).toBe("x".repeat(64));
 });
 it("rejects invalid money values, labels, fields, and empty updates before writes", async () => {
   for (const body of [{ label: "" }, { label: "x", max_spend_total_cents: -1 }, { label: "x", max_spend_total_cents: 1.5 }, { label: "x", max_spend_total_cents: 2147483648 }]) {

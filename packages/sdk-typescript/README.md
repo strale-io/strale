@@ -150,8 +150,21 @@ Caps are integer EUR cents; null means unlimited, zero blocks paid calls.
 Both account and key caps apply. List results include net ledger spending for
 the rolling hour and lifetime, last-use time, and revocation time, never secrets
 or hashes. Refunds restore the budget of the original purchase. The primary key
-is unchanged and cannot be revoked through these methods. Self-revocation of an
-additional key is allowed. All account keys can manage additional keys and caps;
-limits are spending guardrails, not permission scopes. Management is limited to
-5 requests/second/account. Cap errors preserve `key_hourly_cap_exceeded` and
-`key_total_cap_exceeded` in `StraleError.errorCode`. x402 is unchanged.
+is unchanged and cannot be revoked through these methods. These management
+methods require a client configured with the account's primary key. Additional
+keys may spend and read, but cannot list/manage keys, rotate the primary key,
+close the account, erase transactions, reissue audit links, submit account-holder disputes or start wallet top-ups.
+Those actions return 403 `primary_key_required` for additional keys.
+
+The account may have at most 25 active additional keys; a 26th create returns 409
+`active_key_limit_exceeded` ("Revoke an unused key first"). `apiKeys()` returns
+at most 25 active keys and excludes revoked keys. Labels are trimmed, must be
+1–64 characters and cannot contain control characters. Management is limited to
+5 requests/second/account. Cap errors retain HTTP 429, preserve
+`key_hourly_cap_exceeded` / `key_total_cap_exceeded` in `StraleError.errorCode`
+and include `details.retryable: false`; ask the owner to raise the cap using the
+primary key, or use another key. x402 is unchanged.
+
+Email recovery rotates only the primary key. Additional keys survive and can
+still spend up to their caps. Configure the client with the recovered primary
+key, call `apiKeys()`, and `revokeApiKey(id)` for unused or unrecognized keys.

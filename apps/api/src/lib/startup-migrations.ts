@@ -36,6 +36,8 @@
  * with the same input is a no-op).
  */
 
+import { drizzle } from "drizzle-orm/postgres-js";
+import type { Sql } from "postgres";
 import { sql, type SQL } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log } from "./log.js";
@@ -6666,30 +6668,87 @@ export async function runMigration0124_apiKeys(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
-  await tx.execute(sql`
-    CREATE TABLE IF NOT EXISTS api_keys (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL REFERENCES users(id),
-      api_key_hash varchar(255) NOT NULL UNIQUE,
-      key_prefix varchar(16) NOT NULL,
-      label varchar(100) NOT NULL,
-      max_spend_per_hour_cents integer CHECK (max_spend_per_hour_cents >= 0),
-      max_spend_total_cents integer CHECK (max_spend_total_cents >= 0),
-      created_at timestamptz NOT NULL DEFAULT now(),
-      revoked_at timestamptz,
-      last_used_at timestamptz
-    )
-  `);
-  await tx.execute(sql`CREATE INDEX IF NOT EXISTS api_keys_prefix_idx ON api_keys(key_prefix)`);
-  await tx.execute(sql`CREATE INDEX IF NOT EXISTS api_keys_user_idx ON api_keys(user_id)`);
-  await tx.execute(sql`
-    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS api_key_id uuid REFERENCES api_keys(id)
-  `);
-  await tx.execute(sql`
-    CREATE INDEX IF NOT EXISTS wallet_transactions_api_key_created_idx ON wallet_transactions(api_key_id, created_at)
-  `);
-  await tx.execute(sql`
-    CREATE INDEX IF NOT EXISTS wallet_transactions_reference_idx ON wallet_transactions(reference_id)
-  `);
+  // The runner passes the pool, outside a transaction. Reserve one connection:
+  // SET on a pooled executor could otherwise affect an unrelated session.
+  const client = (tx as MigrationExecutor & { $client?: Sql }).$client;
+  const connection = client ? await client.reserve() : null;
+  const session = connection ? drizzle(connection) : tx;
+  try {
+    await session.execute(sql`SET lock_timeout = '3s'`);
+    await session.execute(sql`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id),
+        api_key_hash varchar(255) NOT NULL UNIQUE,
+        key_prefix varchar(16) NOT NULL,
+        label varchar(100) NOT NULL,
+        max_spend_per_hour_cents integer CHECK (max_spend_per_hour_cents >= 0),
+        max_spend_total_cents integer CHECK (max_spend_total_cents >= 0),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        revoked_at timestamptz,
+        last_used_at timestamptz
+      )
+    `);
+    await session.execute(sql`CREATE INDEX IF NOT EXISTS api_keys_prefix_idx ON api_keys(key_prefix)`);
+    await session.execute(sql`CREATE INDEX IF NOT EXISTS api_keys_user_idx ON api_keys(user_id)`);
+    // Even ADD COLUMN IF NOT EXISTS takes ACCESS EXCLUSIVE. Avoid the ALTER
+    // entirely on later boots, including when the column exists but the FK
+    // has not yet been added/validated after an interrupted first boot.
+    await session.execute(sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema() AND table_name = 'wallet_transactions' AND column_name = 'api_key_id'
+        ) THEN
+          ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS api_key_id uuid;
+        END IF;
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'wallet_transactions'::regclass AND conname = 'wallet_transactions_api_key_id_fkey'
+        ) THEN
+          ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_api_key_id_fkey
+            FOREIGN KEY (api_key_id) REFERENCES api_keys(id) NOT VALID;
+        END IF;
+      END $$
+    `);
+    // SHARE UPDATE EXCLUSIVE: validation permits ordinary reads and writes.
+    await session.execute(sql`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conrelid = 'wallet_transactions'::regclass
+            AND conname = 'wallet_transactions_api_key_id_fkey' AND NOT convalidated
+        ) THEN
+          ALTER TABLE wallet_transactions VALIDATE CONSTRAINT wallet_transactions_api_key_id_fkey;
+        END IF;
+      END $$
+    `);
+    // A failed concurrent build can leave an invalid index. Repair only that
+    // state before IF NOT EXISTS, otherwise a retry could silently skip it.
+    const invalid = await session.execute(sql`
+      SELECT c.relname FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+      WHERE i.indrelid = 'wallet_transactions'::regclass AND NOT i.indisvalid
+        AND c.relname IN ('wallet_transactions_api_key_created_idx', 'wallet_transactions_reference_idx')
+    `) as unknown as Array<{ relname: string }>;
+    for (const { relname } of invalid) {
+      if (relname === "wallet_transactions_api_key_created_idx") {
+        await session.execute(sql`DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_api_key_created_idx`);
+      } else if (relname === "wallet_transactions_reference_idx") {
+        await session.execute(sql`DROP INDEX CONCURRENTLY IF EXISTS wallet_transactions_reference_idx`);
+      }
+    }
+    await session.execute(sql`
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_api_key_created_idx ON wallet_transactions(api_key_id, created_at)
+    `);
+    await session.execute(sql`
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS wallet_transactions_reference_idx ON wallet_transactions(reference_id)
+    `);
+  } finally {
+    try {
+      await session.execute(sql`RESET lock_timeout`);
+    } finally {
+      connection?.release();
+    }
+  }
   return { block: "0124_apiKeys", outcome: "ensured additional keys and debit attribution", duration_ms: Date.now() - startedAt };
 }

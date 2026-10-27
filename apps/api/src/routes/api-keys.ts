@@ -5,7 +5,7 @@ import { getDb } from "../db/index.js";
 import { apiKeys, users } from "../db/schema.js";
 import { generateApiKey, getKeyPrefix, hashApiKey } from "../lib/auth.js";
 import { keySpending } from "../lib/api-keys.js";
-import { authMiddleware } from "../lib/middleware.js";
+import { authMiddleware, requirePrimaryKey } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { lockWalletForUser, type WalletTx } from "../lib/wallet-service.js";
 import { apiError, type ApiError } from "../lib/errors.js";
@@ -13,7 +13,7 @@ import type { AppEnv } from "../types.js";
 
 const cap = z.number().int().min(0).max(2_147_483_647).nullable();
 const fields = z.object({
-  label: z.string().trim().min(1).max(100),
+  label: z.string().regex(/^[^\p{Cc}]*$/u).trim().min(1).max(64),
   max_spend_per_hour_cents: cap.optional(),
   max_spend_total_cents: cap.optional(),
 }).strict();
@@ -33,10 +33,9 @@ export function publicKey(key: typeof apiKeys.$inferSelect) {
 }
 
 export const apiKeysRoute = new Hono<AppEnv>();
-apiKeysRoute.use("*", authMiddleware, rateLimitByKey(5, 1000, "account"));
+apiKeysRoute.use("*", authMiddleware, requirePrimaryKey, rateLimitByKey(5, 1000, "account"));
 
-// Auth precedes the lock. Recheck after waiting so a revoked key cannot
-// create a replacement, or change caps, after the revocation commits.
+// Auth and primary-key authorization precede the lock. Recheck closure after waiting.
 async function withManagementLock<T>(c: Context<AppEnv>, write: (tx: WalletTx) => Promise<T>): Promise<
   { row: T } | { error: ApiError; status: 401 | 404 }
 > {
@@ -44,22 +43,20 @@ async function withManagementLock<T>(c: Context<AppEnv>, write: (tx: WalletTx) =
     const userId = c.get("user").id;
     if (!await lockWalletForUser(tx, userId)) return { error: apiError("not_found", "Wallet not found."), status: 404 as const };
     const [account] = await tx.select({ id: users.id }).from(users).where(and(eq(users.id, userId), isNull(users.deletedAt)));
-    const callerId = c.get("apiKeyId");
     if (!account) return { error: apiError("unauthorized", "Invalid API key."), status: 401 as const };
-    if (callerId) {
-      const [caller] = await tx.select({ id: apiKeys.id }).from(apiKeys).where(and(eq(apiKeys.id, callerId), eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)));
-      if (!caller) return { error: apiError("unauthorized", "Invalid API key."), status: 401 as const };
-    }
     return { row: await write(tx) };
   });
 }
 
 apiKeysRoute.post("/", async (c) => {
   const parsed = fields.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json(apiError("invalid_request", "Supply a label (1–100 characters) and optional non-negative integer caps in cents; null removes a cap."), 400);
+  if (!parsed.success) return c.json(apiError("invalid_request", "Supply a label (1–64 characters, no control characters) and optional non-negative integer caps in cents; null removes a cap."), 400);
   const userId = c.get("user").id;
   const key = generateApiKey();
   const result = await withManagementLock(c, async (tx) => {
+    const active = await tx.select({ id: apiKeys.id }).from(apiKeys)
+      .where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt))).limit(25);
+    if (active.length >= 25) return null;
     const [created] = await tx.insert(apiKeys).values({
       userId, apiKeyHash: hashApiKey(key), keyPrefix: getKeyPrefix(key),
       label: parsed.data.label,
@@ -70,6 +67,7 @@ apiKeysRoute.post("/", async (c) => {
   });
   if ("error" in result) return c.json(result.error, result.status);
   const row = result.row;
+  if (!row) return c.json(apiError("active_key_limit_exceeded", "At most 25 active additional keys are allowed. Revoke an unused key first"), 409);
   c.header("Cache-Control", "no-store");
   return c.json({ ...publicKey(row), api_key: key }, 201);
 });
@@ -77,8 +75,8 @@ apiKeysRoute.post("/", async (c) => {
 apiKeysRoute.get("/", async (c) => {
   const db = getDb();
   const userId = c.get("user").id;
-  const keys = await db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).orderBy(apiKeys.createdAt, apiKeys.id);
-  const usage = new Map((await keySpending(db, userId)).map((u) => [u.id, u]));
+  const keys = await db.select().from(apiKeys).where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt))).orderBy(apiKeys.createdAt, apiKeys.id).limit(25);
+  const usage = new Map((await keySpending(db, userId, null, true)).map((u) => [u.id, u]));
   c.header("Cache-Control", "no-store");
   return c.json({ keys: keys.map((key) => ({
     ...publicKey(key),
@@ -110,8 +108,7 @@ apiKeysRoute.delete("/:id", async (c) => {
   const id = c.req.param("id");
   if (!idSchema.safeParse(id).success) return c.json(apiError("invalid_request", "Supply a valid key UUID."), 400);
   const userId = c.get("user").id;
-  // These endpoints never revoke the users key. Self-revocation is safe:
-  // the primary key remains, and recovery can rotate it if it was lost.
+  // Only the primary key may revoke additional keys; it is outside this table.
   const result = await withManagementLock(c, async (tx) => {
     const [revoked] = await tx.update(apiKeys).set({ revokedAt: sql`COALESCE(${apiKeys.revokedAt}, now())` })
       .where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId))).returning();

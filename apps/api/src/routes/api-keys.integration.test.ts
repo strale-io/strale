@@ -1,16 +1,17 @@
 /** Real-Postgres coverage in CI's integration-db lane, never a production DB. */
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { useTestDatabase } from "../test-support/integration-db.js";
-import { apiKeys, capabilities, solutions, solutionSteps, transactions, users, walletTransactions, wallets, walletReservations } from "../db/schema.js";
+import { apiKeyRecoveryTokens, apiKeys, capabilities, solutions, solutionSteps, transactions, users, walletTransactions, wallets, walletReservations } from "../db/schema.js";
 import { generateApiKey, getKeyPrefix, hashApiKey } from "../lib/auth.js";
 import { keyCapError, keySpending } from "../lib/api-keys.js";
 import * as walletService from "../lib/wallet-service.js";
 import { runMigration0124_apiKeys } from "../lib/startup-migrations.js";
 
+vi.mock("../lib/stripe.js", () => ({ getStripe: () => ({checkout: {sessions: {create: async () => ({id: "test-session", url: "https://checkout.example.test"})}}}) }));
 const DATABASE_URL_TEST = useTestDatabase();
 const describeDb = DATABASE_URL_TEST ? describe : describe.skip;
 describeDb("additional keys against real Postgres", () => {
@@ -38,6 +39,7 @@ describeDb("additional keys against real Postgres", () => {
     await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
     await db.delete(walletTransactions).where(eq(walletTransactions.walletId, walletId));
     await db.delete(transactions).where(eq(transactions.userId, userId));
+    await db.delete(apiKeyRecoveryTokens).where(eq(apiKeyRecoveryTokens.userId, userId));
     await db.delete(apiKeys).where(eq(apiKeys.userId, userId));
     await db.delete(wallets).where(eq(wallets.id, walletId));
     await db.delete(users).where(eq(users.id, userId));
@@ -72,7 +74,7 @@ describeDb("additional keys against real Postgres", () => {
     const responses = await Promise.all([call(), call()]);
     expect(responses.map((r) => r.status).sort()).toEqual([200, 429]);
     const rejected = responses.find((r) => r.status === 429)!;
-    expect(await rejected.json()).toMatchObject({ error_code: period === "hourly" ? "key_hourly_cap_exceeded" : "key_total_cap_exceeded" });
+    expect(await rejected.json()).toMatchObject({ error_code: period === "hourly" ? "key_hourly_cap_exceeded" : "key_total_cap_exceeded", details: {retryable: false} });
     const entries = await db.select().from(walletTransactions).where(eq(walletTransactions.apiKeyId, keyId));
     expect(entries).toHaveLength(1); expect(entries[0].amountCents).toBe(-25);
     expect((await db.select().from(wallets).where(eq(wallets.id, walletId)))[0].balanceCents).toBe(975);
@@ -86,8 +88,8 @@ describeDb("additional keys against real Postgres", () => {
     const entries = await db.select().from(walletTransactions).where(eq(walletTransactions.walletId, walletId));
     expect(entries).toHaveLength(1); expect(entries[0].apiKeyId).toBeNull();
   });
-  it("creates once-only secrets, lists net spending, updates, and revokes itself while primary still works", async () => {
-    const created = await request("/v1/api-keys", secret, "POST", { label: "Second", max_spend_total_cents: 75 });
+  it("creates once-only secrets, lists net spending, updates, and primary revokes it while primary still works", async () => {
+    const created = await request("/v1/api-keys", primary, "POST", { label: "Second", max_spend_total_cents: 75 });
     expect(created.status).toBe(201); expect(created.headers.get("cache-control")).toBe("no-store");
     const data = await created.json() as any;
     expect(data.api_key).toMatch(/^sk_live_[0-9a-f]{64}$/);
@@ -97,15 +99,23 @@ describeDb("additional keys against real Postgres", () => {
     const listed = await request("/v1/api-keys"); const listText = await listed.text();
     expect(listText).not.toContain(data.api_key); expect(listText).not.toContain(stored.apiKeyHash);
     expect(JSON.parse(listText).keys.find((k: any) => k.id === data.id)).toMatchObject({ label: "Renamed", max_spend_total_cents: 0, spent_hour_cents: 0, spent_total_cents: 0 });
-    const revoked = await request(`/v1/api-keys/${data.id}`, data.api_key, "DELETE");
+    const revoked = await request(`/v1/api-keys/${data.id}`, primary, "DELETE");
     expect(revoked.status).toBe(200);
     expect((await request("/v1/wallet/balance", data.api_key)).status).toBe(401);
     expect((await request("/v1/wallet/balance", primary)).status).toBe(200);
   });
   it("cannot mutate another account's key or revoke the primary through this API", async () => {
-    const otherId = randomUUID();
-    expect((await request(`/v1/api-keys/${otherId}`, primary, "PATCH", { label: "wrong" })).status).toBe(404);
-    expect((await request(`/v1/api-keys/${otherId}`, primary, "DELETE")).status).toBe(404);
+    const otherUser = randomUUID(), otherId = randomUUID(), otherSecret = generateApiKey();
+    await db.insert(users).values({id: otherUser, email: `${otherUser}@example.test`, apiKeyHash: hashApiKey(otherSecret), keyPrefix: getKeyPrefix(otherSecret)});
+    await db.insert(apiKeys).values({id: otherId, userId: otherUser, label: "Other account", apiKeyHash: hashApiKey(generateApiKey()), keyPrefix: "other"});
+    try {
+      expect((await request(`/v1/api-keys/${otherId}`, primary, "PATCH", { label: "wrong" })).status).toBe(404);
+      expect((await request(`/v1/api-keys/${otherId}`, primary, "DELETE")).status).toBe(404);
+      expect((await db.select().from(apiKeys).where(eq(apiKeys.id, otherId)))[0]).toMatchObject({label: "Other account", revokedAt: null});
+    } finally {
+      await db.delete(apiKeys).where(eq(apiKeys.userId, otherUser));
+      await db.delete(users).where(eq(users.id, otherUser));
+    }
     expect((await request(`/v1/api-keys/${userId}`, primary, "DELETE")).status).toBe(404);
     expect((await request("/v1/wallet/balance")).status).toBe(200);
   });
@@ -114,6 +124,47 @@ describeDb("additional keys against real Postgres", () => {
     expect((await request(`/v1/api-keys/${keyId}`, primary, "PATCH", {})).status).toBe(400);
     expect((await request("/v1/api-keys/invalid", primary, "DELETE")).status).toBe(400);
     expect((await app.request("http://localhost/v1/api-keys")).status).toBe(401);
+  });
+  it.each([
+    ["GET", "/v1/api-keys", undefined, 200],
+    ["POST", "/v1/api-keys", {label: "New agent"}, 201],
+    ["PATCH", "/v1/api-keys/KEY", {label: "Renamed"}, 200],
+    ["DELETE", "/v1/api-keys/KEY", undefined, 200],
+    ["POST", "/v1/auth/api-key", undefined, 200],
+    ["DELETE", "/v1/auth/me", undefined, 200],
+    ["DELETE", "/v1/transactions/TX", undefined, 200],
+    ["POST", "/v1/transactions/TX/audit-token", {}, 200],
+    ["POST", "/v1/wallet/topup", {amount_cents: 1000}, 200],
+  ] as const)("%s %s requires the primary key and still works for it", async (method, template, body, status) => {
+    const id = randomUUID();
+    await db.insert(transactions).values({id, userId, capabilityId, input: {}, priceCents: 0, status: "completed"});
+    const path = template.replace("KEY", keyId).replace("TX", id);
+    const refused = await request(path, secret, method, body);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({error_code: "primary_key_required", message: "Use the account's primary key for this action"});
+    expect((await request(path, primary, method, body)).status).toBe(status);
+  });
+  it("serializes two concurrent creates at 24 active keys", async () => {
+    for (let i = 1; i < 24; i++) {
+      const secret = generateApiKey();
+      await db.insert(apiKeys).values({userId, label: `Agent ${i}`, apiKeyHash: hashApiKey(secret), keyPrefix: getKeyPrefix(secret)});
+    }
+    const results = await Promise.all([request("/v1/api-keys", primary, "POST", {label: "25"}), request("/v1/api-keys", primary, "POST", {label: "26"})]);
+    expect(results.map(r => r.status).sort()).toEqual([201,409]);
+    expect(await results.find(r => r.status === 409)!.json()).toMatchObject({error_code: "active_key_limit_exceeded"});
+    expect(await db.select().from(apiKeys).where(eq(apiKeys.userId, userId))).toHaveLength(25);
+  });
+  it("leaves additional spending keys active after email recovery and warns the owner", async () => {
+    const {issueRecoveryToken} = await import("../lib/key-recovery.js");
+    const issued = await issueRecoveryToken(db, {userId, ipHash: null});
+    const response = await app.request("http://localhost/v1/auth/recover/confirm", {method: "POST", headers: {"Content-Type": "application/json", "X-Forwarded-For": "192.0.2.189"}, body: JSON.stringify({email: `${userId}@example.test`, token: issued.token})});
+    expect(response.status).toBe(200);
+    const result = await response.json() as any;
+    expect(result.message).toContain("Additional keys remain active");
+    expect(result.message).toContain("DELETE /v1/api-keys/{id}");
+    expect((await request("/v1/wallet/balance", primary)).status).toBe(401);
+    expect((await request("/v1/wallet/balance", result.api_key)).status).toBe(200);
+    expect((await call(secret)).status).toBe(200);
   });
   it("refunds release key budget and an old refund cannot offset new spending", async () => {
     const referenceId = randomUUID();

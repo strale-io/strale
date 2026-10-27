@@ -131,22 +131,22 @@ export class Strale {
     return this.request<BalanceResponse>("GET", "/v1/wallet/balance");
   }
 
-  /** Create an additional key. Save api_key securely: it is returned once. */
+  /** Primary key required. Create an additional key (maximum 25 active). Save api_key securely: it is returned once. */
   async createApiKey(options: ApiKeyCreateOptions): Promise<ApiKeyCreated> {
     return this.request("POST", "/v1/api-keys", { ...options });
   }
 
-  /** List additional keys and their ledger-derived spending, including revoked keys. */
+  /** Primary key required. List up to 25 active keys and their ledger-derived spending. */
   async apiKeys(): Promise<ApiKeyUsage[]> {
     return (await this.request<{ keys: ApiKeyUsage[] }>("GET", "/v1/api-keys")).keys;
   }
 
-  /** null removes a cap; zero prevents paid calls. */
+  /** Primary key required. null removes a cap; zero prevents paid calls. */
   async updateApiKey(id: string, options: ApiKeyUpdateOptions): Promise<ApiKey> {
     return this.request("PATCH", `/v1/api-keys/${encodeURIComponent(id)}`, { ...options });
   }
 
-  /** Revoke an additional key. The account's primary key remains available. */
+  /** Primary key required. Revoke an additional key. The account's primary key remains available. */
   async revokeApiKey(id: string): Promise<ApiKey> {
     return this.request("DELETE", `/v1/api-keys/${encodeURIComponent(id)}`);
   }

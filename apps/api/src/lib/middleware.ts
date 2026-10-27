@@ -39,6 +39,14 @@ export async function authMiddleware(
   await next();
 }
 
+/** Account management is reserved for the primary key; run after auth. */
+export async function requirePrimaryKey(c: Context<AppEnv>, next: Next): Promise<Response | void> {
+  if (c.get("apiKeyId") != null) {
+    return c.json(apiError("primary_key_required", "Use the account's primary key for this action"), 403);
+  }
+  await next();
+}
+
 /**
  * Optional auth: validates API key if present, but does NOT 401 if missing.
  * Used for routes that accept both authenticated and unauthenticated requests

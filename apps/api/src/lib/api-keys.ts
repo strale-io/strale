@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { apiKeys, users } from "../db/schema.js";
 import { getKeyPrefix, hashApiKey } from "./auth.js";
+import { logError } from "./log.js";
 import { apiError, type ApiError } from "./errors.js";
 import type { User } from "../types.js";
 import type { WalletTx } from "./wallet-service.js";
@@ -29,16 +30,20 @@ export async function authenticateApiKey(key: string): Promise<{
   const candidates = await db.select({ key: apiKeys, user: users })
     .from(apiKeys).innerJoin(users, eq(apiKeys.userId, users.id))
     .where(and(eq(apiKeys.keyPrefix, prefix), isNull(apiKeys.revokedAt), isNull(users.deletedAt)));
-  const match = candidates.find((row) => hashMatches(row.key.apiKeyHash, hash));
+  const match = candidates.find((row) => !row.key.revokedAt && !row.user.deletedAt && hashMatches(row.key.apiKeyHash, hash));
   if (!match) return null;
 
   // Fresh rows avoid even an UPDATE statement. The database predicate handles
   // races across processes: at most one actual row write per minute per key.
   if (!match.key.lastUsedAt || Date.now() - match.key.lastUsedAt.getTime() >= 60_000) {
-    await db.update(apiKeys).set({ lastUsedAt: sql`now()` }).where(and(
-      eq(apiKeys.id, match.key.id), isNull(apiKeys.revokedAt),
-      sql`(${apiKeys.lastUsedAt} IS NULL OR ${apiKeys.lastUsedAt} <= now() - interval '1 minute')`,
-    ));
+    try {
+      await db.update(apiKeys).set({ lastUsedAt: sql`now()` }).where(and(
+        eq(apiKeys.id, match.key.id), isNull(apiKeys.revokedAt),
+        sql`(${apiKeys.lastUsedAt} IS NULL OR ${apiKeys.lastUsedAt} <= now() - interval '1 minute')`,
+      ));
+    } catch (err) {
+      logError("api-key-last-used-update-failed", err, { api_key_id: match.key.id });
+    }
   }
   return { user: match.user, apiKeyId: match.key.id };
 }
@@ -49,7 +54,7 @@ export async function authenticateApiKey(key: string): Promise<{
  * so a late refund cannot cancel unrelated new spending. No shadow counters.
  * Optional keyId scopes the authoritative check; list gets all keys at once.
  */
-export async function keySpending(tx: WalletTx, userId: string, keyId: string | null = null): Promise<Array<{
+export async function keySpending(tx: WalletTx, userId: string, keyId: string | null = null, activeOnly = false): Promise<Array<{
   id: string; spent_hour_cents: number; spent_total_cents: number;
 }>> {
   const rows = await tx.execute(sql`
@@ -67,6 +72,7 @@ export async function keySpending(tx: WalletTx, userId: string, keyId: string | 
       WHERE d.api_key_id = k.id AND d.type = 'purchase' AND d.amount_cents < 0
     ) p ON true
     WHERE k.user_id = ${userId} ${keyId ? sql`AND k.id = ${keyId}` : sql``}
+      ${activeOnly ? sql`AND k.revoked_at IS NULL` : sql``}
     GROUP BY k.id
   `);
   return rows.map((r: { id: string; spent_hour_cents: string; spent_total_cents: string }) => ({
@@ -88,8 +94,8 @@ export async function keyCapError(
   ] as const) {
     if (limit !== null && spent + requestedCents > limit) {
       return apiError(period === "hourly" ? "key_hourly_cap_exceeded" : "key_total_cap_exceeded",
-        `This key's ${period} spend limit would be exceeded. Raise this key's limit in key settings or use another key.`,
-        { spent_cents: spent, requested_cents: requestedCents, limit_cents: limit });
+        `This key's ${period} spend limit would be exceeded. Ask the account owner to raise this key's limit using the primary key, or use another key.`,
+        { spent_cents: spent, requested_cents: requestedCents, limit_cents: limit, retryable: false });
     }
   }
   return null;

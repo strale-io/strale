@@ -23,12 +23,22 @@ test('key methods use the documented HTTP methods, paths and JSON bodies', async
 });
 
 test('key cap refusal preserves stable code and details', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => Response.json({ error_code: 'key_total_cap_exceeded', message: "Raise this key's limit in key settings or use another key.", details: { limit_cents: 25 } }, { status: 429 }));
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ error_code: 'key_total_cap_exceeded', message: "Raise this key's limit in key settings or use another key.", details: { limit_cents: 25, retryable: false } }, { status: 429 }));
   const client = new Strale({ apiKey: 'test-key' });
   await assert.rejects(client.do({ capability_slug: 'test', inputs: {}, max_price_cents: 25 }), (error) => {
     assert.ok(error instanceof StraleError);
     assert.equal(error.errorCode, 'key_total_cap_exceeded');
-    assert.deepEqual(error.details, { limit_cents: 25 });
+    assert.deepEqual(error.details, { limit_cents: 25, retryable: false });
     return true;
   });
 });
+
+for (const [status, code] of [[403, 'primary_key_required'], [409, 'active_key_limit_exceeded']]) {
+  test(`key management preserves ${code}`, async (t) => {
+    t.mock.method(globalThis, 'fetch', async () => Response.json({error_code: code, message: 'Action required'}, {status}));
+    const client = new Strale({apiKey: 'test-key'});
+    await assert.rejects(client.createApiKey({label: 'Agent'}), error => {
+      assert.ok(error instanceof StraleError); assert.equal(error.statusCode, status); assert.equal(error.errorCode, code); return true;
+    });
+  });
+}

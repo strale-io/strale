@@ -157,24 +157,22 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 ## Several agents on one wallet
 
 Create a separate additional key per agent with `POST /v1/api-keys`. Authenticate
-with your primary key or an additional key. Save `api_key` from the 201 response
+with your primary key. Save `api_key` from the 201 response
 securely: it is shown once and never included in list/update/revoke responses.
 
 ```json
 {"label":"Invoice agent","max_spend_per_hour_cents":100,"max_spend_total_cents":1000}
 ```
 
-- `GET /v1/api-keys` lists additional keys (including revoked ones): `id`,
+- `GET /v1/api-keys` lists at most 25 active additional keys (revoked keys are excluded): `id`,
   `key_prefix`, `label`, both caps, `spent_hour_cents`, `spent_total_cents`,
   `created_at`, `last_used_at`, `revoked_at`. Dates are ISO 8601 or null.
 - `PATCH /v1/api-keys/{id}` updates label and/or caps. Omitted fields stay as
   they are; null removes a cap; zero prevents paid calls. Caps are integer
-  EUR cents from 0 through 2147483647. Labels are 1–100 characters after trimming.
-- `DELETE /v1/api-keys/{id}` revokes idempotently. An additional key can revoke
-  itself: the primary key is outside this API, so it remains available (or
-  recoverable through the existing email recovery flow).
+  EUR cents from 0 through 2147483647. Labels are 1–64 characters after trimming; control characters are rejected, including before trimming.
+- `DELETE /v1/api-keys/{id}` revokes idempotently. Only the primary key can revoke additional keys. The primary key remains available or recoverable through email recovery.
 
-All four endpoints require Bearer auth and share a 5 requests/second/account
+All four endpoints require the primary key as Bearer auth and share a 5 requests/second/account
 management limit. A revoked key gets exactly the same 401 body as an unknown key.
 The primary key and its account cap remain in place. Every additional-key paid
 capability or solution call must pass both the account cap and its own caps.
@@ -182,7 +180,7 @@ x402 payments are unchanged.
 
 A refusal returns HTTP 429 and `error_code` of `key_hourly_cap_exceeded` or
 `key_total_cap_exceeded`, with `spent_cents`, `requested_cents`, and `limit_cents`
-in `details`. Raise that key's cap or use another key. `spend_cap_exceeded`
+in `details`, alongside `retryable: false`. Ask the owner to raise that key's cap using the primary key, or use another key. `spend_cap_exceeded`
 continues to mean the account hourly limit. The hour is a rolling 60 minutes.
 Spending is ledger purchases, including open async reservations, less refunds
 linked to the original purchase. A refund restores that purchase's budget; its
@@ -192,8 +190,18 @@ Last-used timestamps update at most once a minute per key across replicas.
 Revocation/cap updates serialize with debits on the wallet row lock; an already
 locked call can finish before revocation takes effect. Free calls have no debit.
 
-All keys have account management authority, including changing caps and creating
-keys. These limits protect against accidental runaway spending; they are not a
-permission boundary against a key holder who deliberately changes them. Keep
-the primary key securely as your recovery key. The dashboard key UI is follow-up.
-See `/openapi.json` for the complete endpoint schemas.
+Additional keys are spending keys: they can execute capabilities/solutions and
+read balances, transactions and results, but cannot manage the account. Creating,
+listing, updating or revoking keys, rotating the primary key, closing the account,
+erasing transactions, reissuing audit links, submitting account-holder disputes and starting a Stripe wallet top-up
+require the primary key. Additional keys receive HTTP 403 `primary_key_required`
+with "Use the account's primary key for this action".
+
+At most 25 non-revoked additional keys can exist per account. The 26th create
+returns HTTP 409 `active_key_limit_exceeded`: "Revoke an unused key first".
+Email recovery rotates only the primary key. Additional keys survive recovery and
+can still spend up to their caps. Use the recovered primary key to review
+`GET /v1/api-keys` and revoke unused or unrecognized keys with
+`DELETE /v1/api-keys/{id}`. Keeping additional keys active avoids unexpectedly
+stopping every agent when the owner recovers the primary key. Keep that primary
+key secure. The dashboard key UI is follow-up. See `/openapi.json` for schemas.
