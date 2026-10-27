@@ -243,7 +243,7 @@ export const PUBLIC_DESCRIPTIONS_0124: readonly PublicDescriptionRow[] = [
   {
     "slug": "paid-api-preflight",
     "old_description": "Check a paid API before your agent spends money on it: reachability, SSL, response time and the payment handshake (L402, x402, MPP). Returns proceed, caution or avoid, with the payment details.",
-    "description": "Check an API's reachability, TLS and HTTP 402 payment response for L402, x402 or MPP. Returns payment details and a proceed, caution or avoid result."
+    "description": "Check an API's reachability, HTTPS use and HTTP 402 payment response for L402, x402 or MPP. Returns payment details and a proceed, caution or avoid result."
   },
   {
     "slug": "password-strength",
@@ -319,6 +319,11 @@ export const PUBLIC_DESCRIPTIONS_0124: readonly PublicDescriptionRow[] = [
     "slug": "slovak-company-data",
     "old_description": "Look up a Slovak company in RPO, the Statistical Office's register of legal persons. Returns name, address, legal form, registration details and statutory representatives.",
     "description": "Look up a Slovak company in RPO, including name, address, legal form, registration details and representatives where available."
+  },
+  {
+    "slug": "social-profile-check",
+    "old_description": "Check username availability across 7 platforms: GitHub, YouTube, TikTok, Reddit, Pinterest, npm, PyPI.",
+    "description": "Check whether a name is taken as an npm package, a PyPI project or a GitHub organisation, via each registry's official API."
   },
   {
     "slug": "spanish-company-data",

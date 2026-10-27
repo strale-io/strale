@@ -68,7 +68,7 @@ output_field_reliability:
   suggestions: rare
 limitations:
   - title: Format validation only
-    text: Validates format and checksum — does not verify the TIN with tax authorities
+    text: Validates the number format only. It does not check check digits or confirm the number with the tax authority
     category: accuracy
     severity: info
   - title: Country prefix auto-detection

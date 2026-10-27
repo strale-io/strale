@@ -146,7 +146,7 @@ output_field_reliability:
   available: guaranteed
 limitations:
   - title: Country domains and niche platforms are not checked
-    text: Checks .com availability and common social handles — country TLDs and niche platforms are not checked
+    text: Checks .com, .io, .ai, .co and .dev availability and the name on GitHub, npm and PyPI. Country domains and other platforms are not checked
     category: coverage
     severity: info
     workaround: Supplement with whois-lookup for specific TLDs and social-profile-check for additional platform availability

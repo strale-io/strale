@@ -288,3 +288,16 @@ npx tsx scripts/smoke-test.ts --slug email-validate
 ```
 
 For each active changed tool, repeat validation/readiness/smoke under normal operator controls; no dormant tool may be activated or called. DB-backed `checkReadiness(slug)` must be checked separately because it was not available here. Deployment itself runs block 0124; there is no manual production-copy UPDATE and no onboarding write left to perform for the listed rows. Post-deploy ledger query and public-API comparison above remain unverified until deployment. No new capabilities or upstream access paths were built.
+
+## Review follow-up (2026-10-27)
+
+An independent review returned GO. It confirmed that all 75 guard values match production exactly, so the block updates every one. Its should-fix items are applied:
+
+- `social-profile-check` was served with copy that #731 made false (seven platforms, Reddit among them). Its manifest was already right, but no block carried it. Block 0124 now has a 76th guarded row for it, using the live text.
+- `paid-api-preflight` said "TLS", but the executor only checks that the URL uses `https://`. It now says "HTTPS use", in the manifest and in the block data.
+- Four limitations contradicted their executors. They are corrected, and reach production with the limitations sync run:
+  - `tax-id-validate` and `vat-format-validate` claimed check-digit validation; neither validates check digits.
+  - `price-compare` claimed Norway and Finland. Only Sweden and Denmark map to a PriceRunner site, and the executor's unsupported-country error now says so too.
+  - `startup-domain-check` named only `.com` and "social handles". It checks five domain endings plus GitHub, npm and PyPI.
+
+The block's ledger hash was refreshed, because the block has not been merged. `charity-lookup-uk`'s Scottish-coverage wording is left as the report describes.

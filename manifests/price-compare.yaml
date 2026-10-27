@@ -68,10 +68,10 @@ output_field_reliability:
   average_price: guaranteed
   highest_price: guaranteed
 limitations:
-  - title: Only Nordic countries are supported
+  - title: Only Sweden and Denmark are supported
     text: >-
-      Covers Sweden, Norway, Denmark and Finland through PriceRunner. Other countries return an
-      unsupported-country error and are not billed.
+      Covers Sweden and Denmark through PriceRunner. Other countries return an unsupported-country
+      error and are not billed.
     category: coverage
     severity: warning
   - title: Personal and member prices are not included
