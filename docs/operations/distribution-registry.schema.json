@@ -50,7 +50,7 @@
         },
         "status": {
           "type": "string",
-          "enum": ["proposed", "submitted", "open", "merged", "listed", "published", "rejected", "closed", "withdrawn", "unknown"]
+          "enum": ["proposed", "submitted", "open", "merged", "listed", "published", "rejected", "closed", "withdrawn", "unknown", "built"]
         },
         "status_date": {
           "$ref": "#/$defs/isoDate",
