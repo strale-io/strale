@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../../lib/anthropic-client.js";
 import { MODELS } from "../../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 
 /**
  * Shared LLM-backed candidate resolver for name-based registry lookups.
@@ -54,7 +55,7 @@ export async function resolveCandidate(opts: ResolveOptions): Promise<ResolveRes
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required for name resolution.");
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
 
   const numbered = candidates
     .map((c, i) => `${i + 1}. ${c.name}${c.extra ? ` — ${c.extra}` : ""} [id=${c.id}]`)

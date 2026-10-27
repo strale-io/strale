@@ -1,3 +1,5 @@
+import { MODELS } from "../src/lib/models.js";
+import { createAnthropicClient } from "../src/lib/anthropic-client.js";
 /**
  * CEO dashboard generator.
  *
@@ -51,9 +53,8 @@ async function toPlainEnglish(subjects: string[]): Promise<string[]> {
     x.replace(/^\w+(\([^)]*\))?!?:\s*/, "").replace(/^./, (c) => c.toUpperCase()));
   if (!process.env.ANTHROPIC_API_KEY || subjects.length === 0) return fallback;
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const res = await new Anthropic().messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const res = await createAnthropicClient().messages.create({
+      model: MODELS.capability_default.id,
       max_tokens: 500,
       messages: [{
         role: "user",

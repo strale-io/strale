@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
@@ -119,7 +120,7 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
     ? `Extract the following data from this web page and return it as structured JSON:\n\n${extract}`
     : "Extract the main content and key data from this web page and return it as structured JSON.";
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
 
   // Budget raised 4000 -> 16000 (2026-08-17, PR #314) so most legitimate
   // extractions fit; extractJsonWithLlm refuses distinctly (rather than

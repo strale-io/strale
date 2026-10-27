@@ -1,7 +1,8 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonObject } from "./lib/llm-json.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
 import {
   MAX_DECODED_IMAGE_BYTES,
@@ -85,7 +86,7 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
     };
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const r = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 4000,

@@ -1,10 +1,11 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
@@ -61,7 +62,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const r = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 1500,

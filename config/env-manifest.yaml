@@ -943,16 +943,6 @@
     - production
   set_in:
     - railway
-- name: RISK_NARRATIVE_MODEL
-  purpose: Override for the pinned Claude model risk-narrative-generate uses (defaults to the models.ts registry pin). Kept as an env override for fast rollback; the registry entry (apps/api/src/lib/models.ts, role capability_reasoning) is the source of truth for the default.
-  provider: Anthropic
-  holder: petter
-  cost_class: none
-  required_in: []
-  set_in:
-    - none
-  docs: apps/api/src/lib/models.ts
-  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: SDDA_API_CLIENT_ID
   purpose: Latvian SDDA (Enterprise Register) OAuth client ID for latvian-company-data-sdda.
   provider: SDDA (Latvia)

@@ -1,3 +1,5 @@
+import { persistCallCost } from "../lib/persist-call-cost.js";
+import { setCostDeadline } from "../lib/call-cost.js";
 import { refusalDetails } from "../lib/capability-refusal.js";
 import { Hono, type Context } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
@@ -598,6 +600,7 @@ function executeWithHardTimeout<T>(
  */
 async function settleReceiptFor(transactionId: string | null | undefined): Promise<void> {
   if (!transactionId) return;
+  persistCallCost(transactionId);
   await settleExecutionReceipt(getDb(), { transactionId, rail: "v1_do" });
 }
 
@@ -670,6 +673,7 @@ doRoute.post(
     body.timeout_seconds ?? DEFAULT_TIMEOUT_SECONDS,
     MAX_TIMEOUT_SECONDS,
   );
+  setCostDeadline(timeoutSeconds * 1000);
   const dryRun: boolean = body.dry_run === true;
   // `min_sqs` retired with the SQS engine (DEC-20260503-B). Silently ignored
   // when present in the body; not parsed, not gated, not echoed.
@@ -2079,6 +2083,9 @@ async function executeSync(
     // block treats that as execution_failed and refunds nothing (no
     // debit committed).
     await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '15s'`);
+    // Known cost gap: a wallet rollback (including the 15 s timeout) removes
+    // the transaction row even after billable LLM spend. No cost UPDATE can
+    // persist that spend; the margin view therefore understates upstream cost.
     // Cert-audit Y-5: bound the FOR UPDATE wait time so a long-running
     // tx for the same user can't pin a fresh request indefinitely. 5s
     // is generous for the typical sync wallet tx (~10-50ms) and still

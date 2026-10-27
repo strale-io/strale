@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "../anthropic-client.js";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { DigestData } from "./types.js";
 import { logError, logWarn } from "../log.js";
 import { MODELS } from "../models.js";
@@ -124,7 +125,7 @@ export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
   }
 
   try {
-    const client = new Anthropic({ apiKey });
+    const client = createAnthropicClient({ apiKey });
     const response = await client.messages.create({
       model: MODELS.digest.id,
       max_tokens: 1500,

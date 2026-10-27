@@ -975,6 +975,17 @@
         "capabilities.manifest_text_hash"
       ],
       "sha256": "ce057a7a1d73438dee1b227e111d4f43c559ec0b05bc9a59966bec2cd84c20e7"
+    },
+    {
+      "id": "M072",
+      "function": "runMigration0129_transactionCost",
+      "title": "marginal per-call costs, no historical estimates/backfill",
+      "added": "2026-10-27",
+      "columns_written": [
+        "transactions.cost_breakdown",
+        "transactions.cost_cents"
+      ],
+      "sha256": "fdb8d33999a002560925e31697ba59f246b0c8823f47dc38a01f81fe7e57353c"
     }
   ],
   "known_overlaps": [

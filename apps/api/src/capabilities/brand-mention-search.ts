@@ -1,7 +1,8 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Uses Serper.dev API for search (avoids CAPTCHA issues from direct Google scraping)
@@ -61,7 +62,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   // extractJsonWithLlm's stop_reason check now catches the truncation case
   // the old try/catch's "response may have been truncated" message was
   // guessing at — a genuine max_tokens cutoff is refused distinctly, before

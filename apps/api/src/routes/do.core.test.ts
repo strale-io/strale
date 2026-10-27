@@ -99,6 +99,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { DrizzleQueryError } from "drizzle-orm/errors";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
@@ -111,6 +112,8 @@ const mocks = vi.hoisted(() => ({
   recordedSelects: [] as Array<{ table: unknown; cond: unknown }>,
   outerInserts: [] as Array<{ table: unknown; vals: unknown }>,
   dbTransactionCalls: 0,
+  costEvents: [] as string[],
+  failCostWrite: false,
   // Set per-test before the request; consumed by db.transaction(cb).
   txRef: { current: null as unknown },
 }));
@@ -131,13 +134,24 @@ vi.mock("../db/index.js", () => {
       insert: (table: unknown) => ({
         values: (vals: unknown) => {
           mocks.outerInserts.push({ table, vals });
-          return Promise.resolve([]);
+          const result = Promise.resolve([]) as any;
+          result.returning = async () => [{ id: "33333333-3333-3333-3333-333333333333" }];
+          return result;
         },
       }),
-      execute: async () => [],
+      update: () => ({ set: () => ({ where: async () => [] }) }),
+      execute: async (query: any) => {
+        if (new PgDialect().sqlToQuery(query).sql.includes("SET cost_cents")) {
+          mocks.costEvents.push("cost-write");
+          if (mocks.failCostWrite) throw new Error("cost db unavailable");
+        }
+        return [];
+      },
       transaction: async (cb: (tx: unknown) => unknown) => {
         mocks.dbTransactionCalls++;
-        return cb(mocks.txRef.current);
+        const result = await cb(mocks.txRef.current);
+        mocks.costEvents.push("debit-commit");
+        return result;
       },
     }),
   };
@@ -411,6 +425,8 @@ beforeEach(() => {
   mocks.recordedSelects = [];
   mocks.outerInserts = [];
   mocks.dbTransactionCalls = 0;
+  mocks.costEvents = [];
+  mocks.failCostWrite = false;
   mocks.txRef.current = null;
   mockMatchCapability.mockReset();
   mockGetExecutor.mockReset();
@@ -1094,4 +1110,46 @@ it("returns exact field advice from a paid executor refusal without billing or c
   const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
   expect(tx.__updateCalls.filter(c => c.table === wallets)).toHaveLength(0);
   expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+});
+
+describe("POST /v1/do — cost bookkeeping cannot affect settlement", () => {
+  it.each([false, true])("writes cost only after debit commit; failing cost=%s preserves the paid response", async (failCost) => {
+    const user = buildUserRow();
+    mocks.outerSelectQueue.push([user]);
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    mockGetExecutor.mockReturnValue(vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: "2026-10-27T00:00:00Z" } })));
+    const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10_000 }, transactionId: randomUUID() });
+    mocks.txRef.current = tx;
+    mocks.failCostWrite = failCost;
+    const res = await makeApp().request("/v1/do", {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "hello" }, max_price_cents: 100 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.result).toMatchObject({ price_cents: 5, wallet_balance_cents: 9995 });
+    await flushMicrotasks();
+    expect(mocks.costEvents).toEqual(["debit-commit", "cost-write"]);
+    expect(tx.__insertCalls.filter((entry: any) => entry.table === walletTransactions)).toHaveLength(1);
+  });
+});
+
+
+it.each([false, true])("free-tier: cost failure=%s preserves the response without a wallet debit", async (failCost) => {
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user], [{ balanceCents: 10_000 }]);
+  mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, isFreeTier: true } });
+  mockGetExecutor.mockReturnValue(vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test" } })));
+  mocks.failCostWrite = failCost;
+  const response = await makeApp().request("/v1/do", {
+    method: "POST", headers: authHeaders(),
+    body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "hello" }, max_price_cents: 100 }),
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    result: { transaction_id: "33333333-3333-3333-3333-333333333333", status: "completed", price_cents: 0, output: { ok: true } },
+  });
+  await flushMicrotasks();
+  expect(mocks.costEvents).toEqual(["cost-write"]);
+  expect(mocks.dbTransactionCalls).toBe(0);
 });

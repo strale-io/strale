@@ -61,6 +61,7 @@ describe("product-reviews-extract output-truncation handling", () => {
 
     expect(messagesCreate).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ max_tokens: 8000 }),
+      expect.objectContaining({ maxRetries: 0, timeout: expect.any(Number) }),
     );
   });
 

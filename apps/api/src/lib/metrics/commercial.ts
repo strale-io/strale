@@ -838,3 +838,41 @@ export function activatingSlugs(
     .map(([slug, payers]) => ({ slug, payers }))
     .sort((a, b) => b.payers - a.payers);
 }
+
+export interface ToolMargin {
+  tool: string;
+  calls: number;
+  revenue_cents: number;
+  /** All priced components, including components of incomplete-cost calls. */
+  known_cost_cents: number;
+  cohort_cost_cents: number;
+  known_calls: number;
+  known_revenue_cents: number;
+  unknown_cost_share: number;
+  /** Matched known-cost cohort only; never subtract partial costs from all revenue. */
+  margin: number | null;
+  flag: "negative" | "thin" | null;
+}
+export function toolMargin(row: Omit<ToolMargin, "unknown_cost_share" | "margin" | "flag">, minimumKnownCalls = 20): ToolMargin {
+  const margin = row.known_calls >= minimumKnownCalls && row.known_revenue_cents > 0
+    ? (row.known_revenue_cents - row.cohort_cost_cents) / row.known_revenue_cents : null;
+  return { ...row, unknown_cost_share: row.calls ? 1 - row.known_calls / row.calls : 0,
+    margin, flag: row.known_calls >= minimumKnownCalls && row.cohort_cost_cents > row.known_revenue_cents ? "negative" : margin !== null && margin < 0.30 ? "thin" : null };
+}
+/** Historical NULLs stay unknown. Excludes harness traffic using the commercial population. */
+export async function marginPerTool(window: Window): Promise<ToolMargin[]> {
+  const result = await rows<Record<string, string>>(sql`
+    SELECT COALESCE('solution:' || t.solution_slug, c.slug, 'unknown') AS tool,
+      COUNT(*) AS calls,
+      COALESCE(SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END), 0) AS revenue_cents,
+      COUNT(t.cost_cents) AS known_calls,
+      COALESCE(SUM(t.cost_cents), 0) AS cohort_cost_cents,
+      COALESCE(SUM(COALESCE(t.cost_cents, (t.cost_breakdown->>'known_cost_cents')::numeric)), 0) AS known_cost_cents,
+      COALESCE(SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END) FILTER (WHERE t.cost_cents IS NOT NULL), 0) AS known_revenue_cents
+    FROM transactions t LEFT JOIN capabilities c ON c.id = t.capability_id
+    WHERE t.status IN ('completed', 'failed') AND t.created_at >= ${iso(window.from)}
+      AND t.created_at < ${iso(window.to)} AND ${externalCustomers("t")}
+    GROUP BY 1 ORDER BY SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END) DESC`);
+  return result.map((r) => toolMargin({ tool: r.tool!, calls: Number(r.calls), revenue_cents: Number(r.revenue_cents),
+    known_calls: Number(r.known_calls), known_cost_cents: Number(r.known_cost_cents), cohort_cost_cents: Number(r.cohort_cost_cents), known_revenue_cents: Number(r.known_revenue_cents) }));
+}
