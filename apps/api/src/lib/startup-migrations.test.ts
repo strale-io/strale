@@ -1467,6 +1467,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0125_apiKeys",
       "runMigration0126_signupSource",
       "runMigration0127_integrityHashIndex",
+      "runMigration0128_manifestTextHash",
     ]);
   });
 });
@@ -2350,7 +2351,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(127);
+    expect(Math.max(...numbers)).toBe(128);
   });
 });
 
@@ -3521,6 +3522,24 @@ describe("startup-migrations: block 0124 (public descriptions)", () => {
       expect(r.old_description, r.slug).not.toBe(r.description);
       const previous = CATALOGUE_COPY_0123_CAPABILITIES.find((p) => p.slug === r.slug);
       if (previous) expect(r.old_description, r.slug).toBe(previous.description);
+    }
+  });
+});
+
+
+describe("startup-migrations — manifest text checkpoint", () => {
+  it("adds only a bare nullable column with an existence guard and safe bind parameters", async () => {
+    const { runMigration0128_manifestTextHash } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: [] });
+    await runMigration0128_manifestTextHash(stub);
+    const statement = stub.renderedSql.join("\n").toLowerCase();
+    expect(statement).toContain("if not exists");
+    expect(statement).toContain("add column manifest_text_hash text;");
+    expect(statement).toContain("set_config('lock_timeout', '3s', true)");
+    expect(statement).not.toMatch(/default|not null|update capabilities/);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter(c => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
     }
   });
 });

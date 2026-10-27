@@ -275,6 +275,7 @@ export const capabilities = pgTable("capabilities", {
   onboardingHookFailures: integer("onboarding_hook_failures").notNull().default(0),
   deactivationReason: text("deactivation_reason"),
   outputFieldReliability: jsonb("output_field_reliability"),
+  manifestTextHash: text("manifest_text_hash"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }
   visible: boolean("visible").notNull().default(false),
   onboardingManifest: jsonb("onboarding_manifest"),

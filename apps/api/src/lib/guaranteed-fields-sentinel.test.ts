@@ -112,3 +112,8 @@ describe("checkGuaranteedFieldsPresent (Gate 3 — strict-missing-only)", () => 
     expect(result.failureReason).toBe("guaranteed_field_missing:<root-not-object>");
   });
 });
+
+it("resolves dotted paths exactly like the runner and reports every missing field", () => {
+  expect(checkGuaranteedFieldsPresent({ nested: { value: null }, rows: [{ id: 0 }] }, { "nested.value": "guaranteed", "rows.0.id": "guaranteed" }).passed).toBe(true);
+  expect(checkGuaranteedFieldsPresent({ nested: {} }, { "nested.value": "guaranteed", other: "guaranteed" })).toMatchObject({ passed: false, missingFields: ["nested.value", "other"] });
+});

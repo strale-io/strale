@@ -231,6 +231,7 @@ export const CAPABILITY_COLUMN_DISPOSITION: Record<string, "declaration" | strin
   id: "surrogate key; slug is the identity a reader can act on",
   created_at: "row bookkeeping",
   updated_at: "row bookkeeping, and it churns on every metadata write",
+  manifest_text_hash: "deploy sync checkpoint; changing it cannot change an execution or its recorded provenance",
   description: "prose for humans and SEO; never read on the execution path",
   category: "catalog taxonomy; routing reads the slug",
   search_tags: "discovery only",

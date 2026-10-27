@@ -860,7 +860,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "8431befe2ff002f5e36dbb510c5997b563100b3b6f444bd73c977b69895cd346",
+      "sha256": "b0ff4016715f52fb223aff8e4548308bb5dc346679fd8169b0a1a61d0ed79765",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -934,6 +934,8 @@
         "archive/receipts/2026-10-27-test-run-distribution-hygiene-round-2.json",
         "archive/receipts/2026-10-27-test-run-distribution-hygiene.json",
         "archive/receipts/2026-10-27-test-run-limitations-sync-mode.json",
+        "archive/receipts/2026-10-27-test-run-manifest-text-sync-round-2.json",
+        "archive/receipts/2026-10-27-test-run-manifest-text-sync.json",
         "archive/receipts/2026-10-27-test-run-production-watch-round2.json",
         "archive/receipts/2026-10-27-test-run-production-watch-round3.json",
         "archive/receipts/2026-10-27-test-run-production-watch.json",

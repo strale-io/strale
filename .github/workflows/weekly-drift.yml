@@ -52,7 +52,7 @@ jobs:
         run: |
           set +e
           set -o pipefail
-          cd apps/api && npx tsx scripts/sweep-manifest-drift.ts 2>&1 | tee /tmp/manifest-drift.txt
+          cd apps/api && npx tsx scripts/sweep-manifest-drift.ts --strict 2>&1 | tee /tmp/manifest-drift.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
