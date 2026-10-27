@@ -42,10 +42,10 @@ describe("public job freshness", () => {
     }
   });
   it("reads durable successes across restarts and ignores unrelated state", async () => {
-    execute.mockResolvedValue([{ source: "durable", id: "retention", at: new Date().toISOString(), last_error: "private" }, { id: "daily-digest", at: new Date().toISOString() }]);
+    execute.mockResolvedValue([{ source: "durable", id: "retention", at: new Date().toISOString(), last_error: "private" }, { source: "durable", id: "meta-daily", at: new Date().toISOString() }]);
     const jobs = await readJobFreshness();
     expect(jobs.find((j) => j.id === "retention")?.ok).toBe(true);
-    expect(jobs.find((j) => j.id === "daily-digest")?.ok).toBe(true);
+    expect(jobs.find((j) => j.id === "meta-daily")?.ok).toBe(true);
   });
   it("persists success only after a successful write and uses no Date binds", async () => {
     execute.mockRejectedValueOnce(new Error("write failed"));

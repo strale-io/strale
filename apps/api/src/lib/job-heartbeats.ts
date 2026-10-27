@@ -83,8 +83,7 @@ export async function readJobFreshness(): Promise<JobFreshness[]> {
     UNION ALL
     SELECT 'heartbeat-feature-start' AS id, last_finished_at AS at, 'epoch' AS source
       FROM job_schedule WHERE job_name = 'heartbeat-feature-start'
-    UNION ALL
-    SELECT 'daily-digest' AS id, max(created_at) AS at, 'snapshot' AS source FROM digest_snapshots
+
   `);
   const successes = new Map(memory);
   const records = rows as unknown as { id: string; at: string | null; source: string }[];
