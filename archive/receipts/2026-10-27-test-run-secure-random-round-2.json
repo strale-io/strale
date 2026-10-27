@@ -1,0 +1,228 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "79d645891033d297c53db66bd059ffb61633331c"
+  },
+  "at": "2026-10-27T11:42:34.147Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "focused_passed": 73,
+    "focused_failed": 0,
+    "full_passed": 6023,
+    "full_skipped": 346,
+    "full_failed": 0,
+    "files_passed": 343,
+    "files_skipped": 33,
+    "production_readiness_verified": false,
+    "uncommitted": true,
+    "original_receipt_sha256": "82f446a6fde06b7eed9d60afba9882c3407f84dcbfb02f5eeba26f9995d8a2c7"
+  },
+  "topic": "secure-random-round-2",
+  "raw": {
+    "ok": true,
+    "focused_passed": 73,
+    "focused_failed": 0,
+    "full_passed": 6023,
+    "full_skipped": 346,
+    "full_failed": 0,
+    "files_passed": 343,
+    "files_skipped": 33,
+    "production_readiness_verified": false,
+    "uncommitted": true,
+    "checks": [
+      {
+        "command": "cd apps/api && npx vitest run src/capabilities/secure-random.test.ts",
+        "result": "passed: 73 tests",
+        "exit_code": 0
+      },
+      {
+        "command": "npm test",
+        "result": "passed: 6023 tests, 346 skipped; 343 files passed, 33 skipped",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsc --noEmit -p apps/api/tsconfig.json",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "result": "passed; 22 existing allowlisted findings",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "result": "skipped: sibling frontend absent",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "result": "passed: 0 errors, 15 existing length warnings",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:orient",
+        "result": "passed",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:check",
+        "result": "failed: dirty checkout deliberately retained; clone/branch classification, missing feature upstream, unrelated merged branches",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --manifest ../../manifests/secure-random.yaml",
+        "result": "AUTHORIZATION_UNAVAILABLE: no production write credential",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/validate-capability.ts --slug secure-random",
+        "result": "unavailable: DATABASE_URL required for read-only operator handle",
+        "exit_code": 1
+      },
+      {
+        "command": "cd apps/api && npx tsx scripts/smoke-test.ts --slug secure-random",
+        "result": "unavailable: DATABASE_URL required for read-only operator handle",
+        "exit_code": 1
+      },
+      {
+        "command": "curl https://api.strale.io/health",
+        "result": "HTTP 200; status ok; commit f9c98049a754",
+        "exit_code": 0
+      }
+    ],
+    "source_sha256": {
+      "apps/api/src/capabilities/secure-random.ts": "907fb3b6b7f3fd6d947613664d81ec44809f498503302e604d06484c0bd800c4",
+      "apps/api/src/capabilities/secure-random.test.ts": "039dea3a4019ceeffd3e4f6d0edea91caf502dbf20fb8e0cc9b1e4f35cfc0bd2",
+      "manifests/secure-random.yaml": "a6237afedffa0397f6cfcfbf469f55419134719a8864968ec49f483e32024990"
+    },
+    "original_receipt_sha256": "82f446a6fde06b7eed9d60afba9882c3407f84dcbfb02f5eeba26f9995d8a2c7",
+    "attempts_before_final_results": [
+      "Initial focused rerun: 48 passed, 5 failed because the scalar-only executor still had old object-based tests; tests updated to scalar IDs and rerun successfully.",
+      "Workspace lint:ssrf-inventory and lint:no-external-column-access wrappers exited 1 because the scripts assume repository-root cwd; both passed when invoked directly from the root."
+    ],
+    "reviews": {
+      "technical": "GO; existing dotted-path onboarding blocker confirmed",
+      "product": "GO for capability changes; production onboarding remains blocked"
+    },
+    "onboarding_findings": {
+      "discover_false_supported_for_new_capability": true,
+      "first_onboard_discover": false,
+      "blocker": "Shared onboarding verifier uses top-level lookup for dotted fixture fields; fix dotted-path support before onboarding, preserve authored assertions."
+    }
+  }
+}
