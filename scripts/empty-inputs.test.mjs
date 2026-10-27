@@ -65,7 +65,8 @@ for (const [script, file, value] of [
   ["scripts/check-distribution.mjs", "docs/operations/distribution-registry.yaml", "schema_version: 1\nauthority_active: false\nsurfaces: []"],
 ]) test(`${script}: no records fails`, () => runCase(script, [file], () => write(file, value)));
 for (const [script, dir, keep] of [
-  ["scripts/check-program-tracks.mjs", "docs/programs", (n) => !["cto-readiness", "brand-website"].includes(n)],
+  // Remove every program directory (any program, present or future); keep the README and schema.
+  ["scripts/check-program-tracks.mjs", "docs/programs", (n) => !readdirSync(join(fixture, "docs/programs"), { withFileTypes: true }).find((e) => e.name === n)?.isDirectory()],
   ["scripts/check-research.mjs", "docs/research", (n) => n === "README.md" || n.endsWith(".json")],
   ["scripts/check-receipts.mjs", "archive/receipts", (n) => n === "receipt.schema.json" || !n.endsWith(".json")],
   ["scripts/check-protocol-extraction.mjs", "docs/governance/protocols", () => false],
