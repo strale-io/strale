@@ -34,6 +34,7 @@ export type ErrorCode =
   // invalid_request because the request itself is well-formed — the fault is
   // in the key's reuse, and the caller can fix it by issuing a new one.
   | "idempotency_key_reused"
+  | "request_in_progress"
   // Internal admin surface only — POST /v1/internal/tests/admin/
   // apply-migrations returns this when runStartupMigrations() throws
   // (e.g. block 0062 post-condition violation). Not exposed on the
@@ -89,6 +90,8 @@ export function recoveryDetails(
         : { fix: "Retry after the time in the Retry-After response header; if none is supplied, retry with exponential backoff.", retryable: true };
       break;
     }
+    case "request_in_progress":
+      advice = { retryable: true, retry_after_seconds: 2, fix: "The original request is still running; retry with the same Idempotency-Key after 2 seconds." }; break;
     case "idempotency_key_reused":
       advice = { fix: "Send a new Idempotency-Key for different inputs or a different capability." }; break;
     case "budget_exceeded":

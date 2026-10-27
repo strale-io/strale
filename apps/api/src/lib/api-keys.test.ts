@@ -151,6 +151,16 @@ describe("key limits and ledger accounting", () => {
     expect(text).toContain("p.created_at >= now() - interval '1 hour'");
     expect(params).toEqual([user.id, key.id]);
   });
+  it("H4 includes only open undebited holds in both key caps, with scalar binds", async () => {
+    await keySpending(state.db, user.id, key.id);
+    const { sql: text, params } = checked(queries[0]);
+    expect(text).toContain("UNION ALL");
+    expect(text).toContain("FROM wallet_reservations r");
+    expect(text).toContain("r.user_id = k.user_id AND r.api_key_id = k.id");
+    expect(text).toContain("r.mode = 'hold' AND r.state IN ('reserved', 'executing')");
+    expect(text).toContain("SELECT r.created_at, r.amount_cents AS net_cents");
+    expect(params.every(p => !(p instanceof Date) && !Buffer.isBuffer(p))).toBe(true);
+  });
   it("never exposes hash or plaintext in key metadata", () => {
     const result = publicKey(key);
     expect(result).not.toHaveProperty("apiKeyHash");

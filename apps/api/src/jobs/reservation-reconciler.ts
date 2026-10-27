@@ -126,8 +126,11 @@ export async function runReservationReconcilerOnce(): Promise<ReconcileSummary> 
             .set({
               status: "failed",
               error:
-                "Execution did not complete — the charge was refunded automatically.",
+                row.mode === "hold"
+                  ? "Execution did not complete — reserved funds were released automatically."
+                  : "Execution did not complete — the charge was refunded automatically.",
               completedAt: new Date(),
+              complianceHashState: "pending",
             })
             .where(
               and(

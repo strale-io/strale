@@ -9,7 +9,7 @@ import { additionalPublicPaths } from "./openapi-public-paths.js";
 const errorSchema = {
   type: "object" as const,
   properties: {
-    error_code: { type: "string" as const },
+    error_code: { type: "string" as const, enum: ["insufficient_balance", "no_matching_capability", "capability_unavailable", "execution_failed", "timeout_exceeded", "invalid_request", "rate_limited", "spend_cap_exceeded", "key_hourly_cap_exceeded", "key_total_cap_exceeded", "primary_key_required", "active_key_limit_exceeded", "unauthorized", "not_found", "capability_degraded", "below_quality_threshold", "freshness_check_failed", "latency_threshold_exceeded", "budget_exceeded", "locked", "token_expired", "legacy_token_sunset", "transaction_finalization_failed", "idempotency_key_reused", "request_in_progress", "migration_failed"] },
     message: { type: "string" as const },
     details: {
       type: "object" as const,
@@ -188,7 +188,7 @@ export const openApiSpec = {
           capability_slug: { type: "string" as const, description: "Direct capability slug to execute.", example: "iban-validate" },
           inputs: { type: "object" as const, description: "Capability-specific input fields.", example: { iban: "DE89370400440532013000" } },
           max_price_cents: { type: "integer" as const, description: "Maximum price willing to pay (EUR cents). Required for authenticated requests to paid capabilities." },
-          timeout_seconds: { type: "integer" as const, description: "Max execution time (1-60, default 30)." },
+          timeout_seconds: { type: "integer" as const, description: "Execution budget for synchronous paid wallet calls, in seconds (default 30; effective minimum 5 and maximum 60). Positive values below 5, including fractional values from existing clients, are clamped to 5; values above 60 are clamped to 60. Starts immediately before execution, including retries, and also bounds Anthropic SDK calls. On expiry: HTTP 503 timeout_exceeded, no wallet charge, reservation released. Late executor completion cannot charge. Does not change free-tier, async or solution execution. An executing Idempotency-Key returns HTTP 409 request_in_progress with details.retryable=true and details.retry_after_seconds=2; a completed key replays HTTP 200 with meta.idempotency_replay=true; use a new key to attempt execution again." },
           dry_run: { type: "boolean" as const, description: "If true, returns matched capability without executing.", default: false },
         },
       },
@@ -389,6 +389,15 @@ export const openApiSpec = {
           "401": errorResponse("unauthorized", "Authentication required for paid capabilities."),
           "402": errorResponse("insufficient_balance", "Insufficient wallet balance. Top up at the included checkout URL."),
           "404": errorResponse("no_matching_capability", "No capability matches the task within budget."),
+          "409": {
+            description: "The original request is still running, or the key identifies different work.",
+            content: { "application/json": { schema: errorSchema, examples: {
+              in_progress: { value: { error_code: "request_in_progress", message: "The original request is still running.",
+                details: { retryable: true, retry_after_seconds: 2, fix: "The original request is still running; retry with the same Idempotency-Key after 2 seconds." } } },
+              different_request: { value: { error_code: "idempotency_key_reused", message: "This Idempotency-Key was already used for a different request.",
+                details: { fix: "Send a new Idempotency-Key for different inputs or a different capability." } } },
+            } } },
+          },
           "429": errorResponse("rate_limited", "Rate limit exceeded."),
           "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable (circuit breaker open)."),
         },

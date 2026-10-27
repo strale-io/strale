@@ -97,8 +97,14 @@ function assertTransactional(tx: WalletTx, operation: string): void {
   }
 }
 
+/** Open sync holds have not changed the ledger balance yet. */
+export const availableBalance = sql<number>`(${wallets.balanceCents} - COALESCE((
+  SELECT SUM(amount_cents) FROM wallet_reservations
+  WHERE wallet_id = ${wallets.id} AND mode = 'hold' AND state IN ('reserved', 'executing')
+), 0))::int`;
+
 /**
- * Take the row lock and read the balance.
+ * Take the row lock and read the spendable balance.
  *
  * Separate from the debit so callers can run their own checks between the two
  * while still holding the lock — the spend cap re-check in `/v1/do` depends on
@@ -117,7 +123,13 @@ export async function lockWalletForUser(
     .from(wallets)
     .where(eq(wallets.userId, userId))
     .for("update");
-  return wallet ?? null;
+  if (!wallet) return null;
+  // A separate statement AFTER acquiring the lock is essential: a subquery in
+  // SELECT FOR UPDATE can use the snapshot from before a contended lock wait.
+  const [held] = await tx.execute(sql`SELECT COALESCE(SUM(amount_cents), 0)::int AS cents
+    FROM wallet_reservations WHERE wallet_id = ${wallet.id}
+      AND mode = 'hold' AND state IN ('reserved', 'executing')`);
+  return { ...wallet, balanceCents: wallet.balanceCents - Number(held?.cents ?? 0) };
 }
 
 /** Read a balance without locking. For display and pre-checks only. */
@@ -212,7 +224,7 @@ export async function debit(
       balanceCents: sql`${wallets.balanceCents} - ${amountCents}`,
       updatedAt: new Date(),
     })
-    .where(and(eq(wallets.id, wallet.id), gte(wallets.balanceCents, amountCents)))
+    .where(and(eq(wallets.id, wallet.id), gte(availableBalance, amountCents)))
     .returning({ balanceCents: wallets.balanceCents });
 
   if (!row) {
@@ -348,14 +360,15 @@ export async function forfeitOnClosure(
 ): Promise<number> {
   const wallet = await lockWalletForUser(tx, params.userId);
   if (!wallet) return 0;
-  if (wallet.balanceCents === 0) return 0;
+  const balance = await readBalance(tx, params.userId) ?? 0;
+  if (balance === 0) return 0;
 
   await applyDelta(tx, {
     walletId: wallet.id,
-    deltaCents: -wallet.balanceCents,
+    deltaCents: -balance,
     type: "closure_forfeit",
     description: params.description,
   });
 
-  return wallet.balanceCents;
+  return balance;
 }
