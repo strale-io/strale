@@ -1,0 +1,131 @@
+schema_version: 1
+program: platform-hardening
+program_status: active
+updated: 2026-10-27
+tracks:
+  - id: T1
+    title: "H1: Watch production"
+    status: active
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Implement the post-merge deploy SHA check, external dead-man check
+      with an admin-authenticated job-freshness endpoint, scheduled strale-mcp
+      contract probe and one automatic re-run of a red scheduled workflow (§10
+      items 1, 3, 18). Railway auto-redeploy token remains Petter's decision; do
+      not require it for observation.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Merge SHA is checked against production and mismatch alerts are
+        demonstrated.
+      - Job freshness, published MCP contract and bounded workflow retry are
+        verified.
+    evidence: []
+  - id: T2
+    title: "H2: Build and boot the real image"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Make a fresh DB bootable (transactions_integrity_hash_idx); CI
+      builds and boots the real image and every gate fails on an empty input set
+      (§10 items 2, 12).
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Fresh disposable DB and real image boot succeed in CI.
+      - Empty input sets make every gate fail.
+    evidence: []
+  - id: T3
+    title: "H3: Manifest text and guaranteed fields"
+    status: queued
+    gate: none
+    depends_on:
+      - T2
+    owner: session
+    next_action: After H2, apply manifest text on deploy, make the widened drift
+      sweep fail on differences, check guaranteed fields on real traffic and
+      consolidate fetch/claim guards (§10 items 6, 7, 13). Compliance and
+      methodology publication stays founder-gated.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Deploy text and drift checks agree with manifests.
+      - Guaranteed fields are measured on real traffic; claim/fetch guards cover
+        the expanded surfaces.
+    evidence: []
+  - id: T4
+    title: "H4: Money path"
+    status: queued
+    gate: none
+    depends_on:
+      - T2
+    owner: session
+    next_action: Reserve, execute outside the transaction, then capture; honour
+      timeout_seconds and close the x402 concurrent-replay window (§10 item 4
+      and runner-up). Follow DEC-20260504-A fail-before tests and tier-2 review.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Reservation and capture regression tests discriminate the repaired money
+        path.
+      - Timeout and concurrent x402 replay behavior are verified.
+    evidence: []
+  - id: T5
+    title: "H5: Cost recording and Anthropic client"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Record per-call cost and introduce a shared Anthropic client with
+      bounded timeout, explicit retries and usage (§10 item 5).
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Per-call costs and shared client usage are recorded and verified.
+    evidence: []
+  - id: T6
+    title: "H6: Input validation and fetch hardening"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Add report-only-first dispatch validation, robots.txt, pino redact,
+      shared admin check and missing SSRF ranges; put measured Railway config in
+      code and confirm live values with its access holder (§10 items 8, 9, 11).
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Validation and fetch protections have discriminating checks.
+      - Log redaction is verified and Railway settings are confirmed against
+        measured needs.
+    evidence: []
+  - id: T7
+    title: "H7: Structural clean-up"
+    status: queued
+    gate: none
+    depends_on:
+      - T4
+    owner: session
+    next_action: Split migrations with ledger unchanged and advisory lock, separate
+      do.ts execution/settlement, consolidate helpers and remove dead/SQS
+      remnants, then expand fixture contract coverage (§10 items 14–17).
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Migration ledger and boot behavior remain verified after extraction.
+      - Settlement seams, shared helpers and expanded executor contracts pass
+        their checks.
+    evidence: []
+  - id: T8
+    title: "H8: External log sink"
+    status: founder_gated
+    gate: none
+    depends_on:
+      - T6
+    owner: petter
+    blocker: External log sink and sub-processor/token approval remain with Petter
+      under DEC-20261027-B.
+    next_action: Petter decides whether to enable a log sink and supplies the
+      approved token/sub-processor authority; proceed only after H6 redaction is
+      verified (§10 item 10).
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Founder approval and redaction prerequisite are recorded before enabling
+        a sink.
+      - Approved sink and error-rate alert are verified.
+    evidence: []
