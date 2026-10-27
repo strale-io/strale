@@ -1389,7 +1389,7 @@ describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 57 blocks in historical order", () => {
+  it("exports the expected ledgered blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1464,6 +1464,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0122_correctSanctionsSourceCopy",
       "runMigration0123_catalogueCopy",
       "runMigration0124_publicDescriptions",
+      "runMigration0125_apiKeys",
     ]);
   });
 });
@@ -2347,7 +2348,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(124);
+    expect(Math.max(...numbers)).toBe(125);
   });
 });
 

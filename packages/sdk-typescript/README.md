@@ -131,3 +131,40 @@ Common `errorCode` values include `insufficient_balance`, `budget_exceeded` (the
 ## License
 
 MIT — see [LICENSE](https://github.com/strale-io/strale/blob/main/LICENSE)
+
+### Additional API keys
+
+```typescript
+const agentKey = await strale.createApiKey({
+  label: "Invoice agent",
+  max_spend_per_hour_cents: 100,
+  max_spend_total_cents: 1000,
+});
+// Store agentKey.api_key securely now. It is returned only once.
+const keys = await strale.apiKeys();
+await strale.updateApiKey(agentKey.id, { max_spend_total_cents: 2000 });
+await strale.revokeApiKey(agentKey.id);
+```
+
+Caps are integer EUR cents; null means unlimited, zero blocks paid calls.
+Both account and key caps apply. List results include net ledger spending for
+the rolling hour and lifetime, last-use time, and revocation time, never secrets
+or hashes. Refunds restore the budget of the original purchase. The primary key
+is unchanged and cannot be revoked through these methods. These management
+methods require a client configured with the account's primary key. Additional
+keys may spend and read, but cannot list/manage keys, rotate the primary key,
+close the account, erase transactions, reissue audit links, submit account-holder disputes or start wallet top-ups.
+Those actions return 403 `primary_key_required` for additional keys.
+
+The account may have at most 25 active additional keys; a 26th create returns 409
+`active_key_limit_exceeded` ("Revoke an unused key first"). `apiKeys()` returns
+at most 25 active keys and excludes revoked keys. Labels are trimmed, must be
+1–64 characters and cannot contain control characters. Management is limited to
+5 requests/second/account. Cap errors retain HTTP 429, preserve
+`key_hourly_cap_exceeded` / `key_total_cap_exceeded` in `StraleError.errorCode`
+and include `details.retryable: false`; ask the owner to raise the cap using the
+primary key, or use another key. x402 is unchanged.
+
+Email recovery rotates only the primary key. Additional keys survive and can
+still spend up to their caps. Configure the client with the recovered primary
+key, call `apiKeys()`, and `revokeApiKey(id)` for unused or unrecognized keys.

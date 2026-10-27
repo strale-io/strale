@@ -25,7 +25,7 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities, disputeRequests } from "../db/schema.js";
-import { authMiddleware } from "../lib/middleware.js";
+import { authMiddleware, requirePrimaryKey } from "../lib/middleware.js";
 import { apiError } from "../lib/errors.js";
 import { verifyAuditToken } from "../lib/audit-token.js";
 import { logWarn } from "../lib/log.js";
@@ -73,6 +73,8 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
       authOk = true;
     });
     if (authOk) {
+      const denied = await requirePrimaryKey(c, async () => {});
+      if (denied) return denied;
       const user = c.get("user") as { id: string } | undefined;
       if (user) userId = user.id;
     }

@@ -1,3 +1,4 @@
+import { apiKeysRoute } from "./routes/api-keys.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
@@ -496,6 +497,7 @@ app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
 app.route("/v1/auth", authRoute);
+app.route("/v1/api-keys", apiKeysRoute);
 // F-0-002: DB-backed 1/day limit (survives Railway restarts; in-memory
 // would reset on every redeploy, letting an attacker re-signup by timing
 // their burst around a deploy).

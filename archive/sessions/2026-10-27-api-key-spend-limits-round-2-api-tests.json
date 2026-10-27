@@ -1,0 +1,16 @@
+{
+  "command": "npm --workspace=apps/api test -- --maxWorkers=2",
+  "exit_code": 0,
+  "summary": [
+    "Test Files  340 passed | 32 skipped (372)",
+    "Tests  5844 passed | 345 skipped (6189)",
+    "Duration  155.90s (transform 11.71s, setup 2.55s, import 126.10s, tests 117.74s, environment 50ms)"
+  ],
+  "tail": "\n Test Files  340 passed | 32 skipped (372)\n      Tests  5844 passed | 345 skipped (6189)\n   Start at  09:07:25\n   Duration  155.90s (transform 11.71s, setup 2.55s, import 126.10s, tests 117.74s, environment 50ms)\n",
+  "counts": {
+    "files_passed": 340,
+    "files_skipped": 32,
+    "tests_passed": 5844,
+    "tests_skipped": 345
+  }
+}

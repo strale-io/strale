@@ -10,7 +10,7 @@ const errorSchema = {
   properties: {
     error_code: { type: "string" as const },
     message: { type: "string" as const },
-    details: { type: "object" as const },
+    details: { type: "object" as const, description: "Key cap refusals (HTTP 429: key_hourly_cap_exceeded or key_total_cap_exceeded) include retryable: false, spent_cents, requested_cents and limit_cents. Ask the owner to raise the limit using the primary key, or use another key." },
   },
   required: ["error_code", "message"],
 };
@@ -54,6 +54,29 @@ const suggestRecommendationSchema = {
       data_source: { type: "string" as const, enum: ["internal_testing", "blended", "customer_transactions"] },
     } },
   },
+};
+
+const keyCapSchema = { type: ["integer", "null"], minimum: 0, maximum: 2147483647 };
+const keyInputSchema = {
+  type: "object", additionalProperties: false,
+  properties: { label: { type: "string", minLength: 1, maxLength: 64, pattern: "^[^\\u0000-\\u001f\\u007f-\\u009f]*$", description: "Trimmed; 1–64 characters after trimming; control characters rejected before trimming." }, max_spend_per_hour_cents: keyCapSchema, max_spend_total_cents: keyCapSchema },
+};
+const keyMetadataSchema = {
+  type: "object", required: ["id", "key_prefix", "label", "max_spend_per_hour_cents", "max_spend_total_cents", "created_at", "revoked_at", "last_used_at"],
+  properties: {
+    id: { type: "string", format: "uuid" }, key_prefix: { type: "string" }, label: { type: "string" },
+    max_spend_per_hour_cents: keyCapSchema, max_spend_total_cents: keyCapSchema,
+    created_at: { type: "string", format: "date-time" },
+    revoked_at: { type: ["string", "null"], format: "date-time" }, last_used_at: { type: ["string", "null"], format: "date-time" },
+  },
+};
+const keyResponse = (description: string, schema: object) => ({ description, content: { "application/json": { schema } } });
+const primaryKeyError = { "403": errorResponse("primary_key_required", "Use the account's primary key for this action") };
+const keyErrors = {
+  ...primaryKeyError,
+  "400": errorResponse("invalid_request", "Supply a valid label and non-negative integer caps in cents, or null to remove a cap."),
+  "401": errorResponse("unauthorized", "Invalid API key."),
+  "429": errorResponse("rate_limited", "Key management is limited to 5 requests per second per account."),
 };
 
 export const openApiSpec = {
@@ -190,6 +213,40 @@ export const openApiSpec = {
     },
   },
   paths: {
+    "/v1/api-keys": {
+      post: {
+        tags: ["auth"], summary: "Create an additional API key",
+        description: "The primary key remains unchanged. api_key is returned once; store it securely. Null/omitted caps are unlimited; zero blocks paid calls. Primary key required. Additional keys may spend and read, but cannot manage the account. At most 25 active additional keys per account.",
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { ...keyInputSchema, required: ["label"] } } } },
+        responses: { ...keyErrors, "409": errorResponse("active_key_limit_exceeded", "At most 25 active additional keys are allowed. Revoke an unused key first"), "201": keyResponse("Key created; response has Cache-Control: no-store", { ...keyMetadataSchema, required: [...keyMetadataSchema.required, "api_key"], properties: { ...keyMetadataSchema.properties, api_key: { type: "string", description: "Shown once" } } }), "404": errorResponse("not_found", "Wallet not found.") },
+      },
+      get: {
+        tags: ["auth"], summary: "List additional keys and their spending",
+        description: "Primary key required. Bounded at 25 active (non-revoked) keys; revoked keys are excluded. Never includes plaintext keys or hashes. Spending is net ledger purchases, including open reservations, less refunds linked to the original purchase; the rolling hour uses purchase time. Last-used writes occur at most once per minute per key.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...keyErrors, "200": keyResponse("Additional keys", { type: "object", required: ["keys"], properties: { keys: { type: "array", maxItems: 25, items: { ...keyMetadataSchema, required: [...keyMetadataSchema.required, "spent_hour_cents", "spent_total_cents"], properties: { ...keyMetadataSchema.properties, spent_hour_cents: { type: "integer" }, spent_total_cents: { type: "integer" } } } } } }) },
+      },
+    },
+    "/v1/api-keys/{id}": {
+      patch: {
+        tags: ["auth"], summary: "Update additional key label or caps",
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+
+        description: "Primary key required. Omitted fields stay unchanged; null removes a cap. Lowering below existing spending blocks subsequent paid calls. Revoked keys stay revoked.",
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { ...keyInputSchema, minProperties: 1 } } } },
+        responses: { ...keyErrors, "200": keyResponse("Updated key metadata", keyMetadataSchema), "404": errorResponse("not_found", "Key not found.") },
+      },
+      delete: {
+        tags: ["auth"], summary: "Revoke an additional key",
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+
+        description: "Primary key required. Idempotent. The primary key cannot be revoked through this API and remains usable/recoverable. A call already holding the wallet lock may finish first. Revoked keys return the same 401 as unknown keys.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...keyErrors, "200": keyResponse("Revoked key metadata", keyMetadataSchema), "404": errorResponse("not_found", "Key not found.") },
+      },
+    },
     // ─── Capabilities ──────────────────────────────────────────────────
     "/v1/capabilities": {
       get: {
@@ -497,7 +554,7 @@ export const openApiSpec = {
         tags: ["auth"],
         summary: "Redeem a recovery code and rotate the API key",
         description:
-          "Redeems the single-use code sent by /v1/auth/recover. The previous API key stops working the moment this returns 200. Codes expire 30 minutes after issue. Requesting another does NOT invalidate an outstanding one — several can be live at once, each single-use — because an unauthenticated endpoint that invalidates a code on request lets anyone who knows the address keep cancelling a recovery in progress.",
+          "Redeems the single-use code sent by /v1/auth/recover. Only the primary key rotates; additional keys survive and can still spend up to their caps. Use the new primary key to review GET /v1/api-keys and revoke unused or unrecognized keys with DELETE /v1/api-keys/{id}. The previous primary key stops working the moment this returns 200. Codes expire 30 minutes after issue. Requesting another does NOT invalidate an outstanding one — several can be live at once, each single-use — because an unauthenticated endpoint that invalidates a code on request lets anyone who knows the address keep cancelling a recovery in progress.",
         "x-ratelimit": { limit: 10, window: "5m", scope: "per IP" },
         requestBody: {
           required: true,
@@ -535,13 +592,22 @@ export const openApiSpec = {
         },
       },
     },
+    "/v1/auth/me": {
+      delete: {
+        tags: ["auth"], summary: "Close and redact your account",
+        description: "Primary key required. Irreversible: revokes all keys, clears customer content except legal holds, and forfeits the wallet balance. Processing records and integrity hashes are retained.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...primaryKeyError, "200": keyResponse("Account redacted", {type: "object"}), "401": errorResponse("unauthorized", "Invalid API key.") },
+      },
+    },
     "/v1/auth/api-key": {
       post: {
         tags: ["auth"],
         summary: "Regenerate API key",
-        description: "Generates a new API key and invalidates the current one.",
+        description: "Primary key required. Generates a new primary key and invalidates the current primary key. Additional keys survive rotation; review and revoke unused or unrecognized keys.",
         security: [{ BearerAuth: [] }],
         responses: {
+          ...primaryKeyError,
           "200": {
             description: "New API key",
             content: {
@@ -589,7 +655,7 @@ export const openApiSpec = {
       post: {
         tags: ["wallet"],
         summary: "Create a top-up checkout session",
-        description: "Creates a Stripe Checkout session for wallet top-up. Minimum €10.00.",
+        description: "Primary key required. Creates a Stripe Checkout session for wallet top-up. Minimum €10.00.",
         security: [{ BearerAuth: [] }],
         "x-ratelimit": { limit: 5, window: "1s", scope: "per API key" },
         requestBody: {
@@ -607,6 +673,7 @@ export const openApiSpec = {
           },
         },
         responses: {
+          ...primaryKeyError,
           "200": {
             description: "Checkout session created",
             content: {
@@ -702,12 +769,25 @@ export const openApiSpec = {
         },
       },
     },
+    "/v1/transactions/{id}/dispute": {
+      post: {
+        tags: ["transactions"], summary: "Submit a dispute for human review",
+        description: "Account-holder submissions require the primary key. Anonymous data subjects may instead use a signed audit token with expires_at and a contact email; that path does not require an account key.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: {type: "string", format: "uuid"} },
+          { name: "token", in: "query", required: false, schema: {type: "string"} },
+          { name: "expires_at", in: "query", required: false, schema: {type: "integer"} },
+        ],
+        requestBody: {required: true, content: {"application/json": {schema: {type: "object", required: ["reason"], properties: {reason: {type: "string"}, affected_field: {type: "string"}, contact_email: {type: "string", format: "email"}}}}}},
+        responses: { ...primaryKeyError, "202": keyResponse("Dispute received", {type: "object"}), "400": errorResponse("invalid_request", "Supply a reason and contact email for token-only submissions."), "401": errorResponse("unauthorized", "Authorization or signed audit token required."), "404": errorResponse("not_found", "Transaction not found.") },
+      },
+    },
     "/v1/transactions/{id}/audit-token": {
       post: {
         tags: ["transactions"],
         summary: "Re-issue audit token",
         description:
-          "Issue a new HMAC-signed audit URL for a transaction you own. " +
+          "Primary key required. Issue a new HMAC-signed audit URL for a transaction you own. " +
           "Replaces the previous token for the caller's convenience; previous tokens remain valid until their own expires_at (stateless). " +
           "Default TTL 90 days (F-A-006). Caller must own the transaction (same 404 for unknown / cross-user / deleted).",
         security: [{ BearerAuth: [] }],
@@ -732,6 +812,7 @@ export const openApiSpec = {
           },
         },
         responses: {
+          ...primaryKeyError,
           "200": {
             description: "Audit token re-issued.",
             content: {
@@ -756,6 +837,13 @@ export const openApiSpec = {
       },
     },
     "/v1/transactions/{id}": {
+      delete: {
+        tags: ["transactions"], summary: "Redact a transaction",
+        description: "Primary key required. Clears customer content and hides the transaction; integrity hashes remain. Legal holds prevent deletion.",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { ...primaryKeyError, "200": keyResponse("Transaction redacted", {type: "object"}), "401": errorResponse("unauthorized", "Invalid API key."), "404": errorResponse("not_found", "Transaction not found."), "423": errorResponse("locked", "Transaction under legal hold.") },
+      },
       get: {
         tags: ["transactions"],
         summary: "Get transaction detail",

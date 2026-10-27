@@ -120,6 +120,7 @@ export async function reserve(
     transactionId: string;
     description: string;
     ttlMs?: number;
+    apiKeyId?: string | null;
   },
 ): Promise<Reservation> {
   const { wallet, userId, amountCents, transactionId, description } = params;
@@ -128,6 +129,7 @@ export async function reserve(
     wallet,
     amountCents,
     referenceId: transactionId,
+    apiKeyId: params.apiKeyId,
     description,
   });
 
