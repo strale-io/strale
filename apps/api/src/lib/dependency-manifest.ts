@@ -16,6 +16,7 @@
  * 4. Deploy — the invariant checker will flag any remaining code references
  *    to the retired provider's baseUrl
  */
+import { STRALE_USER_AGENT } from "./site-access.js";
 
 export type AuthType =
   | "api-key-header"
@@ -31,7 +32,7 @@ export type ProviderTier =
 
 export interface HealthProbe {
   path: string;
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "HEAD";
   body?: Record<string, unknown>;
   healthyStatuses: number[];
   timeoutMs: number;
@@ -73,6 +74,30 @@ export interface DependencyProvider {
 }
 
 export const PROVIDERS: DependencyProvider[] = [
+  {
+    name: "npm",
+    displayName: "npm",
+    description: "Public package registry JSON API; no credentials or billable calls.",
+    baseUrl: "https://registry.npmjs.org",
+    authType: "none",
+    extraProbeHeaders: { "User-Agent": STRALE_USER_AGENT },
+    healthProbe: { path: "/-/ping", method: "GET", healthyStatuses: [200], timeoutMs: 5000, skipAuth: true },
+    capabilities: ["npm-package-info", "package-docs"],
+    tier: "free",
+  },
+
+  {
+    name: "pypi",
+    displayName: "PyPI",
+    description: "Public package registry JSON API; no credentials or billable calls.",
+    baseUrl: "https://pypi.org",
+    authType: "none",
+    extraProbeHeaders: { "User-Agent": STRALE_USER_AGENT },
+    healthProbe: { path: "/simple/requests/", method: "HEAD", healthyStatuses: [200], timeoutMs: 5000, skipAuth: true },
+    capabilities: ["pypi-package-info", "package-docs"],
+    tier: "free",
+  },
+
   {
     name: "nta-houjin",
     displayName: "NTA Corporate Number Web-API",

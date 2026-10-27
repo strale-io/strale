@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-367 files (340 with a recorded intent, 27 without).
+368 files (341 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-package-docs.md`](_general/from-code/2026-10-27-package-docs.md) | Build and revise package-docs using public npm/PyPI registry APIs; leave the uncommitted changes for the orchestrator... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-nta-env-set-in-railway.md`](_general/from-code/2026-10-27-nta-env-set-in-railway.md) | record that the NTA Corporate Number Web-API application ID is now set in Railway. |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |

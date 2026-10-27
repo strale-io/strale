@@ -92,6 +92,86 @@ non_vendor_sentinels:
   - Other
   - internal
 vendors:
+  - id: npm
+    name: npm
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-10-27
+        decision: unknown
+        reason: Existing package-info API plus portfolio plan 2.7 package-docs; terms recorded before implementation.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      pricing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      licensing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      redistribution:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+    authorization:
+      status: unknown
+  - id: pypi
+    name: PyPI
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-10-27
+        decision: unknown
+        reason: Existing package-info API plus portfolio plan 2.7 package-docs; terms recorded before implementation.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      pricing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      licensing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      redistribution:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+    authorization:
+      status: unknown
   - id: browserless
     name: Browserless (Chromium)
     aliases:

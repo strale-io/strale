@@ -72,6 +72,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | movitz | Movitz | rejected | 2026-09-11 | unknown | unknown |
 | ncbi-eutils | NCBI E-utilities | active | 2026-09-10 | unknown | unknown |
 | notion | Notion | active | 2026-09-10 | unknown | unknown |
+| npm | npm | active | 2026-10-27 | unknown | conditional (verified 2026-10-27) |
 | nta-houjin | NTA Corporate Number Web-API | active | 2026-10-27 | unknown | permitted (verified 2026-10-27) |
 | nvd | NVD (NIST) | active | 2026-09-10 | unknown | unknown |
 | openalex | OpenAlex | active | 2026-09-10 | unknown | permitted (verified 2026-09-06) |
@@ -84,6 +85,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | persona | Persona | rejected | 2026-09-11 | unknown | unknown |
 | prh | PRH | active | 2026-09-10 | unknown | unknown |
 | publicnode | PublicNode Ethereum RPC | retired | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
+| pypi | PyPI | active | 2026-10-27 | unknown | conditional (verified 2026-10-27) |
 | railway | Railway | active | 2026-09-10 | unknown | unknown |
 | registru-centras | Registru centras | active | 2026-09-10 | unknown | unknown |
 | rekt-database | Rekt Database | active | 2026-09-10 | unknown | unknown |

@@ -89,6 +89,39 @@ export interface VendorTermsRecord {
 
 export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
   {
+    vendor: "npm",
+    hosts: ["registry.npmjs.org", "api.npmjs.org"],
+    capabilities: ["dependency-audit", "npm-package-info", "package-docs", "package-security-audit", "social-profile-check", "startup-domain-check"],
+    resale: "permitted",
+    terms_url: "https://docs.npmjs.com/policies/open-source-terms/",
+    accessed: "2026-10-27",
+    how_read: "Read the actual official Open Source Terms (including Acceptable Use) and https://docs.npmjs.com/policies/crawlers/ through the web reader. No website crawling is used by the capability.",
+    findings: [
+      "Acceptable Use 9: 'You may replicate data from the Public Registry using the Public APIs per this Agreement.' Use section 2 permits non-CLI software through public APIs. Website automation is separately restricted.",
+      "Acceptable Use 17 prohibits unreasonable load; five million requests in a month is an example of unreasonable load, not a quota. The crawler policy's one request/second concerns experimental WEBSITE crawlers, not a registry API allowance. Stop on 403/429; no retries or bypass.",
+      "Package content remains under its author's licence, not a blanket npm resale licence. Return the licence, registry package URL and published author/maintainer names for attribution, never contact details; preserve README markings except explicit truncation. No security/audit data (Conditions 4), or unrelated personal-data collection (Acceptable Use 4). Attribution does not replace package-specific licence obligations.",
+    ],
+    decision_ref: "DEC-20261023-A; portfolio plan 2.7; orchestrator instruction 2026-10-27",
+  },
+  {
+    vendor: "PyPI",
+    hosts: ["pypi.org"],
+    url_prefixes: ["https://pypi.org/pypi/"],
+    capabilities: ["dependency-audit", "package-docs", "package-security-audit", "pypi-package-info", "social-profile-check", "startup-domain-check"],
+    resale: "permitted",
+    terms_url: "https://policies.python.org/pypi.org/Terms-of-Service/",
+    accessed: "2026-10-27",
+    how_read: "Read pypi.org/policy/terms-of-use (superseded February 25, 2025), followed its current Terms of Service and Acceptable Use links, and read docs.pypi.org/api/json/ and docs.pypi.org/api/ on the actual official pages.",
+    findings: [
+      "Registry metadata and API use are permitted subject to API terms. User-Generated Content 4 grants the PSF rights to copy and redistribute content unmodified on PyPI, not downstream rights. README and description text remain under each package's own licence; attribution does not grant rights. This permitted record is conditional on those package licences, consistent with config/vendors.yaml (conditional). Return only published attribution names, never contact details.",
+      "API Terms: 'Abuse or excessively frequent requests' may result in suspension. No spam or sale of user personal information. Published authorship is used only for package attribution, never outreach.",
+      "API introduction says no current edge rate limiting for JSON APIs, but reserves blocking irresponsible consumers. Requests are CDN cached, with ETag support; repeated high-volume consumers should use conditional requests/cache, identify their user agent, and avoid thousands of requests in minutes. This executor makes at most two serial requests and stops on blocks. No numeric JSON API quota is promised.",
+      "JSON API documents project and release endpoints. Release-specific responses omit releases; obtain the project response for latest version/history. Project releases is deprecated and may disappear. Description is uploader-provided metadata, not independently checked documentation.",
+    ],
+    decision_ref: "DEC-20261023-A; portfolio plan 2.7; orchestrator instruction 2026-10-27",
+  },
+
+  {
     vendor: "NTA Corporate Number Web-API",
     hosts: ["api.houjin-bangou.nta.go.jp"],
     capabilities: ["japanese-company-data"],
