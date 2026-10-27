@@ -28,6 +28,7 @@
  *   --list   — print the registered contracts and exit 0
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,7 +68,7 @@ const CONTRACTS = [
 
 if (process.argv.includes("--list")) {
   console.log(`Registered shape contracts (${CONTRACTS.length}):`);
-  for (const c of CONTRACTS) {
+  for (const c of requireInputs(CONTRACTS, "shape contracts: registered contracts")) {
     console.log(`  - ${c.name}`);
     console.log(`      backend:  ${c.backendFile}`);
     console.log(`      frontend: ${c.frontendFile}`);
@@ -76,6 +77,8 @@ if (process.argv.includes("--list")) {
   process.exit(0);
 }
 
+// Empty comparison scope is valid when the separately hosted legacy frontend
+// is absent. When present, contracts and fields must both be non-empty.
 if (!existsSync(frontendRoot)) {
   console.log(`Skipping shape-contract check: frontend repo not present at ${frontendRoot}`);
   console.log("  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)");
@@ -156,6 +159,8 @@ function checkContract(c) {
 
   const backendFields = parseFields(backendBody);
   const frontendFields = parseFields(frontendBody);
+  requireInputs(backendFields, "shape contracts: backend fields");
+  requireInputs(frontendFields, "shape contracts: frontend fields");
 
   const missingInFrontend = [];
   const missingInBackend = [];
@@ -185,7 +190,7 @@ function checkContract(c) {
 // ─── Run + report ──────────────────────────────────────────────────────────
 
 let anyFailed = false;
-for (const c of CONTRACTS) {
+for (const c of requireInputs(CONTRACTS, "shape contracts: registered contracts")) {
   const r = checkContract(c);
   console.log(r.summary);
   if (!r.ok) {

@@ -39,6 +39,7 @@
  * than warning -- otherwise the allowlist is a place to park a secret under a
  * path that does not exist, which is green today and permanent tomorrow.
  */
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 
@@ -101,7 +102,7 @@ const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuf
   .filter(Boolean);
 const findings = [];
 
-for (const file of files) {
+for (const file of requireInputs(files, "secrets guard: git ls-files")) {
   let text;
   try {
     if (statSync(file).size > MAX_BYTES) continue;

@@ -15,6 +15,7 @@
 // for a subtree that no longer exists.
 //
 // Usage: node scripts/check-docs-index.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,7 +71,7 @@ export function checkDocsIndex(root) {
     return { findings: [finding("DOCS_README_MISSING", DOCS_README_PATH)], actual: [], referenced: [] };
   }
 
-  const actual = listDocsSubtrees(root);
+  const actual = requireInputs(listDocsSubtrees(root), "docs index: docs subtrees");
   const referenced = listReferencedSubtrees(readFileSync(readmePath, "utf8"));
   const referencedSet = new Set(referenced);
   const actualSet = new Set(actual);

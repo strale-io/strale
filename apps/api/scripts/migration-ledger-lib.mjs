@@ -357,6 +357,9 @@ export function checkLedger(root) {
   }
 
   const current = computeCurrentBlocks(root);
+  if (current.length === 0 || (ledger.blocks ?? []).length === 0) {
+    findings.push({ code: "EMPTY_INPUT", detail: "Migration source and ledger must each contain at least one block" });
+  }
   const currentByFn = new Map(current.map((b) => [b.functionName, b]));
   const ledgerByFn = new Map((ledger.blocks ?? []).map((b) => [b.function, b]));
 

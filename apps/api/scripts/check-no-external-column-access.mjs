@@ -30,6 +30,7 @@
  *   - This script itself.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -64,7 +65,7 @@ function walk(dir) {
 }
 
 const offenders = [];
-for (const file of walk(ROOT)) {
+for (const file of requireInputs(walk(ROOT), "external column guard: source files")) {
   const rel = file.replace(/\\/g, "/");
   if ([...ALLOWLIST_FILES].some((p) => rel.endsWith(p))) continue;
   const raw = readFileSync(file, "utf-8");

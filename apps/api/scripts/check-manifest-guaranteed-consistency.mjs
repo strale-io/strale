@@ -28,6 +28,7 @@
  *       provisioned for unrelated reasons.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,8 +56,9 @@ function scan() {
     process.exit(2);
   }
 
-  const files = readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  const files = requireInputs(readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml")), "manifest guard: manifests/*.{yaml,yml}");
   const violations = [];
+  let parsedManifests = 0;
 
   for (const file of files) {
     let parsed;
@@ -69,12 +71,15 @@ function scan() {
     if (!parsed || typeof parsed !== "object") continue;
     const m = parsed;
 
+    parsedManifests++;
     const reliability = m.output_field_reliability;
     if (!reliability || typeof reliability !== "object") continue;
 
     const guaranteed = Object.entries(reliability)
       .filter(([, lvl]) => lvl === "guaranteed")
       .map(([k]) => k);
+    // Zero guaranteed fields is valid: some manifests promise only common
+    // or rare fields. A nonempty parsed manifest set is still required.
     if (guaranteed.length === 0) continue;
 
     const schemaProps = m.output_schema?.properties || {};
@@ -89,6 +94,7 @@ function scan() {
     }
   }
 
+  requireInputs(parsedManifests, "guaranteed-field consistency: parsed manifests");
   return violations;
 }
 

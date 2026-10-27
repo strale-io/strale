@@ -47,7 +47,7 @@ function main(): number {
   const paths = briefPaths(process.argv.slice(2));
   if (paths.length === 0) {
     // No briefs yet is not a failure — the guard is for briefs that exist.
-    console.log("check-ceo-brief: no briefs found in docs/company/briefs/, nothing to check");
+    throw new Error("EMPTY_INPUT: check-ceo-brief: no briefs found in docs/company/briefs/");
     return 0;
   }
   let errors = 0;

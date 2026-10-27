@@ -23,6 +23,7 @@
 // The pre-commit hook (scripts/handoff/regenerate-indexes.mjs) runs the same
 // generation against the staged tree and stages the result; CI's --check is
 // a warning (DEC-20261024-A).
+import { requireInputs } from "./require-inputs.mjs";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -272,6 +273,10 @@ export function generateAll(root, { check = false } = {}) {
 if (isDirectInvocation(import.meta.url)) {
   const root = repoRootFrom(import.meta.url);
   const check = process.argv.includes("--check");
+  // Archive and handoff are established inputs, even though an individual
+  // category can legitimately contain no files.
+  requireInputs(collectAllSubtreeStats(root), "archive index: subtrees");
+  requireInputs(collectHandoffEntries(root), "handoff index: entries");
   const result = generateAll(root, { check });
 
   if (!check) {

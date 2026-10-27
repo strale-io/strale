@@ -11,6 +11,7 @@
 // Exit codes: 0 — every non-archived .mjs parses cleanly. 1 — at least one
 // syntax error (or the syntax-check subprocess itself failed to run).
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -32,7 +33,7 @@ function listMjsFiles(dir, acc = []) {
   return acc;
 }
 
-const files = listMjsFiles(SCRIPTS_DIR).sort();
+const files = requireInputs(listMjsFiles(SCRIPTS_DIR).sort(), "mjs syntax: API scripts/**/*.mjs");
 const failures = [];
 
 for (const file of files) {
