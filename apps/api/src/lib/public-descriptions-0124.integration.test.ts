@@ -23,8 +23,10 @@ describeMaybe("block 0124 against a real database", () => {
     await client`CREATE TABLE IF NOT EXISTS startup_migration_ledger (
       block text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now(),
       rows_affected integer NOT NULL DEFAULT 0)`;
-    [parked] = await client<{ rows_affected: number; applied_at: Date }[]>`
-      SELECT rows_affected, applied_at FROM startup_migration_ledger WHERE block = ${BLOCK}`;
+    // Read applied_at as text: in CI the driver returned it without Date
+    // methods, and restoring it as text needs no Date bind either.
+    [parked] = await client<{ rows_affected: number; applied_at: string }[]>`
+      SELECT rows_affected, applied_at::text AS applied_at FROM startup_migration_ledger WHERE block = ${BLOCK}`;
     await client`DELETE FROM startup_migration_ledger WHERE block = ${BLOCK}`;
     for (const [suffix, description] of [["match", "Old description."], ["edited", "Edited since snapshot."], ["unchanged", "Same description."]]) {
       await client`INSERT INTO capabilities
@@ -38,7 +40,7 @@ describeMaybe("block 0124 against a real database", () => {
     await client`DELETE FROM capabilities WHERE slug LIKE ${`${prefix}-%`}`;
     await client`DELETE FROM startup_migration_ledger WHERE block = ${BLOCK}`;
     if (parked) await client`INSERT INTO startup_migration_ledger (block, rows_affected, applied_at)
-      VALUES (${BLOCK}, ${parked.rows_affected}, ${parked.applied_at.toISOString()})`;
+      VALUES (${BLOCK}, ${parked.rows_affected}, ${parked.applied_at})`;
     await client.end();
   });
 
