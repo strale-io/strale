@@ -123,7 +123,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "7851087701ccd78a349267bd736798f8cada1fc081523fbd2f2bd0719cee8b2f",
+      "sha256": "114f9d70879bf61d88f8e703e78197932eab0e2c9d59fa91b5b19a6fd1f072b9",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -400,6 +400,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
+        "handoff/_general/from-code/2026-10-27-fleet-credentials-email.md",
         "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md",
         "handoff/_general/from-code/security-audit-api.md",
@@ -568,7 +569,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "540be2e94d0af4e3ee85f25bfb649c33ef3883043160dbeb804c1f5c458c9fb5",
+      "sha256": "3e95d7562cfccab17874ed205de6ab55264a65c84d42cc32353b5aa245e8c424",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -712,6 +713,7 @@
         "handoff/_general/from-code/2026-10-27-checkin-morning.md",
         "handoff/_general/from-code/2026-10-27-distribution-hygiene.md",
         "handoff/_general/from-code/2026-10-27-distribution-strategy.md",
+        "handoff/_general/from-code/2026-10-27-fleet-credentials-email.md",
         "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "handoff/_general/from-code/2026-10-27-per-call-cost.md",
         "handoff/_general/from-code/2026-10-27-production-watch.md",
@@ -873,7 +875,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "41d93e509e66239f23997ba504f00b80fd24c0ec49b9a3f8a1d7a0fa37dd7d26",
+      "sha256": "8c816050ea3a99cb2211641ba91a50f11a977077f006ac8f7a2a02b31ca9ad99",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

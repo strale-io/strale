@@ -1,6 +1,8 @@
 # External email threads awaiting a reply. Procedure: docs/operations/accounts-and-email.md
-# (DEC-20261027-A). Every email a session sends, or drafts for Petter to send, gets a row
-# here in the same session; the daily run checks the inbox (Junk included) for replies.
+# (DEC-20261027-A, narrowed by DEC-20261027-C). Every email drafted or sent for Strale gets
+# a row here in the same session. Cloud sessions write rows with status: draft; only the
+# local "Strale checkin morning" session on the PC sends them and checks the inbox (Junk
+# included) for replies. Statuses: draft | awaiting_reply | closed.
 # Dates are calendar dates in Swedish local time.
 threads:
   - id: nta-invoice-app-id

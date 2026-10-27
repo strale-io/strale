@@ -53,7 +53,7 @@ with the measured figure and its source, not a promise.
 
 - **Owner:** [D]. Free registration with wallet sign-in; listing text is ours.
   Sign in with a dedicated zero-balance wallet created for directory accounts,
-  its key stored in Bitwarden (`strale-portfolio`); never with the wallet that
+  its key stored in Bitwarden (project `strale`); never with the wallet that
   receives payments.
 - **Precondition:** research D1 source texts merged.
 - **Action, not email:** update the origin record at

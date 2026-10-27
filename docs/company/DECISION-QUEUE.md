@@ -961,6 +961,18 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**DEC-20261027-C** · `decided` · owner Petter · 2026-10-27
+Accounts, secrets and email now follow the fleet security rule (wow-core SECURITY_CORE §1a).
+*What happened:* Petter agreed the rule in the wow-core Infrastructure session. It was relayed on the agent bus (moonlighter-ab/agent-bus#2), and Petter told this session to act on it.
+*What changed:*
+- Sessions prepare sign-ups and secret names. Petter does the sign-up, the terms, the 2FA and the Bitwarden paste.
+- The Bitwarden project is `strale`, and cloud sessions read it with a read-only token.
+- Secret names are `STRALE_<PROVIDER>_<WHAT>`. Only read- and test-tier keys go in the store; production keys stay in Railway.
+- Mail is read and sent only by the local PC session. Cloud sessions draft OUTBOX rows.
+- DEC-20261027-A, CHARTER.md item 2, DAILY-RUN.md A2 and `docs/operations/accounts-and-email.md` are updated to match.
+*What remains:* Petter adds the keys on the list in `handoff/_general/from-code/2026-10-27-fleet-credentials-email.md`.
+*How you'd reverse it:* a new founder decision. The platform rule against sessions signing up or setting up TOTP stays either way.
+
 **Old daily digest retired** · `decided` · owner Petter · 2026-10-27
 The old daily-digest email (`apps/api/src/jobs/daily-digest.ts`) is retired rather than restored.
 *What happened:* the new production watch (`/health/jobs`, PR #774) reported on its first run that the digest had last succeeded 196 days earlier, on 2026-04-14. That matches DEC-20260511-F, which in May decided to restore the pipeline; the restoration never happened. Petter decided in session ("retire the old digest"): the CEO morning brief (DEC-20260822-A) already does this job, and restoring it would give him two overlapping morning emails.
