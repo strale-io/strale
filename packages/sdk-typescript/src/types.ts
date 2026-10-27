@@ -3,6 +3,8 @@
 export interface StraleOptions {
   /** API key (starts with sk_) */
   apiKey: string;
+  /** Identify a framework wrapper instead of the underlying SDK. */
+  clientHeader?: string;
   /** Base URL of the Strale API. Defaults to https://api.strale.io */
   baseUrl?: string;
   /** Default max_price_cents for do() calls */
@@ -56,7 +58,7 @@ export interface DoMeta {
 export interface DoResponse extends DoResult {
   /** Full result block as returned by the API. */
   _result: DoResult;
-  /** Trust layer metadata (quality scores, execution guidance, audit trail). */
+  /** Execution metadata (execution guidance and audit context). */
   meta: DoMeta;
   free_tier?: boolean;
   usage?: { calls_today: number; daily_limit: number; resets_at: string };

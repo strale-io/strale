@@ -34,6 +34,12 @@
         "minLength": 1,
         "description": "A repo-relative path or a URL substantiating the claim. Required for status allowed and needs_evidence."
       },
+      "scan_paths": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string" },
+        "description": "Optional exact repo-relative enforcement paths; omitted means all scanned public surfaces."
+      },
       "surfaces": {
         "type": "array",
         "minItems": 1,

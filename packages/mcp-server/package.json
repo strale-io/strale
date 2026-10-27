@@ -1,8 +1,8 @@
 {
   "name": "strale-mcp",
   "mcpName": "io.github.strale-io/strale",
-  "version": "0.2.8",
-  "description": "MCP server for Strale — pre-flight check any paid API before your agent pays, plus 250+ business data, compliance, and validation tools for Claude, Cursor, Windsurf, and any MCP client",
+  "version": "0.2.9",
+  "description": "MCP server for Strale: one connection to hundreds of pay-per-call tools \u2014 company records, sanctions and PEP screening, email/phone/IBAN/VAT checks, web page reading, document extraction. Works with Claude, Cursor, VS Code and any MCP client.",
   "type": "module",
   "main": "./dist/server.js",
   "exports": {
@@ -21,7 +21,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/server.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.0",
@@ -39,16 +40,11 @@
     "cursor",
     "windsurf",
     "paid-api",
-    "preflight",
     "x402",
-    "l402",
-    "mpp",
-    "trust",
-    "verification",
     "agentic-payments"
   ],
-  "author": "Strale <hello@strale.io> (https://strale.dev)",
-  "homepage": "https://strale.dev",
+  "author": "Strale <hello@strale.io> (https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)",
+  "homepage": "https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/strale-io/strale.git",

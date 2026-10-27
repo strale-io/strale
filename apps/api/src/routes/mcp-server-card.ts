@@ -1,3 +1,4 @@
+import { readPackageVersion } from "strale-mcp/tools";
 /**
  * MCP Server Card — /.well-known/mcp.json
  *
@@ -46,32 +47,25 @@ async function buildCard(): Promise<object> {
 
   const card = {
     name: "strale",
-    version: "0.1.0",
+    version: readPackageVersion(),
     description: `Give your agent a new tool without opening another provider account. ${count} tools accessible via MCP and REST API; company data across ${countryCount} countries.`,
     transport: [
       {
         type: "streamable-http",
-        url: "https://api.strale.io/mcp",
+        url: "https://api.strale.io/mcp?src=mcp-card",
       },
     ],
     authentication: {
       type: "bearer",
       description:
-        "Strale API key (sk_live_...). The strale_search tool works without authentication. All other tools require an API key from https://strale.dev",
+        "Strale API key (sk_live_...). The strale_search tool works without authentication. Paid execution and wallet tools require an API key from https://strale.dev?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
     },
     tools: "dynamic",
     products: [
       {
-        name: "Payee Assurance",
-        description:
-          "Decision-ready off-chain counterparty answer (KYB / sanctions / UBO / IBAN-name match) in a single auditable call.",
-        endpoint: "https://api.strale.io/v1/do",
-        mcp_tool: "strale_execute",
-      },
-      {
         name: "Web3 Assurance",
         description:
-          "Decision-ready on-chain counterparty answer (wallet / contract / token / protocol / bridge). Verdict + reason_codes + sidecar audit_url. Outbound + reverse-call modes; sub-second SLA in reverse-call.",
+          "Decision-ready on-chain counterparty answer (wallet / contract / token / protocol / bridge). Returns counterparty signals for review. Requires an API key.",
         endpoint: "https://api.strale.io/v1/web3-assurance",
         mcp_tool: "strale_web3_assurance",
       },
@@ -79,11 +73,11 @@ async function buildCard(): Promise<object> {
     resources: [],
     prompts: [],
     links: {
-      homepage: "https://strale.dev",
-      documentation: "https://strale.dev/docs",
-      pricing: "https://strale.dev/pricing",
-      agent_card: "https://api.strale.io/.well-known/agent-card.json",
-      a2a_endpoint: "https://api.strale.io/a2a",
+      homepage: "https://strale.dev?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      documentation: "https://strale.dev/docs?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      pricing: "https://strale.dev/pricing?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      agent_card: "https://api.strale.io/.well-known/agent-card.json?src=mcp-card",
+      a2a_endpoint: "https://api.strale.io/a2a?src=mcp-card",
       source: "https://github.com/petterlindstrom79/strale",
     },
     contact: {

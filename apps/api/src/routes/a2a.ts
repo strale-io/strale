@@ -165,7 +165,7 @@ function payableViaX402(row: {
  * 404'd, and logged a false `x402_unknown_slug` demand row.
  */
 function solutionEndpoint(slug: string): string {
-  return `${PUBLIC_API_BASE}/x402/v2/solutions/${slug}`;
+  return `${PUBLIC_API_BASE}/x402/v2/solutions/${slug}?src=a2a-card`;
 }
 
 export async function buildAgentCard(): Promise<{ card: object; etag: string }> {
@@ -242,7 +242,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         ? " FREE — no API key, no payment, no signup."
         : payable
           ? ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call — pay per use` +
-            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}, no signup needed.`
+            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}?src=a2a-card, no signup needed.`
           : ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call via API key.` +
             ` Pay-per-call is not available for this one.`;
       return {
@@ -254,7 +254,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         // Extension fields (ignored by strict A2A parsers, actionable by the rest)
         price_cents: cap.isFreeTier ? 0 : cap.priceCents ?? 0,
         currency: "EUR",
-        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/${cap.slug}` : undefined,
+        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/${cap.slug}?src=a2a-card` : undefined,
       };
     });
 
@@ -288,7 +288,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       id: "product-web3-assurance",
       name: "Web3 Assurance",
       description:
-        "Decision-ready answer about an on-chain counterparty (wallet, contract, token, DeFi protocol, or bridge) in a single call. Returns verdict (proceed/review/block/insufficient_evidence), reason_codes (UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, audit firms, EAS, ERC-8004, more), and a sidecar audit_url. Two modes: outbound (agent vetting recipient pre-payment, 8s budget) or reverse-call (x402 service publisher gating an inbound buyer, sub-second SLA).",
+        "Decision-ready answer about an on-chain counterparty (wallet, contract, token, DeFi protocol, or bridge) in a single call. Returns verdict (proceed/review/block/insufficient_evidence), reason_codes (UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, audit firms, EAS, ERC-8004, more), and a sidecar audit_url. Two modes: outbound (agent vetting recipient pre-payment, 8s budget) or reverse-call (x402 service publisher gating an inbound buyer, limited evaluator set).",
       tags: [
         "web3",
         "defi",
@@ -343,13 +343,13 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
   const card = {
     name: "Strale",
     description:
-      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Every call returns an audit record.`,
-    url: `${BASE_URL}/a2a`,
+      "A library of pay-per-call tools for agents: company records, sanctions and PEP screening, email, phone, IBAN and VAT checks, web page reading and document extraction. Pay with an API key or, on eligible tools, an x402 wallet with no signup. Live counts: https://api.strale.io/v1/platform/facts",
+    url: `${BASE_URL}/a2a?src=a2a-card`,
     version: "1.0.0",
-    documentationUrl: "https://strale.dev/docs",
+    documentationUrl: "https://strale.dev/docs?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
     provider: {
       organization: "Strale",
-      url: "https://strale.io",
+      url: "https://strale.dev",
     },
     capabilities: {
       streaming: false,
@@ -367,11 +367,11 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       x402: {
         network: "base",
         currency: "USDC",
-        catalog: `${PUBLIC_API_BASE}/x402/catalog`,
+        catalog: `${PUBLIC_API_BASE}/x402/catalog?src=a2a-card`,
         discovery: `${PUBLIC_API_BASE}/.well-known/x402.json`,
         how: "POST the skill's x402_endpoint, settle the 402 challenge in USDC on Base, replay. Payment is the authentication — no signup.",
       },
-      api_key: { signup: "https://strale.dev/signup", trial_credits_eur: 2 },
+      api_key: { signup: "https://strale.dev/signup?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1" },
     },
     defaultInputModes: ["application/json", "text/plain"],
     defaultOutputModes: ["application/json"],
@@ -608,7 +608,10 @@ async function handleMessageSend(
     // Cert-audit C6: bound the inner /v1/do call. A2A is meant for slow
     // capabilities, so 90s gives async-friendly room without leaving
     // a request stuck if the inner handler hangs.
-    const resp = await fetch(`${BASE_URL}/v1/do`, {
+    const executionUrl = new URL(`${BASE_URL}/v1/do`);
+    const src = c.req.query("src");
+    if (src) executionUrl.searchParams.set("src", src);
+    const resp = await fetch(executionUrl.toString(), {
       method: "POST",
       headers,
       body: JSON.stringify(doBody),
@@ -647,7 +650,7 @@ async function handleMessageSend(
       const fix = (data.details as Record<string, unknown> | undefined)?.fix;
       if (typeof fix === "string") helpText += ` ${fix}`;
       if (errorCode === "unauthorized" && !authHeader) {
-        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, get an API key with €2 free credits at https://strale.dev";
+        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, create an account; trial credits are available where eligible at https://strale.dev";
       }
 
       return c.json({

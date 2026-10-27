@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull().unique(),
   keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  signupSrc: text("signup_src"), // nullable venue label, DB CHECK limits it to 64 characters
   signupIpHash: varchar("signup_ip_hash", { length: 16 }),
   maxSpendPerHourCents: integer("max_spend_per_hour_cents")
     .notNull()

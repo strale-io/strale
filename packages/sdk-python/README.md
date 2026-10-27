@@ -1,6 +1,6 @@
 # straleio
 
-Python client for the [Strale](https://strale.dev) API: call any Strale tool from your code with one API key, paid per call from your Strale balance.
+Python client for the [Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) API: call any Strale tool from your code with one API key, paid per call from your Strale balance.
 
 ## Install
 
@@ -26,7 +26,7 @@ print(result.output)      # the tool's structured fields
 print(result.provenance)  # Provenance(source=..., fetched_at=...)
 ```
 
-`do()` takes a `DoRequest` and returns a `DoResponse`, or a `DryRunResponse` when `dry_run=True` (the return type is the union of the two). `max_price_cents` is required: it caps what one call may cost, and the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.dev/capabilities](https://strale.dev/capabilities) and in `strale.capability(slug)`.
+`do()` takes a `DoRequest` and returns a `DoResponse`, or a `DryRunResponse` when `dry_run=True` (the return type is the union of the two). `max_price_cents` is required: it caps what one call may cost, and the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.dev/capabilities](https://strale.dev/capabilities?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) and in `strale.capability(slug)`.
 
 ## Describe the task instead of naming the tool
 
@@ -81,14 +81,14 @@ res = httpx.post(
 )
 ```
 
-Each bundle's inputs and price are on its page at [strale.dev/solutions](https://strale.dev/solutions).
+Each bundle's inputs and price are on its page at [strale.dev/solutions](https://strale.dev/solutions?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Free tools
 
 This client always sends an API key. Free tools cost nothing with a key. They also work without any key at a small daily limit, if you call the REST API directly:
 
 ```bash
-curl -X POST https://api.strale.io/v1/do \
+curl -X POST https://api.strale.io/v1/do?src=pypi-readme \
   -H 'Content-Type: application/json' \
   -d '{"capability_slug": "email-validate", "inputs": {"email": "hello@example.com"}}'
 ```
@@ -116,7 +116,7 @@ from straleio import StraleError, InsufficientBalanceError
 try:
     strale.do(DoRequest(capability_slug="vat-validate", inputs={"vat_number": "SE556703748501"}, max_price_cents=10))
 except InsufficientBalanceError:
-    ...  # top up at https://strale.dev/topup
+    ...  # top up at https://strale.dev/topup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1
 except StraleError as e:
     print(e.error_code, e.status_code, e)
 ```
@@ -125,9 +125,9 @@ Common `error_code` values include `insufficient_balance`, `budget_exceeded` (th
 
 ## Resources
 
-- [Documentation](https://strale.dev/docs)
-- [Pricing](https://strale.dev/pricing)
-- [Security](https://strale.dev/security)
+- [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Security](https://strale.dev/security?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## License
 

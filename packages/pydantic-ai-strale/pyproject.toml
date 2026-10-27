@@ -31,9 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://strale.dev"
+Homepage = "https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1"
 Repository = "https://github.com/strale-io/strale"
-Documentation = "https://strale.dev/docs"
+Documentation = "https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1"
 
 [tool.setuptools.packages.find]
 include = ["pydantic_ai_strale*"]

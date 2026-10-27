@@ -9,6 +9,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  addedDateForLine,
+  repoRootFrom,
   checkLedger,
   declaredDataFiles,
   extractColumnsWritten,
@@ -376,4 +378,8 @@ test("a declared data file that does not exist fails MIGRATION_DATA_MISSING", ()
     const found = codes(root);
     assert.ok(found.includes("MIGRATION_DATA_MISSING"), found.join(", "));
   });
+});
+
+test("--update accepts an uncommitted appended block beyond HEAD's source length", () => {
+  assert.equal(addedDateForLine(repoRootFrom(import.meta.url), SOURCE_PATH, 999999), null);
 });

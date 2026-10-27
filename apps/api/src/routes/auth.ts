@@ -1,3 +1,4 @@
+import { resolveSignupSource } from "../lib/signup-source.js";
 import { Hono } from "hono";
 import * as walletService from "../lib/wallet-service.js";
 import { eq, sql, and, gte } from "drizzle-orm";
@@ -137,6 +138,7 @@ authRoute.post(
       grantDescription: "Welcome trial credits",
       channel: "register",
       tosVersion: CURRENT_TOS_VERSION,
+      signupSrc: resolveSignupSource(c.req, body),
     });
   } catch (err) {
     if (err instanceof EmailAlreadyRegisteredError) {
@@ -680,6 +682,7 @@ export async function agentSignupHandler(c: Context) {
       grantDescription: "Welcome trial credits (agent self-signup)",
       channel: "agent_signup",
       tosVersion: CURRENT_TOS_VERSION,
+      signupSrc: resolveSignupSource(c.req, body),
     });
   } catch (err) {
     if (err instanceof EmailAlreadyRegisteredError) {
@@ -746,7 +749,7 @@ export async function agentSignupHandler(c: Context) {
           },
         }
       : {}),
-    next_step: `Add "Authorization: Bearer ${apiKey}" to your requests to access 270+ paid capabilities.`,
+    next_step: `Add "Authorization: Bearer ${apiKey}" to your requests to access paid tools.`,
     top_up: "POST /v1/wallet/topup with amount_cents (min 1000) to add more credits.",
   }, 201);
 }

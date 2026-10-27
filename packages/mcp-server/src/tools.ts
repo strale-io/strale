@@ -97,6 +97,7 @@ export interface StraleClientOptions {
   apiKey: string;
   maxPriceCents: number;
   clientIp?: string;
+  src?: string;
   version?: string;
   onFunnelEvent?: (event: McpFunnelEvent) => void;
 }
@@ -112,7 +113,7 @@ function emitFunnelEvent(opts: StraleClientOptions, event: McpFunnelEvent): void
 
 // Attribution client identifier — package name/version, sent as
 // X-Strale-Client on every API call this package makes.
-function readPackageVersion(): string {
+export function readPackageVersion(): string {
   try {
     const pkg = JSON.parse(
       readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
@@ -128,6 +129,13 @@ function readPackageVersion(): string {
 // datapoint was mislabelled by a release. A string a human must remember to
 // bump is a string that will be stale.
 export const STRALE_CLIENT_ID = `strale-mcp/${readPackageVersion()}`;
+
+/** Preserve the venue when MCP hands a caller off to another payment rail. */
+export function attributedUrl(baseUrl: string, path: string, src?: string): string {
+  const url = new URL(`${baseUrl}${path}`);
+  if (src) url.searchParams.set("src", src);
+  return url.toString();
+}
 
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
 
@@ -155,7 +163,7 @@ export async function straleGet<T>(
 export async function stralePost<T>(
   path: string,
   body: Record<string, unknown>,
-  opts: { baseUrl: string; apiKey: string; clientIp?: string },
+  opts: { baseUrl: string; apiKey: string; clientIp?: string; src?: string },
 ): Promise<{ data: T; status: number }> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -170,7 +178,9 @@ export async function stralePost<T>(
     headers["X-Forwarded-For"] = opts.clientIp;
   }
 
-  const resp = await fetch(`${opts.baseUrl}${path}`, {
+  const url = new URL(`${opts.baseUrl}${path}`);
+  if (opts.src) url.searchParams.set("src", opts.src);
+  const resp = await fetch(url.toString(), {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -294,12 +304,12 @@ export async function executeCapability(
               // The machine-actionable option goes first.
               pay_per_call: {
                 how: "No signup. POST to the x402 endpoint below, settle the 402 challenge it returns in USDC on Base, and replay the request — the payment is the authentication.",
-                endpoint: `${opts.baseUrl}/x402/${slug}`,
-                catalog: `${opts.baseUrl}/x402/catalog`,
-                discovery: `${opts.baseUrl}/.well-known/x402.json`,
+                endpoint: attributedUrl(opts.baseUrl, `/x402/${slug}`, opts.src),
+                catalog: attributedUrl(opts.baseUrl, "/x402/catalog", opts.src),
+                discovery: attributedUrl(opts.baseUrl, "/.well-known/x402.json", opts.src),
               },
               api_key: {
-                how: "If a human can complete a web form, https://strale.dev/signup issues a key with €2 of credit and no card.",
+                how: "If a human can complete a web form, https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
                 then: "Reconnect with Authorization: Bearer sk_live_YOUR_KEY",
               },
               free_without_either: `${FREE_TIER_SLUGS.length} capabilities need no key and no payment (10/day per IP): ${FREE_TIER_SLUGS.join(", ")}.`,
@@ -351,7 +361,7 @@ export async function executeCapability(
             error: "Free tier rate limit reached (10 executions/day).",
             fix: typeof details?.fix === "string" && details.fix.includes("https://strale.dev/signup")
               ? details.fix
-              : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for €2 of free credits and send an API key.`,
+              : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for paid access and send an API key.`,
             ...(details ? { details } : {}),
             ...(retryAfter != null ? { retry_after_seconds: retryAfter } : {}),
           }),
@@ -530,6 +540,8 @@ export function registerStraleTools(
   server.registerTool(
     "strale_ping",
     {
+      title: "Check connection",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
         "Checks that the Strale API is reachable and the MCP server is running. Call this before a series of capability executions to verify connectivity, or when troubleshooting connection issues. Returns server status, version, tool count, capability count, solution count, and a timestamp. No API key required.",
       inputSchema: z.object({}),
@@ -558,6 +570,8 @@ export function registerStraleTools(
   server.registerTool(
     "strale_getting_started",
     {
+      title: "Get started with Strale",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
         "Explains how to start using Strale and what is available without credentials. Call this on first connection. Returns the current free-tier capability list with example inputs, the pay-per-call (x402) route that needs no signup, and how to reach the full registry. No API key required.",
       inputSchema: z.object({}),
@@ -605,7 +619,7 @@ export function registerStraleTools(
             type: "text" as const,
             text: JSON.stringify({
               welcome:
-                "Strale is the data layer for AI agents — independently tested, audit-logged data sources" +
+                "Strale is a library of pay-per-call tools for AI agents" +
                 (capabilityCount ? `. ${capabilityCount} capabilities` : "") +
                 (solutionCount ? ` and ${solutionCount} bundled solutions` : "") +
                 " available.",
@@ -618,11 +632,11 @@ export function registerStraleTools(
               // The route an agent can actually take on its own.
               pay_per_call_no_signup: {
                 how: "POST to /x402/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
-                catalog: `${opts.baseUrl}/x402/catalog`,
-                discovery: `${opts.baseUrl}/.well-known/x402.json`,
+                catalog: attributedUrl(opts.baseUrl, "/x402/catalog", opts.src),
+                discovery: attributedUrl(opts.baseUrl, "/.well-known/x402.json", opts.src),
               },
               api_key_alternative:
-                "If a human can complete a web form: https://strale.dev/signup issues a key with €2 of credit, no card.",
+                "If a human can complete a web form: https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
               learn_more:
                 "Call strale_search to browse capabilities, or strale_methodology for how sources are tested and evidenced.",
             }, null, 2),
@@ -636,6 +650,8 @@ export function registerStraleTools(
   server.registerTool(
     "strale_execute",
     {
+      title: "Execute a paid tool",
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
       description:
         "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (10/day limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
@@ -671,6 +687,8 @@ export function registerStraleTools(
   server.registerTool(
     "strale_search",
     {
+      title: "Search tools and bundles",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
         "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, and price in EUR cents. The registry spans company data, compliance, finance, web intelligence, and developer tools. No API key required to search.",
       inputSchema: z.object({
@@ -775,7 +793,7 @@ export function registerStraleTools(
                       showing: page.length,
                       has_more: data.total > skip + page.length,
                       results: page,
-                      tip: "Use strale_execute to run any capability. Use strale_trust_profile for full quality breakdown and execution guidance.",
+                      tip: "Use strale_execute to run any capability. Use strale_trust_profile for current test and availability signals.",
                     },
                     null,
                     2,
@@ -879,7 +897,7 @@ export function registerStraleTools(
                 showing: page.length,
                 has_more: skip + page.length < combined.length,
                 results: page,
-                tip: "Use strale_execute to run any capability. Use strale_trust_profile for full quality breakdown and execution guidance.",
+                tip: "Use strale_execute to run any capability. Use strale_trust_profile for current test and availability signals.",
               },
               null,
               2,
@@ -894,6 +912,8 @@ export function registerStraleTools(
   server.registerTool(
     "strale_balance",
     {
+      title: "Read wallet balance",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
         "Returns the current Strale wallet balance. Call this before executing paid capabilities to verify sufficient funds, or after a series of calls to reconcile spend. Returns balance in EUR cents (integer) and formatted EUR string. Requires an API key — returns an auth instruction if none is configured.",
       inputSchema: z.object({}),
@@ -950,43 +970,26 @@ export function registerStraleTools(
   server.registerTool(
     "strale_methodology",
     {
+      title: "Read testing and source notes",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
-        "Returns Strale's trust methodology as a short reference document — covers test cadence, audit records, and provenance. No API key required.",
+        "Explains testing modes, source context and transaction retrieval. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
-      const methodologyText = `STRALE TRUST METHODOLOGY
-=========================
+      const methodologyText = `STRALE TESTING AND SOURCE NOTES
 
-WHAT STRALE IS
-Strale is data infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every call returns an audit record.
+Strale offers pay-per-call tools and multi-step bundles over MCP and REST.
+Browse each tool's inputs, output fields, price, limitations and source before use.
 
-TEST CADENCE
-Free capabilities are tested hourly with canary inputs that don't consume vendor quota. The scheduler hash-spreads runs across the hour to keep upstream pressure even.
-Paid capabilities are not proactively scheduled. Quality signals come from production traffic, piggyback test suites attached to real customer calls, and any zero-cost auth-less probes the vendor permits.
+Testing differs by tool: scheduled zero-cost probes, fixture tests and suites attached to production calls measure different things. A test result is not a guarantee about the next call.
 
-AUDIT TRAIL
-Every execution writes a transaction row with input, output, provenance (source + fetched_at), latency, price, and a content hash. Retrieve via /v1/audit/{transactionId} or programmatically via strale_transaction.
+Use strale_trust_profile for the current batch projection: badge, tested flag, recent pass rate and last-tested time where available. These signals do not certify a company or a payment.
 
-PROVENANCE
-Every successful call includes:
-  source — the external service that provided the data
-  fetched_at — ISO 8601 timestamp
-  upstream_vendor / acquisition_method — where a vendor sits between Strale and the source (DEC-20261023-A)
-  primary_source_reference — where the primary record has a citable location
+API-key calls expose transaction records through strale_transaction. Audit access and source fields vary by rail and execution mode; check the response. Eligible tools can also be paid through x402 without a Strale account.
 
-LIFECYCLE
-Capabilities transition through states (draft → validating → probation → active → degraded → suspended) via human-driven admin flips. Automatic state transitions retired with the SQS engine in DEC-20260503-B.
-
-CURRENT LIMITATIONS (honest disclosure)
-  Capabilities expose lifecycle_state and last_tested_at but do NOT expose a numeric quality score. The dual-profile SQS engine retired 2026-05-05.
-  Source-health substrate (per-vendor status, fallback availability, last-canary-tested timestamps) is being rebuilt as a separate routing-engine concern.
-  No SOC 2 / ISO 27001 / HIPAA certification.
-  No contractual SLAs.
-
-REFERENCES
-  Decisions DB: DEC-20260503-B (SQS deletion).
-  Public methodology: https://strale.dev/trust/methodology`;
+Live catalogue facts: https://api.strale.io/v1/platform/facts
+Public methodology: https://strale.dev/trust/methodology`;
 
       return { content: [{ type: "text" as const, text: methodologyText }] };
     },
@@ -996,8 +999,10 @@ REFERENCES
   server.registerTool(
     "strale_trust_profile",
     {
+      title: "Read current test and availability signals",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
-        "Returns the trust profile for a capability or solution. Call this before relying on a capability for high-stakes decisions, or when a user asks how reliable a specific check is. Returns lifecycle state, last-tested timestamp, recent test history, known limitations, data source and provenance, and cost envelope. Strale deliberately exposes no single numeric quality score — judge from the test history and limitations. No API key required.",
+        "Reads current public test results for a tool or bundle: badge, tested flag, recent pass rate and last-tested time where available. Use the catalogue for inputs, limitations and sources. No API key required.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -1086,6 +1091,8 @@ REFERENCES
   server.registerTool(
     "strale_transaction",
     {
+      title: "Read a transaction record",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
         "Retrieve a past execution record by transaction ID. Returns inputs, outputs, latency, price, data provenance, success/failure status, and failure categorization. Use this to inspect what a previous strale_execute call returned, debug failures, or provide an audit trail. Free-tier transactions are accessible by ID without an API key.",
       inputSchema: z.object({
@@ -1174,8 +1181,10 @@ REFERENCES
   server.registerTool(
     "strale_web3_assurance",
     {
+      title: "Check on-chain counterparty",
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       description:
-        "Returns a decision-ready answer about an on-chain counterparty (wallet, smart contract, token, DeFi protocol, or bridge) in a single call. Surfaces verdict (proceed/review/block/insufficient_evidence), reason_codes (machine-parsable UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, EAS attestations, ERC-8004 reputation, more), and a sidecar audit_url. Two modes: 'outbound' (agent vetting recipient pre-payment, full evaluator set, 8s budget) or 'reverse-call' (service publisher gating an inbound x402 buyer in real-time, critical evaluators only, sub-second SLA). Use before any agent transacts on-chain — sending value, swapping, staking, minting, bridging, or interacting with a contract.",
+        "Returns a decision-ready answer about an on-chain counterparty (wallet, smart contract, token, DeFi protocol, or bridge) in a single call. Surfaces verdict (proceed/review/block/insufficient_evidence), reason_codes (machine-parsable UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, EAS attestations, ERC-8004 reputation, more), and a sidecar audit_url. Two modes: 'outbound' (agent vetting recipient pre-payment, full evaluator set, 8s budget) or 'reverse-call' (service publisher gating an inbound x402 buyer in real-time, critical evaluators only, limited evaluator set). Use before any agent transacts on-chain — sending value, swapping, staking, minting, bridging, or interacting with a contract.",
       inputSchema: z.object({
         target: z
           .string()
@@ -1208,7 +1217,7 @@ REFERENCES
           .enum(["outbound", "reverse-call"])
           .optional()
           .describe(
-            "Default 'outbound' (agent → recipient, 8s budget, all evidence). Use 'reverse-call' when you are an x402 service publisher gating an inbound buyer (critical evidence only, sub-second SLA).",
+            "Default 'outbound' (agent → recipient, 8s budget, all evidence). Use 'reverse-call' when you are an x402 service publisher gating an inbound buyer (critical evidence only, limited evaluator set).",
           ),
         agent_id: z
           .string()

@@ -563,7 +563,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "a7794fb01439d0c2656f7b7a4715fe4970842924bc4fc0a62404c70ee044d404",
+      "sha256": "d246c70e40a3e9a29a32ba00bb2908237a86371c1426c7534630a2054ae069d7",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -655,7 +655,6 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
-        "docs/x402-listing.md",
         "handoff/README.md",
         "handoff/_general/from-code/2026-08-15-checkin-defects-and-eureg-rebuild.md",
         "handoff/_general/from-code/2026-08-15-operating-charter-and-measurement-rebuild.md",
@@ -699,6 +698,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "handoff/_general/from-code/2026-10-26-checkin-morning.md",
         "handoff/_general/from-code/2026-10-27-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-27-distribution-hygiene.md",
         "handoff/_general/from-code/2026-10-27-distribution-strategy.md",
         "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "scripts/check-claims.mjs",
@@ -849,7 +849,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "76121f45bdea151286214e7e0f8818534e25e4d9560182a625377eb1d6ea6704",
+      "sha256": "9272a1cd79643e9f045d834f5ab09b49299c057b90e7b9fb19e6597b27a0c6dd",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -901,6 +901,7 @@
         "apps/api/src/lib/test-input-drift.test.ts",
         "apps/api/src/lib/test-input-drift.ts",
         "apps/api/src/lib/test-runner.ts",
+        "apps/api/src/routes/distribution-attribution.test.ts",
         "apps/api/test/guard-production-write-access.test.ts",
         "archive/README.md",
         "archive/receipts/2026-09-02-test-run-receipts-lib-t15.json",
@@ -917,6 +918,8 @@
         "archive/receipts/2026-10-27-test-run-actionable-error-messages.json",
         "archive/receipts/2026-10-27-test-run-api-key-spend-limits-round-2.json",
         "archive/receipts/2026-10-27-test-run-api-key-spend-limits.json",
+        "archive/receipts/2026-10-27-test-run-distribution-hygiene-round-2.json",
+        "archive/receipts/2026-10-27-test-run-distribution-hygiene.json",
         "archive/receipts/2026-10-27-test-run-limitations-sync-mode.json",
         "archive/receipts/2026-10-27-test-run-public-descriptions-copy.json",
         "archive/receipts/2026-10-27-test-run-secure-random-round-2.json",

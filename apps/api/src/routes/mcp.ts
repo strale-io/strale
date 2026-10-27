@@ -25,6 +25,7 @@ import {
   fetchTrustBatch,
   fetchSolutionTrust,
   registerStraleTools,
+  readPackageVersion,
   type Capability,
   type Solution,
   type TrustBatchEntry,
@@ -214,7 +215,7 @@ async function handleStatelessRequest(
   clientIp: string,
 ): Promise<Response> {
   const server = new McpServer(
-    { name: "strale", version: "0.1.0" },
+    { name: "strale", version: readPackageVersion() },
     { capabilities: { tools: {} } },
   );
 
@@ -231,9 +232,10 @@ async function handleStatelessRequest(
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-    version: "0.2.4", // matches strale-mcp npm version — update on publish
+    version: readPackageVersion(),
+    src: new URL(req.url).searchParams.get("src") ?? undefined,
     onFunnelEvent: (event) => {
-      recordDiscoveryHit(funnelEventEndpoint(event), headerReader, { ip: clientIp ?? undefined });
+      recordDiscoveryHit(funnelEventEndpoint(event), headerReader, { ip: clientIp ?? undefined, src: new URL(req.url).searchParams.get("src") ?? undefined });
     },
   }, trustData, solutionTrustData);
 
@@ -342,7 +344,7 @@ mcpRoute.all("/", async (c) => {
             n.toLowerCase() === "user-agent" && classified.uaOverride
               ? classified.uaOverride
               : req.headers.get(n) ?? undefined,
-        }, { ip: clientIp ?? undefined });
+        }, { ip: clientIp ?? undefined, src: new URL(req.url).searchParams.get("src") ?? undefined });
       }
     } catch {
       // best-effort only

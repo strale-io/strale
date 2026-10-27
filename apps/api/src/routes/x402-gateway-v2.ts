@@ -320,7 +320,8 @@ export async function extractInputs(
   }
 
   // GET or fallback: extract from query params with type coercion
-  const query = c.req.query() as Record<string, string>;
+  const query = Object.fromEntries(Object.entries(c.req.query() as Record<string, string>)
+    .filter(([key]) => key !== "src" && !key.startsWith("utm_")));
   if (!schema) return query;
 
   const props = (schema as any).properties ?? {};

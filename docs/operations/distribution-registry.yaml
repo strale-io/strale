@@ -365,8 +365,9 @@ surfaces:
     kind: framework-pr
     target: FlowiseAI/Flowise
     status: open
-    status_date: 2026-04-27
+    status_date: 2026-10-27
     evidence: https://github.com/FlowiseAI/Flowise/pull/6209
+    notes: Open PR; no merge established. The distribution strategy’s archived classification was incorrect.
 
   - id: crewai-examples-kyb-pr
     surface: crewAI-examples KYB compliance crew
@@ -552,25 +553,28 @@ surfaces:
     surface: google-adk-strale
     kind: package
     target: PyPI
-    status: published
+    status: withdrawn
     status_date: 2026-09-11
     evidence: https://pypi.org/project/google-adk-strale/
+    notes: Yanked from PyPI after framework integrity failures; do not recommend or republish.
 
   - id: pkg-openai-agents-strale
     surface: openai-agents-strale
     kind: package
     target: PyPI
-    status: published
+    status: withdrawn
     status_date: 2026-09-11
     evidence: https://pypi.org/project/openai-agents-strale/
+    notes: Yanked from PyPI after framework integrity failures; do not recommend or republish.
 
   - id: pkg-pydantic-ai-strale
     surface: pydantic-ai-strale
     kind: package
     target: PyPI
-    status: published
+    status: withdrawn
     status_date: 2026-09-11
     evidence: https://pypi.org/project/pydantic-ai-strale/
+    notes: Yanked from PyPI after framework integrity failures; do not recommend or republish.
 
   - id: pkg-strale-capabilities
     surface: strale-capabilities
@@ -820,3 +824,12 @@ surfaces:
       direct page read. Re-checked today: `curl -sS -o /dev/null -w
       "%{http_code}" https://mcpmarket.com/server/strale` returned 403;
       inconclusive, kept the document's finding.
+
+  - id: pipedream-integration
+    surface: Pipedream Strale app
+    kind: other
+    target: PipedreamHQ/pipedream
+    status: listed
+    status_date: 2026-10-27
+    evidence: docs/research/2026-10-27-distribution-strategy-sweeps/integrations.md
+    notes: Published integration calls a retired endpoint. Repair belongs to a later external PR; no upstream changes in this batch.
