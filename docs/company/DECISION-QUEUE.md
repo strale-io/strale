@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-41** · `your_call` (authorization, not judgement) · owner Petter · raised 2026-10-27 (morning run) — **four new tools and the rewritten public limitation texts are merged but not live, because the onboarding button has no key yet**
+**DQ-41** · `your_call` · owner Petter · raised 2026-10-27 · authorization, not judgement — **four new tools and the rewritten public limitation texts are merged but not live, because the onboarding button has no key yet**
 
 *Settled:* `company-status-check`, `entity-resolve`, `eurostat-data` and `invoice-counterparty-check` (PRs #742, #744, #749, #752) and the 558 rewritten limitation texts (#756) were merged on 2026-10-26 and need onboarding to reach production. The button built for that (#755, #757: Actions → Onboard capability) runs inside the deployed API and was reviewed and merged. Evidence, 2026-10-27 ~07:30Z: none of the four slugs is in the production `capabilities` table; `GET /v1/capabilities/entity-resolve` → 404; `POST /v1/internal/onboarding/run` without credentials → 503 `not_configured` ("Set ONBOARDING_RUN_SECRET … in Railway"); the workflow has never run and the `production-onboarding` GitHub environment does not exist. Six further manifests (bulgarian, cypriot, hungarian, luxembourgish, maltese, romanian company data) are also not in the table; all six were added on 2026-05-16 and are not part of this request.
 
