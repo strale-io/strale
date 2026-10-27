@@ -29,10 +29,17 @@
 /** What a never-persisted field holds in every stored or hashed form. */
 export const NOT_STORED_MARKER = "[not stored]";
 
-/** slug -> input field names that are never persisted or hashed. */
-export const NEVER_PERSIST_INPUTS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  "password-strength": Object.freeze(["password"]),
-});
+/**
+ * slug -> input field names that are never persisted or hashed.
+ *
+ * A Map, not a plain object: the slug is caller-controlled (it reaches this
+ * module before matching, and from a URL path on the solution rail), and a
+ * plain-object lookup of "constructor" or "__proto__" returns an
+ * Object.prototype member, which would throw and turn a 404 into a 500.
+ */
+export const NEVER_PERSIST_INPUTS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["password-strength", Object.freeze(["password"])],
+]);
 
 function redactFields(
   input: Record<string, unknown>,
@@ -58,7 +65,7 @@ function redactFields(
  */
 export function inputForPersistence<T>(slug: string | null | undefined, input: T): T {
   if (!slug || input === null || typeof input !== "object" || Array.isArray(input)) return input;
-  const fields = NEVER_PERSIST_INPUTS[slug];
+  const fields = NEVER_PERSIST_INPUTS.get(slug);
   if (!fields) return input;
   return redactFields(input as Record<string, unknown>, fields) as T;
 }
@@ -80,6 +87,6 @@ export function inputForPersistence<T>(slug: string | null | undefined, input: T
 export function inputForFingerprint<T>(slug: string | null | undefined, input: T): T {
   if (slug) return inputForPersistence(slug, input);
   if (input === null || typeof input !== "object" || Array.isArray(input)) return input;
-  const allFields = [...new Set(Object.values(NEVER_PERSIST_INPUTS).flat())];
+  const allFields = [...new Set([...NEVER_PERSIST_INPUTS.values()].flat())];
   return redactFields(input as Record<string, unknown>, allFields) as T;
 }

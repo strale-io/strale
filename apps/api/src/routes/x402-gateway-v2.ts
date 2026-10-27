@@ -805,6 +805,11 @@ function buildX402AuditTrail(args: {
   };
 }
 
+/** Test seam: the insert values are only observable through this function. */
+export function __recordX402TransactionForTests(args: RecordX402Args): Promise<string | null> {
+  return recordX402Transaction(args);
+}
+
 async function recordX402Transaction(args: RecordX402Args): Promise<string | null> {
   // F-AUDIT-01 / CCO #3: dataJurisdiction is the actual processing region(s),
   // computed from Strale's region + LLM provider region based on transparencyTag.

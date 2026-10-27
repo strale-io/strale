@@ -8,7 +8,7 @@ import {
 
 describe("inputForPersistence", () => {
   it("lists password-strength's password", () => {
-    expect(NEVER_PERSIST_INPUTS["password-strength"]).toEqual(["password"]);
+    expect(NEVER_PERSIST_INPUTS.get("password-strength")).toEqual(["password"]);
   });
 
   it("replaces the listed field with the marker and keeps the other fields", () => {
@@ -59,6 +59,20 @@ describe("inputForPersistence", () => {
     expect(inputForPersistence(null, input)).toBe(input);
     expect(inputForPersistence(undefined, input)).toBe(input);
   });
+});
+
+describe("caller-controlled slugs that name Object.prototype members", () => {
+  // The slug reaches this module before matching (do.ts fingerprint) and from
+  // a URL path (/v1/solutions/:slug/execute). A plain-object lookup would
+  // return Object.prototype.constructor etc. and throw, turning a 404 into a 500.
+  const PROTO_SLUGS = ["constructor", "__proto__", "toString", "hasOwnProperty", "valueOf", "__defineGetter__"];
+  for (const slug of PROTO_SLUGS) {
+    it(`"${slug}" is treated as unlisted, not as a field list`, () => {
+      const input = { password: "hunter2", value: 1 };
+      expect(inputForPersistence(slug, input)).toBe(input);
+      expect(inputForFingerprint(slug, input)).toBe(input);
+    });
+  }
 });
 
 describe("inputForFingerprint", () => {
