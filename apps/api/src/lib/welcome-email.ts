@@ -163,7 +163,7 @@ curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H
 3. Audit an npm package for vulnerabilities (€0.15):
 curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug": "package-security-audit", "inputs": {"name": "express"}, "max_price_cents": 100}'
 
-Browse all 270+ capabilities: https://api.strale.io/v1/capabilities
+Browse available capabilities: https://api.strale.io/v1/capabilities
 Docs: https://strale.dev/docs
 
 HELP US GET DISCOVERED:
@@ -233,7 +233,7 @@ https://strale.dev
 
     // ── Browse capabilities ──
     '<p style="margin-top: 24px;">',
-    '<a href="https://api.strale.io/v1/capabilities" style="' + btnStyle + '">Browse all 270+ capabilities</a>',
+    '<a href="https://api.strale.io/v1/capabilities" style="' + btnStyle + '">Browse available capabilities</a>',
     "&nbsp;&nbsp;",
     '<a href="https://strale.dev/docs" style="color: #666; text-decoration: underline; font-size: 14px;">Read the docs</a>',
     "</p>",

@@ -242,4 +242,12 @@ if (p.total_calls_with_hash < totalCompleted) {
   );
 }
 
+console.log("\n## API-key signups by channel\n");
+const signupSources = await sql`
+  SELECT coalesce(signup_src, '(unknown)') AS source, count(*)::int AS signups
+  FROM users WHERE created_at >= ${since}
+  GROUP BY 1 ORDER BY signups DESC`;
+console.log("| source | signups |\n|---|---|");
+for (const row of signupSources) console.log(`| ${row.source} | ${row.signups} |`);
+
 await sql.end();

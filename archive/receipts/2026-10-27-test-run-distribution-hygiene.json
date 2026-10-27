@@ -1,0 +1,516 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a2c0b654c4a16262086c8794ab332edf349eff50"
+  },
+  "at": "2026-10-27T13:56:56.662Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "implementation_tests_ok": true,
+    "root_ci_check_commands_ok": true,
+    "root_ci_check_commands": 55,
+    "api_tests_passed": 6442,
+    "api_tests_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "claims_tests_passed": 31,
+    "migration_ledger_tests_passed": 24,
+    "context_tests_passed": 180,
+    "typescript_sdk_tests_passed": 7,
+    "mcp_tests_passed": 2,
+    "typescript_framework_tests_passed": 2,
+    "python_tests_passed": 8,
+    "python_tests_skipped": 18,
+    "python_wheels_built": 4,
+    "framework_packages_verified": 4,
+    "framework_packages_deprecated_skipped": 3,
+    "workspace_typecheck_ok": true,
+    "bare_root_typecheck_ok": false,
+    "bare_root_typecheck_errors_in_untouched_files": 282,
+    "bare_root_typecheck_errors_in_changed_files": 0,
+    "handoff_gate_ok": false,
+    "database_integration_available": false,
+    "startup_block": "0126_signupSource",
+    "ledger_row": "M069",
+    "published_npm_mcp_version_checked": "0.2.8",
+    "technical_review_rounds": 2,
+    "product_review_rounds": 2,
+    "high_findings_remaining": 0,
+    "packages_published": 0,
+    "production_writes": 0
+  },
+  "topic": "distribution-hygiene",
+  "raw": {
+    "ok": false,
+    "implementation_tests_ok": true,
+    "root_ci_check_commands_ok": true,
+    "root_ci_check_commands": 55,
+    "api_tests_passed": 6442,
+    "api_tests_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "claims_tests_passed": 31,
+    "migration_ledger_tests_passed": 24,
+    "context_tests_passed": 180,
+    "typescript_sdk_tests_passed": 7,
+    "mcp_tests_passed": 2,
+    "typescript_framework_tests_passed": 2,
+    "python_tests_passed": 8,
+    "python_tests_skipped": 18,
+    "python_wheels_built": 4,
+    "framework_packages_verified": 4,
+    "framework_packages_deprecated_skipped": 3,
+    "workspace_typecheck_ok": true,
+    "bare_root_typecheck_ok": false,
+    "bare_root_typecheck_errors_in_untouched_files": 282,
+    "bare_root_typecheck_errors_in_changed_files": 0,
+    "handoff_gate_ok": false,
+    "database_integration_available": false,
+    "startup_block": "0126_signupSource",
+    "ledger_row": "M069",
+    "published_npm_mcp_version_checked": "0.2.8",
+    "technical_review_rounds": 2,
+    "product_review_rounds": 2,
+    "high_findings_remaining": 0,
+    "packages_published": 0,
+    "production_writes": 0,
+    "verification": {
+      "summary": {
+        "ok": false,
+        "implementation_tests_ok": true,
+        "root_ci_check_commands_ok": true,
+        "root_ci_check_commands": 55,
+        "api_tests_passed": 6442,
+        "api_tests_skipped": 346,
+        "api_files_passed": 348,
+        "api_files_skipped": 33,
+        "claims_tests_passed": 31,
+        "migration_ledger_tests_passed": 24,
+        "context_tests_passed": 180,
+        "typescript_sdk_tests_passed": 7,
+        "mcp_tests_passed": 2,
+        "typescript_framework_tests_passed": 2,
+        "python_tests_passed": 8,
+        "python_tests_skipped": 18,
+        "python_wheels_built": 4,
+        "framework_packages_verified": 4,
+        "framework_packages_deprecated_skipped": 3,
+        "workspace_typecheck_ok": true,
+        "bare_root_typecheck_ok": false,
+        "bare_root_typecheck_errors_in_untouched_files": 282,
+        "bare_root_typecheck_errors_in_changed_files": 0,
+        "handoff_gate_ok": false,
+        "database_integration_available": false,
+        "startup_block": "0126_signupSource",
+        "ledger_row": "M069",
+        "published_npm_mcp_version_checked": "0.2.8",
+        "technical_review_rounds": 2,
+        "product_review_rounds": 2,
+        "high_findings_remaining": 0,
+        "packages_published": 0,
+        "production_writes": 0
+      },
+      "ci_commands": [
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "executed": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "executed": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "executed": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "executed": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "executed": "npm --workspace=apps/api run lint:no-new-console",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "executed": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "executed": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "executed": "node --import tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "executed": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "executed": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "executed": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "executed": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "executed": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "executed": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "executed": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "executed": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "executed": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "executed": "node scripts/guard-production-write-access.mjs",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run programs:check",
+          "executed": "npm run programs:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run programs:test",
+          "executed": "npm run programs:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run research:check",
+          "executed": "npm run research:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run research:test",
+          "executed": "npm run research:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run design:check",
+          "executed": "npm run design:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run design:test",
+          "executed": "npm run design:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run env:check",
+          "executed": "npm run env:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run env:test",
+          "executed": "npm run env:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run vendors:check",
+          "executed": "npm run vendors:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run vendors:test",
+          "executed": "npm run vendors:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run distribution:check",
+          "executed": "npm run distribution:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run distribution:test",
+          "executed": "npm run distribution:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "executed": "npm run digest:shadow:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run candidates:test",
+          "executed": "npm run candidates:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run protocols:check",
+          "executed": "npm run protocols:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run protocols:test",
+          "executed": "npm run protocols:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "executed": "npm run protocols:coverage",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "executed": "npm run protocols:coverage:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run scheduled:check",
+          "executed": "npm run scheduled:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run scheduled:test",
+          "executed": "npm run scheduled:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "executed": "npm run scheduled:outcomes:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run models:check",
+          "executed": "npm run models:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run models:test",
+          "executed": "npm run models:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run claims:check",
+          "executed": "npm run claims:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run claims:test",
+          "executed": "npm run claims:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run docs:check",
+          "executed": "npm run docs:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run docs:test",
+          "executed": "npm run docs:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi",
+          "executed": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run archive:index:test",
+          "executed": "npm run archive:index:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run receipts:check",
+          "executed": "npm run receipts:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run receipts:test",
+          "executed": "npm run receipts:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run migrations:check",
+          "executed": "npm run migrations:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run migrations:test",
+          "executed": "npm run migrations:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run handoff:test",
+          "executed": "npm run handoff:test",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run context:check",
+          "executed": "npm run context:check",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "command": "npm run context:test",
+          "executed": "npm run context:test",
+          "exit_code": 0,
+          "signal": null,
+          "initial_exit_code": 1,
+          "rerun": "canonical inventory refreshed; 180 passed"
+        },
+        {
+          "command": "npm --workspace=packages/sdk-typescript test",
+          "executed": "npm --workspace=packages/sdk-typescript test",
+          "exit_code": 0,
+          "signal": null
+        }
+      ],
+      "additional_verification": [
+        {
+          "command": "npm --workspace=apps/api test -- --maxWorkers=2",
+          "exit_code": 0,
+          "passed": 6442,
+          "skipped": 346
+        },
+        {
+          "command": "npm run typecheck",
+          "exit_code": 0
+        },
+        {
+          "command": "npx tsc --noEmit (API project)",
+          "exit_code": 0
+        },
+        {
+          "command": "npx tsc --noEmit (bare root default project)",
+          "exit_code": 2,
+          "errors_in_untouched_files": 282
+        },
+        {
+          "command": "npm builds: SDK, MCP, LangChain, Semantic Kernel",
+          "exit_code": 0
+        },
+        {
+          "command": "npm package tests: SDK, MCP, LangChain, Semantic Kernel",
+          "exit_code": 0,
+          "passed": 11
+        },
+        {
+          "command": "pytest framework and Python SDK tests",
+          "exit_code": 0,
+          "passed": 8,
+          "skipped": 18
+        },
+        {
+          "command": "python -m build --wheel --no-isolation (four packages)",
+          "exit_code": 0
+        },
+        {
+          "command": "offline catalogue import/find smoke",
+          "exit_code": 0
+        },
+        {
+          "command": "npm view strale-mcp version",
+          "exit_code": 0,
+          "observed": "0.2.8"
+        },
+        {
+          "command": "npm run handoff:check",
+          "exit_code": 1,
+          "reason": "user requires uncommitted/unpushed isolated clone; inherited branches left alone"
+        },
+        {
+          "command": "npm run context:generate",
+          "exit_code": 1,
+          "reason": "standalone private clone rejected as primary worktree; exported generator output refreshed for the one related inventory"
+        },
+        {
+          "command": "git diff --check",
+          "exit_code": 0
+        }
+      ]
+    }
+  }
+}

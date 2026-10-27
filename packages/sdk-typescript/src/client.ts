@@ -1,3 +1,4 @@
+import { CLIENT_ID } from "./package-version.js";
 import type {
   ApiKey, ApiKeyUsage, ApiKeyCreated, ApiKeyCreateOptions, ApiKeyUpdateOptions,
   StraleOptions,
@@ -36,6 +37,7 @@ const DEFAULT_POLL_INTERVAL = 2_000;
 const DEFAULT_MAX_POLL_WAIT = 120_000;
 
 export class Strale {
+  private readonly clientHeader: string;
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeout: number;
@@ -48,6 +50,7 @@ export class Strale {
       throw new Error("apiKey is required");
     }
     this.apiKey = options.apiKey;
+    this.clientHeader = options.clientHeader ?? CLIENT_ID;
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.timeout = options.timeout ?? DEFAULT_TIMEOUT;
     this.pollInterval = options.pollInterval ?? DEFAULT_POLL_INTERVAL;
@@ -253,7 +256,7 @@ export class Strale {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
       // Channel attribution: identifies this SDK on the API side.
-      "X-Strale-Client": "straleio-js/0.1.3",
+      "X-Strale-Client": this.clientHeader,
       ...extraHeaders,
     };
 

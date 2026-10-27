@@ -1,7 +1,7 @@
 {
   "name": "straleio",
-  "version": "0.1.3",
-  "description": "TypeScript SDK for the Strale API — let AI agents buy capabilities at runtime",
+  "version": "0.1.4",
+  "description": "TypeScript SDK for the Strale API \u2014 let AI agents buy capabilities at runtime",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/version.mjs && tsc",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.mjs",
     "prepublishOnly": "npm run build"
@@ -30,8 +30,8 @@
     "sdk",
     "typescript"
   ],
-  "author": "Strale <hello@strale.io> (https://strale.dev)",
-  "homepage": "https://strale.dev",
+  "author": "Strale <hello@strale.io> (https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)",
+  "homepage": "https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/strale-io/strale.git",

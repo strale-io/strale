@@ -1,7 +1,7 @@
 {
   "name": "strale-semantic-kernel",
-  "version": "0.1.4",
-  "description": "Semantic Kernel plugin for Strale — 250+ business capabilities as kernel functions",
+  "version": "0.1.5",
+  "description": "Semantic Kernel plugin for Strale \u2014 pay-per-call tools as kernel functions",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/plugin.test.ts",
+    "test": "tsx --test tests/*.test.ts",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
@@ -39,8 +39,8 @@
     "microsoft"
   ],
   "license": "MIT",
-  "author": "Strale <hello@strale.io> (https://strale.dev)",
-  "homepage": "https://strale.dev",
+  "author": "Strale <hello@strale.io> (https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)",
+  "homepage": "https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/strale-io/strale.git",

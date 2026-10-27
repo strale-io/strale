@@ -38,8 +38,11 @@ one row per claim, ruled `allowed` (may ship, evidence on file),
 every package's README, every manifest's `description` field,
 `apps/api/src/lib/platform-facts.ts`, and (read-only, when the sibling
 checkout is present) `../strale-frontend/public/llms.txt` for forbidden
-phrases and fails the build on a match; `needs_evidence` claims whose
-evidence doesn't resolve produce a warning. Wired into CI alongside
+phrases and fails the build on a match. The scan also covers listing configs,
+package descriptions, public agent instructions and the string literals in MCP
+tool definitions and discovery-card sources. A row may use `scan_paths` for
+an exact, machine-enforced scope; omitted means every scanned surface.
+`needs_evidence` claims whose evidence doesn't resolve produce a warning. Wired into CI alongside
 `env:check` and `models:check`.
 
 Case study the register exists because of: the 2026-04-30 cert audit found

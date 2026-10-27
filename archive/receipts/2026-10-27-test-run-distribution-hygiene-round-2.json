@@ -1,0 +1,494 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a2c0b654c4a16262086c8794ab332edf349eff50"
+  },
+  "at": "2026-10-27T14:25:46.044Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "implementation_tests_ok": true,
+    "root_ci_equivalent_checks_ok": true,
+    "root_ci_commands": 57,
+    "root_ci_direct_pass": 56,
+    "api_tests_passed": 6455,
+    "api_tests_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "claims_tests_passed": 33,
+    "python_tests_passed": 13,
+    "python_tests_skipped": 18,
+    "typescript_sdk_tests_passed": 7,
+    "mcp_tests_passed": 2,
+    "typescript_framework_tests_passed": 2,
+    "route_mutations_caught": 9,
+    "route_baseline_passed": 31,
+    "route_restored_passed": 31,
+    "focused_api_tests_passed": 151,
+    "workspace_typecheck_ok": true,
+    "api_typecheck_ok": true,
+    "bare_root_typecheck_ok": false,
+    "bare_root_typecheck_errors": 282,
+    "bare_root_typecheck_changed_file_errors": 0,
+    "handoff_gate_ok": false,
+    "database_integration_available": false,
+    "production_writes": 0,
+    "packages_published": 0,
+    "committed": false
+  },
+  "topic": "distribution-hygiene-round-2",
+  "raw": {
+    "ok": false,
+    "implementation_tests_ok": true,
+    "root_ci_equivalent_checks_ok": true,
+    "root_ci_commands": 57,
+    "root_ci_direct_pass": 56,
+    "api_tests_passed": 6455,
+    "api_tests_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "claims_tests_passed": 33,
+    "python_tests_passed": 13,
+    "python_tests_skipped": 18,
+    "typescript_sdk_tests_passed": 7,
+    "mcp_tests_passed": 2,
+    "typescript_framework_tests_passed": 2,
+    "route_mutations_caught": 9,
+    "route_baseline_passed": 31,
+    "route_restored_passed": 31,
+    "focused_api_tests_passed": 151,
+    "workspace_typecheck_ok": true,
+    "api_typecheck_ok": true,
+    "bare_root_typecheck_ok": false,
+    "bare_root_typecheck_errors": 282,
+    "bare_root_typecheck_changed_file_errors": 0,
+    "handoff_gate_ok": false,
+    "database_integration_available": false,
+    "production_writes": 0,
+    "packages_published": 0,
+    "committed": false,
+    "commands": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 1
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "archive/handoff index warning step",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0
+      }
+    ],
+    "package_commands": [
+      {
+        "label": "full API Vitest",
+        "command": "npm test",
+        "exit_code": 0,
+        "errors": 0,
+        "tests": "6455",
+        "skipped": "33"
+      },
+      {
+        "label": "bare root TypeScript",
+        "command": "npx tsc --noEmit",
+        "exit_code": 2,
+        "errors": 282
+      },
+      {
+        "label": "API TypeScript",
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit_code": 0,
+        "errors": 0
+      },
+      {
+        "label": "TypeScript SDK tests",
+        "command": "npm --workspace=packages/sdk-typescript test",
+        "exit_code": 0,
+        "errors": 0,
+        "tests": "7"
+      },
+      {
+        "label": "MCP tests",
+        "command": "npm --workspace=packages/mcp-server test",
+        "exit_code": 0,
+        "errors": 0,
+        "tests": "2"
+      },
+      {
+        "label": "TS LangChain build",
+        "command": "npm --workspace=packages/langchain run build",
+        "exit_code": 0,
+        "errors": 0
+      },
+      {
+        "label": "TS LangChain tests",
+        "command": "npm --workspace=packages/langchain test",
+        "exit_code": 1,
+        "errors": 0
+      },
+      {
+        "label": "Semantic Kernel build",
+        "command": "npm --workspace=packages/semantic-kernel-strale run build",
+        "exit_code": 0,
+        "errors": 0
+      },
+      {
+        "label": "Semantic Kernel tests",
+        "command": "npm --workspace=packages/semantic-kernel-strale test",
+        "exit_code": 1,
+        "errors": 0
+      }
+    ],
+    "mutations": [
+      {
+        "file": "mcp.ts",
+        "read": 1,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > MCP execution forwards query src into the actual REST request",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "mcp.ts",
+        "read": 2,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > MCP rejection records src from the real tool callback",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "mcp.ts",
+        "read": 3,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > MCP initialize records the query src through the real transport",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "do.ts",
+        "read": 1,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > /v1/do passes query src to the real handler's metadata consumer",
+          "FAIL  src/routes/do.core.test.ts > POST /v1/do — happy path (authenticated, paid capability, sync) > records query src on the paid transaction while executing and debiting the wallet",
+          "Tests  2 failed | 29 passed (31)"
+        ]
+      },
+      {
+        "file": "x402-gateway-v2.ts",
+        "read": 1,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > x402 catalog records query src",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "x402-gateway-v2.ts",
+        "read": 2,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > x402 solution records src on the transaction (gated=true)",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "x402-gateway-v2.ts",
+        "read": 3,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > x402 solution records src on the transaction (gated=false)",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "x402-gateway-v2.ts",
+        "read": 4,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > x402 execution records src on the transaction (failure=true), excluding tracking inputs",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      },
+      {
+        "file": "x402-gateway-v2.ts",
+        "read": 5,
+        "exit_code": 1,
+        "failures": [
+          "⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+          "FAIL  src/routes/distribution-attribution.test.ts > real distribution entry routes > x402 execution records src on the transaction (failure=false), excluding tracking inputs",
+          "Tests  1 failed | 30 passed (31)"
+        ]
+      }
+    ],
+    "alternatives": [
+      {
+        "command": "node --import tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "reason": "tsx CLI IPC socket path exceeds Unix limit; same script through loader"
+      },
+      {
+        "command": "node --import tsx --test packages/langchain/tests/*.test.ts packages/semantic-kernel-strale/tests/*.test.ts",
+        "exit_code": 0,
+        "tests_passed": 2,
+        "reason": "Same test files through loader; avoids tsx CLI IPC socket"
+      },
+      {
+        "command": "python -m pytest --import-mode=importlib packages/langchain-strale/tests packages/crewai-strale/tests packages/composio-strale/tests packages/sdk-python/tests -q",
+        "exit_code": 0,
+        "passed": 13,
+        "skipped": 18
+      }
+    ],
+    "live_checks": [
+      {
+        "url": "https://strale.dev",
+        "http_status": 200
+      },
+      {
+        "url": "https://strale.io",
+        "http_status": 404
+      }
+    ],
+    "notes": [
+      "Existing bare-root TypeScript errors occur only in untouched files.",
+      "Handoff gate conflicts with explicit leave-uncommitted/no-push/same-checkout contract; inherited merged branch findings untouched.",
+      "No disposable PostgreSQL configured, so database integration suites remain skipped.",
+      "No package tests exist for the offline catalogue, static skill or yanked forwarding packages; catalogue imported successfully.",
+      "Root CI dependency installation was already performed before this round; npm ci was not repeated.",
+      "No post-publish or post-deploy verification is claimed."
+    ]
+  }
+}

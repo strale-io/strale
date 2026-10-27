@@ -1,6 +1,6 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.io) — gives AI agents access to 250+ capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+MCP server for [Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — connects agents to hundreds of pay-per-call tools: company records, screening, validation, web page reading and document extraction. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
 The MCP server version reported in the `initialize` response matches the npm package version.
 
@@ -18,7 +18,7 @@ npm install -g strale-mcp
 
 ## Architecture
 
-**Meta-tools only**: Instead of registering 250+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 8 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
+**Meta-tools only**: Instead of registering the entire catalogue as individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes a compact set of discovery and execution tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
 
 At startup, the server fetches the capability catalog, solutions, and trust data from the Strale API and caches them for search.
 
@@ -43,7 +43,7 @@ No installation required. Connect directly to the hosted MCP server.
   "mcpServers": {
     "strale": {
       "type": "streamableHttp",
-      "url": "https://api.strale.io/mcp",
+      "url": "https://api.strale.io/mcp?src=npm-readme",
       "headers": {
         "Authorization": "Bearer sk_live_your_key_here"
       }
@@ -59,7 +59,7 @@ No installation required. Connect directly to the hosted MCP server.
   "mcpServers": {
     "strale": {
       "type": "streamableHttp",
-      "url": "https://api.strale.io/mcp",
+      "url": "https://api.strale.io/mcp?src=npm-readme",
       "headers": {
         "Authorization": "Bearer sk_live_your_key_here"
       }
@@ -71,7 +71,7 @@ No installation required. Connect directly to the hosted MCP server.
 **Any MCP client supporting Streamable HTTP:**
 
 ```
-URL:    https://api.strale.io/mcp
+URL:    https://api.strale.io/mcp?src=npm-readme
 Auth:   Authorization: Bearer sk_live_your_key_here
 ```
 
@@ -121,7 +121,7 @@ Run the MCP server locally on your machine:
 | `STRALE_BASE_URL` | No | `https://api.strale.io` | API base URL |
 | `STRALE_MAX_PRICE_CENTS` | No | `200` | Default max price per execution (€2.00) |
 
-## Available Tools (8)
+## Available Tools
 
 ### Highlighted: Pre-flight check for paid APIs
 
@@ -143,62 +143,25 @@ Before your agent pays for any external API call, use `paid-api-preflight` to ve
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
 | `strale_getting_started` | No | Onboarding guide. Returns free capabilities available without an API key, usage steps, and signup link. |
-| `strale_search` | No | Search 250+ capabilities and 81 solutions by keyword or category. Returns matches with price, input fields, and geography. |
+| `strale_search` | No | Search available capabilities and bundled workflows by keyword or category. Returns matches with price, input fields, and geography. |
 | `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, and data provenance. *Free-tier capabilities work without an API key. |
-| `strale_methodology` | No | Returns Strale's trust methodology as a short reference document — test cadence, audit records, and provenance. |
-| `strale_trust_profile` | No | Returns the trust profile for any capability or solution — lifecycle state, last-tested timestamp, test history, known limitations, data source and provenance, and cost envelope. Exposes no single numeric quality score. |
+| `strale_methodology` | No | Explains testing modes, source context and transaction retrieval. |
+| `strale_trust_profile` | No | Reads current public test results for a tool or bundle: badge, tested flag, recent pass rate and last-tested time where available. Use the catalogue for inputs, limitations and sources. |
 | `strale_balance` | Yes | Returns your wallet balance in EUR cents and EUR. |
+| `strale_web3_assurance` | Yes | Checks on-chain counterparty signals; requires an API key. |
 | `strale_transaction` | No* | Returns a past execution record by transaction ID: inputs, outputs, latency, price, provenance, and failure categorization. *Free-tier transactions accessible by ID only. |
 
 ## Trust Data
 
-Strale does not publish a single numeric quality score. The dual-profile scoring engine (Quality Profile + Reliability Profile combined into a 0–100 SQS via a 5×5 matrix) was deleted 2026-05-05 (DEC-20260503-B). In its place:
-
-- `strale_methodology` returns a short reference document — test cadence, the audit trail, provenance fields, and capability lifecycle states.
-- `strale_trust_profile` returns the capability's trust profile: lifecycle state, last-tested timestamp, recent test history, known limitations, data source and provenance, and cost envelope.
-
-### Search result fields
-
-```json
-{
-  "type": "capability",
-  "slug": "vat-validate",
-  "name": "VAT Validate",
-  "description": "Validate an EU VAT number via VIES",
-  "category": "compliance",
-  "geography": "eu",
-  "price": "€0.10",
-  "input_fields": "Required: vat_number (string)"
-}
-```
-
-### Execute response fields
-
-```json
-{
-  "output": { ... },
-  "price_cents": 10,
-  "latency_ms": 340,
-  "wallet_balance_cents": 1890,
-  "provenance": { "source": "VIES", "fetched_at": "2026-08-30T12:00:00Z" },
-  "transaction_id": "txn_...",
-  "next_steps": [
-    "Transaction ID recorded. Call strale_transaction with id \"txn_...\" to retrieve the full audit record.",
-    "Call strale_trust_profile with slug \"vat-validate\" to see how this source is tested and evidenced.",
-    "Call strale_search to find related capabilities."
-  ]
-}
-```
-
-`price_cents`, `latency_ms`, `wallet_balance_cents`, `provenance`, and `transaction_id` are included whenever the underlying `/v1/do` response carries them; `next_steps` is always present. Neither this response nor `strale_search` results carry a quality or reliability score — call `strale_trust_profile` for the capability's test history and limitations instead.
+Testing modes vary by tool. Read the current test and availability signals with `strale_trust_profile`; use the catalogue for source context and limitations.
 
 ## Solutions (bundled workflows)
 
-Strale offers 81 pre-built solutions that chain multiple capabilities:
+Strale offers available solutions that chain multiple capabilities:
 
-- **KYB Essentials** (20 countries) — Quick company verification: registry + VAT + sanctions + LEI. €1.50.
-- **KYB Complete** (20 countries) — Full compliance: registry, PEP, adverse media, digital presence + risk narrative. €2.50.
-- **Invoice Verify** (20 countries) — Fraud detection: company verify, payment validation, sender analysis + risk narrative. €2.50.
+- **KYB Essentials** (available countries) — Quick company verification: registry + VAT + sanctions + LEI. €1.50.
+- **KYB Complete** (available countries) — Full compliance: registry, PEP, adverse media, digital presence + risk narrative. €2.50.
+- **Invoice Verify** (available countries) — Fraud detection: company verify, payment validation, sender analysis + risk narrative. €2.50.
 
 ```
 Agent: strale_search(query: "kyb essentials sweden")
@@ -224,9 +187,9 @@ These use free capabilities — no API key needed (KYB/Invoice solutions require
 ```
 1. strale_ping          → Verify the connection is working
 2. strale_search        → Find capabilities matching your needs
-3. strale_trust_profile → (Optional) Read the trust profile (test history, limitations, provenance) for a specific capability
+3. strale_trust_profile → (Optional) Read current public test and availability signals for a tool or bundle
 4. strale_execute       → Run the capability with the required inputs
-5. strale_transaction   → (Optional) Retrieve the full audit trail for any past execution
+5. strale_transaction   → (Optional) Retrieve an execution record where accessible for this rail
 6. strale_balance       → Check remaining balance
 ```
 
@@ -254,7 +217,7 @@ npm run dev --workspace=packages/mcp-server
 ## How it works
 
 1. Server starts and fetches capabilities, solutions, and trust data from the Strale API
-2. Eight meta-tools are registered: ping, getting_started, search, execute, methodology, trust_profile, balance, transaction
+2. The meta-tools are registered: ping, getting_started, search, execute, methodology, trust_profile, balance, transaction, web3_assurance
 3. Agents use `strale_search` to discover capabilities with input requirements and pricing
 4. `strale_execute` sends `POST /v1/do` with `capability_slug` and `inputs`
 5. The response (output, price, latency, provenance) is returned as structured text
@@ -263,9 +226,9 @@ npm run dev --workspace=packages/mcp-server
 
 ## API Reference
 
-Full API documentation: [strale.dev/docs](https://strale.dev/docs)
+Full API documentation: [strale.dev/docs](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
-Quality methodology: [strale.dev/trust/methodology](https://strale.dev/trust/methodology)
+Quality methodology: [strale.dev/trust/methodology](https://strale.dev/trust/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## Contributing
 
@@ -277,7 +240,7 @@ Report bugs or request capabilities at: [github.com/strale-io/strale/issues](htt
 
 ## Try for Free
 
-5 capabilities work without an API key or signup:
+available capabilities work without an API key or signup:
 
 - `email-validate` — verify email deliverability
 - `dns-lookup` — DNS record lookup
@@ -285,23 +248,23 @@ Report bugs or request capabilities at: [github.com/strale-io/strale/issues](htt
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all available capabilities, [sign up](https://strale.dev/signup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
 
 ## x402 pay-per-use access
 
-All Strale capabilities are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
+Eligible Strale tools are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
 
-- Catalog: https://api.strale.io/x402/catalog
+- Catalog: https://api.strale.io/x402/catalog?src=npm-readme
 - Protocol: USDC on Base (eip155:8453)
 - Discovery: https://api.strale.io/.well-known/x402.json
 
 ## Resources
 
-- 📖 [Documentation](https://strale.dev/docs)
+- 📖 [Documentation](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
-- 💰 [Pricing](https://strale.dev/pricing)
-- 🔍 [Quality methodology](https://strale.dev/methodology)
-- 🔒 [Security](https://strale.dev/security)
+- 💰 [Pricing](https://strale.dev/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.dev/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔒 [Security](https://strale.dev/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## License
 

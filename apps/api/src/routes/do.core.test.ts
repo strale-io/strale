@@ -442,7 +442,7 @@ describe("POST /v1/do — required NTA credential", () => {
 });
 
 describe("POST /v1/do — happy path (authenticated, paid capability, sync)", () => {
-  it("debits the wallet, executes the capability, and returns {result:{output,...}} with wallet_balance_cents", async () => {
+  it("records query src on the paid transaction while executing and debiting the wallet", async () => {
     const user = buildUserRow();
     const startingBalance = 10_000; // €100.00 — well above LOW_BALANCE_THRESHOLD after debit
     mocks.outerSelectQueue.push([user]); // optionalAuthMiddleware lookup
@@ -462,7 +462,7 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     });
 
     const app = makeApp();
-    const res = await app.request("/v1/do", {
+    const res = await app.request("/v1/do?src=context7", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({
@@ -503,6 +503,8 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
+    const transactionInsert = tx.__insertCalls.find(call => call.table === transactions);
+    expect((transactionInsert!.vals as any).clientMeta.src).toBe("context7");
     // Wallet debited by exactly the capability price.
     //
     // WP2 changed the shape here deliberately: the debit is now an in-database

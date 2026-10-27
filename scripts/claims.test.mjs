@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { stringify } from "yaml";
-import { checkAllClaims, checkForbiddenClaims, compileMatcher, repoRootFrom, REGISTER_PATH, SCHEMA_PATH } from "./claims-lib.mjs";
+import { stringify, parse as parseYaml } from "yaml";
+import { checkAllClaims, checkForbiddenClaims, compileMatcher, repoRootFrom, REGISTER_PATH, SCHEMA_PATH, SOURCE_TARGETS } from "./claims-lib.mjs";
 
 const realRoot = repoRootFrom(import.meta.url);
 const realSchema = readFileSync(join(realRoot, SCHEMA_PATH), "utf8");
@@ -39,6 +39,7 @@ function makeFixture(rows, surfaceFiles = {}) {
     [SCHEMA_PATH]: realSchema,
     [REGISTER_PATH]: stringify(rows),
     "README.md": "Nothing interesting here.\n",
+    ...Object.fromEntries(SOURCE_TARGETS.map(file => [file, ""])),
     ...surfaceFiles,
   });
   return dir;
@@ -207,5 +208,80 @@ test("a forbidden row written as /pattern/ matches prose on a surface; a literal
     assert.equal(compileMatcher({ claim: "/abc/g" }).flags, "gi");
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+for (const file of ["server.json", "smithery.yaml", "glama.json", "context7.json", "packages/mcp-server/server.json", "packages/skill/SKILL.md", "docs/x402-listing.md", "apps/api/src/routes/a2a.ts", "apps/api/src/routes/mcp-server-card.ts", "packages/mcp-server/src/tools.ts"]) {
+  test(`listing guard catches retired copy and typed totals in ${file}`, () => {
+    const rows = [
+      baseRow({id:"retired",claim:"quality-scored",status:"forbidden"}),
+      baseRow({id:"count",claim:"/\\b\\d+ countries\\b/",status:"forbidden",scan_paths:[file]}),
+    ];
+    const code = file.endsWith(".ts");
+    const dir = makeFixture(rows, {[file]: code ? 'export const description = "290+ quality-scored tools across 27 countries";' : '290+ quality-scored tools across 27 countries'});
+    try {
+      const {findings} = checkAllClaims(dir);
+      assert.equal(findings.filter(f => f.file === file).length, 2);
+      writeFileSync(join(dir,file), code ? '// Old copy: quality-scored\nexport const description = "Pay-per-call tools; see platform facts for coverage";' : 'Pay-per-call tools; see platform facts for coverage');
+      assert.deepEqual(checkAllClaims(dir).findings, []);
+    } finally { rmSync(dir, {recursive:true,force:true}); }
+  });
+}
+
+test("listing-specific bans leave unrelated dataset quality descriptions alone", () => {
+  const dir = makeFixture([baseRow({claim:"quality score",status:"forbidden",scan_paths:["server.json"]})], {
+    "server.json":"Pay-per-call tools", "manifests/data-quality-check.yaml":"description: Computes a dataset quality score",
+  });
+  try { assert.deepEqual(checkAllClaims(dir).findings, []); }
+  finally { rmSync(dir,{recursive:true,force:true}); }
+});
+
+test("real distribution matchers reject plus totals, pre-built totals and universal x402 paraphrases", () => {
+  const rows = parseRegisterForTest();
+  const count = compileMatcher(rows.find(row => row.id === "static-distribution-counts"));
+  for (const text of ["301+ pay-per-call tools", "301+", "81 pre-built solutions", "Available Tools (8)"]) assert.ok(count.test(text), text);
+  for (const text of ["Python 3.10+", "Node 18+", "Python 3.100+", "Node.js 20+"]) assert.equal(count.test(text), false, text);
+  const coverage = compileMatcher(rows.find(row => row.id === "all-x402-coverage"));
+  assert.ok(coverage.test("All Strale capabilities are also available via x402"));
+  assert.equal(coverage.test("Eligible tools are available via x402"), false);
+});
+function parseRegisterForTest() {
+  return parseYaml(readFileSync(join(realRoot,REGISTER_PATH),"utf8"));
+}
+
+test("listing base origins stay plain and skill links carry exactly one source", () => {
+  for (const file of ["packages/mcp-server/README.md", "packages/sdk-typescript/README.md", "packages/sdk-python/README.md", "context7.json"]) {
+    assert.doesNotMatch(readFileSync(join(realRoot,file),"utf8"), /https:\/\/api\.strale\.io\?src=/, file);
+  }
+  const text=readFileSync(join(realRoot,"packages/skill/README.md"),"utf8");
+  for (const match of text.matchAll(/https:\/\/(?:api\.strale\.io|strale\.dev)[^\s)"<>`]*/g)) {
+    const url=new URL(match[0]);
+    if (["/SKILL.md", "/.well-known/mcp.json", "/v1/capabilities", "/v1/platform/facts"].includes(url.pathname)) {
+      assert.equal(url.searchParams.has("src"), false);
+    } else assert.deepEqual(url.searchParams.getAll("src"),["skill"]);
+    assert.ok(!url.searchParams.get("utm_campaign")?.includes("?"));
+  }
+});
+
+test("configured scan paths and source targets must exist", () => {
+  const dir = makeFixture([baseRow({scan_paths:["missing.md"]})]);
+  try {
+    rmSync(join(dir, SOURCE_TARGETS[0]));
+    const findings = checkAllClaims(dir).findings;
+    assert.ok(findings.some(f => f.code === "SCAN_PATH_MISSING" && f.file === "missing.md"));
+    assert.ok(findings.some(f => f.code === "SCAN_PATH_MISSING" && f.file === SOURCE_TARGETS[0]));
+  } finally { rmSync(dir, {recursive:true, force:true}); }
+});
+
+
+test("unrecorded discovery GET links carry no decorative source tags", () => {
+  for (const file of ["README.md", "context7.json", "docs/x402-listing.md", "packages/skill/SKILL.md", ...SOURCE_TARGETS]) {
+    const text = readFileSync(join(realRoot, file), "utf8");
+    assert.doesNotMatch(text, /\/(?:SKILL\.md|\.well-known\/(?:mcp|ai-catalog|x402)\.json|v1\/(?:capabilities(?:\/vat-validate)?|platform\/facts|web3-assurance))\?src=/, file);
+  }
+  for (const file of ["packages/skill/SKILL.md", "apps/api/src/routes/skill.ts"]) {
+    const text = readFileSync(join(realRoot, file), "utf8");
+    assert.doesNotMatch(text, /src=llms-txt/, file);
+    assert.match(text, /src=skill/, file);
   }
 });
