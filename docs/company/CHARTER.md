@@ -46,9 +46,14 @@ spending inside the €50/week envelope.
 
 1. **Money beyond the envelope.** Raising the €50/week ceiling, or any new
    recurring cost.
-2. **Anything that legally binds Moonlighter AB.** Creating accounts, accepting
-   terms, signing agreements, contacting a vendor as the company. He is the
-   legal person; I am not.
+2. **Anything that legally binds Moonlighter AB.** Signing agreements with a
+   named counterparty, and anything that costs money. He is the legal person;
+   I am not. *Narrowed 2026-10-27 by DEC-20261027-A:* creating free accounts,
+   accepting click-through terms and emailing registries and vendors as the
+   company are delegated when no spend is involved, under
+   `docs/operations/accounts-and-email.md`. CAPTCHAs, SMS or identity checks,
+   and signed agreements stay his. Every email sent carries a duty to watch
+   the inbox for the reply (`docs/company/OUTBOX.yaml`).
 3. **One-way public acts.** Publishing a package version that cannot be
    unpublished, submitting to a directory that does not accept removal, or a
    first public statement in a channel we have never used.
