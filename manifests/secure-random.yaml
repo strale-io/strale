@@ -1,0 +1,188 @@
+slug: secure-random
+name: Random Draw
+description: "Draw random integers, UUIDs or bytes, shuffle arrays, or sample
+  items. Do not use as passwords, keys or session tokens; generate secrets
+  locally."
+category: developer-tools
+# Lowest paid band: bounded local computation, no vendor or marginal API cost.
+price_cents: 2
+is_free_tier: false
+cost_class: free_unlimited
+external_cost_cents: 0
+quota_window: none
+data_source: "Node.js crypto CSPRNG (local computation, no vendor)"
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+avg_latency_ms: 20
+data_access:
+  lane: not_applicable
+  acquisition_method: computed
+input_schema:
+  type: object
+  additionalProperties: false
+  required: [ operation ]
+  properties:
+    operation: { type: string, enum: [ integers, uuid, bytes, shuffle, pick ] }
+    count: { type: integer, minimum: 1, maximum: 1000, default: 1 }
+    min: { type: integer, minimum: -9007199254740991, maximum: 9007199254740991 }
+    max: { type: integer, minimum: -9007199254740991, maximum: 9007199254740991 }
+    unique: { type: boolean, default: false }
+    length: { type: integer, minimum: 1, maximum: 1024 }
+    encoding: { type: string, enum: [ hex, base64 ], default: hex }
+    items:
+      type: array
+      maxItems: 1000
+      description: "At most 64 KB (65536 UTF-8 JSON bytes, including brackets and escaping). Send IDs or indexes instead of full objects."
+      items: { type: [string, number, boolean, "null"] }
+      examples: [["item-a", "item-b", "item-c"]]
+    k: { type: integer, minimum: 0, maximum: 1000 }
+  oneOf:
+    - type: object
+      additionalProperties: false
+      required:
+        - operation
+        - min
+        - max
+      properties:
+        operation:
+          const: integers
+        count: &a1
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 1
+        min:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        max:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        unique:
+          type: boolean
+          default: false
+    - type: object
+      additionalProperties: false
+      required:
+        - operation
+      properties:
+        operation:
+          const: uuid
+        count: *a1
+    - type: object
+      additionalProperties: false
+      required:
+        - operation
+        - length
+      properties:
+        operation:
+          const: bytes
+        length:
+          type: integer
+          minimum: 1
+          maximum: 1024
+        encoding:
+          type: string
+          enum:
+            - hex
+            - base64
+          default: hex
+    - type: object
+      additionalProperties: false
+      required:
+        - operation
+        - items
+      properties:
+        operation:
+          const: shuffle
+        items: &a2
+          type: array
+          maxItems: 1000
+          description: "At most 64 KB (65536 UTF-8 JSON bytes, including brackets and escaping). Scalars only; send IDs or indexes instead of full objects."
+          items: { type: [string, number, boolean, "null"] }
+          examples: [["item-a", "item-b", "item-c"]]
+    - type: object
+      additionalProperties: false
+      required:
+        - operation
+        - items
+        - k
+      properties:
+        operation:
+          const: pick
+        items: *a2
+        k:
+          type: integer
+          minimum: 0
+          maximum: 1000
+output_schema:
+  type: object
+  required: [ values, operation, parameters ]
+  additionalProperties: false
+  properties:
+    values:
+      description: "Array of integers, UUIDv4 strings or input items; bytes returns an
+        encoded string."
+      oneOf: [ { type: array, maxItems: 1000, items: { type: [string, number, boolean, "null"] } }, { type: string } ]
+    operation: { type: string, enum: [ integers, uuid, bytes, shuffle, pick ] }
+    parameters:
+      type: object
+      description: "Validated operation inputs including resolved defaults; items is replaced by items_count."
+      additionalProperties: false
+      required: [ operation ]
+      properties:
+        operation: { type: string }
+        count: { type: integer }
+        min: { type: integer }
+        max: { type: integer }
+        unique: { type: boolean }
+        length: { type: integer }
+        encoding: { type: string }
+        items_count: { type: integer, minimum: 0, maximum: 1000 }
+        k: { type: integer }
+test_fixtures:
+  health_check_input: { operation: uuid, count: 2 }
+  known_answer:
+    input: { operation: uuid, count: 2 }
+    expected_fields:
+      - { field: values, operator: type, value: array, reliability: guaranteed }
+      - { field: operation, operator: equals, value: uuid, reliability: guaranteed }
+      - { field: parameters, operator: type, value: object, reliability: guaranteed }
+output_field_reliability:
+  values: guaranteed
+  operation: guaranteed
+  parameters: guaranteed
+limitations:
+  - title: Not for passwords, keys or session tokens
+    text: "Inputs and outputs are kept in the transaction record for 90 days like
+      every call. Do not use these values as passwords, keys or session tokens;
+      generate secrets locally."
+    category: coverage
+    severity: warning
+  - title: Not publicly verifiable
+    text: "There is no commit-reveal and no beacon. Callers cannot publicly verify a
+      draw or prove that it was not selected from repeated calls."
+    category: coverage
+    severity: info
+  - title: Per-call limits
+    text: "Integers and UUIDs: 1–1000 values. Integer bounds must be safe integers;
+      inclusive range smaller than 2^48. Unique count cannot exceed range size.
+      Bytes: 1–1024. Shuffle and pick: at most 1000 scalar input items (string, number, boolean or null),
+      with at most 64 KB (65536 UTF-8 JSON bytes) for the serialized items array.
+      Nested arrays and objects are refused; send IDs or indexes instead of full
+      objects. Parameters echo items_count instead of items. k from 0 to
+      items.length. Sampling is without replacement by position; duplicate input
+      values may remain."
+    category: coverage
+    severity: info
+  - title: Computed with no upstream
+    text: "Uses only Node.js crypto locally, with no vendor, external API cost, or
+      upstream terms to check."
+    category: coverage
+    severity: info

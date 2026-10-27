@@ -9,12 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-367 files (340 with a recorded intent, 27 without).
+369 files (342 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-secure-random.md`](_general/from-code/2026-10-27-secure-random.md) | Build the paid secure-random capability for portfolio Phase 2 item 2.12; complete offline verification and leave prod... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-nta-env-set-in-railway.md`](_general/from-code/2026-10-27-nta-env-set-in-railway.md) | record that the NTA Corporate Number Web-API application ID is now set in Railway. |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-japan-official-corporate-api.md`](_general/from-code/2026-10-27-feat-japan-official-corporate-api.md) | Replace japanese-company-data's browser/LLM extraction with the official NTA Corporate Number Web-API v4; leave crede... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |

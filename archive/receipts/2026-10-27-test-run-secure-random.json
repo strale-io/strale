@@ -1,0 +1,307 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "79d645891033d297c53db66bd059ffb61633331c"
+  },
+  "at": "2026-10-27T11:12:42.929Z",
+  "inputs": {
+    "slug": "secure-random",
+    "branch": "feat/secure-random",
+    "working_tree": "source hashes in raw.inputs"
+  },
+  "summary": {
+    "focused_passed": 53,
+    "focused_failed": 0,
+    "api_passed": 6003,
+    "api_skipped": 346,
+    "api_failed": 0,
+    "root_ci_final_failures": 0,
+    "production_readiness_verified": false
+  },
+  "topic": "secure-random",
+  "raw": {
+    "inputs": {
+      "branch": "feat/secure-random",
+      "source_sha256": {
+        "apps/api/src/capabilities/secure-random.ts": "c2c22780ccc4c3eaac1d750cd3c8814a220f8fe518cfbbb329bbc20164a55907",
+        "apps/api/src/capabilities/secure-random.test.ts": "9290196673039ef8a8c5f775be76e068b2f27cbeb0bb533b75e021e4925f3cb2",
+        "manifests/secure-random.yaml": "429567f967ec560a03b840c80d876beb304bdafc37096f371d7d350860703185"
+      }
+    },
+    "summary": {
+      "focused_passed": 53,
+      "focused_failed": 0,
+      "api_passed": 6003,
+      "api_skipped": 346,
+      "api_failed": 0,
+      "api_files_passed": 343,
+      "api_files_skipped": 33,
+      "root_ci_final_failures": 0,
+      "production_readiness_verified": false
+    },
+    "raw": {
+      "ci_checks": [
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit_code": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit_code": 0,
+          "initial_exit_code": 1,
+          "note": "Removed unsupported nested reliability annotation; strict rerun passed."
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run programs:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run programs:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run research:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run research:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run design:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run design:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run env:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run env:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run vendors:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run vendors:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run distribution:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run distribution:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run candidates:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run protocols:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run protocols:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run scheduled:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run scheduled:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run models:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run models:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run claims:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run claims:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run docs:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run docs:test",
+          "exit_code": 0
+        },
+        {
+          "command": "node scripts/generate-archive-index.mjs --check (CI warning-only wrapper)",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run archive:index:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run receipts:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run migrations:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run migrations:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run handoff:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run context:check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run context:test",
+          "exit_code": 0
+        },
+        {
+          "command": "npm test",
+          "exit_code": 0
+        }
+      ],
+      "additional_checks": [
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit_code": 0
+        },
+        {
+          "command": "npm --workspace=packages/sdk-typescript run build",
+          "exit_code": 0
+        },
+        {
+          "command": "npm run typecheck",
+          "exit_code": 0
+        },
+        {
+          "command": "cd apps/api && npx tsc --noEmit",
+          "exit_code": 0
+        },
+        {
+          "command": "cd apps/api && npx vitest run src/capabilities/secure-random.test.ts",
+          "exit_code": 0,
+          "passed": 53
+        }
+      ],
+      "live_health": {
+        "http_status": 200,
+        "body": {
+          "status": "ok",
+          "commit": "79d645891033"
+        }
+      },
+      "offline_onboarding": {
+        "discover_dry_run": "refused mutually exclusive flags",
+        "dry_run": "production write authorization unavailable",
+        "validate": "DATABASE_URL required",
+        "smoke": "DATABASE_URL required"
+      },
+      "integration_db": "DATABASE_URL_TEST unavailable; guard refused; no migrations attempted"
+    }
+  }
+}
