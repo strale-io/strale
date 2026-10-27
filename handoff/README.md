@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-378 files (351 with a recorded intent, 27 without).
+379 files (352 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -22,6 +22,7 @@
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-package-docs.md`](_general/from-code/2026-10-27-package-docs.md) | Build and revise package-docs using public npm/PyPI registry APIs; leave the uncommitted changes for the orchestrator... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-nta-env-set-in-railway.md`](_general/from-code/2026-10-27-nta-env-set-in-railway.md) | record that the NTA Corporate Number Web-API application ID is now set in Railway. |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-manifest-text-sync.md`](_general/from-code/2026-10-27-manifest-text-sync.md) | Implement H3 deploy-time manifest text sync, actionable drift checks, real-traffic guaranteed-field monitoring and ro... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-japan-official-corporate-api.md`](_general/from-code/2026-10-27-feat-japan-official-corporate-api.md) | Replace japanese-company-data's browser/LLM extraction with the official NTA Corporate Number Web-API v4; leave crede... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |

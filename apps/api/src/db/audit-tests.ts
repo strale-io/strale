@@ -1,3 +1,4 @@
+import { getNestedValue } from "../lib/nested-value.js";
 /**
  * Test Suite Audit: Find structurally broken validation rules.
  *
@@ -74,15 +75,6 @@ interface AuditFix {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current == null || typeof current !== "object") return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
 
 function extractAllKeys(obj: unknown, prefix = ""): string[] {
   if (!obj || typeof obj !== "object") return [];

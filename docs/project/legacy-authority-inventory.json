@@ -866,7 +866,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "98867d8c2b3c35376f14fb6965c066e9fa44299b1e8b778fc2924a7845f621e8",
+      "sha256": "9917ee736b75bebfa745279df9b77fb8d63e30fc1325efc8b8fb3413f10d15f6",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -940,6 +940,8 @@
         "archive/receipts/2026-10-27-test-run-distribution-hygiene-round-2.json",
         "archive/receipts/2026-10-27-test-run-distribution-hygiene.json",
         "archive/receipts/2026-10-27-test-run-limitations-sync-mode.json",
+        "archive/receipts/2026-10-27-test-run-manifest-text-sync-round-2.json",
+        "archive/receipts/2026-10-27-test-run-manifest-text-sync.json",
         "archive/receipts/2026-10-27-test-run-per-call-cost-round2.json",
         "archive/receipts/2026-10-27-test-run-per-call-cost-round3.json",
         "archive/receipts/2026-10-27-test-run-per-call-cost.json",

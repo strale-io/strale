@@ -332,6 +332,12 @@ async function main() {
   const server = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Strale API running on http://localhost:${info.port}`);
 
+    // In-process, after listen. Text sync can fail without taking boot down.
+    void import("./lib/manifest-text-sync.js").then(({ applyManifestText }) => applyManifestText()).catch(async () => {
+      const { log } = await import("./lib/log.js");
+      log.warn({ label: "manifest-text-sync-summary", updated: 0, unchanged: 0, report_only: 0, failed: 1 }, "manifest-text-sync-summary");
+    });
+
     // Pre-warm suggest catalog after env + server are ready
     warmCatalog().catch((err: Error) =>
       console.warn("[suggest] Catalog warm-up failed:", err.message),

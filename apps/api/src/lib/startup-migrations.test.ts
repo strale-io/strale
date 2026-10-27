@@ -1467,7 +1467,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0125_apiKeys",
       "runMigration0126_signupSource",
       "runMigration0127_integrityHashIndex",
-      "runMigration0128_transactionCost",
+      "runMigration0128_manifestTextHash",
+      "runMigration0129_transactionCost",
     ]);
   });
 });
@@ -2351,7 +2352,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(128);
+    expect(Math.max(...numbers)).toBe(129);
   });
 });
 
@@ -3527,11 +3528,28 @@ describe("startup-migrations: block 0124 (public descriptions)", () => {
 });
 
 
-describe("startup-migrations — block 0128 (marginal transaction costs)", () => {
+describe("startup-migrations — manifest text checkpoint", () => {
+  it("adds only a bare nullable column with an existence guard and safe bind parameters", async () => {
+    const { runMigration0128_manifestTextHash } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: [] });
+    await runMigration0128_manifestTextHash(stub);
+    const statement = stub.renderedSql.join("\n").toLowerCase();
+    expect(statement).toContain("if not exists");
+    expect(statement).toContain("add column manifest_text_hash text;");
+    expect(statement).toContain("set_config('lock_timeout', '3s', true)");
+    expect(statement).not.toMatch(/default|not null|update capabilities/);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter(c => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations — block 0129 (marginal transaction costs)", () => {
   it("adds only bare nullable columns under schema guards, with no backfill or unsafe binds", async () => {
-    const { runMigration0128_transactionCost } = await import("./startup-migrations.js");
+    const { runMigration0129_transactionCost } = await import("./startup-migrations.js");
     const statements: SQL[] = [];
-    await runMigration0128_transactionCost({ execute: async (q: SQL) => { statements.push(q); return []; } });
+    await runMigration0129_transactionCost({ execute: async (q: SQL) => { statements.push(q); return []; } });
     expect(statements).toHaveLength(1);
     const q = new PgDialect().sqlToQuery(statements[0]!);
     expect(q.sql).toContain("ADD COLUMN cost_cents numeric(24,9)");

@@ -1,3 +1,4 @@
+import { additionalPublicPaths } from "./openapi-public-paths.js";
 /**
  * OpenAPI 3.1.0 specification for the Strale API.
  *
@@ -230,6 +231,7 @@ export const openApiSpec = {
     },
   },
   paths: {
+    ...additionalPublicPaths,
     "/v1/api-keys": {
       post: {
         tags: ["auth"], summary: "Create an additional API key",
@@ -787,6 +789,11 @@ export const openApiSpec = {
       },
     },
     "/v1/transactions/{id}/dispute": {
+      get: {
+        summary: "Read a transaction dispute",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Current dispute status" } },
+      },
       post: {
         tags: ["transactions"], summary: "Submit a dispute for human review",
         description: "Account-holder submissions require the primary key. Anonymous data subjects may instead use a signed audit token with expires_at and a contact email; that path does not require an account key.",

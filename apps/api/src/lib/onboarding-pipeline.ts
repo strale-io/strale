@@ -1,3 +1,4 @@
+import { getNestedValue } from "./nested-value.js";
 import { withinOnboardingBudget } from "./onboarding-budget.js";
 import { runLimitationsSync } from "./limitations-sync.js";
 import { manifestLimitationsToRows } from "./manifest-limitations.js";
@@ -339,7 +340,7 @@ export async function runOnboarding(
         output: Record<string, unknown>,
         ef: ManifestExpectedField
       ): { pass: boolean; actual: unknown } {
-        const actual = output[ef.field];
+        const actual = getNestedValue(output, ef.field);
         switch (ef.operator) {
           case "not_null":
             return { pass: actual != null, actual };

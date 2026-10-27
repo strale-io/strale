@@ -968,14 +968,24 @@
     },
     {
       "id": "M071",
-      "function": "runMigration0128_transactionCost",
+      "function": "runMigration0128_manifestTextHash",
+      "title": "manifest text sync checkpoint",
+      "added": "2026-10-27",
+      "columns_written": [
+        "capabilities.manifest_text_hash"
+      ],
+      "sha256": "ce057a7a1d73438dee1b227e111d4f43c559ec0b05bc9a59966bec2cd84c20e7"
+    },
+    {
+      "id": "M072",
+      "function": "runMigration0129_transactionCost",
       "title": "marginal per-call costs, no historical estimates/backfill",
       "added": "2026-10-27",
       "columns_written": [
         "transactions.cost_breakdown",
         "transactions.cost_cents"
       ],
-      "sha256": "899d0d0b70613c7224558837a027dac181d24aeb04f8b395a8d0e43aa54530e0"
+      "sha256": "fdb8d33999a002560925e31697ba59f246b0c8823f47dc38a01f81fe7e57353c"
     }
   ],
   "known_overlaps": [
