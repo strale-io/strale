@@ -121,13 +121,13 @@ const DEFAULT_EXAMPLES = [
 function buildUpgradeBlock(capabilitySlug: string, input?: Record<string, unknown>, output?: Record<string, unknown>) {
   const nudge = inferContextualNudge(capabilitySlug, input, output);
   return {
-    message: nudge?.message ?? "You're using a free capability. Sign up for €2 free credits to access 270+ paid capabilities — company data, compliance checks, Web3 security, and more.",
+    message: nudge?.message ?? "You're using a free capability. Create an account to access paid tools; trial credits are available where eligible.",
     signup_url: "https://strale.dev/signup",
     self_signup: {
       url: "https://api.strale.io/v1/signup",
       method: "POST",
       body: { email: "your-agent@yourdomain.com" },
-      description: "Create an account programmatically and get €2 free credits.",
+      description: "Create an account programmatically with trial credits where eligible.",
     },
     paid_examples: nudge?.examples ?? FALLBACK_EXAMPLES[capabilitySlug] ?? DEFAULT_EXAMPLES,
     x402_note: "Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog",
@@ -344,7 +344,7 @@ async function anonymousPaidRefusal(
       error_code: "unauthorized",
       details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header or choose a free 'capability_slug' from GET /v1/capabilities." },
       message:
-        "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
+        "This capability requires an API key. Sign up at strale.dev/signup for paid tools; trial credits are available where eligible.",
       free_capabilities: freeSlugs,
       hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
       self_signup: {
@@ -352,7 +352,7 @@ async function anonymousPaidRefusal(
         method: "POST",
         body: { email: "your-agent@yourdomain.com" },
         description:
-          "Create an account programmatically and get €2 free credits. Requires at least one prior free-tier call from this IP.",
+          "Create an account programmatically with trial credits where eligible. Requires at least one prior free-tier call from this IP.",
       },
     },
     401,
@@ -952,7 +952,7 @@ doRoute.post(
       return c.json({
         error_code: "unauthorized",
       details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header or choose a free 'capability_slug' from GET /v1/capabilities." },
-        message: "No free capability matched your request. Sign up at strale.dev/signup for full access with €2 free credits.",
+        message: "No free capability matched your request. Sign up at strale.dev/signup for paid tools; trial credits are available where eligible.",
         free_capabilities: freeSlugs,
         hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
       }, 401);
@@ -1522,7 +1522,7 @@ function buildUsageBlock(callsToday: number, cap: number): Record<string, unknow
     resets_at: nextMidnight.toISOString(),
     ...(exceeded ? {
       limit_exceeded: true,
-      message: "You've exceeded today's free limit. Sign up for €2 free credits to continue without interruption.",
+      message: "You've exceeded today's free limit. Create an account to continue with paid access; trial credits are available where eligible.",
     } : {}),
   };
 }

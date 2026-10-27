@@ -947,6 +947,16 @@
         "wallet_transactions.api_key_id"
       ],
       "sha256": "43ee1f75b80c1a0e3ef1946301064b3376f3e3ad0dbfcd92c5798d39db510a1a"
+    },
+    {
+      "id": "M069",
+      "function": "runMigration0126_signupSource",
+      "title": "signup channel attribution",
+      "added": "2026-10-27",
+      "columns_written": [
+        "users.signup_src"
+      ],
+      "sha256": "0aa520b14b89953bf2e83734fb0bf49e3ea492cd1918aca49675bce38c0c55db"
     }
   ],
   "known_overlaps": [

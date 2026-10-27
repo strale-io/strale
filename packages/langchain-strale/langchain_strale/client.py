@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 from typing import Any
 
 import requests
 
 DEFAULT_BASE_URL = "https://api.strale.io"
+
+
+def _client_version() -> str:
+    try:
+        return version("langchain-strale")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 class StraleClient:
@@ -19,13 +28,14 @@ class StraleClient:
         self._session.headers.update(
             {
                 "Authorization": f"Bearer {api_key}",
+                "X-Strale-Client": f"langchain-strale/{_client_version()}",
                 "User-Agent": "langchain-strale/0.1.0",
             }
         )
 
     def list_capabilities(self) -> list[dict[str, Any]]:
         """Fetch all active capabilities (public, no auth required)."""
-        resp = requests.get(f"{self.base_url}/v1/capabilities")
+        resp = requests.get(f"{self.base_url}/v1/capabilities", headers={"X-Strale-Client": self._session.headers["X-Strale-Client"]})
         resp.raise_for_status()
         return resp.json()["capabilities"]
 

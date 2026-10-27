@@ -20,6 +20,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
 import { repoRootFrom } from "./program-tracks-lib.mjs";
@@ -49,7 +50,31 @@ export const VOICE_PATH = "docs/company/VOICE.md";
  * the frontend repo is a sibling checkout, not part of this repo, and is
  * read-only (never written) from here.
  */
-export const README_TARGETS = ["README.md"];
+export const README_TARGETS = [
+  "README.md", "server.json", "smithery.yaml", "glama.json", "context7.json",
+  "docs/claude-md-snippet.md", "docs/api-quickstart.md", "docs/x402-listing.md", "docs/ide-rules/strale-compliance.mdc", "packages/skill/SKILL.md", "packages/mcp-server/server.json",
+];
+export const SOURCE_TARGETS = [
+  "apps/api/src/routes/a2a.ts", "apps/api/src/routes/mcp-server-card.ts",
+  "apps/api/src/routes/mcp.ts", "apps/api/src/routes/llms-txt.ts", "apps/api/src/routes/skill.ts",
+  "packages/mcp-server/src/tools.ts", "packages/semantic-kernel-strale/src/plugin.ts",
+  "apps/api/src/routes/do.ts", "apps/api/src/lib/welcome-email.ts", "apps/api/src/lib/activation-emails.ts",
+  "packages/composio-strale/composio_strale/toolkit.py",
+];
+function loadSourceSurfaces(root) {
+  return SOURCE_TARGETS.filter((file) => existsSync(resolve(root, file))).map((file) => {
+    const text = readFileSync(resolve(root, file), "utf8");
+    if (!file.endsWith(".ts")) return { file, text };
+    const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+    const strings = [];
+    function visit(node) {
+      if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) strings.push(node.text);
+      ts.forEachChild(node, visit);
+    }
+    visit(ast);
+    return { file, text: strings.join("\n") };
+  });
+}
 export const PACKAGES_DIR = "packages";
 export const MANIFESTS_DIR = "manifests";
 export const PLATFORM_FACTS_PATH = "apps/api/src/lib/platform-facts.ts";
@@ -183,6 +208,16 @@ function loadPackageReadmes(root) {
     const rel = `${PACKAGES_DIR}/${entry.name}/README.md`;
     const abs = resolve(root, rel);
     if (existsSync(abs)) out.push({ file: rel, text: readFileSync(abs, "utf8") });
+    const metadata = `${PACKAGES_DIR}/${entry.name}/package.json`;
+    if (existsSync(resolve(root, metadata))) {
+      const pkg = JSON.parse(readFileSync(resolve(root, metadata), "utf8"));
+      out.push({ file: metadata, text: pkg.description ?? "" });
+    }
+    const pyproject = `${PACKAGES_DIR}/${entry.name}/pyproject.toml`;
+    if (existsSync(resolve(root, pyproject))) {
+      const text = readFileSync(resolve(root, pyproject), "utf8");
+      out.push({ file: pyproject, text: text.match(/^description\s*=\s*(.+)$/m)?.[1] ?? "" });
+    }
   }
   return out;
 }
@@ -215,6 +250,7 @@ export function loadAllSurfaces(root) {
   return [
     ...loadReadmeTargets(root),
     ...loadPackageReadmes(root),
+    ...loadSourceSurfaces(root),
     ...loadManifestDescriptions(root),
     ...loadPlatformFacts(root),
     ...loadFrontendLlmsTxt(root),
@@ -224,6 +260,9 @@ export function loadAllSurfaces(root) {
 /** FORBIDDEN_CLAIM_FOUND findings: a forbidden-status row's phrase appears in a scanned surface. */
 export function checkForbiddenClaims(root, rows) {
   const findings = [];
+  for (const file of new Set([...SOURCE_TARGETS, ...rows.flatMap(row => row.scan_paths ?? [])])) {
+    if (!existsSync(resolve(root, file))) findings.push({ code: "SCAN_PATH_MISSING", file, detail: "Configured claims scan path does not exist" });
+  }
   const surfaces = loadAllSurfaces(root);
   const forbidden = rows.filter((r) => r.status === "forbidden");
   for (const row of forbidden) {
@@ -233,6 +272,7 @@ export function checkForbiddenClaims(root, rows) {
       continue;
     }
     for (const surface of surfaces) {
+      if (row.scan_paths && !row.scan_paths.includes(surface.file)) continue;
       matcher.lastIndex = 0;
       if (matcher.test(surface.text)) {
         // A surface outside this repository (the frontend's llms.txt) cannot

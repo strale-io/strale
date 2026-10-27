@@ -22,14 +22,14 @@ code handling financial identifiers, company data, and compliance checks.
 Free IBAN validation (no API key, no signup):
 
 ```bash
-curl -X POST https://api.strale.io/v1/do \
+curl -X POST https://api.strale.io/v1/do?src=llms-txt \
   -H "Content-Type: application/json" \
   -d '{"capability_slug": "iban-validate", "inputs": {"iban": "DE89370400440532013000"}}'
 ```
 
 ```typescript
 // Server-side only — never call from browser code
-const res = await fetch("https://api.strale.io/v1/do", {
+const res = await fetch("https://api.strale.io/v1/do?src=llms-txt", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -44,7 +44,7 @@ const { output } = await res.json();
 ```python
 # Server-side only
 import httpx
-resp = httpx.post("https://api.strale.io/v1/do", json={
+resp = httpx.post("https://api.strale.io/v1/do?src=llms-txt", json={
     "capability_slug": "iban-validate",
     "inputs": {"iban": user_provided_iban},
 })
@@ -131,7 +131,7 @@ require no API key at all.
 - For compliance-sensitive data (KYB, sanctions, PEP), store the full audit
   trail: who requested it, when, what result was returned, which source.
 
-Strale APIs return provenance automatically on every response:
+Source context varies by tool and execution mode. Inspect the actual response; this example illustrates source fields:
 
 ```json
 {
@@ -141,7 +141,6 @@ Strale APIs return provenance automatically on every response:
     "fetched_at": "2026-03-31T10:00:00Z",
     "transparency": "algorithmic"
   },
-  "sqs": 92,
   "execution_time_ms": 340
 }
 ```
@@ -168,5 +167,5 @@ npm install straleio
 pip install straleio
 ```
 
-Full capability catalog (250+): https://strale.dev/capabilities
-Free trial with no credit card: https://strale.dev/signup
+Live tool catalogue: https://strale.dev/capabilities?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
+Create an account; trial credits are available where eligible: https://strale.dev/signup?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1

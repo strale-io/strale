@@ -42,3 +42,14 @@ for (const [status, code] of [[403, 'primary_key_required'], [409, 'active_key_l
     });
   });
 }
+
+test('framework wrappers can identify themselves while the SDK defaults to its own metadata', async t => {
+  const {readFileSync} = await import('node:fs');
+  const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url)));
+  const headers=[];
+  t.mock.method(globalThis,'fetch',async (_url,init)=>{headers.push(init.headers);return Response.json({keys:[]});});
+  await new Strale({apiKey:'fixture',clientHeader:'framework-fixture/1.2.3'}).apiKeys();
+  await new Strale({apiKey:'fixture'}).apiKeys();
+  assert.equal(headers[0]['X-Strale-Client'],'framework-fixture/1.2.3');
+  assert.equal(headers[1]['X-Strale-Client'],`straleio-js/${pkg.version}`);
+});

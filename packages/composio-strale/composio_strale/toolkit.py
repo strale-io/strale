@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 import os
 from typing import Any, Optional
 
@@ -10,6 +12,13 @@ from pydantic import BaseModel, Field
 
 
 _BASE_URL = "https://api.strale.io"
+
+
+def _client_version() -> str:
+    try:
+        return version("composio-strale")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 class StraleSearchInput(BaseModel):
@@ -71,7 +80,7 @@ class StraleToolkit:
         self.base_url = base_url.rstrip("/")
 
     def _headers(self) -> dict[str, str]:
-        h: dict[str, str] = {"Content-Type": "application/json", "Accept": "application/json"}
+        h: dict[str, str] = {"Content-Type": "application/json", "Accept": "application/json", "X-Strale-Client": f"composio-strale/{_client_version()}"}
         if self.api_key:
             h["Authorization"] = f"Bearer {self.api_key}"
         return h
@@ -82,7 +91,7 @@ class StraleToolkit:
 
         @composio.tools.custom_tool(toolkit="strale")
         def strale_search(request: StraleSearchInput) -> dict:
-            """Search Strale's 270+ API capabilities. Returns matching capabilities with slugs, descriptions, and pricing. Use this first to discover available capabilities, then use strale_execute to run one."""
+            """Search Strale's available API capabilities. Returns matching capabilities with slugs, descriptions, and pricing. Use this first to discover available capabilities, then use strale_execute to run one."""
             params = {"q": request.query, "limit": "10"}
             if request.category:
                 params["category"] = request.category
@@ -110,7 +119,7 @@ class StraleToolkit:
             resp2 = httpx.get(
                 f"{toolkit.base_url}/v1/capabilities",
                 params={"search": request.query},
-                headers={"Accept": "application/json"},
+                headers=toolkit._headers(),
                 timeout=10,
             )
             if resp2.status_code != 200:
@@ -130,9 +139,9 @@ class StraleToolkit:
 
         @composio.tools.custom_tool(toolkit="strale")
         def strale_execute(request: StraleExecuteInput) -> dict:
-            """Execute a Strale capability. Pass the slug from strale_search and the required inputs. Returns structured output with quality score, latency, and data provenance."""
+            """Execute a Strale capability. Pass the slug from strale_search and the required inputs. Returns structured output with execution status, latency, and data provenance."""
             if not toolkit.api_key:
-                return {"error": "STRALE_API_KEY required. Get one at https://strale.dev/signup (€2 free credits)."}
+                return {"error": "STRALE_API_KEY required. Get one at https://strale.dev/signup (trial credits where eligible)."}
             resp = httpx.post(
                 f"{toolkit.base_url}/v1/do",
                 json={

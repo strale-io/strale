@@ -2,7 +2,7 @@
 
 ## Free capabilities (no API key needed)
 
-These 5 capabilities work without signup or authentication. IP rate limited to 10 requests/day.
+These capabilities work without signup or authentication. IP rate limited to 10 requests/day.
 
 ### Validate an email
 
@@ -132,17 +132,12 @@ Connect any MCP client (Claude Code, Cursor, Windsurf, etc.) to Strale:
 
 Free capabilities work without the Authorization header.
 
-## Check quality before calling
+## Check sources and limitations before calling
 
-Every capability has a Strale Quality Score (SQS) from 0 to 100:
+Read each tool's inputs, source and limitations in the catalogue. Public test
+and availability signals describe observed tests, not a guarantee about the next call.
 
-```bash
-curl https://api.strale.io/v1/quality/iban-validate
-```
-
-Returns quality grade, reliability grade, trend, and response time percentiles.
-
-## Browse all 250+ capabilities
+## Browse available capabilities
 
 ```bash
 curl https://api.strale.io/v1/capabilities
@@ -152,7 +147,7 @@ Categories: compliance, validation, data-extraction, developer-tools, web3, secu
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
+Sign up at [strale.dev](https://strale.dev) — trial credits are available where eligible.
 
 ## Several agents on one wallet
 
@@ -245,5 +240,5 @@ The TypeScript SDK keeps `StraleError.message` unchanged and retains
 details fields when present. MCP tool error text includes the fix as well as details.
 x402 retains its payment challenge and legacy `error` fields, adding `details`;
 A2A and HTTP MCP protocol errors carry guidance at `error.data.details`.
-The executor rollout covers the 30 tools listed in the error inventory;
+The executor rollout covers the tools listed in the error inventory;
 remaining executors can adopt explicit field-level fixes in a later batch.

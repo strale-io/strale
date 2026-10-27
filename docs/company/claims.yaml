@@ -87,7 +87,7 @@
     average is not a defensible customer-latency claim.
 
 - id: all-x402-coverage
-  claim: /\ball (capabilities|tools|solutions) support x402\b/
+  claim: /\ball (Strale )?(capabilities|tools|solutions) (support|are (also )?available (via|over)) x402\b/
   is_regex: true
   status: forbidden
   surfaces: [homepage, x402 page, llms.txt]
@@ -266,3 +266,21 @@
     claim a quality/trust score exists — this is the exact failure mode
     the 2026-04-30 cert audit found ("SQS 0 / Price unavailable"
     fallback card).
+
+- id: retired-distribution-framing
+  claim: /\b(SQS|quality[- ]scored|quality scores?|trust layer|independently tested|verified capabilities|Payee Assurance)\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [listing files, package descriptions, README, MCP tools, agent cards, skill]
+  scan_paths: ["apps/api/src/routes/do.ts", "apps/api/src/lib/welcome-email.ts", "apps/api/src/lib/activation-emails.ts", "docs/claude-md-snippet.md", "docs/api-quickstart.md", "packages/composio-strale/composio_strale/toolkit.py", "README.md", "server.json", "smithery.yaml", "glama.json", "context7.json", "docs/x402-listing.md", "docs/ide-rules/strale-compliance.mdc", "packages/skill/SKILL.md", "packages/mcp-server/server.json", "apps/api/src/routes/a2a.ts", "apps/api/src/routes/mcp-server-card.ts", "apps/api/src/routes/mcp.ts", "apps/api/src/routes/llms-txt.ts", "apps/api/src/routes/skill.ts", "packages/mcp-server/src/tools.ts", "packages/semantic-kernel-strale/src/plugin.ts", "packages/sdk-typescript/README.md", "packages/composio-strale/README.md", "packages/pydantic-ai-strale/README.md", "packages/mcp-server/README.md", "packages/crewai-strale/README.md", "packages/semantic-kernel-strale/README.md", "packages/strale-capabilities/README.md", "packages/openai-agents-strale/README.md", "packages/langchain-strale/README.md", "packages/skill/README.md", "packages/sdk-python/README.md", "packages/google-adk-strale/README.md", "packages/sdk-typescript/package.json", "packages/mcp-server/package.json", "packages/semantic-kernel-strale/package.json", "packages/strale-capabilities/package.json", "packages/langchain/package.json", "packages/composio-strale/pyproject.toml", "packages/pydantic-ai-strale/pyproject.toml", "packages/crewai-strale/pyproject.toml", "packages/openai-agents-strale/pyproject.toml", "packages/langchain-strale/pyproject.toml", "packages/sdk-python/pyproject.toml", "packages/google-adk-strale/pyproject.toml"]
+  decided_by: DEC-20260503-B
+  note: Retired framing; public source text must describe the current product and actual testing mode.
+
+- id: static-distribution-counts
+  claim: /(?:(?<![\w.])\d{3,}\+(?!\w)|\b\d+\s+(?:pre-built |pay-per-call )?(?:capabilities|tools|solutions|countries)\b|Available Tools \(\d+\))/
+  is_regex: true
+  status: forbidden
+  surfaces: [listing files, package descriptions, README, MCP tools, agent cards, skill]
+  scan_paths: ["apps/api/src/routes/do.ts", "apps/api/src/lib/welcome-email.ts", "apps/api/src/lib/activation-emails.ts", "docs/claude-md-snippet.md", "docs/api-quickstart.md", "packages/composio-strale/composio_strale/toolkit.py", "README.md", "server.json", "smithery.yaml", "glama.json", "context7.json", "docs/x402-listing.md", "docs/ide-rules/strale-compliance.mdc", "packages/skill/SKILL.md", "packages/mcp-server/server.json", "apps/api/src/routes/a2a.ts", "apps/api/src/routes/mcp-server-card.ts", "apps/api/src/routes/mcp.ts", "apps/api/src/routes/llms-txt.ts", "apps/api/src/routes/skill.ts", "packages/mcp-server/src/tools.ts", "packages/semantic-kernel-strale/src/plugin.ts", "packages/sdk-typescript/README.md", "packages/composio-strale/README.md", "packages/pydantic-ai-strale/README.md", "packages/mcp-server/README.md", "packages/crewai-strale/README.md", "packages/semantic-kernel-strale/README.md", "packages/strale-capabilities/README.md", "packages/openai-agents-strale/README.md", "packages/langchain-strale/README.md", "packages/skill/README.md", "packages/sdk-python/README.md", "packages/google-adk-strale/README.md", "packages/sdk-typescript/package.json", "packages/mcp-server/package.json", "packages/semantic-kernel-strale/package.json", "packages/strale-capabilities/package.json", "packages/langchain/package.json", "packages/composio-strale/pyproject.toml", "packages/pydantic-ai-strale/pyproject.toml", "packages/crewai-strale/pyproject.toml", "packages/openai-agents-strale/pyproject.toml", "packages/langchain-strale/pyproject.toml", "packages/sdk-python/pyproject.toml", "packages/google-adk-strale/pyproject.toml"]
+  decided_by: DEC-20261023-B
+  note: Read catalogue and country counts from platform facts; never type a total into listing copy.

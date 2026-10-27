@@ -1,26 +1,26 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.strale-io/strale",
-  "title": "Strale - business data and compliance APIs for AI agents",
-  "description": "Independently tested business data and compliance capabilities for AI agents: company registry lookups, KYB and sanctions screening, VAT/IBAN/LEI validation, document extraction. Audit record on every call.",
+  "title": "Strale",
+  "description": "Hundreds of pay-per-call tools for agents: company records, screening, validation, web reading.",
   "repository": {
     "url": "https://github.com/strale-io/strale",
     "source": "github"
   },
-  "version": "0.2.6",
+  "version": "0.2.8",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "strale-mcp",
-      "version": "0.2.6",
+      "version": "0.2.8",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "STRALE_API_KEY",
-          "description": "Your Strale API key (starts with sk_)",
-          "isRequired": true,
+          "description": "Optional API key for paid execution and wallet access. Search and public information work without a key.",
+          "isRequired": false,
           "format": "string",
           "isSecret": true
         }
@@ -30,7 +30,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://api.strale.io/mcp"
+      "url": "https://api.strale.io/mcp?src=mcp-registry"
     }
   ]
 }

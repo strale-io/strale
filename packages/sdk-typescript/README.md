@@ -1,6 +1,6 @@
 # straleio
 
-TypeScript client for the [Strale](https://strale.dev) API: call any Strale tool from your code with one API key, paid per call from your Strale balance.
+TypeScript client for the [Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) API: call any Strale tool from your code with one API key, paid per call from your Strale balance.
 
 ## Install
 
@@ -25,7 +25,7 @@ console.log(result.output);     // the tool's structured fields
 console.log(result.provenance); // { source, fetched_at }
 ```
 
-`max_price_cents` caps what one call may cost: the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.dev/capabilities](https://strale.dev/capabilities) and in `strale.capability(slug)`.
+`max_price_cents` caps what one call may cost: the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.dev/capabilities](https://strale.dev/capabilities?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) and in `strale.capability(slug)`.
 
 ## Describe the task instead of naming the tool
 
@@ -77,14 +77,14 @@ const res = await fetch("https://api.strale.io/v1/solutions/kyb-essentials-se/ex
 });
 ```
 
-Each bundle's inputs and price are on its page at [strale.dev/solutions](https://strale.dev/solutions).
+Each bundle's inputs and price are on its page at [strale.dev/solutions](https://strale.dev/solutions?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Free tools
 
 This client always sends an API key. Free tools cost nothing with a key. They also work without any key at a small daily limit, if you call the REST API directly:
 
 ```bash
-curl -X POST https://api.strale.io/v1/do \
+curl -X POST https://api.strale.io/v1/do?src=npm-readme \
   -H 'Content-Type: application/json' \
   -d '{"capability_slug": "email-validate", "inputs": {"email": "hello@example.com"}}'
 ```
@@ -113,7 +113,7 @@ try {
   await strale.do({ capability_slug: "vat-validate", inputs: { vat_number: "SE556703748501" }, max_price_cents: 10 });
 } catch (err) {
   if (err instanceof InsufficientBalanceError) {
-    // top up at https://strale.dev/topup
+    // top up at https://strale.dev/topup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1
   } else if (err instanceof StraleError) {
     console.error(err.errorCode, err.statusCode, err.message);
   }
@@ -124,9 +124,9 @@ Common `errorCode` values include `insufficient_balance`, `budget_exceeded` (the
 
 ## Resources
 
-- [Documentation](https://strale.dev/docs)
-- [Pricing](https://strale.dev/pricing)
-- [Security](https://strale.dev/security)
+- [Documentation](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Pricing](https://strale.dev/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Security](https://strale.dev/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## License
 

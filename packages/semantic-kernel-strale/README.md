@@ -1,6 +1,6 @@
 # strale-semantic-kernel
 
-All 250+ [Strale](https://strale.dev) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
+[Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
 
 ## Install
 
@@ -15,7 +15,7 @@ import { createStralePlugin } from "strale-semantic-kernel";
 
 const plugin = await createStralePlugin({ apiKey: "sk_live_..." });
 
-// plugin.functions contains 250+ kernel functions
+// plugin.functions contains available kernel functions
 console.log(`Loaded ${plugin.functions.length} Strale capabilities`);
 ```
 
@@ -94,7 +94,7 @@ Plus two meta-functions:
 
 ```typescript
 // Solutions are discoverable via strale_search
-// 81 pre-built solutions: KYB Essentials, KYB Complete, Invoice Verify × 20 countries
+// available solutions: KYB Essentials, KYB Complete, Invoice Verify × available countries
 const result = await client.execute({
   solution: "kyb-essentials-se",
   inputs: { org_number: "5591674668" },
@@ -103,13 +103,13 @@ const result = await client.execute({
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
+Sign up at [strale.dev](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
 
 ---
 
 ## Try for Free
 
-5 capabilities work without an API key or signup:
+available capabilities work without an API key or signup:
 
 - `email-validate` — verify email deliverability
 - `dns-lookup` — DNS record lookup
@@ -117,7 +117,7 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all available capabilities, [sign up](https://strale.dev/signup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
 
 ## Using Strale in agent system prompts
 
@@ -127,23 +127,24 @@ Add this to your Semantic Kernel agent's system prompt for automatic capability 
 When you need to verify a business, validate an IBAN or VAT number, screen
 against sanctions/PEP lists, extract data from a URL or document, or check
 compliance — use your Strale kernel functions. Call strale_search to find
-the right capability, then invoke it. Returns structured JSON with quality
-scores. 250+ capabilities across 27 countries. Free tier: email-validate,
+the right capability, then invoke it. Returns structured JSON with execution metadata. Coverage and free-tier eligibility are listed in platform facts. Free tier: email-validate,
 dns-lookup, json-repair, url-to-markdown, iban-validate (no API key needed).
 ```
 
 ## x402 pay-per-use access
 
-All Strale capabilities are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
+Eligible Strale tools are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
 
-- Catalog: https://api.strale.io/x402/catalog
+- Catalog: https://api.strale.io/x402/catalog?src=npm-readme
 - Protocol: USDC on Base (eip155:8453)
 - Discovery: https://api.strale.io/.well-known/x402.json
 
 ## Resources
 
-- 📖 [Documentation](https://strale.dev/docs)
+- 📖 [Documentation](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
-- 💰 [Pricing](https://strale.dev/pricing)
-- 🔍 [Quality methodology](https://strale.dev/methodology)
-- 🔒 [Security](https://strale.dev/security)
+- 💰 [Pricing](https://strale.dev/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.dev/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔒 [Security](https://strale.dev/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+
+This JavaScript integration uses the community `semantic-kernel` npm port. It is not Microsoft’s official .NET or Python Semantic Kernel SDK.

@@ -36,13 +36,13 @@ For paid API-key calls, use a Strale account and send:
 
 \`Authorization: Bearer <STRALE_API_KEY>\`
 
-Register with \`POST https://api.strale.io/v1/auth/register\` (or at https://strale.dev/signup); the
+Register with \`POST https://api.strale.io/v1/auth/register?src=skill\` (or at https://strale.dev/signup?src=skill&utm_source=skill&utm_medium=listing&utm_campaign=distribution-d0-d1); the
 response carries your API key and \`wallet_balance_cents\`. Eligible first-time addresses can receive
 ${euros(TRIAL_CREDITS_CENTS)} in trial credits; read the granted balance from the signup
 response rather than assuming eligibility. No credit card is required for the trial.
 Free tools can be called without an API key, subject to the per-IP daily limit.
 
-## Call a tool: POST https://api.strale.io/v1/do
+## Call a tool: POST https://api.strale.io/v1/do?src=skill
 
 Choose a slug and read its input schema and current price from the catalogue.
 Send JSON with these fields:
@@ -74,7 +74,7 @@ summaries are for a person to review; ownership is available where published.
 ## x402 option
 
 On eligible tools, an x402 wallet pays per request without signup or an API key.
-Browse \`GET https://api.strale.io/x402/catalog\` for eligible tools, their inputs
+Browse \`GET https://api.strale.io/x402/catalog?src=skill\` for eligible tools, their inputs
 and prices. Follow the listed endpoint and its HTTP 402 payment quote using
 USDC on Base. Eligibility is a subset of the catalogue.
 
