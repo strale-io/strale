@@ -162,7 +162,46 @@ until a reply arrives or DQ-39's exception ends 11-09. **New: DQ-41**
 
 ## D. The work — password-strength stops persisting the password
 
-PLACEHOLDER — filled after the agent and review complete.
+Yesterday's next-session item 1 (deadline 10-28). **PR #758, merged
+`21900ce8`, deployed** (`GET /health` → `21900ce88d2d`). Built by a
+worktree-isolated agent; diff, PR-file identity and deploy checked here.
+
+- `lib/never-persist-inputs.ts`: slug → never-persisted fields
+  (`password-strength: [password]`), a `Map` (review finding 1: a plain-object
+  lookup of `constructor`/`__proto__` turned a 404 into a 500). Fields are
+  replaced by `"[not stored]"` before anything is written or hashed; unlisted
+  slugs get the same object back (byte-identical for every other capability);
+  the executor still gets the real input.
+- Applied at: four `/v1/do` transaction inserts, the idempotency fingerprint,
+  `hashInput` (audit `input_hash`, success and failure), x402 insert, x402 audit
+  `input_hash`, x402 orphan-settlement `raw_args`, solution fingerprint and
+  insert. Integrity hash and receipts read the stored row, so they cover the
+  marker (reviewer confirmed).
+- Tests: module unit tests (18) incl. prototype-name slugs; `do.core.test.ts`
+  sync path success + failure with Idempotency-Key, incl. bind-shape;
+  `x402-gateway-v2.never-persist.test.ts`. **Fail-before** by neutering each
+  masking site in turn (WIP commits, no stash): each fails a specific
+  assertion; restored all pass. CI green on `b0f7fdc3` (check, integration-db).
+- **Independent review**: fresh read-only Claude agent (separate context,
+  same-provider per the 2026-09-07 policy) → PASS-with-should-fix; both
+  should-fix items fixed in `b0f7fdc3`.
+- Manifest limitation now true ("Passwords submitted before 27 October 2026
+  may still be held"); reaches production only via onboarding (DQ-41).
+- **Accepted trade-off:** a reused Idempotency-Key with a different password
+  replays the first result instead of a 409.
+- **Open follow-ups (reviewer, low):** stored output (length, classes,
+  entropy, "commonly used" flag) narrows weak passwords; 7 pre-fix rows hold
+  raw passwords plus unsalted hashes until 90-day redaction (early scrub =
+  production write touching the integrity chain → bulk-operation protocol);
+  a password in task text lands in `failed_requests.task`;
+  `GET /x402/password-strength?password=` puts it in URLs/access logs.
+- `unverified:` effect on a real production row — no password-strength call
+  since deploy, and this session holds no live API key to make one.
+- Cleanup: agent worktree deregistered (`git worktree remove --force`); its
+  ignored files left the directory
+  `.claude/worktrees/agent-ad5b4c5bd508fd70e` on disk (not deleted — never
+  `rm -rf`; prune with `apps/api/scripts/prune-claude-worktrees.ts`). Branch
+  deleted local and remote.
 
 ## E. Authorities updated
 
@@ -176,4 +215,17 @@ the key's holder is Petter by design. Asked as authority, not labour.
 
 ## Next session
 
-PLACEHOLDER
+1. **DQ-41**: when the onboarding key is set, run Actions → Onboard capability:
+   mode `onboard` for company-status-check, entity-resolve, eurostat-data,
+   invoice-counterparty-check; mode `backfill` for domain-contact-extract,
+   social-profile-check, no-bankruptcy-check, norwegian-company-data,
+   password-strength (clears weekly-drift); then mode `limitations`, `all`.
+   Verify each via `GET /v1/capabilities/<slug>` and the drift sweep.
+2. Password-strength post-deploy: after the next real call, read the newest
+   row (query in PR #758) — expect `{"password":"[not stored]"}`.
+3. Password-strength follow-ups (above), mine; the output-narrowing one first.
+4. Weekly drift fails again Monday 11-02 unless item 1 lands — that would be
+   the second consecutive scheduled failure, i.e. a finding.
+5. DQ-39 / DQ-40: act on vendor replies; Serper exception ends 11-09.
+6. Carried: F8 investigation (do.ts vs x402 gateway per-call policy diff);
+   EORI degraded-mode contract; Polish non-JSON error; M4 idle 44 days.
