@@ -649,6 +649,7 @@
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/research/2026-10-23-delegate-competitive-analysis.md",
         "docs/research/2026-10-26-serp-vendor-replacement.md",
+        "docs/research/2026-10-27-codebase-architecture-review.md",
         "docs/research/2026-10-27-distribution-strategy-sweeps/directories.md",
         "docs/research/2026-10-27-distribution-strategy-sweeps/integrations.md",
         "docs/research/2026-10-27-distribution-strategy.md",
@@ -776,6 +777,7 @@
         "docs/programs/brand-website/tracks.yaml",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
+        "docs/research/2026-10-27-codebase-architecture-review.md",
         "docs/research/2026-10-27-distribution-strategy.md",
         "handoff/README.md",
         "handoff/_general/from-code/2026-08-12-readiness-p0-baseline.md",
@@ -849,7 +851,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "9272a1cd79643e9f045d834f5ab09b49299c057b90e7b9fb19e6597b27a0c6dd",
+      "sha256": "e3d8f4901c4d31372665454eb130074fe816242acec6c710fd87e7322482f3d1",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -1042,6 +1044,7 @@
         "docs/research/2026-04-28-india-kyc-kyb-data-landscape.md",
         "docs/research/2026-04-28-payee-assurance-build-vs-buy.md",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
+        "docs/research/2026-10-27-codebase-architecture-review.md",
         "docs/research/2026-10-27-distribution-strategy.md",
         "docs/security/2026-08-22-starve-set-1-provenance.md",
         "docs/strategy/2026-08-05-direction-plan.md",
