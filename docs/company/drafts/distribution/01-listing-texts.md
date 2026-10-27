@@ -112,8 +112,10 @@ independently quality-tested", "no minimum" (a wallet top-up is at least
 €10) and "23 countries".
 
 > **Strale — tools your agent can call and pay for per call.**
-> One connection gives an agent hundreds of tools. Look up companies in
-> official business registers in 25 countries; screen companies and people
+> One connection gives an agent hundreds of tools. Look up company records
+> from business registers and register-backed sources in countries across
+> Europe, the Americas and Asia-Pacific (live list:
+> https://api.strale.io/v1/platform/facts); screen companies and people
 > against sanctions and PEP lists and adverse media; check email addresses,
 > phone numbers, IBAN format and EU VAT numbers; turn any web page into
 > clean text; pull fields out of invoices, receipts and PDFs; run DNS, SSL
@@ -121,18 +123,17 @@ independently quality-tested", "no minimum" (a wallet top-up is at least
 >
 > Pay per call, no subscription. Use one API key and a prepaid balance, or —
 > on eligible tools — pay each request in USDC over x402 with no signup.
-> Eleven tools are free to try without a key. Each tool page lists inputs,
+> A set of free tools works without a key. Each tool page lists inputs,
 > output fields, price, limitations and source.
 >
 > Connect: remote MCP at `https://api.strale.io/mcp`, `npx strale-mcp`,
 > REST `POST /v1/do`, TypeScript and Python SDKs.
 
-Notes: "25 countries" and "Eleven" are typed and must be re-read from
-`/v1/platform/facts` on the day of submission (they are correct on
-2026-10-27). "official business registers" — MESSAGING-LEVELS.md proof gap 4
-asks for a `needs_evidence` row for "official records"; until it lands,
-treat the phrase as **needs_evidence** (US is SEC filers; ES, DE, BE, BR come
-through vendors that wrap the register).
+Notes: no typed counts. "Official business registers" is deliberately not
+used: MESSAGING-LEVELS.md proof gap 4 asks for a `needs_evidence` row for
+"official records", and several countries (the US among them, per
+`/v1/platform/facts`) come through vendors that wrap the register. When that
+row exists and is ruled, this text may say "official".
 
 ## H. Job-shaped short entries (for directories that allow several listings or per-tool pages)
 
@@ -141,8 +142,8 @@ indexes per endpoint (x402 Bazaar, x402 directories, our own catalogue), the
 first line of each tool's description should name the job and the input:
 
 - `email-validate` — "Check an email address before your agent sends: syntax, domain and mail-server checks. Free."
-- `company-data` per country — "Look up a {country} company by registration number in {source}: name, status, address{, directors}."
-- `sanctions-check` — "Screen a person or company name against sanctions lists (Dilisense). Returns matches with list and score for a person to review."
+- `company-data` per country — "Look up a {country} company by registration number in {source}: name, status, address{, directors}." ({source} is read from the manifest's `data_source` at generation time.)
+- `sanctions-check` — "Screen a person or company name against sanctions lists. Returns matches with list and score for a person to review." (No vendor name in static copy: vendor names come from `/v1/platform/facts`, per the `vendor-switch` skill.)
 - `url-to-markdown` — "Turn one web page into clean markdown for the model. Free, one page per call."
 
 These change manifest `description` fields, so they go through the
