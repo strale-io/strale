@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "380b3ff9bc6340d1bb32cdb35720b492a5f5e771585824128f5f1c7a46254e9e",
+      "sha256": "74e8fc78e817b57af577132b17a757d1d5be18e0867239b19ab05cfc86dd47d4",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -113,6 +113,7 @@
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
+        "handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
@@ -122,7 +123,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "b8d4785890345a4e3c83ef3e66c685c3ba8959540ac042fb9747cf19bc5ef584",
+      "sha256": "7851087701ccd78a349267bd736798f8cada1fc081523fbd2f2bd0719cee8b2f",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -397,6 +398,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
         "handoff/_general/from-code/2026-10-27-ops-delegation.md",
+        "handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -563,7 +565,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "a7794fb01439d0c2656f7b7a4715fe4970842924bc4fc0a62404c70ee044d404",
+      "sha256": "d04c048f36a46d00b77961f1d8c4ab294fee5795cef9beb76942b3cd7dcc5fba",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -720,7 +722,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "386b5c75bfb9cf40e97395cd3e48b4202684a030897892447b7aa3893e06e3dc",
+      "sha256": "99736ac1fc116aa80affd0ec79e8b6cad3faa42d43550a8e29f9f0cc70133577",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -799,6 +801,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-fetch-path.md",
         "handoff/_general/from-code/2026-10-24-data-access-people-data.md",
         "handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md",
+        "handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
@@ -851,7 +854,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "163e2ff4ad81a4a4a67e7d96ec03c7b6ac77a8fe75411120b3a72935b6aa06a9",
+      "sha256": "241b226d157918f7c2e7992d88cd310b31f6bfd67e083a652c2754cc1a1630ba",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -1037,6 +1040,7 @@
         "docs/programs/codex-review-backlog.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
+        "docs/programs/distribution/tracks.yaml",
         "docs/remediation/ORCHESTRATOR.md",
         "docs/research/2026-04-28-india-kyc-kyb-data-landscape.md",
         "docs/research/2026-04-28-payee-assurance-build-vs-buy.md",
@@ -1051,6 +1055,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
+        "docs/strategy/2026-10-27-platform-and-distribution-adoption.md",
         "package.json",
         "scripts/candidates.test.mjs",
         "scripts/check-receipts.mjs",

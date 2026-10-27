@@ -961,6 +961,18 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**DEC-20261027-B** · `decided` · owner Petter · 2026-10-27
+Petter approved the platform hardening and distribution plan, with its scoped
+publish and pricing grants.
+*What happened:* in session, Petter answered "all as recommended, go ahead" to
+the distribution strategy §9 and the combined implementation plan.
+*What changed:* [the adoption record](../strategy/2026-10-27-platform-and-distribution-adoption.md)
+records the nine recommendations and retained gates; two program registers now
+provide the execution pointers. This records approval, not completed rollout.
+*What remains:* the log sink and Railway auto-redeploy token stay with Petter.
+DQ-41 remains open; the onboarding key is still not set.
+*How you'd reverse it:* a new founder decision naming the scope to change.
+
 **DQ-26** · `decided` · owner Claude · 2026-08-25
 Our quality system no longer assumes a failed call is our fault when it cannot
 tell whose fault it was.
