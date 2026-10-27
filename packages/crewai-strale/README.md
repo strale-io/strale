@@ -1,6 +1,6 @@
 # crewai-strale
 
-All 250+ [Strale](https://strale.dev) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
+[Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
 
 ## Install
 
@@ -14,7 +14,7 @@ pip install crewai-strale
 from crewai_strale import StraleToolkit
 
 toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # 250+ capabilities + search & balance tools
+tools = toolkit.get_tools()  # available capabilities + search & balance tools
 ```
 
 ## Filter by category
@@ -65,17 +65,17 @@ Plus two meta-tools:
 
 ## Solutions (KYB & Invoice Verify)
 
-81 pre-built solutions are available, including KYB Essentials, KYB Complete, and Invoice Verify across 20 countries. Use `strale_search` to discover them.
+available solutions are available, including KYB Essentials, KYB Complete, and Invoice Verify across available countries. Use `strale_search` to discover them.
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
+Sign up at [strale.dev](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
 
 ---
 
 ## Try for Free
 
-5 capabilities work without an API key or signup:
+available capabilities work without an API key or signup:
 
 - `email-validate` — verify email deliverability
 - `dns-lookup` — DNS record lookup
@@ -83,7 +83,7 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all available capabilities, [sign up](https://strale.dev/signup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
 
 ## Using Strale in agent system prompts
 
@@ -93,23 +93,23 @@ Add this to your CrewAI agent's backstory or system prompt for automatic capabil
 When you need to verify a business, validate an IBAN or VAT number, screen
 against sanctions/PEP lists, extract data from a URL or document, or check
 compliance — use your Strale tools. Call strale_search to find the right
-capability, then call it by name. Returns structured JSON with quality scores.
-250+ capabilities across 27 countries. Free tier: email-validate, dns-lookup,
+capability, then call it by name. Returns structured JSON with execution metadata.
+Coverage and free-tier eligibility are listed in platform facts. Free tier: email-validate, dns-lookup,
 json-repair, url-to-markdown, iban-validate (no API key needed).
 ```
 
 ## x402 pay-per-use access
 
-All Strale capabilities are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
+Eligible Strale tools are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
 
-- Catalog: https://api.strale.io/x402/catalog
+- Catalog: https://api.strale.io/x402/catalog?src=pypi-readme
 - Protocol: USDC on Base (eip155:8453)
 - Discovery: https://api.strale.io/.well-known/x402.json
 
 ## Resources
 
-- 📖 [Documentation](https://strale.dev/docs)
+- 📖 [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
-- 💰 [Pricing](https://strale.dev/pricing)
-- 🔍 [Quality methodology](https://strale.dev/methodology)
-- 🔒 [Security](https://strale.dev/security)
+- 💰 [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.dev/methodology?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔒 [Security](https://strale.dev/security?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)

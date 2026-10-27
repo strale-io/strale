@@ -1,4 +1,4 @@
-"""StraleToolkit — one import to get all 250+ Strale capabilities as LangChain tools."""
+"""StraleToolkit — one import to get all available Strale capabilities as LangChain tools."""
 
 from __future__ import annotations
 

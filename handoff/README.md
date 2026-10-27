@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-373 files (346 with a recorded intent, 27 without).
+375 files (348 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-secure-random.md`](_general/from-code/2026-10-27-secure-random.md) | Build the paid secure-random capability for portfolio Phase 2 item 2.12; complete offline verification and leave prod... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md`](_general/from-code/2026-10-27-record-dec-20261027-b.md) | Record Petter's confirmed DEC-20261027-B, register platform-hardening and distribution, and leave all changes uncommi... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-production-watch.md`](_general/from-code/2026-10-27-production-watch.md) | Finish H1 production monitoring on `feat/production-watch`, retaining the interrupted implementation, testing it, and... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-package-docs.md`](_general/from-code/2026-10-27-package-docs.md) | Build and revise package-docs using public npm/PyPI registry APIs; leave the uncommitted changes for the orchestrator... |
@@ -24,6 +25,7 @@
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-email-phone-validation-copy.md`](_general/from-code/2026-10-27-email-phone-validation-copy.md) | correct what the email and phone validation tools claim, after an external benchmark showed them reporting made-up ad... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-distribution-strategy.md`](_general/from-code/2026-10-27-distribution-strategy.md) | Answer Petter's question "how does Strale get distribution fastest and most cheaply" with an evidence-based report, a... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-distribution-hygiene.md`](_general/from-code/2026-10-27-distribution-hygiene.md) | Implement the in-repository D0 attribution and D1 distribution-copy hygiene work; leave the reviewed changes uncommit... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-codebase-architecture-review.md`](_general/from-code/2026-10-27-codebase-architecture-review.md) | independent, read-only review of Strale's code and architecture for Petter, delivered as research (`docs/research/202... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-actionable-error-messages.md`](_general/from-code/2026-10-27-actionable-error-messages.md) | Build additive error recovery guidance for autonomous callers, preserve stable codes and statuses, and hand the verif... |

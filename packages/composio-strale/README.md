@@ -1,6 +1,6 @@
 # composio-strale
 
-[Composio](https://composio.dev) integration for [Strale](https://strale.dev) — 270+ quality-scored API capabilities as Composio custom tools.
+[Composio](https://composio.dev) integration for [Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — available pay-per-call tools as Composio custom tools.
 
 ## Install
 
@@ -62,25 +62,25 @@ Three tools registered under the `strale` toolkit:
 
 | Tool | Description |
 |------|-------------|
-| `STRALE_SEARCH` | Search 270+ capabilities by keyword or category |
+| `STRALE_SEARCH` | Search available capabilities by keyword or category |
 | `STRALE_EXECUTE` | Execute any capability with structured input |
 | `STRALE_BALANCE` | Check your wallet balance |
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 trial credits, no card required.
+Sign up at [strale.dev](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
 
 ## x402 pay-per-use access
 
-All Strale capabilities are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
+Eligible Strale tools are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
 
-- Catalog: https://api.strale.io/x402/catalog
+- Catalog: https://api.strale.io/x402/catalog?src=pypi-readme
 - Protocol: USDC on Base (eip155:8453)
 - Discovery: https://api.strale.io/.well-known/x402.json
 
 ## Resources
 
-- [Documentation](https://strale.dev/docs)
+- [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - [Examples](https://github.com/strale-io/strale-examples)
-- [Pricing](https://strale.dev/pricing)
-- [Quality methodology](https://strale.dev/methodology)
+- [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Quality methodology](https://strale.dev/methodology?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)

@@ -56,9 +56,16 @@ spending inside the €50/week envelope.
    the inbox for the reply (`docs/company/OUTBOX.yaml`).
 3. **One-way public acts.** Publishing a package version that cannot be
    unpublished, submitting to a directory that does not accept removal, or a
-   first public statement in a channel we have never used.
+   first public statement in a channel we have never used. *Narrowed
+   2026-10-27 by DEC-20261027-B:* the publish class in distribution strategy
+   §9 item 7 is approved for this plan, subject to its protocol, production
+   contract smoke test and reporting conditions. Full scope:
+   [adoption record](../strategy/2026-10-27-platform-and-distribution-adoption.md).
 4. **Pricing outside the existing band, and anything a regulator would read as
-   a claim about the product.**
+   a claim about the product.** *Narrowed 2026-10-27 by DEC-20261027-B:*
+   distribution strategy §9 item 5 is a scoped pricing grant for this plan;
+   see the [adoption record](../strategy/2026-10-27-platform-and-distribution-adoption.md).
+   The reservation on regulator-readable claims remains.
 
 Everything else is mine. If an item is genuinely borderline, I take it, do the
 reversible version, and say so — a decision I can undo is not worth his

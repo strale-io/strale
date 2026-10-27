@@ -7,7 +7,7 @@ startCommand:
     properties:
       STRALE_API_KEY:
         type: string
-        description: "Your Strale API key (free signup at strale.dev). Optional — strale_search works without a key. Required for strale_execute and strale_balance."
+        description: "Your Strale API key (signup at https://strale.dev/signup?src=smithery&utm_source=smithery&utm_medium=listing&utm_campaign=distribution-d0-d1). Optional — strale_search works without a key. Required for paid execution and wallet access."
   commandFunction:
     - node
     - packages/mcp-server/dist/server.js
@@ -15,5 +15,5 @@ startCommand:
     STRALE_API_KEY: "{{config.STRALE_API_KEY}}"
 
 # Remote HTTP transport is also available at:
-# https://api.strale.io/mcp
+# https://api.strale.io/mcp?src=smithery
 # Publish via Smithery URL-based publishing at smithery.ai/new

@@ -1,5 +1,5 @@
 /**
- * strale-capabilities — Local catalog of 250+ Strale capabilities.
+ * strale-capabilities — Local catalog of available Strale capabilities.
  *
  * @example
  * const strale = require("strale-capabilities");

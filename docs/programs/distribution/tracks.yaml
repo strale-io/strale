@@ -1,0 +1,215 @@
+schema_version: 1
+program: distribution
+program_status: active
+updated: 2026-10-27
+tracks:
+  - id: T1
+    title: "D0: Close attribution gaps"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Repo side merged in PR #771 (2026-10-27): ?src tags on every
+      URL we publish, src recorded on /mcp, /v1/do and /x402/*, X-Strale-Client
+      in the packages, users.signup_src (block 0126). Remaining: the website
+      must forward src/utm_source in the signup body; the client header reaches
+      callers only when the prepared package versions are published (D1); the
+      daily run confirms the signup_src column and reports attribution weekly."
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Every new surface is countable by day 30; unattributed new-payer share
+        is reported weekly.
+    evidence: []
+  - id: T2
+    title: "D1: Distribution hygiene"
+    status: active
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Source texts, MCP annotations and the claims guard merged in
+      PR #771. Remaining: publish the prepared versions (strale-mcp 0.2.9 and
+      the packages listed in handoff 2026-10-27-distribution-hygiene.md) under
+      DEC-20261027-B item 7, then bump server.json and republish the official
+      registry entry; repair Pipedream and Activepieces upstream and rebuild or
+      deprecate n8n-nodes-strale (preflight first); Smithery and 402 Index
+      listing edits."
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - No source text or integration carries a retired claim or calls a removed
+        route.
+      - Smithery and directory-attributed calls have a baseline for D7.
+    evidence: []
+  - id: T3
+    title: "D2: x402 ranking metadata"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Deploy the §8 D2 metadata and examples; register x402scan with a
+      dedicated zero-balance wallet stored in Bitwarden, never the receiving
+      wallet. Measure the fixed 12-query cohort and apply the stated stop rule.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Top-20 results and new x402 payers are measured against D2 success/kill
+        thresholds.
+    evidence: []
+  - id: T4
+    title: "D3: Coinbase featured tier"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Only after D2 metadata is live, send the CDP support email and log
+      it in OUTBOX with inbox follow-up duty. Measure featured placement and
+      bazaar payers; after 45 days without an answer, follow up once then drop.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Featured-tier outcome and payer attribution are reported against D3
+        thresholds.
+    evidence: []
+  - id: T5
+    title: "D4: Claude connector directory"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Prepare titles, annotations, no-auth search/free tools and OAuth
+      for paid tools. Once eligible, Petter accepts directory terms for
+      Moonlighter AB and the paid Claude plan at submission time; submit and
+      measure §8 D4 thresholds.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Eligible submission records Petter's terms and paid-plan acts.
+      - Listing and Claude-client calls are reported against D4 success/kill
+        thresholds.
+    evidence: []
+  - id: T6
+    title: "D5: Zapier integration"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Build and test five typed actions as general business tools; check
+      listing text against claims.yaml and pass DEC-20260422-A before publishing
+      under DEC-20261027-B. Hold compliance targeting per §9 item 8; measure
+      installs and weekly repeat callers.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Integration publication and contract verification are recorded.
+      - Installs and repeat callers are reported against D5 success/kill
+        thresholds.
+    evidence: []
+  - id: T7
+    title: "D6: Vercel AI SDK package"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Build tool() package with an offline mock-model test; run
+      distribution preflight, publish under DEC-20261027-B, run the production
+      contract smoke test and report afterwards, then submit the Tools Registry
+      PR. Measure acceptance and client-header calls against §8 D6 thresholds.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Package and registry outcome plus distinct callers are measured against
+        D6 thresholds.
+    evidence: []
+  - id: T8
+    title: "D7: Narrow MCP entry points"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Test at most three narrow entry points using D1 baseline; publish
+      official registry and Smithery entries under DEC-20261027-B conditions,
+      acknowledging registry entries cannot be deleted. Apply §8 D7 success/kill
+      rule.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Per-entry-point usage and payers are compared; unsuccessful servers are
+        retired per D7.
+    evidence: []
+  - id: T9
+    title: "D8: n8n integration"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: After D5 build, rebuild n8n to verified standard, test and publish
+      major release/Creator Portal submission under DEC-20260422-A and
+      DEC-20261027-B. List as general business tools; hold monthly sanctions
+      re-screening and finance/compliance targeting until Petter clears the gate
+      or discovery runs.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Verified or unverified outcome, installs and monthly callers are
+        reported against D8 thresholds.
+      - Held template and targeting remain gated unless the required release
+        condition is recorded.
+    evidence: []
+  - id: T10
+    title: "D9: Clay HTTP template"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Build template and documentation and measure §8 D9 results. Do not
+      apply to Clay partner programme, Stripe Directory or router supply in the
+      first 60 days; revisit with D5 and D9 results. No OEM/partner agreements
+      for 90 days; agreements remain Petter's.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Template repeat use is reported against D9 success/kill thresholds.
+      - Partner deferral and any later founder act are recorded.
+    evidence: []
+  - id: T11
+    title: "D10: Monthly free allowance"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+      - T2
+    owner: session
+    next_action: Implement the adopted monthly-number allowance on the same
+      zero-cost tools and its texts per DEC-20261027-B §9 item 5. Measure free
+      callers and conversions against §8 D10; revert if no rise in 45 days.
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Monthly allowance and texts match the adopted pricing scope.
+      - Free callers and conversions are reported against D10 thresholds.
+    evidence: []
+  - id: T12
+    title: "Housekeeping: Frameworks and directories"
+    status: queued
+    gate: none
+    depends_on:
+      - T2
+    owner: session
+    next_action: After D1, refresh langchain-strale for langchain-core 1.x with
+      meta-tools and offline CI test; deprecate strale-semantic-kernel, freeze
+      crewai-strale/composio-strale, fix distribution-registry rows, and submit
+      Docker MCP registry, Cline, awesome-remote-mcp-servers and Cursor plugin
+      PRs under distribution preflight and approved publish conditions. Petter
+      deletes the three merged branches in GitHub UI (§9 item 9).
+    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    exit:
+      - Housekeeping package and registry corrections and PR outcomes are
+        recorded.
+      - Petter's branch cleanup is reported when performed.
+    evidence: []
