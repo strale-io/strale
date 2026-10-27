@@ -1,0 +1,426 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "8a80d3075178c62aa2cfa6b1fa9d27a939946b1b"
+  },
+  "at": "2026-10-27T16:21:12.012Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "verification_ok": true,
+    "api_passed": 6436,
+    "api_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "focused_tests_passed": 18,
+    "monitoring_script_tests_passed": 25,
+    "root_ci_commands_passed": 57,
+    "typescript_ok": true,
+    "handoff_gate_ok": false,
+    "production_verified": false,
+    "migrations_added": 0
+  },
+  "topic": "production-watch-round2",
+  "raw": {
+    "verification_ok": true,
+    "api_passed": 6436,
+    "api_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "focused_tests_passed": 18,
+    "monitoring_script_tests_passed": 25,
+    "root_ci_commands_passed": 57,
+    "typescript_ok": true,
+    "handoff_gate_ok": false,
+    "production_verified": false,
+    "migrations_added": 0,
+    "candidate": {
+      "branch": "feat/production-watch",
+      "state": "uncommitted working changes over recorded base",
+      "file_sha256": {
+        ".github/workflows/ci.yml": "990dadb9cfaff60208ce739e4aa73b48953fb52abdb6f93db942ebe0dee0a956",
+        "apps/api/src/app.ts": "53119c9d3f278e2886da96e3fde7599674df146a8eee4bc3f5059756e2d0fa36",
+        "apps/api/src/jobs/activation-drip.ts": "468425431404a9c0b5ecad64d4aa8b31ee648531615b46e6f9719829e095e5cd",
+        "apps/api/src/jobs/db-retention.ts": "66cd7f085e57156d29f402e72c2c41de0327953fd4bcc02b118877aa11a37727",
+        "apps/api/src/jobs/integrity-hash-retry.ts": "f0515d4b39f4c97c140247bd4ad88c0b515038642482a7b9cf23c27d17b76038",
+        "apps/api/src/jobs/invariant-checker.ts": "3d31b73bb75a9fbd23c3c14ae1a65edba423408bb8625de1fcebb273111448be",
+        "apps/api/src/jobs/reindex-transactions.ts": "04c1da3c8a124d33d8f21940a7cb5d1d0956b39f123af150e86545b5d62b3b4c",
+        "apps/api/src/jobs/reservation-reconciler.ts": "12361d9e56e4191cdfde670e35423207abc4991ee088784ebbccb68019546abf",
+        "apps/api/src/jobs/revenue-heartbeat.ts": "fb992486829d5d8da6d27b4b808856a23b0f3b5b5f36c1a09c31adb5c68bc368",
+        "apps/api/src/jobs/settlement-reconciler.ts": "c09c2de3f34807c96250d32d2a20c0dc5276f99ddd8a56f4afa6260fcad8dc28",
+        "apps/api/src/jobs/test-scheduler.ts": "f8bd57279a6673f00ebdf06f5e314622b7527052e953254d438ca9934e625d08",
+        "apps/api/src/lib/health-sweep.ts": "f3653c36f0bc61a7bd42ca2c06fe705e1e517aadbe7805c5a9d22622b2c502dc",
+        "apps/api/src/lib/job-coordinator.ts": "fc36778217fabe3cd733b9500db17e4a9706c5e7655fa1881b7bada0a5e1a3a4",
+        "archive/README.md": "c6516c4c7effd4a81e662e1b3d217574e8b2fe31cb68492e24213ccfc6c2692a",
+        "docs/company/DAILY-RUN.md": "f2376c8c9e2cac6e14bf1303e976bb257c4240e5a6fb1a7b3ba03a4787f600bf",
+        "handoff/README.md": "540872c13d0b7b40e1c66dacef0cb53fc8bc613656f403a4ab4d758249203bb9",
+        ".github/workflows/deploy-verify.yml": "706502c07ca4c510243225716566fbc89d91374c3cefa03c8940c7cbfcec1382",
+        ".github/workflows/package-contract.yml": "097b96dca9138065301bbba7f6962eb6fb57398cc1a040dcfaf2bd2e3964aa3d",
+        ".github/workflows/production-watch.yml": "cffb647d63b3aa136aab57d4a605ded319725a1d47492363baa29bf8314cdb5f",
+        ".github/workflows/scheduled-retry.yml": "6ceb21f95a07aaf28b9a87ae57bd4de6c2b4dd4d46e793e111db35a103e969ee",
+        "apps/api/src/jobs/reconciler-heartbeats.test.ts": "662be4e21c024f21f02e4804709a8d31184739de2fc17ea3be5cea998ae9b834",
+        "apps/api/src/lib/job-heartbeats.ts": "e4e5f4f28d8129b7f6e6760de6ab1b79ae8581fff51382f6e3953182439dca5e",
+        "apps/api/src/lib/job-run-context.ts": "cd35fb00c540a35f113bf94bb924b14553b457c755c33e8baafbdd9dc93da2fe",
+        "apps/api/src/lib/job-watch-contract.json": "54588688c3363f6af296927fc7e3a76e47dd3febff784274abf431b3e2a11ac6",
+        "apps/api/src/routes/health-jobs.test.ts": "0b37d8a8bb67f3346092f4ca1c1d9cc29cde1912387242ac3cb1eb0206f518bb",
+        "apps/api/src/routes/health-jobs.ts": "01b42aed7ed2fe951117003813a1a3f5a52c3f791adcb86f3748b6047bb8d657",
+        "handoff/_general/from-code/2026-10-27-production-watch.md": "71f07e661d80414b5cf6f1b45c0cc88deeb283e63e5ad844c4745d21bd25ac34",
+        "scripts/production-watch/classify.mjs": "375840f9f134262fb2701ca1c91b10e2e52b5e3fa53bde3dc6a34dbb4d703faa",
+        "scripts/production-watch/package-probe.mjs": "b8fbd0a6f967b0ce3d3017d0b157f552ad6ef11815c648dc01421298628251ae",
+        "scripts/production-watch/retry.mjs": "9fbcb3f1ac203c69ba9d5247e5c0a07c9d08ffcb00002856eb4ff1dbeb19faa4",
+        "scripts/production-watch/watch.mjs": "c80a5aae82796d63969dec5ddd50e551f9d196ed3c6790e31a7ed61ca15870b2",
+        "scripts/production-watch/watch.test.mjs": "45b885cacdee8e8cb6d449faa1c6d0d49f9bb7da40b2b2a31452e5f96d61090e"
+      }
+    },
+    "checks": [
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit": 0
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit": 0
+      },
+      {
+        "command": "Archive and handoff index (warning only)",
+        "exit": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit": 0
+      }
+    ],
+    "additional_checks": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit": 0
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run typecheck",
+        "exit": 0
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/health-jobs.test.ts src/jobs/reconciler-heartbeats.test.ts",
+        "exit": 0,
+        "passed": 18
+      },
+      {
+        "command": "npm test -- --maxWorkers=2",
+        "exit": 0,
+        "passed": 6436,
+        "skipped": 346,
+        "note": "Root wrapper consumes maxWorkers option; actual Vitest default worker setting."
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit": 0,
+        "passed": 25
+      },
+      {
+        "command": "npm run coverage-matrix:check",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit": 0
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit": 1,
+        "expected_findings": [
+          "dirty",
+          "branch",
+          "ahead",
+          "merged-branch"
+        ],
+        "note": "User requires uncommitted changes and prohibits push or branch switching."
+      }
+    ],
+    "prior_attempts": [
+      {
+        "check": "epoch regression",
+        "result": "1 failed / 17 passed before resetting shared mock calls; fixed in test isolation"
+      },
+      {
+        "check": "full API before final epoch regression",
+        "result": "6435 passed / 346 skipped"
+      },
+      {
+        "check": "live MCP initial attempts",
+        "result": "Install/connect failed because default npm cache is read-only; passed with cache inside checkout and existing managed environment"
+      }
+    ],
+    "live": {
+      "health": {
+        "status": 200,
+        "commit": "d004d774d498"
+      },
+      "health_jobs": {
+        "status": 404,
+        "note": "not deployed"
+      },
+      "mcp": {
+        "counts": [
+          298,
+          95,
+          298,
+          95
+        ],
+        "tools": 9,
+        "startup": "[strale-mcp] Loaded 298 capabilities, 95 solutions, 298 cap trust, 95 sol trust from https://api.strale.io\n[strale-mcp] Server running on stdio (6 meta-tools, 298 capabilities, 95 solutions)"
+      }
+    },
+    "review": {
+      "technical": "GO",
+      "product": "GO",
+      "open_findings": 0
+    },
+    "limitations": [
+      "No disposable database integration job",
+      "No production size or EXPLAIN",
+      "No after-deploy proof or GitHub issue write",
+      "npm ci supplied, not repeated",
+      "actionlint unavailable"
+    ],
+    "production_steps": [
+      "Deploy reviewed branch",
+      "Observe deploy verification for merge SHA",
+      "GET /health/jobs: 200, 26 safe job entries",
+      "Observe real scheduled successes and issue confirmation/recovery; no manual SQL or new secret required"
+    ]
+  }
+}

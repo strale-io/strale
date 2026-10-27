@@ -81,49 +81,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          is_docs_path() {
-            local f="$1"
-            case "$f" in
-              docs/*|archive/*|handoff/*) return 0 ;;
-              CLAUDE.md|AGENTS.md|WORKTREES.md|README.md) return 0 ;;
-            esac
-            # A root-level *.md file only (no "/" in the path) — nested .md
-            # files under application code are not covered by this branch.
-            if [[ "$f" =~ ^[^/]+\.md$ ]]; then
-              return 0
-            fi
-            return 1
-          }
-
-          # A brief, the brief linter, its rules or this workflow: the CEO-brief
-          # lint runs. Anything else cannot change its verdict.
-          is_brief_path() {
-            case "$1" in
-              docs/company/briefs/*) return 0 ;;
-              apps/api/scripts/check-ceo-brief.ts) return 0 ;;
-              apps/api/src/lib/ceo-brief-lint*) return 0 ;;
-              .github/workflows/ci.yml) return 0 ;;
-            esac
-            return 1
-          }
-
-          DOCS_ONLY=true
-          BRIEFS_CHANGED=false
-          while IFS= read -r f; do
-            [ -z "$f" ] && continue
-            if ! is_docs_path "$f"; then
-              echo "Non-docs file changed: $f"
-              DOCS_ONLY=false
-            fi
-            if is_brief_path "$f"; then
-              BRIEFS_CHANGED=true
-            fi
-          done <<< "$CHANGED"
-
-          echo "docs_only=$DOCS_ONLY"
-          echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
-          echo "briefs_changed=$BRIEFS_CHANGED"
-          echo "briefs_changed=$BRIEFS_CHANGED" >> "$GITHUB_OUTPUT"
+          node scripts/production-watch/classify.mjs "$MERGE_BASE" "$HEAD_SHA" "$GITHUB_OUTPUT" pull_request
 
   # ─── Ephemeral-Postgres integration lane (WP1) ──────────────────────────
   #
@@ -566,6 +524,7 @@ jobs:
       # checked here rather than trusted. Tests cover the checker itself.
       # REGISTER (programs:*) — always runs.
       - run: npm run programs:check
+      - run: node --test scripts/production-watch/*.test.mjs
       - run: npm run programs:test
       # Research contract (T12, docs/research/*.md): one current file per
       # topic, reciprocal acyclic supersession, resolvable links/sources,

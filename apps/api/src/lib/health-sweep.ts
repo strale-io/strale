@@ -1,3 +1,4 @@
+import { checksCompleted, noteJobFailure } from "./job-run-context.js";
 /**
  * Weekly Health Sweep — Sprint 7C
  *
@@ -103,6 +104,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       // Apply remediations (only HIGH/MEDIUM confidence auto-apply)
       await applyRemediation(suite.id, actions);
     } catch (err) {
+      noteJobFailure();
       logWarn("health-sweep-remediation-failed", "remediation failed", {
         capability_slug: suite.capabilitySlug,
         err: err instanceof Error ? err.message : String(err),
@@ -188,6 +190,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       }
     }
   } catch (err) {
+    noteJobFailure();
     logWarn("health-sweep-upstream-escalation-failed", "upstream escalation sweep failed", {
       err: err instanceof Error ? err.message : String(err),
     });
@@ -202,6 +205,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
   //   Checks: validation queue stuck, probation timeout, degraded count
   try {
     const metaResults = await runWeeklyChecks();
+    if (!checksCompleted(metaResults)) noteJobFailure();
     const failures = metaResults.filter((r) => !r.passed);
     if (failures.length > 0) {
       logWarn("health-sweep-meta-failures", "meta-monitoring checks failed", {
@@ -220,6 +224,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       );
     }
   } catch (err) {
+    noteJobFailure();
     logWarn("health-sweep-meta-failed", "meta-monitoring weekly checks failed", {
       err: err instanceof Error ? err.message : String(err),
     });

@@ -1,0 +1,29 @@
+name: Retry scheduled preparation failures
+on:
+  workflow_run:
+    workflows:
+      - Weekly drift sweep
+      - Coverage matrix validation
+      - Stale branches
+      - M3 digest shadow comparison
+      - Verify production deploy
+      - Production watch
+      - Published MCP contract
+    types: [completed]
+permissions:
+  contents: read
+  actions: write
+jobs:
+  retry:
+    if: contains(fromJSON('["failure","timed_out","startup_failure"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    steps:
+      # Always trusted main, never the triggering run's code or artifacts.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { retry } = await import(`${process.cwd()}/scripts/production-watch/retry.mjs`);
+            core.info(`Retried: ${await retry(github, context)}`);
