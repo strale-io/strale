@@ -1469,6 +1469,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0127_integrityHashIndex",
       "runMigration0128_manifestTextHash",
       "runMigration0129_transactionCost",
+      "runMigration0130_syncWalletHolds",
     ]);
   });
 });
@@ -2352,7 +2353,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(129);
+    expect(Math.max(...numbers)).toBe(130);
   });
 });
 
@@ -3558,5 +3559,46 @@ describe("startup-migrations — block 0129 (marginal transaction costs)", () =>
     expect(q.sql.match(/set_config\('lock_timeout', '3s', true\)/g)).toHaveLength(2);
     expect(q.sql).not.toMatch(/DEFAULT|NOT NULL|UPDATE transactions/i);
     expect(q.params.some((v) => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
+  });
+});
+
+
+describe("H4 startup-migrations — block 0130", () => {
+  it("adds hold mode and key attribution with branch-local lock limits, no backfill and scalar binds", async () => {
+    const { runMigration0130_syncWalletHolds } = await import("./startup-migrations.js");
+    const statements: SQL[] = [];
+    await runMigration0130_syncWalletHolds({ execute: async (q: SQL) => { statements.push(q); return []; } });
+    expect(statements).toHaveLength(8);
+    const q = new PgDialect().sqlToQuery(statements[0]!);
+    const branches = q.sql.split("IF NOT EXISTS").slice(1);
+    expect(branches).toHaveLength(3);
+    for (const branch of branches) {
+      expect(branch.indexOf("set_config('lock_timeout', '3s', true)")).toBeGreaterThan(0);
+      expect(branch.indexOf("ALTER TABLE")).toBeGreaterThan(branch.indexOf("set_config"));
+    }
+    expect(q.sql).toContain("ADD COLUMN mode varchar(8) NOT NULL DEFAULT 'debit'");
+    expect(q.sql).toContain("ADD COLUMN api_key_id uuid");
+    expect(q.sql).toContain("ADD COLUMN x402_execution_attempts jsonb");
+    expect(q.sql).not.toMatch(/UPDATE transactions/i);
+    const ddl = statements.map(s => new PgDialect().sqlToQuery(s).sql).join("\n");
+    expect(ddl).toContain("CREATE INDEX CONCURRENTLY IF NOT EXISTS transactions_x402_execution_attempt_hash_idx");
+    expect(ddl).toContain("WHERE x402_execution_attempts IS NOT NULL");
+    expect(ddl).toContain("NOT i.indisvalid");
+    expect(ddl).toContain("RESET lock_timeout");
+    expect(q.sql).not.toMatch(/UPDATE wallet_reservations/i);
+    expect(q.params.some(v => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
+  });
+
+  it("skips all index DDL when the index is already valid", async () => {
+    const { runMigration0130_syncWalletHolds } = await import("./startup-migrations.js");
+    const statements: SQL[] = [];
+    await runMigration0130_syncWalletHolds({ execute: async (q: SQL) => {
+      statements.push(q);
+      return new PgDialect().sqlToQuery(q).sql.includes("indisvalid") ? [{ indisvalid: true }] : [];
+    } });
+    const ddl = statements.map(st => new PgDialect().sqlToQuery(st).sql).join("\n");
+    expect(statements).toHaveLength(2);
+    expect(ddl).not.toContain("CREATE INDEX");
+    expect(ddl).not.toContain("SET lock_timeout");
   });
 });

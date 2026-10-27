@@ -30,6 +30,7 @@ import {
   users,
   wallets,
   walletTransactions,
+  walletReservations,
   capabilities,
   transactions,
 } from "../db/schema.js";
@@ -87,6 +88,7 @@ describeMaybe("concurrent /v1/do debits — no overspend", () => {
   });
 
   afterEach(async () => {
+    await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
     await db.delete(transactions).where(eq(transactions.userId, userId));
     await db
       .delete(walletTransactions)

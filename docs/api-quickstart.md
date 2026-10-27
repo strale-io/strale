@@ -177,13 +177,14 @@ A refusal returns HTTP 429 and `error_code` of `key_hourly_cap_exceeded` or
 `key_total_cap_exceeded`, with `spent_cents`, `requested_cents`, and `limit_cents`
 in `details`, alongside `retryable: false`. Ask the owner to raise that key's cap using the primary key, or use another key. `spend_cap_exceeded`
 continues to mean the account hourly limit. The hour is a rolling 60 minutes.
-Spending is ledger purchases, including open async reservations, less refunds
+Spending includes open undebited sync holds plus ledger purchases (including
+open async reservations), less refunds
 linked to the original purchase. A refund restores that purchase's budget; its
 hour follows the purchase time. No balance/counter is stored on the key.
 
 Last-used timestamps update at most once a minute per key across replicas.
-Revocation/cap updates serialize with debits on the wallet row lock; an already
-locked call can finish before revocation takes effect. Free calls have no debit.
+Revocation/cap updates serialize with reservations on the wallet row lock; a
+call reserved before revocation can finish and capture its reserved amount. Free calls have no debit.
 
 Additional keys are spending keys: they can execute capabilities/solutions and
 read balances, transactions and results, but cannot manage the account. Creating,
@@ -242,3 +243,55 @@ x402 retains its payment challenge and legacy `error` fields, adding `details`;
 A2A and HTTP MCP protocol errors carry guidance at `error.data.details`.
 The executor rollout covers the tools listed in the error inventory;
 remaining executors can adopt explicit field-level fixes in a later batch.
+
+## Synchronous paid calls: reservations and timeouts
+
+`POST /v1/do` reserves funds before running a synchronous paid capability.
+Open holds count against available funds, the account hourly cap, and the API
+key's hourly and total caps. The wallet balance and purchase ledger change
+only after success. `wallet_balance_cents` in the success response is the
+ledger balance after capture, including concurrent wallet changes.
+
+`timeout_seconds` is documented as an integer and defaults to 30. The effective
+deadline is clamped to 5–60 seconds: positive values below 5 (including legacy
+fractional values such as 0.01) are raised to 5; values above 60 are capped at 60.
+Non-positive or non-finite values are rejected. The budget starts immediately before synchronous
+paid execution, includes retries, and also bounds Anthropic SDK calls.
+Validation, matching and wallet bookkeeping are outside that budget: it is
+not a deadline for the entire HTTP response. Free-tier, asynchronous and
+solution execution retain their existing behavior.
+
+On expiry, the API returns HTTP 503 `timeout_exceeded`, with
+`details.retryable: true` and `details.fix`. The hold is released without a
+debit or refund. Late completion cannot charge or create a second transaction.
+The failed transaction remains available; unresolved vendor cost is recorded
+as unknown. Executors have no caller AbortSignal parameter, so the watchdog
+does not cancel arbitrary work: LLM calls use the remaining budget and fetches
+retain their own timeouts. No further retry starts after the deadline. A
+blocked JavaScript event loop can delay the watchdog; elapsed time is also
+checked before capture.
+
+The same `Idempotency-Key` and fingerprint replay the stored transaction,
+with HTTP 200 and `meta.idempotency_replay: true` once complete. While the first
+call is `executing`, retries return HTTP 409 `request_in_progress`,
+`details.retryable: true`, `details.retry_after_seconds: 2`, and `details.fix`
+instructing the caller to retry with the same key. Concurrent retries cannot
+both execute. Different inputs with that key return HTTP 409
+`idempotency_key_reused`. Use a new key to attempt a failed or timed-out call
+again; changing only `timeout_seconds` does not change the fingerprint.
+
+A process crash leaves a durable hold. The reconciler releases open holds
+past their 15-minute deadline, longer than the maximum sync budget. It handles
+at most 25 reservations per one-minute tick, so a backlog needs more ticks.
+
+The x402 gateway atomically claims the payment hash after verification and
+before validation or execution. A concurrent duplicate receives the existing
+HTTP 502 replay response; a completed payment replays its output. Confirmed
+unsettled failures release the claim, allowing a retry with the same signed
+payment while valid, up to two executor invocations per payment hash (including
+transient retries). A third attempt receives the existing HTTP 502 replay
+response. Rejections before execution delete the claim and consume no execution
+budget. The settlement reconciler releases claims older than 10 minutes only
+when they have no settlement intent and no settlement; an old owner cannot
+settle after its claim is released. An ambiguous transport failure during
+settlement retains the claim and durable intent for reconciliation.

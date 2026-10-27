@@ -1,5 +1,5 @@
 import { persistCallCost } from "../lib/persist-call-cost.js";
-import { setCostDeadline } from "../lib/call-cost.js";
+import { setCostDeadline, noteUnknownCost } from "../lib/call-cost.js";
 import { refusalDetails } from "../lib/capability-refusal.js";
 import { Hono, type Context } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
@@ -464,24 +464,7 @@ type InvocationActor =
  * both understate quality and break the floor's fact-vs-transaction
  * completeness cross-check.
  */
-/**
- * Write the invocation fact WITHOUT extending an open wallet transaction.
- *
- * `executeSync` runs the executor inside `db.transaction`, holding the wallet
- * row under FOR UPDATE. `recordInvocation` uses the base handle, not that `tx`,
- * so awaiting it there reserved a SECOND connection from the same 30-connection
- * pool while the first was still held — thirty concurrent paid calls would each
- * hold one and queue for a thirty-first that only they could free, exiting only
- * via the transaction's 15s idle-in-transaction timeout, as a wave of failed
- * paid calls whose vendor cost had already been spent.
- *
- * Before WP9 nothing inside that transaction touched a second connection, and
- * the comment at the top of the block exists specifically to bound how long the
- * wallet lock is held. So the fact is tracked rather than awaited: the write
- * still completes and still blocks shutdown until it does, but it no longer sits
- * inside the lock. `recordInvocation` never throws and is explicitly
- * best-effort, so nothing downstream depended on the await.
- */
+/** Track best-effort invocation telemetry without making it a payment dependency. */
 function recordFactWithoutHoldingTheLock(
   fact: Parameters<typeof recordAnonymousInvocation>[0],
 ): void {
@@ -496,11 +479,12 @@ async function executeWithRetry(
   input: Record<string, unknown>,
   capability: CapabilityInfo,
   actor: InvocationActor,
+  deadline?: number,
 ): Promise<any> {
   const startedAt = Date.now();
   try {
     const result = await executeWithTransientRetry(executor, input, capability);
-    recordFactWithoutHoldingTheLock({
+    if (deadline === undefined || Date.now() < deadline) recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.kind === "account" ? actor.userId : null,
@@ -510,7 +494,7 @@ async function executeWithRetry(
     });
     return result;
   } catch (err) {
-    recordFactWithoutHoldingTheLock({
+    if (deadline === undefined || Date.now() < deadline) recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.kind === "account" ? actor.userId : null,
@@ -604,6 +588,67 @@ async function settleReceiptFor(transactionId: string | null | undefined): Promi
   await settleExecutionReceipt(getDb(), { transactionId, rail: "v1_do" });
 }
 
+async function replaySyncRequest(c: any, db: any, existing: any, fingerprint: string, capabilitySlug: string | undefined, userId: string) {
+    if (existing && (existing.solutionSlug != null || existing.deletedAt != null || !isReplayable(existing.idempotencyFingerprint, fingerprint))) {
+      // The dangerous case, and the reason this package exists. Pre-WP6 this
+      // path returned the EARLIER call's output while echoing the slug the
+      // caller had just asked for — an answer to someone else's question,
+      // labelled as an answer to theirs. A deterministic key like "order-123"
+      // reused across two capabilities is far likelier than a UUID collision.
+      return c.json(
+        apiError(
+          "idempotency_key_reused",
+          "This Idempotency-Key was already used for a different request. " +
+            "A key identifies one specific request; reusing it for different " +
+            "inputs or a different capability is not a retry, so replaying the " +
+            "earlier result would answer a question you did not ask. Use a new key.",
+          { conflicting_transaction_id: existing.id },
+        ),
+        409,
+      );
+    }
+
+    if (existing?.status === "executing") {
+      return c.json(apiError("request_in_progress", "The original request is still running.", {
+        retryable: true,
+        retry_after_seconds: 2,
+        transaction_id: existing.id,
+        fix: "The original request is still running; retry with the same Idempotency-Key after 2 seconds.",
+      }), 409);
+    }
+
+    if (existing) {
+      const [wallet] = await db
+        .select({ balanceCents: wallets.balanceCents })
+        .from(wallets)
+        .where(eq(wallets.userId, userId))
+        .limit(1);
+
+      // MED-5: include the stored audit body in the replay so an agent
+      // relying on compliance.shareable_url from the original call still
+      // gets it on retry. Pre-fix, replays returned no meta.audit at all
+      // and customers parsing audit data hit undefined. idempotency_replay:
+      // true distinguishes replays from original calls in customer logs.
+      return c.json({
+        transaction_id: existing.id,
+        status: existing.status,
+        capability_used: capabilitySlug ?? null,
+        price_cents: existing.priceCents,
+        latency_ms: existing.latencyMs,
+        wallet_balance_cents: wallet?.balanceCents ?? 0,
+        output: existing.output,
+        provenance: existing.provenance,
+        meta: {
+          idempotency_replay: true,
+          // A STORED audit body, so it can predate the sanitising write below
+          // and carry a raw error. Reviewer-found: the fix originally covered
+          // only GET /v1/transactions/:id and missed both replay paths.
+          audit: redactAuditTrail(existing.auditTrail),
+        },
+      });
+    }
+}
+
 export const doRoute = new Hono<AppEnv>();
 
 // POST /v1/do — Core endpoint: execute a capability
@@ -669,8 +714,13 @@ doRoute.post(
   const capabilitySlug: string | undefined = body.capability_slug;
   const inputs: Record<string, unknown> | undefined = body.inputs;
   const maxPriceCents: number | undefined = body.max_price_cents;
+  if (body.timeout_seconds !== undefined &&
+      (typeof body.timeout_seconds !== "number" || !Number.isFinite(body.timeout_seconds) || body.timeout_seconds <= 0)) {
+    return c.json(apiError("invalid_request", "'timeout_seconds' must be a positive finite number.",
+      { fix: "Send 'timeout_seconds' as a positive number of seconds (maximum 60)." }), 400);
+  }
   const timeoutSeconds: number = Math.min(
-    body.timeout_seconds ?? DEFAULT_TIMEOUT_SECONDS,
+    Math.max(5, body.timeout_seconds ?? DEFAULT_TIMEOUT_SECONDS),
     MAX_TIMEOUT_SECONDS,
   );
   setCostDeadline(timeoutSeconds * 1000);
@@ -773,55 +823,7 @@ doRoute.post(
       ))
       .limit(1);
 
-    if (existing && !isReplayable(existing.idempotencyFingerprint, idempotencyFingerprint)) {
-      // The dangerous case, and the reason this package exists. Pre-WP6 this
-      // path returned the EARLIER call's output while echoing the slug the
-      // caller had just asked for — an answer to someone else's question,
-      // labelled as an answer to theirs. A deterministic key like "order-123"
-      // reused across two capabilities is far likelier than a UUID collision.
-      return c.json(
-        apiError(
-          "idempotency_key_reused",
-          "This Idempotency-Key was already used for a different request. " +
-            "A key identifies one specific request; reusing it for different " +
-            "inputs or a different capability is not a retry, so replaying the " +
-            "earlier result would answer a question you did not ask. Use a new key.",
-          { conflicting_transaction_id: existing.id },
-        ),
-        409,
-      );
-    }
-
-    if (existing) {
-      const [wallet] = await db
-        .select({ balanceCents: wallets.balanceCents })
-        .from(wallets)
-        .where(eq(wallets.userId, user.id))
-        .limit(1);
-
-      // MED-5: include the stored audit body in the replay so an agent
-      // relying on compliance.shareable_url from the original call still
-      // gets it on retry. Pre-fix, replays returned no meta.audit at all
-      // and customers parsing audit data hit undefined. idempotency_replay:
-      // true distinguishes replays from original calls in customer logs.
-      return c.json({
-        transaction_id: existing.id,
-        status: existing.status,
-        capability_used: capabilitySlug ?? null,
-        price_cents: existing.priceCents,
-        latency_ms: existing.latencyMs,
-        wallet_balance_cents: wallet?.balanceCents ?? 0,
-        output: existing.output,
-        provenance: existing.provenance,
-        meta: {
-          idempotency_replay: true,
-          // A STORED audit body, so it can predate the sanitising write below
-          // and carry a raw error. Reviewer-found: the fix originally covered
-          // only GET /v1/transactions/:id and missed both replay paths.
-          audit: redactAuditTrail(existing.auditTrail),
-        },
-      });
-    }
+    if (existing) return replaySyncRequest(c, db, existing, idempotencyFingerprint, capabilitySlug, user.id);
   }
 
   // ── 3. Early auth gate for unauthenticated requests ───────────────────
@@ -1380,7 +1382,7 @@ doRoute.post(
   if (isAsync) {
     return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness);
   } else {
-    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness);
+    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness, timeoutSeconds * 1000);
   }
 });
 
@@ -1997,7 +1999,7 @@ async function executeFreeTierAuthenticated(
   }
 }
 
-// ─── Sync execution: lock → execute → debit on success (DEC-14) ────────────
+// ─── Sync execution: reserve → execute → capture on success (DEC-14) ────────────
 
 async function executeSync(
   c: any,
@@ -2010,6 +2012,7 @@ async function executeSync(
   idempotencyFingerprint: string,
   outputSchema: Record<string, unknown>,
   freshness: FreshnessInfo | null,
+  timeoutMs: number,
 ) {
   const startTime = Date.now();
 
@@ -2022,7 +2025,7 @@ async function executeSync(
         provenance: unknown;
         latencyMs: number;
         balanceAfter: number;
-        // CRIT-5: audit object built inside the tx and returned so the
+        // CRIT-5: audit object written atomically during capture so the
         // response can surface it as meta.audit without rebuilding it
         // (and without the f-a-f UPDATE that produced the race).
         audit: ReturnType<typeof buildFullAudit>;
@@ -2055,212 +2058,224 @@ async function executeSync(
          */
         countsAgainstCapability: boolean;
         refusal?: Record<string, unknown>;
+        timedOut?: boolean;
       };
 
-  // Cert-audit Y-5: catch postgres timeout codes from the wallet tx so
-  // they surface as a clean `timeout_exceeded` API response instead of
-  // a generic 500. Two cases:
-  //   25P03  — idle_in_transaction_session_timeout (executor took longer
-  //            than the SET LOCAL value below); the tx was rolled back,
-  //            no debit committed, no refund needed.
-  //   55P03  — lock_not_available (FOR UPDATE waited longer than the
-  //            SET LOCAL lock_timeout); same outcome — tx never began
-  //            its body, no row state changed.
-  // Both are operational events, not bugs in the executor; a clean
-  // error code lets clients distinguish from execution_failed (which
-  // means the executor itself raised) and surface a helpful retry hint.
+  // Every DB transaction is short. Only the reservation crosses execution.
   let result: TxResult;
   try {
-    result = await db.transaction(async (tx) => {
-    // Cert-audit C4: cap the lock-hold time. The sync path holds the
-    // wallet FOR UPDATE row for the duration of executeWithRetry, which
-    // can be several seconds for non-async caps. Without this, a stuck
-    // upstream pins the wallet row and serializes every concurrent
-    // request from the same user. SET LOCAL applies for this tx only —
-    // 15s is comfortable for the slowest sync caps (LLM, scrape) while
-    // still cutting off pathological hangs well before the 60s pool
-    // default. A timeout here aborts the tx with code 25P03; the catch
-    // block treats that as execution_failed and refunds nothing (no
-    // debit committed).
-    await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '15s'`);
-    // Known cost gap: a wallet rollback (including the 15 s timeout) removes
-    // the transaction row even after billable LLM spend. No cost UPDATE can
-    // persist that spend; the margin view therefore understates upstream cost.
-    // Cert-audit Y-5: bound the FOR UPDATE wait time so a long-running
-    // tx for the same user can't pin a fresh request indefinitely. 5s
-    // is generous for the typical sync wallet tx (~10-50ms) and still
-    // tight enough that a stuck holder times out before clients give
-    // up. The error surfaces as Postgres code 55P03 (lock_not_available)
-    // and is caught at the route boundary as a clean execution_timeout.
-    await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+    const reserved = await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '15s'`);
+      await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+      // Lock wallet row (WP2: via the wallet service, which owns the lock shape)
+      const wallet = await walletService.lockWalletForUser(tx, user.id);
 
-    // Lock wallet row (WP2: via the wallet service, which owns the lock shape)
-    const wallet = await walletService.lockWalletForUser(tx, user.id);
+      // The preflight lookup can race. Recheck after the wallet lock, before
+      // affordability, so an in-flight retry replays even if its hold used the balance.
+      // The unique key is account-wide: excluded solution/deleted rows must return
+      // a conflict, never replay as a capability (including legacy null fingerprints).
+      if (idempotencyKey) {
+        const [existing] = await tx.select().from(transactions).where(and(
+          eq(transactions.userId, user.id), eq(transactions.idempotencyKey, idempotencyKey),
+        )).limit(1);
+        if (existing) return { replay: existing };
+      }
 
-    const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), capability.priceCents);
-    if (keyError) return { ok: false as const, errorCode: "key_policy" as const, keyError };
+      const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), capability.priceCents);
+      if (keyError) return { ok: false as const, errorCode: "key_policy" as const, keyError };
 
-    if (!wallet || wallet.balanceCents < capability.priceCents) {
-      return {
-        ok: false as const,
-        errorCode: "insufficient_balance" as const,
-        balance: wallet?.balanceCents ?? 0,
-        required: capability.priceCents,
-      };
-    }
-
-    // Cert-audit C8: authoritative spend-cap re-check INSIDE the wallet-
-    // locked tx. Concurrent requests for this user serialize on the wallet
-    // FOR UPDATE lock, so the SUM here reflects every previously-committed
-    // debit. Pre-check at line 698 is a fast-fail; this is the closer.
-    if (user.maxSpendPerHourCents) {
-      const capCheck = await spendCapWouldExceed(
-        tx,
-        user.id,
-        capability.priceCents,
-        user.maxSpendPerHourCents,
-      );
-      if (capCheck) {
+      if (!wallet || wallet.balanceCents < capability.priceCents) {
         return {
           ok: false as const,
-          errorCode: "spend_cap_exceeded" as const,
-          balance: wallet.balanceCents,
+          errorCode: "insufficient_balance" as const,
+          balance: wallet?.balanceCents ?? 0,
           required: capability.priceCents,
-          spent: capCheck.spent,
-          limit: user.maxSpendPerHourCents,
         };
       }
+
+      // Cert-audit C8: authoritative spend-cap re-check INSIDE the wallet-
+      // locked tx. Concurrent requests for this user serialize on the wallet
+      // FOR UPDATE lock, so the SUM here reflects every previously-committed
+      // debit. Pre-check at line 698 is a fast-fail; this is the closer.
+      if (user.maxSpendPerHourCents) {
+        const capCheck = await spendCapWouldExceed(
+          tx,
+          user.id,
+          capability.priceCents,
+          user.maxSpendPerHourCents,
+        );
+        if (capCheck) {
+          return {
+            ok: false as const,
+            errorCode: "spend_cap_exceeded" as const,
+            balance: wallet.balanceCents,
+            required: capability.priceCents,
+            spent: capCheck.spent,
+            limit: user.maxSpendPerHourCents,
+          };
+        }
+      }
+
+      // Determine transparency marker based on capability type
+      const marker = getTransparencyMarker(capability.transparencyTag);
+
+      // Create transaction record as "executing"
+      const [txnRecord] = await tx
+        .insert(transactions)
+        .values({
+          // Captured at INSERT because neither is recoverable later:
+          // the rail is not a property of the row, and the deploy commit
+          // drifts the moment anything redeploys (block 0110).
+          receiptRail: "v1_do",
+          receiptDeployCommit: deployCommitOrNull(),
+          userId: user.id,
+          capabilityId: capability.id,
+          idempotencyKey,
+          idempotencyFingerprint,
+          status: "executing",
+          complianceHashState: "deferred",
+          clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
+          input: inputForPersistence(capability.slug, executionInput),
+          priceCents: capability.priceCents,
+          transparencyMarker: marker,
+          dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
+        })
+        .returning({ id: transactions.id });
+
+      const reservation = await reservations.reserve(tx, {
+        wallet, userId: user.id, amountCents: capability.priceCents,
+        transactionId: txnRecord.id, apiKeyId: c.get("apiKeyId"),
+        description: `Capability: ${capability.slug}`, mode: "hold",
+      });
+      return { transactionId: txnRecord.id, reservationId: reservation.id, marker };
+    });
+
+    if (reserved.replay) {
+      return replaySyncRequest(c, db, reserved.replay, idempotencyFingerprint, capability.slug, user.id);
     }
+    if (reserved.ok === false) {
+      result = reserved;
+    } else {
+      const { transactionId, reservationId, marker } = reserved;
+      const txnRecord = { id: transactionId };
+      try {
+        // Executor interface accepts input only; there is no AbortSignal slot.
+        // One budget starts here for the watchdog, SDK timeouts and retries.
+        const deadline = setCostDeadline(timeoutMs);
+        const capResult = await executeWithHardTimeout(
+          executeWithRetry((input) => {
+            // A retry waking after the deadline must not start another paid call.
+            if (Date.now() >= deadline) throw new ExecutionTimeoutError(timeoutMs);
+            return executor(input);
+          }, executionInput, capability, { kind: "account", userId: user.id }, deadline),
+          Math.max(0, deadline - Date.now()),
+        ).catch((err: unknown) => {
+          // SDK timers are registered before our watchdog and can win at the
+          // same deadline. Normalize execution errors only, never DB errors.
+          if (Date.now() >= deadline) throw new ExecutionTimeoutError(timeoutMs);
+          throw err;
+        });
+        if (Date.now() >= deadline) throw new ExecutionTimeoutError(timeoutMs);
+        assertBillableOutput(capability.slug, capResult.output);
+        const latencyMs = Date.now() - startTime;
 
-    // Determine transparency marker based on capability type
-    const marker = getTransparencyMarker(capability.transparencyTag);
+        // Publish the final audit and completed status atomically during capture.
+        const audit = buildFullAudit({
+          transactionId: txnRecord.id,
+          startTime,
+          capability,
+          marker,
+          executionMode: "sync",
+          latencyMs,
+          executionInput,
+          output: capResult.output,
+          outputSchema,
+          provenance: capResult.provenance,
+          requestContext: c.get("requestContext" as any),
+        });
 
-    // Create transaction record as "executing"
-    const [txnRecord] = await tx
-      .insert(transactions)
-      .values({
-        // Captured at INSERT because neither is recoverable later:
-        // the rail is not a property of the row, and the deploy commit
-        // drifts the moment anything redeploys (block 0110).
-        receiptRail: "v1_do",
-        receiptDeployCommit: deployCommitOrNull(),
-        userId: user.id,
-        capabilityId: capability.id,
-        idempotencyKey,
-        idempotencyFingerprint,
-        status: "executing",
-      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
-        input: inputForPersistence(capability.slug, executionInput),
-        priceCents: capability.priceCents,
-        transparencyMarker: marker,
-        dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
-      })
-      .returning({ id: transactions.id });
+        const newBalance = await db.transaction(async (tx) => {
+          await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+          await walletService.lockWalletForUser(tx, user.id);
+          await tx
+            .update(transactions)
+            .set({
+              status: "completed",
+              complianceHashState: "pending",
+              output: capResult.output,
+              provenance: capResult.provenance,
+              latencyMs,
+              completedAt: new Date(),
+              auditTrail: audit,
+            })
+            .where(eq(transactions.id, txnRecord.id));
 
-    // Execute the capability
-    try {
-      const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "account", userId: user.id });
-      assertBillableOutput(capability.slug, capResult.output);
-      const latencyMs = Date.now() - startTime;
+          const captured = await reservations.capture(tx, { reservationId });
+          if (!captured) throw new reservations.ReservationNotOpenError(reservationId, "capture");
+          return (await walletService.readBalance(tx, user.id))!;
+        });
 
-      // Deduct through the wallet service — the balance change and its ledger
-      // row are written together, so they cannot diverge (WP2).
-      const newBalance = await walletService.debit(tx, {
-        wallet,
-        amountCents: capability.priceCents,
-        referenceId: txnRecord.id,
-        apiKeyId: c.get("apiKeyId"),
-        description: `Capability: ${capability.slug}`,
-      });
-
-      // CRIT-5: build the audit body INSIDE the tx and write auditTrail
-      // atomically with status='completed'. Pre-fix, status was set here
-      // without auditTrail, then a fire-and-forget UPDATE wrote auditTrail
-      // after the tx committed. The retry worker's GRACE_MS (10s) is too
-      // short to outlast a stalled f-a-f UPDATE under DB pressure: worker
-      // hashes auditTrail=null, then the UPDATE lands and mutates the
-      // hashed column → permanently broken row. By writing both in the
-      // same tx, the row is never published to the worker without its
-      // final auditTrail.
-      const audit = buildFullAudit({
-        transactionId: txnRecord.id,
-        startTime,
-        capability,
-        marker,
-        executionMode: "sync",
-        latencyMs,
-        executionInput,
-        output: capResult.output,
-        outputSchema,
-        provenance: capResult.provenance,
-        requestContext: c.get("requestContext" as any),
-      });
-
-      await tx
-        .update(transactions)
-        .set({
-          status: "completed",
+        result = {
+          ok: true as const,
+          transactionId: txnRecord.id,
           output: capResult.output,
           provenance: capResult.provenance,
           latencyMs,
-          completedAt: new Date(),
-          auditTrail: audit,
-        })
-        .where(eq(transactions.id, txnRecord.id));
+          balanceAfter: newBalance,
+          audit,
+        };
+      } catch (err) {
+        const latencyMs = Date.now() - startTime;
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : typeof err === "object" && err !== null && "message" in err
+              ? String((err as { message: unknown }).message)
+              : String(err);
 
-      return {
-        ok: true as const,
-        transactionId: txnRecord.id,
-        output: capResult.output,
-        provenance: capResult.provenance,
-        latencyMs,
-        balanceAfter: newBalance,
-        audit,
-      };
-    } catch (err) {
-      const latencyMs = Date.now() - startTime;
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === "object" && err !== null && "message" in err
-            ? String((err as { message: unknown }).message)
-            : String(err);
+        // Mark transaction failed — no charge (wallet not debited)
+        const failAudit = buildFailureAudit({
+          transactionId: txnRecord.id, startTime, capability, executionInput,
+          errorMessage, executionMode: "sync",
+        });
+        const failProvenance = buildFailureProvenance(
+          capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+        );
 
-      // Mark transaction failed — no charge (wallet not debited)
-      const failAudit = buildFailureAudit({
-        transactionId: txnRecord.id, startTime, capability, executionInput,
-        errorMessage, executionMode: "sync",
-      });
-      const failProvenance = buildFailureProvenance(
-        capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
-      );
+        if (err instanceof ExecutionTimeoutError) noteUnknownCost("sync_execution_timed_out");
+        const balanceAfter = await db.transaction(async (tx) => {
+          await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+          await tx
+            .update(transactions)
+            .set({
+              status: "failed",
+              complianceHashState: "pending",
+              error: errorMessage,
+              latencyMs,
+              completedAt: new Date(),
+              auditTrail: failAudit,
+              provenance: failProvenance,
+            })
+            .where(and(eq(transactions.id, txnRecord.id), inArray(transactions.status, ["executing", "deferred"])));
+          await reservations.release(tx, { reservationId, reason: err instanceof ExecutionTimeoutError ? "sync timeout" : "sync execution failed" });
+          return (await walletService.readBalance(tx, user.id)) ?? 0;
+        });
 
-      await tx
-        .update(transactions)
-        .set({
-          status: "failed",
+        result = {
+          ok: false as const,
+          errorCode: "execution_failed" as const,
           error: errorMessage,
-          latencyMs,
-          completedAt: new Date(),
-          auditTrail: failAudit,
-          provenance: failProvenance,
-        })
-        .where(eq(transactions.id, txnRecord.id));
-
-      return {
-        ok: false as const,
-        errorCode: "execution_failed" as const,
-        error: errorMessage,
-        transactionId: txnRecord.id,
-        balanceAfter: wallet.balanceCents,
-        // Classified HERE, where the thrown value is still in scope. The caller
-        // that records the breaker failure sees only the message string, and a
-        // refusal is indistinguishable from a real fault once flattened to text.
-        countsAgainstCapability: shouldCountAgainstCapability(err),
-        refusal: refusalDetails(err),
-      };
+          transactionId: txnRecord.id,
+          balanceAfter,
+          timedOut: err instanceof ExecutionTimeoutError,
+          // Classified HERE, where the thrown value is still in scope. The caller
+          // that records the breaker failure sees only the message string, and a
+          // refusal is indistinguishable from a real fault once flattened to text.
+          countsAgainstCapability: !(err instanceof ExecutionTimeoutError) && shouldCountAgainstCapability(err),
+          refusal: refusalDetails(err),
+        };
+      }
     }
-    });
   } catch (err) {
     // Cert-audit Y-5: catch postgres timeout codes from the wallet tx.
     // The error shape from postgres-js is `{ code: '25P03' }` or
@@ -2273,7 +2288,7 @@ async function executeSync(
     const code = pgErrorCode(err);
     if (code === "25P03" || code === "55P03") {
       const reason = code === "25P03"
-        ? "Capability execution exceeded the per-transaction timeout (15s). The request was not charged."
+        ? "Wallet bookkeeping exceeded its transaction timeout. The request was not charged."
         : "Wallet was contended by a concurrent request that took too long. Retry with backoff.";
       logWarn("wallet-tx-timeout", reason, { code, slug: capability.slug, userId: user.id });
       return c.json(
@@ -2378,23 +2393,24 @@ async function executeSync(
   if (!result.ok && result.errorCode === "execution_failed") {
     return c.json(
       apiError(
-        "execution_failed",
-        "The capability failed to execute. You were not charged.",
+        result.timedOut ? "timeout_exceeded" : "execution_failed",
+        result.timedOut ? "The capability exceeded timeout_seconds. You were not charged." : "The capability failed to execute. You were not charged.",
         {
           transaction_id: result.transactionId,
           error: sanitizeFailureReason(result.error),
           ...result.refusal,
+          ...(result.timedOut ? { retryable: true, fix: "Retry with a new Idempotency-Key and a larger timeout_seconds (up to 60), or retry later." } : {}),
           wallet_balance_cents: result.balanceAfter,
         },
       ),
-      500,
+      result.timedOut ? 503 : 500,
     );
   }
 
   // CRIT-5: audit was previously rebuilt here and written via fire-and-forget
   // UPDATE — the worker's GRACE_MS could fire between status='completed'
   // commit and the f-a-f write, hashing auditTrail=null permanently. Audit
-  // is now built inside the tx and returned via TxResult; nothing left to
+  // is now written atomically during capture and returned via TxResult; nothing left to
   // write here.
   const audit = result.audit;
 

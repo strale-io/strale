@@ -75,7 +75,7 @@ describe("both rails reach the executor only through the shared policy", () => {
 
   it("x402 gateway: no bare executor call; the capability handler uses the policy", () => {
     expect(gateway).not.toMatch(/await\s+executor\s*\(/);
-    expect(gateway).toMatch(/await executeWithTransientRetry\(executor, inputs, cap\)/);
+    expect(gateway).toMatch(/await executeWithTransientRetry\(async input => \{[\s\S]*?await beginX402Execution\(claimId, paymentHash\);[\s\S]*?return executor\(input\);[\s\S]*?\}, inputs, cap\)/);
   });
 
   it("POST /v1/do: no bare executor call or private retry; executeWithRetry uses the policy", () => {

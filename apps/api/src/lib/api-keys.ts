@@ -70,6 +70,11 @@ export async function keySpending(tx: WalletTx, userId: string, keyId: string | 
       FROM wallet_transactions d
       JOIN wallets w ON w.id = d.wallet_id AND w.user_id = k.user_id
       WHERE d.api_key_id = k.id AND d.type = 'purchase' AND d.amount_cents < 0
+      UNION ALL
+      SELECT r.created_at, r.amount_cents AS net_cents
+      FROM wallet_reservations r
+      WHERE r.user_id = k.user_id AND r.api_key_id = k.id
+        AND r.mode = 'hold' AND r.state IN ('reserved', 'executing')
     ) p ON true
     WHERE k.user_id = ${userId} ${keyId ? sql`AND k.id = ${keyId}` : sql``}
       ${activeOnly ? sql`AND k.revoked_at IS NULL` : sql``}

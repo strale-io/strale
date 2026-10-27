@@ -52,9 +52,11 @@ export async function withExpectedLlmUsage<T>(run: () => Promise<T>): Promise<T>
     }
   });
 }
-export function setCostDeadline(timeoutMs: number): void {
+export function setCostDeadline(timeoutMs: number): number {
+  const deadline = Date.now() + timeoutMs;
   const cost = scope.getStore();
-  if (cost) cost.deadline = Date.now() + timeoutMs;
+  if (cost) cost.deadline = deadline;
+  return deadline;
 }
 export function remainingCallMs(defaultMs = 30_000): number {
   const deadline = scope.getStore()?.deadline;

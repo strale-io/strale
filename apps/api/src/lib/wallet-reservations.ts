@@ -15,6 +15,10 @@
  * movement is still provisional. That record outlives the process, so a
  * reconciler can find what a crash abandoned.
  *
+ * Sync reservations use mode=hold: reserve leaves the balance and ledger alone,
+ * capture debits, and release only closes the hold. Legacy async/solution
+ * reservations default to mode=debit and keep their existing behavior.
+ *
  * Money movement itself is unchanged and still goes through the wallet service
  * (WP2). A reservation records why funds moved and whether that movement is
  * settled. `reserve` debits, `capture` marks the debit final, `release` returns
@@ -37,7 +41,7 @@ import type { WalletTx } from "./wallet-service.js";
  * How long a reservation may stay non-terminal before the reconciler treats it
  * as abandoned.
  *
- * Deliberately generous relative to the 15s sync ceiling and the async paths
+ * Deliberately generous relative to the 60s sync ceiling and the async paths
  * that motivate it: releasing a still-running execution would refund a customer
  * who is about to get their result, which is worse than waiting. The capture
  * and release transitions are conditional, so a late finisher racing the
@@ -121,11 +125,14 @@ export async function reserve(
     description: string;
     ttlMs?: number;
     apiKeyId?: string | null;
+    mode?: "debit" | "hold";
   },
 ): Promise<Reservation> {
   const { wallet, userId, amountCents, transactionId, description } = params;
 
-  const balanceAfter = await walletService.debit(tx, {
+  if (amountCents <= 0 || !Number.isSafeInteger(amountCents)) throw new Error("Invalid reservation amount");
+  if (wallet.balanceCents < amountCents) throw new walletService.InsufficientFundsError(wallet.balanceCents, amountCents);
+  const balanceAfter = params.mode === "hold" ? wallet.balanceCents : await walletService.debit(tx, {
     wallet,
     amountCents,
     referenceId: transactionId,
@@ -141,6 +148,8 @@ export async function reserve(
     .insert(walletReservations)
     .values({
       walletId: wallet.id,
+      mode: params.mode ?? "debit",
+      apiKeyId: params.apiKeyId ?? null,
       userId,
       amountCents,
       state: "reserved",
@@ -207,8 +216,22 @@ export async function capture(
         inArray(walletReservations.state, OPEN_STATES),
       ),
     )
-    .returning({ id: walletReservations.id });
+    .returning({
+      id: walletReservations.id, mode: walletReservations.mode,
+      walletId: walletReservations.walletId, amountCents: walletReservations.amountCents,
+      transactionId: walletReservations.transactionId, apiKeyId: walletReservations.apiKeyId,
+    });
 
+  const claimed = rows[0];
+  if (claimed?.mode === "hold") {
+    // The caller holds the wallet lock. Claiming first removes this hold from
+    // the available-balance predicate; rollback restores it if debit fails.
+    await walletService.debit(tx, {
+      wallet: { id: claimed.walletId, balanceCents: claimed.amountCents },
+      amountCents: claimed.amountCents, referenceId: claimed.transactionId,
+      apiKeyId: claimed.apiKeyId, description: "Sync capability reservation captured",
+    });
+  }
   return rows.length > 0;
 }
 
@@ -240,6 +263,7 @@ export async function release(
     )
     .returning({
       id: walletReservations.id,
+      mode: walletReservations.mode,
       walletId: walletReservations.walletId,
       amountCents: walletReservations.amountCents,
       transactionId: walletReservations.transactionId,
@@ -247,6 +271,7 @@ export async function release(
 
   // Someone else reached a terminal state first. Nothing to refund.
   if (!claimed) return false;
+  if (claimed.mode === "hold") return true;
 
   await walletService.refund(tx, {
     walletId: claimed.walletId,
@@ -259,6 +284,7 @@ export async function release(
 }
 
 export interface AbandonedReservation {
+  mode: string;
   id: string;
   transactionId: string | null;
   amountCents: number;
@@ -280,6 +306,7 @@ export async function findAbandoned(
   return tx
     .select({
       id: walletReservations.id,
+      mode: walletReservations.mode,
       transactionId: walletReservations.transactionId,
       amountCents: walletReservations.amountCents,
       userId: walletReservations.userId,

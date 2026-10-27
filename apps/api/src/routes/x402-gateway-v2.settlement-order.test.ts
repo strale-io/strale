@@ -39,7 +39,7 @@ const SOURCE_PATH =
 let source: string;
 
 /** How the wildcard handler runs its executor (lib/retry.ts, shared with POST /v1/do). */
-const EXECUTOR_CALL = "await executeWithTransientRetry(executor, inputs";
+const EXECUTOR_CALL = "await executeWithTransientRetry(async input";
 
 beforeAll(() => {
   source = readFileSync(SOURCE_PATH, "utf-8");

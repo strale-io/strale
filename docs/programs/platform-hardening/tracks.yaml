@@ -59,9 +59,14 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: Reserve, execute outside the transaction, then capture; honour
-      timeout_seconds and close the x402 concurrent-replay window (§10 item 4
-      and runner-up). Follow DEC-20260504-A fail-before tests and tier-2 review.
+    next_action: H4 round 2 built locally on feat/money-path; orchestrator must
+      review and commit the uncommitted diff, run the disposable-Postgres lane
+      and image boot, then deploy and execute the read-only verification queries
+      in handoff/_general/from-code/2026-10-28-money-path.md (Round 2 supersedes
+      the earlier stale-claim limitation). No production checks or writes were
+      performed. Follow up the separate anonymous /v1/do x402 path, which still
+      has no pre-execution claim and retains its replay/ambiguous-settlement
+      gap. Keep T4 open until verified.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Reservation and capture regression tests discriminate the repaired money

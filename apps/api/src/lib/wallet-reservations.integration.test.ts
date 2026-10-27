@@ -19,7 +19,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
@@ -27,6 +27,7 @@ import { randomUUID } from "node:crypto";
 import { useTestDatabase } from "../test-support/integration-db.js";
 import {
   users,
+  apiKeys,
   wallets,
   walletTransactions,
   walletReservations,
@@ -35,6 +36,7 @@ import {
 } from "../db/schema.js";
 import * as walletService from "./wallet-service.js";
 import * as reservations from "./wallet-reservations.js";
+import { keyCapError, keySpending } from "./api-keys.js";
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
@@ -58,6 +60,8 @@ describeMaybe("wallet reservations against a real database", () => {
 
   afterAll(async () => {
     await client.end();
+    const { closeDbPool } = await import("../db/index.js");
+    await closeDbPool();
   });
 
   afterEach(async () => {
@@ -73,6 +77,7 @@ describeMaybe("wallet reservations against a real database", () => {
         .where(eq(walletTransactions.walletId, walletId));
       await db.delete(wallets).where(eq(wallets.id, walletId));
     }
+    if (userId) await db.delete(apiKeys).where(eq(apiKeys.userId, userId));
     if (userId) await db.delete(users).where(eq(users.id, userId));
     if (capabilityId)
       await db.delete(capabilities).where(eq(capabilities.id, capabilityId));
@@ -238,7 +243,7 @@ describeMaybe("wallet reservations against a real database", () => {
     const refunds = await db
       .select()
       .from(walletTransactions)
-      .where(eq(walletTransactions.type, "refund"));
+      .where(and(eq(walletTransactions.walletId, walletId), eq(walletTransactions.type, "refund")));
     expect(refunds).toHaveLength(1);
   });
 
@@ -347,4 +352,84 @@ describeMaybe("wallet reservations against a real database", () => {
     await openReservation();
     await expect(openReservation()).rejects.toThrow();
   });
+  it("H4 sync holds leave balance and ledger unchanged until capture and protect funds from another debit", async () => {
+    await seed();
+    const hold = await db.transaction(async tx => {
+      const wallet = await walletService.lockWalletForUser(tx, userId);
+      return reservations.reserve(tx, { wallet: wallet!, userId, amountCents: STARTING_BALANCE,
+        transactionId, description: "sync hold", mode: "hold" });
+    });
+    expect(await balance()).toBe(STARTING_BALANCE);
+    expect(await db.select().from(walletTransactions).where(and(eq(walletTransactions.walletId, walletId), eq(walletTransactions.type, "purchase")))).toHaveLength(0);
+    await expect(db.transaction(async tx => {
+      const wallet = await walletService.lockWalletForUser(tx, userId);
+      expect(wallet!.balanceCents).toBe(0);
+      await walletService.debit(tx, { wallet: wallet!, amountCents: 1, description: "competing call" });
+    })).rejects.toThrow(walletService.InsufficientFundsError);
+    await db.transaction(async tx => {
+      await walletService.lockWalletForUser(tx, userId);
+      expect(await reservations.capture(tx, { reservationId: hold.id })).toBe(true);
+    });
+    expect(await balance()).toBe(0);
+    expect(await db.transaction(tx => reservations.capture(tx, { reservationId: hold.id }))).toBe(false);
+    expect(await db.transaction(tx => reservations.release(tx, { reservationId: hold.id, reason: "duplicate" }))).toBe(false);
+  });
+  it.each(["hourly", "total"] as const)("H4 open sync holds enforce the additional-key %s cap without double-counting capture", async kind => {
+    await seed();
+    const apiKeyId = randomUUID();
+    await db.insert(apiKeys).values({ id: apiKeyId, userId, label: "H4 test", apiKeyHash: `hash-${apiKeyId}`,
+      keyPrefix: "sk_live_h4", maxSpendPerHourCents: kind === "hourly" ? AMOUNT : null,
+      maxSpendTotalCents: kind === "total" ? AMOUNT : null });
+    const hold = await db.transaction(async tx => {
+      const wallet = await walletService.lockWalletForUser(tx, userId);
+      return reservations.reserve(tx, { wallet: wallet!, userId, amountCents: AMOUNT,
+        transactionId, apiKeyId, description: "key cap hold", mode: "hold" });
+    });
+    expect(await balance()).toBe(STARTING_BALANCE);
+    expect(await db.select().from(walletTransactions).where(and(
+      eq(walletTransactions.walletId, walletId), eq(walletTransactions.type, "purchase"),
+    ))).toHaveLength(0);
+    await db.transaction(async tx => {
+      await walletService.lockWalletForUser(tx, userId);
+      expect(await keyCapError(tx, userId, apiKeyId, 1)).toMatchObject({
+        error_code: kind === "hourly" ? "key_hourly_cap_exceeded" : "key_total_cap_exceeded",
+        details: { spent_cents: AMOUNT },
+      });
+      expect(await reservations.capture(tx, { reservationId: hold.id })).toBe(true);
+    });
+    const [spending] = await keySpending(db, userId, apiKeyId);
+    expect(spending).toMatchObject({ spent_hour_cents: AMOUNT, spent_total_cents: AMOUNT });
+  });
+  it("H4 releasing a stale sync hold never refunds money that was not debited", async () => {
+    await seed();
+    const hold = await db.transaction(async tx => {
+      const wallet = await walletService.lockWalletForUser(tx, userId);
+      return reservations.reserve(tx, { wallet: wallet!, userId, amountCents: AMOUNT,
+        transactionId, description: "crashed sync hold", mode: "hold", ttlMs: -1 });
+    });
+    expect((await reservations.findAbandoned(db)).map(r => r.id)).toContain(hold.id);
+    expect(await db.transaction(tx => reservations.release(tx, { reservationId: hold.id, reason: "crash" }))).toBe(true);
+    expect(await balance()).toBe(STARTING_BALANCE);
+    expect(await db.select().from(walletTransactions).where(and(eq(walletTransactions.walletId, walletId), eq(walletTransactions.type, "refund")))).toHaveLength(0);
+  });
+
+  it.each(["hold", "debit"] as const)("Round 2 reconciler selects %s mode and reports its actual financial effect", async mode => {
+    await seed();
+    const reservation = await db.transaction(async tx => {
+      const wallet = await walletService.lockWalletForUser(tx, userId);
+      return reservations.reserve(tx, { wallet: wallet!, userId, amountCents: AMOUNT,
+        transactionId, description: "recovery wording", mode, ttlMs: -1 });
+    });
+    expect((await reservations.findAbandoned(db)).find(r => r.id === reservation.id)?.mode).toBe(mode);
+    const { runReservationReconcilerOnce } = await import("../jobs/reservation-reconciler.js");
+    expect((await runReservationReconcilerOnce()).released).toBe(1);
+    const [row] = await db.select().from(transactions).where(eq(transactions.id, transactionId));
+    expect(row!.error).toContain(mode === "hold" ? "released automatically" : "refunded automatically");
+    expect(await balance()).toBe(STARTING_BALANCE);
+    const refunds = await db.select().from(walletTransactions).where(and(
+      eq(walletTransactions.walletId, walletId), eq(walletTransactions.type, "refund"),
+    ));
+    expect(refunds).toHaveLength(mode === "hold" ? 0 : 1);
+  });
+
 });

@@ -11,7 +11,7 @@ it("API-key sync cost write is reached only after the wallet transaction commits
 });
 it("x402 writes cost only after its transaction INSERT returns", () => {
   const source = route("x402-gateway-v2");
-  const insert = source.indexOf("const [row] = await db.insert(transactions)");
+  const insert = source.indexOf("const [row] = args.claimId");
   const cost = source.indexOf("persistCallCost(insertedId)");
   expect(insert).toBeGreaterThan(0); expect(cost).toBeGreaterThan(insert);
   expect(source.slice(insert, cost)).toContain(".returning({ id: transactions.id })");
@@ -39,8 +39,12 @@ const TXID = "33333333-3333-3333-3333-333333333333";
 vi.mock("../db/index.js", async () => {
   const { capabilities, transactions } = await import("../db/schema.js");
   const tx = {
+    execute: async () => [],
     select: () => ({ from: () => ({ where: () => ({ for: async () => [{ id: "wallet", balanceCents: state.balance }] }) }) }),
-    insert: () => ({ values: () => ({ returning: async () => [{ id: "33333333-3333-3333-3333-333333333333" }] }) }),
+    insert: () => ({ values: () => {
+      const result = { returning: async () => [{ id: "33333333-3333-3333-3333-333333333333" }] };
+      return { ...result, onConflictDoNothing: () => result };
+    } }),
     update: () => ({ set: () => ({ where: async () => { state.events.push("terminal-update"); } }) }),
   };
   return { getDb: () => ({
@@ -58,11 +62,16 @@ vi.mock("../db/index.js", async () => {
       state.events.push(`commit-${++state.commits}`);
       return result;
     },
-    insert: () => ({ values: () => ({ returning: async () => {
-      state.events.push("x402-insert-commit");
-      return [{ id: "33333333-3333-3333-3333-333333333333" }];
-    } }) }),
-    update: () => ({ set: () => ({ where: async () => [] }) }),
+    insert: () => ({ values: () => {
+      const result = { returning: async () => {
+        state.events.push("x402-claim-commit");
+        return [{ id: "33333333-3333-3333-3333-333333333333" }];
+      } };
+      return { ...result, onConflictDoNothing: () => result };
+    } }),
+    update: () => ({ set: () => ({ where: () => Object.assign(Promise.resolve([]), { returning: async () => {
+      state.events.push("x402-finalize-commit"); return [{ id: "33333333-3333-3333-3333-333333333333" }];
+    } }) }) }),
     execute: async (query: unknown) => {
       state.events.push("cost-write"); state.costQueries.push(query);
       if (state.failCost) throw new Error("cost write unavailable");
@@ -144,9 +153,9 @@ it.each([false, true])("x402 v2: cost failure=%s preserves the settled transacti
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ answer: "done", _meta: { payment: { method: "x402", settlement_id: "settled-payment" } } });
   expect(state.settle).toHaveBeenCalledTimes(1);
-  expect(state.events.indexOf("x402-insert-commit")).toBeGreaterThan(state.events.indexOf("payment-settled"));
+  expect(state.events.indexOf("x402-finalize-commit")).toBeGreaterThan(state.events.indexOf("payment-settled"));
   await vi.waitFor(() => expect(state.events).toContain("cost-write"));
-  expect(state.events.indexOf("cost-write")).toBeGreaterThan(state.events.indexOf("x402-insert-commit"));
+  expect(state.events.indexOf("cost-write")).toBeGreaterThan(state.events.indexOf("x402-finalize-commit"));
   expect(state.receipt).toHaveBeenCalledTimes(1); expect(state.release).not.toHaveBeenCalled();
   await assertCostWrite(fail);
 });

@@ -103,7 +103,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
-import { users, wallets, transactions, walletTransactions, failedRequests } from "../db/schema.js";
+import { users, wallets, transactions, walletTransactions, walletReservations, failedRequests } from "../db/schema.js";
 
 // ─── Hoisted mutable mock state (referenced from vi.mock factories) ───────────
 
@@ -112,6 +112,8 @@ const mocks = vi.hoisted(() => ({
   recordedSelects: [] as Array<{ table: unknown; cond: unknown }>,
   outerInserts: [] as Array<{ table: unknown; vals: unknown }>,
   dbTransactionCalls: 0,
+  activeTransactions: 0,
+  txTail: Promise.resolve() as Promise<unknown>,
   costEvents: [] as string[],
   failCostWrite: false,
   // Set per-test before the request; consumed by db.transaction(cb).
@@ -149,9 +151,16 @@ vi.mock("../db/index.js", () => {
       },
       transaction: async (cb: (tx: unknown) => unknown) => {
         mocks.dbTransactionCalls++;
-        const result = await cb(mocks.txRef.current);
-        mocks.costEvents.push("debit-commit");
-        return result;
+        const previous = mocks.txTail;
+        let unlock!: () => void;
+        mocks.txTail = new Promise<void>(resolve => { unlock = resolve; });
+        await previous;
+        mocks.activeTransactions++;
+        try {
+          const result = await cb(mocks.txRef.current);
+          mocks.costEvents.push("debit-commit");
+          return result;
+        } finally { mocks.activeTransactions--; unlock(); }
       },
     }),
   };
@@ -318,17 +327,33 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
   // exercised code path uses — see the file-header note on the FOR-UPDATE
   // gating this select provides).
   const selectCalls: Array<{ table: unknown; cond: unknown; mode: string }> = [];
+  let balance = Number(opts.walletRow?.balanceCents ?? 0);
+  const reservationRows: any[] = [];
+  const transactionRows: any[] = [];
   return {
     __insertCalls: insertCalls,
     __updateCalls: updateCalls,
     __selectCalls: selectCalls,
-    execute: vi.fn(async () => []),
+    __reservationRows: reservationRows,
+    __transactionRows: transactionRows,
+    execute: vi.fn(async (query: any) => {
+      const compiled = new PgDialect().sqlToQuery(query);
+      expect(compiled.params.every(p => !(p instanceof Date) && !Buffer.isBuffer(p))).toBe(true);
+      if (compiled.sql.includes("pg_try_advisory_xact_lock")) return [{ acquired: true }];
+      if (compiled.sql.includes("SUM(amount_cents)")) return [{ cents: reservationRows.filter(r => r.mode === "hold" && ["reserved", "executing"].includes(r.state)).reduce((n, r) => n + r.amountCents, 0) }];
+      return [];
+    }),
     select: vi.fn(() => ({
       from: vi.fn((table: unknown) => ({
         where: vi.fn((cond: unknown) => ({
+          then: table === transactions ? (resolve: any) => Promise.resolve([{ total: transactionRows.filter(r => ["executing", "completed"].includes(r.status)).reduce((sum, r) => sum + r.priceCents, 0) }]).then(resolve) : undefined,
+          orderBy: () => ({ limit: async (n: number) => reservationRows.filter(r => ["reserved", "executing"].includes(r.state) && r.deadlineAt < new Date()).slice(0, n) }),
+          limit: async () => table === transactions
+            ? transactionRows.filter(r => whereReferences(cond, transactions, "idempotency_key", { eq: r.idempotencyKey }))
+            : opts.walletRow ? [{ balanceCents: balance }] : [],
           for: vi.fn((mode: string) => {
             selectCalls.push({ table, cond, mode });
-            return Promise.resolve(opts.walletRow ? [opts.walletRow] : []);
+            return Promise.resolve(opts.walletRow ? [{ ...opts.walletRow, balanceCents: balance }] : []);
           }),
         })),
       })),
@@ -337,14 +362,23 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
       values: vi.fn((vals: unknown) => {
         insertCalls.push({ table, vals });
         const p = Promise.resolve([]) as any;
-        p.returning = () => Promise.resolve([{ id: opts.transactionId }]);
+        const row = { ...(vals as object), id: table === walletReservations ? `hold-${reservationRows.length}` : opts.transactionId };
+        if (table === walletReservations) reservationRows.push(row);
+        if (table === transactions) transactionRows.push(row);
+        p.returning = () => Promise.resolve([{ id: row.id }]);
         return p;
       }),
     })),
     update: vi.fn((table: unknown) => ({
       set: vi.fn((vals: unknown) => ({
-        where: vi.fn(() => {
+        where: vi.fn((cond: unknown) => {
           updateCalls.push({ table, vals });
+          if (table === walletReservations) {
+            const matched = reservationRows.filter(r => whereReferences(cond, walletReservations, "id", { eq: r.id }) && ["reserved", "executing"].includes(r.state));
+            matched.forEach(r => Object.assign(r, vals));
+            return Object.assign(Promise.resolve(matched), { returning: async () => matched });
+          }
+          if (table === transactions) transactionRows.forEach(r => Object.assign(r, vals));
           // WP2: the wallet debit is now a conditional UPDATE ... RETURNING,
           // so the result has to be awaitable AND expose .returning(). An
           // empty returning() would read as "the balance predicate did not
@@ -360,9 +394,10 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
           // bound amount out of the SQL delta. The route returns this value
           // as wallet_balance_cents, so echoing the pre-debit balance would
           // make the response assertion vacuous.
-          const before = (opts.walletRow?.balanceCents as number) ?? 0;
+          const before = balance;
           const chunks = (vals as any)?.balanceCents?.queryChunks ?? [];
           const amount = chunks.find((c: unknown) => typeof c === "number");
+          if (table === wallets && typeof amount === "number") balance -= amount;
           const settled: any = Promise.resolve([]);
           settled.returning = vi.fn(async () => [
             { balanceCents: typeof amount === "number" ? before - amount : before },
@@ -425,6 +460,8 @@ beforeEach(() => {
   mocks.recordedSelects = [];
   mocks.outerInserts = [];
   mocks.dbTransactionCalls = 0;
+  mocks.activeTransactions = 0;
+  mocks.txTail = Promise.resolve();
   mocks.costEvents = [];
   mocks.failCostWrite = false;
   mocks.txRef.current = null;
@@ -515,7 +552,7 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     // MAJOR 4 (DEC-8), residual fix: the wallet row was read under FOR
     // UPDATE, exactly once, AND the lock targeted the `wallets` table
     // scoped to THIS user's id — not just "some FOR UPDATE call happened".
-    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls).toHaveLength(body.error_code ? 1 : 2);
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
@@ -635,7 +672,7 @@ describe("POST /v1/do — insufficient balance", () => {
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
     // The lock is still taken to read the balance, and targets THIS
     // user's wallet row — not just "a FOR UPDATE call happened".
-    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls).toHaveLength(body.error_code ? 1 : 2);
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
@@ -782,7 +819,7 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     // DEC-8: the wallet was still read under FOR UPDATE before anything
     // else happened, scoped to THIS user's wallet row.
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
-    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls).toHaveLength(body.error_code ? 1 : 2);
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
@@ -1129,7 +1166,7 @@ describe("POST /v1/do — cost bookkeeping cannot affect settlement", () => {
     const body = await res.json();
     expect(body.result).toMatchObject({ price_cents: 5, wallet_balance_cents: 9995 });
     await flushMicrotasks();
-    expect(mocks.costEvents).toEqual(["debit-commit", "cost-write"]);
+    expect(mocks.costEvents).toEqual(["debit-commit", "debit-commit", "cost-write"]);
     expect(tx.__insertCalls.filter((entry: any) => entry.table === walletTransactions)).toHaveLength(1);
   });
 });
@@ -1152,4 +1189,194 @@ it.each([false, true])("free-tier: cost failure=%s preserves the response withou
   await flushMicrotasks();
   expect(mocks.costEvents).toEqual(["cost-write"]);
   expect(mocks.dbTransactionCalls).toBe(0);
+});
+
+// H4: exercise the real route + wallet/reservation primitives. The DB boundary
+// serializes transaction callbacks and evaluates the persisted open holds.
+// This does not substitute for the Postgres integration lane's row-lock proof.
+describe("H4 sync money path", () => {
+  function setup(balance = 5, cap: number | null = null) {
+    const user = buildUserRow({ maxSpendPerHourCents: cap });
+    const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: balance }, transactionId: randomUUID() });
+    mocks.txRef.current = tx;
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    const app = makeApp();
+    const call = (extra: Record<string, unknown> = {}, key?: string) => {
+      mocks.outerSelectQueue.push([user]);
+      if (key) mocks.outerSelectQueue.push([]);
+      if (cap) mocks.outerSelectQueue.push([{ total: "0" }]);
+      return app.request("/v1/do", { method: "POST", headers: authHeaders(key ? { "Idempotency-Key": key } : {}),
+        body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "hello" }, max_price_cents: 100, ...extra }) });
+    };
+    return { tx, call };
+  }
+  const output = () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } });
+  it("commits a hold before running the executor with no transaction/connection held; captures once with scalar raw binds", async () => {
+    const { tx, call } = setup();
+    let activeAtExecutor: number | undefined;
+    mockGetExecutor.mockReturnValue(async () => {
+      activeAtExecutor = mocks.activeTransactions;
+      expect(mocks.activeTransactions).toBe(0);
+      expect(mocks.costEvents).toEqual(["debit-commit"]);
+      expect(tx.__reservationRows).toMatchObject([{ state: "reserved", mode: "hold", amountCents: 5 }]);
+      expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+      return output();
+    });
+    const response = await call();
+    expect(activeAtExecutor).toBe(0);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ result: { wallet_balance_cents: 0 } });
+    expect(tx.__reservationRows[0].state).toBe("captured");
+    expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(1);
+    expect(tx.execute).toHaveBeenCalled(); // every raw query was checked in execute
+  });
+  it("rejects a concurrent over-commit while the first executor is still running", async () => {
+    const { tx, call } = setup();
+    let finish!: () => void;
+    const gate = new Promise<void>(r => { finish = r; });
+    const executor = vi.fn(async () => { await gate; return output(); });
+    mockGetExecutor.mockReturnValue(executor);
+    const first = call();
+    try {
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+      const second = await Promise.race([call(), new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("second request blocked behind vendor")), 250))]);
+      expect(second.status).toBe(402);
+      expect(await second.json()).toMatchObject({ error_code: "insufficient_balance" });
+      expect(tx.__reservationRows).toHaveLength(1);
+    } finally { finish(); await first; }
+    expect(executor).toHaveBeenCalledTimes(1);
+  });
+  it("counts an open sync reservation against the user hourly cap", async () => {
+    const { call } = setup(10, 5);
+    let finish!: () => void;
+    const gate = new Promise<void>(r => { finish = r; });
+    const executor = vi.fn(async () => { await gate; return output(); });
+    mockGetExecutor.mockReturnValue(executor);
+    const first = call();
+    try {
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+      const second = await Promise.race([call(), new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("cap request blocked behind vendor")), 250))]);
+      expect(second.status).toBe(429);
+      expect(await second.json()).toMatchObject({ error_code: "spend_cap_exceeded", details: { spent_cents: 5 } });
+    } finally { finish(); await first; }
+    expect(executor).toHaveBeenCalledTimes(1);
+  });
+  it("releases a failed hold without a debit or refund", async () => {
+    const { tx, call } = setup();
+    mockGetExecutor.mockReturnValue(async () => { throw new Error("executor failed"); });
+    expect((await call()).status).toBe(500);
+    expect(tx.__reservationRows).toMatchObject([{ state: "released" }]);
+    expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+  });
+  it("clamps timeout_seconds 0.01 to 5 seconds at the same H5 deadline and ignores late success", async () => {
+    vi.useFakeTimers();
+    const { withCallCost, currentCallCost } = await import("../lib/call-cost.js");
+    const { tx, call } = setup();
+    let finish!: (value: any) => void;
+    const executor = vi.fn(() => {
+      expect(currentCallCost()?.deadline).toBe(Date.now() + 5000);
+      return new Promise(r => { finish = r; });
+    });
+    mockGetExecutor.mockReturnValue(executor);
+    try {
+      let settled = false;
+      const pending = withCallCost(() => call({ timeout_seconds: 0.01 }), 1).then(response => { settled = true; return response; });
+      for (let i = 0; i < 200 && executor.mock.calls.length === 0; i++) await Promise.resolve();
+      expect(executor).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled, "the HTTP timeout response must settle at its deadline").toBe(true);
+      const response = await pending;
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ error_code: "timeout_exceeded", details: { retryable: true, fix: expect.any(String), wallet_balance_cents: 5 } });
+      expect(tx.__reservationRows[0].state).toBe("released");
+      const { recordFailure } = await import("../lib/circuit-breaker.js");
+      const { triggerOnFailure } = await import("../lib/event-triggers.js");
+      expect(recordFailure).not.toHaveBeenCalled();
+      expect(triggerOnFailure).not.toHaveBeenCalled();
+      const writes = tx.__updateCalls.length;
+      finish(output());
+      await vi.advanceTimersByTimeAsync(1);
+      expect(tx.__updateCalls).toHaveLength(writes);
+      expect(tx.__transactionRows).toHaveLength(1);
+      expect(tx.__transactionRows[0].status).toBe("failed");
+      expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+    } finally { finish?.(output()); vi.useRealTimers(); }
+  });
+  it("normalizes an executor rejection at the deadline before the watchdog fires, without penalizing health", async () => {
+    vi.useFakeTimers();
+    const { tx, call } = setup();
+    const executor = vi.fn(() => new Promise((_resolve, reject) => {
+      setTimeout(() => reject(new Error("SDK request timeout")), 5000);
+    }));
+    mockGetExecutor.mockReturnValue(executor);
+    try {
+      let settled = false;
+      const pending = call({ timeout_seconds: 0.01 }).then(response => { settled = true; return response; });
+      for (let i = 0; i < 200 && executor.mock.calls.length === 0; i++) await Promise.resolve();
+      expect(executor).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(settled, "deadline rejection must settle the HTTP response immediately").toBe(true);
+      const response = await pending;
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ error_code: "timeout_exceeded" });
+      expect(tx.__reservationRows[0].state).toBe("released");
+      expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+      const { recordFailure } = await import("../lib/circuit-breaker.js");
+      const { triggerOnFailure } = await import("../lib/event-triggers.js");
+      expect(recordFailure).not.toHaveBeenCalled();
+      expect(triggerOnFailure).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+  it.each([{ solutionSlug: "legacy-solution" }, { deletedAt: new Date() }])("rejects an excluded legacy idempotency row without replaying its output (%j)", async excluded => {
+    const { tx, call } = setup();
+    tx.__transactionRows.push({ id: "excluded-row", idempotencyKey: "old-key", idempotencyFingerprint: null,
+      status: "completed", output: { secret: "old output" }, ...excluded });
+    const executor = vi.fn(async () => output()); mockGetExecutor.mockReturnValue(executor);
+    const response = await call({}, "old-key");
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error_code: "idempotency_key_reused" });
+    expect(executor).not.toHaveBeenCalled();
+    expect(tx.__reservationRows).toHaveLength(0);
+  });
+  it("a concurrent same-key retry returns retryable 409 without a second executor, before checking available funds", async () => {
+    const { call } = setup();
+    let finish!: () => void;
+    const gate = new Promise<void>(r => { finish = r; });
+    const executor = vi.fn(async () => { await gate; return output(); });
+    mockGetExecutor.mockReturnValue(executor);
+    const first = call({}, "one-work-item");
+    try {
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+      const second = await Promise.race([call({}, "one-work-item"), new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("retry blocked behind vendor")), 250))]);
+      expect(second.status).toBe(409);
+      expect(await second.json()).toMatchObject({ error_code: "request_in_progress", details: { retryable: true, retry_after_seconds: 2, transaction_id: expect.any(String), fix: expect.stringContaining("same Idempotency-Key") } });
+    } finally { finish(); await first; }
+    expect(executor).toHaveBeenCalledTimes(1);
+  });
+  it("rejects mismatched concurrent key reuse", async () => {
+    const { call } = setup(10);
+    mockGetExecutor.mockReturnValue(async () => output());
+    expect((await call({}, "one-key")).status).toBe(200);
+    const response = await call({ inputs: { value: "different" } }, "one-key");
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error_code: "idempotency_key_reused" });
+  });
+});
+
+it.each(["hold", "debit"])("H4 reconciler releases a stale %s reservation with accurate money wording", async mode => {
+  const { DEFAULT_RESERVATION_TTL_MS } = await import("../lib/wallet-reservations.js");
+  expect(DEFAULT_RESERVATION_TTL_MS).toBeGreaterThan(60_000);
+  const tx = buildMockTx({ walletRow: { id: "wallet", balanceCents: 5 }, transactionId: "transaction" });
+  mocks.txRef.current = tx;
+  tx.__reservationRows.push({ id: "hold", walletId: "wallet", userId: "user", amountCents: 5, mode, state: "reserved", transactionId: "transaction", deadlineAt: new Date(Date.now() - 1) });
+  tx.__transactionRows.push({ id: "transaction", status: "executing", complianceHashState: "deferred" });
+  const { runReservationReconcilerOnce } = await import("../jobs/reservation-reconciler.js");
+  const summary = await runReservationReconcilerOnce();
+  expect(summary).toMatchObject({ examined: 1, released: 1, failed: 0 });
+  expect(tx.__reservationRows[0].state).toBe("released");
+  expect(tx.__transactionRows[0]).toMatchObject({ status: "failed", complianceHashState: "pending" });
+  expect(tx.__transactionRows[0].error).toContain(mode === "hold" ? "released automatically" : "refunded automatically");
+  expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(mode === "hold" ? 0 : 1);
 });

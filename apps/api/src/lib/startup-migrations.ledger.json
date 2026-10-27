@@ -986,6 +986,18 @@
         "transactions.cost_cents"
       ],
       "sha256": "fdb8d33999a002560925e31697ba59f246b0c8823f47dc38a01f81fe7e57353c"
+    },
+    {
+      "id": "M073",
+      "function": "runMigration0130_syncWalletHolds",
+      "title": "sync holds reuse the durable reservation state machine",
+      "added": "2026-10-27",
+      "columns_written": [
+        "transactions.x402_execution_attempts",
+        "wallet_reservations.api_key_id",
+        "wallet_reservations.mode"
+      ],
+      "sha256": "2a46645c5660808c8f152a30fd54ba229316f08d05f7b2c6882183119becfdfb"
     }
   ],
   "known_overlaps": [

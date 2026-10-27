@@ -418,6 +418,8 @@ export interface X402VerifyOnlyResult {
 
 export interface X402SettlementResult {
   valid: boolean;
+  /** Transport failure: settlement may have occurred; do not release a claim. */
+  settlementUnknown?: boolean;
   settlementId?: string;
   error?: string;
 }
@@ -555,6 +557,7 @@ export async function settleX402Payment(
     reportSettlementFailure(err instanceof Error ? err.message : "Settlement failed");
     return {
       valid: false,
+      settlementUnknown: true,
       error: err instanceof Error ? err.message : "Settlement failed",
     };
   }
