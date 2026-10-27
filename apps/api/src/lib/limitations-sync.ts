@@ -11,7 +11,7 @@ import type { OnboardingOptions, OnboardingResult } from "./onboarding-pipeline.
 
 // Validate only the text we write. Stale fixtures and unrelated manifest gates
 // must never prevent text from reaching an existing (even deactivated) row.
-const textManifest = z.object({
+export const textManifest = z.object({
   slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
   limitations: z.array(z.object({
     title: z.string().nullable().optional(),
@@ -25,14 +25,17 @@ const textManifest = z.object({
 });
 
 /** Error shape for the operator log: names, paths and codes, never values. */
-function describeFailure(err: unknown) {
+export function describeFailure(err: unknown) {
   if (err instanceof z.ZodError) {
     return { err_name: "ZodError", issues: err.issues.map((i) => ({ path: i.path.join("."), code: i.code })) };
   }
-  const e = err as { name?: unknown; code?: unknown };
+  const e = err as { name?: unknown; code?: unknown; cause?: { code?: unknown } };
+  // Drizzle wraps postgres-js errors; retain the SQLSTATE without logging
+  // the wrapper's query, bind parameters, or either error's message.
+  const pgCode = typeof e?.code === "string" ? e.code : e?.cause?.code;
   return {
     err_name: typeof e?.name === "string" ? e.name : typeof err,
-    ...(typeof e?.code === "string" ? { pg_code: e.code } : {}),
+    ...(typeof pgCode === "string" ? { pg_code: pgCode } : {}),
   };
 }
 

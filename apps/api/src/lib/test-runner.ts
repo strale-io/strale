@@ -1,3 +1,4 @@
+import { getNestedValue } from "./nested-value.js";
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
 import { deployCommitOrNull } from "./receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "./receipt/settle.js";
@@ -1987,18 +1988,6 @@ function runCheck(
   }
 }
 
-function getNestedValue(
-  obj: Record<string, unknown>,
-  path: string,
-): unknown {
-  const parts = path.split(".");
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current == null || typeof current !== "object") return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
 
 // ─── Quality recording for test executions ──────────────────────────────────
 

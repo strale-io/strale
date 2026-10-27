@@ -965,6 +965,16 @@
       "added": "2026-10-27",
       "columns_written": [],
       "sha256": "e9117fc0d93fcbc81780f5a51bef57ad5ab4ff670abdd9f487cbec8c160aa36e"
+    },
+    {
+      "id": "M071",
+      "function": "runMigration0128_manifestTextHash",
+      "title": "manifest text sync checkpoint",
+      "added": "2026-10-27",
+      "columns_written": [
+        "capabilities.manifest_text_hash"
+      ],
+      "sha256": "ce057a7a1d73438dee1b227e111d4f43c559ec0b05bc9a59966bec2cd84c20e7"
     }
   ],
   "known_overlaps": [

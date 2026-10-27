@@ -1,3 +1,4 @@
+import { getNestedValue as getPath } from "../src/lib/nested-value.js";
 /**
  * Operator sweep: execute every paid capability's known_answer fixture and
  * check it against its declared assertions.
@@ -58,9 +59,6 @@ interface Row {
   ms?: number;
 }
 
-function getPath(o: any, p: string): any {
-  return p.split(".").reduce((a, k) => (a == null ? undefined : a[k]), o);
-}
 
 function classifyError(msg: string): Outcome {
   const m = msg.toLowerCase();
