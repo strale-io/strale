@@ -21,3 +21,8 @@ Line shape, checked by `npm run research:check`:
 ## Inbox
 
 - 2026-09-26 · inbox · US private-company lookup: on 2026-09-18 the largest x402 buyer sent 114 US company names to us-company-data and 103 were correctly refused (SEC EDGAR covers public filers only; the names were mostly private software firms) — find a licensed source for private US company basics that fits DEC-20261023-A (formerly DEC-20260428-A)
+- 2026-10-27 · inbox · A "watch this company" endpoint that calls the customer back when a register status changes, so re-screening stops depending on the customer's scheduler (build only after re-check templates show recurring use) · → 2026-10-27-distribution-strategy.md
+- 2026-10-27 · inbox · An open-source reference agent (supplier check or lead research) that runs on Strale end to end, the pattern GPT Researcher used for Tavily · → 2026-10-27-distribution-strategy.md
+- 2026-10-27 · inbox · A one-line agent install: a hosted SKILL.md at a stable URL plus "set up <url>" prompt, as Delegate and AgentCash do · → 2026-10-27-distribution-strategy.md
+- 2026-10-27 · inbox · Serve MPP alongside x402 on the same routes (mppx wraps an x402 server) to reach Stripe's directory and the mpp.dev list; a new rail, so Petter's call · → 2026-10-27-distribution-strategy.md
+- 2026-10-27 · inbox · A company-lookup and sanctions tool contributed to crewai-tools, which has no company-registry or sanctions tool among its 108; only with real CrewAI code and tests, and only after the MCP route shows CrewAI users exist · → 2026-10-27-distribution-strategy.md
