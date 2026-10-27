@@ -26,3 +26,15 @@ process codes 01/11/12/13/21/22/71/72/81/99 and closure reasons 01/11/21/31.
 These altered cases are synthetic, not live captures. Registration assignment
 is never described as incorporation. `hihyoji=1` indicates search exclusion due
 to an obsolete address, not closure.
+
+Round-2 synthetic cases alter the published XML in memory: partial versus exact
+names, NFKC and registered `enName`, `latest=0`/missing latest, active versus closed
+records sharing a name, incomplete counts, pre-DOM limits, and HTTP errors.
+Process 22 overrides stale closure fields: the resource definition, field 9,
+printed p.2 ([PDF page 6](https://www.houjin-bangou.nta.go.jp/pc/download/images/k-resource-dl.pdf#page=6)),
+explicitly describes restoration after closure was invalidated. These retained
+raw closure fields are not evidence of current dissolution.
+The v4 specification appendix 2 ([PDF pages 39–40](https://www.houjin-bangou.nta.go.jp/pc/webapi/images/k-web-api-kinou-ver4.pdf#page=39))
+defines code 103 (legal form only) and 180 (too many results); overview §5
+([PDF page 35](https://www.houjin-bangou.nta.go.jp/pc/webapi/images/k-web-api-kinou-gaiyo.pdf#page=35))
+defines CSV error responses. The tests use synthetic CSV bodies, not live captures.

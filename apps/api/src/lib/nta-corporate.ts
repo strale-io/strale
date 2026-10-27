@@ -2,8 +2,21 @@ import { readTextWithLimit } from "./resource-limits.js";
 import { logWarn } from "./log.js";
 import { JSDOM } from "jsdom";
 import { apiError, type ErrorCode } from "./errors.js";
-import { assertTargetAllowed, SITE_BLOCK_MARKER } from "./tos-blocklist.js";
+import { assertTargetAllowed } from "./tos-blocklist.js";
 import { CapabilityRefusalError } from "./capability-refusal.js";
+import { SourceBlockedError } from "./site-access.js";
+
+const MAX_RESPONSE_BYTES = 1024 * 1024;
+const MAX_RECORDS = 50;
+const COOLDOWN_MS = 60_000;
+const MAX_IN_FLIGHT = 4;
+let blockedUntil = 0;
+let inFlight = 0;
+
+function tooManyMatches(): Error {
+  const message = "Ambiguous Japanese company name: too many companies match; provide the 13-digit corporate number.";
+  return Object.assign(new CapabilityRefusalError(message), apiError("invalid_request", message));
+}
 
 export const NTA_SOURCE = "https://www.houjin-bangou.nta.go.jp/";
 const ARTICLE_6_CREDIT = "このサービスは、国税庁法人番号システムWeb-API 機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない";
@@ -32,6 +45,11 @@ export interface NtaResponse {
 /** v4 revision 1.2 §§2.3.1, 4.3, 5.2, type=12. No external entities. */
 function parseResponse(xml: string): NtaResponse {
   if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw ntaError("execution_failed", "NTA returned an unsupported XML document. Retry later.");
+  // Bound work before allocating a DOM, including a split/incomplete result.
+  const countText = /<count>\s*(\d+)\s*<\/count>/.exec(xml)?.[1];
+  if (countText && Number(countText) > MAX_RECORDS) throw tooManyMatches();
+  // Also bound dishonest/missing count envelopes before XML allocation.
+  if ((xml.match(/<corporation(?:\s|>)/g) ?? []).length > MAX_RECORDS) throw tooManyMatches();
   let dom: JSDOM;
   try {
     dom = new JSDOM(xml, { contentType: "application/xml" });
@@ -82,10 +100,15 @@ export async function fetchNtaCorporations(query: string, byNumber: boolean): Pr
     url.searchParams.set("close", "1");
   }
   assertTargetAllowed(url.href);
-  let response: Response;
-  let body: string;
+  if (Date.now() < blockedUntil) {
+    throw ntaError("capability_unavailable", "NTA source unavailable during access cool-down. Retry after 60 seconds.");
+  }
+  if (inFlight >= MAX_IN_FLIGHT) {
+    throw ntaError("capability_unavailable", "NTA source unavailable: lookup capacity reached. Retry shortly.");
+  }
+  inFlight++;
   try {
-    response = await fetch(url, {
+    const response = await fetch(url, {
       headers: { "User-Agent": "Strale/1.0 (+https://strale.dev)", Accept: "application/xml" },
       signal: AbortSignal.timeout(15_000),
       redirect: "error",
@@ -93,26 +116,42 @@ export async function fetchNtaCorporations(query: string, byNumber: boolean): Pr
     // Never log request URLs, exception causes, or upstream error bodies: they
     // can contain the application ID. Bound body reads with the same signal.
     if (!response.ok) {
-      await response.body?.cancel().catch(() => {
+      if (response.status === 403 || response.status === 429) blockedUntil = Date.now() + COOLDOWN_MS;
+      if (response.status === 400) {
+        // Overview §5: errors are CSV (code,message), even for type=12.
+        // v4 appendix 2: 103 is legal-form-only input; 180 is too many results.
+        const errorBody = await readTextWithLimit(response, 16 * 1024, "NTA error response");
+        const errorCode = /^\s*(\d{3}),/.exec(errorBody)?.[1];
+        if (errorCode === "180") throw tooManyMatches();
+        if (errorCode) {
+          const message = errorCode === "103"
+            ? "'company_name' must be a registered name including more than the legal form; or provide the 13-digit corporate number."
+            : "'corporate_number' or 'company_name' must be a valid 13-digit corporate number or registered name. Check the input and try again.";
+          throw Object.assign(new CapabilityRefusalError(message), apiError("invalid_request", message));
+        }
+      }
+      if (!response.bodyUsed) await response.body?.cancel().catch(() => {
         logWarn("nta-response-cancel-failed", "NTA response cancellation failed.");
       });
       const code: ErrorCode = response.status === 403 || response.status === 429 ? "rate_limited"
         : response.status === 404 || response.status === 401 ? "capability_unavailable" : "execution_failed";
       if (code === "rate_limited") {
-        // Policy refusal marker also prevents a source block harming capability
-        // health. Avoid transient HTTP wording consumed by the shared retry policy.
-        const message = `${SITE_BLOCK_MARKER}: NTA access restricted (status ${response.status}). Retry later.`;
-        throw Object.assign(new CapabilityRefusalError(message), apiError(code, message));
+        // Strale chose this shared-ID source. This is a counted fault, with
+        // no caller-refusal marker or wording that triggers transport retries.
+        const message = `Source unavailable to Strale: NTA access restricted (status ${response.status}). Retry after 60 seconds.`;
+        throw Object.assign(new SourceBlockedError(message, { kind: "http", status: response.status }), apiError(code, message));
       }
       throw ntaError(code, `NTA request failed (status ${response.status}). Contact Strale support if this persists.`);
     }
-    body = await readTextWithLimit(response, 8 * 1024 * 1024, "NTA response");
+    const body = await readTextWithLimit(response, MAX_RESPONSE_BYTES, "NTA response");
+    return parseResponse(body);
   } catch (err) {
     if (err instanceof Error && "error_code" in err) throw err;
     const timeout = err instanceof Error && ["TimeoutError", "AbortError"].includes(err.name);
     throw ntaError(timeout ? "timeout_exceeded" : "execution_failed", timeout ? "NTA request timed out. Retry later." : "NTA request failed. Retry later.");
+  } finally {
+    inFlight--;
   }
-  return parseResponse(body);
 }
 
 // Resource definition (download/API), fields 9, 15, 25, 26 and 29.
@@ -124,9 +163,10 @@ const CLOSE_REASONS: Record<string, string> = { "01": "清算の結了等", "11"
 const KINDS: Record<string, string> = { "101": "国の機関", "201": "地方公共団体", "301": "株式会社", "302": "有限会社", "303": "合名会社", "304": "合資会社", "305": "合同会社", "399": "その他の設立登記法人", "401": "外国会社等", "499": "その他" };
 
 export function mapNtaCorporation(r: Record<string, string>): Record<string, unknown> {
-  // A closure reason/date takes precedence over later name/address corrections.
-  // Restoration only becomes active once NTA clears those closure fields.
-  const closed = r.process === "21" || !!r.closeDate || !!r.closeCause;
+  // Resource definition, field 9, printed p.2 (v4 spec appendix 1): process
+  // 22 means the closure was invalidated and the register restored. It wins
+  // over stale closure fields, which are still returned as source data.
+  const closed = r.process !== "22" && (r.process === "21" || !!r.closeDate || !!r.closeCause);
   const status = closed ? (["01", "11", "31"].includes(r.closeCause) ? "dissolved" : "closed")
     : ["81", "99"].includes(r.process) ? "inactive"
     : ["01", "11", "12", "13", "22", "71", "72"].includes(r.process) ? "active" : "unknown";

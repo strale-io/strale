@@ -1,0 +1,71 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f0172178e9d65c0de1ab9eb613428fb3e25e0556"
+  },
+  "at": "2026-10-27T09:55:58.979Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "result": "pass"
+  },
+  "topic": "japan-official-api-round-2",
+  "raw": {
+    "baseline_commit": "f0172178",
+    "apps_api_vitest": {
+      "test_files_passed": 337,
+      "test_files_skipped": 31,
+      "tests_passed": 5887,
+      "tests_skipped": 321,
+      "tests_failed": 0
+    },
+    "japanese_company_data_test": {
+      "tests_passed": 84,
+      "tests_failed": 0,
+      "new_tests": 29
+    },
+    "fail_before": {
+      "method": "in-memory Vite transform of the two baseline implementations; current tests; no source replacement or git mutation",
+      "tests_passed": 57,
+      "tests_failed": 27,
+      "new_tests_failed": 25,
+      "strengthened_existing_tests_failed": 2,
+      "timeouts": 0
+    },
+    "root_checks_passed": [
+      "env:check",
+      "vendors:check",
+      "claims:check",
+      "docs:check",
+      "receipts:check",
+      "migrations:check",
+      "models:check",
+      "programs:check"
+    ],
+    "ci_lint_guards": {
+      "commands_passed": 18,
+      "shape_comparison": "skipped; sibling frontend absent"
+    },
+    "api_typecheck": "pass",
+    "mcp_server_build": "pass",
+    "offline_manifest_validation": {
+      "result": "pass",
+      "errors": 0
+    },
+    "round_2_live_smoke": {
+      "authenticated_requests": 0,
+      "empty_id_smoke": "capability_unavailable before fetch; expected exit 1"
+    },
+    "unavailable_checks": {
+      "onboarding_dry_run": "exit 1; production write authority unavailable",
+      "database_validation": "exit 1; read-only database URL unavailable",
+      "platform_smoke": "exit 1; read-only database URL unavailable",
+      "readiness": "not established"
+    },
+    "earlier_runs": {
+      "preliminary_full_suite": "1 test failed due to an English-name fixture tag spelling; fixture corrected; final full suite passes"
+    }
+  }
+}

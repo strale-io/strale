@@ -9,8 +9,12 @@ registerCapability("japanese-company-data", async (input: CapabilityInput) => {
   if (typeof raw !== "string" || [...raw.trim()].length < 2) {
     throw Object.assign(new CapabilityRefusalError("'corporate_number' or 'company_name' must be a corporate number or a name of at least 2 characters."), { error_code: "invalid_request" });
   }
-  const query = raw.trim();
-  const compact = query.replace(/[\s.-]/g, "");
+  const query = raw.normalize("NFKC").trim();
+  const numbers = [...new Set(query.match(/(?<!\d)\d{13}(?!\d)/g) ?? [])];
+  if (numbers.length > 1) {
+    throw Object.assign(new CapabilityRefusalError("Ambiguous corporate numbers: provide a single 13-digit corporate number."), { error_code: "invalid_request" });
+  }
+  const compact = numbers[0] ?? query.replace(/^T(?=\d{13}$)/i, "").replace(/[\s.-]/g, "");
   const byNumber = /^\d+$/.test(compact);
   if (byNumber && !validCorporateNumber(compact)) {
     throw Object.assign(new CapabilityRefusalError("'corporate_number' must be 13 digits with a valid NTA check digit."), { error_code: "invalid_request" });
@@ -42,13 +46,12 @@ registerCapability("japanese-company-data", async (input: CapabilityInput) => {
 function pickByName(records: Record<string, string>[], query: string, count: number): Record<string, string> {
   const norm = (s: string | undefined) => (s ?? "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
   const q = norm(query);
-  const open = (r: Record<string, string>) => r.process !== "21" && !r.closeDate && !r.closeCause && r.latest !== "0";
+  const open = (r: Record<string, string>) => r.latest === "1" && mapNtaCorporation(r).status === "active";
   const exact = records.filter((r) => open(r) && (norm(r.name) === q || norm(r.enName) === q));
-  if (count === 1 && records.length === 1) return records[0];
-  if (exact.length === 1) return exact[0];
+  if (count === records.length && exact.length === 1) return exact[0];
   const candidates = records.slice(0, 5).map((r) => `${r.name} (${r.corporateNumber})`).join("; ");
   throw Object.assign(
-    new CapabilityRefusalError(`Several Japanese companies match this name. Provide the 13-digit corporate number, for example one of: ${candidates}.`),
+    new CapabilityRefusalError(`Ambiguous Japanese company name: no unique exact, open, current match in a complete result set. Provide the 13-digit corporate number, for example one of: ${candidates}.`),
     { error_code: "invalid_request" },
   );
 }
