@@ -72,6 +72,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | movitz | Movitz | rejected | 2026-09-11 | unknown | unknown |
 | ncbi-eutils | NCBI E-utilities | active | 2026-09-10 | unknown | unknown |
 | notion | Notion | active | 2026-09-10 | unknown | unknown |
+| nta-houjin | NTA Corporate Number Web-API | active | 2026-10-27 | unknown | permitted (verified 2026-10-27) |
 | nvd | NVD (NIST) | active | 2026-09-10 | unknown | unknown |
 | openalex | OpenAlex | active | 2026-09-10 | unknown | permitted (verified 2026-09-06) |
 | openapi-com | Openapi.com | active | 2026-09-11 | unknown | unknown |

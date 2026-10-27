@@ -1386,3 +1386,12 @@
     - none
   cost_note: Pending Petter setup in Railway and GitHub environment production-onboarding; endpoint is disabled until configured.
   docs: docs/operations/run-onboarding.md
+
+- name: NTA_HOUJIN_APP_ID
+  purpose: NTA Corporate Number Web-API application ID for Japanese company number lookups and name searches.
+  provider: NTA Corporate Number Web-API
+  holder: petter
+  cost_class: free
+  required_in: []
+  set_in: [none]
+  cost_note: Free official registry API. Petter holds the ID. Until it is set in Railway, japanese-company-data returns capability_unavailable before any execution or settlement. Never log it.

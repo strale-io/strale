@@ -64,6 +64,12 @@ const SG = "singapore-company-data";
 const IE_SRC = "CRO open data, company_status distinct values queried live 2026-10-26 (opendata.cro.ie datastore_search_sql, resource 3fef41bc-b8f4-4b10-8434-ce51c29b1bba); executor passes the value through (irish-company-data.ts `status: clean(record.company_status)`)";
 
 export const STATUS_MAP_ROWS: readonly StatusMapRow[] = [
+  // NTA resource definition fields 9 and 26. Country activation awaits live verification.
+  { slug: "japanese-company-data", raw: "active", status: "active", source: "NTA process 01/11/12/13/22/71/72 without closure fields" },
+  { slug: "japanese-company-data", raw: "dissolved", status: "dissolved", source: "NTA closeCause 01/11/31: liquidation completed or dissolution by merger" },
+  { slug: "japanese-company-data", raw: "closed", status: "inactive", source: "NTA process 21 or closure fields; registrar closure does not establish dissolution" },
+  { slug: "japanese-company-data", raw: "inactive", status: "inactive", source: "NTA process 81/99: trade-name registration cancelled or number/publication withdrawn" },
+
   // Austria. The Firmenbuch has no status field; the executor derives one from
   // legal facts: dissolution fact present -> "dissolved", else "active"
   // (austrian-company-data.ts, "const status = dissolution ? \"dissolved\" : \"active\"").

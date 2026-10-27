@@ -161,10 +161,11 @@ const NON_ACTIVE_REGISTRY_STATUSES: Readonly<Record<string, readonly string[]>> 
   "portuguese-company-data": ["inactive"],
   // romanian-company-data.ts:45
   "romanian-company-data": ["inactive"],
-  // australian-company-data.ts:34 and japanese-company-data.ts:33 delegate to
+  // australian-company-data.ts:34 delegates to
   // lib/browserless-extract.ts:66's explicit extraction vocabulary.
   "australian-company-data": ["inactive", "dissolved"],
-  "japanese-company-data": ["inactive", "dissolved"],
+  // NTA resource definition process 21 and closure reasons; includes registrar closure.
+  "japanese-company-data": ["inactive", "dissolved", "closed"],
   // Receita Federal IN RFB 2119/2022 art. 9; executor passes situacao through.
   // https://normas.receita.fazenda.gov.br/sijut2consulta/link.action?idAto=127567
   "brazilian-company-data": ["BAIXADA", "INAPTA", "SUSPENSA", "NULA"],

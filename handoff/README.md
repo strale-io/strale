@@ -9,13 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-365 files (338 with a recorded intent, 27 without).
+366 files (339 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-japan-official-corporate-api.md`](_general/from-code/2026-10-27-feat-japan-official-corporate-api.md) | Replace japanese-company-data's browser/LLM extraction with the official NTA Corporate Number Web-API v4; leave crede... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-email-phone-validation-copy.md`](_general/from-code/2026-10-27-email-phone-validation-copy.md) | correct what the email and phone validation tools claim, after an external benchmark showed them reporting made-up ad... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |

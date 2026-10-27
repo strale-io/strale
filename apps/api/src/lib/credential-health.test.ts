@@ -18,7 +18,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockGetCuratedProviderCapabilities = vi.fn();
 vi.mock("./dependency-manifest.js", () => ({
-  getCuratedProviderCapabilities: (...args: unknown[]) => mockGetCuratedProviderCapabilities(...args),
+  getCuratedProviderCapabilities: (provider: string) => provider === "browserless"
+    ? mockGetCuratedProviderCapabilities(provider) : [],
 }));
 
 import {

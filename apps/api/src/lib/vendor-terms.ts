@@ -89,6 +89,21 @@ export interface VendorTermsRecord {
 
 export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
   {
+    vendor: "NTA Corporate Number Web-API",
+    hosts: ["api.houjin-bangou.nta.go.jp"],
+    capabilities: ["japanese-company-data"],
+    resale: "permitted",
+    terms_url: "https://www.houjin-bangou.nta.go.jp/webapi/riyokiyaku.html",
+    accessed: "2026-10-27",
+    how_read: "Fetched the official API terms, Article 7's linked content terms at /riyokiyaku/, and their incorporated Digital Agency Public Data License 1.0. Read the v4 specification revision 1.2, overview and April 2022 published samples. No authenticated request made.",
+    findings: [
+      "Article 7 incorporates https://www.houjin-bangou.nta.go.jp/riyokiyaku/, which adopts https://www.digital.go.jp/resources/open_data/public_data_license_v1.0. PDL1.0 section 1 permits redistribution: 「複製、公衆送信、翻訳・変形等の翻案等、自由に利用できます」 and 「商用利用も可能です。」. Preserve source attribution and identify processing by Strale; third-party rights and logos are excluded.",
+      "Article 6 verbatim: 「このサービスは、国税庁法人番号システムWeb-API 機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない」. The overview at https://www.houjin-bangou.nta.go.jp/webapi/ instead says 「このサービスは、国税庁法人番号システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない」. Response attribution emits the Article 6 text plus the content-licence source and Strale processing credit.",
+      "Article 8(3) permits restrictions on concentrated traffic; Article 9(1)(3) prohibits 「短時間における大量アクセスその他本機能の運用に支障を与えること」. No numeric requests-per-time quota is published in these terms. API overview limits number lookup to 10 numbers and differences to 50 days; overview specification splits responses above 2,000 records. This executor performs one request per lookup, never retries or bulk crawls; HTTP 403/429 stop. HTTP 404 means an invalid/unregistered app ID, not company-not-found. Article 9 prohibits disclosure/lending of the ID.",
+    ],
+    decision_ref: "DEC-20261023-A; portfolio plan 1.13; orchestrator instruction 2026-10-27",
+  },
+  {
     vendor: "Eurostat",
     hosts: ["ec.europa.eu"],
     url_prefixes: ["https://ec.europa.eu/eurostat/"],

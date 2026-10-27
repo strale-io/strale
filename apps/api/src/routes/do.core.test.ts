@@ -420,6 +420,27 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe("POST /v1/do — required NTA credential", () => {
+  it("returns capability_unavailable before execution or transaction when the ID is unset", async () => {
+    vi.stubEnv("NTA_HOUJIN_APP_ID", "");
+    try {
+      mocks.outerSelectQueue.push([buildUserRow()]);
+      const executor = vi.fn();
+      mockGetExecutor.mockReturnValue(executor);
+      mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, slug: "japanese-company-data" } });
+      const res = await makeApp().request("/v1/do", {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ capability_slug: "japanese-company-data", inputs: { corporate_number: "1180301018771" }, max_price_cents: 100 }),
+      });
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ error_code: "capability_unavailable" });
+      expect(executor).not.toHaveBeenCalled();
+      expect(mocks.dbTransactionCalls).toBe(0);
+      expect(mocks.outerInserts.filter(x => x.table === transactions)).toEqual([]);
+    } finally { vi.unstubAllEnvs(); }
+  });
+});
+
 describe("POST /v1/do — happy path (authenticated, paid capability, sync)", () => {
   it("debits the wallet, executes the capability, and returns {result:{output,...}} with wallet_balance_cents", async () => {
     const user = buildUserRow();

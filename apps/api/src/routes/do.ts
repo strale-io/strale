@@ -40,6 +40,7 @@ import {
 } from "../capabilities/guarded-executor.js";
 import { apiError, type ApiError } from "../lib/errors.js";
 import { keyCapError } from "../lib/api-keys.js";
+import { hasMissingRequiredCredential } from "../lib/dependency-manifest.js";
 import { pgErrorCode } from "../lib/db-error.js";
 import {
   checkCircuitBreaker,
@@ -969,6 +970,10 @@ doRoute.post(
 
   const capability = match.capability;
   const isFreeTier = capability.isFreeTier;
+
+  if (hasMissingRequiredCredential(capability.slug)) {
+    return c.json(apiError("capability_unavailable", "This capability is temporarily unavailable. Contact Strale support."), 503);
+  }
 
   // ── 3a. Platform-quality-floor gate retired with the SQS engine
   //         (DEC-20260503-B). Lifecycle state + circuit-breaker still gate.

@@ -1,9 +1,7 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: japanese-company-data
-name: "Japanese Company Data"
-description: "Look up a Japanese company in the National Tax Agency's corporate number system by its 13-digit number or name."
+name: Japanese Company Data
+description: Look up a Japanese company in the National Tax Agency's corporate
+  number system by its 13-digit number or name.
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -11,44 +9,129 @@ price_cents: 80
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - corporate_number
+  anyOf:
+    - required:
+        - corporate_number
+    - required:
+        - company_name
+    - required:
+        - task
   properties:
     corporate_number:
       type: string
-      description: 13-digit corporate number or company name
+      minLength: 2
+      description: 13-digit corporate number with valid NTA check digit, or registered
+        company name
+    company_name:
+      type: string
+      minLength: 2
+      maxLength: 150
+      description: Registered Japanese or English company name. It resolves only
+        when it matches one open, current company's full registered name;
+        otherwise provide the corporate number.
+    task:
+      type: string
+      minLength: 2
+      description: Corporate number or literal registered company name;
+        natural-language requests are not resolved.
 output_schema:
   type: object
-  example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
   properties:
     status:
       type: string
-    company_name:
-      type: string
-    business_type:
-      type: string
+      enum:
+        - active
+        - inactive
+        - dissolved
+        - closed
+        - unknown
     registration_number:
       type: string
-data_source: National Tax Agency Corporate Number System (Japan)
-data_source_type: scrape
-transparency_tag: ai_generated
+    company_name:
+      type:
+        - string
+        - "null"
+    business_type:
+      type:
+        - string
+        - "null"
+    address:
+      type:
+        - string
+        - "null"
+    registration_date:
+      type:
+        - string
+        - "null"
+    industry:
+      type:
+        - string
+        - "null"
+    directors:
+      type:
+        - string
+        - "null"
+    assignment_date:
+      type:
+        - string
+        - "null"
+    last_updated:
+      type:
+        - string
+        - "null"
+    english_name:
+      type:
+        - string
+        - "null"
+    furigana:
+      type:
+        - string
+        - "null"
+    postal_code:
+      type:
+        - string
+        - "null"
+    process_code:
+      type:
+        - string
+        - "null"
+    process_description:
+      type:
+        - string
+        - "null"
+    close_date:
+      type:
+        - string
+        - "null"
+    close_reason_code:
+      type:
+        - string
+        - "null"
+    close_reason:
+      type:
+        - string
+        - "null"
+    successor_corporate_number:
+      type:
+        - string
+        - "null"
+    search_excluded:
+      type:
+        - boolean
+        - "null"
+    attribution:
+      type: string
+data_source: National Tax Agency Corporate Number Web-API v4 (Japan)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name
   - address
   - professional
-geography: global
+geography: Japan
 test_fixtures:
   known_answer:
     input:
@@ -61,29 +144,90 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: string
-      - field: company_name
+      - field: registration_number
         operator: not_null
         reliability: guaranteed
-      - field: company_name
+      - field: registration_number
         operator: type
         reliability: guaranteed
+        value: string
+      - field: attribution
+        operator: not_null
+        reliability: guaranteed
+      - field: attribution
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: company_name
+        operator: type
+        reliability: common
         value: string
   health_check_input:
     corporate_number: "1180301018771"
 output_field_reliability:
   status: guaranteed
-  company_name: guaranteed
-  business_type: guaranteed
   registration_number: guaranteed
+  company_name: common
+  business_type: common
+  address: common
+  registration_date: rare
+  industry: rare
+  directors: rare
+  assignment_date: common
+  last_updated: common
+  english_name: common
+  furigana: common
+  postal_code: common
+  process_code: common
+  process_description: common
+  close_date: rare
+  close_reason_code: rare
+  close_reason: rare
+  successor_corporate_number: rare
+  search_excluded: common
+  attribution: guaranteed
 limitations:
-  - title: Financial figures and officer details are not included
-    text: Extracted from National Tax Agency corporate number database — financial data and officer details are not included
+  - title: Corporate-number register coverage
+    text: Covers all entities assigned a Japanese corporate number, including
+      non-company organisations. Officers, financial statements and industry
+      data are not provided. The number-assignment date is not an incorporation
+      date.
     category: coverage
     severity: info
-    workaround: Use the corporate number from the response to search EDINET (edinet-fsa.go.jp) for listed company filings
-
-# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+  - title: Names and addresses follow the register
+    text: Japanese and registered English names are supported. English names are
+      optional. A name resolves only when it matches one open, current company's
+      full registered name; partial names, several matches, and closed or
+      historical companies need the corporate number. Names or address
+      characters supplied only as image references may be incomplete;
+      search-excluded records can contain obsolete addresses. Number withdrawal
+      records can omit the name.
+    category: coverage
+    severity: info
+  - title: Registry status is not a trading or insolvency assessment
+    text: Closure and restoration follow NTA process codes and closure reasons. A
+      registrar closure does not establish dissolution. An open record does not
+      establish trading activity or absence of insolvency.
+    category: coverage
+    severity: info
+  - title: Official data reuse and attribution
+    text: "NTA API Article 7 incorporates the content terms and Public Data License
+      1.0, permitting commercial reuse and redistribution with attribution and
+      processing disclosure. Responses include the Article 6 disclaimer. Terms:
+      https://www.houjin-bangou.nta.go.jp/webapi/riyokiyaku.html and
+      https://www.houjin-bangou.nta.go.jp/riyokiyaku/ (read 2026-10-27). Heavy
+      bursts are prohibited; access restrictions are honoured without retries."
+    category: coverage
+    severity: info
+  - title: Qualified invoice issuer status is not included
+    text: Corporate numbers do not establish T-number invoice registration. That
+      check requires the separate qualified-invoice-system application ID and
+      API.
+    category: coverage
+    severity: info
 data_access:
-  lane: allowed_with_checks
-  acquisition_method: public_page_read
-  checks: pending
+  lane: preferred
+  acquisition_method: direct_api
+  upstream_vendor: nta-houjin
+external_cost_cents: 0
+avg_latency_ms: 1500

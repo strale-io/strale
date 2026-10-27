@@ -17,6 +17,8 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
+import { hasMissingRequiredCredential } from "../lib/dependency-manifest.js";
+import { apiError } from "../lib/errors.js";
 import {
   assertGuardedAllow,
   CapabilityInvocationRefusedError,
@@ -1469,6 +1471,10 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   await ensureCache();
 
   const cap = _capCache.get(slug);
+
+  if (cap && hasMissingRequiredCredential(cap.slug)) {
+    return c.json(apiError("capability_unavailable", "This capability is temporarily unavailable. Contact Strale support."), 503);
+  }
 
   // WP8: the cache is a ROUTING HINT, not an eligibility authority.
   //
