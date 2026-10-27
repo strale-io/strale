@@ -2062,3 +2062,34 @@ vendors:
         note: See Eurostat terms record and executor restrictions; dataset-specific metadata may expose additional rights limitations.
     authorization:
       status: unknown
+
+  - id: nta-houjin
+    name: NTA Corporate Number Web-API
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-10-27
+        decision: unknown
+        reason: Official free registry API replacement authorised by orchestrator; credential setup, backfill and live verification pending.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: permitted
+        note: API Article 7 incorporates PDL1.0 via the content terms; preserve Article 6 credit, source and processing notice. No heavy bursts or ID disclosure.
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: permitted
+        note: PDL1.0 section 1 permits reproduction, public transmission and commercial use with attribution and modification notice.
+    authorization:
+      status: unknown

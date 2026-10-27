@@ -178,6 +178,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("NTA required credential before x402 payment", () => {
+  it("returns the standard unavailable error before a payment challenge", async () => {
+    vi.stubEnv("NTA_HOUJIN_APP_ID", "");
+    state.capRows = [capabilityRow({ slug: "japanese-company-data" })];
+    __resetX402CacheForTests();
+    try {
+      const res = await x402GatewayV2.request("/japanese-company-data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ corporate_number: "1180301018771" }) });
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ error_code: "capability_unavailable" });
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
+    } finally { vi.unstubAllEnvs(); }
+  });
+});
+
 describe("GET /x402/catalog output_schema projection", () => {
   it("omits output_schema by default — the payload crawlers poll stays lean", async () => {
     const { res, body } = await requestCatalog();

@@ -25,6 +25,13 @@ export interface CredentialStatus extends CredentialEntry {
 
 const CREDENTIAL_REGISTRY: CredentialEntry[] = [
   {
+    provider: "nta-houjin",
+    envVar: "NTA_HOUJIN_APP_ID",
+    get capabilities(): string[] {
+      return getCuratedProviderCapabilities("nta-houjin");
+    },
+  },
+  {
     provider: "dilisense",
     envVar: "DILISENSE_API_KEY",
     capabilities: ["sanctions-check", "pep-check", "adverse-media-check"],

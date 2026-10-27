@@ -892,7 +892,8 @@ async function consumeBody(
     // fix for 3xx bodies; #412 review found it here).
     await response.body
       ?.cancel()
-      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
+      // Cancellation exceptions can contain credential-bearing request URLs.
+      .catch(() => logError("image-limit-declared-cancel", new Error("Response body cancellation failed."), { maxBytes, declared }));
     throw new ResourceLimitError(
       `'${field}' must be ${phrase} (it declared ${mib(declared)}).`,
     );
@@ -933,7 +934,7 @@ async function consumeBody(
         // invisible.
         await reader
           .cancel()
-          .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
+          .catch(() => logError("image-limit-reader-cancel", new Error("Response body cancellation failed."), { maxBytes }));
         if (limitMode === "refuse") {
           throw new ResourceLimitError(`'${field}' must be ${phrase}.`);
         }

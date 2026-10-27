@@ -831,7 +831,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "4ab20c1bab9fa2f9ae4c8821bf6ff5f7245a5ffbc5883936df54b2ff93eca594",
+      "sha256": "ee03a35a1082c187f24b802a8ba3fca21f1a7c3f4685da8403a55122ecd08431",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -949,6 +949,7 @@
         "archive/sessions/2026-10-26-search-rebuild/round2-checks.json",
         "archive/sessions/2026-10-26-search-rebuild/round2.md",
         "archive/sessions/2026-10-26-search-rebuild/verification.md",
+        "archive/sessions/2026-10-27-japan-official-api-verification.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",
