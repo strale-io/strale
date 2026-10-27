@@ -1,3 +1,4 @@
+import { markJobSuccess } from "../lib/job-heartbeats.js";
 /**
  * x402 settlement reconciler (WP5).
  *
@@ -289,6 +290,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
     { label: "settlement-reconcile", ...summary, escalated_backlog: escalatedBacklog },
     "settlement-reconcile",
   );
+  if (summary.failed === 0) markJobSuccess("settlement-reconciler");
   return summary;
 }
 

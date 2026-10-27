@@ -1,3 +1,4 @@
+import { noteJobFailure } from "../lib/job-run-context.js";
 /**
  * Self-Healing Invariant Checker
  *
@@ -64,6 +65,7 @@ export async function runInvariantChecks(): Promise<void> {
       }
     }
   } catch (err) {
+    noteJobFailure();
     jobLog.warn(
       { label: "invariant-provider-health-fetch-failed", err: err instanceof Error ? err.message : String(err) },
       "invariant-provider-health-fetch-failed",
@@ -80,6 +82,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r3.alerts;
     checked += r3.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-3-failed", check: "orphaned-steps", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-3-failed");
   }
 
@@ -88,6 +91,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r6.alerts;
     checked += r6.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-6-failed", check: "partial-quarantine", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-6-failed");
   }
 
@@ -100,6 +104,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r5.alerts;
     checked += r5.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-5-failed", check: "algorithmic-correctness-floor", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-5-failed");
   }
 
@@ -108,6 +113,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r6.alerts;
     checked += r6.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-6-failed", check: "broken-solution-integrity", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-6-failed");
   }
 
@@ -116,6 +122,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r7.alerts;
     checked += r7.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-7-failed", check: "migration-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-7-failed");
   }
 
@@ -124,6 +131,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r8.alerts;
     checked += r8.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-8-failed", check: "data-source-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-8-failed");
   }
 
@@ -132,6 +140,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r9.alerts;
     checked += r9.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-9-failed", check: "free-tier-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-9-failed");
   }
 
@@ -141,6 +150,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r10.alerts;
     checked += r10.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-10-failed", check: "suspended-ttl", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-10-failed");
   }
 
@@ -149,6 +159,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r11.alerts;
     checked += r11.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-11-failed", check: "fixture-quality", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-11-failed");
   }
 
@@ -157,6 +168,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r12.alerts;
     checked += r12.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-12-failed", check: "compliance-profile-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-12-failed");
   }
 
@@ -165,6 +177,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r13.alerts;
     checked += r13.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-13-failed", check: "lying-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-13-failed");
   }
 
@@ -173,6 +186,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r14.alerts;
     checked += r14.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-14-failed", check: "fixture-input-drift", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-14-failed");
   }
 
@@ -1004,6 +1018,7 @@ async function checkSuspendedCapabilityTTL(): Promise<{ healed: number; alerts: 
         );
         healed++;
       } catch (err) {
+        noteJobFailure();
         logError("invariant-check-10-deactivation-failed", err, { capability_slug: cap.slug });
       }
 
@@ -1337,6 +1352,7 @@ export async function checkPartialQuarantineState(
       details: { slugs, count: rows.length, invariant: "no_half_quarantine" },
     });
   } catch (err) {
+    noteJobFailure();
     jobLog.error(
       { label: "invariant-partial-quarantine-event-failed", err },
       "invariant-partial-quarantine-event-failed",

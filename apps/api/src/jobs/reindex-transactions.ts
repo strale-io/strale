@@ -1,3 +1,4 @@
+import { noteJobFailure } from "../lib/job-run-context.js";
 /**
  * REINDEX Transactions — monthly index-maintenance job.
  *
@@ -104,6 +105,7 @@ async function withAdvisoryLock<T>(
       `;
       acquired = rows[0]?.acquired === true;
     } catch (err) {
+      noteJobFailure();
       logWarn(
         "reindex-transactions-lock-query-failed",
         "proceeding without lock",
@@ -188,6 +190,7 @@ async function runOnce(): Promise<void> {
     });
 
     if (!outcome.acquired) {
+      noteJobFailure();
       logWarn(
         "reindex-transactions-lock-busy",
         "another holder; skipping tick",
@@ -214,6 +217,7 @@ async function runOnce(): Promise<void> {
       "reindex-transactions-complete",
     );
   } catch (err) {
+    noteJobFailure();
     logError("reindex-transactions-run-failed", err);
   }
 }
