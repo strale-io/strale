@@ -35,31 +35,62 @@ already happened.
 2. Select **Onboard capability** in the left sidebar.
 3. Click **Run workflow**. Keep the branch set to **main**.
 4. In **slug**, type the capability slug, such as `eurostat-data`. For several
-   capabilities, separate slugs with commas. Maximum: 50; no duplicates.
+   capabilities, separate slugs with commas. Maximum: 50 for onboard/backfill,
+   or 1000 for limitations; no duplicates. Only limitations accepts `all`.
 5. Choose **onboard** to create a capability, or **backfill** to update an
    existing capability's tests, reliability, personal-data classification and
    limitations. Backfill preserves database-owned settings such as pricing.
+   Choose **limitations** when only the limitation text needs updating.
    Choosing backfill acknowledges the existing CLI's manifest-drift warning;
    the manifest and column-authority checks still run.
-6. Leave **discover** checked for a new capability. For a backfill that only
-   updates limitations, **uncheck discover**. GitHub cannot change this checkbox
-   automatically when you change mode. Discovery executes the capability using
+6. Leave **discover** checked for a new capability. In **limitations** mode,
+   **discover** and **fix** are ignored, so either checkbox setting is safe.
+   Discovery in onboard/backfill executes the capability using
    its manifest fixtures and returns suggested fixtures and reliability values.
 7. Leave **fix** unchecked unless you want high-confidence fixture corrections
    (for example, matching a field's letter case).
 8. Click the green **Run workflow** button. Open the new run to watch it.
 9. When it finishes, read the **Summary**. “Completed” means the pipeline
-   succeeded and readiness is true. It lists rows created, updated and deleted,
+   succeeded (and readiness is true for onboard/backfill). It lists rows created, updated and deleted,
    generated test types, known-answer verification and readiness issues.
 
 For the four pending new capabilities, use mode **onboard**, discover checked:
 `eurostat-data,entity-resolve,company-status-check,invoice-counterparty-check`.
-For manifests with revised limitations, use their slugs, mode **backfill**,
-and discover unchecked.
+## Update limitation text for the whole catalogue
+
+Open **Actions → Onboard capability → Run workflow**. Keep branch **main**,
+choose mode **limitations**, enter **all** in **slug**, and click the green
+**Run workflow** button. Wait for the API deployment containing the merged
+manifests before starting. You can also enter specific slugs separated by commas.
+
+This copies only the limitations from the reviewed manifests into the database.
+It syncs deactivated tools too, without turning them on. It never runs a tool,
+calls a vendor, discovers or verifies fixtures, generates tests, runs onboarding
+hooks, writes readiness, or changes pricing, visibility, activity, x402 payments,
+lifecycle settings or any other capability data. It costs nothing: there are no
+paid tool calls or vendor requests.
+
+The workflow reads all manifest filenames from its copy of `main` and runs one
+slug at a time. Onboard and backfill still accept at most 50 slugs; limitations
+accepts up to 1000. A failure for one slug does not stop the others, except when
+authentication/configuration fails, the API is busy, or a run times out.
+
+Each slug reports **unchanged**, **updated**, **not_found**, or **failed**, with
+a reason. Updated results include counts of rows created, updated and deleted.
+A changed text entry can appear as one deletion and one creation; an update can
+mean its display order changed. Unchanged means the existing text already
+matches. Not found means there is no capability row, and nothing was written.
+The manifest is the source of truth: a stored limitation that is not in the
+manifest is removed, as backfill already does. A manifest with no limitations is
+refused rather than emptying the stored list.
+Each slug is saved as one transaction: if it fails, that slug keeps its previous
+limitations. Earlier successful slugs remain saved. After the run, the
+maintainer verifies the served text through **GET /v1/capabilities**.
 
 ## Read the result
 
-- **Completed:** onboarding finished and readiness passed. This does not make
+- **Completed:** limitations synced or already matched; in onboard/backfill,
+  onboarding finished and readiness passed. This does not make
   a new capability publicly visible. Creation still sets `visible=false` and
   `lifecycle_state=validating`; x402 remains off by its existing database
   default. The existing hook generates/checks tests and warns about visibility;

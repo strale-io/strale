@@ -74,6 +74,34 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 describe("dedicated onboarding runner", () => {
+  it.each(["updated", "unchanged"])("accepts limitations mode for a deactivated slug and reports %s without readiness", async (outcome) => {
+    writeFileSync(resolve(directory, "disabled-tool.yaml"), "slug: disabled-tool\n");
+    pipeline.mockResolvedValueOnce({ ...success(), slug: "disabled-tool", readiness: null, limitations: { outcome, reason: "Text synced", created: 0, updated: 0, deleted: 0 } });
+    const app = router();
+    const response = await post(app, { slug: "disabled-tool", mode: "limitations", discover: true, fix: true });
+    expect(response.status).toBe(202);
+    const { id } = await response.json();
+    await settle();
+    expect(await (await app.request(`/run/${id}`, { headers })).json()).toMatchObject({ status: "success", errors: [], result: { limitations: { outcome }, readiness: null } });
+    expect(pipeline).toHaveBeenCalledWith({ injected: true }, expect.objectContaining({ mode: "limitations", signal: expect.any(AbortSignal) }));
+  });
+  it.each(["not_found", "failed"])("retains limitations %s with its reason", async (outcome) => {
+    pipeline.mockResolvedValueOnce({ ...success(), status: "failed", readiness: null, errors: [{ code: outcome, message: "Nothing committed" }], limitations: { outcome, reason: "Nothing committed", created: 0, updated: 0, deleted: 0 } });
+    const app = router();
+    const { id } = await (await post(app, { slug: "sample-tool", mode: "limitations" })).json();
+    await settle();
+    expect(await (await app.request(`/run/${id}`, { headers })).json()).toMatchObject({ status: "failed", errors: [{ code: outcome, message: "Nothing committed" }], result: { limitations: { outcome } } });
+  });
+  it("requires the same dedicated secret for limitations mode", async () => {
+    const body = { slug: "sample-tool", mode: "limitations" };
+    expect((await post(router(), body, { ...headers, Authorization: "Bearer wrong" })).status).toBe(401);
+    expect((await post(router({ secret: () => undefined }), body)).status).toBe(503);
+    expect((await post(router({ secret: () => process.env.ADMIN_SECRET }), body)).status).toBe(503);
+    expect(database).not.toHaveBeenCalled();
+    expect(pipeline).not.toHaveBeenCalled();
+    expect((await post(router(), body)).status).toBe(202);
+    await settle();
+  });
   it("reads the dedicated runtime environment secret when no test override is provided", async () => {
     vi.stubEnv("ONBOARDING_RUN_SECRET", "short");
     const app = router({ secret: undefined });
