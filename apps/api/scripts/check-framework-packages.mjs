@@ -45,6 +45,11 @@ function isDeprecated(pkgDir) {
 // docstring — visually present but not executable.
 const FRAMEWORK_RULES = [
   {
+    dirMatch: /^zapier-strale$/,
+    imports: [/^const\s+zapier\s*=\s*require\(['"]zapier-platform-core['"]\)/m],
+    label: "zapier-platform-core with defineApp and defineCreate actions",
+  },
+  {
     dirMatch: /^langchain-strale$/,
     imports: [/^from\s+langchain(?:_core|_community)?[\.\w]*\s+import/m],
     label: "langchain (top-level 'from langchain... import')",
@@ -172,6 +177,16 @@ for (const pkg of requireInputs(packages.filter((pkg) => FRAMEWORK_RULES.some((r
         break outer;
       }
     }
+  }
+  if (matched && pkg === "zapier-strale") {
+    const entryPath = join(pkgDir, "index.js");
+    const entry = existsSync(entryPath) ? readFileSync(entryPath, "utf8") : "";
+    matched = rule.imports.some((pattern) => pattern.test(entry))
+      && /zapier\.defineApp\(/.test(entry)
+      && /zapier\.defineCreate\(/.test(entry)
+      && /authentication:/.test(entry) && /inputFields:/.test(entry)
+      && /outputFields:/.test(entry) && /perform:/.test(entry)
+      && /creates,/.test(entry);
   }
   if (matched) {
     console.log(`ok    ${pkg}  (import found in ${matchedFile.replace(/\\/g, "/")})`);
