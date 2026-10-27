@@ -63,6 +63,7 @@
  * can be grandfathered while their per-manifest fix lands.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -280,8 +281,9 @@ function scan() {
     process.exit(2);
   }
 
-  const files = readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  const files = requireInputs(readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml")), "manifest guard: manifests/*.{yaml,yml}");
   const violations = [];
+  let matched = 0;
 
   for (const file of files) {
     let manifest;
@@ -294,6 +296,7 @@ function scan() {
     if (!manifest || typeof manifest !== "object") continue;
     if (!manifest.slug || !IDENTITY_SLUGS.has(manifest.slug)) continue;
 
+    matched++;
     const findings = [];
     checkIsBranch(manifest, findings);
     checkStatus(manifest, findings);
@@ -305,6 +308,7 @@ function scan() {
     }
   }
 
+  requireInputs(matched, "identity fixtures: matched identity manifests");
   return violations;
 }
 

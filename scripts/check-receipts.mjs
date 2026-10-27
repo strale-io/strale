@@ -5,11 +5,13 @@
 // handoffs since 2026-09-02 that state a bare test count with no receipt.
 //
 // Usage: node scripts/check-receipts.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllReceipts, repoRootFrom } from "./receipts-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { failures, warnings, records } = checkAllReceipts(root);
+requireInputs(records, "receipts: archive/receipts/*.json");
 
 if (json) {
   console.log(JSON.stringify({ ok: failures.length === 0, failures, warnings, receipt_count: records.length }, null, 2));

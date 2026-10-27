@@ -17,6 +17,7 @@
 // would be the "one list, many matchers" bug this repo has hit before
 // (project_one_list_many_matchers) — a second copy of the same list,
 // compared differently, drifting differently.
+import { requireInputs } from "./require-inputs.mjs";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -255,6 +256,17 @@ export function loadAllSurfaces(root) {
     ...loadPlatformFacts(root),
     ...loadFrontendLlmsTxt(root),
   ];
+}
+
+// Required CI scan groups. The sibling frontend is optional because it lives
+// in a separate repository; its absence is legitimate and never hides the
+// mandatory in-repository surfaces.
+export function assertClaimInputs(root) {
+  requireInputs(loadReadmeTargets(root), "claims: root README surfaces");
+  requireInputs(loadPackageReadmes(root), "claims: packages/* metadata and READMEs");
+  requireInputs(loadSourceSurfaces(root), "claims: source surfaces");
+  requireInputs(loadManifestDescriptions(root), "claims: manifest descriptions");
+  requireInputs(loadPlatformFacts(root), "claims: platform facts");
 }
 
 /** FORBIDDEN_CLAIM_FOUND findings: a forbidden-status row's phrase appears in a scanned surface. */

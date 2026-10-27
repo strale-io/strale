@@ -5,11 +5,13 @@
 // Exit 1 on any failing finding.
 //
 // Usage: node scripts/check-distribution.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllDistribution, repoRootFrom, REGISTER_PATH } from "./distribution-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { findings, warnings, surfaceCount } = checkAllDistribution(root);
+requireInputs(surfaceCount, "distribution: surface rows");
 
 if (json) {
   console.log(

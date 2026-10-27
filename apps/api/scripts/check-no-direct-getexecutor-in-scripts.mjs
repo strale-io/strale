@@ -44,6 +44,7 @@
 //       guarded-executor import, or invokes it without a marker + (for
 //       invoking files) the matching allowlist entry.
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, relative } from "node:path";
 import ts from "typescript";
@@ -227,7 +228,7 @@ function analyzeFile(filePath, content) {
 const offenders = [];      // imports getExecutor, no clearing path at all
 const unlistedInvokers = []; // marker present, invokes, but not on the allowlist
 
-for (const file of listSourceFiles(SCRIPTS_DIR)) {
+for (const file of requireInputs(listSourceFiles(SCRIPTS_DIR), "executor guard: script sources")) {
   const content = readFileSync(file, "utf8");
   const { hasGetExecutorImport, hasGuardedImport, invokes } = analyzeFile(file, content);
   if (!hasGetExecutorImport) continue;

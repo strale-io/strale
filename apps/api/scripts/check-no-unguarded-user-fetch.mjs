@@ -14,6 +14,7 @@
 //
 // Exit codes: 0 clean, 1 offender(s).
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -23,7 +24,7 @@ const RAW_FETCH_LINE_RE = /(?:await|return|void|=|\(|,)\s*fetch\s*\(/;
 const OK_MARKER = "unguarded-fetch-ok:";
 
 const offenders = [];
-for (const entry of readdirSync(CAPS_DIR)) {
+for (const entry of requireInputs(readdirSync(CAPS_DIR).filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts") && statSync(join(CAPS_DIR, name)).isFile()), "unguarded fetch: capability sources")) {
   const full = join(CAPS_DIR, entry);
   if (statSync(full).isDirectory()) continue; // lib/providers gate centrally in web-provider/safe-fetch
   if (!entry.endsWith(".ts") || entry.endsWith(".test.ts")) continue;

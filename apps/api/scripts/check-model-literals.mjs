@@ -10,11 +10,13 @@
  * Usage: node apps/api/scripts/check-model-literals.mjs [--json]
  * Wired at the repo root as `npm run models:check`.
  */
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { checkAllModels, repoRootFrom, MODELS_PATH, SCAN_ROOT, DATA_FILE_ALLOWLIST } from "./model-literals-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { findings, scannedFileCount } = checkAllModels(root);
+requireInputs(scannedFileCount, "models: source files");
 
 if (json) {
   console.log(JSON.stringify({ ok: findings.length === 0, findings, scanned_file_count: scannedFileCount }, null, 2));

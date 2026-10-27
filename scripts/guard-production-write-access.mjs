@@ -39,6 +39,7 @@
  * Usage:  node scripts/guard-production-write-access.mjs [--report]
  */
 
+import { requireInputs } from "./require-inputs.mjs";
 import { execFileSync } from "node:child_process";
 import { argv, exit } from "node:process";
 
@@ -131,6 +132,10 @@ const NEEDLE = ["DATABASE", "URL", "WRITE"].join("_");
 const ROOT = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
+
+// Zero forbidden matches is valid; zero tracked candidate files is not.
+requireInputs(execFileSync("git", ["ls-files", "-z", "--", "*.ts", "*.mjs", "*.js", "*.md", "*.yaml", "*.yml", "*.json"],
+  { cwd: ROOT, encoding: "utf8" }).split("\0").filter(Boolean), "production-write guard: tracked candidate files");
 
 /**
  * One `git grep`, not `ls-files` plus a readFileSync per file.

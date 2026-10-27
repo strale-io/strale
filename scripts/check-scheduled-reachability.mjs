@@ -7,11 +7,14 @@
 // declared. Exit 1 on any finding. Never edits a workflow.
 //
 // Usage: node scripts/check-scheduled-reachability.mjs [--json]
-import { checkAllScheduledReachability, repoRootFrom, REGISTER_PATH } from "./scheduled-reachability-lib.mjs";
+import { requireInputs } from "./require-inputs.mjs";
+import { checkAllScheduledReachability, listWorkflowFiles, repoRootFrom, REGISTER_PATH } from "./scheduled-reachability-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
+requireInputs(listWorkflowFiles(root), "scheduled reachability: workflow files");
 const { findings, warnings, mechanismCount } = checkAllScheduledReachability(root);
+requireInputs(mechanismCount, "scheduled mechanisms: rows");
 
 if (json) {
   console.log(
