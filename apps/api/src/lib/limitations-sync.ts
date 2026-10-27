@@ -4,6 +4,7 @@ import { z } from "zod";
 import { boundDatabase, type Database } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { diffAndUpdateLimitations } from "./capability-persistence.js";
+import { clearReadinessCache } from "./capability-readiness.js";
 import { manifestLimitationsToRows } from "./manifest-limitations.js";
 import { log } from "./log.js";
 import type { OnboardingOptions, OnboardingResult } from "./onboarding-pipeline.js";
@@ -18,8 +19,22 @@ const textManifest = z.object({
     category: z.string().min(1),
     severity: z.string().optional(),
     workaround: z.string().nullable().optional(),
-  })),
+  // Backfill's gates require at least one limitation; this mode skips the
+  // gates, and an empty list would delete every stored limitation.
+  })).min(1),
 });
+
+/** Error shape for the operator log: names, paths and codes, never values. */
+function describeFailure(err: unknown) {
+  if (err instanceof z.ZodError) {
+    return { err_name: "ZodError", issues: err.issues.map((i) => ({ path: i.path.join("."), code: i.code })) };
+  }
+  const e = err as { name?: unknown; code?: unknown };
+  return {
+    err_name: typeof e?.name === "string" ? e.name : typeof err,
+    ...(typeof e?.code === "string" ? { pg_code: e.code } : {}),
+  };
+}
 
 /** No executors, gates, hooks, readiness or capability-row persistence. */
 export async function runLimitationsSync(
@@ -67,15 +82,16 @@ export async function runLimitationsSync(
       const counts = { created: count("created"), updated: count("updated"), deleted: count("deleted") };
       const changed = counts.created + counts.updated + counts.deleted > 0;
       result.status = "success";
+      if (changed && !options.dryRun) clearReadinessCache();
       result.limitations = {
         outcome: changed ? "updated" : "unchanged",
         reason: options.dryRun ? "Dry run; nothing was written." : changed ? "Manifest limitations synced." : "Limitations already match the manifest.",
         ...counts,
       };
     }
-  } catch {
+  } catch (err) {
     const code = options.signal?.aborted ? "timeout" : "limitations_sync_failed";
-    log.error({ label: "limitations-sync-failed", slug: result.slug, code }, "limitations-sync-failed");
+    log.error({ label: "limitations-sync-failed", slug: result.slug, code, ...describeFailure(err) }, "limitations-sync-failed");
     if (options.signal?.aborted) limitations.reason = "Time budget exceeded; this slug's transaction was rolled back. Inspect the run before retrying.";
     result.errors.push({ code, message: limitations.reason });
   }

@@ -80,6 +80,9 @@ a reason. Updated results include counts of rows created, updated and deleted.
 A changed text entry can appear as one deletion and one creation; an update can
 mean its display order changed. Unchanged means the existing text already
 matches. Not found means there is no capability row, and nothing was written.
+The manifest is the source of truth: a stored limitation that is not in the
+manifest is removed, as backfill already does. A manifest with no limitations is
+refused rather than emptying the stored list.
 Each slug is saved as one transaction: if it fails, that slug keeps its previous
 limitations. Earlier successful slugs remain saved. After the run, the
 maintainer verifies the served text through **GET /v1/capabilities**.

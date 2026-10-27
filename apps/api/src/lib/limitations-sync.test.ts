@@ -9,6 +9,7 @@ import { getExecutor } from "../capabilities/index.js";
 import { guardedExecute } from "../capabilities/guarded-executor.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
 import { validateCapability } from "./onboarding-gates.js";
+import { log } from "./log.js";
 
 vi.mock("./capability-onboarding.js", () => ({ onCapabilityCreated: vi.fn() }));
 const executor = vi.hoisted(() => vi.fn());
@@ -89,7 +90,8 @@ describe("text-only limitations mode", () => {
   it("never calls the executor, guarded executor, persistence, hooks, gates or readiness even with discover/fix", async () => {
     const { db } = database();
     expect((await sync(db, { discover: true, fix: true })).status).toBe("success");
-    for (const spy of [executor, getExecutor, guardedExecute, persistence.persistCapability, onCapabilityCreated, validateCapability, checkReadiness, clearReadinessCache]) expect(spy).not.toHaveBeenCalled();
+    for (const spy of [executor, getExecutor, guardedExecute, persistence.persistCapability, onCapabilityCreated, validateCapability, checkReadiness]) expect(spy).not.toHaveBeenCalled();
+    // Clearing the in-memory readiness cache is allowed; it writes nothing.
   });
   it("writes only capability_limitations, preserves every capability column and reports observer counts", async () => {
     const { db, state, writes } = database();
@@ -152,6 +154,21 @@ describe("text-only limitations mode", () => {
     const { db } = database();
     expect((await sync(db, { manifestYaml: "slug: sample-tool\nlimitations: bad" })).status).toBe("failed");
     expect(db.transaction).not.toHaveBeenCalled();
+  });
+  it("refuses an empty limitations list instead of deleting every stored row", async () => {
+    const { db, writes } = database();
+    const errorLog = vi.spyOn(log, "error").mockImplementation(() => undefined as never);
+    expect((await sync(db, { manifestYaml: "slug: sample-tool\nlimitations: []" })).status).toBe("failed");
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(writes).not.toHaveBeenCalled();
+    // The operator log names the failing path and code, not just the slug.
+    expect(errorLog.mock.calls[0][0]).toMatchObject({ err_name: "ZodError", issues: [{ path: "limitations", code: "too_small" }] });
+  });
+  it("clears the readiness cache after a sync that changed rows", async () => {
+    const { db } = database();
+    const result = await sync(db);
+    expect(result.limitations?.outcome).toBe("updated");
+    expect(clearReadinessCache).toHaveBeenCalled();
   });
   it("dry-run performs no diff writes even with discovery requested", async () => {
     const { db, writes } = database();
