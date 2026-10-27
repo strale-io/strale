@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-378 files (351 with a recorded intent, 27 without).
+379 files (352 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-zapier-integration.md`](_general/from-code/2026-10-27-zapier-integration.md) | Build Distribution D5 as a real Zapier CLI integration with fixed business jobs, API-key authentication, offline test... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-secure-random.md`](_general/from-code/2026-10-27-secure-random.md) | Build the paid secure-random capability for portfolio Phase 2 item 2.12; complete offline verification and leave prod... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-retire-old-daily-digest.md`](_general/from-code/2026-10-27-retire-old-daily-digest.md) | retire the old daily-digest email instead of restoring it, and stop the production watch from expecting it. |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md`](_general/from-code/2026-10-27-record-dec-20261027-b.md) | Record Petter's confirmed DEC-20261027-B, register platform-hardening and distribution, and leave all changes uncommi... |

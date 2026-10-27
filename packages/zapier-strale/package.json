@@ -1,0 +1,28 @@
+{
+  "name": "zapier-strale",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Strale is a tool library for company lookups, EU VAT validation, name screening and invoice issuer checks.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./jobs": "./lib/jobs.js"
+  },
+  "scripts": {
+    "test": "mocha --timeout 10000 \"test/**/*.test.js\"",
+    "validate": "npx -y zapier-platform-cli@19.2.1 validate --without-style"
+  },
+  "engines": {
+    "node": ">=20.12.1"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "zapier-platform-core": "19.2.1"
+  },
+  "devDependencies": {
+    "mocha": "11.7.5",
+    "nock": "14.0.16",
+    "zapier-platform-schema": "19.2.1",
+    "yaml": "2.9.0"
+  }
+}
