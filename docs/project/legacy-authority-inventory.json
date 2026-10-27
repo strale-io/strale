@@ -565,7 +565,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "ba9173b1abf66d6f2a489fd3ae18a25687c0e218f5b0288b482371da31373e11",
+      "sha256": "8cf065dd8830e7b577af1692e461c3d96fb958bcf6aa992b6de1892ab1ec55d1",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -707,6 +707,7 @@
         "handoff/_general/from-code/2026-10-27-distribution-strategy.md",
         "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "handoff/_general/from-code/2026-10-27-production-watch.md",
+        "handoff/_general/from-code/2026-10-27-retire-old-daily-digest.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -858,7 +859,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "6c808c74d19ca4a0050a77606e98242dbca8d719a1b8f259bda96b249480fa4d",
+      "sha256": "9358466a63e4dd3933d31d1db3d6e0c20148293198f1d92e1d363bc4e489c9b3",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

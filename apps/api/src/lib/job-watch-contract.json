@@ -23,6 +23,5 @@
   "test-scheduler": 60,
   "reservation-reconciler": 60,
   "settlement-reconciler": 60,
-  "integrity-hash-retry": 30,
-  "daily-digest": 86400
+  "integrity-hash-retry": 30
 }
