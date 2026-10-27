@@ -56,6 +56,27 @@ const suggestRecommendationSchema = {
   },
 };
 
+const keyCapSchema = { type: ["integer", "null"], minimum: 0, maximum: 2147483647 };
+const keyInputSchema = {
+  type: "object", additionalProperties: false,
+  properties: { label: { type: "string", minLength: 1, maxLength: 100 }, max_spend_per_hour_cents: keyCapSchema, max_spend_total_cents: keyCapSchema },
+};
+const keyMetadataSchema = {
+  type: "object", required: ["id", "key_prefix", "label", "max_spend_per_hour_cents", "max_spend_total_cents", "created_at", "revoked_at", "last_used_at"],
+  properties: {
+    id: { type: "string", format: "uuid" }, key_prefix: { type: "string" }, label: { type: "string" },
+    max_spend_per_hour_cents: keyCapSchema, max_spend_total_cents: keyCapSchema,
+    created_at: { type: "string", format: "date-time" },
+    revoked_at: { type: ["string", "null"], format: "date-time" }, last_used_at: { type: ["string", "null"], format: "date-time" },
+  },
+};
+const keyResponse = (description: string, schema: object) => ({ description, content: { "application/json": { schema } } });
+const keyErrors = {
+  "400": errorResponse("invalid_request", "Supply a valid label and non-negative integer caps in cents, or null to remove a cap."),
+  "401": errorResponse("unauthorized", "Invalid API key."),
+  "429": errorResponse("rate_limited", "Key management is limited to 5 requests per second per account."),
+};
+
 export const openApiSpec = {
   openapi: "3.1.0",
   info: {
@@ -190,6 +211,40 @@ export const openApiSpec = {
     },
   },
   paths: {
+    "/v1/api-keys": {
+      post: {
+        tags: ["auth"], summary: "Create an additional API key",
+        description: "The primary key remains unchanged. api_key is returned once; store it securely. Null/omitted caps are unlimited; zero blocks paid calls. All account keys can manage all additional keys: caps are spending guardrails, not permission scopes.",
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { ...keyInputSchema, required: ["label"] } } } },
+        responses: { ...keyErrors, "201": keyResponse("Key created; response has Cache-Control: no-store", { ...keyMetadataSchema, required: [...keyMetadataSchema.required, "api_key"], properties: { ...keyMetadataSchema.properties, api_key: { type: "string", description: "Shown once" } } }), "404": errorResponse("not_found", "Wallet not found.") },
+      },
+      get: {
+        tags: ["auth"], summary: "List additional keys and their spending",
+        description: "Includes revoked keys. Never includes plaintext keys or hashes. Spending is net ledger purchases, including open reservations, less refunds linked to the original purchase; the rolling hour uses purchase time. Last-used writes occur at most once per minute per key.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...keyErrors, "200": keyResponse("Additional keys", { type: "object", required: ["keys"], properties: { keys: { type: "array", items: { ...keyMetadataSchema, required: [...keyMetadataSchema.required, "spent_hour_cents", "spent_total_cents"], properties: { ...keyMetadataSchema.properties, spent_hour_cents: { type: "integer" }, spent_total_cents: { type: "integer" } } } } } }) },
+      },
+    },
+    "/v1/api-keys/{id}": {
+      patch: {
+        tags: ["auth"], summary: "Update additional key label or caps",
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+
+        description: "Omitted fields stay unchanged; null removes a cap. Lowering below existing spending blocks subsequent paid calls. Revoked keys stay revoked.",
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { ...keyInputSchema, minProperties: 1 } } } },
+        responses: { ...keyErrors, "200": keyResponse("Updated key metadata", keyMetadataSchema), "404": errorResponse("not_found", "Key not found.") },
+      },
+      delete: {
+        tags: ["auth"], summary: "Revoke an additional key",
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+
+        description: "Idempotent. Self-revocation is allowed because the primary users key cannot be revoked through this API and remains usable/recoverable. A call already holding the wallet lock may finish first. Revoked keys return the same 401 as unknown keys.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...keyErrors, "200": keyResponse("Revoked key metadata", keyMetadataSchema), "404": errorResponse("not_found", "Key not found.") },
+      },
+    },
     // ─── Capabilities ──────────────────────────────────────────────────
     "/v1/capabilities": {
       get: {

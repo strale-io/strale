@@ -150,6 +150,29 @@ export interface TransactionDetail {
 
 // ─── Error response shape ──────────────────────────────────────────────────────
 
+/** Additional key metadata; plaintext is returned only by createApiKey. */
+export interface ApiKey {
+  id: string;
+  key_prefix: string;
+  label: string;
+  max_spend_per_hour_cents: number | null;
+  max_spend_total_cents: number | null;
+  created_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+}
+export interface ApiKeyUsage extends ApiKey {
+  spent_hour_cents: number;
+  spent_total_cents: number;
+}
+export interface ApiKeyCreateOptions {
+  label: string;
+  max_spend_per_hour_cents?: number | null;
+  max_spend_total_cents?: number | null;
+}
+export type ApiKeyUpdateOptions = Partial<ApiKeyCreateOptions>;
+export interface ApiKeyCreated extends ApiKey { api_key: string }
+
 export type ErrorCode =
   | "insufficient_balance"
   | "no_matching_capability"
@@ -158,6 +181,9 @@ export type ErrorCode =
   | "timeout_exceeded"
   | "invalid_request"
   | "rate_limited"
+  | "spend_cap_exceeded"
+  | "key_hourly_cap_exceeded"
+  | "key_total_cap_exceeded"
   | "unauthorized"
   | "not_found";
 

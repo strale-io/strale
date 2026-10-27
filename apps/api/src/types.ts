@@ -8,6 +8,8 @@ export type User = typeof users.$inferSelect;
 export type AppEnv = {
   Variables: {
     user: User;
+    /** null for the unchanged primary key. */
+    apiKeyId: string | null;
     apiVersion: string;
     // F-0-014: request-scoped child logger with request_id + user_id.
     // Attached by the request-id middleware in app.ts. Always present.

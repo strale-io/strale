@@ -33,6 +33,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import {
+  apiKeys,
   disputeRequests,
   failedRequests,
   transactions,
@@ -78,6 +79,17 @@ export interface ClosureRule {
  * Ordering is presentation order in the receipt, nothing more.
  */
 export const CLOSURE_PLAN: readonly ClosureRule[] = [
+  {
+    table: "api_keys",
+    columns: ["api_key_hash", "key_prefix", "label", "last_used_at"],
+    disposition: "anonymized",
+  },
+  {
+    table: "api_keys",
+    columns: ["id", "user_id", "created_at", "revoked_at"],
+    disposition: "retained",
+    reason: "Revoked key IDs and account linkage explain historical wallet debits. Labels, prefixes and hashes are cleared; keys cannot authenticate.",
+  },
   {
     table: "users",
     columns: ["email", "name", "api_key_hash", "key_prefix", "signup_ip_hash"],
@@ -344,6 +356,13 @@ export async function applyClosurePlan(
       updatedAt: params.anonymisedAt,
     })
     .where(eq(users.id, params.userId));
+
+  // Keep IDs for the debit ledger, erase labels and usable authentication data.
+  await tx.update(apiKeys).set({
+    apiKeyHash: sql`'revoked:' || ${apiKeys.id}::text`,
+    keyPrefix: "REDACTED", label: "REDACTED", lastUsedAt: null,
+    revokedAt: sql`COALESCE(${apiKeys.revokedAt}, now())`,
+  }).where(eq(apiKeys.userId, params.userId));
 
   await anonymiseTrialGrantOnClosure(tx, { userId: params.userId });
   await purgeRecoveryTokensOnClosure(tx, { userId: params.userId });

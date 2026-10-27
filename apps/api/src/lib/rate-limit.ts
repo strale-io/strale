@@ -109,7 +109,7 @@ function setRateLimitHeaders(c: Context, result: RateCheckResult): void {
  * @param maxRequests - max requests per window
  * @param windowMs - window duration in ms
  */
-export function rateLimitByKey(maxRequests: number, windowMs: number) {
+export function rateLimitByKey(maxRequests: number, windowMs: number, scope: "key" | "account" = "key") {
   return async (c: Context, next: Next) => {
     const user = c.get("user") as { id: string } | undefined;
     if (!user) {
@@ -118,7 +118,7 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
       return next();
     }
 
-    const key = `key:${user.id}`;
+    const key = `${scope}:${scope === "account" ? user.id : c.get("apiKeyId") ?? user.id}`;
     const result = checkRate(key, maxRequests, windowMs);
     setRateLimitHeaders(c, result);
 

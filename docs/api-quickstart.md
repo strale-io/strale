@@ -153,3 +153,47 @@ Categories: compliance, validation, data-extraction, developer-tools, web3, secu
 ## Get an API key
 
 Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
+
+## Several agents on one wallet
+
+Create a separate additional key per agent with `POST /v1/api-keys`. Authenticate
+with your primary key or an additional key. Save `api_key` from the 201 response
+securely: it is shown once and never included in list/update/revoke responses.
+
+```json
+{"label":"Invoice agent","max_spend_per_hour_cents":100,"max_spend_total_cents":1000}
+```
+
+- `GET /v1/api-keys` lists additional keys (including revoked ones): `id`,
+  `key_prefix`, `label`, both caps, `spent_hour_cents`, `spent_total_cents`,
+  `created_at`, `last_used_at`, `revoked_at`. Dates are ISO 8601 or null.
+- `PATCH /v1/api-keys/{id}` updates label and/or caps. Omitted fields stay as
+  they are; null removes a cap; zero prevents paid calls. Caps are integer
+  EUR cents from 0 through 2147483647. Labels are 1–100 characters after trimming.
+- `DELETE /v1/api-keys/{id}` revokes idempotently. An additional key can revoke
+  itself: the primary key is outside this API, so it remains available (or
+  recoverable through the existing email recovery flow).
+
+All four endpoints require Bearer auth and share a 5 requests/second/account
+management limit. A revoked key gets exactly the same 401 body as an unknown key.
+The primary key and its account cap remain in place. Every additional-key paid
+capability or solution call must pass both the account cap and its own caps.
+x402 payments are unchanged.
+
+A refusal returns HTTP 429 and `error_code` of `key_hourly_cap_exceeded` or
+`key_total_cap_exceeded`, with `spent_cents`, `requested_cents`, and `limit_cents`
+in `details`. Raise that key's cap or use another key. `spend_cap_exceeded`
+continues to mean the account hourly limit. The hour is a rolling 60 minutes.
+Spending is ledger purchases, including open async reservations, less refunds
+linked to the original purchase. A refund restores that purchase's budget; its
+hour follows the purchase time. No balance/counter is stored on the key.
+
+Last-used timestamps update at most once a minute per key across replicas.
+Revocation/cap updates serialize with debits on the wallet row lock; an already
+locked call can finish before revocation takes effect. Free calls have no debit.
+
+All keys have account management authority, including changing caps and creating
+keys. These limits protect against accidental runaway spending; they are not a
+permission boundary against a key holder who deliberately changes them. Keep
+the primary key securely as your recovery key. The dashboard key UI is follow-up.
+See `/openapi.json` for the complete endpoint schemas.

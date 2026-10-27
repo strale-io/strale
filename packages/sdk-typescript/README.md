@@ -131,3 +131,27 @@ Common `errorCode` values include `insufficient_balance`, `budget_exceeded` (the
 ## License
 
 MIT — see [LICENSE](https://github.com/strale-io/strale/blob/main/LICENSE)
+
+### Additional API keys
+
+```typescript
+const agentKey = await strale.createApiKey({
+  label: "Invoice agent",
+  max_spend_per_hour_cents: 100,
+  max_spend_total_cents: 1000,
+});
+// Store agentKey.api_key securely now. It is returned only once.
+const keys = await strale.apiKeys();
+await strale.updateApiKey(agentKey.id, { max_spend_total_cents: 2000 });
+await strale.revokeApiKey(agentKey.id);
+```
+
+Caps are integer EUR cents; null means unlimited, zero blocks paid calls.
+Both account and key caps apply. List results include net ledger spending for
+the rolling hour and lifetime, last-use time, and revocation time, never secrets
+or hashes. Refunds restore the budget of the original purchase. The primary key
+is unchanged and cannot be revoked through these methods. Self-revocation of an
+additional key is allowed. All account keys can manage additional keys and caps;
+limits are spending guardrails, not permission scopes. Management is limited to
+5 requests/second/account. Cap errors preserve `key_hourly_cap_exceeded` and
+`key_total_cap_exceeded` in `StraleError.errorCode`. x402 is unchanged.

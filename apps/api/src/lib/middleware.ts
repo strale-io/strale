@@ -1,9 +1,6 @@
 import type { Context, Next } from "hono";
-import { createHash, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/index.js";
-import { users } from "../db/schema.js";
-import { hashApiKey, getKeyPrefix } from "./auth.js";
+import { createHash } from "node:crypto";
+import { authenticateApiKey } from "./api-keys.js";
 import { apiError } from "./errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -27,30 +24,15 @@ export async function authMiddleware(
     return c.json(apiError("unauthorized", "Invalid API key format."), 401);
   }
 
-  const prefix = getKeyPrefix(apiKey);
-  const hash = hashApiKey(apiKey);
-
-  // Look up candidates by prefix, then verify hash with constant-time compare
-  const db = getDb();
-  const candidates = await db
-    .select()
-    .from(users)
-    .where(eq(users.keyPrefix, prefix));
-
-  const hashBuffer = Buffer.from(hash, "utf-8");
-  const user = candidates.find((u) => {
-    const stored = Buffer.from(u.apiKeyHash, "utf-8");
-    return (
-      stored.length === hashBuffer.length &&
-      timingSafeEqual(stored, hashBuffer)
-    );
-  });
+  const identity = await authenticateApiKey(apiKey);
+  const user = identity?.user;
 
   if (!user) {
     return c.json(apiError("unauthorized", "Invalid API key."), 401);
   }
 
   c.set("user", user);
+  c.set("apiKeyId", identity!.apiKeyId);
   // F-0-014: re-child the request logger with user_id once auth resolves.
   const reqLog = c.get("log");
   if (reqLog) c.set("log", reqLog.child({ user_id: user.id }));
@@ -77,29 +59,15 @@ export async function optionalAuthMiddleware(
     return c.json(apiError("unauthorized", "Invalid API key format."), 401);
   }
 
-  const prefix = getKeyPrefix(apiKey);
-  const hash = hashApiKey(apiKey);
-
-  const db = getDb();
-  const candidates = await db
-    .select()
-    .from(users)
-    .where(eq(users.keyPrefix, prefix));
-
-  const hashBuffer = Buffer.from(hash, "utf-8");
-  const user = candidates.find((u) => {
-    const stored = Buffer.from(u.apiKeyHash, "utf-8");
-    return (
-      stored.length === hashBuffer.length &&
-      timingSafeEqual(stored, hashBuffer)
-    );
-  });
+  const identity = await authenticateApiKey(apiKey);
+  const user = identity?.user;
 
   if (!user) {
     return c.json(apiError("unauthorized", "Invalid API key."), 401);
   }
 
   c.set("user", user);
+  c.set("apiKeyId", identity!.apiKeyId);
   // F-0-014: re-child the request logger with user_id once auth resolves.
   const reqLog = c.get("log");
   if (reqLog) c.set("log", reqLog.child({ user_id: user.id }));

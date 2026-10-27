@@ -831,7 +831,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "4ab20c1bab9fa2f9ae4c8821bf6ff5f7245a5ffbc5883936df54b2ff93eca594",
+      "sha256": "59d4551e563cad4b61e0b85cd91644670378c5a335e79ad8d9769f966d26c206",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -895,6 +895,7 @@
         "archive/receipts/2026-10-26-test-run-invoice-counterparty-check-round-2.json",
         "archive/receipts/2026-10-26-test-run-invoice-counterparty-check-verification.json",
         "archive/receipts/2026-10-26-test-run-registry-status-dead-entities-round-3.json",
+        "archive/receipts/2026-10-27-test-run-api-key-spend-limits.json",
         "archive/receipts/2026-10-27-test-run-limitations-sync-mode.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-08-16-t02-quality-floor-quarantine-audit.md",
@@ -949,6 +950,7 @@
         "archive/sessions/2026-10-26-search-rebuild/round2-checks.json",
         "archive/sessions/2026-10-26-search-rebuild/round2.md",
         "archive/sessions/2026-10-26-search-rebuild/verification.md",
+        "archive/sessions/2026-10-27-api-key-spend-limits-checks.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

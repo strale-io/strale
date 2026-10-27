@@ -915,6 +915,26 @@
         "startup_migration_ledger.rows_affected"
       ],
       "sha256": "6a21ff6b06a58b5ec82e91e63ea3f5d05fc611994ea7d362242312e2e0060821"
+    },
+    {
+      "id": "M067",
+      "function": "runMigration0124_apiKeys",
+      "title": "additional API keys and wallet debit attribution",
+      "added": "2026-10-27",
+      "columns_written": [
+        "api_keys.api_key_hash",
+        "api_keys.created_at",
+        "api_keys.id",
+        "api_keys.key_prefix",
+        "api_keys.label",
+        "api_keys.last_used_at",
+        "api_keys.max_spend_per_hour_cents",
+        "api_keys.max_spend_total_cents",
+        "api_keys.revoked_at",
+        "api_keys.user_id",
+        "wallet_transactions.api_key_id"
+      ],
+      "sha256": "caa7c06a98fcbe21a958f8a99d6626f741d19ecfe387d4ce385845d126cb3346"
     }
   ],
   "known_overlaps": [

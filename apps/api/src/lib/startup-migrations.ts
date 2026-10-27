@@ -4026,6 +4026,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0121_phase0CatalogueRepairs,
   runMigration0122_correctSanctionsSourceCopy,
   runMigration0123_catalogueCopy,
+  runMigration0124_apiKeys,
 ];
 
 /**
@@ -6658,4 +6659,37 @@ export async function runMigration0123_catalogueCopy(
     rows_affected: total,
     duration_ms: Date.now() - startedAt,
   };
+}
+
+// ─── Block 0124: additional API keys and wallet debit attribution ───────────
+export async function runMigration0124_apiKeys(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id),
+      api_key_hash varchar(255) NOT NULL UNIQUE,
+      key_prefix varchar(16) NOT NULL,
+      label varchar(100) NOT NULL,
+      max_spend_per_hour_cents integer CHECK (max_spend_per_hour_cents >= 0),
+      max_spend_total_cents integer CHECK (max_spend_total_cents >= 0),
+      created_at timestamptz NOT NULL DEFAULT now(),
+      revoked_at timestamptz,
+      last_used_at timestamptz
+    )
+  `);
+  await tx.execute(sql`CREATE INDEX IF NOT EXISTS api_keys_prefix_idx ON api_keys(key_prefix)`);
+  await tx.execute(sql`CREATE INDEX IF NOT EXISTS api_keys_user_idx ON api_keys(user_id)`);
+  await tx.execute(sql`
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS api_key_id uuid REFERENCES api_keys(id)
+  `);
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS wallet_transactions_api_key_created_idx ON wallet_transactions(api_key_id, created_at)
+  `);
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS wallet_transactions_reference_idx ON wallet_transactions(reference_id)
+  `);
+  return { block: "0124_apiKeys", outcome: "ensured additional keys and debit attribution", duration_ms: Date.now() - startedAt };
 }

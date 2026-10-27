@@ -8,6 +8,8 @@ export type ErrorCode =
   | "invalid_request"
   | "rate_limited"
   | "spend_cap_exceeded"
+  | "key_hourly_cap_exceeded"
+  | "key_total_cap_exceeded"
   | "unauthorized"
   | "not_found"
   | "capability_degraded"
