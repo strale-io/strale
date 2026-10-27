@@ -167,79 +167,71 @@ output_field_reliability:
   email_provider: common
   evidence: guaranteed
 limitations:
-  - title: Addresses are inferred, never verified — no mailbox existence check is performed
+  - title: Addresses are inferred; mailboxes are not verified
     text: >-
-      email-finder never connects to the target mail server to test whether a mailbox exists (no SMTP callback, VRFY, or
-      RCPT-TO probing). The only mail-server signal used is domain-level MX record existence. Every returned address is
-      a pattern-based guess, ranked by how much public evidence supports it — none are confirmed deliverable. Callers
-      must not present any candidate as "verified" or "confirmed."
+      Returned addresses are pattern-based guesses ranked by public evidence, with no SMTP callback,
+      VRFY or RCPT-TO mailbox check. Only domain-level MX records are checked; no candidate is
+      confirmed deliverable.
     category: accuracy
     severity: warning
     workaround: >-
       Use email-validate on a shortlisted candidate for format/MX-level checks, and treat any outreach as best-effort
       until a reply is received.
-  - title: Accuracy is much lower for domains that publish no addresses
+  - title: Domains without published addresses have low confidence
     text: >-
-      Confidence is evidence-linked: it is only "high" or "medium" when the domain's homepage or contact page publishes
-      an address that is, or corroborates the format of, a generated candidate. Most company websites publish no
-      personal (firstname.lastname-style) addresses at all — only role addresses like info@ or sales@, which are
-      explicitly excluded from pattern inference. For the majority of domains, every candidate returned is "low"
-      confidence: a generic convention guess with the basis field saying so explicitly.
+      High or medium confidence requires an address on the homepage or contact page that matches or
+      supports a candidate’s format; role addresses such as info@ and sales@ do not support
+      personal-address patterns. Most domains publish no usable personal addresses, so all candidates
+      are low-confidence convention guesses identified in `basis`.
     category: accuracy
     severity: warning
     workaround: >-
-      Treat low-confidence output as a starting hypothesis, not a lead-ready address. Prioritize domains where evidence
-      was found.
-  - title: Catch-all domains accept any address, so a valid-looking address proves nothing
+      Treat low-confidence output as a starting hypothesis, not a lead-ready address. Prioritise
+      domains where evidence was found.
+  - title: MX records do not confirm a candidate mailbox exists
     text: >-
-      Many mail servers are configured as "catch-all" — they accept mail (or return no bounce) for any local part at the
-      domain, valid or not. accepts_email:true only means the domain has MX records; it says nothing about whether a
-      specific candidate mailbox exists on a catch-all-configured server. A syntactically valid, MX-backed address is
-      not evidence the address is real.
+      `accepts_email` true means only that the domain has MX records. Catch-all servers can accept any
+      address, so neither that value nor a syntactically valid address confirms that a candidate
+      mailbox exists.
     category: accuracy
     severity: warning
     workaround: >-
       Do not treat accepts_email:true as address-level confirmation. Rely on the per-candidate confidence/basis fields,
       which are scoped to pattern evidence, not deliverability.
-  - title: Caller is responsible for lawful basis under applicable data-protection law
+  - title: Callers must establish a lawful basis for personal data
     text: >-
-      This capability processes personal data (a name plus inferred contact details). email-finder itself performs no
-      outreach and does not determine or record a legal basis for processing. The caller is responsible for establishing
-      and documenting a lawful basis (e.g. GDPR Art. 6 legitimate interest, with the required balancing test and opt-out
-      mechanism) before using the output for outreach or any other processing purpose.
+      The tool processes a name and inferred contact details but performs no outreach and does not
+      establish or record a lawful basis. Callers must document an applicable basis before any
+      processing or outreach, including a balancing test and opt-out mechanism when relying on GDPR
+      legitimate interest.
     category: coverage
     severity: warning
     workaround: >-
-      Confirm a documented lawful basis for the intended use before calling this capability, and honor opt-out/erasure
-      requests against any address sourced from it.
-  - title: Contact-page discovery is a single best-effort follow, not a crawl
+      Confirm a documented lawful basis for the intended use before calling this capability, and
+      honour opt-out/erasure requests against any address sourced from it.
+  - title: Only one linked contact page is checked
     text: >-
-      At most one additional page is fetched beyond the homepage — the first same-host link whose href or link text
-      matches /contact|kontakt|contact-us|get-in-touch/i. Sites that bury contact info deeper in navigation, behind a
-      JS-only menu, or under an unmatched URL/label contribute no extra evidence even if a contact page with published
-      addresses exists.
+      At most one page beyond the homepage is read: the first same-host link whose URL or text matches
+      contact, kontakt, contact-us or get-in-touch, regardless of case. Contact details deeper in
+      navigation, behind JavaScript-only menus or under other labels provide no evidence.
     category: coverage
     severity: info
-  - title: No JavaScript rendering — client-rendered content is invisible
+  - title: JavaScript-generated addresses are not visible
     text: >-
-      This is a plain HTTP fetch of the raw HTML response, not a headless browser. Addresses injected client-side by a
-      JavaScript framework (React/Vue SPA footers, cookie-gated widgets, etc.) will not be seen, reducing evidence
-      availability on such sites regardless of what a human visiting the page would see.
+      Only the initial HTML response is read. Addresses added by JavaScript or interactive widgets are
+      not seen, reducing the evidence available.
     category: coverage
     severity: info
-  - title: Multi-part and hyphenated surnames use simplifying heuristics
+  - title: Some surname conventions are simplified
     text: >-
-      Multi-part surnames (e.g. "van der Berg") use only the final whitespace-separated token as the surname. Hyphenated
-      surnames (e.g. "Smith-Jones") generate both a joined ("smithjones") and a hyphen-preserved ("smith-jones")
-      candidate variant. Other conventions some organisations use (e.g. keeping the middle "van"/"der" particle, or
-      using a maiden-name variant) are not modeled.
+      Multi-part surnames use only the final word; hyphenated surnames produce both joined and
+      hyphen-preserved candidates. Other conventions, such as retaining surname particles or using a
+      maiden name, are not modelled.
     category: coverage
     severity: info
   - title: Only the first 300 KB of each page is scanned
     text: >-
-      Each fetched page is scanned up to 300 KB and the remainder ignored. Contact
-      markup (tel: links, mailto: links, schema.org properties) lives near the top of
-      a document, so this rarely changes the result — but a contact detail placed
-      only in the tail of a very long page will not be found.
+      Only the first 300 KB of each page is scanned. Contact details appearing later in a longer page
+      are not found.
     category: coverage
     severity: info

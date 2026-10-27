@@ -167,13 +167,13 @@ output_field_reliability:
   results: guaranteed
   total_results_estimate: guaranteed
 limitations:
-  - title: Results come from Google's index via Serper.dev — paywalled, login-required, and deep web content not accessible
+  - title: Private and paywalled content is not accessible
     text: >-
       Results from Serper.dev API — limited to Google's index; paywalled, login-required, or deep web content is not
       accessible
     category: coverage
     severity: info
-    workaround: For deep web or database content, use specialized search capabilities (ted-procurement, patent-search) instead
+    workaround: Use ted-procurement for public tender notices, or check the relevant official database directly.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

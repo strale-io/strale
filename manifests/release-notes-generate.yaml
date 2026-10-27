@@ -96,7 +96,7 @@ output_field_reliability:
   markdown: guaranteed
   sections: guaranteed
 limitations:
-  - title: Breaking changes may not be prominently flagged without conventional commit markers in the source
+  - title: Unmarked breaking changes can be missed
     text: >-
       Generated from commits or changelogs — breaking changes may not be prominently flagged without conventional commit
       markers

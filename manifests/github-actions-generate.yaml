@@ -177,16 +177,15 @@ output_field_reliability:
   secrets_needed: guaranteed
   estimated_run_minutes: guaranteed
 limitations:
-  - title: Generated workflows use common action versions — pinned SHA references and custom runners are not included
+  - title: Pinned versions and custom runners need manual setup
     text: >-
       Generated workflows use common action versions — pinned SHA references and organization-specific runners are not
       included
     category: accuracy
     severity: info
     workaround: >-
-      Pin action versions to SHAs for security and replace runner references with your organization's self-hosted
-      runners if applicable
-
+      Pin action versions to SHAs for security and replace runner references with your organisation's
+      self-hosted runners if applicable
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: not_applicable

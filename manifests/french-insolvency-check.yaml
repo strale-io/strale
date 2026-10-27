@@ -115,14 +115,14 @@ output_field_reliability:
   result_count: guaranteed
   insolvency_notices: guaranteed
 limitations:
-  - title: Only formal collective proceedings — not general company filings
+  - title: General company filings are not included
     text: >-
       Scoped to familleavis="collective" (redressement judiciaire, liquidation judiciaire, sauvegarde,
       procédure de rétablissement professionnel). Company creation, deregistration, and annual account
       filings are out of scope — use french-company-data for general registry lookup.
     category: coverage
     severity: info
-  - title: A zero-result answer means no matching notice was found, not a clean-bill-of-health guarantee
+  - title: An empty result does not prove absence of insolvency
     text: >-
       BODACC coverage begins in the 2000s in this open dataset; older proceedings, and any procedure not
       published to BODACC, will not appear. An empty result does not affirmatively prove the company has never
@@ -131,7 +131,7 @@ limitations:
     severity: warning
     workaround: Cross-check company_name search results manually — company names are not deduplicated across
       SIREN in BODACC's own data
-  - title: company_name search uses substring matching, not fuzzy/normalized matching
+  - title: Name search uses literal substring matching
     text: >-
       The 'like' filter on commercant is a literal substring match against BODACC's stored company name, which is
       not accent- or legal-form-normalized. Prefer 'siren' when known for an exact match.

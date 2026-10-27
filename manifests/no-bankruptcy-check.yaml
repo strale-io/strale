@@ -121,20 +121,20 @@ limitations:
     text: "Deleted-unit tombstones set is_deleted and deletion_date and count in has_any_distress_signal. Deletion alone does not imply bankruptcy; bankruptcy and dissolution flags remain separate."
     category: coverage
     severity: info
-  - title: Coverage limited to entities in Brønnøysundregistrene Enhetsregisteret
+  - title: Only registered Norwegian entities are covered
     text: >-
       Only Norwegian entities registered in Enhetsregisteret are covered. Foreign entities and informal businesses
       without an org number cannot be looked up.
     category: coverage
     severity: info
-  - title: Recovery from bankruptcy or dissolution is not surfaced separately
+  - title: Recovery is not reported separately
     text: >-
-      has_bankruptcy_filing reflects current registry state. If a previously bankrupt entity has been restored or
-      completed liquidation, the registry may no longer show konkurs=true. Inspect registry_annotations (paategninger)
-      for the historical timeline of registry events.
+      `has_bankruptcy_filing` reflects current registry state, so a restored entity or one with
+      completed liquidation may not show a bankruptcy flag. Check `registry_annotations` for
+      historical events.
     category: accuracy
     severity: info
-  - title: Bankruptcy proceedings detail (court, trustee, creditor list) not exposed
+  - title: Detailed bankruptcy case records are not included
     text: >-
       Brønnøysundregistrene's free open-data API exposes only the structured booleans and bankruptcy_date. Full
       case-by-case detail (handling court, appointed trustee, creditor schedule) is held in Konkursregisteret and Norsk

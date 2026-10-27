@@ -90,7 +90,7 @@ output_field_reliability:
   migration_down: guaranteed
   breaking_changes: guaranteed
 limitations:
-  - title: AI-generated migrations with destructive operations like DROP COLUMN must be verified before running on production
+  - title: Destructive migrations require review before use
     text: >-
       AI-generated migrations — destructive operations (DROP COLUMN, type changes) should be verified before running on
       production data
@@ -101,9 +101,9 @@ limitations:
       transformations
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a large schema diff spanning many tables and columns.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Provide a smaller schema per call

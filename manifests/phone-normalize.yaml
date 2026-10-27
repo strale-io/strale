@@ -91,13 +91,13 @@ output_field_reliability:
   national_format: guaranteed
   international_format: guaranteed
 limitations:
-  - title: Country code detection relies on input hints when the phone number does not include a + prefix
+  - title: Numbers without a + prefix need country hints
     text: >-
-      Normalizes to E.164 format — country code detection relies on input hints when the number doesn't include a
-      +prefix
+      Normalises to E.164 format — country code detection relies on input hints when the number
+      doesn't include a +prefix
     category: coverage
     severity: info
-    workaround: Always include the country code or specify the default_country parameter to avoid ambiguous normalization
+    workaround: Always include the country code or specify the default_country parameter to avoid ambiguous normalisation
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

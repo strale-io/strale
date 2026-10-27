@@ -85,7 +85,7 @@ limitations:
     category: accuracy
     severity: info
   - title: US and UK systems only
-    text: "Supports FICO, VantageScore (US), Experian, Equifax (UK) — other national credit systems not covered"
+    text: "The `system` input supports fico and vantagescore for the US, and experian and equifax for the UK. Other national credit systems are not covered."
     category: coverage
     severity: info
 

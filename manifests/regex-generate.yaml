@@ -100,16 +100,17 @@ output_field_reliability:
   explanation: guaranteed
   test_results: guaranteed
 limitations:
-  - title: AI-generated regex may need refinement for edge cases — always test against your full dataset before deploying
+  - title: Complex patterns need testing and refinement
     text: AI-generated regex — complex patterns with edge cases may need refinement and testing against your full dataset
     category: accuracy
     severity: info
     workaround: Test the generated regex against both matching and non-matching examples before deploying in production
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~800 output tokens) are refused
-      rather than returned truncated — for example a large 'test_strings' array (uncapped) requiring a
-      test_results entry per string. Retrying the identical request will not help.
+      Structured output is limited to about 800 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. The `test_strings` array has no input-count cap, but
+      each string adds a test result that can exceed the output limit; an identical retry does not
+      help.
     category: coverage
     severity: info
     workaround: Provide fewer test_strings per call

@@ -169,7 +169,7 @@ output_field_reliability:
   next_upcoming: guaranteed
   total_holidays: guaranteed
 limitations:
-  - title: Covers national public holidays via Nager.Date — regional, state, and bank holidays may not be included
+  - title: Regional and bank holidays may be missing
     text: Covers national public holidays via Nager.Date API — regional/state holidays and bank holidays may not be included
     category: coverage
     severity: info

@@ -117,51 +117,40 @@ output_field_reliability:
   shareholders: common
   pec: common
 limitations:
-  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+  - title: Tool is unavailable
     text: >-
-      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
-      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
-      capability-unavailable. price_cents flips from 12 to 10 (€0.122 → €0.10 net) when Moonlighter AB VAT
-      confirms.
+      This tool is unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
-  - title: Directors / legal representatives not available at IT-Advanced tier
+  - title: Directors and legal representatives are not included
     text: >-
-      IT-Advanced does NOT return directors / managers / officers. The IT-Full product surfaces managers[] but
-      has 12s+ latency requiring async execution — deferred to v1.1 quality upgrade per Phase 2c scope decision.
-      Customers needing Italian directors data should integrate the v1.1 IT-Full async path or use a separate
-      directors-specific Strale capability when shipped.
+      Director, manager, officer and legal representative details are not included.
     category: coverage
     severity: warning
-  - title: Shareholders empty for widely-held entities
+  - title: Shareholder lists can be empty
     text: >-
-      shareHolders[] is structurally present in every IT-Advanced response, but ONLY entities with at least one
-      ≥10% shareholder return a non-empty array. Widely-held listed companies (Eni, Enel, etc.) return [].
-      output_field_reliability declares shareholders as "common" not "guaranteed" — applies for closely-held /
-      family-owned / subsidiary entities. UBO data is NOT included in shareHolders[] — that's a separate
-      Openapi product (UBO-Italy, v1.1+).
+      `shareholders` is populated only when the source lists at least one shareholder with a holding
+      of 10% or more; widely held companies can return an empty array. Beneficial owners are not
+      included in this list.
     category: coverage
     severity: info
-  - title: UBOs and subsidiaries not available at IT-Advanced tier
+  - title: Beneficial owners and subsidiaries are not included
     text: >-
-      UBO-Italy is a separate Openapi product not yet probed (v1.1+). Subsidiaries / affiliateCompanies are
-      IT-Full only (v1.1+). For now, IT Tier 3 coverage is 4/6 (shareholders + nace + share_capital +
-      last_filing_date); ubos + establishments null_via_vendor_limitation.
+      Beneficial-owner and subsidiary or establishment data are not included. Shareholders, NACE
+      codes, share capital and last filing date are available where the source supplies them.
     category: coverage
     severity: info
-  - title: ATECO Italian variant of NACE; cross-EU comparisons may need translation
+  - title: ATECO codes may need mapping for comparisons
     text: >-
-      atecoClassification returns Italian ATECO codes (ateco / ateco2007 / ateco2022). Strale's nace_codes field
-      uses the ateco2022 variant where available, falling back to ateco2007, then bare ateco. ATECO codes are
-      derived from NACE Rev 2 but Italian-specific extensions exist; cross-EU comparisons may need translation
-      via the EU NACE crosswalk.
+      `nace_codes` uses Italian ATECO 2022 codes where available, then ATECO 2007, then the base ATECO
+      code. Italian extensions differ from NACE Rev 2, so cross-country comparisons may need an
+      official crosswalk.
     category: coverage
     severity: info
-  - title: Legal form is Italian-localized
+  - title: Legal forms are returned in Italian
     text: >-
-      detailedLegalForm.description returns Italian-language values (e.g. "SOCIETA' PER AZIONI" not
-      "joint-stock company"). Customers needing English normalization should apply a downstream mapping;
-      Strale does not localize.
+      Legal form values are returned in Italian without English translation. Apply a separate mapping
+      if English labels are needed.
     category: coverage
     severity: info
 

@@ -212,7 +212,7 @@ output_field_reliability:
   is_expired: guaranteed
   days_until_expiry: guaranteed
 limitations:
-  - title: Only checks the certificate on port 443, not non-standard TLS ports or configurations
+  - title: Only port 443 is checked
     text: Checks the certificate presented on port 443 only — does not verify non-standard TLS configurations
     category: coverage
     severity: info

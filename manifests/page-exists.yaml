@@ -138,34 +138,33 @@ output_field_reliability:
   content_length: common
   error: rare
 limitations:
-  - title: Client-rendered SPAs may look alive regardless of the specific page
+  - title: Single-page apps can hide missing pages
     text: >-
-      Sites that render content client-side (e.g. Resy) serve the same generic 200 HTML shell for every path,
-      including removed listings. The server-side heuristics see real content and report exists:true even when the
-      specific listing is gone — this is why a clean 200 is reported at confidence medium, never high.
+      Some JavaScript applications return the same HTTP 200 page for every URL, including removed
+      listings. These can return `exists` true with medium confidence even when the requested listing
+      is missing.
     category: coverage
     severity: warning
     workaround: For known SPA domains, corroborate with a rendered check (screenshot-url) before trusting exists:true.
   - title: Soft-404 phrase heuristics are English-only
     text: >-
-      The title/body phrase scan (e.g. "no longer available", "has been removed") matches English phrasing only.
-      Non-English removal/error pages may be misclassified as existing content.
+      Removal and error-page phrases are recognised only in English. Non-English error pages can be
+      misclassified as existing content.
     category: coverage
     severity: info
     workaround: For non-English sites, verify the returned title and final_url yourself rather than trusting exists alone.
-  - title: Bot-blocking sites return an unknown result, and the call is still billed
+  - title: Blocked pages return unknown and are still billed
     text: >-
-      Sites that 401/403 automated requests (bot detection, auth walls) return exists:null with reason
-      access_blocked rather than a true/false determination. The execution completed, so it is billed normally —
-      on bot-heavy domains null may be the common outcome, not the edge case.
+      Pages returning HTTP 401 or 403 produce `exists` null with reason access_blocked, rather than a
+      determination that the page exists. This completed check is billed, and unknown results can be
+      common on sites that block automated requests.
     category: coverage
     severity: info
     workaround: Treat exists:null as "unknown" and fall back to a manual check or a different data source for these domains.
   - title: Low-confidence negatives can misread live pages
     text: >-
-      The redirect-to-generic and thin-content signals fire on some legitimate pages (canonicalization redirects,
-      genuinely minimal pages), producing exists:false at confidence:low for a page that is actually live. Low
-      confidence means exactly that — corroborate before acting.
+      Redirects to generic pages and thin-content checks can classify legitimate pages as missing with
+      low confidence. Confirm low-confidence negatives before acting.
     category: accuracy
     severity: info
     workaround: Only act automatically on confidence high/medium; route confidence:low results to a secondary check.

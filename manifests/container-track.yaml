@@ -92,14 +92,14 @@ output_field_reliability:
   valid_format: guaranteed
   container_number: guaranteed
 limitations:
-  - title: Tracking data is scraped from carrier websites, which may change layouts without notice causing failures
+  - title: Carrier website changes can interrupt tracking
     text: >-
-      Tracking data scraped from carrier websites — carriers may change page layouts without notice, causing temporary
-      failures
+      Tracking reads carrier websites, whose page layouts can change without notice and cause
+      temporary failures.
     category: availability
     severity: warning
     workaround: If tracking fails, use the carrier name and container number to check the carrier's website directly
-  - title: Some carriers only update container positions at port milestones, not during transit
+  - title: Positions may update only at port milestones
     text: >-
       Tracking updates depend on carrier reporting frequency — some carriers update positions only at port milestones,
       not in transit

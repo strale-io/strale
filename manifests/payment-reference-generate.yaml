@@ -85,7 +85,7 @@ output_field_reliability:
   reference: guaranteed
   check_digit: guaranteed
 limitations:
-  - title: Generated OCR/reference formats may need additional validation for country-specific payment reference requirements
+  - title: Payment references may need bank-specific validation
     text: >-
       Generates standard OCR/reference formats — country-specific payment reference formats may have additional
       validation requirements

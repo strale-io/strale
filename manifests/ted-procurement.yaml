@@ -86,7 +86,7 @@ output_field_reliability:
   tenders: guaranteed
   result_count: guaranteed
 limitations:
-  - title: Covers EU public procurement above threshold values only — below-threshold tenders are on national portals
+  - title: Below-threshold tenders are not covered
     text: >-
       Covers EU public procurement above threshold values — below-threshold national tenders are published on
       country-specific portals

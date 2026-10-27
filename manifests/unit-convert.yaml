@@ -102,7 +102,7 @@ output_field_reliability:
   category: guaranteed
   from_unit: guaranteed
 limitations:
-  - title: Covers common unit categories like length, weight, and speed — specialized units like radiation are not supported
+  - title: Specialist unit categories are not supported
     text: >-
       Covers common unit categories (length, weight, volume, temperature, speed) — specialized units (e.g., radiation,
       magnetic flux) not supported

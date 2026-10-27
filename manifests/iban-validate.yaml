@@ -69,14 +69,14 @@ output_field_reliability:
   branch_code: rare
   country_code: guaranteed
 limitations:
-  - title: Validates IBAN structure and checksum only, not whether the account exists or is active
+  - title: IBAN checks do not confirm an active account
     text: Validates structure and checksum only — does not confirm the account is open or active
     category: coverage
     severity: info
     workaround: >-
       Use a SEPA test transaction (€0.01) or bank account verification API to confirm the account is live before large
       transfers
-  - title: Non-SEPA country IBANs are validated structurally but bank details may be incomplete
+  - title: Bank details can be incomplete outside SEPA
     text: Covers all SEPA-zone IBANs. Non-SEPA country IBANs validated structurally but bank lookup may be incomplete
     category: coverage
     severity: info

@@ -103,7 +103,7 @@ output_field_reliability:
   corporate_tax_rate: guaranteed
   personal_income_tax_top_rate: guaranteed
 limitations:
-  - title: Tax rates are based on AI knowledge and may not reflect the most recent annual budget changes
+  - title: Tax rates may not reflect recent budget changes
     text: >-
       Tax rate data based on AI knowledge — rates change with annual budgets and may not reflect the most recent fiscal
       year

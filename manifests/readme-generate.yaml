@@ -436,7 +436,7 @@ output_field_reliability:
   has_usage: guaranteed
   has_installation: guaranteed
 limitations:
-  - title: AI-generated README installation steps and configuration details may not match your actual setup process
+  - title: Generated setup instructions can be inaccurate
     text: >-
       AI-generated README from project context — installation steps and configuration details may not reflect your
       actual setup process
@@ -445,9 +445,9 @@ limitations:
     workaround: Verify all command examples and installation steps in a clean environment before publishing
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~8k output tokens) are refused
-      rather than returned truncated — for example an unusually large or detailed project description.
-      Retrying the identical request will not help.
+      Structured output is limited to about 8000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Retry with a smaller or more focused request — a shorter project_description

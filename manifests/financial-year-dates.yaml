@@ -89,7 +89,7 @@ output_field_reliability:
   financial_year_start: guaranteed
   vat_filing_frequency: guaranteed
 limitations:
-  - title: Standard financial year patterns are covered — companies with non-standard fiscal years may compute incorrectly
+  - title: Non-standard financial years can be computed incorrectly
     text: Covers standard financial year patterns — companies with non-standard fiscal years may not be accurately computed
     category: coverage
     severity: info

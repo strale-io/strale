@@ -183,7 +183,7 @@ output_field_reliability:
   sample_urls: guaranteed
   top_path_segments: guaranteed
 limitations:
-  - title: Sitemap index files are not recursively fetched and dynamically generated sitemaps may be incomplete
+  - title: Child sitemaps are not fetched automatically
     text: >-
       Parses XML sitemaps — sitemap index files are not recursively fetched and dynamically generated sitemaps may be
       incomplete
@@ -192,11 +192,9 @@ limitations:
     workaround: If the sitemap is an index, extract the child sitemap URLs and process each one separately
   - title: Sitemaps above the 50 MB protocol maximum are refused
     text: >-
-      The sitemaps.org protocol caps an uncompressed sitemap at 50 MB and 50,000
-      URLs. A file above that is invalid by the specification and is refused with a
-      caller_input error rather than partially parsed; no charge is taken. Sitemap
-      index files pointing at multiple child sitemaps are unaffected, and each child
-      is subject to the same ceiling when fetched separately.
+      An uncompressed sitemap above 50 MB or 50,000 URLs exceeds the protocol maximum and is refused
+      with a caller_input error and no charge. Sitemap indexes can reference multiple child sitemaps,
+      each subject to these limits when fetched separately.
     category: coverage
     severity: info
 

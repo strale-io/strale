@@ -107,7 +107,7 @@ output_field_reliability:
   failure_point: guaranteed
   suggested_fix: guaranteed
 limitations:
-  - title: AI trace analysis may not identify all performance bottlenecks in complex multi-agent orchestrations
+  - title: Complex trace bottlenecks can be missed
     text: AI analysis of agent traces — may not identify all performance bottlenecks in complex multi-agent orchestrations
     category: accuracy
     severity: info

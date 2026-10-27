@@ -183,48 +183,43 @@ output_field_reliability:
   date_incorporated: common
   jurisdiction: guaranteed
 limitations:
-  - title: Coverage starts with 2009 BORME activity — some listed parent entities are absent
+  - title: Companies without BORME activity since 2009 may be absent
     text: >-
-      The register is accumulated from BORME gazette acts from ~2009 onward. Companies with no BORME
-      activity in that window are absent — verified to include several IBEX-listed PARENT entities
-      (Telefónica SA, Banco Santander SA, Inditex SA) even though their operating subsidiaries
-      (Telefónica Móviles España, Santander Consumer Finance, ...) are covered. The 2.8M-company SME and
-      operating-company population — the usual KYB target — is the covered set. Absent companies are
-      refused, never guessed.
+      Coverage comes from BORME acts published from about 2009 and includes about 2.8 million mainly
+      small, medium and operating companies. Some major listed parent companies with no acts in that
+      window are missing even when their subsidiaries are covered; absent companies return an error.
     category: coverage
     severity: warning
     workaround: For listed parents, use lei-lookup (GLEIF) or the CNMV's public issuer registry
-  - title: Not an official source — normalized by a third party from official BORME acts
+  - title: Records are normalised by a third-party provider
     text: >-
-      OpenMercantil self-describes as not an official source. Every fact derives from official BORME
-      gazette publications (per-act registral references are preserved), but the normalization layer is a
-      small third-party project — treat as Tier-2 vendor aggregation, not registry ground truth.
+      Records are derived from official BORME acts and retain references to those acts, but the
+      normalised record is supplied by a third party rather than an official registry. Confirm
+      critical facts against the cited act or a Registro Mercantil extract.
     category: accuracy
     severity: info
     workaround: Confirm critical facts against the BORME act cited in the record or a Registro Mercantil extract
-  - title: Officer list reflects BORME appointment/cessation acts, not a maintained register snapshot
+  - title: Officer records depend on published appointment acts
     text: >-
-      Current officers are derived from appointment (Nombramientos), re-election and cessation acts. An
-      officer whose cessation was never published, or whose appointment predates coverage, may be listed
-      incorrectly. Dates of birth are never available (BORME does not publish them).
+      Officers are derived from BORME appointment, re-election and cessation acts, so missing
+      cessation notices or appointments before coverage can leave an incorrect list. Dates of birth
+      are not available.
     category: accuracy
     severity: info
-  - title: Single-operator vendor — no SLA, no contract, no indemnification
+  - title: Availability depends on a single provider
     text: >-
-      OpenMercantil is a small single-operator project offering a free unauthenticated API. There is no
-      service agreement, uptime commitment, or indemnification. The underlying facts are statutory open
-      data (BORME, Ley 37/2007 reuse right), so the legal exposure is the normalization layer's
-      availability and accuracy, not the data's redistributability. Durability risk is accepted and
-      monitored; a registry-direct or paid-tier fallback is the upgrade path if the service degrades.
+      The source is operated by a single provider without a service agreement, uptime commitment or
+      indemnification. Its availability and the accuracy of its normalisation can affect results.
     category: availability
     severity: info
   - title: Free-tier quota is 200 upstream requests/day (~100 lookups)
     text: >-
-      The vendor's free tier allows 200 requests/day; each lookup consumes two (search + company fetch).
-      Quota exhaustion returns a clear retry-later error, never a partial answer.
+      The source allows 200 requests per day, and each company lookup uses two requests, allowing
+      about 100 lookups daily. Exhausted quota returns a retry-later error rather than a partial
+      answer.
     category: throughput
     severity: info
-    workaround: Vendor's Profesional tier (5,000/day, €57/mo) is the upgrade path if ES volume materializes
+    workaround: Retry after the daily quota resets and reuse existing results when their age suits the task.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

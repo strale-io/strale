@@ -321,17 +321,17 @@ output_field_reliability:
 limitations:
   - title: Name search must resolve to exactly one entry
     text: >-
-      Firmenbuch name search does not rank by relevance. When a company_name query matches more than one entry and no
-      unique exact name match exists, the capability refuses with a candidate list (name, FN, seat) instead of guessing.
-      Callers should retry with the Firmenbuchnummer from the candidate list.
+      If `company_name` matches several entries without a unique exact name match, the tool returns a
+      candidate list with names, FN identifiers and seats instead of selecting one. Firmenbuch name
+      search does not rank by relevance; retry using a candidate identifier.
     category: coverage
     severity: info
     workaround: Call again with registration_number taken from the returned candidate list.
   - title: Status is derived, not a registry field
     text: >-
-      The Kurzinformation extract has no dedicated status element. Status is derived from whether current
-      (AUFRECHT="true") registration blocks exist; insolvency/liquidation markers surface in status_note only when the
-      entry was resolved via name search. Struck-off (gelöscht) companies return an error rather than historical data.
+      `status` is derived from current registration blocks because the Kurzinformation extract has no
+      explicit status field; insolvency or liquidation markers appear in `status_note` only for name
+      searches. Struck-off companies return an error rather than historical data.
     category: accuracy
     severity: info
   - title: No UBO data
@@ -348,16 +348,15 @@ limitations:
     severity: info
   - title: VAT numbers are not accepted
     text: >-
-      The Firmenbuch is keyed by Firmenbuchnummer, not UID (VAT). The previous vendor path accepted only ATU-format VAT
-      input; that contract is retired. UID-to-FN resolution is not offered by the registry API.
+      Lookup accepts a Firmenbuchnummer or company name, not an Austrian UID or ATU-format VAT number.
+      The tool does not resolve VAT numbers to Firmenbuchnummer identifiers.
     category: coverage
     severity: info
-    workaround: Look up the company by name, or find the FN on any official company document or at firmen.wko.at.
-  - title: Name-path latency
+    workaround: Look up the company by name, or find its Firmenbuchnummer on an official company document.
+  - title: Name lookups take longer than identifier lookups
     text: >-
-      Resolving by company_name costs one or two search calls plus the extract call against a SOAP registry (~4s
-      typical, slower under registry load). Callers with the Firmenbuchnummer should pass registration_number, which is
-      a single call (~1s).
+      Name lookup takes about 4 seconds and can slow down under registry load. A known
+      Firmenbuchnummer supplied as `registration_number` takes about 1 second.
     category: performance
     severity: info
     workaround: Pass registration_number instead of company_name when the FN is known.

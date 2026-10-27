@@ -82,22 +82,20 @@ output_field_reliability:
   css_framework: guaranteed
   frontend_framework: guaranteed
 limitations:
-  - title: Sources whose Terms of Service forbid automated access are rejected
+  - title: Some website sources are unsupported
     text: >-
-      URLs on sites whose Terms of Service prohibit automated access (Trustpilot, Glassdoor,
-      LinkedIn, Google Search and the major social platforms) are rejected before any fetch is
-      attempted, returning a policy error with compliant alternatives where they exist. Retrying
-      will not succeed. Strale adds a source back only under a licensed API agreement.
+      Unsupported website URLs return a policy error before the page is read. Repeating the same
+      request does not return content.
     category: coverage
     severity: warning
-  - title: Database covers 1,000+ technologies but niche or custom-built tools may not be identified
+  - title: Niche or custom technologies can be missed
     text: Database covers 1,000+ technologies — niche or custom-built tools may not be identified
     category: coverage
     severity: info
     workaround: >-
       Check the raw HTTP headers in the response for custom X-Powered-By or Server values that indicate unlisted
       technology
-  - title: Only detects client-side and header-visible technologies — server-side-only tools are not visible
+  - title: Server-only technologies are not visible
     text: >-
       Detection based on HTTP headers, JavaScript libraries, and HTML signatures — technologies loaded conditionally or
       server-side only may not be detected
@@ -106,11 +104,9 @@ limitations:
     workaround: Complement with dns-lookup and ssl-check results to infer infrastructure choices not visible in the HTML
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
-      rather than after buffering. That is ~5x the heaviest ordinary web page, so
-      normal targets are unaffected. An oversized page returns a caller_input
-      refusal naming the field, and is not retried through another fetch path; no
-      charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

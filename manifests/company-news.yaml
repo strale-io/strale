@@ -81,8 +81,8 @@ limitations:
     severity: info
   - title: Company name matching
     text: >-
-      Uses exact phrase matching on the company name. Short or generic names (e.g. 'Apple') may return unrelated
-      articles. Use the full legal name for best results.
+      Uses exact phrase matching, so short or generic company names can return unrelated articles. Use
+      the full legal name for a more specific search.
     category: accuracy
     severity: info
 

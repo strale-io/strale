@@ -112,7 +112,7 @@ output_field_reliability:
   mx_records: guaranteed
   email_provider: guaranteed
 limitations:
-  - title: Returns MX records from DNS only — cannot verify whether the mail server is actually accepting connections
+  - title: MX records do not confirm server reachability
     text: Returns MX records from DNS — cannot verify whether the mail server is actually accepting connections
     category: coverage
     severity: info

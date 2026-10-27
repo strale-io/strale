@@ -98,30 +98,25 @@ output_field_reliability:
   source_as_of: guaranteed
   last_filing_date: guaranteed
 limitations:
-  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+  - title: Tool is unavailable
     text: >-
-      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
-      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
-      capability-unavailable. price_cents flips from 6 to 5 (€0.061 → €0.05 net) when Moonlighter AB VAT confirms.
+      This tool is unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
-  - title: Legal form not returned at PT-Advanced tier
-    text: Openapi PT-Advanced does not return Portuguese legal form (S.A., Lda., etc.).
+  - title: Legal form is not included
+    text: Portuguese legal forms, such as S.A. or Lda., are not included.
     category: coverage
     severity: info
-  - title: Directors not available at PT-Advanced tier
+  - title: Directors, officers and shareholders are not included
     text: >-
-      Directors / officers / shareholders are NOT returned at PT-Advanced — the directors-gap closure is IT-only
-      via Openapi IT-Full. Direct Registo Comercial / publicacoes.mj.pt integration queued as v1.1 quality
-      upgrade per DEC-20260507-C.
+      Director, officer and shareholder details are not included.
     category: coverage
     severity: info
-  - title: Share capital not returned at PT-Advanced tier
+  - title: Share capital is not included
     text: >-
-      Despite the Matrix's "share capital via balanceSheets" claim, the PT-Advanced response contains employees /
-      netWorth / operatingRevenue / equity / totalAssets per year, but NOT a dedicated shareCapital field. Tier 3
-      coverage is 2/6 (NACE + last_filing_date), not 3/6. Matrix needs reconciliation; documented for chat to
-      address separately. Only IT-Advanced surfaces shareCapital.
+      A dedicated share-capital figure is not returned. Employee counts, net worth, operating revenue,
+      equity, total assets, NACE codes and last filing date can be available, but do not establish
+      share capital.
     category: coverage
     severity: info
 

@@ -135,25 +135,23 @@ output_field_reliability:
   citing_works_total: common
   open_access_pdf: rare
 limitations:
-  - title: OpenAlex counts differ from Scopus and Web of Science
+  - title: Citation counts depend on index coverage
     text: >-
-      Citation totals depend on which corpus the index covers. OpenAlex is broader and includes
-      preprints and repositories, so its count typically exceeds Scopus for the same work. Do not
-      present the figure as the citation count.
+      OpenAlex includes preprints and repositories, so its citation counts can differ from other
+      citation indexes. A count describes coverage in OpenAlex rather than a universal total.
     category: accuracy
     severity: warning
   - title: The two citation totals need not agree
     text: >-
-      citation_count comes from the work record and citing_works_total from a live query over the
-      index. They drift apart by a small margin while OpenAlex reindexes — 1,989 against 1,990 in
-      the example above. Neither is a correction of the other.
+      `citation_count` comes from the work record and `citing_works_total` from a live index query.
+      They can differ slightly while OpenAlex updates its index.
     category: accuracy
     severity: info
   - title: References are limited to what the record lists
     text: >-
-      reference_count reflects the reference list OpenAlex extracted, which is usually shorter than
-      the bibliography actually printed in the paper — 36 against the 30 Crossref records for the
-      example work. References are unavailable entirely for many older and paywalled articles.
+      `reference_count` reflects the references recorded by OpenAlex and may be shorter than the
+      paper’s printed bibliography. Reference lists are unavailable for many older and paywalled
+      articles.
     category: coverage
     severity: warning
   - title: Preprints and published versions are separate works

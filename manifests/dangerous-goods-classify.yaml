@@ -62,14 +62,13 @@ output_field_reliability:
   error: rare
 limitations:
   - title: >-
-      AI-based dangerous goods classification is a preliminary screen only — certified testing and documentation are
-      required
+      Classification requires certified confirmation
     text: >-
       AI-based classification guidance — official dangerous goods classification requires certified testing and
       documentation
     category: accuracy
     severity: warning
-    workaround: Use as a preliminary screen and confirm the UN number and packing group with your certified DG advisor
+    workaround: Use as a preliminary screen and confirm the UN number and packing group with your certified DG adviser
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

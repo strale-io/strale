@@ -111,11 +111,11 @@ output_field_reliability:
   latest_version: guaranteed
   weekly_downloads: guaranteed
 limitations:
-  - title: Queries the public npm registry only — private packages and packages from private registries are not accessible
+  - title: Private packages and registries are not accessible
     text: Queries the public npm registry — private packages and scoped packages from private registries are not accessible
     category: coverage
     severity: info
-    workaround: For private packages, query your organization's registry endpoint directly
+    workaround: For private packages, query your organisation's registry endpoint directly
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

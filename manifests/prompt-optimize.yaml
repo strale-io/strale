@@ -115,16 +115,16 @@ output_field_reliability:
   improved_prompt: guaranteed
   techniques_applied: guaranteed
 limitations:
-  - title: Optimization suggestions are model-agnostic — some techniques work better with specific LLM providers
-    text: Optimization suggestions are model-agnostic — some techniques work better with specific LLM providers
+  - title: Suggestions can work differently across models
+    text: Optimisation suggestions are model-agnostic — some techniques work better with specific AI providers
     category: accuracy
     severity: info
-    workaround: Test optimized prompts against your target model and iterate based on actual output quality
+    workaround: Test optimised prompts against your target model and iterate based on actual output quality
   - title: Output size cap per call
     text: >-
-      The output budget scales with input size (up to an 8k-token ceiling) but a request can still exceed it —
-      the improved prompt plus the analysis envelope must fit in one response. When it doesn't, the call is
-      refused rather than returned truncated. Retrying the identical request will not help.
+      The improved prompt and its analysis must fit within an output limit that scales with input
+      size, up to 8,000 tokens. Requests exceeding that limit are refused rather than returned
+      truncated, and an identical retry does not help.
     category: coverage
     severity: info
     workaround: Shorten the prompt and retry

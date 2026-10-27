@@ -84,19 +84,19 @@ output_field_reliability:
   liability_limitations: guaranteed
   termination_conditions: guaranteed
 limitations:
-  - title: AI extracts key terms of service clauses but legal interpretation requires qualified legal review
+  - title: Legal interpretation requires qualified review
     text: AI extraction of key terms — legal interpretation of clauses requires qualified legal review
     category: accuracy
     severity: info
     workaround: Use extracted terms as a quick screening tool and flag unusual clauses for legal counsel review
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example an unusually long or detailed Terms of Service document.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This ToS page produced more content than fits in one call — no direct workaround
+    workaround: Read the original terms page directly for details that exceed the output limit.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

@@ -77,7 +77,7 @@ output_field_reliability:
   env_template: guaranteed
   total_variables: guaranteed
 limitations:
-  - title: Dynamically constructed environment variable names may be missed during code analysis
+  - title: Dynamically named environment variables can be missed
     text: Generates .env templates from code analysis — dynamically constructed environment variable names may be missed
     category: coverage
     severity: info

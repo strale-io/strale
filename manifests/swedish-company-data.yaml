@@ -196,29 +196,28 @@ output_field_reliability:
   business_description: common
   deregistration_reason: rare
 limitations:
-  - title: Registry data only — no financials
+  - title: Registry data only; no financial statements
     text: >-
-      HVD is the EU Open Data Directive subset of Bolagsverket's data. It covers registry identity (name, legal form,
-      status, address, SNI, registration date, insolvency flags) but NOT annual-report financials (revenue, profit,
-      employees, equity). Financial fields were available in earlier Allabolag-backed versions of this capability but
-      have been dropped; they require Bolagsverket's paid Årsredovisningsinformation API or a licensed aggregator.
+      Bolagsverket’s open company data covers names, legal forms, status, addresses, SNI codes,
+      registration dates and insolvency flags. Annual-report figures such as revenue, profit, employee
+      counts and equity are not included.
     category: coverage
     severity: info
-    workaround: Use a licensed credit-bureau capability (roadmap) or order an annual-report extract manually.
-  - title: Lookup requires organisationsnummer (no name search)
+    workaround: Order an annual report or financial statement extract from Bolagsverket.
+  - title: Organisation number required; no name search
     text: >-
-      The HVD API accepts only `identitetsbeteckning` (organisationsnummer/personnummer). Name-based resolution is not
-      offered — earlier LLM-based name-to-orgnr resolution was removed because it relied on scraping Allabolag.se, which
-      is prohibited by DEC-20260420-H.
+      Looks up companies by organisation number only; it does not search by name. Sole-trader lookups
+      can also accept a personal identity number.
     category: coverage
     severity: info
     workaround: >-
-      Resolve the company name to an orgnr via an upstream name-resolver or via the VIES VAT validator, then pass the
-      orgnr.
+      Find the organisation number on an official company document or in the registry, then pass it as
+      `org_number`.
   - title: Enskild näringsidkare may return multiple entries
     text: >-
-      Sole traders (enskild näringsidkare) can have multiple registered companies on the same personnummer. The executor
-      returns the first entry. If a personnummer is passed, only the primary entry is surfaced.
+      Sole traders (enskild näringsidkare) can have several companies registered under the same
+      personal identity number. Lookup returns only the first entry, so other registrations under that
+      number are not included.
     category: coverage
     severity: info
     workaround: Prefer aktiebolag organisationsnummer (10 digits starting 2–9) for unambiguous single-entry lookups.

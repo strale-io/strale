@@ -110,13 +110,13 @@ output_field_reliability:
   nutrition: guaranteed
   product_name: guaranteed
 limitations:
-  - title: Open Food Facts coverage is strong for food and beverage but weak for electronics and general merchandise
+  - title: Coverage is strongest for food and drink
     text: >-
       Product database via Open Food Facts — coverage strongest for food/beverage products, weaker for electronics and
       general merchandise
     category: coverage
     severity: info
-    workaround: If no result is found, try the barcode with a commercial product API like UPCitemdb or Barcodelookup.com
+    workaround: Check the barcode with the manufacturer or retailer if no product is found.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

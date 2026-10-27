@@ -191,7 +191,7 @@ output_field_reliability:
   patents: guaranteed
   total_found: guaranteed
 limitations:
-  - title: Searches Google Patents via Browserless — focused on US, EP, and WO patents; some national patents may not appear
+  - title: Some national patents may be missing
     text: >-
       Searches via Browserless + Google Patents — coverage focused on US, EP, and WO patents; some national patents may
       not appear
@@ -202,9 +202,9 @@ limitations:
       office
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a broad query returning many patents.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Reduce max_results so fewer patents are returned per call

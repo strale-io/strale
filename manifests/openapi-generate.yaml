@@ -163,16 +163,16 @@ output_field_reliability:
   endpoints: guaranteed
   total_paths: guaranteed
 limitations:
-  - title: AI-generated OpenAPI specs may need manual refinement for complex request/response schemas
+  - title: Complex schemas may need manual refinement
     text: AI-generated OpenAPI spec from code or descriptions — complex request/response schemas may need manual refinement
     category: accuracy
     severity: info
-    workaround: Validate the generated spec with openapi-validate and test against actual API behavior
+    workaround: Validate the generated spec with openapi-validate and test against actual API behaviour
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~4k output tokens) are refused
-      rather than returned truncated — for example a description covering many endpoints and schemas.
-      Retrying the identical request will not help.
+      Structured output is limited to about 4000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Describe fewer endpoints per call

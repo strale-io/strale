@@ -74,13 +74,13 @@ output_field_reliability:
   valid: guaranteed
   isbn13: guaranteed
 limitations:
-  - title: Validates ISBN-10 and ISBN-13 format and check digits only — does not verify the ISBN is assigned to a publication
+  - title: A valid ISBN does not confirm a publication exists
     text: >-
       Validates ISBN-10 and ISBN-13 format and check digits — does not verify the ISBN is assigned to an actual
       publication
     category: coverage
     severity: info
-    workaround: Use the validated ISBN with Open Library API or Google Books to verify the publication exists
+    workaround: Check the ISBN against the publisher’s catalogue to confirm the publication.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

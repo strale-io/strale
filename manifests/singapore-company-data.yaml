@@ -133,19 +133,20 @@ output_field_reliability:
   registered_address: common
   jurisdiction: guaranteed
 limitations:
-  - title: Address is street + postal code only — no building number or unit
+  - title: Addresses lack building and unit numbers
     text: >-
-      The data.gov.sg ACRA dataset publishes only registered street name and postal code. Building number, unit number,
-      and full street address are not included. For complete address detail, query ACRA BizFile+ directly.
+      The ACRA open dataset returns only the registered street name and postal code, without building
+      number, unit number or full street address. Request complete address details directly from ACRA
+      BizFile+.
     category: coverage
     severity: info
-  - title: Monthly refresh — sub-month filings may not be reflected immediately
+  - title: New filings can take a month to appear
     text: >-
       The ACRA Open Data dataset is republished monthly. Filings made within the current month may not be reflected in
       the API response until the next monthly refresh.
     category: freshness
     severity: warning
-  - title: Open data covers core register only — directors, shareholders, and financials require BizFile+ access
+  - title: Directors, owners and financials are not included
     text: >-
       This capability returns the structured register record only. Directors, shareholders, beneficial owners, share
       capital, and financial filings require a paid lookup at ACRA BizFile+ and are not included in this response.

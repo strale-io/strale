@@ -190,7 +190,7 @@ output_field_reliability:
   comparison: guaranteed
   strategic_analysis: guaranteed
 limitations:
-  - title: Comparison is based on public information only — pricing and features may lag behind actual product changes
+  - title: Public pricing and feature details can be out of date
     text: >-
       Comparison based on publicly available information — pricing, features, and positioning may lag behind actual
       product changes

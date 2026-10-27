@@ -128,9 +128,9 @@ limitations:
     severity: warning
   - title: Free-text matching, not an ingredient index
     text: >-
-      The query is matched against product description, recall reason and firm name. A search for a
-      generic ingredient will miss recalls that name only a brand, and vice versa. The example
-      query "aspirin" matches records whose description mentions it, not every aspirin-containing product.
+      Search matches product descriptions, recall reasons and firm names. Generic ingredient searches
+      can miss brand-only notices, and brand searches can miss ingredient-only notices; results do not
+      cover every product containing a searched ingredient.
     category: accuracy
     severity: warning
   - title: Classification is the FDA's judgement of the recall

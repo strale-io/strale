@@ -111,7 +111,7 @@ output_field_reliability:
   message_type: guaranteed
   receiver_bic: guaranteed
 limitations:
-  - title: Parses MT message formats like MT103 and MT202 only — MX/ISO 20022 XML messages are not supported
+  - title: MX and ISO 20022 messages are not supported
     text: Parses MT message formats (MT103, MT202, etc.) — MX/ISO 20022 XML messages are not supported
     category: coverage
     severity: info

@@ -85,19 +85,17 @@ output_field_reliability:
   # edit distance 2 of a known provider.
   did_you_mean: rare
 limitations:
-  - title: Disposable email detection covers major providers but newly registered throwaway domains may pass
+  - title: New disposable domains can be missed
     text: Disposable email detection covers major providers but new throwaway domains may not be flagged
     category: coverage
     severity: info
-    workaround: Supplement with a domain age check — disposable domains are typically registered within the last 30 days
-  - title: Catch-all domains used by enterprises show as valid even for non-existent mailboxes
+    workaround: Check the domain’s age when investigating suspicious traffic.
+  - title: A valid result does not prove the mailbox exists
     text: Catch-all domains (common in enterprises) will show as valid even for non-existent mailboxes
     category: accuracy
     severity: info
     workaround: >-
-      Check the is_catchall field in the response and require email confirmation via a verification link for catch-all
-      domains
-
+      Require confirmation through a verification link before relying on a mailbox.
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: preferred

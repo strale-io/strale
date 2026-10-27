@@ -100,38 +100,37 @@ output_field_reliability:
   active_manifest: common
   validation_status: guaranteed
 limitations:
-  - title: Image formats only in v1
+  - title: Images only; video and audio are not supported
     text: >-
-      v1 supports JPEG, PNG, WebP, AVIF, HEIF, TIFF, DNG, and GIF. Video and audio formats (MP4, M4A, MP3, WAV) are
-      not yet enabled even though c2pa-rs supports them. Adding video raises the byte budget significantly; v2 will
-      address this.
+      Supports JPEG, PNG, WebP, AVIF, HEIF, TIFF, DNG and GIF images. Video and audio formats,
+      including MP4, M4A, MP3 and WAV, are not supported.
     category: coverage
     severity: info
-    workaround: Convert the relevant frame to a still image before inspection, or wait for v2 video support.
+    workaround: Convert the relevant frame to a still image before inspection.
   - title: 15 MB per-fetch size cap
     text: >-
-      The capability fetches the media server-side. To prevent abuse and DoS, fetched media is capped at 15 MB.
-      Larger originals must be downsampled or referenced via a smaller derivative.
+      Fetched media is limited to 15 MB. Supply a smaller derivative or downsampled image for larger
+      originals.
     category: coverage
     severity: info
-    workaround: Provide a downsampled URL or upload a base64-encoded payload (planned for v2).
-  - title: URL input only — no direct upload in v1
+    workaround: Provide a publicly accessible URL for a downsampled image.
+  - title: Public HTTP or HTTPS URL required
     text: >-
-      v1 accepts only an HTTP(S) URL. Direct upload of base64-encoded media bytes is planned for v2 to support agents
-      that already hold the media in memory. URL must be publicly fetchable.
+      Accepts only publicly accessible HTTP or HTTPS URLs. Direct uploads and base64-encoded media are
+      not supported.
     category: coverage
     severity: info
     workaround: Host the media on a publicly accessible URL (e.g. S3 public object, CDN) before calling.
-  - title: Signature trust depends on c2pa-rs trust list
+  - title: Unlisted signers can report as untrusted
     text: >-
-      signature_valid reflects cryptographic verification against c2pa-rs's bundled trust list. A valid signature from
-      an unknown signer (not in the trust list) may surface as "untrusted" in validation_status even if the bytes are
-      authentic. Treat signer.issuer + signature_valid jointly when assessing trust.
+      `signature_valid` checks cryptographic verification against the tool’s bundled trust list; a
+      valid signature from an unlisted signer can still report untrusted in `validation_status`.
+      Assess `signer.issuer` together with `signature_valid`.
     category: accuracy
     severity: warning
     workaround: >-
-      Inspect validation_status for codes ending in ".untrusted" and decide whether to trust the signer organization
-      separately.
+      Inspect validation_status for codes ending in ".untrusted" and decide whether to trust the
+      signer organisation separately.
   - title: AI-generation flag is heuristic, not authoritative
     text: >-
       ai_generated returns true if any manifest assertion label matches a known generative-AI marker

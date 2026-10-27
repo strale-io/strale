@@ -125,7 +125,7 @@ limitations:
     category: coverage
     severity: info
   - title: Registry status interpretation
-    text: "Liquidation uses a current VR liquidator appointment, not the company name. Insolvency means an active IR source registration, not a court finding of bankruptcy. Status is unknown when VR is expected but unavailable; ROS active alone cannot exclude liquidation."
+    text: "Liquidation reflects a current VR liquidator appointment, while insolvency reflects an active IR registration rather than a bankruptcy ruling. Status is unknown when an expected VR record is unavailable; ROS active status alone cannot exclude liquidation."
     category: coverage
     severity: info
   - title: Natural persons' DIČ not derivable
@@ -136,12 +136,11 @@ limitations:
     severity: info
   - title: Fuzzy name search returns first match only
     text: >-
-      When resolving a company name via LLM, only the top ARES search hit is returned. Ambiguous names may resolve to
-      the wrong entity.
+      Name search returns only the first ARES match. Ambiguous names can resolve to the wrong entity.
     category: accuracy
     severity: info
     workaround: Pass IČO directly when known.
-  - title: Sole proprietors with only trade license may be outside ROS
+  - title: Sole proprietors with only trade licence may be outside ROS
     text: >-
       Entities registered solely in RŽP (Živnostenský rejstřík) without ROS record may return limited data. ARES still
       returns basic identification.

@@ -156,15 +156,15 @@ output_field_reliability:
   # class fix, 2026-08-14.
   match_confidence: rare
 limitations:
-  - title: Financial data comes from annual reports and can be up to 12 months old
+  - title: Financial figures can be up to 12 months old
     text: Financial data from annual reports — can be up to 12 months old
     category: freshness
     severity: info
     workaround: >-
       Check the report_date field and retrieve the latest filing from the Danish Business Authority
       (erhvervsstyrelsen.dk)
-  - title: Does not cover sole proprietorships — about 15% of Danish businesses
-    text: Does not cover sole proprietorships (enkeltmandsvirksomhed)
+  - title: Sole proprietorships are not covered
+    text: Does not cover sole proprietorships (enkeltmandsvirksomhed), which account for about 15% of Danish businesses.
     category: coverage
     severity: info
     workaround: Search the CVR register (datacvr.virk.dk) directly using the person's CPR-linked CVR number

@@ -80,7 +80,7 @@ output_field_reliability:
   trader_name: guaranteed
   country_code: guaranteed
 limitations:
-  - title: EU EORI validation service has periodic downtime and may respond slowly during peak hours
+  - title: EU EORI checks can be slow or unavailable
     text: >-
       Validates against the EU EORI service — the service experiences periodic downtime and may be slow during peak
       hours

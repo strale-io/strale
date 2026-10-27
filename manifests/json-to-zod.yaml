@@ -82,7 +82,7 @@ output_field_reliability:
   root_schema: guaranteed
   schema_count: guaranteed
 limitations:
-  - title: Generates Zod schemas from JSON samples but string format constraints like email or URL are not inferred
+  - title: String format constraints are not inferred
     text: >-
       Generates Zod schemas from JSON samples — string format constraints (email, URL, date) are not inferred
       automatically

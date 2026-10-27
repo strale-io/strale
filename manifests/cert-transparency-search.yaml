@@ -117,9 +117,9 @@ output_field_reliability:
 limitations:
   - title: Issuance is not deployment
     text: >-
-      A certificate in a CT log proves a CA issued it for that name. It does not prove the host
-      exists, is reachable, or ever served the certificate. Hostnames found here are candidates to
-      verify, not confirmed infrastructure.
+      A Certificate Transparency record shows that a certificate authority issued a certificate for a
+      name. It does not prove the host exists, is reachable or has served that certificate; verify
+      returned hostnames before treating them as infrastructure.
     category: accuracy
     severity: warning
   - title: Wildcard entries are not hosts

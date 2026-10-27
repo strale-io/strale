@@ -86,21 +86,21 @@ output_field_reliability:
   enterprise_cta: guaranteed
   free_trial_available: guaranteed
 limitations:
-  - title: Extracts visible list pricing only — enterprise tiers, volume discounts, and negotiated rates are not available
+  - title: Negotiated prices and discounts are not included
     text: Extracts visible pricing — custom/enterprise pricing, volume discounts, and negotiated rates are not available
     category: coverage
     severity: info
     workaround: Flag extracted prices as 'list price' and note that enterprise or high-volume pricing requires direct contact
-  - title: Dynamic pricing pages with complex JavaScript interactions may not render all plan tiers
+  - title: Interactive pricing pages can hide plan details
     text: Dynamic pricing pages with complex JavaScript interactions may not fully render all plan tiers
     category: accuracy
     severity: info
     workaround: If results appear incomplete, pass the direct pricing page URL rather than the homepage
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~1.5k output tokens) are refused
-      rather than returned truncated — for example a pricing page with an unusually large number of plans.
-      Retrying the identical request will not help.
+      Structured output is limited to about 1,500 output tokens per call; requests exceeding this
+      limit are refused rather than returned truncated. Requests with large results can exceed this
+      limit, and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: This pricing page produced more plans than fit in one call — no direct workaround; retry is unlikely to help

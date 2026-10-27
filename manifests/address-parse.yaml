@@ -98,14 +98,12 @@ output_field_reliability:
   postal_code: guaranteed
   country_code: guaranteed
 limitations:
-  - title: Addresses with ambiguous formatting or missing components may be parsed incorrectly by the AI
-    text: AI-powered parsing — addresses with ambiguous formatting or missing components may be parsed incorrectly
+  - title: Ambiguous or incomplete addresses can be misread
+    text: Ambiguous formatting or missing address components can cause parsing errors.
     category: accuracy
     severity: info
     workaround: >-
-      Validate parsed components against a postal address database (e.g., Google Address Validation API) for critical
-      use cases
-
+      Validate parsed components against an official postal address database for critical uses.
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: not_applicable

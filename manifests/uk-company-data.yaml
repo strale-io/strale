@@ -139,7 +139,7 @@ output_field_reliability:
   match_confidence: rare
   matched_registry_name: rare
 limitations:
-  - title: Companies House API includes LLPs but sole traders and unregistered partnerships are not covered
+  - title: Sole traders and unregistered partnerships are excluded
     text: >-
       Data from Companies House API — LLPs and Scottish LPs included, but sole traders and partnerships are not
       registered

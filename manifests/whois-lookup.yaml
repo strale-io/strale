@@ -79,12 +79,12 @@ output_field_reliability:
   registrar: guaranteed
   name_servers: guaranteed
 limitations:
-  - title: Some registrars rate-limit WHOIS queries, causing slower responses during bulk lookups
+  - title: Rate limits can slow high-volume lookups
     text: Some registrars rate-limit WHOIS queries — bulk lookups may see slower response times
     category: availability
     severity: info
     workaround: Batch lookups with 1-2 second delays between requests, or use the RDAP protocol endpoint when available
-  - title: EU domain registrations are commonly GDPR-redacted, showing limited registrant information
+  - title: Redacted registrations have limited owner information
     text: GDPR-redacted registrations (common for EU domains) show limited registrant information
     category: coverage
     severity: warning

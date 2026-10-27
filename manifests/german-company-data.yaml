@@ -151,44 +151,35 @@ output_field_reliability:
   incorporated_at: common
   terminated_at: rare
 limitations:
-  - title: Free plan has a hard credit allowance
+  - title: Provider credits and rate limits affect availability
     text: >-
-      OpenRegister's Free plan includes 500 credits per rolling 30 days. A name lookup
-      normally costs 11 credits (1 for autocomplete and 10 for company details), while a
-      canonical company-id lookup costs 10. HTTP 402 means the allowance is exhausted;
-      HTTP 429 is a separate short-term rate limit. The Vendor Control Tower reads the
-      zero-cost credits endpoint, takes this capability off every serving rail when the
-      account cannot pay, and restores the saved state only after the vendor reports
-      usable credits again.
+      OpenRegister allows 500 credits per rolling 30 days on the configured plan; a name lookup
+      normally uses 11 credits and a `company_id` lookup 10. HTTP 402 indicates exhausted credits and
+      HTTP 429 a short-term rate limit; the tool can be paused until usable credits are restored.
     category: cost
     severity: warning
     workaround: >-
-      Prefer canonical company_id inputs when available and use the cached result within
-      the product's permitted refresh window to avoid repeating an 11-credit lookup.
+      Use `company_id` when known and reuse results within the permitted refresh window to avoid
+      repeated lookups.
   - title: UBO data not covered
     text: >-
-      OpenRegister does not expose Transparenzregister (German UBO registry) data. UBO
-      lookups for AML-obliged customers require a separate BYO-credentials path against
-      the Transparenzregister, per the Coverage Matrix architectural note.
+      Beneficial ownership from the German Transparenzregister is not included.
     category: coverage
     severity: info
-    workaround: Use a dedicated UBO capability with customer-supplied Transparenzregister credentials.
-  - title: Real-time fetches not implemented
+    workaround: Request beneficial-ownership information directly from the Transparenzregister with authorised access.
+  - title: Stored registry data can be up to four weeks old
     text: >-
-      OpenRegister's `realtime=true` flag (which forces a live Handelsregister fetch at
-      +10 credits per call) is not exposed by this capability. The default cadence is
-      OpenRegister's stored-with-refresh model — stored data refreshed every ≤4 weeks
-      with daily updates for financials and new incorporations. Out of scope for v1.
+      Company records are refreshed at least every four weeks, with daily updates for financials and
+      new incorporations. The tool does not request a live Handelsregister refresh.
     category: freshness
     severity: info
     workaround: >-
-      For agents that need same-day filings, consume the capability and treat
-      `provenance.fetched_at` as the freshness floor for stored data.
+      For same-day filings, check Handelsregister directly; `provenance.fetched_at` records retrieval
+      time rather than the original filing time.
   - title: HRB/HRA numbers require court (Registergericht)
     text: >-
-      German registration numbers are per-court, not globally unique. The same HRB
-      number can refer to different companies at different courts. When passing
-      'hrb_number', 'court' is also required.
+      HRB and HRA numbers are unique only within their registration court, so the same number can
+      identify different companies. Both `hrb_number` and `court` are required for a number lookup.
     category: coverage
     severity: warning
     workaround: >-

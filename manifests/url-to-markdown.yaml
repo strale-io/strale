@@ -69,31 +69,27 @@ output_field_reliability:
   markdown: guaranteed
   word_count: guaranteed
 limitations:
-  - title: Sources whose Terms of Service forbid automated access are rejected
+  - title: Some website sources are unsupported
     text: >-
-      URLs on sites whose Terms of Service prohibit automated access (Trustpilot, Glassdoor,
-      LinkedIn, Google Search and the major social platforms) are rejected before any fetch is
-      attempted, returning a policy error with compliant alternatives where they exist. Retrying
-      will not succeed. Strale adds a source back only under a licensed API agreement.
+      Unsupported website URLs return a policy error before the page is read. Repeating the same
+      request does not return content.
     category: coverage
     severity: warning
-  - title: JavaScript-heavy single-page applications may not render completely before content is extracted
+  - title: JavaScript applications may render incompletely
     text: JavaScript-heavy single-page applications may not render completely
     category: coverage
     severity: info
-    workaround: Pass a wait_for_selector parameter if available, or use web-extract-clean which renders JS via headless browser
+    workaround: Inspect the rendered page in a browser to confirm whether any content is missing.
   - title: Login-protected or paywalled content cannot be extracted
     text: Login-protected or paywalled content cannot be extracted
     category: coverage
     severity: info
-    workaround: Provide the direct content URL if accessible via API, or pre-fetch the HTML and pass it as raw input instead
+    workaround: Use an accessible public page containing the information you need.
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
-      rather than after buffering. That is ~5x the heaviest ordinary web page, so
-      normal targets are unaffected. An oversized page returns a caller_input
-      refusal naming the field, and is not retried through another fetch path; no
-      charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

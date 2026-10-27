@@ -136,43 +136,38 @@ output_field_reliability:
   primary_registration_id: guaranteed
   date_incorporated: common
 limitations:
-  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+  - title: Tool is unavailable
     text: >-
-      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
-      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
-      capability-unavailable.
+      This tool is unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
-  - title: PARTIAL coverage — some entities not in Openapi catalog
+  - title: Some companies are missing from the source catalogue
     text: >-
-      Openapi WW-Top accepts 3 CY identifier shapes (CY-prefix VAT, bare VAT, C-prefix company number) but the
-      underlying catalog has gaps. Wargaming CY99000230P returned 204 on 2026-05-15 v4 probe despite valid input
-      shape — anomaly logged on Openapi support case 151296. Bank of Cyprus (C165) confirmed populated.
+      Accepts CY-prefix VAT, bare VAT and C-prefix company numbers, but valid identifiers can still
+      return HTTP 204 with no record. Coverage gaps include some large companies.
     category: coverage
     severity: warning
-  - title: Legal form not returned at WW-Top tier
-    text: Openapi WW-Top does not return Cypriot legal form.
+  - title: Legal form is not included
+    text: The company’s legal form is not included in this tool’s response.
     category: coverage
     severity: info
-  - title: Directors via DRCOR open data — C-prefix lookup only
+  - title: Director lookup requires a C-prefix company number
     text: >-
-      Openapi WW-Top does not return directors / legal representatives for CY. The gap is closed for C-prefix inputs
-      via data.gov.cy DRCOR open data (CC BY 4.0, monthly refresh) — see jobs/ingest-cy-directors.ts and DEC-20260518-E
-      Phase 6 enumeration. VAT-format inputs (CY-prefix or bare) cannot be resolved against the DRCOR cache because
-      DRCOR indexes by numeric REGISTRATION_NO only, not by VAT.
+      Directors are available only for C-prefix company-number inputs through DRCOR open data.
+      CY-prefix and bare VAT inputs cannot resolve directors because the dataset uses registration
+      numbers rather than VAT identifiers.
     category: coverage
     severity: info
-  - title: DRCOR open data freshness — monthly snapshot
+  - title: Director details can be about four weeks old
     text: >-
-      The cy_directors cache is refreshed from the data.gov.cy monthly bulk CSV. Officer changes filed in the last
-      ~4 weeks may not appear until the next refresh. Per-row appointment dates are not published in the open-data
-      file (start_date is always null in legal_representatives entries).
+      DRCOR director data refreshes monthly, so appointments and resignations filed within about four
+      weeks may be missing. Appointment dates are not published, so `start_date` is always null in
+      `legal_representatives`.
     category: freshness
     severity: info
   - title: UBO data not available
     text: >-
-      Cyprus UBO Register closed to public access since 2023-01-03 following CJEU C-37/20. Beneficial-owner data is
-      out of scope at v1.
+      Beneficial-owner data is not included. The Cyprus UBO Register is closed to public access.
     category: coverage
     severity: info
 

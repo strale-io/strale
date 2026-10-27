@@ -213,7 +213,7 @@ output_field_reliability:
   features_enabled: guaranteed
   security_headers_included: guaranteed
 limitations:
-  - title: Generates standard nginx configurations — custom modules and OpenResty/Lua blocks are not supported
+  - title: Custom modules and OpenResty blocks are not supported
     text: >-
       Generates standard nginx configurations — complex setups with custom modules or OpenResty/Lua blocks are not
       supported

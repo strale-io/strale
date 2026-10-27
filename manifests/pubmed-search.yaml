@@ -110,7 +110,7 @@ limitations:
     category: coverage
     severity: info
     workaround: Pass the returned DOI to paper-details for the abstract and open-access link.
-  - title: Two upstream calls per invocation against a 3 requests/second keyless allowance
+  - title: Two requests per call share a 3-request-per-second limit
     text: Sustained bursts trip NCBI's limiter; the error is surfaced as retryable and nothing is cached.
     category: availability
     severity: info

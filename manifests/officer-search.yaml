@@ -90,15 +90,15 @@ output_field_reliability:
   country: common
 limitations:
   - title: Coverage limited to UK and US
-    text: Only UK Companies House and US SEC EDGAR are supported. EU coverage was removed under DEC-20260427-I (commercial KYB-aggregator scraping ban) and will be reinstated when a licensed source lands.
+    text: Covers UK Companies House and US SEC EDGAR only. EU officer searches are not included.
     category: coverage
     severity: warning
-    workaround: For EU officer data, use country-specific company-data capabilities where available
+    workaround: Request officer details directly from the relevant national company registry.
   - title: US officer detail is shallow
     text: SEC EDGAR exposes officer-change events (8-K item 5.02) and entity names rather than a structured officer list. Detailed names and roles often require reading the underlying filing.
     category: coverage
     severity: info
-  - title: Requires COMPANIES_HOUSE_API_KEY for UK
-    text: UK lookups require a Companies House API key (free registration at developer.company-information.service.gov.uk). Without it, UK searches return no results.
+  - title: UK searches depend on Companies House access
+    text: UK searches return no results if the Companies House connection is not configured.
     category: configuration
     severity: warning

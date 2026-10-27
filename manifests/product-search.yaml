@@ -57,16 +57,16 @@ output_field_reliability:
   products: guaranteed
   total_results_estimate: guaranteed
 limitations:
-  - title: Product search results depend on retailer scraping and vary by region and product category
-    text: Search results depend on retailer website scraping — results vary by region and product category
+  - title: Coverage varies by region and product category
+    text: Results depend on retailer website content and vary by region and product category.
     category: coverage
     severity: info
     workaround: Include the target market or retailer name in the search query for more relevant results
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — the prompt extracts "as many products as visible" with no fixed cap,
-      so a busy results page can exceed the budget. Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Product count has no fixed cap, so a busy results
+      page can exceed this limit; an identical retry does not help.
     category: coverage
     severity: info
     workaround: Narrow the search query so fewer products are returned per call

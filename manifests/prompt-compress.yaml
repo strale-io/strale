@@ -93,8 +93,8 @@ output_field_reliability:
   compressed_tokens: guaranteed
   actual_reduction_percent: guaranteed
 limitations:
-  - title: Compression may remove context that appears redundant but is semantically important for specific tasks
-    text: Compression may remove context that appears redundant but is semantically important for specific LLM tasks
+  - title: Compression can remove important context
+    text: Compression may remove context that appears redundant but is semantically important for specific AI tasks
     category: accuracy
     severity: info
     workaround: Test compressed prompts against your original to verify output quality is maintained before switching

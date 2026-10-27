@@ -81,8 +81,8 @@ output_field_reliability:
   accessible: guaranteed
   valid_format: guaranteed
 limitations:
-  - title: Validates LinkedIn URL format and structure only — cannot verify the profile exists or is active
+  - title: URL checks do not confirm an active profile
     text: Validates URL format and structure — cannot verify the profile exists or is active without LinkedIn API access
     category: coverage
     severity: info
-    workaround: Use the validated URL with social-profile-check for existence verification
+    workaround: Open the profile URL directly to check whether it exists.

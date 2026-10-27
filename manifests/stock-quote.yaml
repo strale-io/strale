@@ -98,12 +98,12 @@ output_field_reliability:
   volume: guaranteed
   change_percent: guaranteed
 limitations:
-  - title: Yahoo Finance quotes are delayed approximately 15-20 minutes for most stock exchanges
+  - title: Quotes can be delayed by 15–20 minutes
     text: Quotes from Yahoo Finance — delayed by approximately 15-20 minutes for most exchanges
     category: freshness
     severity: info
     workaround: For real-time quotes, use the exchange's official data feed or a licensed market data provider
-  - title: Covers major exchange listings only — OTC, pink sheet, and some international exchange stocks may be missing
+  - title: OTC and some international listings can be missing
     text: Covers stocks listed on major exchanges — OTC, pink sheets, and some international exchanges may have limited data
     category: coverage
     severity: info

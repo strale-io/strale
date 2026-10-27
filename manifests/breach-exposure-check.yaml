@@ -112,10 +112,9 @@ limitations:
     severity: warning
   - title: No per-email or per-password checking, by design
     text: >-
-      Have I Been Pwned's account endpoint and the Pwned Passwords range API are both excluded.
-      Strale records capability inputs on the transaction for 90 days with no write-time redaction,
-      so an email address or password hash passed here would be retained. Those inputs are rejected
-      with an explanatory error rather than accepted.
+      Per-email and password-hash lookups are rejected with an explanatory error; only domain-level
+      breach queries are supported. Submitted tool inputs are retained for 90 days without redaction
+      at submission, so do not pass an email address or password hash.
     category: coverage
     severity: warning
     workaround: Query Have I Been Pwned directly from your own environment for account-level checks.

@@ -166,41 +166,36 @@ output_field_reliability:
   # wrong-company class fix, 2026-08-14.
   match_confidence: rare
 limitations:
-  - title: Covers federally incorporated Canadian companies — provincially registered businesses may have limited data
+  - title: Provincial company coverage is limited
     text: Covers federally incorporated companies — provincially registered businesses may have limited information
     category: coverage
     severity: info
     workaround: For provincial companies, supplement with the relevant provincial registry (e.g., Ontario ONBIS, BC Registry)
-  - title: Named directors are not exposed by the Corporations Canada JSON API
+  - title: Named directors are not included
     text: >-
-      The official JSON API returns director count limits (minimum/maximum) but not director names.
-      director_limits is a governance constraint from the articles, NOT a count of current directors.
-      Named-director extraction from the web UI is paused pending a sourcing-doctrine ruling.
+      Director names are not included. `director_limits` gives the minimum and maximum permitted by
+      the articles, rather than the current number of directors.
     category: coverage
     severity: info
     workaround: Order a corporate profile from Corporations Canada, or check the corporation's own filings
-  - title: Transparency differs by lookup path — numeric lookups are algorithmic, name lookups use AI extraction
+  - title: Name and number lookups use different methods
     text: >-
-      Corporation/business-number lookups read the official JSON API verbatim (no AI involved). Company-name
-      lookups render the Corporations Canada site search and extract results with an LLM, and may return
-      looser fields. The transparency_tag "mixed" reflects this split.
+      Corporation-number and business-number lookups read the official API directly. Name lookups
+      extract results from the Corporations Canada website using AI and can return less precise
+      fields.
     category: accuracy
     severity: info
     workaround: Provide the corporation number for a fully algorithmic answer
-  - title: name_history may be empty even when a name change is on record
+  - title: Name history can be incomplete
     text: >-
-      The JSON API's corporationNames array sometimes carries only the current name even when the
-      activities feed records a name-change event. An empty name_history is not proof no rename occurred.
+      `name_history` can contain only the current name even when the registry’s activity history
+      records a name change. An empty list does not prove that the company has never been renamed.
     category: coverage
     severity: info
     workaround: Check the corporation's activity history on Corporations Canada for name-change events
   - title: API responses are limited to 4 MiB
     text: >-
-      A response body above 4 MiB from the upstream endpoint is refused rather than
-      parsed, enforced while streaming. The limit sits below the 16 MiB page limit
-      deliberately: JSON is materialised into an object graph costing several times
-      its source bytes. Observed real responses for this source are well under
-      100 KiB.
+      API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info
 

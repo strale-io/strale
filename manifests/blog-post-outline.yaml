@@ -209,7 +209,7 @@ output_field_reliability:
   title_options: guaranteed
   estimated_total_words: guaranteed
 limitations:
-  - title: AI-generated outlines follow general best practices and may not match your brand voice or audience
+  - title: Outlines may not match your brand or audience
     text: >-
       AI-generated outline reflects general best practices — may not match your specific brand voice or audience
       expectations

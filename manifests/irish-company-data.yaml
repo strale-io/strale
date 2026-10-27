@@ -120,19 +120,19 @@ output_field_reliability:
   # class fix, 2026-08-14.
   match_confidence: rare
 limitations:
-  - title: Eircode (postal code) is not present for older or dissolved entities
+  - title: Older or dissolved companies can lack an Eircode
     text: >-
       The Eircode field was introduced in 2014 and is populated for newer registrations and recently-updated entities.
       Older or dissolved companies may have a null eircode.
     category: coverage
     severity: info
-  - title: Daily snapshot — sub-day filings may not be reflected immediately
+  - title: New filings can take a day to appear
     text: >-
       The CRO Open Data Portal publishes a daily snapshot. Filings submitted today may not be reflected in the API
       response until the next daily refresh.
     category: freshness
     severity: info
-  - title: Open data covers core register only — full filings require separate access
+  - title: Full company filings require separate access
     text: >-
       This capability returns the structured register record only. Document-level filings (memorandums of association,
       annual return forms, etc.) require a separate paid lookup at core.cro.ie.

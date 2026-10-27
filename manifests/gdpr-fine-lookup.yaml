@@ -60,21 +60,21 @@ output_field_reliability:
   total_fines: guaranteed
   total_amount_eur: guaranteed
 limitations:
-  - title: GDPR fine database updates weekly — recently announced fines may take up to 7 days to appear
+  - title: New fines can take up to 7 days to appear
     text: Fine database updated weekly — recently announced fines may take up to 7 days to appear
     category: freshness
     severity: info
-    workaround: For breaking enforcement news, check enforcementtracker.com directly or subscribe to the relevant DPA's press feed
-  - title: Covers publicly reported fines only, as some national DPAs delay or omit publication
+    workaround: Check the relevant data protection authority’s press releases for recently announced fines.
+  - title: Unpublished fines are not covered
     text: Covers publicly reported fines only — some national DPAs delay publication
     category: coverage
     severity: info
     workaround: Supplement with the target company's own regulatory disclosure filings, which may reference unpublished penalties
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a broad country-level search returning many fines.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Narrow the search (specific company or country) so fewer fines are returned per call

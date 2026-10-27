@@ -77,14 +77,14 @@ output_field_reliability:
   classification_reason: guaranteed
   conformity_assessment_needed: guaranteed
 limitations:
-  - title: EU AI Act classification is guidance only — official risk categorization requires legal analysis
-    text: Classification is guidance only — official EU AI Act risk categorization requires legal analysis
+  - title: Risk classification requires legal review
+    text: Classification is guidance only — official EU AI Act risk categorisation requires legal analysis
     category: accuracy
     severity: warning
     workaround: >-
       Use the classification output as a starting point for legal review — include the returned risk factors in your
       compliance documentation
-  - title: Based on the latest published AI Act text — implementing regulations may shift interpretation over time
+  - title: Implementing rules can change interpretation
     text: Based on AI Act text as of latest published version — implementing regulations may change interpretation
     category: freshness
     severity: info

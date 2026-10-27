@@ -79,20 +79,17 @@ output_field_reliability:
   source_url: guaranteed
   total_links: guaranteed
 limitations:
-  - title: Extracts links from static HTML only — JavaScript-rendered links in SPAs and lazy-loaded content may be missed
+  - title: JavaScript-generated links can be missing
     text: Extracts links from static HTML — JavaScript-rendered links (SPAs, lazy-loaded content) may not be captured
     category: coverage
     severity: info
     workaround: >-
-      For JavaScript-heavy pages, use web-extract or structured-scrape which render via headless browser before
-      extraction
+      Check the rendered page manually for links added by JavaScript.
   - title: Pages are limited to 16 MiB of HTML
     text: >-
-      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
-      rather than after buffering. That is ~5x the heaviest ordinary web page, so
-      normal targets are unaffected. An oversized page returns a caller_input
-      refusal naming the field, and is not retried through another fetch path; no
-      charge is taken.
+      Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input
+      field. The call is not charged, and the page is not retried through another fetch or rendering
+      route.
     category: coverage
     severity: info
 

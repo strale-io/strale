@@ -120,9 +120,8 @@ limitations:
     severity: warning
   - title: Metadata is only as complete as the publisher's deposit
     text: >-
-      Crossref stores what the publisher submitted. Abstracts, licences, ORCIDs and page ranges are
-      optional fields and are frequently absent even for major journals — the Nature article in the
-      example above has no deposited abstract.
+      Metadata reflects the publisher’s deposit. Abstracts, licences, ORCIDs and page ranges are
+      optional and can be absent even for major journals.
     category: coverage
     severity: info
   - title: DataCite records are thinner than Crossref records
@@ -134,8 +133,8 @@ limitations:
     severity: info
   - title: Citation count is Crossref's, not a consensus figure
     text: >-
-      referenced_by_count counts citations from works deposited at Crossref. Scopus, Web of Science
-      and OpenAlex all report different totals for the same paper.
+      `referenced_by_count` counts citations from works deposited at Crossref. Other citation indexes
+      can report different totals for the same paper.
     category: accuracy
     severity: info
     workaround: Call citation-graph for the OpenAlex figure and the citing works themselves.

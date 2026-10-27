@@ -77,9 +77,8 @@ output_field_reliability:
 limitations:
   - title: Company name extraction depends on website metadata quality
     text: >-
-      The company name is extracted from website title/meta tags using LLM.
-      Websites with generic titles or no metadata may not yield a usable
-      company name.
+      Company names are inferred from website titles and metadata. Generic titles or missing metadata
+      can prevent a usable name from being returned.
     category: accuracy
     severity: info
   - title: Country detection only works for ccTLDs
@@ -88,9 +87,9 @@ limitations:
       Country detection works for ccTLDs like .se, .de, .dk, .fi, .no, .uk.
     category: coverage
     severity: warning
-  - title: WHOIS registrant data is redacted post-GDPR
+  - title: WHOIS registrant details are often redacted
     text: >-
-      Since 2018, WHOIS registrant data is redacted for most TLDs.
-      The capability extracts company names from website content instead.
+      WHOIS registrant details are redacted for most top-level domains. This tool extracts company
+      names from website content instead.
     category: coverage
     severity: info

@@ -115,7 +115,7 @@ output_field_reliability:
   capture_groups: guaranteed
   common_matches: guaranteed
 limitations:
-  - title: Explains standard regex syntax only — engine-specific features like PCRE2 lookbehinds may not be fully documented
+  - title: Engine-specific features may be incompletely explained
     text: >-
       Explains standard regex syntax — engine-specific features (PCRE2 lookbehinds, .NET named groups) may not be fully
       documented
@@ -124,9 +124,10 @@ limitations:
     workaround: Specify the target regex engine in the input for more accurate explanations of engine-specific syntax
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~1.5k output tokens) are refused
-      rather than returned truncated — for example a large 'test_strings' array (uncapped) requiring a
-      test_results entry per string. Retrying the identical request will not help.
+      Structured output is limited to about 1,500 output tokens per call; requests exceeding this
+      limit are refused rather than returned truncated. The `test_strings` array has no input-count
+      cap, but each string adds a test result that can exceed the output limit; an identical retry
+      does not help.
     category: coverage
     severity: info
     workaround: Provide fewer test_strings per call

@@ -80,18 +80,18 @@ output_field_reliability:
   ratings_breakdown: guaranteed
   recommend_percent: guaranteed
 limitations:
-  - title: Scraped ratings may be biased toward extreme experiences — very satisfied and very dissatisfied reviews dominate
+  - title: Ratings can overrepresent extreme experiences
     text: >-
-      Reviews scraped from public platforms — ratings may be biased toward extreme experiences (very satisfied or very
-      dissatisfied)
+      Public reviews may overrepresent very satisfied or very dissatisfied reviewers, which can bias
+      ratings.
     category: accuracy
     severity: info
     workaround: Consider the sample size in the response and weight results higher when based on 50+ reviews
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a company with an unusually large volume of review themes.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This employer's review page produced more content than fits in one call — no direct workaround
+    workaround: Read the original review page to assess themes that exceed the output limit.

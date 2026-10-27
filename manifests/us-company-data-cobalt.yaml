@@ -141,9 +141,9 @@ output_field_reliability:
 limitations:
   - title: State is required
     text: >-
-      Cobalt routes queries per Secretary of State. Cross-state name searches are not supported in a
-      single call. Provide the state of incorporation; if unknown, query DE first (most common
-      domicile) then NY/CA/TX as fallbacks.
+      Each call searches one state’s Secretary of State registry; cross-state name search is not
+      supported. Supply the state of incorporation, or search states separately when it is unknown,
+      starting with Delaware, New York, California or Texas.
     category: coverage
     severity: info
   - title: Status definitions vary per state
@@ -155,11 +155,10 @@ limitations:
     severity: warning
   - title: Officer / filing depth varies per state
     text: >-
-      Some states publish full officer rosters and 10+ years of filings; others publish only the
-      registered agent and incorporation event. When the state's SoS feed does not surface officer
-      or filing data, the corresponding field is null (not an empty array — empty would falsely
-      claim "this entity has no officers"). On a found=false envelope, the officers and filings
-      fields are absent entirely.
+      Officer and filing coverage varies by state, from full officer lists and over ten years of
+      filings to only a registered agent and incorporation event. Unavailable officer or filing fields
+      are null rather than empty arrays, and `officers` and `filings` are absent when `found` is
+      false.
     category: coverage
     severity: info
 

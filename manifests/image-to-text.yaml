@@ -68,7 +68,7 @@ output_field_reliability:
   confidence: guaranteed
   language_detected: guaranteed
 limitations:
-  - title: Handwritten text, low-resolution images, and complex layouts like multi-column pages have lower OCR accuracy
+  - title: Handwriting and complex layouts reduce OCR accuracy
     text: >-
       AI-powered OCR — handwritten text, low-resolution images, and complex layouts (multi-column, overlapping) have
       lower accuracy
@@ -77,9 +77,8 @@ limitations:
     workaround: Pre-process images to improve contrast and resolution before submission for better OCR results
   - title: Input images are limited to 4 MiB decoded
     text: >-
-      Both image_url fetches and base64 payloads are refused above 4 MiB of decoded
-      image bytes. Oversized input returns a caller_input refusal naming the field;
-      no charge is taken. Resize or compress the image before submitting.
+      Images supplied by URL or base64 are refused above 4 MiB of decoded data, with a caller_input
+      error naming the input field and no charge. Resize or compress the image before submitting.
     category: coverage
     severity: info
 

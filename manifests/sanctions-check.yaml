@@ -175,7 +175,7 @@ output_field_reliability:
   country_filter: common
   birth_date_filter: common
 limitations:
-  - title: Per-list version timestamps are not exposed by the upstream API
+  - title: Per-list update timestamps are not available
     text: >-
       Dilisense refreshes the consolidated index multiple times daily, but the screening API does not return
       a per-list last_updated_at value per call. Output sets lists_queried.last_updated_at = null with a
@@ -183,7 +183,7 @@ limitations:
     category: freshness
     severity: info
     workaround: For same-day compliance against fresh designations, cross-reference primary sources (OFAC RSS, EU OJ).
-  - title: Fuzzy name matching can produce false positives for common names
+  - title: Common names can produce false matches
     text: >-
       Common names (e.g. "Mohammad", "John Smith") may produce false-positive matches. Use birth_date for
       person disambiguation.

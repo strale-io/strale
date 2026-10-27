@@ -77,8 +77,8 @@ limitations:
     text: "Only covers companies registered with UK Companies House. Does not include companies registered in other jurisdictions."
     category: "coverage"
     severity: "info"
-  - title: "Requires API key"
-    text: "Requires COMPANIES_HOUSE_API_KEY environment variable. Free registration at developer.company-information.service.gov.uk."
+  - title: "Checks depend on Companies House access"
+    text: "Filing checks require a configured Companies House connection."
     category: "dependency"
     severity: "info"
 

@@ -102,7 +102,8 @@ output_field_reliability:
 limitations:
   - title: "Sourcify coverage only"
     text: >-
-      is_verified reports verification on Sourcify. A contract verified only on another explorer (for example Etherscan) reads as not verified. license_type is always null. Rebuilt 2026-09-11 off Etherscan, whose free API does not permit commercial use.
+      `is_verified` reports verification in Sourcify only; verification solely on another explorer is
+      not reflected. `license_type` is always null.
     category: coverage
     severity: warning
     workaround: null
