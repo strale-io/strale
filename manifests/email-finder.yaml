@@ -1,8 +1,6 @@
 slug: email-finder
 name: Email Finder
-description: >-
-  Infer a person's most likely work email address from their name and a company domain, ranked by confidence.
-  Evidence-linked, never claims verification.
+description: "Currently unavailable. Suggest possible work email addresses from a person's name and company domain, with confidence estimates."
 category: web-intelligence
 search_tags:
   - find email

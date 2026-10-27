@@ -17,7 +17,7 @@
 
 slug: vat-validate
 name: "EU VAT Validation"
-description: "Check a European VAT number in VIES and get the registered company name, address and validity. Repeat lookups within 48 hours come from cache, and cached data is served while VIES is down."
+description: "Check supported VAT numbers against registry services, returning validity and available company details, with cache information when used."
 category: validation
 cost_class: free_unlimited
 quota_window: none

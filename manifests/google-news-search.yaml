@@ -1,8 +1,6 @@
 slug: google-news-search
 name: Google News Search
-description: >-
-  Search Google News via a licensed SERP API. Returns ranked news results with source, relative
-  publish time, snippet and image, with optional country/language scoping and time-range filters.
+description: "Search Google News results by query, country, language and time range. Returns headlines, sources, snippets and relative publication times."
 category: web-scraping
 cost_class: paid_prepaid
 quota_window: none

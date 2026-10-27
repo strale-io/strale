@@ -3,7 +3,7 @@
 
 slug: charity-lookup-uk
 name: "UK Charity Lookup"
-description: "Look up a charity in England and Wales or Scotland by registration number, or search by name, from Find that Charity. A number lookup returns status, registration dates, income, spending and description."
+description: "Look up charity registration records by number or name, including status, registration dates and reported income and spending."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

@@ -3,7 +3,7 @@
 
 slug: email-draft
 name: "Email Draft"
-description: "Draft a professional email for a purpose and tone you give, such as a cold introduction, follow-up or apology. Returns subject options, the body and key phrases."
+description: "Draft an email for a purpose, tone and context you supply, with subject options, body text and key phrases."
 category: content-writing
 cost_class: paid_prepaid
 quota_window: none

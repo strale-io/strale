@@ -3,9 +3,7 @@
 
 slug: flight-status
 name: Flight Status
-description: >-
-  Look up flight status by flight number (e.g. LH400, BA117). Returns departure/arrival times, delays, gates. Requires
-  AVIATIONSTACK_API_KEY for live data.
+description: "Currently unavailable. Look up a flight number's reported status, departure and arrival times, delays and gates."
 category: data-extraction
 cost_class: free_quota
 quota_window: monthly

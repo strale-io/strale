@@ -3,7 +3,7 @@
 
 slug: container-track
 name: "Container Tracking"
-description: "Track a shipping container by its ISO 6346 number: check the number, identify the carrier and get the tracking status."
+description: "Check a container number, identify its carrier and try to read tracking details. Returns available status information and tracking links."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

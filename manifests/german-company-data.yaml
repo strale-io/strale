@@ -1,6 +1,6 @@
 slug: german-company-data
 name: "German Company Data"
-description: "Look up a company in the German commercial register (Handelsregister). Returns name, register number, court, legal form, status, address, directors, capital, LEI, and incorporation and closure dates."
+description: "Look up German company identity and registration details, including court, legal form, status, address and directors where available."
 category: company-data
 price_cents: 20
 is_free_tier: false

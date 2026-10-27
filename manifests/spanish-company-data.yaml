@@ -1,6 +1,6 @@
 slug: spanish-company-data
 name: "Spanish Company Data"
-description: "Look up a Spanish company by CIF/NIF or name in the BORME-based register. Returns identity, status, legal form, current officers and BORME history, across 2.8M+ companies."
+description: "Look up a Spanish company by CIF, NIF or name in BORME-derived records, returning identity, status, current officers and recent publication acts."
 category: company-data
 # OpenMercantil free tier: 200 requests/day without auth. Each lookup costs
 # 2 upstream calls (search + company), so ~100 lookups/day headroom.

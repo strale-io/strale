@@ -3,7 +3,7 @@
 
 slug: web-extract
 name: "Web Page Data Extraction"
-description: "Pull structured data from a web page, rendering JavaScript first, so single-page apps and dynamic content work."
+description: "Read a supported public web page and map its content to requested fields. Returns structured data; blocked pages return an access error."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

@@ -1,10 +1,6 @@
 slug: portuguese-company-data
 name: Portuguese Company Data
-description: >-
-  Look up Portuguese company data via Openapi.com PT-Advanced (Tier-3 vendor aggregator). Accepts Portuguese NIPC
-  (9 digits). Returns name, registration number, status, registered address, registration date, LEI, primary NACE
-  code, last filing date (from balance-sheet data), and last-update timestamp. Directors are not returned at the
-  *-Advanced tier (Italian product line only).
+description: "Look up a Portuguese company by NIPC, returning identity, status, address, industry code and latest filing date where available."
 category: company-data
 cost_class: paid_per_call
 price_cents: 6

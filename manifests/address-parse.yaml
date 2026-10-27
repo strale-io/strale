@@ -3,7 +3,7 @@
 
 slug: address-parse
 name: "Address Parser"
-description: "Split a free-text address from anywhere in the world into street, city, postal code, region and country."
+description: "Split a free-text postal address into street, city, postal code, region and country, with a formatted address and confidence estimate."
 category: data-processing
 cost_class: paid_prepaid
 quota_window: none

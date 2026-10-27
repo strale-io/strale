@@ -1,6 +1,6 @@
 slug: phone-validate
 name: "Phone Validation"
-description: "Validate a phone number in 200+ countries. Returns the E.164 form, country, and whether it is mobile, landline or VoIP."
+description: "Check a phone number's format and numbering-plan rules. Returns its E.164 form, country and available line type without confirming activity."
 category: validation
 cost_class: free_unlimited
 quota_window: none

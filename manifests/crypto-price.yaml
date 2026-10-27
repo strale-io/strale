@@ -3,9 +3,7 @@
 
 slug: crypto-price
 name: Crypto Price
-description: >-
-  Get current cryptocurrency price, market cap, and trends via CoinGecko API. Supports 10,000+ coins. Multiple fiat
-  currencies.
+description: "Currently unavailable. Look up cryptocurrency price, market capitalisation and price changes in a chosen currency."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily

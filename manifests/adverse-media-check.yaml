@@ -1,6 +1,6 @@
 slug: adverse-media-check
 name: "Adverse Media Check"
-description: "Screen a person or company for adverse news across 235,000+ sources. Returns a risk level with its thresholds, FATF-aligned category counts, and the top headlines with source links and dates."
+description: "Search adverse news about a person or company. Returns a risk level, category counts and linked headlines for review."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

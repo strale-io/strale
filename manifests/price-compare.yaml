@@ -3,7 +3,7 @@
 
 slug: price-compare
 name: "Price Comparison"
-description: "Compare a product's price across shops on PriceRunner in Sweden, Norway, Denmark and Finland. Returns the lowest, highest and average price."
+description: "Compare product prices found on public comparison pages in Sweden and Denmark. Returns offers and price statistics."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none

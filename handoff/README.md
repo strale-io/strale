@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-361 files (334 with a recorded intent, 27 without).
+362 files (335 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-public-limitations-copy.md`](_general/from-code/2026-10-26-public-limitations-copy.md) | Rewrite public capability limitations while preserving every stated constraint; orchestrator review, push, PR, merge... |

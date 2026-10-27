@@ -1,10 +1,6 @@
 slug: us-sec-filings-extended
 name: US SEC Filings (Extended)
-description: >-
-  Extended SEC EDGAR filings search via sec-api.io. Full-text search across the EDGAR corpus (10-K,
-  10-Q, 8-K, S-1, proxy, insider Form 4, etc.) by CIK or company name, optionally filtered by form
-  type and date. Supplements the free SEC EDGAR API used by us-company-data with full-text search,
-  cross-form aggregation, and filing-event monitoring.
+description: "Search SEC filings by CIK or company name, with optional filing type and date filters. Returns matching filing records and source links."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none

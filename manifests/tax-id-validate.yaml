@@ -1,6 +1,6 @@
 slug: tax-id-validate
 name: "Tax ID Validation"
-description: "Check tax identification number formats for 40+ countries, including checksums where they exist. Does not check with the tax authority."
+description: "Check tax identification number formats for supported countries. Returns pattern results and normalised input without checking registration or check digits."
 category: validation
 cost_class: free_unlimited
 quota_window: none

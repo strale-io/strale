@@ -1,6 +1,6 @@
 slug: pep-check
 name: "PEP Check"
-description: "Screen a person against politically exposed persons in 230+ territories, aligned with the EU PEP function list and including relatives and close associates. Returns matches with positions held, jurisdictions and sources."
+description: "Screen a person for potential politically exposed person matches, returning positions, countries and record sources where available."
 category: compliance
 cost_class: paid_prepaid
 quota_window: none
