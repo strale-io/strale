@@ -815,8 +815,6 @@ async function handleTasksGet(
     };
 
     if (state === "completed" && txn.output) {
-      const failureMessage = sanitizeFailureReason(txn.error);
-      const failureDetails = recoveryDetails("execution_failed", "", { error: failureMessage });
       result.status.message = {
         role: "agent",
         parts: [
@@ -860,7 +858,9 @@ async function handleTasksGet(
         // form -- 14.3% -- window 2026-05-25 to 2026-08-24. The rail shows no
         // usage yet, so this is a live path that has not been exercised rather
         // than an active leak.
-        parts: [{ type: "text", text: `${failureMessage} ${String(failureDetails.fix ?? failureDetails.next_step)}` }],
+        // The text stays the sanitised failure alone; the advice travels
+        // in metadata.details, as on every other rail.
+        parts: [{ type: "text", text: failureMessage }],
         metadata: { details: failureDetails },
       };
     }
