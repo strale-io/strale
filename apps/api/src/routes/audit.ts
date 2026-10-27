@@ -423,7 +423,7 @@ auditRoute.get("/:transactionId", async (c) => {
   if (expiresAtRaw != null) {
     const parsed = parseInt(expiresAtRaw, 10);
     if (!Number.isFinite(parsed) || String(parsed) !== expiresAtRaw) {
-      return c.json(apiError("invalid_request", "expires_at must be an integer (unix seconds)."), 400);
+      return c.json(apiError("invalid_request", "expires_at must be an integer (unix seconds).", { fix: "Send 'expires_at' as the integer Unix timestamp from the signed audit URL." }), 400);
     }
     expiresAt = parsed;
   }
@@ -449,7 +449,7 @@ auditRoute.get("/:transactionId", async (c) => {
       );
     }
     if (result.reason === "malformed") {
-      return c.json(apiError("invalid_request", "Malformed audit token."), 400);
+      return c.json(apiError("invalid_request", "Malformed audit token.", { fix: "Use the complete 'token' and 'expires_at' query parameters from a freshly issued audit URL." }), 400);
     }
     return c.json(apiError("unauthorized", "Invalid audit token."), 401);
   }

@@ -47,7 +47,7 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
   const q = c.req.query("q")?.trim().slice(0, MAX_KEYWORD_QUERY_CHARS).trim();
   if (!q || q.length < 2) {
     return c.json(
-      apiError("invalid_request", "'q' parameter is required and must be at least 2 characters."),
+      apiError("invalid_request", "'q' parameter is required and must be at least 2 characters.", { fix: "Send the 'q' query parameter as at least 2 characters." }),
       400,
     );
   }
@@ -87,7 +87,7 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || !body.query || typeof body.query !== "string") {
     return c.json(
-      apiError("invalid_request", "'query' is required and must be a string."),
+      apiError("invalid_request", "'query' is required and must be a string.", { fix: "Send 'query' as a string of at least 2 characters within the limit stated in the validation message." }),
       400,
     );
   }
@@ -95,7 +95,7 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
   const query = body.query.trim();
   if (query.length < 2) {
     return c.json(
-      apiError("invalid_request", "'query' must be at least 2 characters."),
+      apiError("invalid_request", "'query' must be at least 2 characters.", { fix: "Send 'query' as a string of at least 2 characters within the limit stated in the validation message." }),
       400,
     );
   }
@@ -104,7 +104,7 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
     assertSuggestQueryLength(query);
   } catch (err) {
     if (err instanceof SuggestQueryTooLongError) {
-      return c.json(apiError("invalid_request", `'query' ${err.message.toLowerCase()}`), 400);
+      return c.json(apiError("invalid_request", `'query' ${err.message.toLowerCase()}`, { fix: "Send 'query' as a string of at least 2 characters within the limit stated in the validation message." }), 400);
     }
     throw err;
   }

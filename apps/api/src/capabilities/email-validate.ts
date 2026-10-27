@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolveMx } from "node:dns/promises";
 
@@ -155,7 +156,7 @@ export async function validateOneEmail(
 registerCapability("email-validate", async (input: CapabilityInput) => {
   const raw = (input.email as string) ?? (input.email_address as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'email' is required. Provide an email address to validate.");
+    throw inputRefusal("'email' is required. Provide an email address to validate.", "email", "Send 'email' as an email address such as person@example.com.");
   }
 
   const result = await validateOneEmail(raw);

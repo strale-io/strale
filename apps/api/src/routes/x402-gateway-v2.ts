@@ -9,6 +9,8 @@
  * Route: /x402/catalog  — discover all available x402 capabilities
  */
 
+import { refusalDetails } from "../lib/capability-refusal.js";
+
 import { Hono } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
@@ -18,7 +20,7 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { hasMissingRequiredCredential } from "../lib/dependency-manifest.js";
-import { apiError } from "../lib/errors.js";
+import { apiError, recoveryDetails } from "../lib/errors.js";
 import {
   assertGuardedAllow,
   CapabilityInvocationRefusedError,
@@ -609,6 +611,7 @@ export function build402(
     JSON.stringify({ x402Version: 1, accepts: [paymentRequirement] }),
   ).toString("base64");
 
+  Object.assign(body, { details: { fix: "Sign a fresh x402 payment matching 'accepts' and resend it in the PAYMENT-SIGNATURE header (or X-PAYMENT for v1)." } });
   return { body, headerPayload, paymentRequirement };
 }
 
@@ -626,16 +629,27 @@ export function build402(
 // failed — retry with backoff instead of mutating the request. `charged` is
 // always false here: these 400s happen after verify but before settle, so
 // the signed authorization expires unused (DEC-14).
-function schemaBadRequest(
+export function schemaBadRequest(
   c: any,
   error: string | undefined,
   inputSchema: Record<string, unknown> | null,
   errorCode: "invalid_request" | "execution_failed" = "invalid_request",
+  refusal?: Record<string, unknown>,
 ) {
   return c.json(
     {
       error,
       error_code: errorCode,
+      details: recoveryDetails(errorCode, "", {
+        ...(errorCode === "invalid_request" ? {
+          fix: `Send a JSON body matching 'input_schema': ${(error ?? "use the declared field types and anyOf/oneOf alternatives").replace(/[.]+\s*$/, "")}.`,
+          ...(Array.isArray(inputSchema?.required) ? { required_fields: inputSchema.required } : {}),
+          ...(inputSchema?.anyOf ? { any_of: inputSchema.anyOf } : {}),
+          ...(inputSchema?.oneOf ? { one_of: inputSchema.oneOf } : {}),
+          docs_url: `${BASE_URL}/x402/catalog`,
+        } : {}),
+        ...refusal,
+      }),
       charged: false,
       input_schema: inputSchema,
       example: generateExampleFromSchema(inputSchema),
@@ -1141,7 +1155,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     if (!live?.isActive || !live.x402Enabled) {
       _solCache.delete(slug);
       return c.json(
-        {
+        { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
           error: "Solution is no longer available via x402. No payment was taken.",
           hint: `${BASE_URL}/x402/catalog`,
         },
@@ -1158,7 +1172,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
           ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
-      { error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
+      { details: { fix: "Choose an enabled slug from GET /x402/catalog and use its x402 URL.", docs_url: `${BASE_URL}/x402/catalog` }, error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
     );
   }
@@ -1176,7 +1190,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
 
     if (!paymentHeader) {
       if (!isX402Configured()) {
-        return c.json({ error: "x402 payments not configured on this server." }, 503);
+        return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured on this server." }, 503);
       }
       const { body } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
@@ -1200,7 +1214,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     }
 
     if (!isX402Configured()) {
-      return c.json({ error: "x402 payments not configured." }, 503);
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured." }, 503);
     }
 
     const solRebuild = build402(
@@ -1256,7 +1270,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         });
       }
       return c.json(
-        { error: "Prior request with this payment header failed.", solution: sol.slug, _meta: { replayed: true } },
+        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "Prior request with this payment header failed.", solution: sol.slug, _meta: { replayed: true } },
         502,
       );
     }
@@ -1273,7 +1287,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // emits its 413 only when the error reaches `c.error`, so a handler that
     // absorbs it defeats the middleware no matter what extractInputs does.
     if ((err as { name?: string })?.name === "BodyLimitError") throw err;
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
+    return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
   }
 
   // Same input-validation guard as the wildcard capability handler. The
@@ -1294,7 +1308,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   });
 
   if (!result) {
-    return c.json({ error: "Solution has no steps configured." }, 503);
+    return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "Solution has no steps configured." }, 503);
   }
 
   // WP4: billability comes from the canonical outcome, not from a predicate
@@ -1356,7 +1370,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     }
 
     return c.json(
-      {
+      { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
         error:
           outcome.failure_class === "gate_tripped"
             ? `Solution could not run: ${outcome.error_message}. No payment was taken.`
@@ -1404,7 +1418,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     }
     if (!settled.valid) {
       return c.json(
-        { error: "Payment settlement failed", detail: settled.error },
+        { details: { retryable: false, fix: "Check the payment status with your wallet before signing a fresh x402 payment matching the current accepts requirements." }, error: "Payment settlement failed", detail: settled.error },
         402,
       );
     }
@@ -1506,7 +1520,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       // lookup, and answer as the catalogue would once it refreshes.
       _capCache.delete(slug);
       return c.json(
-        {
+        { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
           error: "Capability is no longer available via x402. No payment was taken.",
           hint: `${BASE_URL}/x402/catalog`,
         },
@@ -1526,7 +1540,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
           ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
-      { error: "Capability not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
+      { details: { fix: "Choose an enabled slug from GET /x402/catalog and use its x402 URL.", docs_url: `${BASE_URL}/x402/catalog` }, error: "Capability not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
     );
   }
@@ -1552,7 +1566,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
 
     if (!paymentHeader) {
       if (!isX402Configured()) {
-        return c.json({ error: "x402 payments not configured on this server." }, 503);
+        return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured on this server." }, 503);
       }
       const { body } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
@@ -1568,7 +1582,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     }
 
     if (!isX402Configured()) {
-      return c.json({ error: "x402 payments not configured." }, 503);
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured." }, 503);
     }
 
     // Rebuild the same requirement so verify carries the discovery
@@ -1622,7 +1636,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         });
       }
       return c.json(
-        { error: "Prior request with this payment header failed.", capability: cap.slug, _meta: { replayed: true } },
+        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "Prior request with this payment header failed.", capability: cap.slug, _meta: { replayed: true } },
         502,
       );
     }
@@ -1631,7 +1645,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // Method check (after verify — crawler hits with any method)
   if (c.req.method === "GET" && !isSimpleSchema(cap.inputSchema)) {
     return c.json(
-      { error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
+      { details: { fix: "Send a POST request with Content-Type: application/json and the tool parameters in the JSON body." }, error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
       405,
     );
   }
@@ -1647,7 +1661,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // emits its 413 only when the error reaches `c.error`, so a handler that
     // absorbs it defeats the middleware no matter what extractInputs does.
     if ((err as { name?: string })?.name === "BodyLimitError") throw err;
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
+    return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
   }
 
   // validateX402Input handles classic `required: [...]`, anyOf/oneOf
@@ -1671,7 +1685,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // Execute capability
   const executor = getExecutor(cap.slug);
   if (!executor) {
-    return c.json({ error: "Capability executor unavailable. Try again later." }, 503);
+    return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "Capability executor unavailable. Try again later." }, 503);
   }
 
   // Phase A0b dispatcher gate. x402 callers are paying via USDC settlement,
@@ -1688,7 +1702,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       err instanceof CapabilityNotClassifiedError ||
       err instanceof BudgetExhaustedError
     ) {
-      return c.json({ error: err.message }, 503);
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: err.message }, 503);
     }
     throw err;
   }
@@ -1787,7 +1801,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // the agent this may be an upstream failure, not necessarily bad input
     // — so it can back off instead of mutating a valid request and paying
     // to retry it.
-    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed");
+    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed", refusalDetails(err));
   }
 
   const latencyMs = Date.now() - startMs;
@@ -1828,7 +1842,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     }
     if (!settled.valid) {
       return c.json(
-        { error: "Payment settlement failed", detail: settled.error },
+        { details: { retryable: false, fix: "Check the payment status with your wallet before signing a fresh x402 payment matching the current accepts requirements." }, error: "Payment settlement failed", detail: settled.error },
         402,
       );
     }

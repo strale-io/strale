@@ -1,3 +1,4 @@
+import { refusalDetails } from "../lib/capability-refusal.js";
 import { Hono, type Context } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
@@ -341,6 +342,7 @@ async function anonymousPaidRefusal(
   return c.json(
     {
       error_code: "unauthorized",
+      details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header or choose a free 'capability_slug' from GET /v1/capabilities." },
       message:
         "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
       free_capabilities: freeSlugs,
@@ -655,7 +657,7 @@ doRoute.post(
   const body = await c.req.json().catch(() => null);
   if (!body) {
     return c.json(
-      apiError("invalid_request", "Request body is required."),
+      apiError("invalid_request", "Request body is required.", { fix: "Send a JSON object in the request body with Content-Type: application/json." }),
       400,
     );
   }
@@ -681,7 +683,7 @@ doRoute.post(
     return c.json(
       apiError(
         "invalid_request",
-        "Either 'task' or 'capability_slug' is required.",
+        "Either 'task' or 'capability_slug' is required.", { fix: "Send either 'task' describing the work or 'capability_slug' from GET /v1/capabilities." },
       ),
       400,
     );
@@ -697,7 +699,7 @@ doRoute.post(
       return c.json(
         apiError(
           "invalid_request",
-          "'max_price_cents' is required and must be a positive integer.",
+          "'max_price_cents' is required and must be a positive integer.", { fix: "Send 'max_price_cents' as a positive integer number of cents." },
         ),
         400,
       );
@@ -708,7 +710,7 @@ doRoute.post(
         apiError(
           "invalid_request",
           `'max_price_cents' cannot exceed ${MAX_PRICE_CAP_CENTS} (€${MAX_PRICE_CAP_CENTS / 100}).`,
-          { max_allowed: MAX_PRICE_CAP_CENTS },
+          { fix: `Set 'max_price_cents' to an integer between 1 and ${MAX_PRICE_CAP_CENTS}.`, max_allowed: MAX_PRICE_CAP_CENTS },
         ),
         400,
       );
@@ -731,7 +733,7 @@ doRoute.post(
     return c.json(
       apiError(
         "invalid_request",
-        "Idempotency-Key must be 255 characters or fewer.",
+        "Idempotency-Key must be 255 characters or fewer.", { fix: "Shorten the Idempotency-Key header to 255 characters or fewer." },
       ),
       400,
     );
@@ -878,6 +880,7 @@ doRoute.post(
         if (!verification.valid || !verification.verified) {
           return c.json({
             error_code: "payment_failed",
+            details: { retryable: false, fix: "Fetch fresh payment requirements for this capability and send a matching signed x402 payment in the PAYMENT-SIGNATURE header (or X-PAYMENT for v1)." },
             message: verification.error ?? "x402 payment verification failed",
           }, 402);
         }
@@ -948,6 +951,7 @@ doRoute.post(
       const freeSlugs = await getFreeTierSlugs(db);
       return c.json({
         error_code: "unauthorized",
+      details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header or choose a free 'capability_slug' from GET /v1/capabilities." },
         message: "No free capability matched your request. Sign up at strale.dev/signup for full access with €2 free credits.",
         free_capabilities: freeSlugs,
         hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
@@ -1177,7 +1181,7 @@ doRoute.post(
       apiError(
         "invalid_request",
         `It looks like you passed the /v1/do request body as "inputs". The "inputs" field should contain the capability's parameters: { ${expectedFields.map((f) => `"${f}": ...`).join(", ")} }`,
-        {
+        { fix: `Move the request envelope outside 'inputs' and send tool parameters in 'inputs': ${expectedFields.join(", ")}.`,
           confused_keys: confusedKeys,
           expected_fields: expectedFields,
           example: expectedFields.length > 0
@@ -1221,7 +1225,7 @@ doRoute.post(
         apiError(
           "invalid_request",
           `Missing required input fields: ${missingFields.join(", ")}`,
-          {
+          { fix: `Send the missing fields inside 'inputs': ${missingFields.join(", ")}.`,
             missing_fields: missingFields,
             expected_fields: Object.keys(inputSchema.properties),
             ...(hint ? { hint } : {}),
@@ -1279,7 +1283,7 @@ doRoute.post(
         apiError(
           "invalid_request",
           groupCheck.error,
-          {
+          { fix: `Send 'inputs' satisfying the required field group: ${groupCheck.error}.`,
             expected_fields: inputSchema?.properties ? Object.keys(inputSchema.properties) : [],
             input_schema: inputSchema ?? undefined,
             ...(groupHint ? { hint: groupHint } : {}),
@@ -1342,7 +1346,7 @@ doRoute.post(
       return c.json(
         apiError("rate_limited",
           `Free-tier daily limit reached (${cap} calls/day). Sign up at strale.dev/signup for unlimited access.`,
-          { retry_after_seconds: retryAfterSeconds, limit: cap },
+          { retry_after_seconds: retryAfterSeconds, limit: cap, fix: `Retry after ${nextMidnight.toISOString()}, or sign up at https://strale.dev/signup for €2 of free credits and send an API key in the Authorization: Bearer <api_key> header.` },
         ),
         429,
       );
@@ -1643,6 +1647,7 @@ async function executeFreeTier(
           {
             error_code: "payment_failed",
             message: "x402 settlement failed after successful execution.",
+            details: { retryable: false, fix: "Check payment status in your wallet before signing a fresh x402 payment authorization." },
             detail: settled.error,
           },
           402,
@@ -1788,7 +1793,7 @@ async function executeFreeTier(
       ...apiError(
         "execution_failed",
         "The capability failed to execute.",
-        { error: sanitizeFailureReason(errorMessage) },
+        { error: sanitizeFailureReason(errorMessage), ...refusalDetails(err) },
       ),
       free_tier: true,
       upgrade: buildUpgradeBlock(capability.slug, executionInput),
@@ -1979,6 +1984,7 @@ async function executeFreeTierAuthenticated(
         {
           transaction_id: txnRecord.id,
           error: sanitizeFailureReason(errorMessage),
+          ...refusalDetails(err),
           wallet_balance_cents: wallet?.balanceCents ?? 0,
         },
       ),
@@ -2044,6 +2050,7 @@ async function executeSync(
          * and a refusal is indistinguishable from a fault once flattened.
          */
         countsAgainstCapability: boolean;
+        refusal?: Record<string, unknown>;
       };
 
   // Cert-audit Y-5: catch postgres timeout codes from the wallet tx so
@@ -2243,6 +2250,7 @@ async function executeSync(
         // that records the breaker failure sees only the message string, and a
         // refusal is indistinguishable from a real fault once flattened to text.
         countsAgainstCapability: shouldCountAgainstCapability(err),
+        refusal: refusalDetails(err),
       };
     }
     });
@@ -2368,6 +2376,7 @@ async function executeSync(
         {
           transaction_id: result.transactionId,
           error: sanitizeFailureReason(result.error),
+          ...result.refusal,
           wallet_balance_cents: result.balanceAfter,
         },
       ),

@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
 
@@ -26,7 +27,7 @@ const DNSBLS = [
 
 registerCapability("email-deliverability-check", async (input: CapabilityInput) => {
   const raw = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
-  if (!raw) throw new Error("'domain' is required. Provide a domain to check email deliverability.");
+  if (!raw) throw inputRefusal("'domain' is required. Provide a domain to check email deliverability.", "domain", "Send 'domain' as a DNS hostname such as example.com.");
 
   // Clean domain
   const domain = raw

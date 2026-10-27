@@ -1,3 +1,4 @@
+import { recoveryDetails } from "../lib/errors.js";
 import { Hono } from "hono";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -103,6 +104,7 @@ transactionsRoute.get(
         input: row.input,
         output: row.output,
         error: row.error ? sanitizeFailureReason(row.error) : null,
+        ...(row.error ? { details: recoveryDetails("execution_failed", "", { error: sanitizeFailureReason(row.error) }) } : {}),
         price_cents: row.price_cents,
         latency_ms: row.latency_ms,
         provenance: row.provenance,
@@ -418,7 +420,7 @@ transactionsRoute.post(
         return c.json(
           apiError(
             "invalid_request",
-            "expires_in_days must be an integer between 1 and 365.",
+            "expires_in_days must be an integer between 1 and 365.", { fix: "Send 'expires_in_days' as an integer between 1 and 365." },
           ),
           400,
         );

@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
@@ -9,7 +10,7 @@ import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim();
-  if (!domain) throw new Error("'domain' is required.");
+  if (!domain) throw inputRefusal("'domain' is required.", "domain", "Send 'domain' as a DNS hostname such as example.com.");
 
   const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   const fullUrl = `https://${cleanDomain}`;

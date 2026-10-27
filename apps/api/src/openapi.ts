@@ -10,7 +10,24 @@ const errorSchema = {
   properties: {
     error_code: { type: "string" as const },
     message: { type: "string" as const },
-    details: { type: "object" as const, description: "Key cap refusals (HTTP 429: key_hourly_cap_exceeded or key_total_cap_exceeded) include retryable: false, spent_cents, requested_cents and limit_cents. Ask the owner to raise the limit using the primary key, or use another key." },
+    details: {
+      type: "object" as const,
+      description: "Additive recovery guidance; stable error_code and HTTP status are unchanged. Caller-fixable errors include fix. Service failures include retryable and next_step. Key caps are not automatically retryable.",
+      additionalProperties: true,
+      properties: {
+        fix: { type: "string", minLength: 1, description: "One imperative sentence naming the field, limit or next step to correct before retrying." },
+        field: { type: "string", description: "Input field to correct, when known." },
+        retryable: { type: "boolean", description: "Whether retrying unchanged input after backoff can help; false means an explicit change is needed." },
+        next_step: { type: "string", description: "Safe next step for a failure outside the caller's control." },
+        retry_after_seconds: { type: "integer", minimum: 0 },
+        required_fields: { type: "array", items: { type: "string" }, description: "Only fields actually required by the failed constraint; optional fields are not inferred as required." },
+        any_of: { type: "array", items: { type: "object", additionalProperties: true }, description: "Alternative input-schema groups; at least one must match." },
+        one_of: { type: "array", items: { type: "object", additionalProperties: true }, description: "Alternative input-schema groups; exactly one must match." },
+        min_topup_cents: { type: "integer", minimum: 0 },
+        docs_url: { type: "string", format: "uri" },
+        spent_cents: { type: "integer" }, requested_cents: { type: "integer" }, limit_cents: { type: "integer" },
+      },
+    },
   },
   required: ["error_code", "message"],
 };

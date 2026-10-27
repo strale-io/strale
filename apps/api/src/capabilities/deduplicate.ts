@@ -1,9 +1,10 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("deduplicate", async (input: CapabilityInput) => {
   const data = input.data ?? input.items;
-  if (!data) throw new Error("'data' is required. Provide a JSON array of objects.");
+  if (!data) throw inputRefusal("'data' is required. Provide a JSON array of objects.", "data", "Send 'data' as a JSON array of objects.");
 
   let rows: Record<string, unknown>[];
   if (typeof data === "string") {
@@ -11,7 +12,7 @@ registerCapability("deduplicate", async (input: CapabilityInput) => {
   } else if (Array.isArray(data)) {
     rows = data as Record<string, unknown>[];
   } else {
-    throw new Error("'data' must be a JSON array of objects.");
+    throw inputRefusal("'data' must be a JSON array of objects.", "data", "Send 'data' as a JSON array of objects.");
   }
 
   if (!Array.isArray(rows) || rows.length === 0) {

@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { fetchNtaCorporations, mapNtaCorporation, ntaError, NTA_ATTRIBUTION, NTA_SOURCE, validCorporateNumber } from "../lib/nta-corporate.js";
@@ -7,20 +8,20 @@ registerCapability("japanese-company-data", async (input: CapabilityInput) => {
   // contract and the company_name/task aliases without LLM name resolution.
   const raw = input.corporate_number ?? input.company_name ?? input.task;
   if (typeof raw !== "string" || [...raw.trim()].length < 2) {
-    throw Object.assign(new CapabilityRefusalError("'corporate_number' or 'company_name' must be a corporate number or a name of at least 2 characters."), { error_code: "invalid_request" });
+    throw Object.assign(inputRefusal("'corporate_number' or 'company_name' must be a corporate number or a name of at least 2 characters.", "corporate_number", "Send 'corporate_number' as 13 digits or 'company_name' as at least 2 characters."), { error_code: "invalid_request" });
   }
   const query = raw.normalize("NFKC").trim();
   const numbers = [...new Set(query.match(/(?<!\d)\d{13}(?!\d)/g) ?? [])];
   if (numbers.length > 1) {
-    throw Object.assign(new CapabilityRefusalError("Ambiguous corporate numbers: provide a single 13-digit corporate number."), { error_code: "invalid_request" });
+    throw Object.assign(inputRefusal("Ambiguous corporate numbers: provide a single 13-digit corporate number.", "corporate_number", "Send a single 13-digit 'corporate_number'."), { error_code: "invalid_request" });
   }
   const compact = numbers[0] ?? query.replace(/[\s.\-\u2010\u2011\u2012\u2013\u2212]/g, "").replace(/^T(?=\d{13}$)/i, "");
   const byNumber = /^\d+$/.test(compact);
   if (byNumber && !validCorporateNumber(compact)) {
-    throw Object.assign(new CapabilityRefusalError("'corporate_number' must be 13 digits with a valid NTA check digit."), { error_code: "invalid_request" });
+    throw Object.assign(inputRefusal("'corporate_number' must be 13 digits with a valid NTA check digit.", "corporate_number", "Send 'corporate_number' as 13 digits with a valid NTA check digit."), { error_code: "invalid_request" });
   }
   if (!byNumber && [...query].length > 150) {
-    throw Object.assign(new CapabilityRefusalError("'company_name' must be at most 150 characters."), { error_code: "invalid_request" });
+    throw Object.assign(inputRefusal("'company_name' must be at most 150 characters.", "company_name", "Send 'company_name' as a registered company name between 2 and 150 characters."), { error_code: "invalid_request" });
   }
   const result = await fetchNtaCorporations(byNumber ? compact : query, byNumber);
   if (result.count === 0) throw ntaError("not_found", "No Japanese company found. Check the number or use the registered Japanese or English name.");

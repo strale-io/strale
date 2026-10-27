@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { promises as dns } from "node:dns";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
@@ -108,19 +109,19 @@ async function resolveDmarc(domain: string): Promise<{
 registerCapability("email-auth-check", async (input: CapabilityInput) => {
   for (const k of ["domain", "email", "task", "dkim_selector"] as const) {
     if (input[k] !== undefined && typeof input[k] !== "string") {
-      throw new Error(`'${k}' must be a string. Received ${typeof input[k]}.`);
+      throw inputRefusal(`'${k}' must be a string. Received ${typeof input[k]}.`, k, k === "dkim_selector" ? "Send 'dkim_selector' as a DKIM selector string such as default." : k === "email" ? "Send 'email' as an email address such as person@example.com." : k === "task" ? "Send 'task' as a domain name or email address string." : "Send 'domain' as a DNS hostname string such as example.com.");
     }
   }
   const raw = ((input.domain as string) ?? (input.email as string) ?? (input.task as string) ?? "").trim().toLowerCase();
-  if (!raw) throw new Error("'domain' is required (e.g. example.com). An email address is also accepted.");
+  if (!raw) throw inputRefusal("'domain' is required (e.g. example.com). An email address is also accepted.", "domain", "Send 'domain' as a DNS hostname such as example.com.");
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(raw)) {
-    throw new Error("IP addresses have no email-authentication DNS records — provide a domain name.");
+    throw inputRefusal("IP addresses have no email-authentication DNS records — provide a domain name.", "domain", "Send 'domain' as a DNS hostname rather than an IP address.");
   }
 
   // Accept a full email address and take its domain.
   const domain = raw.includes("@") ? raw.split("@").pop()!.trim() : raw.replace(/^https?:\/\//, "").split("/")[0];
   if (!DOMAIN_RE.test(domain)) {
-    throw new Error(`'${domain}' is not a valid domain name.`);
+    throw inputRefusal(`'${domain}' is not a valid domain name.`, "domain", "Send 'domain' as a valid DNS hostname such as example.com.");
   }
 
   const dkimSelector = ((input.dkim_selector as string) ?? "").trim();

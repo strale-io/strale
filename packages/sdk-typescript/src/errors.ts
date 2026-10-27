@@ -8,6 +8,9 @@ export class StraleError extends Error {
   readonly errorCode: ErrorCode;
   readonly statusCode: number;
   readonly details?: Record<string, unknown>;
+  readonly fix?: string;
+  readonly retryable?: boolean;
+  readonly nextStep?: string;
 
   constructor(
     errorCode: ErrorCode,
@@ -20,6 +23,9 @@ export class StraleError extends Error {
     this.errorCode = errorCode;
     this.statusCode = statusCode;
     this.details = details;
+    this.fix = typeof details?.fix === "string" ? details.fix : undefined;
+    this.retryable = typeof details?.retryable === "boolean" ? details.retryable : undefined;
+    this.nextStep = typeof details?.next_step === "string" ? details.next_step : undefined;
   }
 }
 

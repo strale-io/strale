@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -6,7 +7,7 @@ import { extractJsonWithLlm } from "./lib/llm-extract.js";
 registerCapability("address-parse", async (input: CapabilityInput) => {
   const address = ((input.address as string) ?? (input.text as string) ?? (input.task as string) ?? "").trim();
   if (!address) {
-    throw new Error("'address' is required. Provide an address string to parse.");
+    throw inputRefusal("'address' is required. Provide an address string to parse.", "address", "Send 'address' as a non-empty postal address string.");
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

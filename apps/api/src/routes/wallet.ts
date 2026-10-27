@@ -52,7 +52,7 @@ walletRoute.post("/topup", async (c) => {
       apiError(
         "invalid_request",
         `'amount_cents' must be an integer between ${MIN_TOPUP_CENTS} (€${MIN_TOPUP_CENTS / 100}) and ${MAX_TOPUP_CENTS} (€${MAX_TOPUP_CENTS / 100}).`,
-        {
+        { fix: `Send 'amount_cents' as an integer between ${MIN_TOPUP_CENTS} and ${MAX_TOPUP_CENTS}.`, min_topup_cents: MIN_TOPUP_CENTS,
           min_amount_cents: MIN_TOPUP_CENTS,
           max_amount_cents: MAX_TOPUP_CENTS,
           suggested_amounts: SUGGESTED_AMOUNTS,

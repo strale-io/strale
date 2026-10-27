@@ -11,12 +11,16 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - siren
+  anyOf:
+    - required: [siren]
+    - required: [company_name]
   properties:
     siren:
       type: string
-      description: SIREN (9 digits), SIRET (14 digits), or company name
+      description: SIREN (9 digits) or SIRET (14 digits); company names are also accepted for compatibility
+    company_name:
+      type: string
+      description: Registered company name
 output_schema:
   type: object
   example:

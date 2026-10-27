@@ -1,8 +1,9 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 registerCapability("csv-to-json", async (input: CapabilityInput) => {
   const csvString = ((input.csv_string as string) ?? (input.csv as string) ?? (input.task as string) ?? "").trim();
-  if (!csvString) throw new Error("'csv_string' is required.");
+  if (!csvString) throw inputRefusal("'csv_string' is required.", "csv_string", "Send 'csv_string' as a non-empty CSV string.");
 
   const hasHeader = (input.has_header as boolean) ?? true;
   const explicitDelimiter = (input.delimiter as string) ?? null;
@@ -21,7 +22,7 @@ registerCapability("csv-to-json", async (input: CapabilityInput) => {
   }
 
   const lines = csvString.split("\n").map((l) => l.trim()).filter(Boolean);
-  if (lines.length === 0) throw new Error("CSV is empty.");
+  if (lines.length === 0) throw inputRefusal("CSV is empty.", "csv_string", "Send 'csv_string' with at least one non-empty row.");
 
   const parseLine = (line: string): string[] => {
     const result: string[] = [];

@@ -9,6 +9,9 @@
  * pattern as the MCP server.
  */
 
+import type { ErrorCode } from "../lib/errors.js";
+import { recoveryDetails } from "../lib/errors.js";
+
 import { Hono } from "hono";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { X402_PAYABLE_LIFECYCLE_STATES } from "../lib/x402-eligibility.js";
@@ -431,7 +434,7 @@ a2aRoute.post("/", async (c) => {
     return c.json(
       {
         jsonrpc: "2.0",
-        error: { code: -32600, message: "Invalid JSON-RPC request" },
+        error: { data: { details: {"fix":"Send a JSON object with jsonrpc set to \"2.0\", an id, a supported method and params."} }, code: -32600, message: "Invalid JSON-RPC request" },
         id: body?.id ?? null,
       },
       400,
@@ -450,7 +453,7 @@ a2aRoute.post("/", async (c) => {
     case "tasks/cancel":
       return c.json({
         jsonrpc: "2.0",
-        error: {
+        error: { data: { details: {"fix":"Use the message/send or tasks/get method; tasks/cancel is not supported."} },
           code: -32601,
           message:
             "tasks/cancel is not supported. Strale capabilities are atomic operations.",
@@ -461,7 +464,7 @@ a2aRoute.post("/", async (c) => {
       return c.json(
         {
           jsonrpc: "2.0",
-          error: {
+          error: { data: { details: {"fix":"Use the message/send or tasks/get method; tasks/cancel is not supported."} },
             code: -32601,
             message: `Method '${method}' not found. Supported: message/send, tasks/get`,
           },
@@ -488,7 +491,7 @@ async function handleMessageSend(
   if (!message || !message.parts || !Array.isArray(message.parts)) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"fix":"Send params.message.parts as an array of text or data parts."} },
         code: -32602,
         message: "Invalid params: message with parts array is required",
       },
@@ -517,7 +520,7 @@ async function handleMessageSend(
   if (!skillId && task && task.length > MAX_SUGGEST_QUERY_CHARS) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"fix":"Shorten the text part to the limit in the message or send params.skillId explicitly."} },
         code: -32602,
         message:
           `Invalid params: text part must be under ${MAX_SUGGEST_QUERY_CHARS} characters ` +
@@ -547,6 +550,7 @@ async function handleMessageSend(
         id: `task-${Date.now()}`,
         status: {
           state: "failed",
+          details: { fix: "Send params.skillId from the agent card skills list or a more specific text part in params.message.parts." },
           message: {
             role: "agent",
             parts: [{
@@ -640,6 +644,8 @@ async function handleMessageSend(
 
       // Helpful message for unauthenticated users hitting paid capabilities
       let helpText = String(errorMsg);
+      const fix = (data.details as Record<string, unknown> | undefined)?.fix;
+      if (typeof fix === "string") helpText += ` ${fix}`;
       if (errorCode === "unauthorized" && !authHeader) {
         helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, get an API key with €2 free credits at https://strale.dev";
       }
@@ -650,6 +656,7 @@ async function handleMessageSend(
           id: `task-${Date.now()}`,
           status: {
             state,
+            details: data.details ?? recoveryDetails(errorCode as ErrorCode, String(errorMsg)),
             message: {
               role: "agent",
               parts: [{ kind: "text", text: helpText }],
@@ -713,7 +720,7 @@ async function handleMessageSend(
     );
     return c.json({
       jsonrpc: "2.0",
-      error: { code: -32603, message: "Internal error processing request." },
+      error: { data: { details: {"retryable":true,"next_step":"Retry with exponential backoff; contact support if the failure continues."} }, code: -32603, message: "Internal error processing request." },
       id,
     });
   }
@@ -736,7 +743,7 @@ async function handleTasksGet(
   if (!taskId) {
     return c.json({
       jsonrpc: "2.0",
-      error: { code: -32602, message: "Invalid params: id is required" },
+      error: { data: { details: {"fix":"Send params.id as the transaction_id returned by message/send."} }, code: -32602, message: "Invalid params: id is required" },
       id,
     });
   }
@@ -746,7 +753,7 @@ async function handleTasksGet(
   if (!authHeader?.startsWith("Bearer ")) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"fix":"Send a valid API key in the Authorization: Bearer <api_key> header."} },
         code: -32000,
         message:
           "Authentication required. Pass Authorization: Bearer sk_live_... header.",
@@ -761,7 +768,7 @@ async function handleTasksGet(
   if (!user) {
     return c.json({
       jsonrpc: "2.0",
-      error: { code: -32000, message: "Invalid API key." },
+      error: { data: { details: {"fix":"Send a valid API key in the Authorization: Bearer <api_key> header."} }, code: -32000, message: "Invalid API key." },
       id,
     });
   }
@@ -778,7 +785,7 @@ async function handleTasksGet(
     if (!txn) {
       return c.json({
         jsonrpc: "2.0",
-        error: { code: -32602, message: `Task '${taskId}' not found` },
+        error: { data: { details: {"fix":"Send params.id as a transaction_id belonging to the authenticated account."} }, code: -32602, message: `Task '${taskId}' not found` },
         id,
       });
     }
@@ -808,6 +815,8 @@ async function handleTasksGet(
     };
 
     if (state === "completed" && txn.output) {
+      const failureMessage = sanitizeFailureReason(txn.error);
+      const failureDetails = recoveryDetails("execution_failed", "", { error: failureMessage });
       result.status.message = {
         role: "agent",
         parts: [
@@ -833,6 +842,8 @@ async function handleTasksGet(
     }
 
     if (state === "failed" && txn.error) {
+      const failureMessage = sanitizeFailureReason(txn.error);
+      const failureDetails = recoveryDetails("execution_failed", "", { error: failureMessage });
       result.status.message = {
         role: "agent",
         // SANITISED, like every other customer-facing error surface.
@@ -849,7 +860,8 @@ async function handleTasksGet(
         // form -- 14.3% -- window 2026-05-25 to 2026-08-24. The rail shows no
         // usage yet, so this is a live path that has not been exercised rather
         // than an active leak.
-        parts: [{ type: "text", text: sanitizeFailureReason(txn.error) }],
+        parts: [{ type: "text", text: `${failureMessage} ${String(failureDetails.fix ?? failureDetails.next_step)}` }],
+        metadata: { details: failureDetails },
       };
     }
 
@@ -861,7 +873,7 @@ async function handleTasksGet(
     );
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"retryable":true,"next_step":"Retry with exponential backoff; contact support if the failure continues."} },
         code: -32603,
         message: "Internal error processing request.",
       },

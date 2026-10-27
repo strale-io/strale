@@ -1,8 +1,9 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 registerCapability("csv-clean", async (input: CapabilityInput) => {
   const raw = ((input.csv as string) ?? (input.data as string) ?? (input.task as string) ?? "").trim();
-  if (!raw) throw new Error("'csv' is required. Provide a CSV string to clean.");
+  if (!raw) throw inputRefusal("'csv' is required. Provide a CSV string to clean.", "csv", "Send 'csv' as a CSV string with at least one non-empty row.");
 
   const issuesFixed: string[] = [];
 
@@ -26,7 +27,7 @@ registerCapability("csv-clean", async (input: CapabilityInput) => {
   // Parse rows respecting quoted fields
   const rows = parseCSV(csv, delimiter);
 
-  if (rows.length === 0) throw new Error("CSV has no data rows.");
+  if (rows.length === 0) throw inputRefusal("CSV has no data rows.", "csv", "Send 'csv' with at least one non-empty CSV row.");
 
   // Trim whitespace in all fields
   let trimmedCount = 0;
