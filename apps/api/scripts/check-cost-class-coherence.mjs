@@ -87,6 +87,7 @@
 //   0 — clean
 //   1 — at least one capability has a coherence violation.
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import yaml from "js-yaml";
@@ -228,7 +229,8 @@ function readLibSourceCached(libPath) {
 
 const violations = [];
 
-for (const manifestFile of readdirSync(MANIFESTS_DIR)) {
+let classifiedExecutors = 0;
+for (const manifestFile of requireInputs(readdirSync(MANIFESTS_DIR).filter((name) => name.endsWith(".yaml")), "cost class: manifests/*.yaml")) {
   if (!manifestFile.endsWith(".yaml")) continue;
   if (manifestFile === "CLASSIFICATION.md") continue;
 
@@ -248,6 +250,7 @@ for (const manifestFile of readdirSync(MANIFESTS_DIR)) {
   if (!existsSync(executorPath)) continue;
 
   const executorSource = readFileSync(executorPath, "utf8");
+  classifiedExecutors++;
 
   for (const rule of RULES) {
     if (!executorSource.includes(rule.envVar)) continue;
@@ -324,6 +327,8 @@ for (const manifestFile of readdirSync(MANIFESTS_DIR)) {
     });
   }
 }
+
+requireInputs(classifiedExecutors, "cost class: classified manifests with executor source");
 
 if (violations.length === 0) {
   console.log("[lint] cost_class coherence: all classified capabilities OK.");

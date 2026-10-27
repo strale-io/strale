@@ -18,6 +18,7 @@
  * Exit 0 = clean, exit 1 = at least one package fails the contract.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -141,7 +142,7 @@ try {
 }
 
 let skippedDeprecated = 0;
-for (const pkg of packages) {
+for (const pkg of requireInputs(packages.filter((pkg) => FRAMEWORK_RULES.some((rule) => rule.dirMatch.test(pkg))), "framework packages: matching package directories")) {
   const rule = FRAMEWORK_RULES.find((r) => r.dirMatch.test(pkg));
   if (!rule) continue;
   const pkgDir = join(ROOT, pkg);

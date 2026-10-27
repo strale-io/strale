@@ -192,7 +192,7 @@ test("wired as hooks: a commit and a clean merge both land a fresh index (plante
   try {
     // Install the real hook scripts with the regeneration script and the
     // generator it imports, but a stub handoff gate, so only regeneration runs.
-    for (const file of ["scripts/generate-archive-index.mjs", "scripts/handoff/regenerate-indexes.mjs"]) {
+    for (const file of ["scripts/generate-archive-index.mjs", "scripts/require-inputs.mjs", "scripts/handoff/regenerate-indexes.mjs"]) {
       mkdirSync(dirname(join(root, file)), { recursive: true });
       copyFileSync(join(realRoot, file), join(root, file));
     }

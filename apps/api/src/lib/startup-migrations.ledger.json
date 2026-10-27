@@ -957,6 +957,14 @@
         "users.signup_src"
       ],
       "sha256": "0aa520b14b89953bf2e83734fb0bf49e3ea492cd1918aca49675bce38c0c55db"
+    },
+    {
+      "id": "M070",
+      "function": "runMigration0127_integrityHashIndex",
+      "title": "repair integrity index after schema bootstrap",
+      "added": "2026-10-27",
+      "columns_written": [],
+      "sha256": "e9117fc0d93fcbc81780f5a51bef57ad5ab4ff670abdd9f487cbec8c160aa36e"
     }
   ],
   "known_overlaps": [

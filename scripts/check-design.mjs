@@ -4,12 +4,19 @@
 // finding; warnings never fail the build.
 //
 // Usage: node scripts/check-design.mjs [--json]
-import { checkAllDesign, repoRootFrom, GENERATED_PATH } from "./design-lib.mjs";
+import { requireInputs } from "./require-inputs.mjs";
+import { checkAllDesign, lintTargets, repoRootFrom, GENERATED_PATH } from "./design-lib.mjs";
 import { generate } from "./generate-design-tokens.mjs";
 
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 const root = repoRootFrom(import.meta.url);
+requireInputs(lintTargets(root).filter((file) => existsSync(resolve(root, file))), "design: existing lint targets");
 const json = process.argv.includes("--json");
 const { failures, warnings, tokenFileCount, lintCurrentCount, lintRawCount, lintAllowlistCount } = checkAllDesign(root);
+
+requireInputs(tokenFileCount, "design: token files");
 
 const genResult = generate(root, { check: true });
 if (genResult.stale) {

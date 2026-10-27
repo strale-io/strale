@@ -20,6 +20,7 @@
  * apps/api/coverage-matrix/README.md for the canonical-source contract.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,9 +70,9 @@ function main() {
   // Convention is .yaml only; .yml would fail filename-alignment anyway
   // (the validator builds expectedFilename with .yaml). Filter the same way
   // the summary script does.
-  const files = readdirSync(matrixDir)
+  const files = requireInputs(readdirSync(matrixDir)
     .filter((f) => f.endsWith(".yaml"))
-    .sort();
+    .sort(), "coverage matrix: *.yaml");
 
   let violations = 0;
   for (const file of files) {

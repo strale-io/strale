@@ -24,6 +24,7 @@
  * Wired into .github/workflows/ci.yml.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,7 +68,7 @@ function toPosix(p) {
 const allowlist = JSON.parse(readFileSync(ALLOWLIST_PATH, "utf-8"));
 
 const currentCounts = {};
-for (const full of walk(SRC_ROOT)) {
+for (const full of requireInputs(walk(SRC_ROOT), "console guard: source files")) {
   const rel = toPosix(relative(REPO_ROOT, full));
   const count = countInFile(full);
   if (count > 0) currentCounts[rel] = count;

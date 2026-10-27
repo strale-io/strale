@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-375 files (348 with a recorded intent, 27 without).
+376 files (349 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -27,6 +27,7 @@
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-distribution-strategy.md`](_general/from-code/2026-10-27-distribution-strategy.md) | Answer Petter's question "how does Strale get distribution fastest and most cheaply" with an evidence-based report, a... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-distribution-hygiene.md`](_general/from-code/2026-10-27-distribution-hygiene.md) | Implement the in-repository D0 attribution and D1 distribution-copy hygiene work; leave the reviewed changes uncommit... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-codebase-architecture-review.md`](_general/from-code/2026-10-27-codebase-architecture-review.md) | independent, read-only review of Strale's code and architecture for Petter, delivered as research (`docs/research/202... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ci-boot-smoke.md`](_general/from-code/2026-10-27-ci-boot-smoke.md) | Make a schema-bootstrapped fresh database bootable, exercise the production image and entry point in CI, and reject e... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-actionable-error-messages.md`](_general/from-code/2026-10-27-actionable-error-messages.md) | Build additive error recovery guidance for autonomous callers, preserve stable codes and statuses, and hand the verif... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-public-limitations-copy.md`](_general/from-code/2026-10-26-public-limitations-copy.md) | Rewrite public capability limitations while preserving every stated constraint; orchestrator review, push, PR, merge... |
