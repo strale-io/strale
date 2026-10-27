@@ -1,16 +1,24 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, appendFileSync, readdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export function parseSlugs(value) {
-  const slugs = value.split(",").map((s) => s.trim());
+export function parseSlugs(value, mode = "onboard", manifestDirectory = "manifests") {
+  const limit = mode === "limitations" ? 1000 : 50;
+  // Expand from the main-only workflow checkout, keeping the API single-slug
+  // lock and budget unchanged. The API still validates each deployed manifest.
+  const slugs = mode === "limitations" && value.trim() === "all"
+    ? readdirSync(manifestDirectory, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".yaml"))
+        .map((entry) => entry.name.slice(0, -5)).sort()
+    : value.split(",").map((s) => s.trim());
   if (
     !slugs.length ||
-    slugs.length > 50 ||
+    slugs.length > limit ||
+    slugs.includes("all") ||
     slugs.some((s) => s.length > 100 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s))
   ) {
     throw new Error(
-      "Enter between 1 and 50 lowercase capability slugs, separated by commas."
+      `Enter between 1 and ${limit} lowercase capability slugs, separated by commas. Use all only by itself in limitations mode.`
     );
   }
   if (new Set(slugs).size !== slugs.length)
@@ -29,9 +37,9 @@ export async function runWorkflow(
   summary("# Capability onboarding\n");
   let failed = false;
   try {
-    const slugs = parseSlugs(env.INPUT_SLUGS ?? "");
-    if (!["onboard", "backfill"].includes(env.INPUT_MODE))
-      throw new Error("Choose onboard or backfill.");
+    if (!["onboard", "backfill", "limitations"].includes(env.INPUT_MODE))
+      throw new Error("Choose onboard, backfill or limitations.");
+    const slugs = parseSlugs(env.INPUT_SLUGS ?? "", env.INPUT_MODE);
     if (!env.ONBOARDING_RUN_SECRET || env.ONBOARDING_RUN_SECRET.length < 32)
       throw new Error(
         "Add a secret of at least 32 characters to the production-onboarding environment."
@@ -87,27 +95,32 @@ export async function runWorkflow(
           );
           summary(`Rows ${action}: ${count}.`);
         }
-        summary(
-          `Generated test types: ${
-            (result.generatedTestTypes ?? []).join(", ") || "none"
-          }.`
-        );
-        summary(
-          `Known-answer verification: ${
-            result.verification?.passed === true
-              ? "passed"
-              : result.verification?.passed === false
-              ? "not verified or failed; inspect JSON"
-              : "skipped"
-          }.`
-        );
-        summary(
-          `Readiness: ${
-            result.readiness?.ready === true ? "ready" : "has unresolved issues"
-          }.`
-        );
-        for (const issue of result.readiness?.issues ?? [])
-          summary(`- ${String(issue).replace(/[\r\n]/g, " ")}`);
+        if (env.INPUT_MODE === "limitations") {
+          const limitations = result.limitations;
+          summary(`Limitations: ${limitations?.outcome ?? "failed"}. ${String(limitations?.reason ?? "Inspect the JSON result.").replace(/[\r\n]/g, " ")}`);
+        } else {
+          summary(
+            `Generated test types: ${
+              (result.generatedTestTypes ?? []).join(", ") || "none"
+            }.`
+          );
+          summary(
+            `Known-answer verification: ${
+              result.verification?.passed === true
+                ? "passed"
+                : result.verification?.passed === false
+                ? "not verified or failed; inspect JSON"
+                : "skipped"
+            }.`
+          );
+          summary(
+            `Readiness: ${
+              result.readiness?.ready === true ? "ready" : "has unresolved issues"
+            }.`
+          );
+          for (const issue of result.readiness?.issues ?? [])
+            summary(`- ${String(issue).replace(/[\r\n]/g, " ")}`);
+        }
         if (result.updatedManifestYaml)
           summary(
             "Download the YAML artifact, review its fixtures and reliability annotations, and ask the maintainer to commit it to main. The deployed manifest was not changed."
@@ -134,6 +147,7 @@ export async function runWorkflow(
         response.http === 401 ||
         response.http === 503 ||
         run.error?.code === "not_configured" ||
+        run.errors?.some((error) => error.code === "not_configured") ||
         run.error_code === "not_configured" ||
         run.status === "running" ||
         run.status === "timeout"

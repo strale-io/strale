@@ -176,7 +176,7 @@ export function createOnboardingRunRoute(
     {
       id: string;
       slug: string;
-      mode: "onboard" | "backfill";
+      mode: "onboard" | "backfill" | "limitations";
       status: "running" | "success" | "failed" | "timeout";
       started_at: string;
       finished_at?: string;
@@ -246,14 +246,14 @@ export function createOnboardingRunRoute(
           error: {
             code: "invalid_body",
             message:
-              "Use a lowercase hyphenated slug, mode onboard or backfill, and boolean discover/fix flags.",
+              "Use a lowercase hyphenated slug, mode onboard, backfill or limitations, and boolean discover/fix flags.",
           },
         },
         400
       );
     }
     const input = parsed.data;
-    if (getDeactivatedCapabilities().has(input.slug)) {
+    if (input.mode !== "limitations" && getDeactivatedCapabilities().has(input.slug)) {
       return c.json(
         {
           error: {
@@ -376,7 +376,7 @@ export function createOnboardingRunRoute(
         }), controller.signal);
         run.result = result;
         if (run.status !== "timeout") {
-          const ready = result.readiness?.ready === true;
+          const ready = input.mode === "limitations" || result.readiness?.ready === true;
           run.status =
             result.status === "success" && ready ? "success" : "failed";
           run.errors = [...result.errors];
@@ -457,7 +457,7 @@ const onboardingRunBody = z
       .string()
       .max(100)
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
-    mode: z.enum(["onboard", "backfill"]),
+    mode: z.enum(["onboard", "backfill", "limitations"]),
     discover: z.boolean().optional(),
     fix: z.boolean().optional(),
   })

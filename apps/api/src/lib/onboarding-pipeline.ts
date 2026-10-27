@@ -1,4 +1,6 @@
 import { withinOnboardingBudget } from "./onboarding-budget.js";
+import { runLimitationsSync } from "./limitations-sync.js";
+import { manifestLimitationsToRows } from "./manifest-limitations.js";
 import { suitesAreSchedulable } from "./onboard-scheduling.js";
 import { dependencyHealthChecks } from "./onboard-dependency-health.js";
 import { expectedFieldsToChecks } from "./known-answer-checks.js";
@@ -54,7 +56,7 @@ import {
 
 export interface OnboardingOptions {
   manifestYaml: string;
-  mode: "onboard" | "backfill";
+  mode: "onboard" | "backfill" | "limitations";
   dryRun?: boolean;
   strict?: boolean;
   fix?: boolean;
@@ -86,6 +88,13 @@ export interface OnboardingResult {
   };
   readiness: ReadinessCheck | null;
   updatedManifestYaml?: string;
+  limitations?: {
+    outcome: "unchanged" | "updated" | "not_found" | "failed";
+    reason: string;
+    created: number;
+    updated: number;
+    deleted: number;
+  };
 }
 class OnboardingError extends Error {
   constructor(readonly code: string, message: string) {
@@ -142,6 +151,9 @@ export async function runOnboarding(
   handle: Database,
   options: OnboardingOptions
 ): Promise<OnboardingResult> {
+  // Text-only mode ignores discover/fix, including the workflow's default true
+  // discover flag. Return before entering any of the onboarding stages.
+  if (options.mode === "limitations") return runLimitationsSync(handle, options);
   const db = boundDatabase(handle, options.signal);
   const run = async () => {
       const start = Date.now();
@@ -1720,13 +1732,7 @@ export async function runOnboarding(
         // edits (add/remove/edit/reorder) silently no-opped once ≥1 row existed.
         // diffAndUpdateLimitations DELETEs orphans, INSERTs new, UPDATEs
         // sort_order on moves — called regardless of existing-row count.
-        const manifestLimRows = (manifest.limitations ?? []).map((lim) => ({
-          title: lim.title ?? null,
-          limitationText: lim.text,
-          category: lim.category,
-          severity: lim.severity ?? "info",
-          workaround: lim.workaround ?? null,
-        }));
+        const manifestLimRows = manifestLimitationsToRows(manifest);
         const limResult = await diffAndUpdateLimitations(
           db,
           manifest.slug,

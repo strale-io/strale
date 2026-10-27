@@ -3,20 +3,20 @@ on:
   workflow_dispatch:
     inputs:
       slug:
-        description: Capability slug, or up to 50 slugs separated by commas
+        description: Slugs separated by commas (max 50; limitations max 1000 or all)
         required: true
         type: string
       mode:
-        description: Create a capability or backfill an existing one
+        description: Create, backfill, or sync only limitation text
         type: choice
-        options: [onboard, backfill]
+        options: [onboard, backfill, limitations]
         default: onboard
       discover:
-        description: Discover fixtures from live output (normally off for a limitations-only backfill)
+        description: Discover fixtures from live output (ignored in limitations mode)
         type: boolean
         default: true
       fix:
-        description: Correct high-confidence fixture mismatches
+        description: Correct high-confidence fixture mismatches (ignored in limitations mode)
         type: boolean
         default: false
 permissions:
