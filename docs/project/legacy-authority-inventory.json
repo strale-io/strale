@@ -563,7 +563,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "5fa583f26960f090a6c6a487d0d4c64d8a11ed71ec3a90377b671ee6a535a267",
+      "sha256": "a7794fb01439d0c2656f7b7a4715fe4970842924bc4fc0a62404c70ee044d404",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -650,6 +650,9 @@
         "docs/research/2026-10-23-delegate-competitive-analysis.md",
         "docs/research/2026-10-26-serp-vendor-replacement.md",
         "docs/research/2026-10-27-codebase-architecture-review.md",
+        "docs/research/2026-10-27-distribution-strategy-sweeps/directories.md",
+        "docs/research/2026-10-27-distribution-strategy-sweeps/integrations.md",
+        "docs/research/2026-10-27-distribution-strategy.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
@@ -697,6 +700,7 @@
         "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "handoff/_general/from-code/2026-10-26-checkin-morning.md",
         "handoff/_general/from-code/2026-10-27-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-27-distribution-strategy.md",
         "handoff/_general/from-code/2026-10-27-ops-delegation.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
@@ -774,6 +778,7 @@
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/research/2026-10-27-codebase-architecture-review.md",
+        "docs/research/2026-10-27-distribution-strategy.md",
         "handoff/README.md",
         "handoff/_general/from-code/2026-08-12-readiness-p0-baseline.md",
         "handoff/_general/from-code/2026-08-16-quality-program-phase0-phase1.md",
@@ -846,7 +851,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "b148eac8485eee55b3c8e41741d1f5cd4baa8127d2814548cd2f09681805659d",
+      "sha256": "163e2ff4ad81a4a4a67e7d96ec03c7b6ac77a8fe75411120b3a72935b6aa06a9",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -1037,6 +1042,7 @@
         "docs/research/2026-04-28-payee-assurance-build-vs-buy.md",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/research/2026-10-27-codebase-architecture-review.md",
+        "docs/research/2026-10-27-distribution-strategy.md",
         "docs/security/2026-08-22-starve-set-1-provenance.md",
         "docs/strategy/2026-08-05-direction-plan.md",
         "docs/strategy/2026-08-12-platform-readiness-program.md",
