@@ -91,7 +91,10 @@ limitations:
     severity: info
     workaround: Check the domain’s age when investigating suspicious traffic.
   - title: A valid result does not prove the mailbox exists
-    text: Catch-all domains (common in enterprises) will show as valid even for non-existent mailboxes
+    text: >-
+      No mailbox is contacted. A made-up or bouncing address can return valid if its syntax
+      is correct, its domain has mail servers, and it is not flagged as disposable.
+      Catch-all domains are one example; mailbox existence and delivery are never checked.
     category: accuracy
     severity: info
     workaround: >-
