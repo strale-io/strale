@@ -29,6 +29,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { dbErrorMessage } from "./db-error.js";
 
 // Mock the DB layer so the orchestrator-level test below can inject a
 // stub executor via getDb(). Per-block tests pass their stub directly
@@ -36,13 +37,21 @@ import { PgDialect } from "drizzle-orm/pg-core";
 // affected by this mock.
 const mockGetDb = vi.fn();
 vi.mock("../db/index.js", () => ({
-  getDb: () => mockGetDb(),
+  getDb: () => ({ ...mockGetDb(), $client: { options: { connection: { statement_timeout: 30_000 } } } }),
   closeDbPool: () => Promise.resolve(),
 }));
 
 // The runner uses a dedicated lock session; per-block tests stay DB-free.
-vi.mock("postgres", () => ({ default: () => ({
-  reserve: async () => ({ unsafe: async () => [{ acquired: true }], release() {} }),
+vi.mock("postgres", () => ({ default: (_url: string, options: { connection: { statement_timeout: number } }) => ({
+  options: { parsers: {}, serializers: {} },
+  reserve: async () => ({
+    unsafe: async (text: string) => {
+      if (options.connection.statement_timeout === 5_000) return [{ acquired: true }];
+      if (text.startsWith("SELECT set_config") || text === "RESET lock_timeout") return [];
+      return mockGetDb.mock.results.at(-1)!.value.execute(sql.raw(text));
+    },
+    release() {},
+  }),
   end: async () => {},
 }) }));
 
@@ -1771,9 +1780,10 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
       },
     });
 
-    await expect(runStartupMigrations()).rejects.toThrow(
-      /simulated executor failure on first query/,
-    );
+    await expect(runStartupMigrations().catch((err) => {
+      // The reserved executor preserves drizzle's wrapper; inspect its cause.
+      throw new Error(dbErrorMessage(err));
+    })).rejects.toThrow(/simulated executor failure on first query/);
   });
 
   it("propagates a post-condition violation thrown by a later block", async () => {

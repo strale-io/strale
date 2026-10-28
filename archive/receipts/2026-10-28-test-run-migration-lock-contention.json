@@ -1,0 +1,241 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4085cc2efce03bbc5682992e0de154a67576a778"
+  },
+  "at": "2026-10-28T13:47:56.824Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "branch": "fix/migration-lock-contention",
+    "uncommitted": true
+  },
+  "topic": "migration-lock-contention",
+  "raw": {
+    "summary": {
+      "full_suite_passed": true,
+      "typecheck_passed": true,
+      "ledger_unchanged": true,
+      "postgres_verified": false,
+      "post_deploy_verified": false,
+      "handoff_gate_passed": false,
+      "files_passed": 373,
+      "files_skipped": 35,
+      "tests_passed": 7554,
+      "tests_skipped": 358
+    },
+    "branch": "fix/migration-lock-contention",
+    "uncommitted": true,
+    "file_sha256": {
+      "apps/api/src/index.ts": "d945c0f45339d6476eed6ea0ff670d6560e84a647cfaa0dd3b3c0358dbb66b40",
+      "apps/api/src/lib/startup-migrations.ts": "308611be7223cd1038598210850549369ef1004d0ab10fba769ea32519f68f38",
+      "apps/api/src/lib/startup-migration-block.ts": "0954f6051aa20bfebd66adf8c1c0c8fc8f62c23ea511c799d11266da981cfc56",
+      "apps/api/src/lib/startup-error.ts": "8489027a7f4f863cb187ff5ad8847a65b0702c580861c5ea0261e87cb9a10c55",
+      "apps/api/src/lib/startup-migrations-lock.test.ts": "7bbc34ea857aedf5d0f25dfd90eb466a40bed17b01a4adafa329115ca2e0e0ee",
+      "apps/api/src/lib/startup-migrations.test.ts": "f045590702418248ccb1ee72da2c5fbf30dccf6d6703643f41c5ceaac778882a"
+    },
+    "checks": [
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-bare-catch.mjs apps/api/src",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      }
+    ],
+    "other_commands": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit_code": 0
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/startup-migrations-lock.test.ts",
+        "exit_code": 0,
+        "tests_passed": 12,
+        "stage": "before codec regression added"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/startup-migrations.test.ts src/lib/startup-migrations-lock.test.ts src/lib/startup-integrity-index.test.ts src/lib/startup-db-retry.test.ts",
+        "exit_code": 0,
+        "tests_passed": 246,
+        "stage": "before codec regression added"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/startup-migrations.test.ts src/lib/startup-migrations-lock.test.ts",
+        "exit_code": 0,
+        "summary": [
+          "Test Files  2 passed (2)",
+          "Tests  226 passed (226)",
+          "Duration  4.10s (transform 2.11s, setup 192ms, import 5.03s, tests 1.15s, environment 1ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/migration-failbefore.test.ts -t 'retries wrapped'",
+        "exit_code": 1,
+        "expected_failure": true,
+        "source": "git show origin/main:apps/api/src/lib/startup-migrations.ts",
+        "scratch_sources_removed": true,
+        "summary": [
+          "Test Files  1 failed (1)",
+          "Tests  2 failed | 11 skipped (13)",
+          "Duration  1.89s (transform 634ms, setup 38ms, import 1.56s, tests 33ms, environment 0ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run",
+        "exit_code": 1,
+        "stage": "initial run",
+        "summary": [
+          "Test Files  1 failed | 372 passed | 35 skipped (408)",
+          "Tests  2 failed | 7549 passed | 358 skipped (7909)",
+          "Duration  231.40s (transform 33.77s, setup 6.99s, import 310.12s, tests 245.71s, environment 85ms)"
+        ],
+        "failure": "two old runner mocks required adaptation to reserved sessions"
+      },
+      {
+        "command": "cd apps/api && npx vitest run",
+        "exit_code": 1,
+        "stage": "intermediate run while edits were in progress",
+        "summary": [
+          "Test Files  1 failed | 372 passed | 35 skipped (408)",
+          "Tests  1 failed | 7553 passed | 358 skipped (7912)",
+          "Duration  215.19s (transform 24.66s, setup 4.89s, import 284.05s, tests 227.57s, environment 74ms)"
+        ],
+        "failure": "JSON codec regression failed against runner without codec initialization; fixed and covered"
+      },
+      {
+        "command": "cd apps/api && npx vitest run",
+        "exit_code": 0,
+        "stage": "finished code",
+        "summary": [
+          "Test Files  373 passed | 35 skipped (408)",
+          "Tests  7554 passed | 358 skipped (7912)",
+          "Duration  192.43s (transform 22.66s, setup 4.57s, import 244.06s, tests 219.65s, environment 84ms)"
+        ]
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --exit-code origin/main -- apps/api/src/lib/startup-migrations.ledger.json",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:orient",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit_code": 1,
+        "expected_findings": [
+          "dirty worktree: user forbids commit",
+          "feature branch in isolated clone: user forbids branch switch",
+          "no branch upstream: user forbids push",
+          "pre-existing merged branches retained; origin fetch unavailable"
+        ]
+      }
+    ],
+    "flaky_files": [],
+    "real_postgres": {
+      "performed": false,
+      "reason": "PostgreSQL 16 installed, but chown and runuser denied; local Docker socket absent. No production credentials sought."
+    },
+    "post_deploy": {
+      "performed": false,
+      "instructions": "handoff/_general/from-code/2026-10-28-migration-lock-contention.md"
+    },
+    "review": {
+      "technical": "no remaining blockers after round 2 and high-fix confirmation",
+      "operations": "GO round 2",
+      "simplify": "manual pass; standalone skill unavailable"
+    }
+  }
+}
