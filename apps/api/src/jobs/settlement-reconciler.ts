@@ -155,10 +155,8 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
               .limit(1);
 
         const recoveryValues = {
-            // Captured at INSERT because neither is recoverable later:
-            // the rail is not a property of the row, and the deploy commit
-            // drifts the moment anything redeploys (block 0110).
-            receiptRail: "x402",
+            // A lost row cannot supply the deploy commit that ran it; capture
+            // the recovery deploy's identity for the receipt (block 0110).
             receiptDeployCommit: deployCommitOrNull(),
             userId: null,
             capabilityId: cap?.id ?? null,
@@ -200,7 +198,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
               eq(transactions.id, claim.id), eq(transactions.status, "executing"),
               isNull(transactions.x402SettlementId),
             )).returning({ id: transactions.id })
-          : await db.insert(transactions).values(recoveryValues).returning({ id: transactions.id });
+          : await db.insert(transactions).values({ ...recoveryValues, receiptRail: "x402" }).returning({ id: transactions.id });
         if (!recreated) throw new Error("Settlement recovery lost the claim race; retry next tick");
 
         await markRecordedBySettlement(db, {
@@ -214,7 +212,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
         // a positive claim that the step never ran, and it very probably did.
         await settleExecutionReceipt(db, {
           transactionId: recreated.id,
-          rail: "x402",
+          ...(!claim ? { rail: "x402" as const } : {}),
           solutionSlug: intent.solutionSlug,
           stepsUnknown: Boolean(intent.solutionSlug),
         });

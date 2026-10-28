@@ -1,0 +1,548 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "67807f4d6ca184686eb8df92c5420f62328f5cd1"
+  },
+  "at": "2026-10-28T17:56:30.290Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "branch": "fix/v1-do-x402-parity",
+    "uncommitted": true,
+    "base_commit": "67807f4d6ca184686eb8df92c5420f62328f5cd1",
+    "api_tests_passed": 7592,
+    "api_tests_skipped": 359,
+    "api_files_passed": 374,
+    "api_files_skipped": 36,
+    "postgres_executed": false,
+    "live_payment_made": false,
+    "new_regressions_fail_before": 13,
+    "raw_sql_binds": "Characterization simulated DB compiles every execute query with PgDialect and asserts no Date/Buffer parameters.",
+    "migration_diff": "No change to startup-migrations.ts or startup-migrations.ledger.json."
+  },
+  "topic": "v1-do-x402-parity",
+  "raw": {
+    "ok": true,
+    "branch": "fix/v1-do-x402-parity",
+    "uncommitted": true,
+    "base_commit": "67807f4d6ca184686eb8df92c5420f62328f5cd1",
+    "api_tests_passed": 7592,
+    "api_tests_skipped": 359,
+    "api_files_passed": 374,
+    "api_files_skipped": 36,
+    "postgres_executed": false,
+    "live_payment_made": false,
+    "new_regressions_fail_before": 13,
+    "files_sha256": {
+      "apps/api/src/lib/do/dispatch.ts": "c0aaea993c915643c6ff227f4e941a1bc8b1ba36c6e0823eb5b7478cbf057320",
+      "apps/api/src/lib/x402-payment-claims.ts": "7773a46439883c7407c05365738c814082be63be58ceea72ae4301bf4df7a27f",
+      "apps/api/src/lib/x402-settle.ts": "2ed87245923f606034e29181299888543760e50652be6de48c563d617ab8f5b7",
+      "apps/api/src/routes/__snapshots__/x402-settlement-characterization.test.ts.snap": "1d1b53a830e0158151bbca75efc39d7a65c64c13085194c051ca77bb62fcec01",
+      "apps/api/src/routes/x402-gateway-v2.ts": "c3a1c0fbfc03613e091ba7e37c668ae4d768d93bc8835fd76d1904ef718af94c",
+      "apps/api/src/routes/x402-settlement-characterization.test.ts": "bd3ccbd697c6cf75a56de1e254bd46fb8253e3510331cb94b6e97cfe44dfdbce",
+      "apps/api/src/lib/x402-recording.ts": "c9974bb24d03cadb6f291c17f6529dcacc173aa104941836472daec41f22f524",
+      "apps/api/src/routes/do.x402-concurrency.integration.test.ts": "89871991650a011d675a579ff0c4bff9043504f7a1f620bf2ba8fc0a5bc19b4f",
+      "handoff/_general/from-code/2026-10-28-v1-do-x402-parity.md": "cc13e2f5c4925bfcdc737e9a65ecaf3933f8cf382f22c17439800ca35c1334d6"
+    },
+    "checks": [
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "output_excerpt": "[check-mjs-syntax] 40 .mjs file(s) checked (syntax-only — see script header for scope).\n[check-mjs-syntax] All clean.\n"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "output_excerpt": "\n> @strale/api@0.1.0 lint:no-bare-catch\n> node scripts/check-no-bare-catch.mjs src\n\nF-0-009 guard: no bare `.catch(() => {})` found.\n"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "output_excerpt": "\n> @strale/api@0.1.0 lint:no-unguarded-user-fetch\n> node scripts/check-no-unguarded-user-fetch.mjs\n\n[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked.\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "output_excerpt": "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment.\n"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "output_excerpt": "\n> @strale/api@0.1.0 lint:no-new-console\n> node scripts/check-no-new-console.mjs\n\nF-0-014 guard: no new `console.*` calls.\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "output_excerpt": "SCF-3 guard: no API access to integrity_hash_status found.\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "output_excerpt": "ok    composio-strale  (import found in packages/composio-strale/composio_strale/toolkit.py)\nok    crewai-strale  (import found in packages/crewai-strale/crewai_strale/toolkit.py)\nskip  google-adk-strale  (DEPRECATED.md present — yanked, forwarding only)\nok    langchain-strale  (import found in packages/langchain-strale/langchain_strale/toolkit.py)\nskip  openai-agents-strale  (DEPRECATED.md present — yanked, forwarding only)\nskip  pydantic-ai-strale  (DEPRECATED.md present — yanked, forwarding only)\nok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)\nok    zapier-strale  (import found in packages/zapier-strale/index.js)\n\nframework-packages check: 5 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims.\n"
+      },
+      {
+        "command": "node --test apps/api/scripts/check-framework-packages.test.mjs",
+        "exit_code": 0,
+        "output_excerpt": "✔ Zapier integrity rejects an import-only hollow app (226.843332ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 335.039138\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "output_excerpt": "check-no-committed-secrets: clean (3905 tracked files scanned)\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "output_excerpt": "[lint] No scripts bypass the dispatcher gate.\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "output_excerpt": "fetch-timeout coverage: 4 total offenders, 0 not in allowlist\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "output_excerpt": "manifest guaranteed-field consistency: 22 total, 0 not in allowlist\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "output_excerpt": "PII guard: clean — no unredacted person names or checksum-valid identifiers found.\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "output_excerpt": "]: fixture populates fields not in output_field_reliability: [vat_number]\n  us-company-data [allowlisted]: fixture populates fields not in output_field_reliability: [entity_type, sic, sic_description, address, ein, ticker, exchange, status]\n\nUNDECLARED_SCHEMA (4):\n  cz-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [legal_name, primary_registration_id, legal_form, registered_address, date_incorporated]\n  estonian-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [legal_name, primary_registration_id, legal_form, registered_address]\n  french-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [vat_number]\n  norwegian-company-data [allowlisted]: fixture populates fields not in output_schema.properties: [legal_name, primary_registration_id, legal_form, registered_address, date_incorporated]\n\nGUARANTEED_EMPTY (5):\n  estonian-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [historical_names]\n  japanese-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [attribution]\n  swedish-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [alternative_names, ongoing_procedures]\n  uk-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [tier_2_available, tier_2_available_reason, ubo_availability, ubo_availability_reason]\n  us-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [match_confidence, is_exact_match, resolution_method]\n\nSTRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. Re-capture a fixture after fixing its manifest with: npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "output_excerpt": "identity fixture-shape sentinel: 0 total, 0 not in allowlist\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "output_excerpt": "Skipping shape-contract check: frontend repo not present at <checkout>/c:/Users/pette/Projects/strale-frontend\n  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)\n"
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "output_excerpt": "[lint] cost_class coherence: all classified capabilities OK.\n"
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "output_excerpt": "production write credential: 1 authorised reader, 0 unauthorised references\n"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> programs:check\n> node scripts/check-program-tracks.mjs\n\nok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml\nok   docs/programs/distribution/tracks.yaml\nok   docs/programs/platform-hardening/tracks.yaml\n"
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> research:check\n> node scripts/check-research.mjs\n\nchecked 46 docs/research/*.md files\nok   research contract\nwarn (5) — research-looking files outside docs/research:\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n"
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> design:check\n> node scripts/check-design.mjs && node design/brand-kit/quiet-material/build.mjs --check && node design/brand-kit/quiet-material/foundations/build.mjs --check && node design/brand-kit/quiet-material/controls/build.mjs --check && node design/brand-kit/quiet-material/patterns/build.mjs --check && node design/brand-kit/quiet-material/illustrations/build.mjs --check && node design/brand-kit/quiet-material/homepage/build.mjs --check && node design/brand-kit/quiet-material/hero-comparison/build.mjs --check && node design/brand-kit/quiet-material/opening/build.mjs --check && node design/brand-kit/open-flow/build.mjs --check\n\nchecked 15 design/tokens/*.json files, 0 distinct off-token literals (0 raw occurrences) across the internal-report consumers, 0 allowlisted\nok   design tokens contract\n{\"ok\":true,\"assets\":14,\"gradients\":9,\"source_integrity\":\"not-requested\"}\n{\"ok\":true,\"roles\":12,\"fonts\":2,\"production_adopted\":false}\nControls source, output and evidence bindings pass\nPatterns inputs, outputs and evidence pass\nShared-access illustration sources, outputs and evidence pass\nHomepage generated outputs are current.\nHero comparison sources and generated outputs agree.\nOpening study sources and outputs agree.\nok   open-flow design system: 122 contrast pairs pass, specimen on-token, assets match provenance\n"
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> env:check\n> node scripts/check-env.mjs\n\nchecked 130 process.env names against 135 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract\n"
+      },
+      {
+        "command": "npm run vendor-terms:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> vendor-terms:check\n> node scripts/check-vendor-terms.mjs\n\nvendor-terms: 14 records, 0 errors\n"
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "output_excerpt": "c/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: hn-algolia: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-edgar: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-ticker-index: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: nvd: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: usgs-earthquake: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: alchemy-eth: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\n  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sourcify: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows\nok   vendor register contract\n"
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> distribution:check\n> node scripts/check-distribution.mjs\n\nchecked 61 surfaces in docs/operations/distribution-registry.yaml\nok   distribution register contract\n"
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> protocols:check\n> node scripts/check-protocol-extraction.mjs\n\nchecked 19 candidate protocol mirror(s) under docs/governance/protocols\nok   protocol extraction\n"
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "output_excerpt": "\n> protocols:coverage\n> node scripts/check-protocol-coverage.mjs\n\nchecked 20 protocol row(s) in docs/project/protocol-coverage.yaml\n  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20260910-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision\n  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20261024-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision\nok   protocol coverage\n"
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> scheduled:check\n> node scripts/check-scheduled-reachability.mjs\n\nchecked 9 scheduled mechanisms in config/scheduled-mechanisms.yaml\nok   scheduled mechanism reachability\n"
+      },
+      {
+        "command": "npm run anthropic:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> anthropic:check\n> node apps/api/scripts/check-anthropic-client.mjs\n\n{\"scanned\":870,\"findings\":[]}\n"
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> models:check\n> node apps/api/scripts/check-model-literals.mjs\n\nchecked 941 files under apps/api/src and apps/api/scripts (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)\nok   model registry contract\n"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> claims:check\n> node scripts/check-claims.mjs\n\nchecked 30 rows in docs/company/claims.yaml against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract\n"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n"
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "output_excerpt": "orning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-06-retention-cadence-and-review-followups.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-24-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n"
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> migrations:check\n> node apps/api/scripts/check-migration-ledger.mjs\n\nchecked 73 migration blocks in apps/api/src/lib/startup-migrations.ts\nok   migration ledger\n"
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "output_excerpt": "\n> context:check\n> node scripts/check-project-context.mjs\n\nproject context check: warning-only (M2 candidate foundation)\n  no warnings\n"
+      }
+    ],
+    "build": {
+      "command": "npm --workspace=packages/mcp-server run build",
+      "exit_code": 0,
+      "runs": 1
+    },
+    "typecheck": {
+      "command": "cd apps/api && npx tsc --noEmit",
+      "exit_code": 0,
+      "initial_failure": "New orphan-helper generic and cached lookup result types needed correction; subsequent runs passed."
+    },
+    "full_api_initial": {
+      "command": "cd apps/api && npx vitest run",
+      "exit_code": 1,
+      "passed": 7590,
+      "failed": 1,
+      "skipped": 359,
+      "finding": "audit-serve-coverage.test.ts rejected bare cached.auditTrail; fixed with existing redactAuditTrail and a regression, without changing the guard."
+    },
+    "full_api_final": {
+      "command": "cd apps/api && npx vitest run",
+      "exit_code": 0,
+      "output_summary": "{\"level\":30,\"time\":1793210081876,\"env\":\"test\",\"label\":\"mcp-http-prewarm-done\",\"msg\":\"mcp-http-prewarm-done\"}\n\n Test Files  374 passed | 36 skipped (410)\n      Tests  7592 passed | 359 skipped (7951)\n   Start at  17:52:06\n   Duration  177.96s (transform 21.53s, setup 4.02s, import 225.01s, tests 204.33s, environment 69ms)\n"
+    },
+    "focused": {
+      "command": "cd apps/api && npx vitest run src/routes/x402-settlement-characterization.test.ts src/routes/do.x402-concurrency.integration.test.ts src/lib/audit-serve-coverage.test.ts",
+      "exit_code": 0,
+      "output_summary": "\n\n Test Files  2 passed | 1 skipped (3)\n      Tests  55 passed | 1 skipped (56)\n   Start at  17:51:06\n   Duration  3.47s (transform 1.27s, setup 88ms, import 3.54s, tests 882ms, environment 1ms)\n"
+    },
+    "fail_before": {
+      "command": "cd apps/api && npx vitest run --root .h4b-baseline --config ../vitest.config.ts src/routes/x402-settlement-characterization.test.ts -t H4b",
+      "exit_code": 1,
+      "expected_failure": true,
+      "method": "git show origin/main:<path> copied dispatch, claims, settle and gateway source into scratch source tree; current regression tests run against baseline modules; scratch removed; no stash or branch switch.",
+      "output": "\n RUN  v4.1.4 <checkout>/apps/api/.h4b-baseline\n\nstderr | src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > replays a completed hash with the cached result, no second execution or settlement\n[processing-location] Neither RAILWAY_REPLICA_REGION nor STRALE_PROCESSING_REGION is set; falling back to \"unknown\". Expected in local dev. In a deployed environment this indicates a misconfiguration — compliance records will carry 'unknown' as processing_location.\n\n ❯ src/routes/x402-settlement-characterization.test.ts (46 tests | 13 failed | 33 skipped) 137ms\n     × replays a completed hash with the cached result, no second execution or settlement 74ms\n     × redacts legacy stored audit error text on completed replay 11ms\n     × refuses concurrent use with the gateway's 502 and retry guidance 8ms\n     × refuses a stored failed hash without executing or settling 4ms\n     × releases failed execution claims but refuses a third execution for the hash 7ms\n     × counts transient retries in the same two-execution budget 7ms\n     × retains unknown settlement intent and claim for reconciliation 4ms\n     × retains a thrown facilitator call's claim and never counts it against health 4ms\n     × captures terminal-write failure after settlement and returns the paid result 3ms\n     × logs double storage failure and still returns success with the durable intent 3ms\n     × keeps the completed transaction on mark-recorded failure and logs it 3ms\n     × returns and stores the catalogue price as paid, without upgrade text 3ms\n     × makes /v1/do claims visible to the existing stale janitor and fences late settlement 3ms\n\n⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > replays a completed hash with the cached result, no second execution or settlement\nAssertionError: expected 500 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:258:27\n    256|     const first = await (await request(\"do\")).json();\n    257|     const replay = await request(\"do\");\n    258|     expect(replay.status).toBe(200);\n       |                           ^\n    259|     const body = await replay.json();\n    260|     expect(body.result).toEqual(first.result);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > redacts legacy stored audit error text on completed replay\nAssertionError: expected { transaction_id: 'tx-1', …(17) } to deeply equal { Object (execution) }\n\n- Expected\n+ Received\n\n  {\n-   \"execution\": {\n-     \"error\": \"Service temporarily unreachable\",\n+   \"ai_description\": \"Purely algorithmic — no AI/LLM involved in processing\",\n+   \"capability\": \"test-capability\",\n+   \"completed_at\": \"2026-10-28T12:00:00.000Z\",\n+   \"compliance\": {\n+     \"access_endpoint\": \"GET /v1/transactions/tx-1\",\n+     \"ai_involvement\": \"Purely algorithmic — no AI/LLM involved in processing\",\n+     \"data_retention_days\": 1095,\n+     \"deletion_endpoint\": \"DELETE /v1/transactions/tx-1\",\n+     \"human_oversight\": \"autonomous\",\n+     \"human_oversight_description\": \"Automated execution with schema validation. No human review required for this capability.\",\n+     \"personal_data_categories\": [],\n+     \"personal_data_processed\": false,\n+     \"regulations_addressed\": {\n+       \"gdpr\": {\n+         \"article_15\": \"Transaction data accessible via GET /v1/transactions/tx-1\",\n+         \"article_17\": \"Transaction data deletable via DELETE /v1/transactions/tx-1\",\n+         \"article_30\": \"Complete processing record with data sources, classifications, and jurisdiction\",\n+       },\n+       \"notes\": \"No personal data detected. No DPIA required.\",\n+     },\n+     \"shareable_url\": \"https://example.test/audit\",\n+     \"shareable_url_expires_at\": \"2026-10-29T00:00:00.000Z\",\n+   },\n+   \"data_classification\": \"unknown\",\n+   \"data_jurisdiction\": \"unknown\",\n+   \"data_source\": \"Test\",\n+   \"data_source_url\": null,\n+   \"execution_mode\": \"sync\",\n+   \"input_hash\": \"sha256:93268aced3bf3c807a4c872a65a2dfd877d14af1b2baaf94951f8ead505502ae\",\n+   \"latency_ms\": 0,\n+   \"processing_location\": \"unknown\",\n+   \"provenance\": {\n+     \"source\": \"test\",\n    },\n+   \"request_context\": {\n+     \"acceptLanguage\": null,\n+     \"fingerprintHash\": null,\n+     \"ipHash\": null,\n+     \"mcpClient\": null,\n+     \"origin\": null,\n+     \"referer\": null,\n+     \"userAgent\": null,\n+   },\n+   \"schema_validated\": true,\n+   \"timestamp\": \"2026-10-28T12:00:00.000Z\",\n+   \"transaction_id\": \"tx-1\",\n+   \"transparency_marker\": \"algorithmic\",\n  }\n\n ❯ src/routes/x402-settlement-characterization.test.ts:275:29\n    273|     expect(response.status).toBe(200);\n    274|     const body = await response.json();\n    275|     expect(body.meta.audit).toEqual({ execution: { error: \"Service tem…\n       |                             ^\n    276|     expect(state.rows[0].auditTrail.execution.error).toContain(\"intern…\n    277|     expect(state.executor).not.toHaveBeenCalled();\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > refuses concurrent use with the gateway's 502 and retry guidance\nAssertionError: expected 500 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:292:34\n    290|     const second = await request(\"do\");\n    291|     finish(output);\n    292|     expect((await first).status).toBe(200);\n       |                                  ^\n    293|     expect(second.status).toBe(502);\n    294|     expect(await second.json()).toMatchObject({ error_code: \"payment_f…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > refuses a stored failed hash without executing or settling\nAssertionError: expected 200 to be 502 // Object.is equality\n\n- Expected\n+ Received\n\n- 502\n+ 200\n\n ❯ src/routes/x402-settlement-characterization.test.ts:300:42\n    298|   it(\"refuses a stored failed hash without executing or settling\", asy…\n    299|     state.rows.push({ id: \"prior\", status: \"failed\", x402PaymentHash: …\n    300|     expect((await request(\"do\")).status).toBe(502);\n       |                                          ^\n    301|     expect(state.executor).not.toHaveBeenCalled();\n    302|     expect(state.settle).not.toHaveBeenCalled();\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > releases failed execution claims but refuses a third execution for the hash\nAssertionError: expected 500 to be 502 // Object.is equality\n\n- Expected\n+ Received\n\n- 502\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:308:42\n    306|     expect((await request(\"do\")).status).toBe(500);\n    307|     expect((await request(\"do\")).status).toBe(500);\n    308|     expect((await request(\"do\")).status).toBe(502);\n       |                                          ^\n    309|     expect(state.executor).toHaveBeenCalledTimes(2);\n    310|     expect(state.settle).not.toHaveBeenCalled();\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > counts transient retries in the same two-execution budget\nAssertionError: expected 500 to be 502 // Object.is equality\n\n- Expected\n+ Received\n\n- 502\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:322:35\n    320|     const second = request(\"do\");\n    321|     await vi.advanceTimersByTimeAsync(1500);\n    322|     expect((await second).status).toBe(502);\n       |                                   ^\n    323|     expect(state.executor).toHaveBeenCalledTimes(2);\n    324|     expect(state.rows[0].x402ExecutionAttempts.count).toBe(2);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > retains unknown settlement intent and claim for reconciliation\nAssertionError: expected 'failed' to be 'settling' // Object.is equality\n\nExpected: \"settling\"\nReceived: \"failed\"\n\n ❯ src/routes/x402-settlement-characterization.test.ts:329:36\n    327|     state.settle.mockResolvedValue({ valid: false, settlementUnknown: …\n    328|     expect((await request(\"do\")).status).toBe(402);\n    329|     expect(state.intents[0].state).toBe(\"settling\");\n       |                                    ^\n    330|     expect(state.rows[0]).toMatchObject({ status: \"executing\", x402Pay…\n    331|     expect((await request(\"do\")).status).toBe(502);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > retains a thrown facilitator call's claim and never counts it against health\nAssertionError: expected { id: 'tx-1', …(18) } to match object { status: 'executing', …(1) }\n(42 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  {\n-   \"status\": \"executing\",\n-   \"x402PaymentHash\": \"same-payment-hash\",\n+   \"status\": \"failed\",\n  }\n\n ❯ src/routes/x402-settlement-characterization.test.ts:338:27\n    336|     state.settle.mockRejectedValue(new Error(\"transport threw\"));\n    337|     expect((await request(\"do\")).status).toBe(500);\n    338|     expect(state.rows[0]).toMatchObject({ status: \"executing\", x402Pay…\n       |                           ^\n    339|     expect(state.intents[0].state).toBe(\"settling\");\n    340|     expect((await request(\"do\")).status).toBe(502);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > captures terminal-write failure after settlement and returns the paid result\nAssertionError: expected 500 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:347:29\n    345|     state.failRecord = true;\n    346|     const response = await request(\"do\");\n    347|     expect(response.status).toBe(200);\n       |                             ^\n    348|     expect(await response.json()).toMatchObject({ free_tier: false, re…\n    349|     expect(state.orphanRows).toHaveLength(1);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > logs double storage failure and still returns success with the durable intent\nAssertionError: expected 500 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:360:42\n    358|   it(\"logs double storage failure and still returns success with the d…\n    359|     state.failRecord = true; state.failOrphan = true;\n    360|     expect((await request(\"do\")).status).toBe(200);\n       |                                          ^\n    361|     expect(state.intents[0].state).toBe(\"settled\");\n    362|     expect(state.logError.mock.calls.map(([name]) => name)).toContain(…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > keeps the completed transaction on mark-recorded failure and logs it\nAssertionError: expected 500 to be 200 // Object.is equality\n\n- Expected\n+ Received\n\n- 200\n+ 500\n\n ❯ src/routes/x402-settlement-characterization.test.ts:366:42\n    364|   it(\"keeps the completed transaction on mark-recorded failure and log…\n    365|     state.failRecorded = true;\n    366|     expect((await request(\"do\")).status).toBe(200);\n       |                                          ^\n    367|     expect(state.rows[0]).toMatchObject({ status: \"completed\", priceCe…\n    368|     expect(state.logError.mock.calls.map(([name]) => name)).toContain(…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > returns and stores the catalogue price as paid, without upgrade text\nAssertionError: expected { result: { …(7) }, …(3) } to match object { free_tier: false, result: { …(1) } }\n(16 matching properties omitted from actual)\n\n- Expected\n+ Received\n\n  {\n-   \"free_tier\": false,\n+   \"free_tier\": true,\n    \"result\": {\n-     \"price_cents\": 5,\n+     \"price_cents\": 0,\n    },\n  }\n\n ❯ src/routes/x402-settlement-characterization.test.ts:376:18\n    374|     expect(response.status).toBe(200);\n    375|     const body = await response.json();\n    376|     expect(body).toMatchObject({ free_tier: false, result: { price_cen…\n       |                  ^\n    377|     expect(body).not.toHaveProperty(\"upgrade\");\n    378|     expect(body).not.toHaveProperty(\"unlocked\");\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯\n\n FAIL  src/routes/x402-settlement-characterization.test.ts > H4b /v1/do x402 parity regressions > makes /v1/do claims visible to the existing stale janitor and fences late settlement\nAssertionError: expected +0 to be 1 // Object.is equality\n\n- Expected\n+ Received\n\n- 1\n+ 0\n\n ❯ src/routes/x402-settlement-characterization.test.ts:394:22\n    392|     finish(output);\n    393|     const response = await pending;\n    394|     expect(released).toBe(1);\n       |                      ^\n    395|     expect(response.status).toBe(500);\n    396|     expect(state.settle).not.toHaveBeenCalled();\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯\n\n\n Test Files  1 failed (1)\n      Tests  13 failed | 33 skipped (46)\n   Start at  17:51:29\n   Duration  2.81s (transform 1.08s, setup 42ms, import 2.41s, tests 137ms, environment 0ms)\n\n"
+    },
+    "snapshots": {
+      "unchangedGateway": 22,
+      "changedDo": [
+        {
+          "case": "H7b do settlement characterization > a thrown facilitator call preserves the claim and intent policy 1",
+          "oldStatus": "500",
+          "newStatus": "500",
+          "oldFree": true,
+          "newFree": true,
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > ambiguous settlement preserves current intent state and retry policy 1",
+          "oldStatus": "402",
+          "newStatus": "402",
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "detail"
+          ],
+          "newKeys": [
+            "error_code",
+            "message",
+            "details",
+            "detail"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > confirmed decline: no settlement id or wallet charge, documented error 1",
+          "oldStatus": "402",
+          "newStatus": "402",
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "detail"
+          ],
+          "newKeys": [
+            "error_code",
+            "message",
+            "details",
+            "detail"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > failed execution never opens an intent or settles 1",
+          "oldStatus": "500",
+          "newStatus": "500",
+          "oldFree": true,
+          "newFree": true,
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > intent settlement write failure captures the orphan and surfaces its log 1",
+          "oldStatus": "200",
+          "newStatus": "200",
+          "oldFree": true,
+          "newFree": false,
+          "oldPrice": 0,
+          "newPrice": 5,
+          "oldKeys": [
+            "result",
+            "meta",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "result",
+            "meta",
+            "free_tier"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > intent write failure prevents any settlement 1",
+          "oldStatus": "500",
+          "newStatus": "500",
+          "oldFree": true,
+          "newFree": true,
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > mark-recorded failure preserves the caller's current response and log policy 1",
+          "oldStatus": "500",
+          "newStatus": "200",
+          "oldFree": true,
+          "newFree": false,
+          "newPrice": 5,
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "result",
+            "meta",
+            "free_tier"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > post-settlement transaction write failure preserves current orphan policy 1",
+          "oldStatus": "500",
+          "newStatus": "200",
+          "oldFree": true,
+          "newFree": false,
+          "newPrice": 5,
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "result",
+            "meta",
+            "free_tier"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > same payment replay preserves execution count and response 1",
+          "oldStatus": "500",
+          "newStatus": "200",
+          "oldFree": true,
+          "newFree": false,
+          "newPrice": 5,
+          "oldKeys": [
+            "error_code",
+            "message",
+            "details",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "result",
+            "meta",
+            "free_tier"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > success: intent commits before the irreversible call, then records 1",
+          "oldStatus": "200",
+          "newStatus": "200",
+          "oldFree": true,
+          "newFree": false,
+          "oldPrice": 0,
+          "newPrice": 5,
+          "oldKeys": [
+            "result",
+            "meta",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "result",
+            "meta",
+            "free_tier"
+          ]
+        },
+        {
+          "case": "H7b do settlement characterization > valid result without settlement id keeps legacy response and writes 1",
+          "oldStatus": "200",
+          "newStatus": "200",
+          "oldFree": true,
+          "newFree": true,
+          "oldPrice": 0,
+          "newPrice": 0,
+          "oldKeys": [
+            "result",
+            "meta",
+            "free_tier",
+            "upgrade"
+          ],
+          "newKeys": [
+            "result",
+            "meta",
+            "free_tier"
+          ]
+        }
+      ]
+    },
+    "raw_sql_binds": "Characterization simulated DB compiles every execute query with PgDialect and asserts no Date/Buffer parameters.",
+    "migration_diff": "No change to startup-migrations.ts or startup-migrations.ledger.json.",
+    "live_check": {
+      "phase": "pre-deploy existing production",
+      "catalog_status": 200,
+      "method": "POST",
+      "path": "/v1/do",
+      "request": {
+        "capability_slug": "canadian-company-data",
+        "max_price_cents": 100,
+        "inputs": {}
+      },
+      "status": 402,
+      "response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base",
+            "maxAmountRequired": "864000",
+            "resource": "/v1/do",
+            "description": "Canadian Company Data. Strale: tools for AI agents, paid per call.",
+            "payTo": "0x66D7C2F952362BFB24FD7F02a9beC9c754ea83bC",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            }
+          }
+        ],
+        "error": "Payment required. Canadian Company Data costs $0.864 USDC per call.",
+        "details": {
+          "fix": "Sign an x402 payment matching 'accepts' and resend this POST /v1/do request with its X-PAYMENT header."
+        }
+      },
+      "payment_headers_sent": false,
+      "api_key_sent": false
+    },
+    "reviews": {
+      "technical": "GO, two rounds, independent read-only same-provider context",
+      "contract": "GO, two rounds, independent read-only same-provider context",
+      "scope": "uncommitted tree based on 67807f4d"
+    },
+    "handoff_gate": {
+      "command": "npm run handoff:check",
+      "exit_code": 1,
+      "expected_build_agent_failure": true,
+      "finding_codes": [
+        "dirty",
+        "branch",
+        "ahead",
+        "worktree",
+        "merged-branch"
+      ],
+      "origin_fetch_failed": true
+    },
+    "limitations": [
+      "No real Postgres available; the new integration test skipped. Orchestrator must run it and prove fail-before on disposable Postgres.",
+      "No deployment or production database queries; repeat unsigned 402 probe after deployment.",
+      "Shape-contract command exits zero but skips internal cross-repo comparison because sibling frontend is absent."
+    ]
+  }
+}
