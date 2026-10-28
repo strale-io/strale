@@ -1,3 +1,4 @@
+import { isValidAdminAuth } from "../lib/admin-auth.js";
 /**
  * Internal Health Monitor routes.
  *
@@ -37,7 +38,6 @@
 
 import { Hono } from "hono";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
-import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
@@ -50,15 +50,8 @@ import { sendExternalOutageDigest } from "../lib/external-outage-digest.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
-function isValidAdminAuth(auth: string | undefined): boolean {
-  if (!auth || !ADMIN_SECRET) return false;
-  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
-  const provided = Buffer.from(auth, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
+
 
 export const internalHealthMonitorRoute = new Hono<AppEnv>();
 

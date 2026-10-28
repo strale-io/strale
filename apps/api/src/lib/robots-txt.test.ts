@@ -186,17 +186,17 @@ describe("assertRobotsAllowed (access results, RFC 9309 §2.3.1)", () => {
     expect((err as SiteAccessRefusedError).block).toEqual({ kind: "robots_unavailable", status: 503 });
   });
 
-  it("a 429 robots.txt is treated like a 5xx: refused", async () => {
+  it("a 429 robots.txt is a 4xx: allowed", async () => {
     safeFetchMock.mockResolvedValue(text("", 429));
-    await expect(assertRobotsAllowed("https://site.test/x")).rejects.toThrow(SiteAccessRefusedError);
+    await expect(assertRobotsAllowed("https://site.test/x")).resolves.toBeUndefined();
   });
 
-  it("a transport failure allows the fetch, and the allow is cached briefly", async () => {
+  it("a transport failure refuses the fetch, and the refusal is cached briefly", async () => {
     // Cached so a robots.txt that hangs costs its timeout once per origin per
     // five minutes, not on every call (review of 2026-10-24).
     safeFetchMock.mockRejectedValueOnce(new Error("The operation was aborted due to timeout"));
-    await expect(assertRobotsAllowed("https://site.test/x")).resolves.toBeUndefined();
-    await expect(assertRobotsAllowed("https://site.test/y")).resolves.toBeUndefined();
+    await expect(assertRobotsAllowed("https://site.test/x")).rejects.toThrow(SiteAccessRefusedError);
+    await expect(assertRobotsAllowed("https://site.test/y")).rejects.toThrow(SiteAccessRefusedError);
     expect(safeFetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -210,8 +210,8 @@ describe("assertRobotsAllowed (access results, RFC 9309 §2.3.1)", () => {
       { status: 200 },
     );
     safeFetchMock.mockResolvedValueOnce(stalled);
-    await expect(assertRobotsAllowed("https://site.test/x")).resolves.toBeUndefined();
-    await expect(assertRobotsAllowed("https://site.test/y")).resolves.toBeUndefined();
+    await expect(assertRobotsAllowed("https://site.test/x")).rejects.toThrow(SiteAccessRefusedError);
+    await expect(assertRobotsAllowed("https://site.test/y")).rejects.toThrow(SiteAccessRefusedError);
     expect(safeFetchMock).toHaveBeenCalledTimes(1);
   });
 

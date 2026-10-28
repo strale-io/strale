@@ -39,6 +39,7 @@ registerCapability("url-health-check", async (input: CapabilityInput) => {
       // safe-fetch.ts's SafeFetchOptions doc for the full history.
       await validateUrl(currentUrl);
       const response = await safeFetch(currentUrl, {
+        purpose: "availability_probe",
         method: "HEAD",
         maxRedirects: 0,
         returnOnRedirectCap: true,
@@ -73,6 +74,7 @@ registerCapability("url-health-check", async (input: CapabilityInput) => {
     // above: without it, a redirecting URL threw instead of reporting
     // its 3xx status_code.
     const response = await safeFetch(fullUrl, {
+      purpose: "availability_probe",
       method: "HEAD",
       maxRedirects: 0,
       returnOnRedirectCap: true,

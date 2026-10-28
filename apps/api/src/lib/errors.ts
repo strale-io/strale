@@ -8,6 +8,7 @@ export type ErrorCode =
   | "capability_unavailable"
   | "execution_failed"
   | "timeout_exceeded"
+  | "invalid_input"
   | "invalid_request"
   | "rate_limited"
   | "spend_cap_exceeded"
@@ -117,6 +118,7 @@ export function recoveryDetails(
     case "timeout_exceeded":
     case "transaction_finalization_failed":
       advice = { retryable: true, next_step: "Retry with exponential backoff; contact support with the transaction_id if the failure continues." }; break;
+    case "invalid_input":
     case "invalid_request": {
       const fields = details.missing_fields ?? details.required_fields;
       advice = { fix: Array.isArray(fields) && fields.length

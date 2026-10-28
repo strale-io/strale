@@ -1380,3 +1380,81 @@ it.each(["hold", "debit"])("H4 reconciler releases a stale %s reservation with a
   expect(tx.__transactionRows[0].error).toContain(mode === "hold" ? "released automatically" : "refunded automatically");
   expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(mode === "hold" ? 0 : 1);
 });
+
+
+describe("H6 dispatch schema validation before reservation", () => {
+  it.each(["enforce", "report"])("%s handles a type mismatch before any wallet hold", async mode => {
+    vi.stubEnv("INPUT_VALIDATION_MODE", mode);
+    const { log } = await import("../lib/log.js");
+    const warn = vi.spyOn(log, "warn");
+    const user = buildUserRow();
+    mocks.outerSelectQueue.push([user]);
+    const executor = vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+    mockGetExecutor.mockReturnValue(executor);
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10000 }, transactionId: randomUUID() });
+    mocks.txRef.current = tx;
+    try {
+      const res = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: 81726354 }, max_price_cents: 100 }) });
+      expect(res.status).toBe(mode === "enforce" ? 400 : 200);
+      if (mode === "enforce") {
+        expect(await res.json()).toMatchObject({ error_code: "invalid_input", details: { fix: expect.any(String), paths: ["/value"] } });
+        expect(executor).not.toHaveBeenCalled();
+        expect(mocks.dbTransactionCalls).toBe(0);
+        expect(tx.__reservationRows).toEqual([]);
+      } else expect(executor).toHaveBeenCalledWith({ value: 81726354 });
+      expect(warn).toHaveBeenCalledWith(expect.objectContaining({ label: "input-schema-mismatch", slug: "test-capability", rail: "wallet", paths: ["/value"] }), expect.any(String));
+      expect(JSON.stringify(warn.mock.calls)).not.toContain("81726354");
+    } finally { warn.mockRestore(); vi.unstubAllEnvs(); }
+  });
+});
+
+it.each([{ type: "foo" }, { $ref: "round2-do-missing" }, { type: "string", pattern: "[" }, { type: "object", properties: { a: { type: "string" } }, required: "a" }, []])("Round 2 malformed schema %j executes twice in report and refuses before hold in enforce", async schema => {
+  const { log } = await import("../lib/log.js");
+  const warn = vi.spyOn(log, "warn");
+  const executor = vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+  mockGetExecutor.mockReturnValue(executor);
+  mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, inputSchema: schema } });
+  try {
+    for (const mode of ["report", "report", "enforce"]) {
+      vi.stubEnv("INPUT_VALIDATION_MODE", mode);
+      const user = buildUserRow();
+      mocks.outerSelectQueue.push([user]);
+      const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10000 }, transactionId: randomUUID() });
+      mocks.txRef.current = tx;
+      const before = mocks.dbTransactionCalls;
+      const res = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(), body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "ok" }, max_price_cents: 100 }) });
+      expect(res.status).toBe(mode === "enforce" ? 503 : 200);
+      if (mode === "enforce") {
+        expect(await res.json()).toMatchObject({ error_code: "capability_unavailable", details: { fix: expect.any(String) } });
+        expect(mocks.dbTransactionCalls).toBe(before);
+        expect(tx.__reservationRows).toEqual([]);
+      }
+    }
+    expect(executor).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls.filter(([ctx]) => ctx.label === "input-schema-compile-failed")).toHaveLength(1);
+  } finally { warn.mockRestore(); vi.unstubAllEnvs(); }
+});
+
+it("Round 2 a 10000-item bad array executes in report with bounded logged paths", async () => {
+  vi.stubEnv("INPUT_VALIDATION_MODE", "report");
+  const { log } = await import("../lib/log.js");
+  const warn = vi.spyOn(log, "warn");
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user]);
+  const executor = vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+  mockGetExecutor.mockReturnValue(executor);
+  mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, inputSchema: { type: "object", properties: { value: { type: "array", items: { type: "integer" } } } } } });
+  mocks.txRef.current = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10000 }, transactionId: randomUUID() });
+  try {
+    const res = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(), body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: Array(10000).fill("bad") }, max_price_cents: 100 }) });
+    expect(res.status).toBe(200);
+    expect(executor).toHaveBeenCalledOnce();
+    const warning = warn.mock.calls.find(([ctx]) => ctx.label === "input-schema-mismatch");
+    expect(warning).toBeDefined();
+    const paths = warning![0].paths as string[];
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.length).toBeLessThanOrEqual(20);
+  } finally { warn.mockRestore(); vi.unstubAllEnvs(); }
+});

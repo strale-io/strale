@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { PgDialect } from "drizzle-orm/pg-core";
-const state = vi.hoisted(() => ({ rows: [] as any[], events: [] as string[], executor: vi.fn(), settle: vi.fn(), logError: vi.fn(), failRecord: false, intents: [] as any[], capabilityType: "deterministic", failBegin: false }));
+const state = vi.hoisted(() => ({ rows: [] as any[], events: [] as string[], executor: vi.fn(), settle: vi.fn(), logError: vi.fn(), logWarn: vi.fn(), failRecord: false, intents: [] as any[], capabilityType: "deterministic", failBegin: false, solution: vi.fn(), schema: undefined as unknown }));
 vi.mock("../db/index.js", async () => {
   const { capabilities, solutions, transactions, x402OrphanSettlements } = await import("../db/schema.js");
   const compile = (q: any) => {
@@ -24,10 +24,14 @@ vi.mock("../db/index.js", async () => {
     transaction: async (fn: any) => fn(db),
     delete: () => ({ where: async (q: any) => { state.rows = state.rows.filter(r => !match(r, q)); } }),
     select: () => ({ from: (table: unknown) => ({ where: (q: any) => {
-      const rows = table === transactions ? state.rows.filter(r => match(r, q)).map(r => ({ ...r, settlementId: r.x402SettlementId })) : table === solutions ? [] : [{
+      const rows = table === transactions ? state.rows.filter(r => match(r, q)).map(r => ({ ...r, settlementId: r.x402SettlementId })) : table === solutions ? [{
+        id: "44444444-4444-4444-4444-444444444444", slug: "test-solution", name: "Test solution", description: "Test solution",
+        priceCents: 5, isActive: true, x402Enabled: true,
+        inputSchema: state.schema ?? { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
+      }] : [{
         id: "22222222-2222-2222-2222-222222222222", slug: "test-capability", name: "Test", description: "Test tool",
         priceCents: 5, isActive: true, visible: true, x402Enabled: true, marketplaceEligible: true, lifecycleState: "active",
-        inputSchema: { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
+        inputSchema: state.schema ?? { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
         capabilityType: state.capabilityType, transparencyTag: "algorithmic", processesPersonalData: false,
       }];
       return Object.assign(Promise.resolve(rows), { limit: async () => rows, for: async () => rows });
@@ -87,12 +91,13 @@ vi.mock("../lib/x402-gateway.js", async (importOriginal) => ({
   hashPaymentHeader: () => "same-payment-hash", extractPayerAddress: () => null,
   settleX402Payment: state.settle,
 }));
+vi.mock("../lib/solution-executor.js", () => ({ executeSolution: state.solution, stepsThatRan: () => ["test-capability"] }));
 vi.mock("../capabilities/index.js", () => ({ getExecutor: () => state.executor }));
 vi.mock("../capabilities/guarded-executor.js", async (importOriginal) => ({
   ...await importOriginal<typeof import("../capabilities/guarded-executor.js")>(), assertGuardedAllow: vi.fn(),
 }));
 vi.mock("../lib/invocation-facts.js", () => ({ recordPaidInvocation: vi.fn() }));
-vi.mock("../lib/log.js", () => ({ logError: state.logError, logWarn: vi.fn() }));
+vi.mock("../lib/log.js", () => ({ logError: state.logError, logWarn: state.logWarn }));
 import { x402GatewayV2, __resetX402CacheForTests } from "./x402-gateway-v2.js";
 import { markFailed } from "../lib/x402-settlement-intent.js";
 const call = (inputs: any = { value: "test" }) => new Hono().route("/x402", x402GatewayV2).request("/x402/v2/test-capability", {
@@ -100,6 +105,7 @@ const call = (inputs: any = { value: "test" }) => new Hono().route("/x402", x402
 });
 const output = { output: { answer: "done" }, provenance: { source: "test" } };
 beforeEach(() => {
+  state.schema = undefined;
   vi.clearAllMocks(); state.rows = []; state.events = []; state.intents = []; state.failRecord = false; state.failBegin = false; state.capabilityType = "deterministic"; __resetX402CacheForTests();
   state.executor.mockImplementation(async () => { state.events.push("execute"); return output; });
   state.settle.mockImplementation(async () => { state.events.push("settle"); return { valid: true, settlementId: "settled-payment" }; });
@@ -213,4 +219,63 @@ it("Round 2 deletes the claim on a guarded-allow 503 before execution", async ()
   expect((await call()).status).toBe(503);
   expect(state.rows).toHaveLength(0);
   expect(state.executor).not.toHaveBeenCalled();
+});
+
+
+it.each(["enforce", "report"])("H6 %s schema validation happens before the payment claim", async mode => {
+  vi.stubEnv("INPUT_VALIDATION_MODE", mode);
+  try {
+    const res = await call({ value: 81726354 });
+    expect(res.status).toBe(mode === "enforce" ? 400 : 200);
+    if (mode === "enforce") {
+      expect(await res.json()).toMatchObject({ error_code: "invalid_input", details: { fix: expect.any(String), paths: ["/value"] } });
+      expect(state.events).not.toContain("claim");
+      expect(state.rows).toEqual([]);
+      expect(state.executor).not.toHaveBeenCalled();
+      expect(state.settle).not.toHaveBeenCalled();
+    } else {
+      expect(state.executor).toHaveBeenCalledWith({ value: 81726354 });
+      expect(state.events).toContain("claim");
+    }
+    expect(state.logWarn).toHaveBeenCalledWith("input-schema-mismatch", expect.any(String), { slug: "test-capability", rail: "x402", paths: ["/value"] });
+    expect(JSON.stringify(state.logWarn.mock.calls)).not.toContain("81726354");
+  } finally { vi.unstubAllEnvs(); }
+});
+
+
+it.each(["enforce", "report"])("H6 %s solution schema validation precedes claim", async mode => {
+  vi.stubEnv("INPUT_VALIDATION_MODE", mode);
+  state.solution.mockResolvedValue(null); // Executed, but has no configured steps; no settlement.
+  try {
+    const res = await new Hono().route("/x402", x402GatewayV2).request("/x402/v2/solutions/test-solution", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Payment": "signed-solution-payment" },
+      body: JSON.stringify({ value: 81726354 }),
+    });
+    expect(res.status).toBe(mode === "enforce" ? 400 : 503);
+    if (mode === "enforce") {
+      expect(await res.json()).toMatchObject({ error_code: "invalid_input", details: { fix: expect.any(String) } });
+      expect(state.events).not.toContain("claim"); expect(state.solution).not.toHaveBeenCalled();
+    } else {
+      expect(state.solution).toHaveBeenCalledWith(expect.any(String), { value: 81726354 }, { userId: null });
+      expect(state.events).toContain("claim");
+    }
+    expect(state.logWarn).toHaveBeenCalledWith("input-schema-mismatch", expect.any(String), { slug: "test-solution", rail: "x402", paths: ["/value"] });
+    expect(JSON.stringify(state.logWarn.mock.calls)).not.toContain("81726354");
+  } finally { vi.unstubAllEnvs(); }
+});
+
+it.each(["capability", "solution"])("Round 2 malformed %s schema returns 503 before x402 claim", async kind => {
+  state.schema = { type: "foo" };
+  vi.stubEnv("INPUT_VALIDATION_MODE", "enforce");
+  try {
+    const res = kind === "capability" ? await call() : await new Hono().route("/x402", x402GatewayV2).request("/x402/v2/solutions/test-solution", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Payment": "signed-solution-payment" }, body: JSON.stringify({ value: "ok" }),
+    });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error_code: "capability_unavailable", details: { fix: expect.any(String) } });
+    expect(state.events).not.toContain("claim");
+    expect(state.executor).not.toHaveBeenCalled();
+    expect(state.solution).not.toHaveBeenCalled();
+    expect(state.settle).not.toHaveBeenCalled();
+  } finally { vi.unstubAllEnvs(); }
 });

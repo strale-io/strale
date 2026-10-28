@@ -1,3 +1,4 @@
+import { isValidAdminAuth } from "../lib/admin-auth.js";
 import { withinOnboardingBudget } from "../lib/onboarding-budget.js";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
@@ -31,13 +32,7 @@ import type { AppEnv } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
-function isValidAdminAuth(auth: string | undefined): boolean {
-  if (!auth || !ADMIN_SECRET) return false;
-  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
-  const provided = Buffer.from(auth, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
+
 
 export const internalOnboardingRoute = new Hono<AppEnv>();
 

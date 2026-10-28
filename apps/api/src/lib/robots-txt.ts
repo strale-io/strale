@@ -17,39 +17,25 @@
  *     NOT a RegExp: robots.txt is written by whoever owns the site, and a
  *     pattern such as `/*a*a*a*b` compiled to `.*` backtracks exponentially —
  *     measured at 17 s on a 500-character path, blocking the event loop.
- *   - Access results (§2.3.1): 2xx is parsed; any other 4xx means "no
+ *   - Access results (§2.3.1): 2xx is parsed; any 4xx means "no
  *     robots.txt", so everything is allowed; 5xx means unreachable, which the
- *     RFC says MUST be treated as complete disallow. 429 is grouped with 5xx
- *     (as Google does): a site rate-limiting its robots.txt is asking crawlers
- *     to stay away, not saying it has no rules.
+ *     RFC says MUST be treated as complete disallow.
  *   - Caching (§2.4): at most 24 hours. Used here: one hour for a parsed file
  *     or a 4xx, five minutes for an unreachable one, so a brief outage of the
  *     site does not refuse it for an hour afterwards. Concurrent checks for one
  *     origin share a single request.
  *
- * One deliberate departure: a TRANSPORT failure (DNS, refused connection,
- * timeout) allows the fetch rather than refusing it. The page fetch that
- * follows goes to the same host and fails with the precise error the caller
- * needs ("domain does not resolve"), and a slow robots.txt on a healthy site
- * would otherwise refuse a page nobody asked us to stay away from. This is
- * recorded so it is a decision, not an accident; the RFC's "unreachable"
- * clause is applied to every case where the server answered. The allow is
- * cached for five minutes, so a robots.txt that hangs costs its timeout once
- * per origin per five minutes, not on every call.
- *
- * Redirects: a fetch that ends on a different URL is checked again against
- * the final URL's robots.txt (`assertRedirectAllowed`), and the page is
- * refused. This runs AFTER the transport has followed the redirect — safeFetch
- * and Browserless both follow it before Strale sees the final URL — so the
- * disallowed page has been requested once; what the check guarantees is that
- * its content is never used or returned. Checking every hop beforehand would
- * need a per-hop hook in safeFetch's redirect loop, and is not possible on the
- * Browserless route.
+ * Transport failure (including timeout or failed body read) disallows this call.
+ * Unreachable verdicts are cached for five minutes; successful rules and 4xx
+ * for one hour. safeFetch checks each page redirect BEFORE requesting it.
+ * Browserless's final URL still receives a post-transport check.
  *
  * Not a crawler: Strale fetches one page per call, so Crawl-delay is not
  * consulted.
  */
 
+import { UrlValidationError } from "./url-validator.js";
+import { isCapabilityRefusal } from "./capability-refusal.js";
 import { discardBody, safeFetch } from "./safe-fetch.js";
 import { readRobotsTxt } from "./resource-limits.js";
 import {
@@ -280,11 +266,19 @@ async function fetchVerdict(origin: string): Promise<RobotsVerdict> {
   try {
     response = await safeFetch(`${origin}/robots.txt`, {
       headers: { "User-Agent": STRALE_USER_AGENT, Accept: "text/plain,*/*;q=0.5" },
+      acquisitionMethod: "direct_api", // Internal control fetch: avoid recursive robots checks.
       maxRedirects: ROBOTS_MAX_REDIRECTS,
       timeoutMs: ROBOTS_TIMEOUT_MS,
     });
-  } catch {
-    // Transport failure: see the module header. Allowed, and cached briefly.
+  } catch (err) {
+    // An invalid/restricted target or explicit ToS refusal is not a robots outage.
+    if (err instanceof UrlValidationError || isCapabilityRefusal(err)) throw err;
+    // Preserve the page fetch's precise DNS diagnostic instead of masking it
+    // as robots_unavailable. Node fetch wraps the socket error in cause.
+    const cause = err instanceof Error ? (err.cause ?? err) : err;
+    if (cause && typeof cause === "object" && "code" in cause &&
+        (cause.code === "ENOTFOUND" || cause.code === "EAI_AGAIN")) throw cause;
+    // Conservative transport failure: refuse, and cache briefly.
     return remember(origin, { kind: "transport_failed" });
   }
 
@@ -304,7 +298,7 @@ async function fetchVerdict(origin: string): Promise<RobotsVerdict> {
     });
   }
   await discardBody(response, `robots.txt HTTP ${response.status}`);
-  if (response.status >= 500 || response.status === 429) {
+  if (response.status >= 500 || response.status < 400) {
     return remember(origin, { kind: "unreachable", status: response.status });
   }
   return remember(origin, { kind: "allow_all" });
@@ -327,7 +321,10 @@ export async function assertRobotsAllowed(targetUrl: string): Promise<void> {
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return;
 
   const verdict = await loadVerdict(parsed.origin);
-  if (verdict.kind === "allow_all" || verdict.kind === "transport_failed") return;
+  if (verdict.kind === "allow_all") return;
+  if (verdict.kind === "transport_failed") {
+    throw siteAccessRefusal(targetUrl, { kind: "robots_unavailable", status: 0 });
+  }
   if (verdict.kind === "unreachable") {
     throw siteAccessRefusal(targetUrl, { kind: "robots_unavailable", status: verdict.status });
   }

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 /**
  * Data-access lane and acquisition method on every answer (DEC-20261023-A,
  * "On adoption" item: "acquisition method and lane in provenance").
@@ -170,4 +171,13 @@ export function stampDataAccess<P extends Record<string, unknown>>(provenance: P
     delete out.data_access_checks;
   }
   return out as P;
+}
+
+/** Propagate the manifest method through nested executor helpers without cross-call leakage. */
+const acquisitionContext = new AsyncLocalStorage<AcquisitionMethod>();
+export function withAcquisitionMethod<T>(method: AcquisitionMethod | undefined, run: () => T): T {
+  return method ? acquisitionContext.run(method, run) : run();
+}
+export function currentAcquisitionMethod(): AcquisitionMethod | undefined {
+  return acquisitionContext.getStore();
 }

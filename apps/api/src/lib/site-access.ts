@@ -29,7 +29,7 @@
  * stop, but a fault the health machinery counts.
  */
 
-import { CapabilityRefusalError } from "./capability-refusal.js";
+import { CapabilityRefusalError, ROBOTS_UNAVAILABLE_DETAILS } from "./capability-refusal.js";
 import { SITE_BLOCK_MARKER } from "./tos-blocklist.js";
 
 /**
@@ -85,7 +85,7 @@ export class SiteAccessRefusedError extends CapabilityRefusalError {
   readonly block: SiteBlock;
 
   constructor(message: string, block: SiteBlock) {
-    super(message);
+    super(message, block.kind === "robots_unavailable" ? ROBOTS_UNAVAILABLE_DETAILS : undefined);
     this.name = "SiteAccessRefusedError";
     this.block = block;
   }
@@ -115,7 +115,7 @@ function describeBlock(host: string, block: SiteBlock): string {
       return `${host}'s robots.txt disallows this path for automated agents.`;
     case "robots_unavailable":
       return (
-        `${host}'s robots.txt could not be read (HTTP ${block.status}); ` +
+        `${host}'s robots.txt could not be read (${block.status === 0 ? "transport failure or timeout" : `HTTP ${block.status}`}); ` +
         `the robots.txt standard (RFC 9309) treats that as "do not fetch".`
       );
   }
@@ -136,7 +136,10 @@ export function siteAccessRefusal(
 ): SiteAccessRefusedError {
   const message =
     `Site refused automated access: ${describeBlock(hostOf(targetUrl), block)} ` +
-    `${SITE_BLOCK_MARKER} and does not retry it through another route, so retrying the same URL will not succeed. ` +
+    `${SITE_BLOCK_MARKER} and does not retry it through another route. ` +
+    (block.kind === "robots_unavailable"
+      ? "Wait at least 5 minutes before retrying this URL after robots.txt becomes reachable. "
+      : "Retrying the same URL will not succeed. ") +
     advice;
   return new SiteAccessRefusedError(message, block);
 }

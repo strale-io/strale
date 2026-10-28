@@ -1387,3 +1387,13 @@
   set_in:
     - railway
   cost_note: Free official registry API. Petter holds the ID; set in Railway on 2026-10-27. Without it, japanese-company-data returns capability_unavailable before any execution or settlement. Never log it.
+
+- name: INPUT_VALIDATION_MODE
+  purpose: "Dispatch JSON-schema validation: report (default) logs value-free mismatch paths; enforce rejects before payment reservation or claim."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  example_value: report
