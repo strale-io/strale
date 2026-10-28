@@ -237,22 +237,23 @@ export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
       "serp-analyze",
       "serp-related-questions",
     ],
-    resale: "unverified",
+    resale: "permitted",
     terms_url: "https://serper.dev/terms",
-    accessed: "2026-10-24",
+    accessed: "2026-10-28",
     how_read:
-      "serper.dev was unreachable from the 2026-10-24 session (environment network policy). Read instead: a " +
-      "web-search tool's summary of, and excerpts from, a cached copy about 878 days old per that tool. The " +
-      "quotations below are the tool's excerpts, not verified word-for-word against the page, and an ellipsis may " +
-      "hide qualifying words.",
+      "Written reply from support@serper.dev on 2026-10-27 19:40 CET to Petter's email of 2026-10-26 asking whether " +
+      "per-call resale is permitted; read from the inbox by the 2026-10-28 morning run (docs/company/OUTBOX.yaml " +
+      "serper-resale-terms). The published terms (\"Updated on May 29, 2024\", read 2026-10-26) are silent on resale.",
     findings: [
-      "Licence is a B2B use licence ('Permission is granted to download the materials … for as long as your use case " +
-        "requires'), not a transfer of title; no clause grants resale or sublicensing of results.",
-      "Prohibits 'Mirror the materials on any other server as-is with no-value-added' — close to returning raw results.",
-      "States 'Serper provides web-scraped data collected from public domain sources' and no affiliation with Google.",
-      "Termination at any time, with or without cause.",
+      "Serper, in writing: \"Using Serper as an upstream source within a value-added commercial service is permitted " +
+        "under our standard terms. This includes returning processed results through your own per-call API.\"",
+      "Condition: reselling API access without added value is not permitted — every executor must return processed " +
+        "results in Strale's own schema, one search per request, never Serper's response passed through as-is.",
+      "No separate reseller or partner agreement; standard prepaid tiers apply.",
+      "The permission does not grant third-party rights; Serper points to Google's terms (the search-data case " +
+        "DEC-20261023-A already allows for in the vendor lane).",
     ],
-    decision_ref: "docs/company/DECISION-QUEUE.md DQ-39",
+    decision_ref: "docs/company/DECISION-QUEUE.md DQ-39 (accepted by Petter 2026-10-28)",
   },
   {
     vendor: "Jina AI (Reader)",

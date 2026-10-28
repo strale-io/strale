@@ -21,9 +21,10 @@ Written 2026-10-27 for `docs/research/2026-10-27-distribution-strategy.md` §6.
 - `no-account-required-x402` is **needs_evidence**: used only scoped to x402.
 - Avoided words: verified, trusted, trust layer, quality-scored, SQS,
   independently tested, compliant, most popular, SLA, average latency.
-- Search tools (Google results via Serper) are **not** named in headline
-  copy until DQ-39 resolves (Serper resale terms; exception ends 2026-11-09).
-  Body copy names "web search" generically, which survives a vendor change.
+- Search tools (Google results via Serper) may be named now that Serper's
+  written permission is accepted (DQ-39, 2026-10-28). Prefer "web search" in
+  body copy, which survives a vendor change, and never present the tools as
+  an affiliate of Google.
 
 ---
 
