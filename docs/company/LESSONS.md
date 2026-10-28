@@ -457,7 +457,7 @@ to verify were broken?* For F7 incident 8: *which consumers read this setting,
 and did the strictest one accept it?* Same question. A reader who agrees with
 the paragraph above and does not ask one of these has changed nothing.
 
-**Count: 11 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded, and incident 11 (2026-10-18) is a unit test fed a message its production caller never produces.** Integration
+**Count: 12 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded, incident 11 (2026-10-18) is a unit test fed a message its production caller never produces, and incident 12 (2026-10-28) is a monitoring check whose query could never run.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -697,6 +697,28 @@ unfixed runner at both call sites. *The discriminating question in this dress:*
 **is the test's input the value the production caller actually passes, or the
 value I assume it passes?** For a classifier, take the input from a stored
 production row, not from a reconstruction.
+
+**Incident 12, 2026-10-28 — a monitoring check whose query could never run.**
+`free_tier_health`, the daily check guarding the free-tier showcase, bound a JS
+slug array into `ANY(${...})` inside a drizzle `sql` template. drizzle renders
+that as a row tuple, `ANY(($1, $2))`, and Postgres refuses it ("op ANY/ALL
+(array) requires array on right side"). The check caught the error and returned
+"Check error" on every run; the query has been unchanged since the check was
+written (49781bb3, 2026-03-20). Nothing read it as a
+failure until #774 made the meta-daily heartbeat depend on every daily check
+completing, and `/health/jobs` then showed meta-daily as never succeeding.
+Reproduced on Postgres 16 with the schema and all startup migrations applied.
+The same shape was live in two more files (`digest-compiler.ts`,
+`reply-webhook.ts`), found by the guard on its first run. It is the fifth
+occurrence of the pattern after 4bf58d0, `auto-register.ts` and
+`test-scheduler.ts`, each repaired locally with a warning comment at its own
+site — and per-site comments did not prevent the next one. Repaired with a
+repo-wide scan (`no-drizzle-any-array.test.ts`: any `ANY(${name})` in a file
+importing drizzle's `sql`, except listed SQL fragments) and a real-Postgres
+integration test of the daily checks, each shown failing on the unrepaired code
+through `mutation-test.mjs`. *The discriminating question in this dress:* **if
+this check errored on every run, what would tell me?** Here the answer was
+"nothing, for seven months".
 
 ### F6 · Stale or unsupported public claim
 
@@ -1367,7 +1389,7 @@ would have needed for `close_stranded_executing_rows` and confirm it is refused
 > with `git checkout -- <file>` — which does not restore uncommitted work, it
 > discards it.
 
-**Count: 6.** Four during the 2026-08-21 remediation program, which is what
+**Count: 7.** Four during the 2026-08-21 remediation program, which is what
 caused `apps/api/scripts/mutation-test.mjs` to be written. Then twice more on
 2026-08-23, in WP10 and in the execution-receipt package, by a session that had
 not reached for it.
@@ -1397,6 +1419,17 @@ mutations through it reproduced all nine as CAUGHT, with clean-tree enforcement
 and a verified-green baseline on both sides — which the hand-rolled version could
 not assert, and which is the difference between "the suite went red" and "the
 suite went red *because of the mutation*".
+
+**Incident 7, 2026-10-28.** Same shape again: two fixes written and not yet
+committed, the original files put back with `git checkout origin/main --` for a
+fail-before run, then "restored" with `git checkout HEAD --`, which on an
+uncommitted branch is the original too. Both fixes were gone. Rewritten from
+the session record within minutes, and the rest of the change's fail-before
+checks then ran through `mutation-test.mjs` on a committed tree. Doing so
+found a hole in the tool itself: `--find` text that occurs more than once was
+mutated at its first match only (a guard line repeated seven times in the
+file), which reported a false SURVIVED, and could as easily report a false
+CAUGHT. The tool now refuses an ambiguous `--find`, with a test.
 
 **State: OPEN.** No new tooling is owed — the existing guard is sufficient and
 that is the finding. What is owed is the thing this file asks of every family: a
