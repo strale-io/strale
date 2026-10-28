@@ -11,8 +11,8 @@
  * of them. A regression in one of these executors fails CI instead of the
  * next scheduled test run in production.
  *
- * Executors that call the network are out of scope here; their contract needs
- * recorded upstream responses, which come in later batches.
+ * Executors that call the network are judged the same way from recorded
+ * upstream responses in upstream-replay-contract.test.ts.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -20,10 +20,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { getExecutor } from "./index.js";
 import { getDeactivatedCapabilities } from "./auto-register.js";
-import { expectedFieldsToChecks, isCheckEnforced, runKnownAnswerCheck } from "../lib/known-answer-checks.js";
-import { checkGuaranteedFieldsPresent } from "../lib/guaranteed-fields-sentinel.js";
-import { CAPABILITY_OUTPUT_CONTRACTS } from "../lib/capability-output-contracts.js";
-import type { ManifestExpectedField } from "../lib/capability-manifest-types.js";
+import { judgeKnownAnswer, knownAnswerCheckCount, type ContractManifest } from "../test-helpers/known-answer-contract.js";
 
 const OFFLINE_SOURCE_TYPES = new Set(["computed", "reference"]);
 
@@ -55,12 +52,7 @@ const UNSTUBBED_REACH = /getExecutor\(|["']node:(?:dns|net|http|https|tls|dgram)
  */
 const MIN_COVERED = 79;
 
-interface Manifest {
-  slug: string;
-  data_source_type?: string;
-  output_field_reliability?: Record<string, string>;
-  test_fixtures?: { known_answer?: { input?: Record<string, unknown>; expected_fields?: ManifestExpectedField[] } };
-}
+type Manifest = ContractManifest;
 
 const manifestsDir = resolve(import.meta.dirname, "../../../../manifests");
 const deactivated = getDeactivatedCapabilities();
@@ -97,8 +89,7 @@ describe("offline contract: computed executors", () => {
   it.each(covered.map((m) => [m.slug, m] as const))("%s meets its known answer offline", async (slug, manifest) => {
     const knownAnswer = manifest.test_fixtures?.known_answer;
     expect(knownAnswer?.input, `${slug}: manifest has no known_answer input`).toBeTruthy();
-    const checks = expectedFieldsToChecks(knownAnswer?.expected_fields ?? []);
-    expect(checks.length, `${slug}: known_answer asserts nothing`).toBeGreaterThan(0);
+    expect(knownAnswerCheckCount(manifest), `${slug}: known_answer asserts nothing`).toBeGreaterThan(0);
 
     await import(/* @vite-ignore */ `./${slug}.js`);
     const executor = getExecutor(slug);
@@ -108,16 +99,7 @@ describe("offline contract: computed executors", () => {
     const result = await executor!(structuredClone(knownAnswer!.input!));
     expect(fetchMock, `${slug}: called the network`).not.toHaveBeenCalled();
 
-    // The runner reads reliability from the DB, which carries the corrected
-    // contract where one exists (startup-migrations applies it).
-    const reliability = CAPABILITY_OUTPUT_CONTRACTS[slug]?.reliability ?? manifest.output_field_reliability;
-    const failures = checks
-      .filter((check) => isCheckEnforced(check, reliability))
-      .map((check) => runKnownAnswerCheck(check, result.output))
-      .filter((r) => !r.passed)
-      .map((r) => r.reason);
-    const sentinel = checkGuaranteedFieldsPresent(result.output, reliability);
-    if (!sentinel.passed) failures.push(sentinel.failureReason ?? "guaranteed field missing");
+    const failures = judgeKnownAnswer(manifest, result.output);
     expect(failures, slug).toEqual([]);
   });
 });

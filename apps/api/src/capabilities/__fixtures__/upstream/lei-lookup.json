@@ -1,0 +1,41 @@
+{
+  "slug": "lei-lookup",
+  "recorded_at": "2026-10-28T22:20:19.219Z",
+  "input": {
+    "lei": "549300MLUDYVRQOOXS22"
+  },
+  "redactions": [
+    "Set-Cookie values replaced with 'redacted'"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.gleif.org/api/v1/lei-records/549300MLUDYVRQOOXS22"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "alt-svc": "h3=\":443\"; ma=60",
+          "cache-control": "private, must-revalidate",
+          "content-security-policy": "default-src 'self' 'unsafe-inline' https://*.gleif.org;",
+          "content-type": "application/vnd.api+json",
+          "date": "Wed, 28 Oct 2026 22:20:19 GMT",
+          "expires": "-1",
+          "pragma": "no-cache",
+          "set-cookie": "DYNSRV=redacted; Expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/",
+          "strict-transport-security": "max-age=63072000; includeSubdomains; preload",
+          "x-content-security": "default-src 'self' 'unsafe-inline' https://*.gleif.org;",
+          "x-content-type-options": "nosniff",
+          "x-download-options": "noopen",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-robots-tag": "all",
+          "x-webkit-csp": "default-src 'self' 'unsafe-inline' https://*.gleif.org;"
+        },
+        "body": "{\"meta\":{\"goldenCopy\":{\"publishDate\":\"2026-10-28T16:00:00Z\"}},\"data\":{\"type\":\"lei-records\",\"id\":\"549300MLUDYVRQOOXS22\",\"attributes\":{\"lei\":\"549300MLUDYVRQOOXS22\",\"entity\":{\"legalName\":{\"name\":\"NORDIC CREDIT RATING AS\",\"language\":\"no\"},\"otherNames\":[{\"name\":\"NORDIC RATING AS\",\"language\":\"no\",\"type\":\"PREVIOUS_LEGAL_NAME\"}],\"transliteratedOtherNames\":[],\"legalAddress\":{\"language\":\"no\",\"addressLines\":[\"Rusel\\u00f8kkveien 34\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"OSLO\",\"region\":\"NO-03\",\"country\":\"NO\",\"postalCode\":\"0251\"},\"headquartersAddress\":{\"language\":\"no\",\"addressLines\":[\"Rusel\\u00f8kkveien 34\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"OSLO\",\"region\":\"NO-03\",\"country\":\"NO\",\"postalCode\":\"0251\"},\"registeredAt\":{\"id\":\"RA000472\",\"other\":null},\"registeredAs\":\"917685991\",\"jurisdiction\":\"NO\",\"category\":\"GENERAL\",\"legalForm\":{\"id\":\"YI42\",\"other\":null},\"associatedEntity\":{\"lei\":null,\"name\":null},\"status\":\"ACTIVE\",\"expiration\":{\"date\":null,\"reason\":null},\"successorEntity\":{\"lei\":null,\"name\":null},\"successorEntities\":[],\"creationDate\":\"2016-08-26T10:00:00Z\",\"subCategory\":null,\"otherAddresses\":[],\"eventGroups\":[{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"SUPPORTING_DOCUMENTS\",\"effectiveDate\":\"2022-10-06T21:00:00Z\",\"recordedDate\":\"2022-10-18T12:47:37Z\",\"type\":\"CHANGE_HQ_ADDRESS\",\"status\":\"COMPLETED\"}]},{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"SUPPORTING_DOCUMENTS\",\"effectiveDate\":\"2022-10-06T21:00:00Z\",\"recordedDate\":\"2022-10-18T12:47:37Z\",\"type\":\"CHANGE_LEGAL_ADDRESS\",\"status\":\"COMPLETED\"}]}]},\"registration\":{\"initialRegistrationDate\":\"2017-04-29T02:02:00Z\",\"lastUpdateDate\":\"2026-10-21T05:07:36Z\",\"status\":\"ISSUED\",\"nextRenewalDate\":\"2027-12-04T12:36:14Z\",\"managingLou\":\"529900F6BNUR3RJ2WH29\",\"corroborationLevel\":\"FULLY_CORROBORATED\",\"validatedAt\":{\"id\":\"RA000472\",\"other\":null},\"validatedAs\":\"917685991\",\"otherValidationAuthorities\":[]},\"bic\":null,\"mic\":null,\"ocid\":\"no\\/917685991\",\"qcc\":\"QNOBSF4NS8\",\"gem\":null,\"spglobal\":[\"429320453\"],\"conformityFlag\":\"CONFORMING\"},\"relationships\":{\"managing-lou\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\\/managing-lou\"}},\"lei-issuer\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\\/lei-issuer\"}},\"field-modifications\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\\/field-modifications\"}},\"direct-parent\":{\"links\":{\"reporting-exception\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\\/direct-parent-reporting-exception\"}},\"ultimate-parent\":{\"links\":{\"reporting-exception\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\\/ultimate-parent-reporting-exception\"}},\"isins\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\\/isins\"}}},\"links\":{\"self\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300MLUDYVRQOOXS22\"}}}",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

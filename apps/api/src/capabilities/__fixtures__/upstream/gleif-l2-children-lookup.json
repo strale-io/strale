@@ -1,0 +1,70 @@
+{
+  "slug": "gleif-l2-children-lookup",
+  "recorded_at": "2026-10-28T22:20:16.026Z",
+  "input": {
+    "lei": "549300B4X0JHWV0DTD60"
+  },
+  "redactions": [
+    "Set-Cookie values replaced with 'redacted'"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.gleif.org/api/v1/lei-records/549300B4X0JHWV0DTD60"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "alt-svc": "h3=\":443\"; ma=60",
+          "cache-control": "private, must-revalidate",
+          "content-security-policy": "default-src 'self' 'unsafe-inline' https://*.gleif.org;",
+          "content-type": "application/vnd.api+json",
+          "date": "Wed, 28 Oct 2026 22:20:16 GMT",
+          "expires": "-1",
+          "pragma": "no-cache",
+          "set-cookie": "DYNSRV=redacted; Expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/",
+          "strict-transport-security": "max-age=63072000; includeSubdomains; preload",
+          "x-content-security": "default-src 'self' 'unsafe-inline' https://*.gleif.org;",
+          "x-content-type-options": "nosniff",
+          "x-download-options": "noopen",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-robots-tag": "all",
+          "x-webkit-csp": "default-src 'self' 'unsafe-inline' https://*.gleif.org;"
+        },
+        "body": "{\"meta\":{\"goldenCopy\":{\"publishDate\":\"2026-10-28T16:00:00Z\"}},\"data\":{\"type\":\"lei-records\",\"id\":\"549300B4X0JHWV0DTD60\",\"attributes\":{\"lei\":\"549300B4X0JHWV0DTD60\",\"entity\":{\"legalName\":{\"name\":\"SPOTIFY TECHNOLOGY S.A.\",\"language\":\"lb\"},\"otherNames\":[],\"transliteratedOtherNames\":[],\"legalAddress\":{\"language\":\"lb\",\"addressLines\":[\"42-44, avenue de la Gare\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Luxembourg\",\"region\":\"LU-LU\",\"country\":\"LU\",\"postalCode\":\"L-1610\"},\"headquartersAddress\":{\"language\":\"lb\",\"addressLines\":[\"Regeringsgatan 19\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Stockholm\",\"region\":\"SE-AB\",\"country\":\"SE\",\"postalCode\":\"111 53\"},\"registeredAt\":{\"id\":\"RA000432\",\"other\":null},\"registeredAs\":\"B123052\",\"jurisdiction\":\"LU\",\"category\":\"GENERAL\",\"legalForm\":{\"id\":\"5GGB\",\"other\":null},\"associatedEntity\":{\"lei\":null,\"name\":null},\"status\":\"ACTIVE\",\"expiration\":{\"date\":null,\"reason\":null},\"successorEntity\":{\"lei\":null,\"name\":null},\"successorEntities\":[],\"creationDate\":null,\"subCategory\":null,\"otherAddresses\":[],\"eventGroups\":[]},\"registration\":{\"initialRegistrationDate\":\"2019-05-08T14:30:00Z\",\"lastUpdateDate\":\"2023-08-02T13:59:00Z\",\"status\":\"LAPSED\",\"nextRenewalDate\":\"2022-08-17T15:32:00Z\",\"managingLou\":\"549300O897ZC5H7CY412\",\"corroborationLevel\":\"FULLY_CORROBORATED\",\"validatedAt\":{\"id\":\"RA000432\",\"other\":null},\"validatedAs\":\"B123052\",\"otherValidationAuthorities\":[]},\"bic\":null,\"mic\":null,\"ocid\":\"lu\\/B123052\",\"qcc\":\"QLUD8T46XW\",\"gem\":null,\"spglobal\":[\"225595077\"],\"conformityFlag\":\"NON_CONFORMING\"},\"relationships\":{\"managing-lou\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/managing-lou\"}},\"lei-issuer\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/lei-issuer\"}},\"field-modifications\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/field-modifications\"}},\"direct-parent\":{\"links\":{\"reporting-exception\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/direct-parent-reporting-exception\"}},\"ultimate-parent\":{\"links\":{\"reporting-exception\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/ultimate-parent-reporting-exception\"}},\"direct-children\":{\"links\":{\"relationship-records\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/direct-child-relationships\",\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/direct-children\"}},\"ultimate-children\":{\"links\":{\"relationship-records\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/ultimate-child-relationships\",\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/ultimate-children\"}},\"isins\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/isins\"}}},\"links\":{\"self\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\"}}}",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.gleif.org/api/v1/lei-records/549300B4X0JHWV0DTD60/direct-children?page[size]=20"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "alt-svc": "h3=\":443\"; ma=60",
+          "cache-control": "private, must-revalidate",
+          "content-security-policy": "default-src 'self' 'unsafe-inline' https://*.gleif.org;",
+          "content-type": "application/vnd.api+json",
+          "date": "Wed, 28 Oct 2026 22:20:16 GMT",
+          "expires": "-1",
+          "pragma": "no-cache",
+          "set-cookie": "DYNSRV=redacted; Expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/",
+          "strict-transport-security": "max-age=63072000; includeSubdomains; preload",
+          "x-content-security": "default-src 'self' 'unsafe-inline' https://*.gleif.org;",
+          "x-content-type-options": "nosniff",
+          "x-download-options": "noopen",
+          "x-frame-options": "SAMEORIGIN",
+          "x-permitted-cross-domain-policies": "none",
+          "x-robots-tag": "all",
+          "x-webkit-csp": "default-src 'self' 'unsafe-inline' https://*.gleif.org;"
+        },
+        "body": "{\"meta\":{\"goldenCopy\":{\"publishDate\":\"2026-10-28T16:00:00Z\"},\"pagination\":{\"currentPage\":1,\"perPage\":20,\"from\":1,\"to\":2,\"total\":2,\"lastPage\":1}},\"links\":{\"first\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/direct-children?page%5Bnumber%5D=1&page%5Bsize%5D=20\",\"last\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/549300B4X0JHWV0DTD60\\/direct-children?page%5Bnumber%5D=1&page%5Bsize%5D=20\"},\"data\":[{\"type\":\"lei-records\",\"id\":\"335800LYVN89V3RVI889\",\"attributes\":{\"lei\":\"335800LYVN89V3RVI889\",\"entity\":{\"legalName\":{\"name\":\"SPOTIFY INDIA LLP\",\"language\":\"en\"},\"otherNames\":[],\"transliteratedOtherNames\":[],\"legalAddress\":{\"language\":\"en\",\"addressLines\":[\"JET AIRWAYS, GODREJ BKC 1ST FLOOR, UNIT NO. 1 & 2 PLOT C-68 G BLOCK BANDRA KURLA COMPLEX BANDRA(E)\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"MUMBAI\",\"region\":\"IN-MH\",\"country\":\"IN\",\"postalCode\":\"400051\"},\"headquartersAddress\":{\"language\":\"en\",\"addressLines\":[\"JET AIRWAYS, GODREJ BKC 1ST FLOOR, UNIT NO. 1 & 2 PLOT C-68 G BLOCK BANDRA KURLA COMPLEX BANDRA(E)\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"MUMBAI\",\"region\":\"IN-MH\",\"country\":\"IN\",\"postalCode\":\"400051\"},\"registeredAt\":{\"id\":\"RA000394\",\"other\":null},\"registeredAs\":\"AAP-6218\",\"jurisdiction\":\"IN\",\"category\":\"GENERAL\",\"legalForm\":{\"id\":\"U5S6\",\"other\":null},\"associatedEntity\":{\"lei\":null,\"name\":null},\"status\":\"ACTIVE\",\"expiration\":{\"date\":null,\"reason\":null},\"successorEntity\":{\"lei\":null,\"name\":null},\"successorEntities\":[],\"creationDate\":\"2019-06-12T18:30:00Z\",\"subCategory\":null,\"otherAddresses\":[],\"eventGroups\":[{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"OTHER_OFFICIAL_DOCUMENTS\",\"effectiveDate\":\"2022-10-19T18:30:00Z\",\"recordedDate\":\"2022-10-19T18:30:00Z\",\"type\":\"CHANGE_LEGAL_ADDRESS\",\"status\":\"COMPLETED\"}]},{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"OTHER_OFFICIAL_DOCUMENTS\",\"effectiveDate\":\"2022-10-19T18:30:00Z\",\"recordedDate\":\"2022-10-19T18:30:00Z\",\"type\":\"CHANGE_HQ_ADDRESS\",\"status\":\"COMPLETED\"}]}]},\"registration\":{\"initialRegistrationDate\":\"2020-10-21T07:45:48Z\",\"lastUpdateDate\":\"2026-09-07T10:37:43Z\",\"status\":\"ISSUED\",\"nextRenewalDate\":\"2027-10-20T18:30:00Z\",\"managingLou\":\"335800FVH4MOKZS9VH40\",\"corroborationLevel\":\"FULLY_CORROBORATED\",\"validatedAt\":{\"id\":\"RA000394\",\"other\":null},\"validatedAs\":\"AAP-6218\",\"otherValidationAuthorities\":[]},\"bic\":null,\"mic\":null,\"ocid\":\"in\\/AAP-6218\",\"qcc\":\"QINDFG622A\",\"gem\":null,\"spglobal\":[\"694102729\"],\"conformityFlag\":\"CONFORMING\"},\"relationships\":{\"managing-lou\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/managing-lou\"}},\"lei-issuer\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/lei-issuer\"}},\"field-modifications\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/field-modifications\"}},\"direct-parent\":{\"links\":{\"relationship-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/direct-parent-relationship\",\"lei-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/direct-parent\"}},\"ultimate-parent\":{\"links\":{\"relationship-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/ultimate-parent-relationship\",\"lei-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\\/ultimate-parent\"}}},\"links\":{\"self\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/335800LYVN89V3RVI889\"}},{\"type\":\"lei-records\",\"id\":\"5493004INDUJX1TDHI57\",\"attributes\":{\"lei\":\"5493004INDUJX1TDHI57\",\"entity\":{\"legalName\":{\"name\":\"Spotify AB\",\"language\":\"sv\"},\"otherNames\":[],\"transliteratedOtherNames\":[],\"legalAddress\":{\"language\":\"sv\",\"addressLines\":[\"Regeringsgatan 19\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Stockholm\",\"region\":\"SE-AB\",\"country\":\"SE\",\"postalCode\":\"111 53\"},\"headquartersAddress\":{\"language\":\"sv\",\"addressLines\":[\"Regeringsgatan 19\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Stockholm\",\"region\":\"SE-AB\",\"country\":\"SE\",\"postalCode\":\"111 53\"},\"registeredAt\":{\"id\":\"RA000544\",\"other\":null},\"registeredAs\":\"556703-7485\",\"jurisdiction\":\"SE\",\"category\":\"GENERAL\",\"legalForm\":{\"id\":\"XJHM\",\"other\":null},\"associatedEntity\":{\"lei\":null,\"name\":null},\"status\":\"ACTIVE\",\"expiration\":{\"date\":null,\"reason\":null},\"successorEntity\":{\"lei\":null,\"name\":null},\"successorEntities\":[],\"creationDate\":\"2006-05-10T00:00:00Z\",\"subCategory\":null,\"otherAddresses\":[],\"eventGroups\":[]},\"registration\":{\"initialRegistrationDate\":\"2016-03-04T02:15:00Z\",\"lastUpdateDate\":\"2026-02-12T07:16:00Z\",\"status\":\"ISSUED\",\"nextRenewalDate\":\"2027-03-07T14:29:00Z\",\"managingLou\":\"549300O897ZC5H7CY412\",\"corroborationLevel\":\"FULLY_CORROBORATED\",\"validatedAt\":{\"id\":\"RA000544\",\"other\":null},\"validatedAs\":\"556703-7485\",\"otherValidationAuthorities\":[]},\"bic\":[\"SPOTSESSXXX\"],\"mic\":null,\"ocid\":\"se\\/556703-7485\",\"qcc\":\"QSE1GRFWS4\",\"gem\":null,\"spglobal\":[\"145460788\"],\"conformityFlag\":\"CONFORMING\"},\"relationships\":{\"managing-lou\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/managing-lou\"}},\"lei-issuer\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/lei-issuer\"}},\"field-modifications\":{\"links\":{\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/field-modifications\"}},\"direct-parent\":{\"links\":{\"relationship-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/direct-parent-relationship\",\"lei-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/direct-parent\"}},\"ultimate-parent\":{\"links\":{\"relationship-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/ultimate-parent-relationship\",\"lei-record\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/ultimate-parent\"}},\"direct-children\":{\"links\":{\"relationship-records\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/direct-child-relationships\",\"related\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\\/direct-children\"}}},\"links\":{\"self\":\"https:\\/\\/api.gleif.org\\/api\\/v1\\/lei-records\\/5493004INDUJX1TDHI57\"}}]}",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

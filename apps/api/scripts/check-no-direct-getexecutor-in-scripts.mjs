@@ -62,6 +62,10 @@ const OPERATOR_TOOL_ALLOWLIST = new Set([
   "sweep-paid-fixtures.ts",
   "capture-tier-fixtures.ts",
   "smoke-openapi-resolver.ts",
+  // H7c batch 2: invokes through src/test-helpers/known-answer-contract.ts,
+  // which this checker does not trace; listed so the exemption is on record.
+  // Free cost classes only, one live call per slug per run, no DB.
+  "record-upstream.ts",
 ]);
 
 const CAPABILITIES_INDEX_RE = /^(\.\.\/)+src\/capabilities\/index(\.js)?$/;

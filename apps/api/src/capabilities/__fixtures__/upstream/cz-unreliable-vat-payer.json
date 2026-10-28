@@ -1,0 +1,46 @@
+{
+  "slug": "cz-unreliable-vat-payer",
+  "recorded_at": "2026-10-28T22:20:09.958Z",
+  "input": {
+    "dic": "CZ00177041"
+  },
+  "redactions": [
+    "Set-Cookie values replaced with 'redacted'"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP",
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tns=\"http://adis.mfcr.cz/rozhraniCRPDPH/\">\n  <soapenv:Body>\n    <tns:StatusNespolehlivyPlatceRozsirenyRequest>\n      <tns:dic>00177041</tns:dic>\n    </tns:StatusNespolehlivyPlatceRozsirenyRequest>\n  </soapenv:Body>\n</soapenv:Envelope>"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept",
+          "access-control-allow-origin": "https://adisrws.mfcr.cz",
+          "cache-control": "no-cache, no-store, must-revalidate, post-check=0, pre-check=0, max-age=0",
+          "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; frame-ancestors 'self'",
+          "content-type": "text/xml;charset=utf-8",
+          "date": "Wed, 28 Oct 2026 22:20:11 GMT",
+          "expires": "0",
+          "feature-policy": "geolocation 'none'; midi 'none'; notifications 'none'; sync-xhr 'self'; microphone 'none'; camera 'none'; magnetometer 'none'; gyroscope 'none'; speaker 'none'; vibrate 'none'; fullscreen 'none'; payment 'none'",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "set-cookie": "TS01ff8683=redacted; Path=/; Domain=.adisrws.mfcr.cz",
+          "strict-transport-security": "max-age=31536000; includeSubDomains",
+          "vary": "Accept-Encoding, Origin",
+          "x-backside-transport": "OK OK",
+          "x-content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; frame-ancestors 'self'",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-global-transaction-id": "2cb129f16ae2751be4b2b51f",
+          "x-ua-compatible": "IE=8",
+          "x-webkit-csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; frame-ancestors 'self'",
+          "x-xss-protection": "1"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Header/><soapenv:Body><StatusNespolehlivyPlatceRozsirenyResponse xmlns=\"http://adis.mfcr.cz/rozhraniCRPDPH/\"><status odpovedGenerovana=\"2026-10-28\" statusCode=\"0\" statusText=\"OK\"/><statusPlatceDPH dic=\"00177041\" nespolehlivyPlatce=\"NE\" cisloFu=\"13\"><zverejneneUcty><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"DE67269410530689050300\"/></ucet><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"GB86MIDL40025051315439\"/></ucet><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"DE02502109001215824019\"/></ucet><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"PL32103015080000000815365003\"/></ucet><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"NO0460050583913\"/></ucet><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"SE1230000000031441710744\"/></ucet><ucet datumZverejneni=\"2013-04-01\"><nestandardniUcet cislo=\"DE30514107004058012218\"/></ucet><ucet datumZverejneni=\"2013-04-05\"><standardniUcet cislo=\"2101983244\" kodBanky=\"2700\"/></ucet><ucet datumZverejneni=\"2013-12-20\"><nestandardniUcet cislo=\"CH0508836120399100006\"/></ucet><ucet datumZverejneni=\"2015-06-18\"><nestandardniUcet cislo=\"DE88269410530689050310\"/></ucet><ucet datumZverejneni=\"2019-02-08\"><nestandardniUcet cislo=\"0101968892\"/></ucet><ucet datumZverejneni=\"2019-03-21\"><nestandardniUcet cislo=\"DE20512106004270708318\"/></ucet><ucet datumZverejneni=\"2020-03-14\"><nestandardniUcet cislo=\"6161403594\"/></ucet><ucet datumZverejneni=\"2020-07-08\"><nestandardniUcet cislo=\"BE90001833662132\"/></ucet><ucet datumZverejneni=\"2020-07-08\"><standardniUcet cislo=\"1387698195\" kodBanky=\"2700\"/></ucet><ucet datumZverejneni=\"2026-03-19\"><standardniUcet cislo=\"1000053254\" kodBanky=\"2700\"/></ucet></zverejneneUcty><nazevSubjektu>ŠKODA AUTO A.S.        </nazevSubjektu><adresa><uliceCislo>tř. Václava Klementa 869</uliceCislo><castObce>MLADÁ BOLESLAV II                               </castObce><mesto>MLADÁ BOLESLAV</mesto><psc>29301</psc><stat>Česká republika</stat></adresa></statusPlatceDPH></StatusNespolehlivyPlatceRozsirenyResponse></soapenv:Body></soapenv:Envelope>",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

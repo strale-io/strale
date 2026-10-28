@@ -1,0 +1,43 @@
+{
+  "slug": "holiday-calendar",
+  "recorded_at": "2026-10-28T22:20:18.357Z",
+  "input": {
+    "country_code": "SE",
+    "year": 2025
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://date.nager.at/api/v3/PublicHolidays/2025/SE"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "age": "596756",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "api-supported-versions": "3.0",
+          "cache-control": "public,max-age=604800",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a51d53b84f42f41d-ATL",
+          "content-security-policy": "default-src https: data: 'unsafe-inline' 'unsafe-eval'",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 28 Oct 2026 22:20:18 GMT",
+          "last-modified": "Thu, 22 Oct 2026 01:34:29 GMT",
+          "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+          "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=DqYnwfZmnwmih4l5uIEeh%2BPPWA3owXHZ0pO%2BXV40DYwn5b4iVmCpY%2FvTRcIZE94lD3Sk61G%2FQ0mEPcpHEpcCoveamdn7X0HSNZ4LChplkUW%2BjxqyLUjkRWYFXXIZTlIq\"}]}",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN"
+        },
+        "body": "[{\"date\":\"2025-01-01\",\"localName\":\"Nyårsdagen\",\"name\":\"New Year's Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-01-06\",\"localName\":\"Trettondedag jul\",\"name\":\"Epiphany\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-04-18\",\"localName\":\"Långfredagen\",\"name\":\"Good Friday\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-04-20\",\"localName\":\"Påskdagen\",\"name\":\"Easter Sunday\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-04-21\",\"localName\":\"Annandag påsk\",\"name\":\"Easter Monday\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-05-01\",\"localName\":\"Första maj\",\"name\":\"International Workers' Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-05-29\",\"localName\":\"Kristi himmelsfärdsdag\",\"name\":\"Ascension Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-06-06\",\"localName\":\"Sveriges nationaldag\",\"name\":\"National Day of Sweden\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-06-08\",\"localName\":\"Pingstdagen\",\"name\":\"Pentecost\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-06-20\",\"localName\":\"Midsommarafton\",\"name\":\"Midsummer Eve\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-06-21\",\"localName\":\"Midsommardagen\",\"name\":\"Midsummer Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-11-01\",\"localName\":\"Alla helgons dag\",\"name\":\"All Saints' Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-12-24\",\"localName\":\"Julafton\",\"name\":\"Christmas Eve\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-12-25\",\"localName\":\"Juldagen\",\"name\":\"Christmas Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-12-26\",\"localName\":\"Annandag jul\",\"name\":\"St. Stephen's Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2025-12-31\",\"localName\":\"Nyårsafton\",\"name\":\"New Year's Eve\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]}]",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}
