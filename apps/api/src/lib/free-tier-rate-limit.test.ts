@@ -36,7 +36,8 @@ const db = { execute, transaction: (fn: (tx: { execute: typeof execute }) => Pro
     try { return await fn({ execute }); }
     catch (error) { state.counts = snapshot; throw error; }
   });
-  pending = run.catch(() => {});
+  // Keep the serialization chain alive after a refused (rolled-back) transaction.
+  pending = run.then(() => undefined, (error: unknown) => error);
   return run;
 } };
 const limit = STATIC_FACTS.free_tier_monthly_limit;
