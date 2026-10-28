@@ -642,17 +642,13 @@ export async function checkDegradedCount(): Promise<MetaCheckResult> {
 
 // ─── Check 14: Free-tier showcase protection (CRITICAL, daily) ──────────────
 
-const FREE_TIER_SLUGS = [
-  "iban-validate",
-  "email-validate",
-  "dns-lookup",
-  "json-repair",
-  "url-to-markdown",
-];
-
 /**
  * Check 14: Free-tier health (CRITICAL)
- * The 5 free-tier capabilities are the first thing agents try.
+ * The free-tier capabilities (is_free_tier, the canonical flag) are the first
+ * thing agents try. Selected by the flag, not a slug list: the list this
+ * replaced named 5 of 11, and its `ANY(${list})` never ran — drizzle expands a
+ * JS array to a row tuple, so the check errored on every run and meta-daily
+ * never recorded a success.
  * All deterministic — zero external_service_failures expected.
  */
 export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
@@ -670,7 +666,7 @@ export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
             AND tr.executed_at >= NOW() - INTERVAL '7 days'
         ) AS external_failures_7d
       FROM capabilities c
-      WHERE c.slug = ANY(${FREE_TIER_SLUGS})
+      WHERE c.is_free_tier = true
         AND c.is_active = true
     `);
 
@@ -680,6 +676,11 @@ export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
       external_failures_7d: number;
     }>;
 
+    // An empty showcase is the failure, not a pass over nothing (LESSONS F5).
+    if (results.length === 0) {
+      return { check, severity: "critical", passed: false, details: "No active free-tier capabilities (is_free_tier = true AND is_active = true)" };
+    }
+
     const issues: string[] = [];
     for (const r of results) {
       if (r.external_failures_7d > 0) {
@@ -688,7 +689,7 @@ export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
     }
 
     if (issues.length === 0) {
-      return { check, severity: "critical", passed: true, details: "All 5 free-tier capabilities healthy (no external failures)" };
+      return { check, severity: "critical", passed: true, details: `All ${results.length} free-tier capabilities healthy (no external failures)` };
     }
 
     await _logMetaEvent(check, "critical", `Free-tier showcase degraded: ${issues.length} issue(s)`, {
