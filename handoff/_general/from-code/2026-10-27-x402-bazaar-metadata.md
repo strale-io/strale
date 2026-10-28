@@ -416,3 +416,23 @@ Evidence: [round 3 receipt](../../../archive/receipts/2026-10-28-test-run-x402-b
 - Invocation correction: the initial quoted Vitest glob found no files; `vitest run x402` was used for actual x402 verification. An extra `src/lib/search*.test.ts` shell-glob run covered `search.test.ts` (11 passed); the actual failing search-quality file was then rerun explicitly as described above.
 
  No production writes, paid requests, deployment, commit, push, PR, merge or publication was performed. No production commands are required for these fixes; deployment and external validation remain with the orchestrator. [BACKFILL] This handoff is the session record; no Notion write was requested or performed.
+
+## Follow-up — 2026-10-28
+
+The header budget now removes the two legacy `outputSchema` mirrors after examples and before removing the Bazaar extension. The whole-word placeholder screen also inspects decoded strings, markup and parsed JSON values, including `value`; solutions still have no invented examples. This also withholds strings containing `example` as a whole word, including reserved example-domain fixtures.
+
+The Round 3 matrix method was repeated on all 356 manifests × GET/POST × capability/solution (1,424 v2 challenges), with identical fixture inputs on `origin/main` and this change:
+
+| Measure | Before | After |
+| --- | ---: | ---: |
+| Maximum encoded header bytes | 8,152 | 8,152 |
+| p95 bytes | 6,456 | 6,544 |
+| Median bytes | 4,048 | 4,078 |
+| Over 8,192 bytes | 0 | 0 |
+| Challenges with Bazaar extension | 861 | 880 |
+
+Of the 20 capability GET challenges previously missing the extension, 19 now retain it; `invoice-counterparty-check` still exceeds the budget without the mirrors. POST challenges may independently omit the extension when their required input lacks an eligible example. The unchanged payment projection (all fields of both `accepts` and `paymentRequirements`, excluding only discovery `outputSchema`) was JSON-serialized for each keyed matrix entry in order and SHA-256 hashed. Both revisions produced `fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6` across all 1,424 combinations. This is offline fixture evidence, not a live production comparison.
+
+The large `us-company-data` GET regression asserts both the extension and the limit; the all-challenge budget test remains. New privacy tests cover markup, JSON and percent encoding, and distinguish substrings. The final x402 run passed 968 tests with two skipped. The full API suite passed 7,395 tests, with 358 skipped; 365 files passed and 35 were skipped, so no isolated failure reruns were needed. MCP build, API typecheck, claims, models, env, docs, programs and receipts checks passed. The first x402 run failed eight assertions with the old assumptions; those assertions were updated to match the intended placeholder and budget behavior, then the final run passed. See the [follow-up receipt](../../../archive/receipts/2026-10-28-test-run-x402-discovery-coverage.json).
+
+The orchestrator owns independent review and shipping; no independent review, live check, commit, push, PR, deployment or production write was performed. No production migration or configuration change is required. [BACKFILL] No Notion Journal write was requested or performed.

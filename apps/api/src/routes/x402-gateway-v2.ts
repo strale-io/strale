@@ -546,13 +546,15 @@ export function encodeBudgetedPaymentRequiredHeader(body: Record<string, any>, s
     } else delete input.queryParams;
   }
   if (!fits()) {
+    // These are discovery-only legacy mirrors, never payment fields.
+    for (const requirement of [...(body.accepts ?? []), ...(body.paymentRequirements ?? [])]) requirement.outputSchema = {};
+  }
+  if (!fits()) {
     if (!oversizedDiscoverySlugs.has(slug)) {
       oversizedDiscoverySlugs.add(slug);
       logWarn("x402-discovery-header-budget", "Discovery schemas exceed the header budget; serving payment without discovery examples", { slug });
     }
     body.extensions = {};
-    // These are discovery-only legacy mirrors, never payment fields.
-    for (const requirement of [...(body.accepts ?? []), ...(body.paymentRequirements ?? [])]) requirement.outputSchema = {};
   }
   // Facilitator diagnostics can be arbitrarily long. Keep the actionable
   // retry instructions in details, without reflecting an oversized reason.

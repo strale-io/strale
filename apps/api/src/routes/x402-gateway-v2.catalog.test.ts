@@ -405,6 +405,7 @@ describe("x402 AgentCash discovery contract", () => {
 // and Bazaar Ajv validator for ALL manifests, a superset of enabled DB rows.
 // Enabled status lives in the DB; a fixture does not assert production eligibility.
 import { encodePaymentRequiredHeader } from "@x402/core/http";
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { getDiscoveryMetadata, metadataFromManifest, type DiscoveryManifest } from "../lib/x402-discovery-metadata.js";
@@ -421,6 +422,9 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
   }, 60_000);
   it("bounds all manifest capability and solution headers", () => {
     const sizes: number[] = [];
+    let extensions = 0;
+    const missing: string[] = [];
+    const paymentHash = createHash("sha256");
     const counts = {
       capability: { GET: { input: 0, output: 0 }, POST: { input: 0, output: 0, emptyBody: 0 } },
       solution: { GET: { input: 0, output: 0 }, POST: { input: 0, output: 0, emptyBody: 0 } },
@@ -432,6 +436,10 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
           const bytes = Buffer.byteLength(encodePaymentRequiredHeader(body as never));
           sizes.push(bytes);
           const info = (body.extensions.bazaar as any)?.info;
+          if (info) extensions++;
+          else if (kind === "capability" && method === "GET") missing.push(manifest.slug);
+          const withoutSchema = (entry: Record<string, unknown>) => Object.fromEntries(Object.entries(entry).filter(([key]) => key !== "outputSchema"));
+          paymentHash.update(JSON.stringify([kind, manifest.slug, method, body.accepts.map(withoutSchema), body.paymentRequirements.map(withoutSchema)]));
           const input = info?.input[method === "POST" ? "body" : "queryParams"];
           const published = metadataFromManifest(manifest).inputExample;
           if (input !== undefined && published !== undefined && kind === "capability") counts[kind][method].input++;
@@ -441,9 +449,15 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
       }
     }
     sizes.sort((a, b) => a - b);
-    process.stdout.write("D2 header distribution " + JSON.stringify({ challenges: sizes.length, max: sizes.at(-1), p95: sizes[Math.ceil(sizes.length * .95) - 1], median: (sizes[sizes.length / 2 - 1] + sizes[sizes.length / 2]) / 2, over8192: sizes.filter(size => size > 8192).length, counts }) + "\n");
+    process.stdout.write("D2 header distribution " + JSON.stringify({ challenges: sizes.length, max: sizes.at(-1), p95: sizes[Math.ceil(sizes.length * .95) - 1], median: (sizes[sizes.length / 2 - 1] + sizes[sizes.length / 2]) / 2, over8192: sizes.filter(size => size > 8192).length, extensions, missing, paymentHash: paymentHash.digest("hex"), counts }) + "\n");
     expect(sizes.filter(size => size > 8192)).toEqual([]);
   }, 60_000);
+  it("keeps Bazaar discovery for a large us-company-data GET challenge", () => {
+    const manifest = discoveryManifests.find(item => item.slug === "us-company-data")!;
+    const { body } = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${manifest.slug}`, manifest.input_schema, "GET", manifest.output_schema, 2, { kind: "capability", slug: manifest.slug });
+    expect(Buffer.byteLength(encodePaymentRequiredHeader(body as never))).toBeLessThanOrEqual(8192);
+    expect(body.extensions.bazaar).toBeDefined();
+  });
   it.each(discoveryManifests.flatMap(manifest => ["GET", "POST"].map(method => [manifest.slug, method, manifest] as const)))("validates %s %s challenge", (slug, method, manifest) => {
     const { body } = build402(manifest.name, manifest.description, 0.054, `https://api.strale.io/x402/v2/${slug}`, manifest.input_schema, method, manifest.output_schema, 2, { kind: "capability", slug });
     expect(validateOfflineDiscovery(body)).toEqual([]);
@@ -452,7 +466,9 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
     expect(body.resource.description).toBe(`${manifest.name}: ${manifest.description}`);
     const extension = body.extensions.bazaar as any;
     if (extension) {
-      expect(extension.info.input[method === "POST" ? "body" : "queryParams"]).toEqual(metadata.inputExample ?? (method === "POST" ? {} : undefined));
+      const input = extension.info.input[method === "POST" ? "body" : "queryParams"];
+      // Budgeting may drop the input example or use a valid empty POST body.
+      if (input !== undefined && !(method === "POST" && Object.keys(input).length === 0)) expect(input).toEqual(metadata.inputExample);
       // Header budgeting may withhold an otherwise safe output example.
       if (extension.info.output.example !== undefined) expect(extension.info.output.example).toEqual(metadata.outputExample);
       expect(JSON.stringify(extension.info.input)).not.toMatch(/example_\w+/);

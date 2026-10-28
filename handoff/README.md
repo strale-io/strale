@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-387 files (360 with a recorded intent, 27 without).
+388 files (361 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-28 | [`handoff/_general/from-code/2026-10-28-x402-discovery-coverage.md`](_general/from-code/2026-10-28-x402-discovery-coverage.md) | Preserve Bazaar discovery for large x402 schemas within the header budget and withhold embedded placeholder examples;... |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-vendor-permissions.md`](_general/from-code/2026-10-28-vendor-permissions.md) | make founder-accepted vendor and source permissions durable and checked; leave this branch uncommitted for orchestrat... |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-output-schema-runtime-example.md`](_general/from-code/2026-10-28-output-schema-runtime-example.md) | stop the manifest drift sweep counting the test runner's captured |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-money-path.md`](_general/from-code/2026-10-28-money-path.md) | Implement H4 on `feat/money-path` from `e871a2ad`: release database connections during sync paid execution, enforce t... |
