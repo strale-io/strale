@@ -196,6 +196,19 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # H7c batch 2: the CI replay test cannot see an upstream change, so this
+      # re-runs each recorded executor live once (free cost classes only) and
+      # reports a broken live contract, a request the executor no longer
+      # makes, a moved status, or a recording older than 90 days. A finding
+      # means re-capture with apps/api/scripts/record-upstream.ts --slug <slug>.
+      - id: upstream-recordings
+        run: |
+          set +e
+          set -o pipefail
+          cd apps/api && npx tsx scripts/record-upstream.ts --check 2>&1 | tee /tmp/upstream-recordings.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Aggregate report. Step fails (and triggers issue creation) if
       # ANY upstream sweep reported drift.
       - id: aggregate
@@ -242,6 +255,11 @@ jobs:
             echo '```'
             cat /tmp/output-schema.txt
             echo '```'
+            echo ""
+            echo "## Recorded upstream responses (live re-check)"
+            echo '```'
+            cat /tmp/upstream-recordings.txt
+            echo '```'
           } > /tmp/report.md
           cat /tmp/report.md
 
@@ -254,7 +272,8 @@ jobs:
           FTC=${{ steps.frontend-typecheck.outputs.exit }}
           TR=${{ steps.toast-readability.outputs.exit }}
           OS=${{ steps.output-schema.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$FTC" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ]; then
+          UR=${{ steps.upstream-recordings.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$FTC" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ] || [ "$UR" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi

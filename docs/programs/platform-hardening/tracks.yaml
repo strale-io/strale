@@ -113,14 +113,16 @@ tracks:
       - T4
     owner: session
     next_action: H7a (PR 787), the boot-lock retry fix (PR 790), H7b (PR 793,
-      one x402 settle path and the do.ts split) and H4b (PR 794, /v1/do x402
-      claim, replay and recording parity) are merged and verified live
-      (GET /health commit e4493594a318). H7c batch 1 (offline contract test
-      for the 79 offline computed/reference executors, judged by the runner's own
-      check functions; apps/api/src/capabilities/offline-contract.test.ts) is
-      in PR 799. The next H7c batch adds contract tests for network executors from
-      recorded upstream responses, starting with the most-called tools.
-      After that come the migrations file split with the ledger
+      one x402 settle path and the do.ts split), H4b (PR 794) and H7c batch 1
+      (PR 799, offline contract test for the 79 computed/reference executors)
+      are merged and verified live. H7c batch 2 adds the upstream replay
+      contract test (apps/api/src/capabilities/upstream-replay-contract.test.ts)
+      with 21 recorded free upstreams, a per-slug perturbation proof, the
+      recorder apps/api/scripts/record-upstream.ts and a weekly live re-check in
+      weekly-drift.yml. The next H7c batch tightens the known_answer contracts
+      the perturbation proof rejected (listed in
+      apps/api/src/capabilities/__fixtures__/upstream/README.md) and records
+      them. After that come the migrations file split with the ledger
       unchanged, the separate ledgered SQS column drop, and the
       applied-block-hash skip. See
       handoff/_general/from-code/2026-10-28-orchestrator-checkpoint.md.
