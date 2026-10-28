@@ -116,7 +116,7 @@ tracks:
       one x402 settle path and the do.ts split) and H4b (PR 794, /v1/do x402
       claim, replay and recording parity) are merged and verified live
       (GET /health commit e4493594a318). H7c batch 1 (offline contract test
-      for the 80 computed/reference executors, judged by the runner's own
+      for the 79 offline computed/reference executors, judged by the runner's own
       check functions; apps/api/src/capabilities/offline-contract.test.ts) is
       in its PR. Next H7c batch: contract tests for network executors from
       recorded upstream responses, starting with the most-called tools.

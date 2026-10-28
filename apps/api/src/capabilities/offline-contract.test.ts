@@ -36,14 +36,24 @@ const NOT_OFFLINE = new Map<string, string>([
   ["business-day-check", "fetches the public-holiday calendar; the expected answer depends on it"],
   ["c2pa-inspect", "fetches the asset at the input URL"],
   ["company-industry-classify", "classifies with an LLM call"],
+  ["email-reputation-score", "resolves MX records over DNS"],
 ]);
+
+/**
+ * Ways an executor reaches outside the process that the fetch stub cannot see:
+ * other network modules, and executors composed through getExecutor (whose
+ * dependencies this file never registers, so the executor would take a
+ * fallback branch production never takes). A covered executor whose source
+ * matches must be listed in NOT_OFFLINE instead of passing on that branch.
+ */
+const UNSTUBBED_REACH = /getExecutor\(|["']node:(?:dns|net|http|https|tls|dgram)(?:\/promises)?["']|["']undici["']/;
 
 /**
  * Floor on the number of executors judged here. A gate whose input set
  * shrinks to nothing passes vacuously (LESSONS.md F5); this keeps it honest.
  * Raise it as coverage grows; never lower it to make a red run green.
  */
-const MIN_COVERED = 80;
+const MIN_COVERED = 79;
 
 interface Manifest {
   slug: string;
@@ -77,13 +87,20 @@ describe("offline contract: computed executors", () => {
     expect([...NOT_OFFLINE.keys()].filter((slug) => !candidates.has(slug))).toEqual([]);
   });
 
+  it("covers no executor that reaches the network by another route", () => {
+    const reaching = covered
+      .map((m) => m.slug)
+      .filter((slug) => UNSTUBBED_REACH.test(readFileSync(resolve(import.meta.dirname, `${slug}.ts`), "utf8")));
+    expect(reaching).toEqual([]);
+  });
+
   it.each(covered.map((m) => [m.slug, m] as const))("%s meets its known answer offline", async (slug, manifest) => {
     const knownAnswer = manifest.test_fixtures?.known_answer;
     expect(knownAnswer?.input, `${slug}: manifest has no known_answer input`).toBeTruthy();
     const checks = expectedFieldsToChecks(knownAnswer?.expected_fields ?? []);
     expect(checks.length, `${slug}: known_answer asserts nothing`).toBeGreaterThan(0);
 
-    await import(`./${slug}.js`);
+    await import(/* @vite-ignore */ `./${slug}.js`);
     const executor = getExecutor(slug);
     expect(executor, `${slug}: no executor registered`).toBeTruthy();
 
