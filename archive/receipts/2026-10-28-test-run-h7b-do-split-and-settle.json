@@ -1,0 +1,453 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d8eb0c522cd6aeb114f23c64b8bc14531ff89f78"
+  },
+  "at": "2026-10-28T15:34:47.381Z",
+  "inputs": {
+    "branch": "refactor/h7b-do-split-and-settle",
+    "base": "d8eb0c52",
+    "working_tree": "uncommitted; orchestrator owns shipment"
+  },
+  "summary": {
+    "full_suite_passed": 7579,
+    "full_suite_failed": 0,
+    "full_suite_skipped": 358,
+    "full_suite_files_passed": 374,
+    "full_suite_files_skipped": 35,
+    "root_checks_passed": 25,
+    "characterization_baseline_passed": 33,
+    "origin_final_comparison_passed": 66,
+    "fail_before_expected_failures": 3,
+    "mechanically_equal_function_bodies": 24,
+    "preserved_findings": 5,
+    "handoff_gate_passed": false,
+    "uncommitted": true
+  },
+  "topic": "h7b-do-split-and-settle",
+  "raw": {
+    "baseline_commit": "d8eb0c522cd6aeb114f23c64b8bc14531ff89f78",
+    "uncommitted": true,
+    "changed_files": [
+      "apps/api/src/lib/account-closure.test.ts",
+      "apps/api/src/lib/api-keys.test.ts",
+      "apps/api/src/lib/audit-key-coverage.test.ts",
+      "apps/api/src/lib/audit-serve-coverage.test.ts",
+      "apps/api/src/lib/call-cost-settlement.test.ts",
+      "apps/api/src/lib/execution-outcome.guard.test.ts",
+      "apps/api/src/lib/execution-routing.test.ts",
+      "apps/api/src/lib/invocation-facts.test.ts",
+      "apps/api/src/lib/receipt/rail-coverage.test.ts",
+      "apps/api/src/lib/retry.executor-parity.test.ts",
+      "apps/api/src/routes/do.ts",
+      "apps/api/src/routes/x402-gateway-v2.settlement-order.test.ts",
+      "apps/api/src/routes/x402-gateway-v2.ts",
+      "apps/api/src/types.ts",
+      "docs/programs/platform-hardening/tracks.yaml",
+      "apps/api/src/lib/do/audit.ts",
+      "apps/api/src/lib/do/dispatch.ts",
+      "apps/api/src/lib/do/idempotency.ts",
+      "apps/api/src/lib/do/types.ts",
+      "apps/api/src/lib/do/upgrade.ts",
+      "apps/api/src/lib/x402-settle.ts",
+      "apps/api/src/routes/__snapshots__/x402-settlement-characterization.test.ts.snap",
+      "apps/api/src/routes/x402-settlement-characterization.test.ts",
+      "handoff/_general/from-code/2026-10-28-h7b-do-split-and-settle.md"
+    ],
+    "checks": [
+      {
+        "command": "npm run claims:check",
+        "exit": 0,
+        "output_tail": "> node scripts/check-claims.mjs\n\nchecked 30 rows in docs/company/claims.yaml against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract"
+      },
+      {
+        "command": "npm run models:check",
+        "exit": 0,
+        "output_tail": "> node apps/api/scripts/check-model-literals.mjs\n\nchecked 940 files under apps/api/src and apps/api/scripts (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)\nok   model registry contract"
+      },
+      {
+        "command": "npm run env:check",
+        "exit": 0,
+        "output_tail": "\nchecked 130 process.env names against 135 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit": 0,
+        "output_tail": "> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit": 0,
+        "output_tail": "ok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml\nok   docs/programs/distribution/tracks.yaml\nok   docs/programs/platform-hardening/tracks.yaml"
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit": 0,
+        "output_tail": "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it"
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit": 0,
+        "output_tail": "> node apps/api/scripts/check-migration-ledger.mjs\n\nchecked 73 migration blocks in apps/api/src/lib/startup-migrations.ts\nok   migration ledger"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-bare-catch.mjs apps/api/src",
+        "exit": 0,
+        "output_tail": "F-0-009 guard: no bare `.catch(() => {})` found."
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit": 0,
+        "output_tail": "[check-mjs-syntax] 40 .mjs file(s) checked (syntax-only — see script header for scope).\n[check-mjs-syntax] All clean."
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit": 0,
+        "output_tail": "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment."
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit": 0,
+        "output_tail": "SCF-3 guard: no API access to integrity_hash_status found."
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit": 0,
+        "output_tail": "ok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)\nok    zapier-strale  (import found in packages/zapier-strale/index.js)\n\nframework-packages check: 5 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims."
+      },
+      {
+        "command": "node --test apps/api/scripts/check-framework-packages.test.mjs",
+        "exit": 0,
+        "output_tail": "ℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 361.547069"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit": 0,
+        "output_tail": "check-no-committed-secrets: clean (3894 tracked files scanned)"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit": 0,
+        "output_tail": "[lint] No scripts bypass the dispatcher gate."
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit": 0,
+        "output_tail": "fetch-timeout coverage: 4 total offenders, 0 not in allowlist"
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit": 0,
+        "output_tail": "manifest guaranteed-field consistency: 22 total, 0 not in allowlist"
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit": 0,
+        "output_tail": "PII guard: clean — no unredacted person names or checksum-valid identifiers found."
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit": 0,
+        "output_tail": "  uk-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [tier_2_available, tier_2_available_reason, ubo_availability, ubo_availability_reason]\n  us-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [match_confidence, is_exact_match, resolution_method]\n\nSTRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. Re-capture a fixture after fixing its manifest with: npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>"
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit": 0,
+        "output_tail": "identity fixture-shape sentinel: 0 total, 0 not in allowlist"
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit": 0,
+        "output_tail": "Skipping shape-contract check: frontend repo not present at ./c:/Users/pette/Projects/strale-frontend\n  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)"
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit": 0,
+        "output_tail": "[lint] cost_class coherence: all classified capabilities OK."
+      },
+      {
+        "command": "node apps/api/scripts/check-no-unguarded-user-fetch.mjs",
+        "exit": 0,
+        "output_tail": "[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked."
+      },
+      {
+        "command": "node apps/api/scripts/check-no-new-console.mjs",
+        "exit": 0,
+        "output_tail": "F-0-014 guard: no new `console.*` calls."
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit": 0,
+        "output_tail": "production write credential: 1 authorised reader, 0 unauthorised references"
+      }
+    ],
+    "runs": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit": 0,
+        "note": "Built once"
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit": 0,
+        "note": "Passed after extraction and at closeout"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/x402-settlement-characterization.test.ts -u",
+        "exit": 0,
+        "tests_passed": 33,
+        "note": "Final baseline passed before production edits on origin/main; earlier harness setup failures corrected"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/x402-settlement-characterization.test.ts src/routes/x402-money-path.test.ts",
+        "exit": 0,
+        "note": "Unchanged characterization and H4 tests passed after shared-settle extraction"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/x402-settlement-characterization.test.ts src/routes/x402-money-path.test.ts src/routes/do.core.test.ts src/routes/do.async.test.ts src/routes/do.spend-cap.test.ts",
+        "exit": 0,
+        "tests_passed": 110
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/execution-outcome.guard.test.ts src/lib/invocation-facts.test.ts src/lib/audit-key-coverage.test.ts src/lib/audit-serve-coverage.test.ts src/lib/receipt/rail-coverage.test.ts src/lib/account-closure.test.ts src/lib/api-keys.test.ts src/lib/retry.executor-parity.test.ts src/routes/x402-gateway-v2.settlement-order.test.ts",
+        "exit": 0,
+        "tests_passed": 107
+      },
+      {
+        "command": "cd apps/api && npx vitest run",
+        "stage": "first full suite",
+        "exit": 1,
+        "passed": 7575,
+        "failed": 2,
+        "skipped": 358,
+        "failures": [
+          "call-cost-settlement.test.ts: old do.ts source location",
+          "execution-routing.test.ts: old do.ts source location"
+        ],
+        "resolution": "Retargeted both structural checks; final suite passes"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/call-cost-settlement.test.ts",
+        "exit": 0,
+        "tests_passed": 7
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/.h7b-scratch/mutation.test.ts -t \"success: intent\"",
+        "exit": 1,
+        "expected_failure": true,
+        "failed": 3,
+        "skipped": 30,
+        "mutation": "Scratch helper skips durable intent; all 3 original route ordering assertions fail",
+        "restoration": "Production helper never modified; scratch module/test removed"
+      },
+      {
+        "command": "cd apps/api && npx vitest run",
+        "stage": "final full suite",
+        "exit": 0,
+        "passed": 7579,
+        "failed": 0,
+        "skipped": 358,
+        "files_passed": 374,
+        "files_skipped": 35,
+        "flakes": []
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/h7b-origin-characterization.test.ts src/routes/x402-settlement-characterization.test.ts",
+        "exit": 0,
+        "tests_passed": 66,
+        "note": "Final environment-pinned fixture and unchanged golden snapshots pass against both git-show origin/main route copies and final refactor; scratch copies removed"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit": 0,
+        "note": "After T7 next_action update"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit": 0,
+        "note": "After handoff creation"
+      },
+      {
+        "command": "git diff --check",
+        "exit": 0
+      },
+      {
+        "command": "git diff --quiet -- apps/api/src/lib/startup-migrations.ts apps/api/src/lib/startup-migrations.ledger.json",
+        "exit": 0
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit": 1,
+        "expected_failure": true,
+        "codes": [
+          "dirty",
+          "branch",
+          "ahead",
+          "worktree",
+          "merged-branch"
+        ],
+        "note": "Uncommitted build-agent tree/tracks origin-main; supplied feature checkout; existing detached sibling and merged branches left untouched. Auto-fetch unavailable, so remote findings may be stale."
+      }
+    ],
+    "skipped_files": [
+      {
+        "file": "apps/api/src/jobs/integrity-hash-chain.integration.test.ts",
+        "count": 8
+      },
+      {
+        "file": "apps/api/src/jobs/job-migration.integration.test.ts",
+        "count": 12
+      },
+      {
+        "file": "apps/api/src/jobs/onboarding-retry.integration.test.ts",
+        "count": 10
+      },
+      {
+        "file": "apps/api/src/jobs/partial-quarantine.integration.test.ts",
+        "count": 8
+      },
+      {
+        "file": "apps/api/src/jobs/quality-floor.integration.test.ts",
+        "count": 9
+      },
+      {
+        "file": "apps/api/src/jobs/settlement-recovery.integration.test.ts",
+        "count": 7
+      },
+      {
+        "file": "apps/api/src/routes/a2a-error-leak.integration.test.ts",
+        "count": 4
+      },
+      {
+        "file": "apps/api/src/routes/account-lifecycle.integration.test.ts",
+        "count": 26
+      },
+      {
+        "file": "apps/api/src/routes/api-keys.integration.test.ts",
+        "count": 24
+      },
+      {
+        "file": "apps/api/src/routes/billing-parity.integration.test.ts",
+        "count": 6
+      },
+      {
+        "file": "apps/api/src/routes/capabilities-contract.integration.test.ts",
+        "count": 14
+      },
+      {
+        "file": "apps/api/src/routes/capabilities.integration.test.ts",
+        "count": 8
+      },
+      {
+        "file": "apps/api/src/routes/do.crash-recovery.integration.test.ts",
+        "count": 5
+      },
+      {
+        "file": "apps/api/src/routes/do.idempotency.integration.test.ts",
+        "count": 6
+      },
+      {
+        "file": "apps/api/src/routes/do.receipt.integration.test.ts",
+        "count": 8
+      },
+      {
+        "file": "apps/api/src/routes/do.spend-cap.integration.test.ts",
+        "count": 7
+      },
+      {
+        "file": "apps/api/src/routes/do.usage-summary.integration.test.ts",
+        "count": 2
+      },
+      {
+        "file": "apps/api/src/routes/do.wallet-concurrency.integration.test.ts",
+        "count": 3
+      },
+      {
+        "file": "apps/api/src/routes/example-output-curation.integration.test.ts",
+        "count": 6
+      },
+      {
+        "file": "apps/api/src/routes/solution-receipt.integration.test.ts",
+        "count": 2
+      },
+      {
+        "file": "apps/api/src/routes/solution-reservations.integration.test.ts",
+        "count": 9
+      },
+      {
+        "file": "apps/api/src/routes/transactions.audit-leak.integration.test.ts",
+        "count": 8
+      },
+      {
+        "file": "apps/api/src/routes/webhook.integration.test.ts",
+        "count": 12
+      },
+      {
+        "file": "apps/api/src/lib/catalogue-copy-0123.integration.test.ts",
+        "count": 1
+      },
+      {
+        "file": "apps/api/src/lib/job-coordinator.integration.test.ts",
+        "count": 30
+      },
+      {
+        "file": "apps/api/src/lib/manifest-sync-scope.integration.test.ts",
+        "count": 4
+      },
+      {
+        "file": "apps/api/src/lib/manifest-text-sync.integration.test.ts",
+        "count": 3
+      },
+      {
+        "file": "apps/api/src/lib/public-descriptions-0124.integration.test.ts",
+        "count": 1
+      },
+      {
+        "file": "apps/api/src/lib/solution-executor.test.ts",
+        "count": 4
+      },
+      {
+        "file": "apps/api/src/lib/vendor-control-tower.integration.test.ts",
+        "count": 7
+      },
+      {
+        "file": "apps/api/src/lib/wallet-reservations.integration.test.ts",
+        "count": 15
+      },
+      {
+        "file": "apps/api/src/lib/wallet-service.integration.test.ts",
+        "count": 8
+      },
+      {
+        "file": "apps/api/src/lib/x402-payment-claims.integration.test.ts",
+        "count": 2
+      },
+      {
+        "file": "apps/api/src/lib/receipt/execution-receipt.integration.test.ts",
+        "count": 40
+      },
+      {
+        "file": "apps/api/src/lib/receipt/receipt-chain-junction.integration.test.ts",
+        "count": 9
+      },
+      {
+        "file": "apps/api/src/lib/receipt/receipt-invariants.integration.test.ts",
+        "count": 30
+      }
+    ],
+    "skips_note": "35 entire integration files / 354 tests need DATABASE_URL_TEST for a loopback test database. Four explicit skips in solution-executor.test.ts are pre-existing.",
+    "mechanical_move_comparison": {
+      "checked_function_bodies": 24,
+      "all_equal": true,
+      "comparison": "Typed pre-move intermediate vs route and lib/do modules; only relative import depth and comments normalized"
+    },
+    "reviews": {
+      "technical": "GO, round 1, no new correctness/security/architecture findings",
+      "contract": "GO with nits, round 1; direct-call guard medium fixed and confirmed; ambient snapshot configuration low fixed by pinning fixture environment",
+      "independent_tests": "Technical: 104 behavioral tests passed; billability 11 passed with one temporary-scratch scan failure, cleared in final full suite. Contract: settlement-order 13 passed."
+    },
+    "live_checks": "None: no live paid probes or production writes; no credentials searched",
+    "production_steps": "None for H7b. Orchestrator must run skipped suites on real isolated Postgres before shipment."
+  }
+}

@@ -71,7 +71,11 @@ describe("executeWithTransientRetry — the shared policy", () => {
 
 describe("both rails reach the executor only through the shared policy", () => {
   const gateway = readFileSync(resolve(here, "../routes/x402-gateway-v2.ts"), "utf-8");
-  const doRoute = readFileSync(resolve(here, "../routes/do.ts"), "utf-8");
+  // The /v1/do route delegates to lib/do/dispatch.ts; scan both so a bare
+  // executor call cannot creep back into the route file either.
+  const doRoute = [resolve(here, "../routes/do.ts"), resolve(here, "./do/dispatch.ts")]
+    .map((path) => readFileSync(path, "utf-8"))
+    .join("\n");
 
   it("x402 gateway: no bare executor call; the capability handler uses the policy", () => {
     expect(gateway).not.toMatch(/await\s+executor\s*\(/);

@@ -127,7 +127,7 @@ describe("receipt rail coverage", () => {
       .map((p) => p.slice(SRC.length + 1).split("\\").join("/"));
 
     for (const expected of [
-      "routes/do.ts",
+      "lib/do/dispatch.ts",
       "routes/solution-execute.ts",
       "routes/x402-gateway-v2.ts",
       "lib/test-runner.ts",

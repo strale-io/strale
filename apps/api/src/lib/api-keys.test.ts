@@ -244,7 +244,7 @@ it("attributes both sync debits and async reservations to the authenticating key
 });
 
 it("validates a revoked key before returning wallet balance after waiting for the lock", () => {
-  const doSource = readFileSync(new URL("../routes/do.ts", import.meta.url), "utf8");
+  const doSource = readFileSync(new URL("./do/dispatch.ts", import.meta.url), "utf8");
   for (const name of ["executeSync", "executeAsync"]) {
     const source = doSource.slice(doSource.indexOf(`async function ${name}(`));
     const lock = source.indexOf("await walletService.lockWalletForUser(tx, user.id)");
