@@ -62,7 +62,7 @@ list below is the minimum the run must be able to answer.
 - Send one follow-up when a row's `follow_up_by` has passed, then set the next date. After two unanswered follow-ups, put it to Petter.
 - Close finished rows.
 
-Procedure: `docs/operations/accounts-and-email.md`. Under DEC-20261027-C this step runs only in the local "Strale checkin morning" session on the PC, which holds the Microsoft 365 connector and sends any rows a cloud session left as `draft`. A cloud run skips A2 in one line and carries on.
+Procedure: `docs/operations/accounts-and-email.md`. Under DEC-20261027-C this step runs only in the one Strale inbox routine, the only session with the Microsoft 365 connector switched on; until that routine exists and a probe confirms no other session sees the connector, the local "Strale checkin morning" session on the PC runs it. It sends any rows other sessions left as `draft`. Any other run skips A2 in one line and carries on.
 
 **B. Overnight health.** First run the Vendor Control Tower report
 (`cd apps/api && npm run vendor:status`, production read-only). Treat every

@@ -54,10 +54,11 @@ spending inside the €50/week envelope.
    `docs/operations/accounts-and-email.md`. CAPTCHAs, SMS or identity checks,
    and signed agreements stay his. Every email sent carries a duty to watch
    the inbox for the reply (`docs/company/OUTBOX.yaml`).
-   *Narrowed again 2026-10-27 by DEC-20261027-C:* sessions no longer sign up,
-   accept terms, sign in with passwords or set up TOTP; they prepare the forms
-   and secret names and Petter completes them. Mail is read and sent only from
-   the local PC session; cloud sessions draft.
+   *Narrowed again 2026-10-27 by DEC-20261027-C, as loosened by Petter the same
+   day:* a session fills a sign-up form up to its final button once Petter has
+   said go for it; Petter clicks it, accepts the terms and does any 2FA. Mail is
+   sent and watched by one Strale inbox routine (until it exists, the local
+   morning session); other sessions draft.
 3. **One-way public acts.** Publishing a package version that cannot be
    unpublished, submitting to a directory that does not accept removal, or a
    first public statement in a channel we have never used. *Narrowed

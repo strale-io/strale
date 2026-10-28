@@ -975,6 +975,15 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**DEC-20261027-C loosened** · `decided` · owner Petter · 2026-10-28
+Petter loosened the fleet security rule in three ways. He agreed them on 2026-10-27 in the wow-core Infrastructure session (moonlighter-ab/wow-core#146, merged), and confirmed them in a Strale session on 2026-10-28: "confirm the three loosenings".
+*What changed:*
+- **Email.** Sending to registries, vendors and data providers returns to sessions, through one Strale inbox routine, the only session with Microsoft 365. Until that routine exists, the local morning session does it.
+- **Emailed keys.** Keys that arrive by email are stored by the local PC session with a PC-only write token (read- and test-tier only).
+- **Sign-up forms.** Sessions fill a sign-up form up to its final button after Petter says go for that form. Petter still clicks it, accepts the terms and does 2FA.
+*What remains:* setting up the inbox routine and the probe that confirms no other session sees the connector.
+*How you'd reverse it:* a new founder decision.
+
 **DEC-20261027-C** · `decided` · owner Petter · 2026-10-27
 Accounts, secrets and email now follow the fleet security rule (wow-core SECURITY_CORE §1a).
 *What happened:* Petter agreed the rule in the wow-core Infrastructure session. It was relayed on the agent bus (moonlighter-ab/agent-bus#2), and Petter told this session to act on it.
