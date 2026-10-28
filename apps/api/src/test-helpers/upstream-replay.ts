@@ -150,12 +150,17 @@ export function redactEmails(exchanges: RecordedExchange[]): number {
 
 export type Perturbation = "empty" | "hollow";
 
-/** Every JSON leaf changed while every key and array element stays: strings empty, numbers -1, booleans flipped. */
+/**
+ * Every JSON leaf changed while every key and array element stays: strings
+ * empty, booleans flipped, numbers kept in sign but wrong in magnitude
+ * (n * 1000 + 7). A sentinel like -1 would trip a bare `gt -1` check that
+ * constrains no real value; a wrong magnitude only fails a check that does.
+ */
 function hollowJson(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(hollowJson);
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, hollowJson(v)]));
   if (typeof value === "string") return "";
-  if (typeof value === "number") return -1;
+  if (typeof value === "number") return value * 1000 + 7;
   if (typeof value === "boolean") return !value;
   return value;
 }

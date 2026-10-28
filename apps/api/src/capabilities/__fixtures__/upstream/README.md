@@ -6,7 +6,8 @@ into the real executor (fetch answers only from the file, DNS is stubbed, the
 clock is frozen at `recorded_at`) and judges the output with the production
 runner's known_answer rules. A second test empties every recorded body and
 requires a contract check to fail, under one of two perturbations: bodies
-emptied to `{}`/`[]`, or bodies hollowed (structure kept, every value changed).
+emptied to `{}`/`[]`, or bodies hollowed (structure kept; strings emptied,
+booleans flipped, numbers kept in sign but wrong in magnitude).
 An executor that merely throws on a perturbed body does not count; the judge
 has to read the output and reject it.
 
@@ -41,11 +42,11 @@ slug; the test refuses a recording made on a different input.
 
 ## First batch (2026-10-28)
 
-14 executors, chosen from the keyless, free, fetch-only network executors by
+12 executors, chosen from the keyless, free, fetch-only network executors by
 most recent customer call (`last_customer_call_at` in the public catalogue).
 Sources: GLEIF (CC0), the ECB, CPSC (U.S. government work), Nominatim (data
 © OpenStreetMap contributors, ODbL), Have I Been Pwned, Find that Charity, the
-Czech Ministry of Finance, the UK Food Standards Agency, Nager.Date and PyPI.
+Czech Ministry of Finance, Nager.Date and PyPI.
 They are kept here as test inputs only.
 
 Considered and left out, with the reason:
@@ -55,6 +56,7 @@ Considered and left out, with the reason:
 | eori-validate, api-health-check, og-image-check, page-exists, robots-txt-parse, uptime-check, url-health-check, base64-encode-url, website-carbon-estimate | known_answer contract passes with the upstream bodies empty; the test would prove nothing about parsing |
 | cve-lookup, no-bankruptcy-check, postal-code-lookup, public-holiday-lookup, ted-procurement, usgs-earthquake-search, weather-lookup | known_answer contract passes when the upstream answers `{}`; same reason |
 | country-economic-indicators, cve-details, fear-greed-index, forex-history, sitemap-parse, slovenian-company-data, stablecoin-flow-check | the contract fails on a perturbed body only because the executor throws; on hollowed values it passes (stablecoin-flow-check enforces no check at all) |
+| currency-convert, food-safety-rating-uk | the only check a perturbed body fails is a bare `gt -1`; any non-negative number passes |
 | vasp-verify, vasp-non-compliant-check | ESMA answered 403 to every request, and the contract still passed |
 | clinical-trials-search, doi-resolve, fr-bodacc-lookup, slovak-company-data, barcode-lookup | the answer names natural persons (investigators, authors, officers, contributors) |
 | gdpr-website-check, header-security-check, redirect-trace | the input is a third party's home page; recording would commit its HTML |

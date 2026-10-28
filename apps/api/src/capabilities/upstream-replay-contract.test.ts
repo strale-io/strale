@@ -43,7 +43,7 @@ const NETWORK_SOURCE_TYPES = new Set(["api", "scrape"]);
  * shrinks to nothing passes vacuously (LESSONS.md F5). Raise it as recordings
  * are added; never lower it to make a red run green.
  */
-const MIN_RECORDED = 14;
+const MIN_RECORDED = 12;
 
 /**
  * Modules that reach the network without `fetch`. An executor whose import

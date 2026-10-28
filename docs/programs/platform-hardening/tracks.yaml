@@ -117,7 +117,7 @@ tracks:
       (PR 799, offline contract test for the 79 computed/reference executors)
       are merged and verified live. H7c batch 2 adds the upstream replay
       contract test (apps/api/src/capabilities/upstream-replay-contract.test.ts)
-      with 14 recorded free upstreams, a per-slug perturbation proof, the
+      with 12 recorded free upstreams, a per-slug perturbation proof, the
       recorder apps/api/scripts/record-upstream.ts and a weekly live re-check in
       weekly-drift.yml. The next H7c batch tightens the known_answer contracts
       the perturbation proof rejected (listed in
