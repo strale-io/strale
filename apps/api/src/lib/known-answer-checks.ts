@@ -13,6 +13,7 @@
  * runner never reads it from a row.
  */
 import type { ManifestExpectedField } from "./capability-manifest-types.js";
+import { getNestedValue } from "./nested-value.js";
 
 export interface KnownAnswerCheck {
   field: string;
@@ -72,4 +73,130 @@ export function diffChecks(current: unknown, next: readonly KnownAnswerCheck[]):
   }
   for (const [field, to] of after) if (!before.has(field)) diff.added.push(...to);
   return diff;
+}
+
+/**
+ * Whether the runner holds a capability to a check. A check on a field whose
+ * top-level reliability is `common` or `rare` may fail without failing the
+ * suite; a `guaranteed` or unannotated field is enforced. With no reliability
+ * data at all, every check is enforced.
+ */
+export function isCheckEnforced(
+  check: KnownAnswerCheck,
+  fieldReliability: Record<string, string> | null | undefined,
+): boolean {
+  if (!fieldReliability || !check.field) return true;
+  const level = fieldReliability[check.field.split(".")[0]];
+  return level !== "rare" && level !== "common";
+}
+
+/** The runner's evaluation of one known-answer check against an output. */
+export function runKnownAnswerCheck(
+  check: KnownAnswerCheck,
+  output: Record<string, unknown>,
+): { passed: boolean; reason: string } {
+  const value = getNestedValue(output, check.field);
+
+  switch (check.operator) {
+    case "equals":
+      if (value !== check.value) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected '${check.value}', got '${value}'`,
+        };
+      }
+      return { passed: true, reason: "" };
+
+    case "not_null":
+      if (value == null) {
+        return { passed: false, reason: `${check.field}: expected non-null` };
+      }
+      return { passed: true, reason: "" };
+
+    case "is_true":
+      if (value !== true) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected true, got ${value}`,
+        };
+      }
+      return { passed: true, reason: "" };
+
+    case "is_false":
+      if (value !== false) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected false, got ${value}`,
+        };
+      }
+      return { passed: true, reason: "" };
+
+    case "contains":
+      if (
+        typeof value !== "string" ||
+        !value.toLowerCase().includes(String(check.value).toLowerCase())
+      ) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected to contain '${check.value}', got '${value}'`,
+        };
+      }
+      return { passed: true, reason: "" };
+
+    case "in":
+      if (!check.values || !check.values.includes(value)) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected one of [${check.values?.join(", ")}], got '${value}'`,
+        };
+      }
+      return { passed: true, reason: "" };
+
+    case "type": {
+      const actualType = Array.isArray(value) ? "array" : typeof value;
+      if (actualType !== check.value) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected type '${check.value}', got '${actualType}'`,
+        };
+      }
+      return { passed: true, reason: "" };
+    }
+
+    case "gt": {
+      if (typeof value !== "number" || value <= Number(check.value)) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected > ${check.value}, got ${value}`,
+        };
+      }
+      return { passed: true, reason: "" };
+    }
+
+    case "lt": {
+      if (typeof value !== "number" || value >= Number(check.value)) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected < ${check.value}, got ${value}`,
+        };
+      }
+      return { passed: true, reason: "" };
+    }
+
+    case "gte": {
+      if (typeof value !== "number" || value < Number(check.value)) {
+        return {
+          passed: false,
+          reason: `${check.field}: expected >= ${check.value}, got ${value}`,
+        };
+      }
+      return { passed: true, reason: "" };
+    }
+
+    default:
+      return {
+        passed: false,
+        reason: `Unknown operator: ${check.operator}`,
+      };
+  }
 }
