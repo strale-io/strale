@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { firstString } from "./lib/input-aliases.js";
@@ -113,7 +114,7 @@ function findRegCode(input: string): string | null {
 async function extractCompanyName(text: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const r = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 100,

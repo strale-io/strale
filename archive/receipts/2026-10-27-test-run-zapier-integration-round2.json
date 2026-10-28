@@ -1,0 +1,36 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "1d7bba99331dfa433d550dbe875ca4f9105cbf0a"
+  },
+  "at": "2026-10-27T18:47:15.552Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "package_tests": "42 passing; official schema validation included",
+    "cli_validation": "passed via npx with temporary npm cache",
+    "framework_gate": "passed; regression test passed",
+    "checks": "claims, distribution, docs, models, env, programs, receipts passed; receipts reported historical warnings",
+    "typecheck": "MCP build and API TypeScript passed",
+    "docker_install": "npm ci --ignore-scripts passed with Docker COPY inputs in temporary directory",
+    "audit": "workspace audit reported runtime and development findings; Docker-shaped install reported findings",
+    "lockfile": "2215 to 928 package entries; CLI removed",
+    "handoff_gate": "failed on expected dirty state, branch and upstream, and pre-existing merged branches"
+  },
+  "topic": "zapier-integration-round2",
+  "raw": {
+    "ok": true,
+    "package_tests": "42 passing; official schema validation included",
+    "cli_validation": "passed via npx with temporary npm cache",
+    "framework_gate": "passed; regression test passed",
+    "checks": "claims, distribution, docs, models, env, programs, receipts passed; receipts reported historical warnings",
+    "typecheck": "MCP build and API TypeScript passed",
+    "docker_install": "npm ci --ignore-scripts passed with Docker COPY inputs in temporary directory",
+    "audit": "workspace audit reported runtime and development findings; Docker-shaped install reported findings",
+    "lockfile": "2215 to 928 package entries; CLI removed",
+    "handoff_gate": "failed on expected dirty state, branch and upstream, and pre-existing merged branches"
+  }
+}

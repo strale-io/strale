@@ -1,3 +1,5 @@
+import { checksCompleted, observeJobOutcome } from "../lib/job-run-context.js";
+import { markJobSuccess, persistJobSuccess } from "../lib/job-heartbeats.js";
 /**
  * DB-driven test scheduler — risk-tiered and quota-aware.
  *
@@ -627,6 +629,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   if (await shouldRun("chromium-probe", CHROMIUM_PROBE_INTERVAL_MS)) {
     try {
       await probeChromiumHealth();
+      await persistJobSuccess("chromium-probe");
     } catch (err) {
       logError("test-scheduler-chromium-probe-error", err);
     }
@@ -651,6 +654,7 @@ async function runAuxiliaryTasks(): Promise<void> {
           "test-scheduler-all-healthy",
         );
       }
+      await persistJobSuccess("health-check");
     } catch (err) {
       logError("test-scheduler-health-check-failed", err);
     }
@@ -663,7 +667,8 @@ async function runAuxiliaryTasks(): Promise<void> {
   if (await shouldRun("meta-hourly", META_HOURLY_INTERVAL_MS)) {
     try {
       const { runHourlyChecks } = await import("../lib/meta-monitoring.js");
-      await runHourlyChecks();
+      const results = await runHourlyChecks();
+      if (checksCompleted(results)) await persistJobSuccess("meta-hourly");
     } catch (err) {
       logError("test-scheduler-meta-hourly-failed", err);
     }
@@ -673,7 +678,8 @@ async function runAuxiliaryTasks(): Promise<void> {
   if (await shouldRun("meta-daily", META_DAILY_INTERVAL_MS)) {
     try {
       const { runDailyChecks } = await import("../lib/meta-monitoring.js");
-      await runDailyChecks();
+      const results = await runDailyChecks();
+      if (checksCompleted(results)) await persistJobSuccess("meta-daily");
     } catch (err) {
       logError("test-scheduler-meta-daily-failed", err);
     }
@@ -699,6 +705,7 @@ async function runAuxiliaryTasks(): Promise<void> {
           "test-scheduler-diagnostic-passed",
         );
       }
+      await persistJobSuccess("diagnostics");
     } catch (err) {
       logError("test-scheduler-diagnostic-failed", err);
     }
@@ -710,7 +717,8 @@ async function runAuxiliaryTasks(): Promise<void> {
   if (await shouldRun("weekly-sweep", WEEKLY_SWEEP_INTERVAL_MS)) {
     try {
       const { runWeeklyHealthSweep } = await import("../lib/health-sweep.js");
-      await runWeeklyHealthSweep();
+      const observed = await observeJobOutcome(runWeeklyHealthSweep);
+      if (observed.successful) await persistJobSuccess("weekly-sweep");
     } catch (err) {
       logError("test-scheduler-weekly-sweep-failed", err);
     }
@@ -721,6 +729,7 @@ async function runAuxiliaryTasks(): Promise<void> {
     try {
       const { cleanupOldTestData } = await import("../lib/data-retention.js");
       await cleanupOldTestData();
+      await persistJobSuccess("retention");
     } catch (err) {
       logError("test-scheduler-retention-cleanup-failed", err);
     }
@@ -733,7 +742,8 @@ async function runAuxiliaryTasks(): Promise<void> {
       await import("../lib/external-outage-digest.js");
     if (isDigestSendHour(new Date()) && await shouldRun("external-outage-digest", DIGEST_DUE_INTERVAL_MS)) {
       try {
-        await sendExternalOutageDigest();
+        const result = await sendExternalOutageDigest();
+        if (result.reason !== "email_not_configured") await persistJobSuccess("external-outage-digest");
       } catch (err) {
         logError("test-scheduler-external-outage-digest-failed", err);
       }
@@ -758,6 +768,7 @@ async function pollCycle(): Promise<void> {
     // Railway scales to 2+ instances; the helper's own connection guarantees
     // the lock and the unlock hit the same session (no pool-reuse gap).
     const outcome = await withAdvisoryLock(LOCK_ID, async () => {
+      markJobSuccess("test-scheduler");
       // Refresh upstream health mapping if stale
       if (isCacheExpired()) {
         await refreshUpstreamMapping().catch((err) =>
@@ -944,6 +955,7 @@ async function pollCycle(): Promise<void> {
             testType: suite.testType,
             suiteId: suite.suiteId,
           });
+          markJobSuccess("test-scheduler");
           totalPassed += summary.passed;
           totalFailed += summary.failed;
           slugsTested.add(suite.slug);
@@ -1053,6 +1065,7 @@ async function pollCycle(): Promise<void> {
       );
     });
 
+    if (outcome.acquired) markJobSuccess("test-scheduler");
     if (!outcome.acquired) {
       logWarn("test-scheduler-lock-busy", "another holder; skipping tick", { job_run_id: runId });
     }

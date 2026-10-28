@@ -81,49 +81,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          is_docs_path() {
-            local f="$1"
-            case "$f" in
-              docs/*|archive/*|handoff/*) return 0 ;;
-              CLAUDE.md|AGENTS.md|WORKTREES.md|README.md) return 0 ;;
-            esac
-            # A root-level *.md file only (no "/" in the path) — nested .md
-            # files under application code are not covered by this branch.
-            if [[ "$f" =~ ^[^/]+\.md$ ]]; then
-              return 0
-            fi
-            return 1
-          }
-
-          # A brief, the brief linter, its rules or this workflow: the CEO-brief
-          # lint runs. Anything else cannot change its verdict.
-          is_brief_path() {
-            case "$1" in
-              docs/company/briefs/*) return 0 ;;
-              apps/api/scripts/check-ceo-brief.ts) return 0 ;;
-              apps/api/src/lib/ceo-brief-lint*) return 0 ;;
-              .github/workflows/ci.yml) return 0 ;;
-            esac
-            return 1
-          }
-
-          DOCS_ONLY=true
-          BRIEFS_CHANGED=false
-          while IFS= read -r f; do
-            [ -z "$f" ] && continue
-            if ! is_docs_path "$f"; then
-              echo "Non-docs file changed: $f"
-              DOCS_ONLY=false
-            fi
-            if is_brief_path "$f"; then
-              BRIEFS_CHANGED=true
-            fi
-          done <<< "$CHANGED"
-
-          echo "docs_only=$DOCS_ONLY"
-          echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
-          echo "briefs_changed=$BRIEFS_CHANGED"
-          echo "briefs_changed=$BRIEFS_CHANGED" >> "$GITHUB_OUTPUT"
+          node scripts/production-watch/classify.mjs "$MERGE_BASE" "$HEAD_SHA" "$GITHUB_OUTPUT" pull_request
 
   # ─── Ephemeral-Postgres integration lane (WP1) ──────────────────────────
   #
@@ -238,8 +196,90 @@ jobs:
           STRALE_REQUIRE_INTEGRATION_DB: "1"
         run: npx vitest run --no-file-parallelism integration.test.ts
 
-  check:
+  image-boot-smoke:
     needs: classify
+    if: needs.classify.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: strale_boot_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgresql://postgres:test@localhost:5432/strale_boot_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - uses: docker/setup-buildx-action@v3
+      # Real Dockerfile, loaded into Actions' Docker daemon. Layer cache keeps
+      # unchanged dependency/build layers between runs (target: <6 min).
+      - name: Build production image
+        timeout-minutes: 6
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: strale-boot-smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # Production inherited its base schema from the original Drizzle push
+      # (WP11); startup migrations alter existing tables, not an empty DB.
+      # Push is TEST ONLY (drizzle.config.ts); subsequent deploys run only CMD.
+      - name: Guard the disposable database
+        working-directory: apps/api
+        run: node scripts/assert-disposable-test-db.mjs
+      - name: Bootstrap base schema and offline catalogue fixture
+        working-directory: apps/api
+        run: |
+          npx drizzle-kit push --force
+          node scripts/seed-boot-smoke.mjs
+      - name: Boot real image with database-only networking
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          docker network create --internal boot-smoke
+          docker network connect --alias postgres boot-smoke "$POSTGRES_CONTAINER"
+          docker run --detach --name strale-boot-smoke --network boot-smoke \
+            -e DATABASE_URL=postgresql://postgres:test@postgres:5432/strale_boot_test \
+            -e AUDIT_HMAC_SECRET="$(openssl rand -hex 32)" -e FRONTEND_URL=http://localhost:3000 \
+            -e NODE_ENV=production -e RAILWAY_GIT_COMMIT_SHA="$GITHUB_SHA" strale-boot-smoke
+          started_at=$(docker inspect --format '{{.State.StartedAt}}' strale-boot-smoke)
+          docker exec -i strale-boot-smoke node --input-type=module - "$started_at" "$GITHUB_SHA" \
+            < scripts/ci/boot-probe.mjs | tee boot-result.json
+          node --input-type=module -e 'import fs from "node:fs"; const {boot_ms} = JSON.parse(fs.readFileSync("boot-result.json", "utf8")); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `boot_ms: ${boot_ms}\n`); if (boot_ms > 12000) console.log(`::warning::Boot took ${boot_ms}ms (warning threshold 12000ms)`);'
+          docker exec strale-boot-smoke node -e "fetch('https://example.com',{signal:AbortSignal.timeout(10000)}).then(()=>process.exit(1),()=>process.exit(0))"
+          # index.ts enforces the executor minimum before listen. Also prove
+          # that this boot traversed registration, not just a catalogue fixture.
+          docker logs strale-boot-smoke > boot-container.log 2>&1
+          grep -E 'Health gate passed: [0-9]+ executors registered' boot-container.log
+          if grep -q 'Fatal startup error' boot-container.log; then exit 1; fi
+      - name: Logs and cleanup
+        if: always()
+        run: |
+          docker logs strale-boot-smoke || true
+          docker rm -f strale-boot-smoke || true
+          docker network rm boot-smoke || true
+
+  check:
+    needs: [classify, image-boot-smoke]
+    # A skipped required job can count as successful. Always run check and
+    # explicitly fail its first step when a required dependency did not pass.
+    # !cancelled() rather than always(): a cancelled run stays cancelled.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     env:
       # Required by apps/api/src/lib/audit-token.ts (F-0-001). Not secret —
@@ -252,6 +292,22 @@ jobs:
       # request-level test) fails at module load.
       FRONTEND_URL: https://strale.dev
     steps:
+      - name: Require successful image boot (or intentional docs-only skip)
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          DOCS_ONLY: ${{ needs.classify.outputs.docs_only }}
+          SMOKE_RESULT: ${{ needs.image-boot-smoke.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$CLASSIFY_RESULT" != success ]]; then
+            echo "::error::Change classification did not succeed"
+            exit 1
+          fi
+          if [[ "$SMOKE_RESULT" == success || ( "$DOCS_ONLY" == true && "$SMOKE_RESULT" == skipped ) ]]; then
+            exit 0
+          fi
+          echo "::error::Image boot smoke did not succeed ($SMOKE_RESULT)"
+          exit 1
       - uses: actions/checkout@v4
         with:
           # The project-context checks compare against origin/main (operator-action
@@ -335,6 +391,10 @@ jobs:
       # CODE (scans packages/*-strale source).
       - if: needs.classify.outputs.docs_only == 'false'
         run: node apps/api/scripts/check-framework-packages.mjs
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm test --workspace=packages/zapier-strale
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node --test apps/api/scripts/check-framework-packages.test.mjs
       # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
       # Prose drifts back toward its author's frame, and the daily report had
       # already become an engineering activity log once. This lints every brief
@@ -468,6 +528,7 @@ jobs:
       # checked here rather than trusted. Tests cover the checker itself.
       # REGISTER (programs:*) — always runs.
       - run: npm run programs:check
+      - run: node --test scripts/production-watch/*.test.mjs
       - run: npm run programs:test
       # Research contract (T12, docs/research/*.md): one current file per
       # topic, reciprocal acyclic supersession, resolvable links/sources,
@@ -576,6 +637,8 @@ jobs:
       # apps/api/src (outside *.test.ts), or a registry entry missing
       # pinned_at/decision.
       # REGISTER (models:*) — always runs.
+      - run: npm run anthropic:check
+      - run: npm run anthropic:test
       - run: npm run models:check
       - run: npm run models:test
       # Claims register (T14, docs/company/claims.yaml): validates the
@@ -630,6 +693,7 @@ jobs:
       # REGISTER (migrations:*) — always runs.
       - run: npm run migrations:check
       - run: npm run migrations:test
+      - run: npm run gates:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.

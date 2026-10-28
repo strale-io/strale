@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // CLI: validates every docs/programs/*/tracks.yaml. Exit 1 on any finding.
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllRegisters, repoRootFrom } from "./program-tracks-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const results = checkAllRegisters(root);
+requireInputs(results, "programs: docs/programs/*/tracks.yaml");
 let failed = false;
 for (const { path, findings } of results) {
   if (findings.length === 0) {

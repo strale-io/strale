@@ -10,6 +10,7 @@
 // Pre-existing offenders are tracked in scripts/fetch-timeout-allowlist.txt
 // (one path per line). The unwind plan is to chip away at that list, not
 // to fix all 180 callsites in one PR.
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,7 +38,7 @@ const DIRECT_FETCH = /(?<![A-Za-z0-9_.])fetch\s*\(/g;
 const SIGNAL_NEAR = /signal\s*:|AbortSignal\.timeout|abortController/;
 
 const offenders = [];
-for (const file of walk(root)) {
+for (const file of requireInputs(walk(root), "fetch timeout guard: source files")) {
   const src = readFileSync(file, "utf8");
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {

@@ -1,3 +1,4 @@
+import { walletReservations } from "../db/schema.js";
 /**
  * Idempotency and replay against a real Postgres (WP1, CR-03 / N4).
  *
@@ -84,6 +85,7 @@ describeMaybe("/v1/do idempotency against a real database", () => {
 
   afterEach(async () => {
     for (const { userId, walletId } of seeded) {
+      await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
       await db.delete(transactions).where(eq(transactions.userId, userId));
       await db
         .delete(walletTransactions)

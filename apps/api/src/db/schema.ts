@@ -275,6 +275,7 @@ export const capabilities = pgTable("capabilities", {
   onboardingHookFailures: integer("onboarding_hook_failures").notNull().default(0),
   deactivationReason: text("deactivation_reason"),
   outputFieldReliability: jsonb("output_field_reliability"),
+  manifestTextHash: text("manifest_text_hash"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }
   visible: boolean("visible").notNull().default(false),
   onboardingManifest: jsonb("onboarding_manifest"),
@@ -369,6 +370,8 @@ export const transactions = pgTable(
     input: jsonb("input").notNull(),
     output: jsonb("output"),
     error: text("error"),
+    costCents: decimal("cost_cents", { precision: 24, scale: 9 }),
+    costBreakdown: jsonb("cost_breakdown"),
     priceCents: integer("price_cents").notNull(),
     latencyMs: integer("latency_ms"),
     provenance: jsonb("provenance"),
@@ -512,6 +515,8 @@ export const transactions = pgTable(
     // proxy, or an attacker trying to double-charge during the
     // verify-then-settle window). Null on wallet-paid rows.
     x402PaymentHash: varchar("x402_payment_hash", { length: 32 }),
+    // Durable invocation budget survives releasing the unique payment claim.
+    x402ExecutionAttempts: jsonb("x402_execution_attempts").$type<{ paymentHash: string; count: number }>(),
     // MCP funnel P0 (migration 0083, 2026-08-15): stable (non-rotating)
     // secret-salted sha256 over (AUDIT_HMAC_SECRET || lowercased payer address),
     // truncated to
@@ -560,6 +565,9 @@ export const transactions = pgTable(
     uniqueIndex("transactions_x402_payment_hash_unique")
       .on(table.x402PaymentHash)
       .where(sql`x402_payment_hash IS NOT NULL`),
+    index("transactions_x402_execution_attempt_hash_idx")
+      .on(sql`(${table.x402ExecutionAttempts}->>'paymentHash')`)
+      .where(sql`x402_execution_attempts IS NOT NULL`),
     // MCP funnel P0: distinct-payer / repeat-rate rollup queries filter on
     // payment_method='x402' and group by this column — not unique (a repeat
     // payer is expected to produce many rows with the same hash).
@@ -1389,6 +1397,9 @@ export const walletReservations = pgTable(
     amountCents: integer("amount_cents").notNull(),
     /** reserved | executing | captured | released */
     state: varchar("state", { length: 16 }).notNull().default("reserved"),
+    /** debit (legacy async/solutions) or hold (sync: debit only on capture). */
+    mode: varchar("mode", { length: 8 }).notNull().default("debit"),
+    apiKeyId: uuid("api_key_id"),
     /** The execution this reservation is holding funds for. */
     transactionId: uuid("transaction_id"),
     /**

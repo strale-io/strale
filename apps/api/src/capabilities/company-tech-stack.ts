@@ -1,3 +1,4 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
@@ -5,7 +6,7 @@ import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import * as dns from "node:dns/promises";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("company-tech-stack", async (input: CapabilityInput) => {
@@ -74,7 +75,7 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

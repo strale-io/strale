@@ -1,3 +1,4 @@
+import { getNestedValue } from "./nested-value.js";
 /**
  * Auto-Remediation Engine — Sprint 7C
  *
@@ -618,14 +619,4 @@ function flattenKeys(obj: unknown, prefix = ""): string[] {
     }
   }
   return keys;
-}
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current == null || typeof current !== "object") return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
 }

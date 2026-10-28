@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // F-0-006 Bucket D: user inputs (including URL-like strings) are passed
@@ -20,7 +21,7 @@ registerCapability("nginx-config-generate", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

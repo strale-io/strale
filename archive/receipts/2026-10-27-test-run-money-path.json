@@ -1,0 +1,1284 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e871a2ad0418ef2e3baa876614d250736cf85b8b"
+  },
+  "at": "2026-10-27T19:47:53.203Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "api_passed": 6583,
+    "api_failed": 0,
+    "api_skipped": 354,
+    "api_total": 6937,
+    "fail_before_failed": 19,
+    "fail_before_passed": 0,
+    "pass_after_passed": 19,
+    "pass_after_failed": 0,
+    "ci_commands": 63,
+    "ci_commands_failed": 0,
+    "postgres_integration_verified": false,
+    "production_checked": false,
+    "uncommitted": true
+  },
+  "topic": "money-path",
+  "raw": {
+    "api_passed": 6583,
+    "api_failed": 0,
+    "api_skipped": 354,
+    "api_total": 6937,
+    "fail_before_failed": 19,
+    "fail_before_passed": 0,
+    "pass_after_passed": 19,
+    "pass_after_failed": 0,
+    "ci_commands": 63,
+    "ci_commands_failed": 0,
+    "postgres_integration_verified": false,
+    "production_checked": false,
+    "uncommitted": true,
+    "source_hashes": {
+      "apps/api/src/db/schema.ts": "842e608c84d4e561a026968b19470365b3f322e425ebe6b32fc731f28f610cd0",
+      "apps/api/src/jobs/reservation-reconciler.ts": "72cb92a8ff3125d0b3bdc25ca391f0e7512845401aead6a996c2efed0512c115",
+      "apps/api/src/jobs/settlement-reconciler.test.ts": "72d27235af73b78ec6c92079ecb49758524f1270f6b328f561e18f73c95bd176",
+      "apps/api/src/jobs/settlement-reconciler.ts": "c4d2e42a1fa9b9bd0cd0cef0e5e9a3404000a325f5f21690dab7ea508298c519",
+      "apps/api/src/lib/api-keys.test.ts": "c151e453cea62d59aa9bbe50ddffad4956daf389f6ba5d362b3f438a379dc617",
+      "apps/api/src/lib/api-keys.ts": "cb0d86a6cae2b1f20c3b8d5b9b5ac84f5951424105ca5ea5c299ce44d69ea7f4",
+      "apps/api/src/lib/call-cost-settlement.test.ts": "4ea4cae6c9ada4d304ee1516970a5c09d6da2fe37fe19fd790b9056d4cc17f16",
+      "apps/api/src/lib/call-cost.ts": "5e4e62e9470da3e04899ba5f0cf4ca8ad43212f602d3c7c426b9cfaed767d321",
+      "apps/api/src/lib/startup-migrations.ledger.json": "0210c7a1d46e681d38afe47feed6a4983575980cd801bf75538b340528067112",
+      "apps/api/src/lib/startup-migrations.test.ts": "949cf90b34f0a72ec17aff58914b17680979414f7af0de4a13ee875c2bb2e6ed",
+      "apps/api/src/lib/startup-migrations.ts": "9431f7d2903329e690a1ac67ba8641101ddb7301e54c994fd9e7480b65722e6d",
+      "apps/api/src/lib/wallet-reservations.integration.test.ts": "5bb9594088e9bb6183d8297dd220063c8fdd42b01ba37b2a15999b7f256505f0",
+      "apps/api/src/lib/wallet-reservations.ts": "9b49a8099c7ae86cbd409cb8a0e048485560a400cc800ae04a12543ddc8ec524",
+      "apps/api/src/lib/wallet-service.ts": "47b9f5ff31374c33edec6e7846cdcb70862a434f709b0c5e69ad2b0b5a34fe6e",
+      "apps/api/src/lib/x402-gateway.ts": "37ec772285175761c312314281b62cf9730b75b7c4fa4fbc95c11fda6f733086",
+      "apps/api/src/lib/x402-settlement-intent.ts": "042e32879acbe7e1c165aaf74e6285b95d6e721f4d92fb2ecff4ecbc9334cfff",
+      "apps/api/src/openapi.ts": "985407a359e272e75e479a3035526682fee774f41b27fd7010eaa8e294a6fd21",
+      "apps/api/src/routes/do.core.test.ts": "20f19cf8aa89a31e29e0110cd7bfc94b0c797cac412f139a011b09a6d33ba86c",
+      "apps/api/src/routes/do.idempotency.integration.test.ts": "89f9a722c19eb7bcf06942a715718404126dc33d7021d7e7a77c1a6c1d3aa69c",
+      "apps/api/src/routes/do.receipt.integration.test.ts": "f87746e9aaa94fd72724aae571fe927fd2637ab0dfb98082f885f224e3b3603b",
+      "apps/api/src/routes/do.ts": "f308045e11d04b85a4c7453a531c858f02bbecfe951034f96dd6f5cacde102ca",
+      "apps/api/src/routes/do.usage-summary.integration.test.ts": "d1aa2c60eb6321625d98ccb025e41b3974603594262e103bceb960117a7c063b",
+      "apps/api/src/routes/do.wallet-concurrency.integration.test.ts": "b05af55fa606d16ab5a6f5b7809271bfd18ff0476616d38b30251e441890f02f",
+      "apps/api/src/routes/solution-execute.ts": "e9e445ce76005968bea8804b4fe6f2bd7c85619a9570ee785cca61098e078bf8",
+      "apps/api/src/routes/solution-reservations.integration.test.ts": "145ceb989d6907ef8c3c7a47dd9c90ae5da1afc2d501ba6148421528dafbf3fb",
+      "apps/api/src/routes/transactions.audit-leak.integration.test.ts": "cbf73de4f2d0de5343d0705b5afc9132bc8d72ad453ca7a4a6a21c3958834cd9",
+      "apps/api/src/routes/x402-gateway-v2.payer-hash.test.ts": "b32f7557c69b23b0d7cd697ff8615f903c81f5c8743884833193ce17b88f5078",
+      "apps/api/src/routes/x402-gateway-v2.ts": "3d5f7e1011f43c8d90481627993f9e139faf276c933931af9ecb08e9a02b19a1",
+      "apps/api/src/routes/x402-money-path.test.ts": "a0ffc901c611e7fdcc4434bcec464540915441900b5b10fe78d6da61a4acc1d6"
+    },
+    "files_changed": [
+      "apps/api/src/db/schema.ts",
+      "apps/api/src/jobs/reservation-reconciler.ts",
+      "apps/api/src/jobs/settlement-reconciler.test.ts",
+      "apps/api/src/jobs/settlement-reconciler.ts",
+      "apps/api/src/lib/api-keys.test.ts",
+      "apps/api/src/lib/api-keys.ts",
+      "apps/api/src/lib/call-cost-settlement.test.ts",
+      "apps/api/src/lib/call-cost.ts",
+      "apps/api/src/lib/startup-migrations.ledger.json",
+      "apps/api/src/lib/startup-migrations.test.ts",
+      "apps/api/src/lib/startup-migrations.ts",
+      "apps/api/src/lib/wallet-reservations.integration.test.ts",
+      "apps/api/src/lib/wallet-reservations.ts",
+      "apps/api/src/lib/wallet-service.ts",
+      "apps/api/src/lib/x402-gateway.ts",
+      "apps/api/src/lib/x402-settlement-intent.ts",
+      "apps/api/src/openapi.ts",
+      "apps/api/src/routes/do.core.test.ts",
+      "apps/api/src/routes/do.idempotency.integration.test.ts",
+      "apps/api/src/routes/do.receipt.integration.test.ts",
+      "apps/api/src/routes/do.ts",
+      "apps/api/src/routes/do.usage-summary.integration.test.ts",
+      "apps/api/src/routes/do.wallet-concurrency.integration.test.ts",
+      "apps/api/src/routes/solution-execute.ts",
+      "apps/api/src/routes/solution-reservations.integration.test.ts",
+      "apps/api/src/routes/transactions.audit-leak.integration.test.ts",
+      "apps/api/src/routes/x402-gateway-v2.payer-hash.test.ts",
+      "apps/api/src/routes/x402-gateway-v2.ts",
+      "docs/api-quickstart.md",
+      "docs/programs/platform-hardening/tracks.yaml",
+      "docs/project/legacy-authority-inventory.json",
+      "handoff/README.md",
+      "apps/api/src/routes/x402-money-path.test.ts",
+      "handoff/_general/from-code/2026-10-28-money-path.md"
+    ],
+    "full_api": {
+      "command": "npm test --workspace=apps/api -- --maxWorkers=4",
+      "exit_code": 0,
+      "summary": [
+        "",
+        " Test Files  364 passed | 34 skipped (398)",
+        "      Tests  6583 passed | 354 skipped (6937)",
+        "   Start at  19:42:59",
+        "   Duration  127.67s (transform 17.93s, setup 5.05s, import 214.09s, tests 185.19s, environment 54ms)"
+      ]
+    },
+    "api_typecheck": {
+      "command": "npx tsc --noEmit -p apps/api/tsconfig.json",
+      "exit_code": 0
+    },
+    "fail_before": {
+      "sources": [
+        "apps/api/src/db/schema.ts",
+        "apps/api/src/jobs/reservation-reconciler.ts",
+        "apps/api/src/jobs/settlement-reconciler.ts",
+        "apps/api/src/lib/api-keys.ts",
+        "apps/api/src/lib/call-cost.ts",
+        "apps/api/src/lib/startup-migrations.ledger.json",
+        "apps/api/src/lib/startup-migrations.ts",
+        "apps/api/src/lib/wallet-reservations.ts",
+        "apps/api/src/lib/wallet-service.ts",
+        "apps/api/src/lib/x402-gateway.ts",
+        "apps/api/src/lib/x402-settlement-intent.ts",
+        "apps/api/src/openapi.ts",
+        "apps/api/src/routes/do.ts",
+        "apps/api/src/routes/solution-execute.ts",
+        "apps/api/src/routes/x402-gateway-v2.ts",
+        "docs/api-quickstart.md",
+        "docs/programs/platform-hardening/tracks.yaml",
+        "docs/project/legacy-authority-inventory.json"
+      ],
+      "base": "e871a2ad0418ef2e3baa876614d250736cf85b8b",
+      "source_reset": "git show origin/main:<path> -> working file; git checkout rejected read-only index",
+      "before": {
+        "passed": 0,
+        "failed": 19,
+        "skipped": 249,
+        "tests": [
+          {
+            "file": "apps/api/src/jobs/settlement-reconciler.test.ts",
+            "name": "H4 recovers a settled pre-execution claim in place instead of colliding on its unique hash",
+            "status": "failed",
+            "failure": "AssertionError: expected +0 to be 1 // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path commits a hold before running the executor with no transaction/connection held; captures once with scalar raw binds",
+            "status": "failed",
+            "failure": "AssertionError: expected 1 to be +0 // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects a concurrent over-commit while the first executor is still running",
+            "status": "failed",
+            "failure": "Error: second request blocked behind vendor"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path counts an open sync reservation against the user hourly cap",
+            "status": "failed",
+            "failure": "Error: cap request blocked behind vendor"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path releases a failed hold without a debit or refund",
+            "status": "failed",
+            "failure": "AssertionError: expected [] to match object [ { state: 'released' } ]"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path honours timeout_seconds at the same H5 deadline and ignores late success",
+            "status": "failed",
+            "failure": "AssertionError: the HTTP timeout response must settle at its deadline: expected false to be true // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path normalizes an executor rejection at the deadline before the watchdog fires, without penalizing health",
+            "status": "failed",
+            "failure": "AssertionError: expected 500 to be 503 // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects an excluded legacy idempotency row without replaying its output ({\"solutionSlug\":\"legacy-solution\"})",
+            "status": "failed",
+            "failure": "AssertionError: expected 200 to be 409 // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects an excluded legacy idempotency row without replaying its output ({\"deletedAt\":\"2026-10-27T19:42:37.179Z\"})",
+            "status": "failed",
+            "failure": "AssertionError: expected 200 to be 409 // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path a concurrent same-key retry replays without a second executor, before checking available funds",
+            "status": "failed",
+            "failure": "Error: retry blocked behind vendor"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects mismatched concurrent key reuse",
+            "status": "failed",
+            "failure": "AssertionError: expected 200 to be 409 // Object.is equality"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 reconciler releases a stale sync hold, makes it hashable and never credits undebited money",
+            "status": "failed",
+            "failure": "AssertionError: expected { id: 'transaction', …(4) } to match object { status: 'failed', …(1) }"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim two concurrent identical payments execute once, then replay the same finalized row",
+            "status": "failed",
+            "failure": "Error: duplicate executed instead of losing claim"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim releases a failed execution claim so the same payment can retry successfully",
+            "status": "failed",
+            "failure": "AssertionError: expected { id: 'tx-0', …(22) } to match object { status: 'failed', …(1) }"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim releases on input rejection, before execution or settlement",
+            "status": "failed",
+            "failure": "AssertionError: expected undefined to match object { status: 'failed', …(1) }"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim retains an ambiguous settlement claim and its durable intent",
+            "status": "failed",
+            "failure": "TypeError: Cannot read properties of undefined (reading 'x402PaymentHash')"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim keeps orphan capture and logs a post-settlement record failure",
+            "status": "failed",
+            "failure": "AssertionError: expected [ 'verify', 'execute', 'intent', …(2) ] to include 'orphan'"
+          },
+          {
+            "file": "apps/api/src/lib/api-keys.test.ts",
+            "name": "key limits and ledger accounting H4 includes only open undebited holds in both key caps, with scalar binds",
+            "status": "failed",
+            "failure": "AssertionError: expected '\\n    SELECT k.id,\\n      COALESCE(SU…' to contain 'UNION ALL'"
+          },
+          {
+            "file": "apps/api/src/lib/startup-migrations.test.ts",
+            "name": "H4 startup-migrations — block 0130 adds hold mode and key attribution with branch-local lock limits, no backfill and scalar binds",
+            "status": "failed",
+            "failure": "TypeError: runMigration0130_syncWalletHolds is not a function"
+          }
+        ]
+      },
+      "context_baseline_exit": 0,
+      "after": {
+        "passed": 19,
+        "failed": 0,
+        "skipped": 249,
+        "tests": [
+          {
+            "file": "apps/api/src/jobs/settlement-reconciler.test.ts",
+            "name": "H4 recovers a settled pre-execution claim in place instead of colliding on its unique hash",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path commits a hold before running the executor with no transaction/connection held; captures once with scalar raw binds",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects a concurrent over-commit while the first executor is still running",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path counts an open sync reservation against the user hourly cap",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path releases a failed hold without a debit or refund",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path honours timeout_seconds at the same H5 deadline and ignores late success",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path normalizes an executor rejection at the deadline before the watchdog fires, without penalizing health",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects an excluded legacy idempotency row without replaying its output ({\"solutionSlug\":\"legacy-solution\"})",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects an excluded legacy idempotency row without replaying its output ({\"deletedAt\":\"2026-10-27T19:42:47.100Z\"})",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path a concurrent same-key retry replays without a second executor, before checking available funds",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 sync money path rejects mismatched concurrent key reuse",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/do.core.test.ts",
+            "name": "H4 reconciler releases a stale sync hold, makes it hashable and never credits undebited money",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim two concurrent identical payments execute once, then replay the same finalized row",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim releases a failed execution claim so the same payment can retry successfully",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim releases on input rejection, before execution or settlement",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim retains an ambiguous settlement claim and its durable intent",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/routes/x402-money-path.test.ts",
+            "name": "H4 x402 atomic payment claim keeps orphan capture and logs a post-settlement record failure",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/lib/api-keys.test.ts",
+            "name": "key limits and ledger accounting H4 includes only open undebited holds in both key caps, with scalar binds",
+            "status": "passed"
+          },
+          {
+            "file": "apps/api/src/lib/startup-migrations.test.ts",
+            "name": "H4 startup-migrations — block 0130 adds hold mode and key attribution with branch-local lock limits, no backfill and scalar binds",
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    "ci_check_job": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0,
+        "output_tail": [
+          "> strale-mcp@0.2.9 build",
+          "> tsc"
+        ]
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0,
+        "output_tail": [
+          "> straleio@0.1.4 build",
+          "> node scripts/version.mjs && tsc"
+        ]
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "output_tail": [
+          "",
+          "",
+          "> strale-semantic-kernel@0.1.5 typecheck",
+          "> tsc --noEmit",
+          "",
+          "",
+          "> strale-mcp@0.2.9 typecheck",
+          "> tsc --noEmit"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "[check-mjs-syntax] 40 .mjs file(s) checked (syntax-only — see script header for scope).",
+          "[check-mjs-syntax] All clean."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "output_tail": [
+          "> @strale/api@0.1.0 lint:no-bare-catch",
+          "> node scripts/check-no-bare-catch.mjs src",
+          "",
+          "F-0-009 guard: no bare `.catch(() => {})` found."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "output_tail": [
+          "> @strale/api@0.1.0 lint:no-unguarded-user-fetch",
+          "> node scripts/check-no-unguarded-user-fetch.mjs",
+          "",
+          "[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "output_tail": [
+          "> @strale/api@0.1.0 lint:no-new-console",
+          "> node scripts/check-no-new-console.mjs",
+          "",
+          "F-0-014 guard: no new `console.*` calls."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "SCF-3 guard: no API access to integrity_hash_status found."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "skip  google-adk-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "ok    langchain-strale  (import found in packages/langchain-strale/langchain_strale/toolkit.py)",
+          "skip  openai-agents-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "skip  pydantic-ai-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "ok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)",
+          "ok    zapier-strale  (import found in packages/zapier-strale/index.js)",
+          "",
+          "framework-packages check: 5 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims."
+        ]
+      },
+      {
+        "command": "npm test --workspace=packages/zapier-strale",
+        "exit_code": 0,
+        "output_tail": [
+          "    ✔ validates before paid calls: check_company_status {\"country\":\"GB\",\"registration_number\":\" \"}",
+          "    ✔ validates before paid calls: check_eu_vat {\"vat_number\":\" \"}",
+          "    ✔ validates before paid calls: screen_name {\"name\":\"X\"}",
+          "    ✔ validates before paid calls: screen_name {\"name\":\"Example Person\",\"birth_date\":\"2026-02-30\"}",
+          "    ✔ validates before paid calls: check_invoice_issuer {\"tax_id\":\" \"}",
+          "",
+          "",
+          "  42 passing (793ms)"
+        ]
+      },
+      {
+        "command": "node --test apps/api/scripts/check-framework-packages.test.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 1",
+          "ℹ suites 0",
+          "ℹ pass 1",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 792.910648"
+        ]
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "output_tail": [
+          "2026-10-10.md: clean (557 words)",
+          "2026-10-17.md: clean (463 words)",
+          "2026-10-18.md: clean (371 words)",
+          "2026-10-19.md: clean (357 words)",
+          "2026-10-26.md: clean (589 words)",
+          "2026-10-27.md: clean (411 words)",
+          "",
+          "checked 29 brief(s): 0 error(s), 15 warning(s)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "check-no-committed-secrets: clean (3829 tracked files scanned)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "[lint] No scripts bypass the dispatcher gate."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "output_tail": [
+          "fetch-timeout coverage: 4 total offenders, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "output_tail": [
+          "manifest guaranteed-field consistency: 22 total, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "output_tail": [
+          "PII guard: clean — no unredacted person names or checksum-valid identifiers found."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "output_tail": [
+          "GUARANTEED_EMPTY (5):",
+          "  estonian-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [historical_names]",
+          "  japanese-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [attribution]",
+          "  swedish-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [alternative_names, ongoing_procedures]",
+          "  uk-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [tier_2_available, tier_2_available_reason, ubo_availability, ubo_availability_reason]",
+          "  us-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [match_confidence, is_exact_match, resolution_method]",
+          "",
+          "STRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. Re-capture a fixture after fixing its manifest with: npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "output_tail": [
+          "identity fixture-shape sentinel: 0 total, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "Skipping shape-contract check: frontend repo not present at c:/Users/pette/Projects/strale-frontend",
+          "  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "[lint] cost_class coherence: all classified capabilities OK."
+        ]
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "production write credential: 1 authorised reader, 0 unauthorised references"
+        ]
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> programs:check",
+          "> node scripts/check-program-tracks.mjs",
+          "",
+          "ok   docs/programs/brand-website/tracks.yaml",
+          "ok   docs/programs/cto-readiness/tracks.yaml",
+          "ok   docs/programs/distribution/tracks.yaml",
+          "ok   docs/programs/platform-hardening/tracks.yaml"
+        ]
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 26",
+          "ℹ suites 0",
+          "ℹ pass 26",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 314.510345"
+        ]
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 30",
+          "ℹ suites 0",
+          "ℹ pass 30",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2683.481547"
+        ]
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "output_tail": [
+          "checked 46 docs/research/*.md files",
+          "ok   research contract",
+          "warn (5) — research-looking files outside docs/research:",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract"
+        ]
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 31",
+          "ℹ suites 0",
+          "ℹ pass 31",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 5834.449176"
+        ]
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "output_tail": [
+          "{\"ok\":true,\"roles\":12,\"fonts\":2,\"production_adopted\":false}",
+          "Controls source, output and evidence bindings pass",
+          "Patterns inputs, outputs and evidence pass",
+          "Shared-access illustration sources, outputs and evidence pass",
+          "Homepage generated outputs are current.",
+          "Hero comparison sources and generated outputs agree.",
+          "Opening study sources and outputs agree.",
+          "ok   open-flow design system: 122 contrast pairs pass, specimen on-token, assets match provenance"
+        ]
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 15",
+          "ℹ suites 0",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 151.812077"
+        ]
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> env:check",
+          "> node scripts/check-env.mjs",
+          "",
+          "checked 129 process.env names against 134 rows in config/env-manifest.yaml",
+          "example files: .env.example, apps/api/.env.example",
+          "ok   environment manifest contract"
+        ]
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 24",
+          "ℹ suites 0",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 985.412558"
+        ]
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "output_tail": [
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: hn-algolia: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-edgar: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-ticker-index: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: nvd: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: usgs-earthquake: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: alchemy-eth: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sourcify: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "ok   vendor register contract"
+        ]
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 78",
+          "ℹ suites 0",
+          "ℹ pass 78",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 3902.701131"
+        ]
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> distribution:check",
+          "> node scripts/check-distribution.mjs",
+          "",
+          "checked 61 surfaces in docs/operations/distribution-registry.yaml",
+          "ok   distribution register contract"
+        ]
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 15",
+          "ℹ suites 0",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 485.857595"
+        ]
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 20",
+          "ℹ suites 0",
+          "ℹ pass 20",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 270.302762"
+        ]
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 3",
+          "ℹ suites 0",
+          "ℹ pass 3",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 166.649699"
+        ]
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> protocols:check",
+          "> node scripts/check-protocol-extraction.mjs",
+          "",
+          "checked 19 candidate protocol mirror(s) under docs/governance/protocols",
+          "ok   protocol extraction"
+        ]
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 12",
+          "ℹ suites 0",
+          "ℹ pass 12",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 175.071902"
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "output_tail": [
+          "> protocols:coverage",
+          "> node scripts/check-protocol-coverage.mjs",
+          "",
+          "checked 20 protocol row(s) in docs/project/protocol-coverage.yaml",
+          "  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20260910-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision",
+          "  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20261024-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision",
+          "ok   protocol coverage"
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 16",
+          "ℹ suites 0",
+          "ℹ pass 16",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 855.466514"
+        ]
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> scheduled:check",
+          "> node scripts/check-scheduled-reachability.mjs",
+          "",
+          "checked 9 scheduled mechanisms in config/scheduled-mechanisms.yaml",
+          "ok   scheduled mechanism reachability"
+        ]
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 43",
+          "ℹ suites 0",
+          "ℹ pass 43",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1060.641397"
+        ]
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 24",
+          "ℹ suites 0",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1368.068328"
+        ]
+      },
+      {
+        "command": "npm run anthropic:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> anthropic:check",
+          "> node apps/api/scripts/check-anthropic-client.mjs",
+          "",
+          "{\"scanned\":856,\"findings\":[]}"
+        ]
+      },
+      {
+        "command": "npm run anthropic:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 2",
+          "ℹ suites 0",
+          "ℹ pass 2",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 440.622036"
+        ]
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> models:check",
+          "> node apps/api/scripts/check-model-literals.mjs",
+          "",
+          "checked 927 files under apps/api/src and apps/api/scripts (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)",
+          "ok   model registry contract"
+        ]
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 15",
+          "ℹ suites 0",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 468.462331"
+        ]
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> claims:check",
+          "> node scripts/check-claims.mjs",
+          "",
+          "checked 29 rows in docs/company/claims.yaml against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present",
+          "ok   claims register contract"
+        ]
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 33",
+          "ℹ suites 0",
+          "ℹ pass 33",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 3113.061583"
+        ]
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> docs:check",
+          "> node scripts/check-docs-index.mjs",
+          "",
+          "checked 18 docs/ subtrees against docs/README.md",
+          "ok   docs/README.md index"
+        ]
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 6",
+          "ℹ suites 0",
+          "ℹ pass 6",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 145.323777"
+        ]
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0,
+        "output_tail": [
+          "archive/README.md and handoff/README.md up to date"
+        ]
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 12",
+          "ℹ suites 0",
+          "ℹ pass 12",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 209.271913"
+        ]
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "output_tail": [
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-24-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it"
+        ]
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 25",
+          "ℹ suites 0",
+          "ℹ pass 25",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 4255.495122"
+        ]
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> migrations:check",
+          "> node apps/api/scripts/check-migration-ledger.mjs",
+          "",
+          "checked 73 migration blocks in apps/api/src/lib/startup-migrations.ts",
+          "ok   migration ledger"
+        ]
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 24",
+          "ℹ suites 0",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 180.93634"
+        ]
+      },
+      {
+        "command": "npm run gates:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 65",
+          "ℹ suites 0",
+          "ℹ pass 65",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 10637.915276"
+        ]
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 46",
+          "ℹ suites 0",
+          "ℹ pass 46",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 11897.701906"
+        ]
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "output_tail": [
+          "> context:check",
+          "> node scripts/check-project-context.mjs",
+          "",
+          "project context check: warning-only (M2 candidate foundation)",
+          "  no warnings"
+        ]
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "output_tail": [
+          "ℹ tests 180",
+          "ℹ suites 0",
+          "ℹ pass 180",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 117254.742038"
+        ]
+      }
+    ],
+    "focused_runs": [
+      {
+        "command": "cd apps/api && npx vitest run src/routes/do.core.test.ts src/routes/x402-money-path.test.ts src/lib/call-cost-settlement.test.ts src/lib/startup-migrations.test.ts",
+        "exit_code": 0,
+        "passed": 247,
+        "skipped": 0
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/do.core.test.ts src/routes/x402-money-path.test.ts src/jobs/settlement-reconciler.test.ts",
+        "exit_code": 0,
+        "passed": 32,
+        "skipped": 0
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/do.core.test.ts src/routes/x402-money-path.test.ts src/lib/api-keys.test.ts src/lib/wallet-reservations.integration.test.ts src/jobs/settlement-reconciler.test.ts src/lib/call-cost-settlement.test.ts src/lib/startup-migrations.test.ts",
+        "exit_code": 0,
+        "passed": 272,
+        "skipped": 11
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/do.core.test.ts src/routes/solution-reservations.integration.test.ts src/routes/do.wallet-concurrency.integration.test.ts src/lib/wallet-reservations.integration.test.ts",
+        "exit_code": 0,
+        "passed": 27,
+        "skipped": 25
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/do.core.test.ts",
+        "exit_code": 0,
+        "passed": 28,
+        "skipped": 0
+      }
+    ],
+    "additional_checks": [
+      {
+        "command": "npm run handoff:orient",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-migration-ledger.mjs --update",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:generate",
+        "exit_code": 1,
+        "reason": "Assigned isolated clone is classified as primary/shared by git-dir==common-dir guard"
+      },
+      {
+        "command": "writeGeneratedFiles(process.cwd()) from scripts/project-context-lib.mjs",
+        "exit_code": 0,
+        "reason": "User explicitly designated this clone isolated; generated inventory only, no guard edit"
+      },
+      {
+        "command": "npm run handoff:check -- --json",
+        "exit_code": 1,
+        "result": {
+          "ok": false,
+          "mode": "session",
+          "worktree": "<checkout>",
+          "kind": "trunk",
+          "branch": "feat/money-path",
+          "failures": [
+            {
+              "code": "dirty",
+              "message": "41 uncommitted or untracked path(s) in <checkout>: apps/api/src/db/schema.ts, apps/api/src/jobs/reservation-reconciler.ts, apps/api/src/jobs/settlement-reconciler.test.ts, apps/api/src/jobs/settlement-reconciler.ts, apps/api/src/lib/api-keys.test.ts, … (41 total)",
+              "fix": "commit your own changes (Conventional Commit message); if a path is not yours, stop and report it — never delete another session's work; nothing may stay uncommitted when a session ends"
+            },
+            {
+              "code": "branch",
+              "message": "trunk <checkout> is on feat/money-path; it stays on main",
+              "fix": "finish that branch in a batch worktree (git worktree add ../strale-wt-<track> feat/money-path) and git switch main here"
+            },
+            {
+              "code": "ahead",
+              "message": "branch feat/money-path has no upstream of its own (it tracks origin/main)",
+              "fix": "git push -u origin feat/money-path"
+            },
+            {
+              "code": "merged-branch",
+              "message": "local branch chore/nta-env-set-in-railway has landed on main (patch-equivalent) and still exists",
+              "fix": "git branch -D chore/nta-env-set-in-railway (safe: every commit on it is patch-equivalent to one on main)"
+            },
+            {
+              "code": "merged-branch",
+              "message": "local branch docs/email-phone-validation-copy has landed on main (patch-equivalent) and still exists",
+              "fix": "git branch -D docs/email-phone-validation-copy (safe: every commit on it is patch-equivalent to one on main)"
+            },
+            {
+              "code": "merged-branch",
+              "message": "local branch docs/ops-delegation has landed on main (patch-equivalent) and still exists",
+              "fix": "git branch -D docs/ops-delegation (safe: every commit on it is patch-equivalent to one on main)"
+            },
+            {
+              "code": "merged-branch",
+              "message": "remote branch origin/chore/nta-env-set-in-railway has landed on main (patch-equivalent) and still exists",
+              "fix": "git push origin --delete chore/nta-env-set-in-railway (its PR is merged, or it never diverged from main)"
+            },
+            {
+              "code": "merged-branch",
+              "message": "remote branch origin/docs/email-phone-validation-copy has landed on main (patch-equivalent) and still exists",
+              "fix": "git push origin --delete docs/email-phone-validation-copy (its PR is merged, or it never diverged from main)"
+            },
+            {
+              "code": "merged-branch",
+              "message": "remote branch origin/docs/ops-delegation has landed on main (patch-equivalent) and still exists",
+              "fix": "git push origin --delete docs/ops-delegation (its PR is merged, or it never diverged from main)"
+            },
+            {
+              "code": "merged-branch",
+              "message": "remote branch origin/docs/review-follow-ups-2026-10-26 has landed on main (patch-equivalent) and still exists",
+              "fix": "git push origin --delete docs/review-follow-ups-2026-10-26 (its PR is merged, or it never diverged from main)"
+            }
+          ],
+          "warnings": [
+            "could not fetch origin; remote-branch findings may be stale",
+            "worktree <other-checkout> carries 22 uncommitted path(s); the session that owns it must clear them before it ends",
+            "worktree <other-checkout> is on feat/x402-bazaar-metadata, which has no commits beyond main: freshly cut, or its work already landed; if no session is using it, git worktree remove <other-checkout> then git branch -d feat/x402-bazaar-metadata",
+            "this branch (feat/money-path) has landed on main (ancestor) or has no commits yet; once its PR is merged, the next session removes this worktree and deletes the branch from the trunk"
+          ]
+        }
+      }
+    ],
+    "development_runs": {
+      "initial_full_api": {
+        "failed": 8,
+        "passed": 6556,
+        "skipped": 349,
+        "exit_code": 1,
+        "note": "Route/migration/test-double fixes completed; final full suite supersedes"
+      },
+      "initial_context_test": {
+        "command": "npm run context:test",
+        "exit_code": 1,
+        "reason": "Generated inventory drift from T4 handoff pointer; regenerated"
+      },
+      "base_context_test": {
+        "command": "node --test --test-name-pattern=the checked-in repository context is warning-clean scripts/check-project-context.test.mjs",
+        "exit_code": 0
+      }
+    },
+    "ci_steps_not_reexecuted": [
+      {
+        "step": "npm ci",
+        "reason": "Already performed by orchestrator, per prompt"
+      },
+      {
+        "step": "Require successful image boot job",
+        "reason": "GitHub needs.image-boot-smoke.result unavailable locally; run image-boot-smoke in CI"
+      }
+    ],
+    "limitations": [
+      "PostgreSQL integration suites skipped: local server startup blocked by denied ownership/group changes. Run disposable-DB CI lane.",
+      "No paid vendor calls or production queries were run.",
+      "x402 gateway pre-intent crash claims remain held for manual investigation; separate anonymous /v1/do x402 replay/ambiguous-settlement path remains a follow-up.",
+      "Executor interface has no AbortSignal parameter; watchdog stops awaiting, not arbitrary upstream work."
+    ],
+    "review": {
+      "base": "e871a2ad",
+      "uncommitted_diff": true,
+      "rounds": 2,
+      "confirmation_read": true,
+      "technical": "GO",
+      "contract": "GO with retained MEDIUM",
+      "remaining_high": 0,
+      "remaining_medium": 1
+    }
+  }
+}

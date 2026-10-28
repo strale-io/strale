@@ -22,6 +22,8 @@ fill the expanded panel.
 
 *What I need:* the one-time key set in both places. After that, running the onboarding (mode `onboard` for the four slugs, then mode `limitations`, slugs `all`) is a delegated `capability_onboarding` action the next session can trigger and verify.
 
+**Update 2026-10-28 (morning run):** still blocked — `POST /v1/internal/onboarding/run` → 503 `not_configured`; `GET /v1/capabilities/entity-resolve` → 404. **The ask has narrowed to the four new tools.** #776 (merged 2026-10-27) applies reviewed manifest text after every deploy; it ran on the deployed tip `f2270a61` (322 of 356 rows carry its hash) and the strict drift sweep shows no limitation drift on any writable tool. Not applied, by design: the 22 compliance/risk-synthesis tools the sync treats as report-only (their rewritten wording stays with Petter under CHARTER.md), the four new tools, and the six 2026-05-16 manifests not in the table. **Note for the session that runs the button:** its `limitations` mode has no report-only guard, so run it for named non-compliance slugs only, never `all`, unless Petter has approved publishing the compliance wording.
+
 **DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · answered 2026-10-26, open until the registers reply — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
 
 Under the data-access rule (DEC-20261023-A), a per-call read of a public source is allowed when its terms permit it. Building the Swiss company-ID and VAT check (portfolio plan 1.12), the build stopped at that test, and it applies to two live tools too.
@@ -140,6 +142,11 @@ switch-off is one line in the deactivation list.
 - Petter emailed hello@serper.dev at 22:12 CET. His mailbox shows no earlier contact with Serper about terms, only payment receipts.
 - Option 2 research is in `docs/research/2026-10-26-serp-vendor-replacement.md`. None of the prepaid Google-results vendors explicitly permits resale. DataForSEO fits best, but it would need its own written yes. Scrapingdog's terms do permit redistribution, but only on a subscription from about $40 a month, which is a supplier contract and so Petter's call. Without either, google-search, serp-analyze, keyword-rank-check and serp-related-questions would switch off.
 - Petter decided on 2026-10-26 to hold off on contacting DataForSEO.
+
+**Update 2026-10-28 (morning run): Serper replied in writing.** support@serper.dev, 2026-10-27 19:40 CET, to Petter's email: "Using Serper as an upstream source within a value-added commercial service is permitted under our standard terms. This includes returning processed results through your own per-call API." Reselling API access without added value is not permitted. No separate reseller or partner agreement is needed; standard prepaid tiers apply. The permission does not cover third-party rights and they suggest reviewing Google's terms. Read from the inbox on 2026-10-28; recorded in `docs/company/OUTBOX.yaml`.
+- What this settles: the condition DEC-20261023-A sets for the vendor lane ("vendor data whose terms permit resale, SERP search data included") is now met in writing for the use we described (processed results from one search per request). The Google caveat is the vendor-lane case the rule already allows for search data.
+- What stays with Petter: relying on the permission (the reason this item is his). The entry stays open until he accepts or declines. **Recommendation: accept**; then the 2026-11-09 exception ends, `vendor-terms.ts` moves the Serper row from `resale: "unverified"` to permitted, citing this reply, and option 2 stops.
+- Separate, coming: the prepaid allowance (46,890 of 50,000 queries left on 2026-10-28) expires 2026-11-08. Renewing is a purchase, so it is his; it will be brought with usage figures before then.
 
 **DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology
@@ -960,6 +967,25 @@ one I would not leave indefinitely.
 > without authority, pointing the other way — LESSONS.md family F10, incident 3.
 
 ## DECIDED — visible so you can reverse them
+
+**DEC-20261027-C** · `decided` · owner Petter · 2026-10-27
+Accounts, secrets and email now follow the fleet security rule (wow-core SECURITY_CORE §1a).
+*What happened:* Petter agreed the rule in the wow-core Infrastructure session. It was relayed on the agent bus (moonlighter-ab/agent-bus#2), and Petter told this session to act on it.
+*What changed:*
+- Sessions prepare sign-ups and secret names. Petter does the sign-up, the terms, the 2FA and the Bitwarden paste.
+- The Bitwarden project is `strale`, and cloud sessions read it with a read-only token.
+- Secret names are `STRALE_<PROVIDER>_<WHAT>`. Only read- and test-tier keys go in the store; production keys stay in Railway.
+- Mail is read and sent only by the local PC session. Cloud sessions draft OUTBOX rows.
+- DEC-20261027-A, CHARTER.md item 2, DAILY-RUN.md A2 and `docs/operations/accounts-and-email.md` are updated to match.
+*What remains:* Petter adds the keys on the list in `handoff/_general/from-code/2026-10-27-fleet-credentials-email.md`.
+*How you'd reverse it:* a new founder decision. The platform rule against sessions signing up or setting up TOTP stays either way.
+
+**Old daily digest retired** · `decided` · owner Petter · 2026-10-27
+The old daily-digest email (`apps/api/src/jobs/daily-digest.ts`) is retired rather than restored.
+*What happened:* the new production watch (`/health/jobs`, PR #774) reported on its first run that the digest had last succeeded 196 days earlier, on 2026-04-14. That matches DEC-20260511-F, which in May decided to restore the pipeline; the restoration never happened. Petter decided in session ("retire the old digest"): the CEO morning brief (DEC-20260822-A) already does this job, and restoring it would give him two overlapping morning emails.
+*What changed:* `daily-digest` is removed from `apps/api/src/lib/job-watch-contract.json` and from the freshness query, so the watch no longer expects it. The script and `lib/daily-digest/` stay, because the M3 digest shadow (`m3-digest-shadow.yml`) and the M4 repo-native digest reuse them.
+*What remains:* nothing. DEC-20260511-F's restoration is closed by this decision.
+*How you'd reverse it:* say so. The job script still exists; restoring it means scheduling it and adding it back to the watch contract.
 
 **DEC-20261027-B** · `decided` · owner Petter · 2026-10-27
 Petter approved the platform hardening and distribution plan, with its scoped

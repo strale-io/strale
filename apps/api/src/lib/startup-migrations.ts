@@ -4034,6 +4034,10 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0124_publicDescriptions,
   runMigration0125_apiKeys,
   runMigration0126_signupSource,
+  runMigration0127_integrityHashIndex,
+  runMigration0128_manifestTextHash,
+  runMigration0129_transactionCost,
+  runMigration0130_syncWalletHolds,
 ];
 
 /**
@@ -6849,4 +6853,144 @@ export async function runMigration0126_signupSource(tx: MigrationExecutor): Prom
     END $$
   `);
   return { block: "0126_signupSource", outcome: "ensured nullable signup channel", duration_ms: Date.now() - startedAt };
+}
+
+// ─── Block 0127: repair integrity index after schema bootstrap ─────────────
+// Block 0030 skips when integrity_hash already exists (as after drizzle push).
+// Ensure the index independently, including on partially restored databases.
+export async function runMigration0127_integrityHashIndex(tx: MigrationExecutor): Promise<BlockResult> {
+  const startedAt = Date.now();
+  // Inspect the catalogue before any DDL: even IF NOT EXISTS takes SHARE.
+  const check = await tx.execute(sql`
+    SELECT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+    WHERE i.indrelid = 'transactions'::regclass
+      AND c.relname = 'transactions_integrity_hash_idx'
+  `);
+  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+  const index = rows[0] as { indisvalid: boolean } | undefined;
+  if (index?.indisvalid) {
+    return { block: "0127_integrityHashIndex", outcome: "skipped (index already valid)", duration_ms: Date.now() - startedAt };
+  }
+  // Match 0125's reserved-session pattern; it has no shared helper.
+  const client = (tx as MigrationExecutor & { $client?: Sql }).$client;
+  const connection = client ? await client.reserve() : null;
+  const run = (text: string): Promise<unknown> =>
+    connection ? connection.unsafe(text) : tx.execute(sql.raw(text));
+  try {
+    await run(`SET lock_timeout = '3s'`);
+    await run(`SET statement_timeout = 0`);
+    if (index) await run(`DROP INDEX CONCURRENTLY IF EXISTS "transactions_integrity_hash_idx"`);
+    await run(`CREATE INDEX CONCURRENTLY IF NOT EXISTS "transactions_integrity_hash_idx" ON "transactions" ("integrity_hash")`);
+  } finally {
+    try {
+      try { await run(`RESET statement_timeout`); }
+      finally { await run(`RESET lock_timeout`); }
+    } finally {
+      connection?.release();
+    }
+  }
+  return {
+    block: "0127_integrityHashIndex",
+    outcome: "ensured transactions integrity hash index",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0128: manifest text sync checkpoint ─────────────────────────────
+export async function runMigration0128_manifestTextHash(tx: MigrationExecutor): Promise<BlockResult> {
+  const startedAt = Date.now();
+  await tx.execute(sql`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'capabilities' AND column_name = 'manifest_text_hash'
+      ) THEN
+        -- Transaction-local even when the runner uses a pooled connection.
+        PERFORM set_config('lock_timeout', '3s', true);
+        ALTER TABLE capabilities ADD COLUMN manifest_text_hash text;
+      END IF;
+    END $$
+  `);
+  return { block: "0128_manifestTextHash", outcome: "ensured nullable manifest text hash", duration_ms: Date.now() - startedAt };
+}
+
+// ─── Block 0129: marginal per-call costs, no historical estimates/backfill ────
+export async function runMigration0129_transactionCost(tx: MigrationExecutor): Promise<BlockResult> {
+  const startedAt = Date.now();
+  await tx.execute(sql`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'cost_cents') THEN
+        PERFORM set_config('lock_timeout', '3s', true);
+        ALTER TABLE transactions ADD COLUMN cost_cents numeric(24,9);
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'cost_breakdown') THEN
+        PERFORM set_config('lock_timeout', '3s', true);
+        ALTER TABLE transactions ADD COLUMN cost_breakdown jsonb;
+      END IF;
+    END $$
+  `);
+  return { block: "0129_transactionCost", outcome: "ensured nullable per-call cost columns", duration_ms: Date.now() - startedAt };
+}
+
+// ─── Block 0130: sync holds reuse the durable reservation state machine ────
+export async function runMigration0130_syncWalletHolds(tx: MigrationExecutor): Promise<BlockResult> {
+  const startedAt = Date.now();
+  await tx.execute(sql`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'wallet_reservations' AND column_name = 'mode') THEN
+        PERFORM set_config('lock_timeout', '3s', true);
+        ALTER TABLE wallet_reservations ADD COLUMN mode varchar(8) NOT NULL DEFAULT 'debit';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'wallet_reservations' AND column_name = 'api_key_id') THEN
+        PERFORM set_config('lock_timeout', '3s', true);
+        ALTER TABLE wallet_reservations ADD COLUMN api_key_id uuid;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'transactions' AND column_name = 'x402_execution_attempts') THEN
+        PERFORM set_config('lock_timeout', '3s', true);
+        ALTER TABLE transactions ADD COLUMN x402_execution_attempts jsonb;
+      END IF;
+    END $$
+  `);
+  // Inspect the catalogue before any DDL, as block 0127 does: even
+  // CREATE INDEX CONCURRENTLY IF NOT EXISTS takes a lock on every boot.
+  const check = await tx.execute(sql`
+    SELECT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+    WHERE i.indrelid = 'transactions'::regclass
+      AND c.relname = 'transactions_x402_execution_attempt_hash_idx'
+  `);
+  const checkRows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+  if ((checkRows[0] as { indisvalid: boolean } | undefined)?.indisvalid) {
+    return { block: "0130_syncWalletHolds", outcome: "ensured columns; index already valid", duration_ms: Date.now() - startedAt };
+  }
+  // The runner invokes blocks outside a transaction, as for block 0125.
+  // Index only the new nullable metadata; no historical rows are rewritten.
+  const client = (tx as MigrationExecutor & { $client?: Sql }).$client;
+  const connection = client ? await client.reserve() : null;
+  const run = (text: string): Promise<unknown> =>
+    connection ? connection.unsafe(text) : tx.execute(sql.raw(text));
+  try {
+    await run(`SET lock_timeout = '3s'`);
+    await run(`SET statement_timeout = 0`);
+    const invalid = await run(`
+      SELECT c.relname FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+      WHERE i.indrelid = 'transactions'::regclass AND NOT i.indisvalid
+        AND c.relname = 'transactions_x402_execution_attempt_hash_idx'
+    `) as unknown as Array<{ relname: string }>;
+    if (invalid.length) await run(`DROP INDEX CONCURRENTLY IF EXISTS transactions_x402_execution_attempt_hash_idx`);
+    await run(`CREATE INDEX CONCURRENTLY IF NOT EXISTS transactions_x402_execution_attempt_hash_idx
+      ON transactions ((x402_execution_attempts->>'paymentHash')) WHERE x402_execution_attempts IS NOT NULL`);
+  } finally {
+    try {
+      await run(`RESET statement_timeout`);
+      await run(`RESET lock_timeout`);
+    } finally {
+      connection?.release();
+    }
+  }
+  return { block: "0130_syncWalletHolds", outcome: "ensured sync reservation hold mode and key attribution", duration_ms: Date.now() - startedAt };
 }

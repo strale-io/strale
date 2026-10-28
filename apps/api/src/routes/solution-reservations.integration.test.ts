@@ -20,6 +20,8 @@ import postgres from "postgres";
 import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../test-support/integration-db.js";
+import * as walletService from "../lib/wallet-service.js";
+import * as reservations from "../lib/wallet-reservations.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import {
   users,
@@ -215,6 +217,22 @@ describeMaybe("solution execution holds a wallet reservation", () => {
       .where(eq(walletTransactions.walletId, walletId));
     return rows.reduce((sum, r) => sum + r.amountCents, 0);
   }
+
+  it("H4 returns insufficient_balance when a concurrent sync hold owns the solution funds", async () => {
+    await seed();
+    const [transaction] = await db.insert(transactions).values({ userId, capabilityId, status: "executing",
+      input: {}, priceCents: STARTING_BALANCE, transparencyMarker: "algorithmic" }).returning();
+    await db.transaction(async tx => {
+      const wallet = await walletService.lockWalletForUser(tx, userId);
+      await reservations.reserve(tx, { wallet: wallet!, userId, amountCents: STARTING_BALANCE,
+        transactionId: transaction.id, description: "concurrent sync hold", mode: "hold" });
+    });
+    const response = await runSolution();
+    expect(response.status).toBe(402);
+    expect(await response.json()).toMatchObject({ error_code: "insufficient_balance" });
+    expect(await balance()).toBe(STARTING_BALANCE);
+    expect(await reservationRows()).toHaveLength(1);
+  });
 
   it("captures the reservation when the solution succeeds", async () => {
     await seed();

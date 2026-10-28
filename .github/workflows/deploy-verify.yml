@@ -1,0 +1,46 @@
+name: Verify production deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: deploy-verify-main
+  cancel-in-progress: false
+permissions:
+  contents: read
+  issues: write
+  statuses: read
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify changed files
+        id: classify
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execFileSync } = require('node:child_process');
+            const { docsOnly } = await import(`${process.cwd()}/scripts/production-watch/classify.mjs`);
+            const before = context.payload.before;
+            const files = before && !/^0+$/.test(before)
+              ? execFileSync('git', ['diff', '--name-only', before, context.sha], { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
+              : ['unknown'];
+            core.setOutput('docs_only', docsOnly(files));
+  verify:
+    needs: classify
+    if: needs.classify.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check production deploy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { deploy } = await import(`${process.cwd()}/scripts/production-watch/watch.mjs`);
+            core.info(JSON.stringify(await deploy(github, context)));

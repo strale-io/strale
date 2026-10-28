@@ -1,253 +1,64 @@
-/**
- * Drift sweep across all manifests vs DB.
- *
- * Compares the canonical fields between manifests/*.yaml and the
- * capabilities table for every YAML manifest. Reports drift per cap.
- * Read-only — does NOT apply fixes; for that, run
- * sync-manifest-canonical-to-db.ts <slug> --fields <a,b> per drifted cap.
- * (--apply below does exactly that, passing the fields THIS sweep found
- * drifted, so the mutation covers the same set as the detection.)
- *
- * Why: yesterday's audit-grade hardening for adverse-media-check ran
- * sync-manifest-text-to-db.ts (which only covers description + schemas)
- * but never the canonical-sync, leaving transparency_tag and other
- * runtime-affecting fields out of sync. The audit-honesty work this
- * session caught it for adverse-media-check; this sweep checks every
- * other capability for the same gap.
- *
- * Usage: cd apps/api && npx tsx scripts/sweep-manifest-drift.ts [--apply]
- *   default: dry-run, prints drift report.
- *   --apply: also runs the canonical sync per drifted cap (CAUTION:
- *            changes runtime behavior on caps where transparency_tag
- *            / data_source / output_field_reliability / etc differ).
+/** Read-only manifest/DB sweep. --strict fails only sync-writable differences on writable tools.
+ * Missing DB rows are not implicit onboarding; malformed manifests fail closed.
+ * Post-deploy: DATABASE_URL=<read-only role> npx tsx scripts/sweep-manifest-drift.ts --strict
  */
 import { config } from "dotenv";
 import { resolve, basename } from "node:path";
 import { readFileSync, readdirSync } from "node:fs";
 import * as yaml from "js-yaml";
 import postgres from "postgres";
-
+import { manifestDrift, driftExitCode } from "../src/lib/manifest-drift.js";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
-
-const apply = process.argv.includes("--apply");
-
-// Without this, an unset DATABASE_URL becomes `undefined`, postgres falls
-// back to localhost:5432, and the sweep dies on ECONNREFUSED — which is
-// what it had been doing on every weekly run, unnoticed, because the
-// workflow step never passed the secret. "Cannot connect" and "found
-// drift" must not look alike to whoever reads the drift issue.
-if (!process.env.DATABASE_URL) {
-  console.error(
-    "DATABASE_URL is not set — refusing to run.\n" +
-      "This sweep compares manifests against the real capabilities table; without a\n" +
-      "connection it verifies NOTHING. Do not read a failure here as drift.",
-  );
+if (process.argv.includes("--apply")) {
+  console.error("This sweep is read-only. Apply text through the boot sync; DB-owned differences require human review.");
   process.exit(2);
 }
-const sql = postgres(process.env.DATABASE_URL, { max: 1, ssl: "require" });
-
-interface Manifest {
-  slug: string;
-  data_source?: unknown;
-  maintenance_class?: unknown;
-  transparency_tag?: unknown;
-  gdpr_art_22_classification?: unknown;
-  freshness_category?: unknown;
-  output_field_reliability?: unknown;
-  processes_personal_data?: unknown;
-  personal_data_categories?: unknown[];
-  input_schema?: unknown;
+if (!process.env.DATABASE_URL) {
+  console.error("DATABASE_URL is not set; sweep verified nothing. Supply a read-only DB credential.");
+  process.exit(2);
 }
-
-interface Drift {
-  slug: string;
-  fields: Array<{ field: string; db: unknown; manifest: unknown }>;
-}
-
-const manifestDir = resolve(import.meta.dirname, "../../../manifests");
-const manifestFiles = readdirSync(manifestDir).filter((f) => f.endsWith(".yaml"));
-console.log(`Sweeping ${manifestFiles.length} manifests against DB...\n`);
-
-const drifts: Drift[] = [];
-let cleanCount = 0;
-let missingCount = 0;
-const transparencyDrifts: Drift[] = [];
-
-for (const file of manifestFiles) {
-  const slug = basename(file, ".yaml");
-  let manifest: Manifest;
-  try {
-    manifest = yaml.load(readFileSync(resolve(manifestDir, file), "utf8")) as Manifest;
-  } catch (err) {
-    console.log(`✗ ${slug}: failed to parse YAML — ${err instanceof Error ? err.message : String(err)}`);
-    continue;
-  }
-  if (manifest.slug !== slug) {
-    console.log(`✗ ${slug}: manifest slug mismatch (${manifest.slug})`);
-    continue;
-  }
-
-  const rows = await sql`
-    SELECT slug, data_source, maintenance_class, transparency_tag, freshness_category,
-           output_field_reliability, processes_personal_data, personal_data_categories,
-           gdpr_art_22_classification, input_schema
-    FROM capabilities
-    WHERE slug = ${slug}
-  `;
-  if (rows.length === 0) {
-    missingCount++;
-    continue;
-  }
-  const dbRow = rows[0];
-
-  const fields: Array<{ field: string; db: unknown; manifest: unknown }> = [];
-  // Stable canonical-form comparison — JSONB roundtrip in PostgreSQL doesn't
-  // preserve object-key insertion order, so naive JSON.stringify on the same
-  // {a: 1, b: 2} vs {b: 2, a: 1} produces "different" strings. Sort keys
-  // recursively so semantically-equal objects compare equal.
-  function canonicalize(v: unknown): unknown {
-    if (Array.isArray(v)) return v.map(canonicalize);
-    if (v && typeof v === "object") {
-      const o = v as Record<string, unknown>;
-      const sorted: Record<string, unknown> = {};
-      for (const k of Object.keys(o).sort()) sorted[k] = canonicalize(o[k]);
-      return sorted;
-    }
-    return v;
-  }
-  function compare(field: string, dbVal: unknown, manifestVal: unknown) {
-    if (manifestVal === undefined) return; // manifest doesn't declare this field — skip
-    if (JSON.stringify(canonicalize(dbVal)) !== JSON.stringify(canonicalize(manifestVal))) {
-      fields.push({ field, db: dbVal, manifest: manifestVal });
+const strict = process.argv.includes("--strict");
+const db = postgres(process.env.DATABASE_URL, { max: 1, ssl: "require", connection: { default_transaction_read_only: true } });
+let differences = 0, failures = 0, missing = 0, examined = 0;
+const sections: Record<"writable" | "reportOnly" | "nonSynced" | "dbOwned", string[]> = {
+  writable: [], reportOnly: [], nonSynced: [], dbOwned: [],
+};
+try {
+  const directory = resolve(import.meta.dirname, "../../../manifests");
+  const files = readdirSync(directory).filter(f => /\.ya?ml$/.test(f));
+  if (!files.length) throw new Error("No manifests found");
+  for (const file of files) {
+    const slug = basename(file).replace(/\.ya?ml$/, "");
+    try {
+      const manifest = yaml.load(readFileSync(resolve(directory, file), "utf8")) as Record<string, unknown>;
+      if (manifest.slug !== slug) throw new Error("Manifest slug mismatch");
+      const [row] = await db`SELECT * FROM capabilities WHERE slug = ${slug}`;
+      if (!row) { missing++; continue; }
+      examined++;
+      const limitations = await db`SELECT title, limitation_text AS "limitationText", category, severity, workaround
+        FROM capability_limitations WHERE capability_slug = ${slug} AND active = true ORDER BY sort_order`;
+      const drift = manifestDrift(manifest, row, limitations);
+      differences += drift.writable.length;
+      for (const section of ["writable", "reportOnly", "nonSynced", "dbOwned"] as const) {
+        if (drift[section].length || section === "reportOnly" && drift.publicationPending)
+          sections[section].push(`${slug}: ${drift[section].join(", ") || "no text differences"}`);
+      }
+    } catch {
+      failures++;
+      console.error(`${slug}: sweep failed; inspect manifest or DB availability`);
     }
   }
-  compare("data_source", dbRow.data_source, manifest.data_source);
-  compare("maintenance_class", dbRow.maintenance_class, manifest.maintenance_class);
-  compare("transparency_tag", dbRow.transparency_tag, manifest.transparency_tag);
-  compare("freshness_category", dbRow.freshness_category, manifest.freshness_category);
-  compare("output_field_reliability", dbRow.output_field_reliability, manifest.output_field_reliability);
-  compare("processes_personal_data", dbRow.processes_personal_data, manifest.processes_personal_data);
-  compare("personal_data_categories", dbRow.personal_data_categories, manifest.personal_data_categories);
-  compare("gdpr_art_22_classification", dbRow.gdpr_art_22_classification, manifest.gdpr_art_22_classification);
-  // input_schema is the customer-facing contract: it's what MCP tool
-  // definitions, /v1/capabilities, and the x402 catalog serve. Drift here is
-  // how three capabilities spent months advertising "nothing required" while
-  // their executors demanded input (2026-08-15 incident — real x402 payers
-  // sent {} and hit refusals the schema said couldn't happen). A DB value
-  // stored as a JSON *string* (double-encoding) serves zero properties and
-  // is flagged as drift regardless of content.
-  compare(
-    "input_schema",
-    typeof dbRow.input_schema === "string" ? "<DOUBLE-ENCODED JSON STRING>" : dbRow.input_schema,
-    manifest.input_schema,
-  );
-
-  if (fields.length === 0) {
-    cleanCount++;
-  } else {
-    const drift = { slug, fields };
-    drifts.push(drift);
-    if (fields.some((f) => f.field === "transparency_tag")) {
-      transparencyDrifts.push(drift);
-    }
-  }
+  if (!examined) { failures++; console.error("No existing capabilities examined; sweep verified nothing"); }
+} finally { await db.end(); }
+for (const [section, title] of Object.entries({
+  writable: "Sync-writable drift (strict failures)",
+  reportOnly: "Report-only tools: awaiting Petter's publication",
+  nonSynced: "Manifest columns not written by sync (report only)",
+  dbOwned: "DB/hybrid-owned columns (report only)",
+})) {
+  console.log(`\n${title}`);
+  for (const line of sections[section as keyof typeof sections]) console.log(line);
+  if (!sections[section as keyof typeof sections].length) console.log("(none)");
 }
-
-console.log(`=== Sweep summary ===\n`);
-console.log(`Manifests examined: ${manifestFiles.length}`);
-console.log(`Clean (no drift):   ${cleanCount}`);
-console.log(`Drifted:            ${drifts.length}`);
-console.log(`Missing in DB:      ${missingCount}`);
-console.log(`Of which transparency_tag drifts (audit-honesty critical): ${transparencyDrifts.length}\n`);
-
-if (transparencyDrifts.length > 0) {
-  console.log(`=== TRANSPARENCY_TAG DRIFTS — audit body lying about AI involvement ===\n`);
-  for (const d of transparencyDrifts) {
-    const t = d.fields.find((f) => f.field === "transparency_tag")!;
-    console.log(`  ${d.slug.padEnd(36)} db=${JSON.stringify(t.db)}  →  manifest=${JSON.stringify(t.manifest)}`);
-  }
-  console.log();
-}
-
-if (drifts.length > 0) {
-  console.log(`=== All drifts (one line per cap) ===\n`);
-  for (const d of drifts) {
-    console.log(`  ${d.slug.padEnd(36)} ${d.fields.map((f) => f.field).join(", ")}`);
-  }
-  console.log();
-}
-
-// Hoisted so the exit-code decision below can see it.
-let appliedFailed = 0;
-
-if (apply && drifts.length > 0) {
-  console.log(`\n=== APPLYING canonical sync to ${drifts.length} drifted caps ===\n`);
-  // Spawn the existing sync-manifest-canonical-to-db.ts per cap so we
-  // benefit from its existing field-by-field write logic.
-  const { spawn } = await import("node:child_process");
-  let applied = 0;
-  let failed = 0;
-  for (const d of drifts) {
-    const result = await new Promise<{ code: number; out: string }>((resolveP) => {
-      let out = "";
-      // Sync exactly the fields THIS SWEEP COMPARED and found drifted — not
-      // --all-fields.
-      //
-      // Reviewer-found, and it recreated the very failure the scoping work
-      // exists to stop: the sweep compares nine fields, so passing
-      // --all-fields would push the other eight too, including output_schema.
-      // A capability reported as drifting on data_source could have had an
-      // unrelated, unreviewed output_schema example swept along with it.
-      // Detection and mutation now cover the same set by construction.
-      const fields = d.fields.map((f) => f.field).join(",");
-      const child = spawn(
-        "npx",
-        ["tsx", "scripts/sync-manifest-canonical-to-db.ts", d.slug, "--fields", fields],
-        {
-          cwd: resolve(import.meta.dirname, ".."),
-          shell: true,
-        },
-      );
-      child.stdout.on("data", (chunk) => (out += chunk));
-      child.stderr.on("data", (chunk) => (out += chunk));
-      child.on("close", (code) => resolveP({ code: code ?? -1, out }));
-    });
-    if (result.code === 0) {
-      applied++;
-      // Echo the child's own audit line rather than a bare checkmark.
-      // Reviewer-found: discarding successful output meant a --apply run left
-      // no record of WHICH columns each sync wrote, which is precisely the
-      // thing a reader needs afterwards.
-      const audit = result.out
-        .split("\n")
-        .find((l) => l.startsWith("Audit: "));
-      console.log(`  ✓ ${d.slug}${audit ? `  ${audit}` : ""}`);
-    } else {
-      failed++;
-      appliedFailed++;
-      console.log(`  ✗ ${d.slug} (exit ${result.code})`);
-      console.log(`    ${result.out.split("\n").filter((l) => l).slice(-3).join(" | ")}`);
-    }
-  }
-  console.log(`\nApplied: ${applied}  Failed: ${failed}`);
-}
-
-await sql.end();
-
-// Exit non-zero when drift remains. This script previously exited 0
-// unconditionally, so even a fully-working sweep reported "clean" to the
-// weekly aggregate no matter how many capabilities had drifted — a check
-// that runs, finds real problems, and reports success. Fixing the missing
-// DATABASE_URL without also fixing this would have turned a loudly-broken
-// gate into a silently-useless one, which is worse: nobody investigates a
-// green check.
-//   0 = no drift (or --apply resolved all of it)
-//   1 = drift found and not applied, or some --apply syncs failed
-//   2 = could not run at all (see the DATABASE_URL guard above)
-if (drifts.length === 0) process.exit(0);
-if (apply) process.exit(appliedFailed > 0 ? 1 : 0);
-console.log(
-  `${drifts.length} capabilit${drifts.length === 1 ? "y has" : "ies have"} manifest↔DB drift. ` +
-    `Re-run with --apply to sync, or fix the manifest if the DB is right.`,
-);
-process.exit(1);
+console.log(JSON.stringify({ examined, sync_writable_differences: differences, missing, failed: failures }));
+process.exitCode = driftExitCode(strict, differences, failures);

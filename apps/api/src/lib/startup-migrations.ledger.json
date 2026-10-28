@@ -957,6 +957,47 @@
         "users.signup_src"
       ],
       "sha256": "0aa520b14b89953bf2e83734fb0bf49e3ea492cd1918aca49675bce38c0c55db"
+    },
+    {
+      "id": "M070",
+      "function": "runMigration0127_integrityHashIndex",
+      "title": "repair integrity index after schema bootstrap",
+      "added": "2026-10-27",
+      "columns_written": [],
+      "sha256": "e9117fc0d93fcbc81780f5a51bef57ad5ab4ff670abdd9f487cbec8c160aa36e"
+    },
+    {
+      "id": "M071",
+      "function": "runMigration0128_manifestTextHash",
+      "title": "manifest text sync checkpoint",
+      "added": "2026-10-27",
+      "columns_written": [
+        "capabilities.manifest_text_hash"
+      ],
+      "sha256": "ce057a7a1d73438dee1b227e111d4f43c559ec0b05bc9a59966bec2cd84c20e7"
+    },
+    {
+      "id": "M072",
+      "function": "runMigration0129_transactionCost",
+      "title": "marginal per-call costs, no historical estimates/backfill",
+      "added": "2026-10-27",
+      "columns_written": [
+        "transactions.cost_breakdown",
+        "transactions.cost_cents"
+      ],
+      "sha256": "fdb8d33999a002560925e31697ba59f246b0c8823f47dc38a01f81fe7e57353c"
+    },
+    {
+      "id": "M073",
+      "function": "runMigration0130_syncWalletHolds",
+      "title": "sync holds reuse the durable reservation state machine",
+      "added": "2026-10-27",
+      "columns_written": [
+        "transactions.x402_execution_attempts",
+        "wallet_reservations.api_key_id",
+        "wallet_reservations.mode"
+      ],
+      "sha256": "2a46645c5660808c8f152a30fd54ba229316f08d05f7b2c6882183119becfdfb"
     }
   ],
   "known_overlaps": [

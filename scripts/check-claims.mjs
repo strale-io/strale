@@ -7,11 +7,14 @@
 // evidence doesn't resolve are warnings, not failures.
 //
 // Usage: node scripts/check-claims.mjs [--json]
-import { checkAllClaims, repoRootFrom, REGISTER_PATH } from "./claims-lib.mjs";
+import { requireInputs } from "./require-inputs.mjs";
+import { checkAllClaims, assertClaimInputs, repoRootFrom, REGISTER_PATH } from "./claims-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
+assertClaimInputs(root);
 const { findings, warnings, rowCount } = checkAllClaims(root);
+requireInputs(rowCount, "claims: register rows");
 
 if (json) {
   console.log(JSON.stringify({ ok: findings.length === 0, findings, warnings, row_count: rowCount }, null, 2));

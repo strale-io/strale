@@ -67,6 +67,7 @@ describe("price-compare output-truncation handling", () => {
 
     expect(messagesCreate).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ max_tokens: 4000 }),
+      expect.objectContaining({ maxRetries: 0, timeout: expect.any(Number) }),
     );
   });
 

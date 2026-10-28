@@ -1,3 +1,4 @@
+import { markJobSuccess } from "../lib/job-heartbeats.js";
 /**
  * Integrity-hash retry worker (F-0-009 Stage 2).
  *
@@ -92,12 +93,14 @@ async function runOnce(): Promise<void> {
   // statement. Lock auto-releases at commit/rollback — no explicit
   // pg_advisory_unlock needed (which is what broke the session-scoped
   // pattern on a pooled connection).
+  let successful = true;
   try {
     await db.transaction(async (tx) => {
       const [lock] = await tx.execute(
         sql`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_ID}) AS acquired`,
       );
       if (!(lock as { acquired?: boolean })?.acquired) {
+        successful = false;
         logWarn(
           "integrity-hash-retry-lock-busy",
           "another holder; skipping tick",
@@ -335,6 +338,7 @@ async function runOnce(): Promise<void> {
           // One row failing shouldn't take down the whole batch. Log and move on.
           logError("integrity-hash-retry-row-failed", err, { transactionId: txn.id });
           failed++;
+          successful = false;
 
           // If this row has been pending for well past STALE_WARN_MS, flip to
           // 'failed' so it stops clogging the queue and operators get a ping.
@@ -432,6 +436,7 @@ async function runOnce(): Promise<void> {
         });
       }
     });
+    if (successful) markJobSuccess("integrity-hash-retry");
   } catch (err) {
     logError("integrity-hash-retry-batch-failed", err);
   }

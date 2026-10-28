@@ -1,0 +1,454 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "1d7bba99331dfa433d550dbe875ca4f9105cbf0a"
+  },
+  "at": "2026-10-27T18:35:30.621Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "branch": "feat/zapier-integration",
+    "working_tree": "uncommitted; no push or publication",
+    "root_check_commands_passed": 62,
+    "package_tests_passed": 40,
+    "integrity_tests_passed": 1,
+    "api_tests_passed": 6509,
+    "api_tests_skipped": 349,
+    "handoff_gate_ok": false,
+    "docker_lanes_run": false
+  },
+  "topic": "zapier-integration",
+  "raw": {
+    "ok": true,
+    "branch": "feat/zapier-integration",
+    "working_tree": "uncommitted; no push or publication",
+    "root_check_commands_passed": 62,
+    "package_tests_passed": 40,
+    "integrity_tests_passed": 1,
+    "api_tests_passed": 6509,
+    "api_tests_skipped": 349,
+    "handoff_gate_ok": false,
+    "docker_lanes_run": false,
+    "commands": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm test --workspace=packages/zapier-strale",
+        "exit_code": 0
+      },
+      {
+        "command": "node --test apps/api/scripts/check-framework-packages.test.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run gates:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm test",
+        "exit_code": 0
+      }
+    ],
+    "clean_install": {
+      "command": "npm ci",
+      "exit_code": 0
+    },
+    "final_package_tests": {
+      "command": "npm test --workspace=packages/zapier-strale",
+      "exit_code": 0,
+      "output": "  40 passing (1s)"
+    },
+    "final_api_tests": {
+      "command": "npm test",
+      "exit_code": 0,
+      "output": " Test Files  356 passed | 34 skipped (390)\n      Tests  6509 passed | 349 skipped (6858)\n   Duration  218.77s (transform 25.16s, setup 5.97s, import 280.99s, tests 235.06s, environment 61ms)"
+    },
+    "final_local_validation": {
+      "command": "npm run validate --workspace=packages/zapier-strale",
+      "exit_code": 0,
+      "output": "\n> zapier-strale@0.1.0 validate\n> zapier-platform validate --without-style\n\nValidating project locally\nNo structural errors found during validation routine.\nThis project is structurally sound!\n"
+    },
+    "final_integrity_test": {
+      "command": "node --test apps/api/scripts/check-framework-packages.test.mjs",
+      "exit_code": 0,
+      "output": "✔ Zapier integrity rejects an import-only hollow app (378.080695ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 651.268858\n"
+    },
+    "framework": {
+      "command": "node apps/api/scripts/check-framework-packages.mjs",
+      "exit_code": 0,
+      "output": "ok    composio-strale  (import found in packages/composio-strale/composio_strale/toolkit.py)\nok    crewai-strale  (import found in packages/crewai-strale/crewai_strale/toolkit.py)\nskip  google-adk-strale  (DEPRECATED.md present — yanked, forwarding only)\nok    langchain-strale  (import found in packages/langchain-strale/langchain_strale/toolkit.py)\nskip  openai-agents-strale  (DEPRECATED.md present — yanked, forwarding only)\nskip  pydantic-ai-strale  (DEPRECATED.md present — yanked, forwarding only)\nok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)\nok    zapier-strale  (import found in packages/zapier-strale/index.js)\n\nframework-packages check: 5 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims.\n"
+    },
+    "final_followup_checks": {
+      "passed": [
+        "claims:check",
+        "distribution:check",
+        "distribution:test",
+        "docs:check",
+        "models:check",
+        "env:check",
+        "programs:check",
+        "receipts:check",
+        "archive:index",
+        "git diff --check",
+        "check-mjs-syntax",
+        "public package/jobs export loading"
+      ]
+    },
+    "public_get_checks": [
+      {
+        "path": "/v1/capabilities/uk-company-data",
+        "status": 200,
+        "slug": "uk-company-data",
+        "price_cents": 5
+      },
+      {
+        "path": "/v1/capabilities/swedish-company-data",
+        "status": 200,
+        "slug": "swedish-company-data",
+        "price_cents": 5
+      },
+      {
+        "path": "/v1/capabilities/norwegian-company-data",
+        "status": 200,
+        "slug": "norwegian-company-data",
+        "price_cents": 5
+      },
+      {
+        "path": "/v1/capabilities/finnish-company-data",
+        "status": 200,
+        "slug": "finnish-company-data",
+        "price_cents": 5
+      },
+      {
+        "path": "/v1/capabilities/vat-validate",
+        "status": 200,
+        "slug": "vat-validate",
+        "price_cents": 2
+      },
+      {
+        "path": "/v1/capabilities/sanctions-check",
+        "status": 200,
+        "slug": "sanctions-check",
+        "price_cents": 20
+      },
+      {
+        "path": "/v1/capabilities/pep-check",
+        "status": 200,
+        "slug": "pep-check",
+        "price_cents": 5
+      },
+      {
+        "path": "/v1/capabilities/company-status-check",
+        "status": 404,
+        "error_code": "not_found",
+        "message": "Capability 'company-status-check' not found."
+      },
+      {
+        "path": "/v1/capabilities/entity-resolve",
+        "status": 404,
+        "error_code": "not_found",
+        "message": "Capability 'entity-resolve' not found."
+      },
+      {
+        "path": "/v1/capabilities/invoice-counterparty-check",
+        "status": 404,
+        "error_code": "not_found",
+        "message": "Capability 'invoice-counterparty-check' not found."
+      },
+      {
+        "path": "/v1/capabilities/danish-company-data",
+        "status": 404,
+        "error_code": "not_found",
+        "message": "Capability 'danish-company-data' not found."
+      },
+      {
+        "path": "/v1/solutions/invoice-verify-se",
+        "status": 200,
+        "slug": "invoice-verify-se",
+        "price_cents": 250
+      }
+    ],
+    "reviews": {
+      "rounds": 2,
+      "high_findings_remaining": 0,
+      "product_verdict": "GO",
+      "technical_round_two": "GO with one MEDIUM polling replay finding; corrected after review and covered by four tests"
+    },
+    "handoff": {
+      "command": "node scripts/handoff/handoff-check.mjs --json",
+      "exit_code": 1,
+      "failures": [
+        {
+          "code": "dirty",
+          "message": "17 uncommitted or untracked path(s) in <checkout>: .github/workflows/ci.yml, apps/api/scripts/check-framework-packages.mjs, docs/operations/distribution-registry.schema.json, docs/operations/distribution-registry.yaml, package-lock.json, … (17 total)"
+        },
+        {
+          "code": "branch",
+          "message": "trunk <checkout> is on feat/zapier-integration; it stays on main"
+        },
+        {
+          "code": "ahead",
+          "message": "branch feat/zapier-integration has no upstream of its own (it tracks origin/main)"
+        },
+        {
+          "code": "merged-branch",
+          "message": "local branch docs/dq-39-40-answered has landed on main (patch-equivalent) and still exists"
+        },
+        {
+          "code": "merged-branch",
+          "message": "local branch docs/dq-40-zefix-terms has landed on main (patch-equivalent) and still exists"
+        },
+        {
+          "code": "merged-branch",
+          "message": "local branch docs/search-live-eval has landed on main (patch-equivalent) and still exists"
+        },
+        {
+          "code": "merged-branch",
+          "message": "remote branch origin/docs/dq-39-40-answered has landed on main (patch-equivalent) and still exists"
+        },
+        {
+          "code": "merged-branch",
+          "message": "remote branch origin/docs/dq-40-zefix-terms has landed on main (patch-equivalent) and still exists"
+        }
+      ]
+    },
+    "unverified": [
+      "Docker DB integration and image boot: no Docker daemon/disposable test DB",
+      "Live auth, private Zap runs and paid executions: no key/account",
+      "Public publication and production contract smoke: intentionally deferred"
+    ]
+  }
+}

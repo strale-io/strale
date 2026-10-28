@@ -1,3 +1,5 @@
+import { withCallCost } from "../lib/call-cost.js";
+import { EUR_USD_RATE } from "../lib/currency.js";
 /**
  * Request-scoped logging context (F-0-014).
  *
@@ -41,7 +43,7 @@ export const requestContext = (): MiddlewareHandler<AppEnv> => async (c, next) =
   // structured JSON record. Inherits request_id/method/path/user_id from
   // the child logger; adds status_code and duration_ms at completion.
   const start = Date.now();
-  await next();
+  await withCallCost(next, EUR_USD_RATE);
   const duration_ms = Date.now() - start;
   c.get("log").info(
     { label: "request-complete", status_code: c.res.status, duration_ms },

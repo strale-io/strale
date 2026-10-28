@@ -1,3 +1,4 @@
+import { noteJobFailure } from "../lib/job-run-context.js";
 /**
  * DB Retention — daily job that prunes old rows from high-volume internal tables.
  *
@@ -182,6 +183,7 @@ export async function runOneRulePaginated(
       `);
       batchCount = (res as { count?: number }).count ?? 0;
     } catch (err) {
+      noteJobFailure();
       error = err instanceof Error ? err.message : String(err);
       break;
     }

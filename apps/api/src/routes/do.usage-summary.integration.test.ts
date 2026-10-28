@@ -1,3 +1,4 @@
+import { walletReservations } from "../db/schema.js";
 /**
  * Usage summary behind the conversion emails (WP1).
  *
@@ -83,7 +84,8 @@ describeMaybe("conversion-email usage summary against a real database", () => {
   });
 
   afterEach(async () => {
-    await db.delete(transactions).where(eq(transactions.userId, userId));
+    await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
+      await db.delete(transactions).where(eq(transactions.userId, userId));
     // Ledger rows reference the wallet, so they go first or the delete trips
     // the foreign key.
     await db

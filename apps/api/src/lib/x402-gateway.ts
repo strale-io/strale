@@ -1,3 +1,4 @@
+import { EUR_USD_RATE } from "./currency.js";
 /**
  * x402 Payment Gateway — per-request USDC payments for AI agents.
  *
@@ -39,12 +40,6 @@ const CAIP2_BY_NETWORK: Record<string, string> = {
 export function networkToCaip2(network: string): string {
   if (network.includes(":")) return network;
   return CAIP2_BY_NETWORK[network] ?? network;
-}
-const EUR_USD_RATE = parseFloat(process.env.EUR_USD_RATE ?? "1.08");
-if (!Number.isFinite(EUR_USD_RATE) || EUR_USD_RATE <= 0) {
-  // Fail fast at module load: a malformed env value ("1,085", "") would
-  // otherwise emit maxAmountRequired: "NaN" on every 402.
-  throw new Error(`EUR_USD_RATE is not a positive number: "${process.env.EUR_USD_RATE}"`);
 }
 // Integer micro-USD rate for exact conversion. Float arithmetic on the raw
 // rate produced machine-surface artifacts (catalog `price_usd:
@@ -423,6 +418,8 @@ export interface X402VerifyOnlyResult {
 
 export interface X402SettlementResult {
   valid: boolean;
+  /** Transport failure: settlement may have occurred; do not release a claim. */
+  settlementUnknown?: boolean;
   settlementId?: string;
   error?: string;
 }
@@ -560,6 +557,7 @@ export async function settleX402Payment(
     reportSettlementFailure(err instanceof Error ? err.message : "Settlement failed");
     return {
       valid: false,
+      settlementUnknown: true,
       error: err instanceof Error ? err.message : "Settlement failed",
     };
   }

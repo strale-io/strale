@@ -3,12 +3,15 @@
 // manifest contract. Exit 1 on any failing finding.
 //
 // Usage: node scripts/check-env.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllEnv, repoRootFrom, MANIFEST_PATH, ROOT_EXAMPLE_PATH, API_EXAMPLE_PATH } from "./env-lib.mjs";
 import { generate } from "./generate-env-example.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { findings, usageCount, rowCount } = checkAllEnv(root);
+requireInputs(rowCount, "env: manifest rows");
+requireInputs(usageCount, "env: source usages");
 
 const genResult = generate(root, { check: true });
 for (const r of genResult.results) {

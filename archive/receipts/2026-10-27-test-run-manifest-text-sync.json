@@ -1,0 +1,650 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0e7c0b2be0d219e2b44e3bff9c4e5a7d69e7776b"
+  },
+  "at": "2026-10-27T17:32:58.200Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "api_tests_passed": 6500,
+    "api_tests_skipped": 347,
+    "api_tests_failed": 0,
+    "api_files_passed": 356,
+    "api_files_skipped": 34,
+    "typecheck_exit": 0,
+    "manifest_count": 356,
+    "real_local_db_run": false,
+    "preexisting_pii_guard_exit": 1,
+    "working_tree_uncommitted": true
+  },
+  "topic": "manifest-text-sync",
+  "raw": {
+    "ok": false,
+    "api_tests_passed": 6500,
+    "api_tests_skipped": 347,
+    "api_tests_failed": 0,
+    "api_files_passed": 356,
+    "api_files_skipped": 34,
+    "typecheck_exit": 0,
+    "manifest_count": 356,
+    "real_local_db_run": false,
+    "preexisting_pii_guard_exit": 1,
+    "working_tree_uncommitted": true,
+    "raw": {
+      "initial_ci_commands": [
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=packages/sdk-typescript run build",
+          "exit": 0
+        },
+        {
+          "command": "npm run typecheck",
+          "exit": 2
+        },
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit": 1
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm run programs:check",
+          "exit": 0
+        },
+        {
+          "command": "node --test scripts/production-watch/*.test.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm run programs:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run research:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run research:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run design:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run design:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run env:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run env:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run vendors:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run vendors:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run distribution:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run distribution:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run candidates:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run scheduled:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run scheduled:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run models:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run models:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run claims:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run claims:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run docs:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run docs:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run archive:index:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run receipts:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run migrations:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run migrations:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run gates:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run handoff:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run context:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run context:test",
+          "exit": 0
+        },
+        {
+          "command": "npm test",
+          "exit": 1
+        },
+        {
+          "command": "npm run handoff:check",
+          "exit": 1
+        }
+      ],
+      "latest_commands": [
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=packages/sdk-typescript run build",
+          "exit": 0
+        },
+        {
+          "command": "npm run typecheck",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit": 1
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit": 0
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm run programs:check",
+          "exit": 0
+        },
+        {
+          "command": "node --test scripts/production-watch/*.test.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm run programs:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run research:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run research:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run design:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run design:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run env:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run env:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run vendors:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run vendors:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run distribution:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run distribution:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run candidates:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "exit": 0
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run scheduled:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run scheduled:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run models:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run models:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run claims:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run claims:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run docs:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run docs:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run archive:index:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run receipts:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run migrations:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run migrations:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run gates:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run handoff:test",
+          "exit": 0
+        },
+        {
+          "command": "npm run context:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run context:test",
+          "exit": 0
+        },
+        {
+          "command": "npm test",
+          "exit": 0
+        },
+        {
+          "command": "npm run handoff:check",
+          "exit": 1
+        },
+        {
+          "command": "node scripts/generate-archive-index.mjs --check",
+          "exit": 0
+        },
+        {
+          "command": "cd apps/api && npx tsc --noEmit",
+          "exit": 0
+        }
+      ],
+      "manifest_corpus": {
+        "count": 356,
+        "bytes": 990339,
+        "limitations": 771,
+        "largest": 32902,
+        "reportOnly": [
+          "adverse-media-check",
+          "aml-risk-score",
+          "beneficial-ownership-lookup",
+          "breach-exposure-check",
+          "company-status-check",
+          "cz-unreliable-vat-payer",
+          "domain-reputation",
+          "eu-regulation-search",
+          "fr-bodacc-lookup",
+          "french-insolvency-check",
+          "gdpr-website-check",
+          "gleif-l2-children-lookup",
+          "gleif-l2-ubo-lookup",
+          "insolvency-check",
+          "invoice-counterparty-check",
+          "no-bankruptcy-check",
+          "pep-check",
+          "risk-narrative-generate",
+          "sanctions-check",
+          "uk-cop-check",
+          "uk-disqualified-director-check",
+          "us-court-search",
+          "us-ein-match",
+          "us-sec-filings-extended"
+        ],
+        "errors": []
+      },
+      "local_db": {
+        "runuser_exit": 1,
+        "runuser_error": "cannot set groups: Operation not permitted",
+        "postgres_version_installed": 16,
+        "postgres_server_available": false,
+        "docker_daemon_available": false
+      },
+      "file_sha256": {
+        ".github/workflows/weekly-drift.yml": "ff35b51d194ce8b1a60858314319fa47e2eb29293ab783bed2d0e793636a8bf7",
+        "apps/api/scripts/sweep-manifest-drift.ts": "e6737bbc8a8770e21638c99a63da52a6de1480ee62fb9a5c917d8138dd6a3a3c",
+        "apps/api/scripts/sweep-paid-fixtures.ts": "6f404e0f79bf1f385f55a7e5261b56fc9de87fdc89b4de7e80e612a1bba6f0cf",
+        "apps/api/scripts/sweep-prod-catalog.ts": "9845d1116d3900d03e9fe8bddb6c776bb13ddc90628f675bfdec5f554dfccd90",
+        "apps/api/src/db/audit-tests.ts": "46a88adf4d94d8fd71f5a0ec4d67c34beb3e912309246195ca8e77ac127aefe7",
+        "apps/api/src/db/schema.ts": "76cf589fc8c5b9972f5cd81fdfa9d8c99bde3fff0611c45ddaf231dcaf0281e0",
+        "apps/api/src/index.ts": "dec3733b22a5472dc49fcdb8df34223b0ab27871ad6b600d0c88d0581a70e9d0",
+        "apps/api/src/lib/auto-remediation.ts": "01a435f92606e7dfaf1ecd15497ead948d016f847cb94746c9d0faba6ecc8e2e",
+        "apps/api/src/lib/capability-field-authority.test.ts": "d60016f2578120dc693d613a81aa2a2f2daf1867257d9d0451e1be98d0360221",
+        "apps/api/src/lib/guaranteed-fields-sentinel.test.ts": "8fbf6dcb9b2f1788e832ee22ac19f434aecaf57b478de1b2fe8cd499d0d4aa1f",
+        "apps/api/src/lib/guaranteed-fields-sentinel.ts": "e1826b2026533407bc9f280508f6aebca3732ecc83e5f8afa4a69c395ef0406e",
+        "apps/api/src/lib/limitations-sync.ts": "6fc142f706d12a593fea880303d45ef613a66e22fe493e02168ec4d77b072085",
+        "apps/api/src/lib/manifest-drift.test.ts": "f2de597a5c45cdc291d174b368f57c112a8a4dd6b23e3eb53b0ab2ec90a45e29",
+        "apps/api/src/lib/manifest-drift.ts": "66de1a33f0cba576bb557163b4386f711fa4ca0cc9a59d3b441816a79eed2b57",
+        "apps/api/src/lib/manifest-publication-policy.ts": "f48d96dd448c1b566653a4b12d0d6c55e7806e5ad8ef8c31b893b4988ecaf38f",
+        "apps/api/src/lib/manifest-text-sync.integration.test.ts": "f3e03db620e79d11da90370fe8f76cca826c8e9c3d98202bf5b05de89be5d71a",
+        "apps/api/src/lib/manifest-text-sync.test.ts": "048c25b36ec1b46a687331b4587e2d87582189bfad0adf8b305de43c7f9f2100",
+        "apps/api/src/lib/manifest-text-sync.ts": "b5dc5645cedd4becc516c27d86da7897fb5624269dd8b6222dbed6b39830de89",
+        "apps/api/src/lib/nested-value.test.ts": "9b276d7be21a3babd73504a7424a626e3322bfa4249006744676401b5d73d265",
+        "apps/api/src/lib/nested-value.ts": "441f07698ba5a9e10a9184f2a067f36c8a4bf02c5349dc44066b10eae29d51a1",
+        "apps/api/src/lib/onboarding-pipeline.test.ts": "7fe67d68e4aeee743f5a3e35964c8522a017b7bc42ddf71343753748240919c6",
+        "apps/api/src/lib/onboarding-pipeline.ts": "fb0221b24c736d07a6ebbc438137c715ed82f591478ea89ae0ae8779d864fb0c",
+        "apps/api/src/lib/piggyback-monitor.test.ts": "f685d88173bcbc1036d619e18c94d10c9a2e08e2b2c44596fd98a98229738812",
+        "apps/api/src/lib/piggyback-monitor.ts": "abc9e6b9fef57486ea9a3f61d5b1f47c301fdca0ea4da8c43713f882d42b2e2a",
+        "apps/api/src/lib/receipt/manifest-snapshot.ts": "282c4fc99d961d9d3feb1eade394d272574a23c304297a1c9436dab65e181eb5",
+        "apps/api/src/lib/startup-migrations.ledger.json": "1bda4542319aeb514bd3eb6259d4b3ffcb598802aa5d643ecf42adab72b636e6",
+        "apps/api/src/lib/startup-migrations.test.ts": "79136a8248c3928c6b3a8a2d1761e798bfed2cae05e611fd45e5be0aff182911",
+        "apps/api/src/lib/startup-migrations.ts": "84b0fad81a07b1f87ae92023c9bef1762f582f9794bf836823b1f74551fe99e0",
+        "apps/api/src/lib/test-runner.ts": "1a18c31bb03839c4cc6374c888a52ed2c2a91978b37dd0b5b4e9d37977b40917",
+        "apps/api/src/openapi-internal-routes.ts": "50cf19ddba3f33674de1b6b548860a643d36abd002461fbb05d81496656da2a5",
+        "apps/api/src/openapi-public-paths.ts": "9541906332b13524085618a0691a345b918391ac2af78af4b56a8aad5d61d42b",
+        "apps/api/src/openapi-route-coverage.ts": "16dcfae786bec7c3745c13eb00c8d71fae701bdf924f471cc4ee9817851684e3",
+        "apps/api/src/openapi-routes.test.ts": "f607b6a41e90b10c4be36d297db6054395219052fe1d3243308ecfad83c8f140",
+        "apps/api/src/openapi.ts": "a97bebf70edb4a6c80f0edef8781beeca5e3cc5c8192fc11eec2a075e22550b8",
+        "handoff/_general/from-code/2026-10-27-manifest-text-sync.md": "48c015a9109cd415d21e127240ee67db53dd5c430f3f2adff27961bd67a0d575"
+      }
+    },
+    "inputs": {
+      "branch": "feat/manifest-text-sync",
+      "working_tree_uncommitted": true,
+      "files": [
+        ".github/workflows/weekly-drift.yml",
+        "apps/api/scripts/sweep-manifest-drift.ts",
+        "apps/api/scripts/sweep-paid-fixtures.ts",
+        "apps/api/scripts/sweep-prod-catalog.ts",
+        "apps/api/src/db/audit-tests.ts",
+        "apps/api/src/db/schema.ts",
+        "apps/api/src/index.ts",
+        "apps/api/src/lib/auto-remediation.ts",
+        "apps/api/src/lib/capability-field-authority.test.ts",
+        "apps/api/src/lib/guaranteed-fields-sentinel.test.ts",
+        "apps/api/src/lib/guaranteed-fields-sentinel.ts",
+        "apps/api/src/lib/limitations-sync.ts",
+        "apps/api/src/lib/manifest-drift.test.ts",
+        "apps/api/src/lib/manifest-drift.ts",
+        "apps/api/src/lib/manifest-publication-policy.ts",
+        "apps/api/src/lib/manifest-text-sync.integration.test.ts",
+        "apps/api/src/lib/manifest-text-sync.test.ts",
+        "apps/api/src/lib/manifest-text-sync.ts",
+        "apps/api/src/lib/nested-value.test.ts",
+        "apps/api/src/lib/nested-value.ts",
+        "apps/api/src/lib/onboarding-pipeline.test.ts",
+        "apps/api/src/lib/onboarding-pipeline.ts",
+        "apps/api/src/lib/piggyback-monitor.test.ts",
+        "apps/api/src/lib/piggyback-monitor.ts",
+        "apps/api/src/lib/receipt/manifest-snapshot.ts",
+        "apps/api/src/lib/startup-migrations.ledger.json",
+        "apps/api/src/lib/startup-migrations.test.ts",
+        "apps/api/src/lib/startup-migrations.ts",
+        "apps/api/src/lib/test-runner.ts",
+        "apps/api/src/openapi-internal-routes.ts",
+        "apps/api/src/openapi-public-paths.ts",
+        "apps/api/src/openapi-route-coverage.ts",
+        "apps/api/src/openapi-routes.test.ts",
+        "apps/api/src/openapi.ts",
+        "handoff/_general/from-code/2026-10-27-manifest-text-sync.md"
+      ]
+    }
+  }
+}

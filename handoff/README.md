@@ -9,17 +9,26 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-375 files (348 with a recorded intent, 27 without).
+385 files (358 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-28 | [`handoff/_general/from-code/2026-10-28-output-schema-runtime-example.md`](_general/from-code/2026-10-28-output-schema-runtime-example.md) | stop the manifest drift sweep counting the test runner's captured |
+| 2026-10-28 | [`handoff/_general/from-code/2026-10-28-money-path.md`](_general/from-code/2026-10-28-money-path.md) | Implement H4 on `feat/money-path` from `e871a2ad`: release database connections during sync paid execution, enforce t... |
+| 2026-10-28 | [`handoff/_general/from-code/2026-10-28-checkin-morning.md`](_general/from-code/2026-10-28-checkin-morning.md) | run the 2026-10-28 operating session under DAILY-RUN.md — sweep the |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-zapier-integration.md`](_general/from-code/2026-10-27-zapier-integration.md) | Build Distribution D5 as a real Zapier CLI integration with fixed business jobs, API-key authentication, offline test... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-x402-bazaar-metadata.md`](_general/from-code/2026-10-27-x402-bazaar-metadata.md) | Finish D2 x402 challenge discovery metadata with conservative manifest-only examples, preserve the existing catalog/O... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-secure-random.md`](_general/from-code/2026-10-27-secure-random.md) | Build the paid secure-random capability for portfolio Phase 2 item 2.12; complete offline verification and leave prod... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-retire-old-daily-digest.md`](_general/from-code/2026-10-27-retire-old-daily-digest.md) | retire the old daily-digest email instead of restoring it, and stop the production watch from expecting it. |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-record-dec-20261027-b.md`](_general/from-code/2026-10-27-record-dec-20261027-b.md) | Record Petter's confirmed DEC-20261027-B, register platform-hardening and distribution, and leave all changes uncommi... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-public-descriptions-copy.md`](_general/from-code/2026-10-27-public-descriptions-copy.md) | Rewrite public tool descriptions against their executors and apply listed copy on deploy through a guarded descriptio... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-production-watch.md`](_general/from-code/2026-10-27-production-watch.md) | Finish H1 production monitoring on `feat/production-watch`, retaining the interrupted implementation, testing it, and... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-per-call-cost.md`](_general/from-code/2026-10-27-per-call-cost.md) | Build H5 per-call marginal upstream cost recording, bounded shared Anthropic clients and the daily margin input. Impl... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-package-docs.md`](_general/from-code/2026-10-27-package-docs.md) | Build and revise package-docs using public npm/PyPI registry APIs; leave the uncommitted changes for the orchestrator... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ops-delegation.md`](_general/from-code/2026-10-27-ops-delegation.md) | record Petter's 2026-10-27 delegation of no-spend accounts and email, and make the inbox a duty that works from any C... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-nta-env-set-in-railway.md`](_general/from-code/2026-10-27-nta-env-set-in-railway.md) | record that the NTA Corporate Number Web-API application ID is now set in Railway. |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-manifest-text-sync.md`](_general/from-code/2026-10-27-manifest-text-sync.md) | Implement H3 deploy-time manifest text sync, actionable drift checks, real-traffic guaranteed-field monitoring and ro... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-fleet-credentials-email.md`](_general/from-code/2026-10-27-fleet-credentials-email.md) | bring Strale in line with the fleet security rule Petter agreed on 2026-10-27 (wow-core SECURITY_CORE §1a). The rule... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-limitations-sync-mode.md`](_general/from-code/2026-10-27-feat-limitations-sync-mode.md) | Add a text-only limitations sync through the onboarding runner so reviewed manifest text reaches existing capability... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-japan-official-corporate-api.md`](_general/from-code/2026-10-27-feat-japan-official-corporate-api.md) | Replace japanese-company-data's browser/LLM extraction with the official NTA Corporate Number Web-API v4; leave crede... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-feat-api-key-spend-limits.md`](_general/from-code/2026-10-27-feat-api-key-spend-limits.md) | Add several API keys per account with hourly/lifetime spending limits, preserving the primary key and x402; build and... |
@@ -27,6 +36,7 @@
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-distribution-strategy.md`](_general/from-code/2026-10-27-distribution-strategy.md) | Answer Petter's question "how does Strale get distribution fastest and most cheaply" with an evidence-based report, a... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-distribution-hygiene.md`](_general/from-code/2026-10-27-distribution-hygiene.md) | Implement the in-repository D0 attribution and D1 distribution-copy hygiene work; leave the reviewed changes uncommit... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-codebase-architecture-review.md`](_general/from-code/2026-10-27-codebase-architecture-review.md) | independent, read-only review of Strale's code and architecture for Petter, delivered as research (`docs/research/202... |
+| 2026-10-27 | [`handoff/_general/from-code/2026-10-27-ci-boot-smoke.md`](_general/from-code/2026-10-27-ci-boot-smoke.md) | Make a schema-bootstrapped fresh database bootable, exercise the production image and entry point in CI, and reject e... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-checkin-morning.md`](_general/from-code/2026-10-27-checkin-morning.md) | run the 2026-10-27 operating session under DAILY-RUN.md — sweep the |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-actionable-error-messages.md`](_general/from-code/2026-10-27-actionable-error-messages.md) | Build additive error recovery guidance for autonomous callers, preserve stable codes and statuses, and hand the verif... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-public-limitations-copy.md`](_general/from-code/2026-10-26-public-limitations-copy.md) | Rewrite public capability limitations while preserving every stated constraint; orchestrator review, push, PR, merge... |

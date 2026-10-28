@@ -1,3 +1,4 @@
+import { markJobSuccess } from "../lib/job-heartbeats.js";
 /**
  * Recovers wallet reservations a crash abandoned (WP3, risks CR-01 / N1).
  *
@@ -93,7 +94,10 @@ export async function runReservationReconcilerOnce(): Promise<ReconcileSummary> 
 
   const abandoned = claimed;
   summary.examined = abandoned.length;
-  if (abandoned.length === 0) return summary;
+  if (abandoned.length === 0) {
+    markJobSuccess("reservation-reconciler");
+    return summary;
+  }
 
   for (const row of abandoned) {
     try {
@@ -122,8 +126,11 @@ export async function runReservationReconcilerOnce(): Promise<ReconcileSummary> 
             .set({
               status: "failed",
               error:
-                "Execution did not complete — the charge was refunded automatically.",
+                row.mode === "hold"
+                  ? "Execution did not complete — reserved funds were released automatically."
+                  : "Execution did not complete — the charge was refunded automatically.",
               completedAt: new Date(),
+              complianceHashState: "pending",
             })
             .where(
               and(
@@ -184,6 +191,7 @@ export async function runReservationReconcilerOnce(): Promise<ReconcileSummary> 
     "reservation-reconcile",
   );
 
+  if (summary.failed === 0) markJobSuccess("reservation-reconciler");
   return summary;
 }
 

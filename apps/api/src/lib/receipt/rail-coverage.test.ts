@@ -27,6 +27,11 @@ const SRC = join(import.meta.dirname, "..", "..");
  * Key: path relative to `src/`, using forward slashes.
  */
 const EXEMPT: Record<string, string> = {
+  "lib/x402-payment-claims.ts":
+    "Admission-only executing claims, not a new execution rail. Gateway " +
+    "recordX402Transaction finalizes these rows and settles their receipts. " +
+    "Pre-execution rejections delete the claim; crash-abandoned attempts keep " +
+    "receipt_rail and pending receipt state for the existing receipt sweeper.",
   "lib/startup-migrations.ts":
     "block 0109's behavioural self-check. It inserts an ordinary row inside a " +
     "plpgsql subtransaction and unwinds it, to prove that the receipt defaults " +

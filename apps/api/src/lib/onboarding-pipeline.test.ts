@@ -441,3 +441,16 @@ describe("shared onboarding pipeline", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 });
+
+it("verifies dotted guaranteed fields with the same helper as the test runner", async () => {
+  const m = manifest();
+  m.test_fixtures.known_answer.expected_fields[0].field = "nested.answer";
+  m.output_field_reliability = { "nested.answer": "guaranteed" } as any;
+  vi.mocked(guardedExecute).mockResolvedValueOnce({ output: { nested: { answer: "expected" } } } as any);
+  const { getNestedValue } = await import("./nested-value.js");
+  const { checkGuaranteedFieldsPresent } = await import("./guaranteed-fields-sentinel.js");
+  expect(getNestedValue({ nested: { answer: "expected" } }, "nested.answer")).toBe("expected");
+  expect(checkGuaranteedFieldsPresent({ nested: { answer: "expected" } }, { "nested.answer": "guaranteed" }).passed).toBe(true);
+  const result = await runOnboarding(database(), { manifestYaml: yaml.dump(m), mode: "onboard", strict: true });
+  expect(result.verification.passed).toBe(true);
+});

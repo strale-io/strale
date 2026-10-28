@@ -1,3 +1,4 @@
+import { getNestedValue } from "./nested-value.js";
 /**
  * Canonical-input sentinel — strict-missing-only assertion on guaranteed fields.
  *
@@ -30,6 +31,7 @@
 export interface SentinelResult {
   passed: boolean;
   failureReason?: string;
+  missingFields?: string[];
 }
 
 export function checkGuaranteedFieldsPresent(
@@ -50,17 +52,15 @@ export function checkGuaranteedFieldsPresent(
     return {
       passed: false,
       failureReason: "guaranteed_field_missing:<root-not-object>",
+      missingFields: guaranteedFields,
     };
   }
 
-  const outputRecord = output as Record<string, unknown>;
-  for (const field of guaranteedFields) {
-    if (!(field in outputRecord)) {
-      return {
-        passed: false,
-        failureReason: `guaranteed_field_missing:${field}`,
-      };
-    }
-  }
+  const missingFields = guaranteedFields.filter(field => getNestedValue(output, field) === undefined);
+  if (missingFields.length) return {
+    passed: false,
+    failureReason: `guaranteed_field_missing:${missingFields[0]}`,
+    missingFields,
+  };
   return { passed: true };
 }

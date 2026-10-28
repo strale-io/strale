@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { readStringArray } from "../lib/capability-input.js";
 
@@ -51,7 +52,7 @@ registerCapability("prompt-optimize", async (input: CapabilityInput) => {
   // short prompts; ceiling = MAX_OUTPUT_TOKENS (see above).
   const maxTokens = Math.min(MAX_OUTPUT_TOKENS, Math.max(1500, Math.ceil(estimatedInputTokens * 1.6) + 800));
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   // If the model hit the output ceiling the JSON is truncated mid-string and
   // unparseable. extractJsonWithLlm's stop_reason check catches this before
   // parsing is attempted and throws a CapabilityRefusalError (caller_input)

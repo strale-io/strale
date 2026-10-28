@@ -1,3 +1,4 @@
+import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * POST /v1/solutions/:slug/execute — Execute a bundled solution.
  *
@@ -27,7 +28,7 @@ import {
 } from "../lib/idempotency-fingerprint.js";
 import { inputForPersistence } from "../lib/never-persist-inputs.js";
 import { extractClientMeta } from "../lib/attribution.js";
-import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
+import { solutions, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError, recoveryDetails } from "../lib/errors.js";
@@ -178,11 +179,7 @@ solutionExecuteRoute.post(
           }
         }
 
-        const [wallet] = await tx
-          .select()
-          .from(wallets)
-          .where(eq(wallets.userId, user.id))
-          .for("update");
+        const wallet = await walletService.lockWalletForUser(tx, user.id);
 
         const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), sol.priceCents);
         if (keyError) return { ok: false as const, policyError: keyError };
@@ -265,7 +262,7 @@ solutionExecuteRoute.post(
           transactionId: txnRecord.id,
           balanceAfter: reservation.balanceAfter,
           walletId: wallet.id,
-          walletBalanceBefore: wallet.balanceCents,
+          walletBalanceBefore: reservation.balanceAfter + sol.priceCents,
           reservationId: reservation.id,
         };
       });
@@ -597,6 +594,8 @@ solutionExecuteRoute.post(
         500,
       );
     }
+
+    persistCallCost(transactionId);
 
     c.get("log").info(
       {

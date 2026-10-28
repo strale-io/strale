@@ -1,3 +1,5 @@
+import { claimX402Payment, beginX402Execution, openClaimedX402Intent, releaseX402Claim } from "../lib/x402-payment-claims.js";
+import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * x402 Scalable Gateway — DB-driven capability exposure via USDC payments.
  *
@@ -727,6 +729,7 @@ async function findCachedX402Response(
 }
 
 interface RecordX402Args {
+  claimId?: string | null;
   // Exactly one of capabilityId / solutionSlug is set.
   capabilityId: string | null;
   solutionSlug: string | null;
@@ -902,7 +905,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         ...(args.error ? { error: sanitizeFailureReason(args.error).substring(0, 500) } : {}),
       };
   try {
-    const [row] = await db.insert(transactions).values({
+    const values = {
                                                  // Captured at INSERT because neither is recoverable later:
                                                  // the rail is not a property of the row, and the deploy commit
                                                  // drifts the moment anything redeploys (block 0110).
@@ -925,7 +928,8 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       isFreeTier: false,
       paymentMethod: "x402",
       x402SettlementId: args.settlementId ?? null,
-      x402PaymentHash: args.paymentHash ?? null,
+      x402PaymentHash: args.error ? null : args.paymentHash ?? null,
+      complianceHashState: "pending",
       // MCP funnel P0: stable pseudonymous payer identity for distinct-payer
       // / repeat-rate analytics — see hashX402Payer's docstring. The raw
       // address stays in auditTrail.payer_address (above) for refund/
@@ -933,7 +937,12 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       x402PayerHash: hashX402Payer(args.payerAddress) ?? null,
       priceUsd: args.priceUsd.toFixed(4),
       completedAt: new Date(),
-    }).returning({ id: transactions.id });
+    };
+    const [row] = args.claimId
+      ? await db.update(transactions).set(values).where(and(eq(transactions.id, args.claimId),
+          eq(transactions.status, "executing"))).returning({ id: transactions.id })
+      : await db.insert(transactions).values(values).returning({ id: transactions.id });
+    if (!row) throw new Error("x402 claim finalization matched no row");
     const insertedId = row?.id ?? null;
     // CRIT-8 follow-up: now that we have the row's id, rebuild the audit
     // with the shareable_url / endpoint fields populated and overwrite.
@@ -967,6 +976,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
     // customer-facing record must never fail to land because bookkeeping did,
     // and a missed mark leaves an intent the reconciler resolves as
     // already-recorded.
+    persistCallCost(insertedId);
     if (args.settlementId) {
       try {
         await settlementIntent.markRecordedBySettlement(db, {
@@ -1221,6 +1231,9 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   // not charged.
   let verified: X402VerifiedPayment | undefined;
   let paymentHash: string | null = null;
+  let claimId: string | null = null;
+  let releaseClaim = true;
+  let executionStarted = false;
   if (sol.x402PriceUsd > 0) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -1290,7 +1303,11 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // Only safe AFTER verify so an unverified replay can't probe for the
     // existence of cached rows.
     paymentHash = hashPaymentHeader(paymentHeader);
-    const cached = await findCachedX402Response(paymentHash);
+    let cached = await findCachedX402Response(paymentHash);
+    if (!cached) {
+      claimId = await claimX402Payment(paymentHash, null, sol.slug);
+      if (!claimId) cached = await findCachedX402Response(paymentHash) ?? { status: "executing", output: null, latencyMs: null, settlementId: null };
+    }
     if (cached) {
       if (cached.status === "completed") {
         return c.json({
@@ -1308,12 +1325,13 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         });
       }
       return c.json(
-        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "Prior request with this payment header failed.", solution: sol.slug, _meta: { replayed: true } },
+        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "A request with this payment is already in progress or has failed", solution: sol.slug, _meta: { replayed: true } },
         502,
       );
     }
   }
 
+  try {
   // Extract inputs (after verify, before settle — bad input returns 4xx without charging)
   let inputs: Record<string, unknown>;
   try {
@@ -1338,6 +1356,8 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   }
 
   // Execute solution steps via shared orchestration module
+  if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
+  executionStarted = true;
   const result = await executeSolution(sol.id, inputs, {
     // x402 callers have no account — payment IS the auth. Null here is the
     // honest value, and it matches how x402 transaction rows already record
@@ -1346,6 +1366,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   });
 
   if (!result) {
+    executionStarted = false; // No configured step reached an executor.
     return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "Solution has no steps configured." }, 503);
   }
 
@@ -1382,6 +1403,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // carries no payment.
     try {
       await recordX402Transaction({
+        claimId,
         clientMeta: extractClientMeta(c.req, {
           src: c.req.query("src"),
           ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1431,7 +1453,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // window between it succeeding and the row landing is the one place on the
     // platform where a crash costs a customer money with no record at all.
     const intent = paymentHash
-      ? await settlementIntent.openIntent(getDb(), {
+      ? await openClaimedX402Intent(claimId!, {
           paymentHash,
           slug: sol.slug,
           solutionSlug: sol.slug,
@@ -1440,14 +1462,16 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         })
       : null;
 
+    releaseClaim = false; // A thrown facilitator call is ambiguous: never reopen its authorization.
     const settled = await settleX402Payment(verified);
+    if (!settled.valid && !settled.settlementUnknown) releaseClaim = true;
     if (intent) {
       if (settled.valid && settled.settlementId) {
         await settlementIntent.markSettled(getDb(), {
           intentId: intent.id,
           settlementId: settled.settlementId,
         });
-      } else {
+      } else if (!settled.settlementUnknown) {
         await settlementIntent.markFailed(getDb(), {
           intentId: intent.id,
           reason: settled.error ?? "settlement returned invalid",
@@ -1475,6 +1499,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   // LLM reach derived from transparencyTag.
   const solPayerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
+        claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
       ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1506,6 +1531,9 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         : { method: "x402", price_usd: sol.x402PriceUsd },
     },
   });
+  } finally {
+    if (claimId && paymentHash && releaseClaim) await releaseX402Claim(claimId, paymentHash, executionStarted);
+  }
 });
 
 // ─── Wildcard capability handler: /x402/:slug ───────────────────────────────
@@ -1587,6 +1615,9 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   const isFree = cap.x402PriceUsd === 0;
   let verified: X402VerifiedPayment | undefined;
   let paymentHash: string | null = null;
+  let claimId: string | null = null;
+  let releaseClaim = true;
+  let executionStarted = false;
 
   // Payment check FIRST — before any input validation. CDP's Bazaar crawler
   // sends an empty request to discover endpoints and requires HTTP 402 back.
@@ -1659,7 +1690,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // if this exact payment header already produced a recorded transaction,
     // return the cached output and don't re-execute or re-settle.
     paymentHash = hashPaymentHeader(paymentHeader);
-    const cached = await findCachedX402Response(paymentHash);
+    let cached = await findCachedX402Response(paymentHash);
+    if (!cached) {
+      claimId = await claimX402Payment(paymentHash, cap.id, null);
+      if (!claimId) cached = await findCachedX402Response(paymentHash) ?? { status: "executing", output: null, latencyMs: null, settlementId: null };
+    }
     if (cached) {
       if (cached.status === "completed") {
         return c.json({
@@ -1676,12 +1711,13 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         });
       }
       return c.json(
-        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "Prior request with this payment header failed.", capability: cap.slug, _meta: { replayed: true } },
+        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "A request with this payment is already in progress or has failed", capability: cap.slug, _meta: { replayed: true } },
         502,
       );
     }
   }
 
+  try {
   // Method check (after verify — crawler hits with any method)
   if (c.req.method === "GET" && !isSimpleSchema(cap.inputSchema)) {
     return c.json(
@@ -1759,7 +1795,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // Same transient-retry policy as POST /v1/do (lib/retry.ts). Inside the
     // try and before settle, so a retry that still fails takes the unpaid
     // failure path below; the 300 s authorization window absorbs the ~1 s wait.
-    result = await executeWithTransientRetry(executor, inputs, cap);
+    result = await executeWithTransientRetry(async input => {
+      if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
+      executionStarted = true;
+      return executor(input);
+    }, inputs, cap);
     await recordPaidInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",
@@ -1780,6 +1820,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // DEC-14), which is exactly the handling an unusable output needs.
     assertBillableOutput(cap.slug, result.output);
   } catch (err) {
+    if (!executionStarted) {
+      logError("x402-execution-admission-failed", err, { slug: cap.slug });
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff." },
+        error: "Execution could not start. No payment was taken." }, 503);
+    }
     // CRIT-9: executor failure was previously logged-only — no transactions
     // row, no audit record, no compliance evidence the call ever happened.
     // Now record a 'failed' x402 transaction with no settlement so failed
@@ -1800,6 +1845,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     }
     try {
       await recordX402Transaction({
+        claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
       ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1857,7 +1903,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // window between it succeeding and the row landing is the one place on the
     // platform where a crash costs a customer money with no record at all.
     const intent = paymentHash
-      ? await settlementIntent.openIntent(getDb(), {
+      ? await openClaimedX402Intent(claimId!, {
           paymentHash,
           slug: cap.slug,
           solutionSlug: null,
@@ -1866,14 +1912,16 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         })
       : null;
 
+    releaseClaim = false; // A thrown facilitator call is ambiguous: never reopen its authorization.
     const settled = await settleX402Payment(verified);
+    if (!settled.valid && !settled.settlementUnknown) releaseClaim = true;
     if (intent) {
       if (settled.valid && settled.settlementId) {
         await settlementIntent.markSettled(getDb(), {
           intentId: intent.id,
           settlementId: settled.settlementId,
         });
-      } else {
+      } else if (!settled.settlementUnknown) {
         await settlementIntent.markFailed(getDb(), {
           intentId: intent.id,
           reason: settled.error ?? "settlement returned invalid",
@@ -1899,6 +1947,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // compliance shape (was a 7-field stub previously).
   const payerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
+        claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
       ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1937,6 +1986,9 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         : { method: "free" },
     },
   });
+  } finally {
+    if (claimId && paymentHash && releaseClaim) await releaseX402Claim(claimId, paymentHash, executionStarted);
+  }
 });
 
 // ─── Exported for .well-known/x402.json ─────────────────────────────────────

@@ -833,3 +833,12 @@ surfaces:
     status_date: 2026-10-27
     evidence: docs/research/2026-10-27-distribution-strategy-sweeps/integrations.md
     notes: Published integration calls a retired endpoint. Repair belongs to a later external PR; no upstream changes in this batch.
+
+  - id: pkg-zapier-strale
+    surface: Strale Zapier integration
+    kind: package
+    target: Zapier Developer Platform
+    status: built
+    status_date: 2026-10-27
+    evidence: packages/zapier-strale/README.md
+    notes: Built and tested offline; not registered, pushed to Zapier or published. Company status and invoice issuer actions are hidden pending public availability.

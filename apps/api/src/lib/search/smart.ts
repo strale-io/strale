@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "../anthropic-client.js";
+import type Anthropic from "@anthropic-ai/sdk";
 import { MODELS } from "../models.js";
 import { log, logWarn } from "../log.js";
 import type { SearchItem } from "./keyword.js";
@@ -182,7 +183,7 @@ export function createSearchRanker() {
       "suggest-model-request"
     );
     try {
-      const client = new Anthropic({ apiKey, timeout: 6000, maxRetries: 0 });
+      const client = createAnthropicClient({ apiKey, timeout: 6000, maxRetries: 0 });
       const response = await client.messages.create(
         buildSearchRequest(args.prompt, args.query, args.limit),
         { timeout: 6000, signal: AbortSignal.timeout(6000) }

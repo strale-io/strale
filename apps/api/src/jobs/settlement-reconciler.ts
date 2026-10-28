@@ -1,3 +1,5 @@
+import { releaseStaleX402Claims } from "../lib/x402-payment-claims.js";
+import { markJobSuccess } from "../lib/job-heartbeats.js";
 /**
  * x402 settlement reconciler (WP5).
  *
@@ -26,7 +28,7 @@
  * number nobody can find.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 
@@ -60,6 +62,7 @@ const STARTUP_DELAY_MS = 60_000;
 
 export interface ReconcileSettlementsSummary {
   examined: number;
+  staleClaimsReleased: number;
   /** Intents whose transaction row already existed; bookkeeping caught up. */
   discharged: number;
   /** Rows recreated for settlements that moved money and lost their record. */
@@ -73,6 +76,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
   const db = getDb();
   const summary: ReconcileSettlementsSummary = {
     examined: 0,
+    staleClaimsReleased: 0,
     discharged: 0,
     recovered: 0,
     escalated: 0,
@@ -87,6 +91,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
       sql`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_ID}) AS acquired`,
     )) as unknown as Array<{ acquired?: boolean }>;
     if (!lock?.acquired) return null;
+    summary.staleClaimsReleased = await releaseStaleX402Claims(tx, BATCH_SIZE);
     return findAbandonedIntents(tx, BATCH_SIZE);
   });
 
@@ -149,9 +154,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
               .where(eq(capabilities.slug, intent.slug))
               .limit(1);
 
-        const [recreated] = await db
-          .insert(transactions)
-          .values({
+        const recoveryValues = {
             // Captured at INSERT because neither is recoverable later:
             // the rail is not a property of the row, and the deploy commit
             // drifts the moment anything redeploys (block 0110).
@@ -185,8 +188,20 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
               "row was written. The customer paid and did not receive output, " +
               "which cannot be reconstructed.",
             completedAt: new Date(),
-          })
-          .returning({ id: transactions.id });
+          complianceHashState: "pending",
+        };
+        // H4 claims occupy the unique hash slot before execution. Finalize that
+        // row on recovery; INSERT alone would collide forever with the claim.
+        const [claim] = await db.select({ id: transactions.id }).from(transactions)
+          .where(and(eq(transactions.x402PaymentHash, intent.paymentHash),
+            eq(transactions.status, "executing"), isNull(transactions.x402SettlementId))).limit(1);
+        const [recreated] = claim
+          ? await db.update(transactions).set(recoveryValues).where(and(
+              eq(transactions.id, claim.id), eq(transactions.status, "executing"),
+              isNull(transactions.x402SettlementId),
+            )).returning({ id: transactions.id })
+          : await db.insert(transactions).values(recoveryValues).returning({ id: transactions.id });
+        if (!recreated) throw new Error("Settlement recovery lost the claim race; retry next tick");
 
         await markRecordedBySettlement(db, {
           settlementId: intent.settlementId,
@@ -289,6 +304,7 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
     { label: "settlement-reconcile", ...summary, escalated_backlog: escalatedBacklog },
     "settlement-reconcile",
   );
+  if (summary.failed === 0) markJobSuccess("settlement-reconciler");
   return summary;
 }
 

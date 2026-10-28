@@ -1,9 +1,10 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 
 // Product review extraction from review and product pages via Browserless + Claude.
 // Trustpilot is NOT supported — see lib/tos-blocklist.ts.
@@ -38,7 +39,7 @@ registerCapability("product-reviews-extract", async (input: CapabilityInput) => 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
 
   // Budget raised 2000 -> 8000 (2026-08-17, PR #314) so this should be rare
   // in practice; extractJsonWithLlm refuses distinctly (rather than falling

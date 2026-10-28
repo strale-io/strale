@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // A comprehensive README (installation, usage, API docs, contributing) is the
@@ -23,7 +24,7 @@ registerCapability("readme-generate", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   // Truncation surfaced as "Unterminated string in JSON" via the naive
   // parser (production incident, 2026-06-17→24). extractJsonWithLlm's
   // stop_reason check catches it before the parse and throws a
