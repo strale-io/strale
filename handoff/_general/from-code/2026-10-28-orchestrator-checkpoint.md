@@ -10,7 +10,12 @@ Read this file first, then `docs/programs/platform-hardening/PROGRAM.md` and `do
   - Codex CLI does the builds: gpt-6.1-sol for judgement, gpt-6-astra for the money path, gpt-6.1-terra for precise fixes.
   - A separate read-only Claude reviewer does the verification, on real Postgres 16 for money-path work.
   - The orchestrator commits, pushes, opens the PR, merges on green CI and verifies production.
-- **Production at checkpoint time:** `/health` commit `67807f4d6ca1` (PR 793). PR 794 merged as `e4493594`, and Railway had not started deploying it yet. Railway deploys were starting 10 to 12 minutes late this afternoon; PR 793 went live that way.
+- **Production at checkpoint time (20:20 Swedish time):** `/health` commit `e4493594a318` (PR 794). Verified:
+  - a free `/v1/do` call returns 200;
+  - `/x402/vat-validate` returns 402;
+  - an anonymous paid `/v1/do` call returns 402 with payment requirements.
+
+  Railway deploys started 10 to 30 minutes late this afternoon, so the merged checkpoint PRs (795 and its update) may reach production later. They are docs only.
 - **Shipped today:**
   - H5 (#777);
   - D5 Zapier (#778);
@@ -27,7 +32,8 @@ Read this file first, then `docs/programs/platform-hardening/PROGRAM.md` and `do
   - H7b (#793);
   - `/v1/do` x402 parity (#794).
 - **strale-mcp 0.2.9:**
-  - published to npm, with the smoke test against production passing: 298 capabilities, 95 solutions, full trust, 9 tools, provenance;
+  - passed the Distribution PR Integrity Protocol: `check-framework-packages.mjs` passed before publishing;
+  - published to npm, with the production contract smoke test passing on the npm artefact: 298 capabilities, 95 solutions, 298 cap trust, 95 sol trust, 9 tools, provenance;
   - published to the official MCP registry as latest;
   - future releases update the registry automatically (`publish-mcp-registry.yml`).
 - **CR-19:** re-checked on 2026-10-28. Forged `X-Forwarded-For` and `X-Real-IP` do not reach the app. Receipt: [verify-ip re-check](../../../archive/receipts/2026-10-28-audit-verify-ip-proxy-hops-recheck.json). No fix is needed.
@@ -48,13 +54,8 @@ None of these are this orchestrator's open work; they belong to other lanes.
 ## In-flight lanes
 
 - Nothing is building. No Codex run is active and no branch holds uncommitted work.
-- **Waiting:** PR 794's Railway deploy. Then verify:
-  - `GET /health` shows commit `e4493594a318`;
-  - a free `/v1/do` call returns 200;
-  - `/x402/vat-validate` returns 402;
-  - an anonymous paid `/v1/do` call returns 402 with requirements.
-
-  No live payment is made. At 19:50 Swedish time, 24 minutes after the merge, Railway had posted no deploy status and the verify-deploy run had failed, so Petter was asked to start it in Railway: strale service, then Deployments, then Redeploy on the newest row (or Deploy latest commit).
+- PR 794 is deployed and verified, so nothing is waiting on Railway.
+- **Child sessions** (codebase review, distribution strategy, company-status-check builder) were told on 2026-10-28 to push their work and write notes before archiving. Their deliverables are already merged (PRs 769, 770, and the company-status-check PR).
 
 ## Founder items
 
@@ -66,9 +67,17 @@ None of these are this orchestrator's open work; they belong to other lanes.
   - strale-mcp 0.2.9: released, on npm and in the MCP registry.
   - The three loosenings: Petter confirmed them in session on 2026-10-28, recorded in #791.
 
+## Decided by Petter on 2026-10-28 (evening)
+
+- **Branch clean-up is done.** The 10 merged branches are deleted, and "Automatically delete head branches" is on.
+- **A wow-core communication-rules sync PR is coming to Strale.** It covers the inbox check at session start, and posting asks for Petter to the `needs-petter` bus channel. It is a version without the private bus repo name or Petter's name, because Strale is public.
+  - Accept it when it arrives, unless Strale's rules need something more.
+  - If they do, say what on bus channel `wow-core-master`.
+- **DQ-41** is confirmed: restrict `production-onboarding` to `main`, and run the limitations step for named tools only, never `all`.
+
 ## Remaining work, in order
 
-1. Verify PR 794 in production (above).
+1. Review and merge the wow-core communication-rules sync PR when it arrives (see above).
 2. **H7 rest:** H7c contract tests; the migrations file split with the ledger unchanged; the ledgered SQS column drop; the applied-block-hash skip.
 3. **Distribution:** D7 narrow MCP servers, D8 n8n, D9 Clay.
 4. **The Strale inbox routine** (DEC-20261027-C) and the connector probe.
@@ -80,4 +89,4 @@ None of these are this orchestrator's open work; they belong to other lanes.
 
 ## Next authorised action
 
-Verify that PR 794 is live in production, as described above. Then start H7c, the fixture contract tests, as a Codex build with an independent reviewer. Both are inside the DEC-20261027-B mandate, and neither needs Petter.
+Start H7c, the fixture contract tests, as a Codex build with an independent reviewer. It is inside the DEC-20261027-B mandate and does not need Petter. If the wow-core sync PR has arrived, review and merge it first.

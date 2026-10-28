@@ -114,7 +114,7 @@ tracks:
     owner: session
     next_action: H7a (PR 787), the boot-lock retry fix (PR 790), H7b (PR 793,
       one x402 settle path and the do.ts split) and H4b (PR 794, /v1/do x402
-      claim, replay and recording parity) are merged. Verify PR 794 is live
+      claim, replay and recording parity) are merged and verified live
       (GET /health commit e4493594a318). Remaining H7 work is H7c contract
       tests, the migrations file split with the ledger unchanged, the separate
       ledgered SQS column drop, and the applied-block-hash skip. See
