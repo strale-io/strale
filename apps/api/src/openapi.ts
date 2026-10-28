@@ -100,6 +100,7 @@ export const openApiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Strale API",
+    "x-guidance": "Browse x402 endpoints below and send the required input; payment is requested per call.",
     version: "1.0.0",
     description:
       "Give your agent a new tool without opening another provider account. Search and read the web, read documents, check details and look up companies through one connection. Pay per call with an API key or, on eligible tools, an x402 wallet. Browse /v1/platform/facts for live coverage.",

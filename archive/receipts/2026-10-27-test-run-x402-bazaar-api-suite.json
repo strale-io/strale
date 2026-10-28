@@ -1,0 +1,26 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/package.json",
+    "commit": "d004d774d4987c3007ec5e66d64fd6d6c2043478"
+  },
+  "at": "2026-10-27T16:08:05.352Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "test_files_passed": 348,
+    "test_files_skipped": 33,
+    "tests_passed": 6455,
+    "tests_skipped": 346
+  },
+  "topic": "x402-bazaar-api-suite",
+  "raw": {
+    "ok": true,
+    "test_files_passed": 348,
+    "test_files_skipped": 33,
+    "tests_passed": 6455,
+    "tests_skipped": 346
+  }
+}

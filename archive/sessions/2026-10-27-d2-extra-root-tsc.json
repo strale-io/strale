@@ -1,0 +1,13 @@
+{
+  "command": "npx tsc --noEmit (repository root; extra, outside the API project gate)",
+  "exit_code": 2,
+  "error_count": 282,
+  "touched_file_error_count": 0,
+  "examples": [
+    "apps/api/scripts/archive/activity-7d.ts(1,16): error TS2393: Duplicate function implementation.",
+    "apps/api/scripts/archive/add-name-fixtures.ts(12,23): error TS2307: Cannot find module '../src/db/index.js' or its corresponding type declarations.",
+    "apps/api/scripts/archive/add-name-fixtures.ts(13,28): error TS2307: Cannot find module '../src/db/schema.js' or its corresponding type declarations.",
+    "apps/api/scripts/archive/add-name-fixtures.ts(14,29): error TS2307: Cannot find module '../src/capabilities/index.js' or its corresponding type declarations.",
+    "apps/api/scripts/archive/add-name-fixtures.ts(15,32): error TS2307: Cannot find module '../src/capabilities/guarded-executor.js' or its corresponding type declarations."
+  ]
+}

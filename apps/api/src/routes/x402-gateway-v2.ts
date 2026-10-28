@@ -44,6 +44,7 @@ import {
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { discoverySchema, exampleFailure, getDiscoveryMetadata, type DiscoveryMetadata } from "../lib/x402-discovery-metadata.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
@@ -343,7 +344,8 @@ export async function extractInputs(
 
 /**
  * Generate an example input object from a JSON Schema's properties.
- * Used by the bazaar extension to show agents what a typical request looks like.
+ * Used by schema-error responses. Public challenge examples instead come from
+ * screened manifest health inputs via x402-discovery-metadata.ts.
  */
 function generateExampleFromSchema(
   schema: Record<string, unknown> | null,
@@ -449,15 +451,23 @@ function buildBazaarDiscovery(
   method: string,
   inputSchema: Record<string, unknown> | null,
   outputSchema: Record<string, unknown> | null,
+  metadata?: DiscoveryMetadata,
 ): { v2Extensions: Record<string, unknown>; v1OutputSchema: Record<string, unknown> } {
   const httpMethod = method.toUpperCase();
   const isBodyMethod = ["POST", "PUT", "PATCH"].includes(httpMethod);
-  const example = generateExampleFromSchema(inputSchema);
+  const example = metadata?.inputExample;
+  const outputExample = metadata?.outputExample;
+  // Primary sources (read 2026-10-27):
+  // https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md
+  // https://docs.cdp.coinbase.com/x402/seller/get-discovered
+  // resource carries provider metadata; info.input.body/queryParams are examples,
+  // schema.properties.input carries the actual input contract. Omitted examples
+  // stay absent (privacy/invalid fixture), never fabricated placeholder objects.
 
   const config: Record<string, unknown> = {
     input: example,
-    ...(inputSchema ? { inputSchema } : {}),
-    ...(outputSchema ? { output: { schema: outputSchema } } : {}),
+    ...(inputSchema ? { inputSchema: discoverySchema(inputSchema) } : {}),
+    ...(outputSchema ? { output: { schema: discoverySchema(outputSchema), example: outputExample } } : {}),
   };
   if (isBodyMethod) config.bodyType = "json";
 
@@ -469,6 +479,18 @@ function buildBazaarDiscovery(
     ...extension.info,
     input: { ...extension.info.input, method: httpMethod },
   };
+  const inputProperty = isBodyMethod ? "body" : "queryParams";
+  if (example === undefined) {
+    delete enrichedInfo.input[inputProperty];
+    // The SDK requires body by default; when privacy prevents a public example,
+    // retain its schema but make the example optional, as query examples are.
+    extension.schema.properties.input.required = extension.schema.properties.input.required.filter((key: string) => key !== inputProperty);
+  }
+  // Output format and contract remain useful when its example is withheld.
+  enrichedInfo.output = { type: "json", ...(outputExample !== undefined ? { example: outputExample } : {}) };
+  extension.schema.properties.output = {
+    type: "object", properties: { type: { const: "json" }, example: discoverySchema(outputSchema ?? {}) }, required: ["type"],
+  };
   const enrichedExtension = { ...extension, info: enrichedInfo };
 
   // v1 outputSchema: match the shape of working indexed entries in the live
@@ -478,7 +500,7 @@ function buildBazaarDiscovery(
   // survive CDP's indexing pipeline on Base mainnet all use the descriptor
   // shape. Cheap hedge while #1982 (CDP drops v2 extensions on mainnet) is
   // unresolved upstream.
-  const fieldDescriptors = toBazaarFields(inputSchema);
+  const fieldDescriptors = toBazaarFields(discoverySchema(inputSchema));
   const v1Input: Record<string, unknown> = {
     type: "http",
     method: httpMethod,
@@ -490,7 +512,7 @@ function buildBazaarDiscovery(
   } else {
     v1Input.queryParams = fieldDescriptors;
   }
-  const v1Output = outputSchema ? toBazaarFields(outputSchema) : undefined;
+  const v1Output = outputSchema ? toBazaarFields(discoverySchema(outputSchema)) : undefined;
   const v1OutputSchema: Record<string, unknown> = {
     input: v1Input,
     ...(v1Output ? { output: v1Output } : {}),
@@ -513,8 +535,16 @@ export function build402(
   method?: string,
   outputSchema?: Record<string, unknown> | null,
   challengeVersion?: 1 | 2,
+  identity?: { kind: "capability" | "solution"; slug: string },
 ) {
   const version = challengeVersion ?? x402ChallengeVersion();
+  const source = identity ? getDiscoveryMetadata(identity.kind, identity.slug) : undefined;
+  // Check against the runtime published schemas too: DB and manifests can drift.
+  const metadata = source ? {
+    ...source,
+    inputExample: exampleFailure(inputSchema ?? undefined, source.inputExample) ? undefined : source.inputExample,
+    outputExample: exampleFailure(outputSchema ?? undefined, source.outputExample) ? undefined : source.outputExample,
+  } : undefined;
   const maxAmount = usdToUsdcAtomic(priceUsd);
 
   const httpMethod = (method ?? "POST").toUpperCase();
@@ -522,6 +552,7 @@ export function build402(
     httpMethod,
     inputSchema ?? null,
     outputSchema ?? null,
+    metadata,
   );
 
   // CDP facilitator rejects PaymentRequirements whose description is too long
@@ -555,8 +586,12 @@ export function build402(
   const error = `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`;
   const resourceInfo = {
     url: resourceUrl,
-    description: finalDescription,
     mimeType: "application/json",
+    serviceName: "Strale",
+    tags: metadata?.tags ?? [],
+    iconUrl: "https://strale.dev/favicon-32x32.png",
+    // Tool name belongs in the description; serviceName identifies the provider.
+    ...(metadata ? { description: `${metadata.name}: ${metadata.description}` } : { description: `${name}: ${finalDescription}` }),
   };
 
   // Challenge body. The /x402/v2/* alias paths always get the v2 shape
@@ -1062,7 +1097,7 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
     description: cap.description,
     price_usd: cap.x402PriceUsd,
     method: cap.x402Method,
-    endpoint: `${BASE_URL}/x402/${cap.slug}`,
+    endpoint: `${BASE_URL}/x402/v2/${cap.slug}`,
     input_schema: cap.inputSchema,
     // Solutions deliberately never gain this key: the solutions table has no
     // output_schema column (see ensureCache), so an absent contract must stay
@@ -1076,7 +1111,7 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
     description: sol.description,
     price_usd: sol.x402PriceUsd,
     method: "POST",
-    endpoint: `${BASE_URL}/x402/solutions/${sol.slug}`,
+    endpoint: `${BASE_URL}/x402/v2/solutions/${sol.slug}`,
     input_schema: sol.inputSchema,
   }));
 
@@ -1198,6 +1233,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         resourceUrl,
         sol.inputSchema, "POST", sol.outputSchema,
         challengeVersion,
+        { kind: "solution", slug: sol.slug },
       );
       // Legacy paths: no Payment-Required header — the v1 body is the
       // canonical source, and a v1-encoded header trips v2-only header
@@ -1223,6 +1259,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       resourceUrl,
       sol.inputSchema, "POST", sol.outputSchema,
       challengeVersion,
+      { kind: "solution", slug: sol.slug },
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,
@@ -1574,6 +1611,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         resourceUrl,
         cap.inputSchema, cap.x402Method, cap.outputSchema,
         challengeVersion,
+        { kind: "capability", slug: cap.slug },
       );
       // See the solutions handler note: header only on v2 paths.
       if (challengeVersion === 2) {
@@ -1594,6 +1632,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       resourceUrl,
       cap.inputSchema, cap.x402Method, cap.outputSchema,
       challengeVersion,
+      { kind: "capability", slug: cap.slug },
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,

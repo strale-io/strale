@@ -1,0 +1,62 @@
+[
+  {
+    "command": "cd apps/api && npx tsc --noEmit",
+    "exit_code": 0,
+    "output": ""
+  },
+  {
+    "command": "npm run claims:check",
+    "exit_code": 0,
+    "output": "\n> claims:check\n> node scripts/check-claims.mjs\n\nchecked 29 rows in docs/company/claims.yaml against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract\n"
+  },
+  {
+    "command": "npm run docs:check",
+    "exit_code": 0,
+    "output": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n"
+  },
+  {
+    "command": "npm run env:check",
+    "exit_code": 0,
+    "output": "\n> env:check\n> node scripts/check-env.mjs\n\nchecked 130 process.env names against 135 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract\n"
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-bare-catch",
+    "exit_code": 0,
+    "output": "\n> @strale/api@0.1.0 lint:no-bare-catch\n> node scripts/check-no-bare-catch.mjs src\n\nF-0-009 guard: no bare `.catch(() => {})` found.\n"
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+    "exit_code": 0,
+    "output": "\n> @strale/api@0.1.0 lint:no-unguarded-user-fetch\n> node scripts/check-no-unguarded-user-fetch.mjs\n\n[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked.\n"
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:ssrf-inventory",
+    "exit_code": 1,
+    "output": "\n> @strale/api@0.1.0 lint:ssrf-inventory\n> node scripts/check-ssrf-inventory.mjs\n\nnode:fs:1630\n  const result = binding.readdir(\n                         ^\n\nError: ENOENT: no such file or directory, scandir 'apps/api/src/capabilities'\n    at readdirSync (node:fs:1630:26)\n    at walk (file://<checkout>/apps/api/scripts/check-ssrf-inventory.mjs:32:22)\n    at file://<checkout>/apps/api/scripts/check-ssrf-inventory.mjs:47:15\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  errno: -2,\n  code: 'ENOENT',\n  syscall: 'scandir',\n  path: 'apps/api/src/capabilities'\n}\n\nNode.js v24.22.1\nnpm error Lifecycle script `lint:ssrf-inventory` failed with error:\nnpm error code 1\nnpm error path <temporary-test-path>\nnpm error workspace @strale/api@0.1.0\nnpm error location <temporary-test-path>\nnpm error command failed\nnpm error command sh -c node scripts/check-ssrf-inventory.mjs\n"
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-new-console",
+    "exit_code": 0,
+    "output": "\n> @strale/api@0.1.0 lint:no-new-console\n> node scripts/check-no-new-console.mjs\n\nF-0-014 guard: no new `console.*` calls.\n"
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-external-column-access",
+    "exit_code": 1,
+    "output": "\n> @strale/api@0.1.0 lint:no-external-column-access\n> node scripts/check-no-external-column-access.mjs\n\nnode:fs:1630\n  const result = binding.readdir(\n                         ^\n\nError: ENOENT: no such file or directory, scandir 'apps/api/src'\n    at readdirSync (node:fs:1630:26)\n    at walk (file://<checkout>/apps/api/scripts/check-no-external-column-access.mjs:57:22)\n    at file://<checkout>/apps/api/scripts/check-no-external-column-access.mjs:67:20\n    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)\n    at async node:internal/modules/esm/loader:647:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  errno: -2,\n  code: 'ENOENT',\n  syscall: 'scandir',\n  path: 'apps/api/src'\n}\n\nNode.js v24.22.1\nnpm error Lifecycle script `lint:no-external-column-access` failed with error:\nnpm error code 1\nnpm error path <temporary-test-path>\nnpm error workspace @strale/api@0.1.0\nnpm error location <temporary-test-path>\nnpm error command failed\nnpm error command sh -c node scripts/check-no-external-column-access.mjs\n"
+  },
+  {
+    "command": "git diff --check",
+    "exit_code": 0,
+    "output": ""
+  },
+  {
+    "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+    "exit_code": 0,
+    "output": "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment.\n"
+  },
+  {
+    "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+    "exit_code": 0,
+    "output": "SCF-3 guard: no API access to integrity_hash_status found.\n"
+  }
+]

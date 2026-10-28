@@ -1,0 +1,390 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d004d774d4987c3007ec5e66d64fd6d6c2043478"
+  },
+  "at": "2026-10-27T16:39:08.360Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "implementation_checks_ok": true,
+    "working_tree_uncommitted": true,
+    "manifest_count": 356,
+    "offline_challenges": 712,
+    "offline_before_failed": 712,
+    "offline_after_failed": 0,
+    "live_catalog_generated_challenges": 363,
+    "live_catalog_generated_failed": 0,
+    "input_examples": 175,
+    "input_examples_omitted": 181,
+    "output_examples": 254,
+    "output_examples_omitted": 102,
+    "enabled_capability_count": 275,
+    "enabled_input_examples": 153,
+    "enabled_output_examples": 205,
+    "solution_count_without_examples": 88,
+    "targeted_tests_passed": 790,
+    "full_suite_tests_passed": 7226,
+    "full_suite_tests_failed": 1,
+    "full_suite_tests_skipped": 346,
+    "full_suite_files_passed": 348,
+    "full_suite_files_failed": 1,
+    "full_suite_files_skipped": 33,
+    "isolated_existing_timing_tests_passed": 38,
+    "context_tests_passed": 180,
+    "root_ci_commands_run": 59,
+    "root_ci_non_api_commands_passed": 58,
+    "api_typecheck_ok": true,
+    "extra_root_bare_tsc_errors": 282,
+    "review": "technical and product GO after two rounds and bounded HIGH-fix confirmation",
+    "limitation": "Full API gate red on unrelated timing assertions; both timing files pass isolated. Extra repository-wide bare tsc is red on unrelated files. Expected dirty/unpushed handoff gate remains red.",
+    "evidence": "archive/sessions/2026-10-27-d2-discovery-evidence.json",
+    "full_suite_evidence": "archive/sessions/2026-10-27-d2-api-bounded-workers.json",
+    "isolated_timing_evidence": "archive/sessions/2026-10-27-d2-existing-timing-tests.json",
+    "vocabulary_passed": 11,
+    "vocabulary_deliberately_retired": 1,
+    "paid_calls": 0
+  },
+  "topic": "x402-bazaar-challenge-metadata",
+  "raw": {
+    "ok": false,
+    "implementation_checks_ok": true,
+    "working_tree_uncommitted": true,
+    "manifest_count": 356,
+    "offline_challenges": 712,
+    "offline_before_failed": 712,
+    "offline_after_failed": 0,
+    "live_catalog_generated_challenges": 363,
+    "live_catalog_generated_failed": 0,
+    "input_examples": 175,
+    "input_examples_omitted": 181,
+    "output_examples": 254,
+    "output_examples_omitted": 102,
+    "enabled_capability_count": 275,
+    "enabled_input_examples": 153,
+    "enabled_output_examples": 205,
+    "solution_count_without_examples": 88,
+    "targeted_tests_passed": 790,
+    "full_suite_tests_passed": 7226,
+    "full_suite_tests_failed": 1,
+    "full_suite_tests_skipped": 346,
+    "full_suite_files_passed": 348,
+    "full_suite_files_failed": 1,
+    "full_suite_files_skipped": 33,
+    "isolated_existing_timing_tests_passed": 38,
+    "context_tests_passed": 180,
+    "root_ci_commands_run": 59,
+    "root_ci_non_api_commands_passed": 58,
+    "api_typecheck_ok": true,
+    "extra_root_bare_tsc_errors": 282,
+    "review": "technical and product GO after two rounds and bounded HIGH-fix confirmation",
+    "limitation": "Full API gate red on unrelated timing assertions; both timing files pass isolated. Extra repository-wide bare tsc is red on unrelated files. Expected dirty/unpushed handoff gate remains red.",
+    "source_sha256": {
+      "apps/api/src/lib/x402-discovery-metadata.ts": "01cfddac8182a7fe8c129d0e8874005705a3c59338fbbb5798a23364e3eea43f",
+      "apps/api/src/lib/x402-discovery-metadata.test.ts": "79f639a9957aa24ab6075da99064b508f2a96110e693cf568dcebbe3c6ec8c1b",
+      "apps/api/src/lib/x402-discovery-validator.ts": "da818cae4b6c1a5366d42fd5a3d2c4e93978cf34b1803d6b68e8bc5cc4a29a57",
+      "apps/api/src/routes/x402-gateway-v2.ts": "7c53925fd158db1a7eeea1d4243113dccb8bb521e42ad99b459b803f87e37057",
+      "apps/api/src/routes/x402-gateway-v2.catalog.test.ts": "8eb7e842f19b598e5f720173477ce5846856f755f32b7801f3047573124bd703",
+      "apps/api/src/openapi.ts": "3d66e8c53a7b7e7334a8d7ab1595bb55735adfe7596d356abf1f1945867a2e25",
+      "apps/api/package.json": "b29f1d520ad3c7dc7ecdbd3f8507277e403d49ce84c20967db8065c430b2b830",
+      "package-lock.json": "570bd34188df825137c47b685233bc1bb3661e4ba73d41ecb73761c123e0976d"
+    },
+    "root_ci_results": [
+      {
+        "command": "npm ci",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "archive index warning-only CI wrapper",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm test",
+        "exit_code": 1
+      }
+    ],
+    "final_checks": [
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:ssrf-inventory",
+        "exit_code": 1
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-external-column-access",
+        "exit_code": 1
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      }
+    ],
+    "evidence": "archive/sessions/2026-10-27-d2-discovery-evidence.json",
+    "full_suite_evidence": "archive/sessions/2026-10-27-d2-api-bounded-workers.json",
+    "isolated_timing_evidence": "archive/sessions/2026-10-27-d2-existing-timing-tests.json",
+    "vocabulary_passed": 11,
+    "vocabulary_deliberately_retired": 1,
+    "paid_calls": 0
+  }
+}

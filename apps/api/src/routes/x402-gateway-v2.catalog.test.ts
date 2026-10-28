@@ -231,6 +231,7 @@ describe("GET /x402/catalog output_schema projection", () => {
     const entry = body.solutions.find((s) => s.slug === "kyb-essentials-se");
     expect(entry).toBeDefined();
     expect(entry).not.toHaveProperty("output_schema");
+    expect(entry!.endpoint).toBe(`${BASE_URL}/x402/v2/solutions/kyb-essentials-se`);
     expect(Object.keys(entry!).sort()).toEqual(
       ["description", "endpoint", "input_schema", "method", "name", "price_usd", "slug"].sort(),
     );
@@ -253,7 +254,7 @@ describe("GET /x402/catalog output_schema projection", () => {
       description: "Verify any paid API endpoint before your agent spends money.",
       price_usd: eurCentsToUsd(2),
       method: "POST",
-      endpoint: `${BASE_URL}/x402/paid-api-preflight`,
+      endpoint: `${BASE_URL}/x402/v2/paid-api-preflight`,
       input_schema: PAID_INPUT,
       output_schema: PAID_OUTPUT,
     });
@@ -396,5 +397,63 @@ describe("x402 AgentCash discovery contract", () => {
       currency: "USD",
       protocols: ["x402"],
     });
+  });
+});
+
+// CDP's hosted API has no offline package: exercise the published SDK parser
+// and Bazaar Ajv validator for ALL manifests, a superset of enabled DB rows.
+// Enabled status lives in the DB; a fixture does not assert production eligibility.
+import { readdirSync, readFileSync } from "node:fs";
+import yaml from "js-yaml";
+import { metadataFromManifest, type DiscoveryManifest } from "../lib/x402-discovery-metadata.js";
+import { validateOfflineDiscovery } from "../lib/x402-discovery-validator.js";
+const manifestDirectory = new URL("../../../../manifests/", import.meta.url);
+const discoveryManifests = readdirSync(manifestDirectory).filter(file => file.endsWith(".yaml"))
+  .map(file => yaml.load(readFileSync(new URL(file, manifestDirectory), "utf8")) as DiscoveryManifest);
+
+describe("D2 offline CDP/Bazaar discovery gate", () => {
+  it.each(discoveryManifests.flatMap(manifest => ["GET", "POST"].map(method => [manifest.slug, method, manifest] as const)))("validates %s %s challenge", (slug, method, manifest) => {
+    const { body } = build402(manifest.name, manifest.description, 0.054, `https://api.strale.io/x402/v2/${slug}`, manifest.input_schema, method, manifest.output_schema, 2, { kind: "capability", slug });
+    expect(validateOfflineDiscovery(body)).toEqual([]);
+    const metadata = metadataFromManifest(manifest);
+    expect(body.resource.serviceName).toBe("Strale");
+    expect(body.resource.description).toBe(`${manifest.name}: ${manifest.description}`);
+    const extension = body.extensions.bazaar as any;
+    expect(extension.info.input[method === "POST" ? "body" : "queryParams"]).toEqual(metadata.inputExample);
+    expect(extension.info.output.example).toEqual(metadata.outputExample);
+    expect(JSON.stringify(extension.info.input)).not.toMatch(/example_\w+/);
+  });
+  it.each(["email-validate", "whois-lookup", "image-to-text"])("preserves every v1 payment field for %s", slug => {
+    const manifest = discoveryManifests.find(item => item.slug === slug)!;
+    const resource = `https://api.strale.io/x402/${slug}`;
+    // Frozen payment-field projection from the d004d774 builder (pre-D2).
+    const before = {
+      maxAmountRequired: "54000", payTo: WALLET ?? "0x0000000000000000000000000000000000000001",
+      asset: NETWORK === "base" ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" : "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      network: NETWORK, scheme: "exact", resource, maxTimeoutSeconds: 300,
+    };
+    const { body, paymentRequirement, headerPayload } = build402(manifest.name, manifest.description, 0.054, resource, manifest.input_schema, "POST", manifest.output_schema, 1, { kind: "capability", slug });
+    const project = (requirement: Record<string, unknown>) => Object.fromEntries(Object.keys(before).map(key => [key, requirement[key]]));
+    expect(JSON.stringify(project(paymentRequirement))).toBe(JSON.stringify(before));
+    expect(project(body.accepts[0])).toEqual(before);
+    expect(project(body.paymentRequirements[0])).toEqual(before);
+    expect(project(JSON.parse(Buffer.from(headerPayload, "base64").toString()).accepts[0])).toEqual(before);
+  });
+  it("does not disclose a capability's example through a solution with the same slug", () => {
+    const manifest = discoveryManifests.find(item => metadataFromManifest(item).inputExample !== undefined)!;
+    const make = (kind: "capability" | "solution") => build402("Solution", "Solution description", 0.054, `https://api.strale.io/x402/v2/solutions/${manifest.slug}`, manifest.input_schema, "POST", manifest.output_schema, 2, { kind, slug: manifest.slug }).body;
+    expect((make("capability").extensions.bazaar as any).info.input.body).toBeDefined();
+    const solution = make("solution");
+    expect((solution.extensions.bazaar as any).info.input.body).toBeUndefined();
+    expect(solution.resource.description).toBe("Solution: Solution description");
+    expect(validateOfflineDiscovery(solution)).toEqual([]);
+  });
+  it("rejects malformed discovery metadata and v1 envelopes", () => {
+    const body = build402("Tool", "Description", 0.054, "https://api.strale.io/x402/v2/tool", null, "POST", null, 2).body;
+    expect(validateOfflineDiscovery(body)).toEqual([]);
+    expect(validateOfflineDiscovery({ ...body, x402Version: 1 }).length).toBeGreaterThan(0);
+    expect(validateOfflineDiscovery({ ...body, resource: { ...body.resource, serviceName: "", tags: ["x", "X"], iconUrl: "https://127.0.0.1/icon.png" } })).toEqual(expect.arrayContaining(["missing/invalid serviceName", "missing/invalid tags", "invalid iconUrl"]));
+    expect(validateOfflineDiscovery({ ...body, extensions: { bazaar: { ...(body.extensions.bazaar as any), info: { input: { type: "wrong" } } } } }).length).toBeGreaterThan(0);
+    expect(validateOfflineDiscovery({ ...body, extensions: { bazaar: { schema: { $schema: "https://json-schema.org/draft/2020-12/schema" }, info: { input: { type: "anything", method: "BANANA" } } } } })).toEqual(expect.arrayContaining(["missing HTTP input schema contract", "invalid HTTP method contract"]));
   });
 });
