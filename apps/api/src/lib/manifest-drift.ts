@@ -1,4 +1,4 @@
-import { FIELD_CATEGORIES, valuesEqual } from "./capability-field-authority.js";
+import { FIELD_CATEGORIES, valuesEqual, withRuntimeExample } from "./capability-field-authority.js";
 import { manifestLimitationsToRows } from "./manifest-limitations.js";
 import { sanitizeLimitationTitle } from "./capability-persistence.js";
 import { TEXT_COLUMNS, isReportOnly } from "./manifest-publication-policy.js";
@@ -16,7 +16,8 @@ export function manifestDrift(manifest: Record<string, unknown>, row: Record<str
     : publicationPending ? reportOnly : writable;
   for (const [field, authority] of Object.entries(FIELD_CATEGORIES)) {
     if (field === "slug" || manifest[field] === undefined) continue;
-    if (!valuesEqual(manifest[field], row[field])) destination(field, authority.category === "manifest").push(field);
+    const expected = field === "output_schema" ? withRuntimeExample(manifest[field], row[field]) : manifest[field];
+    if (!valuesEqual(expected, row[field])) destination(field, authority.category === "manifest").push(field);
   }
   if (manifest.limitations !== undefined) {
     const expected = manifestLimitationsToRows(manifest as unknown as Manifest).map(l => ({ ...l, title: sanitizeLimitationTitle(l.title) }));

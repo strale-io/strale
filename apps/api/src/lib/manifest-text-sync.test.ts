@@ -167,3 +167,18 @@ it("strict sweep goes green after complete sync despite report-only and non-sync
   h.state.rows[0].name = "Out of band";
   expect(driftExitCode(true, sweep().reduce((n, d) => n + d.writable.length, 0), 0)).toBe(1);
 });
+
+it("keeps a runtime-captured output_schema example on write and in report-only comparison", async () => {
+  const m = manifest(); const gated = { ...manifest("gated"), category: "compliance" };
+  const h = harness([m, gated]);
+  for (const row of h.state.rows) Object.assign(row, { outputSchema: { type: "object", example: { value: 1 } } });
+  const info = vi.spyOn(log, "info");
+  expect(await applyManifestText(h.db, [source(m), source(gated)])).toMatchObject({ updated: 1, report_only: 1 });
+  expect((h.state.rows[0] as any).outputSchema).toEqual({ type: "object", example: { value: 1 } });
+  const reported = info.mock.calls.find(([o]: any[]) => o?.label === "manifest-text-report-only")?.[0] as any;
+  expect(reported.fields).not.toContain("outputSchema");
+  const declared = { ...manifest("declared"), output_schema: { type: "object", example: { value: 2 } } };
+  const d = harness([declared]); Object.assign(d.state.rows[0], { outputSchema: { type: "object", example: { value: 1 } } });
+  await applyManifestText(d.db, [source(declared)]);
+  expect((d.state.rows[0] as any).outputSchema).toEqual({ type: "object", example: { value: 2 } });
+});

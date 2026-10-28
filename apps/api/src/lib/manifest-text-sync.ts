@@ -10,7 +10,7 @@ import { z } from "zod";
 import type { Sql } from "postgres";
 import { getDb, type Database } from "../db/index.js";
 import { capabilities, capabilityLimitations } from "../db/schema.js";
-import { FIELD_CATEGORIES, snakeToCamel, valuesEqual } from "./capability-field-authority.js";
+import { FIELD_CATEGORIES, snakeToCamel, valuesEqual, withRuntimeExample } from "./capability-field-authority.js";
 import { buildAssignments } from "./manifest-sync-fields.js";
 import { textManifest, describeFailure } from "./limitations-sync.js";
 import { manifestLimitationsToRows } from "./manifest-limitations.js";
@@ -103,16 +103,18 @@ export async function applyManifestText(db: Database = getDb(), sources?: Manife
           await tx.execute(sql`SET LOCAL statement_timeout = '5s'`);
           const [current] = await tx.select().from(capabilities).where(eq(capabilities.slug, manifest.slug)).limit(1).for("no key update");
           if (!current) throw new Error("Capability disappeared");
+          // The hash covers the manifest text only; a runtime-captured example is kept, not drift.
+          const patch: Record<string, unknown> = { ...payload.patch, outputSchema: withRuntimeExample(payload.patch.outputSchema, current.outputSchema) };
           if (isReportOnly(manifest, current)) {
             const limitations = await tx.select().from(capabilityLimitations).where(and(eq(capabilityLimitations.capabilitySlug, current.slug), eq(capabilityLimitations.active, true))).orderBy(capabilityLimitations.sortOrder);
-            const fields = Object.keys(payload.patch).filter(k => !valuesEqual(payload.patch[k], (current as Record<string, unknown>)[k]));
+            const fields = Object.keys(patch).filter(k => !valuesEqual(patch[k], (current as Record<string, unknown>)[k]));
             if (!valuesEqual(payload.limitations, limitations.map(({ title, limitationText, category, severity, workaround }) => ({ title, limitationText, category, severity, workaround })))) fields.push("limitations");
             if (fields.length) log.info({ label: "manifest-text-report-only", slug: current.slug, fields }, "Manifest text differs; Petter must approve publication");
             return "report_only" as const;
           }
           if (current.manifestTextHash === payload.hash) return "unchanged" as const;
           await diffAndUpdateLimitations(tx, manifest.slug, payload.limitations);
-          await tx.update(capabilities).set({ ...payload.patch, manifestTextHash: payload.hash }).where(eq(capabilities.slug, manifest.slug));
+          await tx.update(capabilities).set({ ...patch, manifestTextHash: payload.hash }).where(eq(capabilities.slug, manifest.slug));
           return "updated" as const;
         });
         counts[outcome]++;
