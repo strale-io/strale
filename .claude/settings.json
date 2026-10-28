@@ -15,7 +15,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/scripts/bus.mjs inbox"
+            "command": "node -e \"const c=require('node:child_process');const r=c.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();const p=c.spawnSync(process.execPath,[require('node:path').join(r,'.claude/scripts/bus.mjs'),'inbox'],{cwd:r,stdio:'inherit',timeout:25000});if(p.error)console.log('[bus] inbox unavailable: '+p.error.message);process.exit(0)\"",
+            "timeout": 30,
+            "statusMessage": "Reading the bus inbox..."
           }
         ]
       }
