@@ -1,0 +1,24 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/src/routes/x402-gateway-v2.catalog.test.ts",
+    "commit": "d004d774d4987c3007ec5e66d64fd6d6c2043478"
+  },
+  "at": "2026-10-27T16:05:54.659Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "test_files": 1,
+    "tests": 18,
+    "scope": "catalog regression only; challenge metadata remains incomplete"
+  },
+  "topic": "x402-bazaar-catalog",
+  "raw": {
+    "ok": true,
+    "test_files": 1,
+    "tests": 18,
+    "scope": "catalog regression only; challenge metadata remains incomplete"
+  }
+}

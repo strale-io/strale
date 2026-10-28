@@ -1,0 +1,22 @@
+[
+  {
+    "command": "npm run handoff:check",
+    "exit_code": 1,
+    "output": "\n> handoff:check\n> node scripts/handoff/handoff-check.mjs\n\nHANDOFF GATE FAILED (session) — 9 thing(s) to fix before this session may end:\n- [dirty] 21 uncommitted or untracked path(s) in <checkout>: apps/api/package.json, apps/api/src/openapi.ts, apps/api/src/routes/x402-gateway-v2.catalog.test.ts, apps/api/src/routes/x402-gateway-v2.ts, package-lock.json, … (21 total)\n    fix: commit your own changes (Conventional Commit message); if a path is not yours, stop and report it — never delete another session's work; nothing may stay uncommitted when a session ends\n- [ahead] branch feat/x402-bazaar-metadata has no upstream of its own (it tracks origin/main)\n    fix: git push -u origin feat/x402-bazaar-metadata\n- [merged-branch] local branch chore/nta-env-set-in-railway has landed on main (patch-equivalent) and still exists\n    fix: git branch -D chore/nta-env-set-in-railway (safe: every commit on it is patch-equivalent to one on main)\n- [merged-branch] local branch docs/email-phone-validation-copy has landed on main (patch-equivalent) and still exists\n    fix: git branch -D docs/email-phone-validation-copy (safe: every commit on it is patch-equivalent to one on main)\n- [merged-branch] local branch docs/ops-delegation has landed on main (patch-equivalent) and still exists\n    fix: git branch -D docs/ops-delegation (safe: every commit on it is patch-equivalent to one on main)\n- [merged-branch] remote branch origin/chore/nta-env-set-in-railway has landed on main (patch-equivalent) and still exists\n    fix: git push origin --delete chore/nta-env-set-in-railway (its PR is merged, or it never diverged from main)\n- [merged-branch] remote branch origin/docs/email-phone-validation-copy has landed on main (patch-equivalent) and still exists\n    fix: git push origin --delete docs/email-phone-validation-copy (its PR is merged, or it never diverged from main)\n- [merged-branch] remote branch origin/docs/ops-delegation has landed on main (patch-equivalent) and still exists\n    fix: git push origin --delete docs/ops-delegation (its PR is merged, or it never diverged from main)\n- [merged-branch] remote branch origin/docs/review-follow-ups-2026-10-26 has landed on main (patch-equivalent) and still exists\n    fix: git push origin --delete docs/review-follow-ups-2026-10-26 (its PR is merged, or it never diverged from main)\n  note: could not fetch origin; remote-branch findings may be stale\n  note: worktree <other-checkout> carries 36 uncommitted path(s); the session that owns it must clear them before it ends\n  note: worktree <other-checkout> is on feat/production-watch, which has no commits beyond main: freshly cut, or its work already landed; if no session is using it, git worktree remove <other-checkout> then git branch -d feat/production-watch\n  note: this branch (feat/x402-bazaar-metadata) has landed on main (ancestor) or has no commits yet; once its PR is merged, the next session removes this worktree and deletes the branch from the trunk\n"
+  },
+  {
+    "command": "npm run docs:check",
+    "exit_code": 0,
+    "output": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n"
+  },
+  {
+    "command": "node apps/api/scripts/check-pii.mjs --strict",
+    "exit_code": 0,
+    "output": "PII guard: clean — no unredacted person names or checksum-valid identifiers found.\n"
+  },
+  {
+    "command": "git diff --check",
+    "exit_code": 0,
+    "output": ""
+  }
+]

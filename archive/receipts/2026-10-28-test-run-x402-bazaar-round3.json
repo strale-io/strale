@@ -1,0 +1,232 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "94e3f63160dec7f0de6a85cf65da808808bc2ee3"
+  },
+  "at": "2026-10-28T09:39:52.382Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "base_commit": "94e3f631",
+    "worktree": "uncommitted",
+    "payment_fields": "unchanged"
+  },
+  "topic": "x402-bazaar-round3",
+  "raw": {
+    "base_commit": "94e3f631",
+    "worktree": "uncommitted",
+    "header_distribution": {
+      "challenges": 1424,
+      "max": 8152,
+      "p95": 6456,
+      "median": 4048,
+      "over8192": 0,
+      "counts": {
+        "capability": {
+          "GET": {
+            "input": 108,
+            "output": 18
+          },
+          "POST": {
+            "input": 108,
+            "output": 9,
+            "emptyBody": 34
+          }
+        },
+        "solution": {
+          "GET": {
+            "input": 0,
+            "output": 0
+          },
+          "POST": {
+            "input": 0,
+            "output": 0,
+            "emptyBody": 34
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0,
+        "result": []
+      },
+      {
+        "command": "npm --workspace=apps/api run typecheck",
+        "exit_code": 0,
+        "result": []
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/x402-gateway-v2.catalog.test.ts -t \"bounds all manifest\"",
+        "exit_code": 1,
+        "result": [
+          "D2 header distribution {\"challenges\":1424,\"max\":46408,\"p95\":9712,\"median\":4878,\"over8192\":120,\"counts\":{\"capability\":{\"input\":175,\"output\":254},\"solution\":{\"input\":0,\"output\":0}}}",
+          "FAIL  src/routes/x402-gateway-v2.catalog.test.ts > D2 offline CDP/Bazaar discovery gate > bounds all manifest capability and solution headers",
+          "AssertionError: expected [ Array(120) ] to deeply equal []",
+          "Test Files  1 failed (1)",
+          "Tests  1 failed | 735 skipped (736)",
+          "Duration  4.76s (transform 1.04s, setup 52ms, import 2.64s, tests 1.83s, environment 0ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/x402-discovery-metadata.test.ts src/routes/x402-gateway-v2.catalog.test.ts",
+        "exit_code": 0,
+        "result": [
+          "Test Files  2 passed (2)",
+          "Tests  807 passed (807)",
+          "Duration  17.41s (transform 1.49s, setup 153ms, import 3.32s, tests 15.21s, environment 0ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run x402",
+        "exit_code": 0,
+        "result": [
+          "D2 header distribution {\"challenges\":1424,\"max\":8152,\"p95\":6456,\"median\":4048,\"over8192\":0,\"counts\":{\"capability\":{\"GET\":{\"input\":108,\"output\":18},\"POST\":{\"input\":108,\"output\":9,\"emptyBody\":34}},\"solution\":{\"GET\":{\"input\":0,\"output\":0},\"POST\":{\"input\":0,\"output\":0,\"emptyBody\":34}}}}",
+          "Test Files  17 passed | 1 skipped (18)",
+          "Tests  963 passed | 2 skipped (965)",
+          "Duration  35.09s (transform 11.82s, setup 643ms, import 17.76s, tests 54.00s, environment 3ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/routes/x402-gateway-v2.catalog.test.ts",
+        "exit_code": 0,
+        "result": [
+          "D2 header distribution {\"challenges\":1424,\"max\":8152,\"p95\":6456,\"median\":4048,\"over8192\":0,\"counts\":{\"capability\":{\"GET\":{\"input\":108,\"output\":18},\"POST\":{\"input\":108,\"output\":9,\"emptyBody\":34}},\"solution\":{\"GET\":{\"input\":0,\"output\":0},\"POST\":{\"input\":0,\"output\":0,\"emptyBody\":34}}}}",
+          "Test Files  1 passed (1)",
+          "Tests  740 passed (740)",
+          "Duration  34.68s (transform 1.26s, setup 88ms, import 3.87s, tests 30.13s, environment 0ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run",
+        "exit_code": 1,
+        "result": [
+          "FAIL  src/lib/search/search-quality.test.ts > frozen public catalogue quality gate > ranks 1,000 mixed natural/typo/country queries in under two seconds",
+          "AssertionError: expected 2968.9978080000005 to be less than 2000",
+          "Test Files  1 failed | 364 passed | 35 skipped (400)",
+          "Tests  1 failed | 7383 passed | 358 skipped (7742)",
+          "Duration  371.75s (transform 28.88s, setup 11.25s, import 595.58s, tests 274.29s, environment 123ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/search/search-quality.test.ts",
+        "exit_code": 1,
+        "result": [
+          "FAIL  src/lib/search/search-quality.test.ts > frozen public catalogue quality gate > ranks 1,000 mixed natural/typo/country queries in under two seconds",
+          "AssertionError: expected 3801.486757 to be less than 2000",
+          "Test Files  1 failed (1)",
+          "Tests  1 failed | 12 passed (13)",
+          "Duration  6.55s (transform 682ms, setup 157ms, import 704ms, tests 5.23s, environment 0ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/search/search-quality.test.ts",
+        "exit_code": 0,
+        "result": [
+          "Test Files  1 passed (1)",
+          "Tests  13 passed (13)",
+          "Duration  1.93s (transform 276ms, setup 44ms, import 378ms, tests 1.25s, environment 0ms)"
+        ]
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/search*.test.ts",
+        "exit_code": 0,
+        "result": [
+          "Test Files  1 passed (1)",
+          "Tests  11 passed (11)",
+          "Duration  569ms (transform 123ms, setup 77ms, import 89ms, tests 14ms, environment 0ms)"
+        ]
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "result": [
+          "checked 29 rows in docs/company/claims.yaml against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present",
+          "ok   claims register contract"
+        ],
+        "existing_warnings": false
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "result": [
+          "checked 930 files under apps/api/src and apps/api/scripts (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)",
+          "ok   model registry contract"
+        ],
+        "existing_warnings": false
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "result": [
+          "checked 129 process.env names against 134 rows in config/env-manifest.yaml",
+          "ok   environment manifest contract"
+        ],
+        "existing_warnings": false
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "result": [
+          "checked 18 docs/ subtrees against docs/README.md",
+          "ok   docs/README.md index"
+        ],
+        "existing_warnings": false
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "result": [
+          "ok   docs/programs/brand-website/tracks.yaml",
+          "ok   docs/programs/cto-readiness/tracks.yaml",
+          "ok   docs/programs/distribution/tracks.yaml",
+          "ok   docs/programs/platform-hardening/tracks.yaml"
+        ],
+        "existing_warnings": false
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "result": [
+          "checked 113 archive/receipts/*.json files",
+          "ok   receipts contract"
+        ],
+        "existing_warnings": true
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit_code": 1,
+        "expected": true,
+        "findings": [
+          "ahead",
+          "dirty",
+          "merged-branch"
+        ],
+        "notes": [
+          "No commit or push per explicit user instruction. Existing merged branches retained. Origin fetch unavailable; remote findings may be stale."
+        ]
+      },
+      {
+        "command": "cd apps/api && npx tsc --listFilesOnly",
+        "exit_code": 0,
+        "result": [
+          "Moved validator absent from runtime compilation inputs."
+        ]
+      }
+    ],
+    "review": {
+      "technical": "Original HIGH fixed and confirmed; subsequent oversized-diagnostic MEDIUM fixed with 12000-byte regression.",
+      "product": "GO after final-emission fix; no remaining blockers."
+    },
+    "limitations": [
+      "Full suite ran before final verification-diagnostic guard; subsequent x402-complete run covers the final code and validator.",
+      "No live production/hosted validator or DB check performed; no credentials required.",
+      "Initial quoted glob x402 invocation found no tests; corrected to vitest run x402."
+    ],
+    "payment_fields": "unchanged",
+    "production_steps": []
+  }
+}
