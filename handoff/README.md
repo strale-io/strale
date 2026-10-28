@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-384 files (357 with a recorded intent, 27 without).
+385 files (358 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-28 | [`handoff/_general/from-code/2026-10-28-vendor-permissions.md`](_general/from-code/2026-10-28-vendor-permissions.md) | make founder-accepted vendor and source permissions durable and checked; leave this branch uncommitted for orchestrat... |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-output-schema-runtime-example.md`](_general/from-code/2026-10-28-output-schema-runtime-example.md) | stop the manifest drift sweep counting the test runner's captured |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-money-path.md`](_general/from-code/2026-10-28-money-path.md) | Implement H4 on `feat/money-path` from `e871a2ad`: release database connections during sync paid execution, enforce t... |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-checkin-morning.md`](_general/from-code/2026-10-28-checkin-morning.md) | run the 2026-10-28 operating session under DAILY-RUN.md — sweep the |
