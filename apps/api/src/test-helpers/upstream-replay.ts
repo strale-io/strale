@@ -17,6 +17,7 @@
  *     replaced; e-mail addresses in text bodies are replaced.
  */
 import { readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { readBodyWithLimit, ResourceLimitError } from "../lib/resource-limits.js";
 
@@ -65,8 +66,8 @@ export function recordingPath(slug: string): string {
   return resolve(RECORDINGS_DIR, `${slug}.json`);
 }
 
-/** Bodies of these statuses must be null when building a Response. */
-const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+/** Bodies of these statuses must be null when building a Response (1xx never reaches a recording). */
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 /** Headers that describe the wire framing, not the content; replay must not repeat them. */
 const DROPPED_RESPONSE_HEADERS = new Set(["content-encoding", "content-length", "transfer-encoding", "connection", "keep-alive"]);
 const TEXT_TYPE = /^(text\/|application\/(?:[\w.+-]*\+)?(?:json|xml|javascript|x-www-form-urlencoded|csv|rss|atom)\b)/i;
@@ -89,7 +90,7 @@ export async function describeRequest(input: RequestInfo | URL, init?: RequestIn
 }
 
 export function requestKey(r: RecordedRequest): string {
-  return `${r.method} ${r.url}${r.body ? ` <${r.body.length}b>` : ""}`;
+  return `${r.method} ${r.url}${r.body ? ` <body ${createHash("sha256").update(r.body).digest("hex").slice(0, 12)}>` : ""}`;
 }
 
 function sameRequest(a: RecordedRequest, b: RecordedRequest): boolean {
@@ -103,7 +104,7 @@ export async function captureResponse(response: Response): Promise<RecordedRespo
     if (DROPPED_RESPONSE_HEADERS.has(name)) return;
     headers[name] = name === "set-cookie" ? value.replace(/^([^=;]+)=[^;]*/, "$1=redacted") : value;
   });
-  let bytes = Buffer.alloc(0);
+  let bytes: Buffer = Buffer.alloc(0);
   let oversize = false;
   try {
     bytes = await readBodyWithLimit(response, MAX_RECORDED_BODY_BYTES, "upstream_response");
@@ -147,25 +148,46 @@ export function redactEmails(exchanges: RecordedExchange[]): number {
   return count;
 }
 
+export type Perturbation = "empty" | "hollow";
+
+/** Every JSON leaf changed while every key and array element stays: strings empty, numbers -1, booleans flipped. */
+function hollowJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(hollowJson);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, hollowJson(v)]));
+  if (typeof value === "string") return "";
+  if (typeof value === "number") return -1;
+  if (typeof value === "boolean") return !value;
+  return value;
+}
+
 /**
- * The perturbed body: still well-formed where the recording was JSON, so an
- * executor cannot fail the perturbation merely by choking on a parse error,
- * but with every value gone.
+ * The perturbed body. `empty` keeps only the outer shape (`{}`, `[]` or
+ * nothing). `hollow` keeps the structure and replaces the values: JSON leaves
+ * as hollowJson, XML attribute values and text emptied. An executor that
+ * merely throws on `empty` still has to show, under `hollow`, that its
+ * contract reads the values.
  */
-function emptied(recorded: RecordedResponse): string {
+function perturbed(recorded: RecordedResponse, mode: Perturbation): string {
   if (recorded.body_encoding !== "utf8") return "";
   const text = recorded.body.trimStart();
-  if (text.startsWith("{")) return "{}";
-  if (text.startsWith("[")) return "[]";
+  if (text.startsWith("{") || text.startsWith("[")) {
+    if (mode === "empty") return text.startsWith("{") ? "{}" : "[]";
+    try {
+      return JSON.stringify(hollowJson(JSON.parse(text)));
+    } catch {
+      return "";
+    }
+  }
+  if (mode === "hollow" && text.startsWith("<")) return text.replace(/="[^"]*"/g, '=""').replace(/>[^<]+</g, "><");
   return "";
 }
 
 /** A Response carrying a recorded answer, as fetch would have returned it for `url`. */
-export function recordedResponse(url: string, recorded: RecordedResponse, perturb = false): Response {
+export function recordedResponse(url: string, recorded: RecordedResponse, perturb?: Perturbation): Response {
   const body = NULL_BODY_STATUSES.has(recorded.status)
     ? null
     : perturb
-      ? emptied(recorded)
+      ? perturbed(recorded, perturb)
       : recorded.body_encoding === "base64"
         ? Buffer.from(recorded.body, "base64")
         : recorded.body;
@@ -188,11 +210,12 @@ export interface ReplayFetch {
  * A fetch that answers only from the recording, matching method, URL and
  * body exactly. Identical requests are answered in recorded order, and the
  * last answer repeats. `perturb` answers every request with the recorded
- * status and content type but an emptied body (`{}`, `[]` or nothing): an
+ * status and content type but a perturbed body (see `perturbed`): an
  * executor whose contract still passes then does not depend on the upstream
- * content, and its test proves nothing about parsing.
+ * content, and its test proves nothing about parsing. The response `url` is
+ * always the request URL; replay does not model a fetch-followed redirect.
  */
-export function createReplayFetch(exchanges: RecordedExchange[], opts: { perturb?: boolean } = {}): ReplayFetch {
+export function createReplayFetch(exchanges: RecordedExchange[], opts: { perturb?: Perturbation } = {}): ReplayFetch {
   const used = new Map<RecordedExchange, number>();
   const state: ReplayFetch = {
     served: [],

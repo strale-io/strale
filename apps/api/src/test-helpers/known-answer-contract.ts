@@ -27,17 +27,23 @@ export function loadManifest(slug: string): ContractManifest {
   return yaml.load(readFileSync(resolve(MANIFESTS_DIR, `${slug}.yaml`), "utf8")) as ContractManifest;
 }
 
-/** Number of checks the known_answer declares; zero means it asserts nothing. */
+function reliabilityOf(manifest: ContractManifest): Record<string, string> | undefined {
+  // The runner reads reliability from the DB, which carries the corrected
+  // contract where one exists (startup-migrations applies it).
+  return CAPABILITY_OUTPUT_CONTRACTS[manifest.slug]?.reliability ?? manifest.output_field_reliability;
+}
+
+/** Number of known_answer checks the runner enforces; zero means it asserts nothing. */
 export function knownAnswerCheckCount(manifest: ContractManifest): number {
-  return expectedFieldsToChecks(manifest.test_fixtures?.known_answer?.expected_fields ?? []).length;
+  const reliability = reliabilityOf(manifest);
+  return expectedFieldsToChecks(manifest.test_fixtures?.known_answer?.expected_fields ?? [])
+    .filter((check) => isCheckEnforced(check, reliability)).length;
 }
 
 /** Every reason the output fails the slug's known_answer contract; empty when it passes. */
 export function judgeKnownAnswer(manifest: ContractManifest, output: unknown): string[] {
   const checks = expectedFieldsToChecks(manifest.test_fixtures?.known_answer?.expected_fields ?? []);
-  // The runner reads reliability from the DB, which carries the corrected
-  // contract where one exists (startup-migrations applies it).
-  const reliability = CAPABILITY_OUTPUT_CONTRACTS[manifest.slug]?.reliability ?? manifest.output_field_reliability;
+  const reliability = reliabilityOf(manifest);
   const failures = checks
     .filter((check) => isCheckEnforced(check, reliability))
     .map((check) => runKnownAnswerCheck(check, output as Record<string, unknown>))

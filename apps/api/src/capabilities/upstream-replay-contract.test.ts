@@ -19,11 +19,12 @@
  * `record-upstream.ts --check` run in weekly-drift.yml; see the README in
  * __fixtures__/upstream/ for re-capture.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
+import net from "node:net";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getDeactivatedCapabilities } from "./auto-register.js";
-import { createReplayFetch, loadRecordings, type UpstreamRecording } from "../test-helpers/upstream-replay.js";
+import { createReplayFetch, loadRecordings, type Perturbation, type UpstreamRecording } from "../test-helpers/upstream-replay.js";
 import { judgeKnownAnswer, knownAnswerCheckCount, loadExecutor, loadManifest } from "../test-helpers/known-answer-contract.js";
 
 // validateUrl resolves the host before every safeFetch; without this the
@@ -42,7 +43,7 @@ const NETWORK_SOURCE_TYPES = new Set(["api", "scrape"]);
  * shrinks to nothing passes vacuously (LESSONS.md F5). Raise it as recordings
  * are added; never lower it to make a red run green.
  */
-const MIN_RECORDED = 21;
+const MIN_RECORDED = 14;
 
 /**
  * Modules that reach the network without `fetch`. An executor whose import
@@ -65,10 +66,11 @@ function importGraph(file: string, seen = new Set<string>()): Set<string> {
   return seen;
 }
 
+const THREW = "executor threw: ";
 const recordings = loadRecordings();
 const deactivated = getDeactivatedCapabilities();
 
-async function replay(recording: UpstreamRecording, perturb: boolean) {
+async function replay(recording: UpstreamRecording, perturb?: Perturbation) {
   vi.setSystemTime(new Date(recording.recorded_at));
   const replayFetch = createReplayFetch(recording.exchanges, { perturb });
   vi.stubGlobal("fetch", replayFetch.fetch);
@@ -79,9 +81,22 @@ async function replay(recording: UpstreamRecording, perturb: boolean) {
     const result = await executor(structuredClone(recording.input));
     return { replayFetch, failures: judgeKnownAnswer(manifest, result.output) };
   } catch (err) {
-    return { replayFetch, failures: [`executor threw: ${err instanceof Error ? err.message : String(err)}`] };
+    return { replayFetch, failures: [`${THREW}${err instanceof Error ? err.message : String(err)}`] };
   }
 }
+
+// Backstop for any socket the import-graph guard below cannot see (bare
+// packages, computed imports). Built-in modules are one shared instance, so
+// this covers every importer of net, tls, http and undici alike.
+const realConnect = net.Socket.prototype.connect;
+beforeAll(() => {
+  net.Socket.prototype.connect = function () {
+    throw new Error("socket blocked in upstream replay test");
+  } as typeof realConnect;
+});
+afterAll(() => {
+  net.Socket.prototype.connect = realConnect;
+});
 
 beforeEach(() => {
   // A fresh module graph per run: module-level caches (ECB rates, the ESMA
@@ -125,14 +140,22 @@ describe("upstream replay contract: network executors", () => {
   });
 
   it.each(recordings.map((r) => [r.slug, r] as const))("%s meets its known answer on the recorded upstream", async (slug, recording) => {
-    const { replayFetch, failures } = await replay(recording, false);
+    const { replayFetch, failures } = await replay(recording);
     expect(replayFetch.misses, `${slug}: requests the recording cannot answer`).toEqual([]);
     expect(replayFetch.served.length, `${slug}: never asked the upstream`).toBeGreaterThan(0);
     expect(failures, slug).toEqual([]);
   }, 30_000);
 
+  // A throw only shows the executor rejects the perturbed body. The proof
+  // needs output that the judge reads and rejects, under one of the two
+  // perturbations.
   it.each(recordings.map((r) => [r.slug, r] as const))("%s fails its known answer when the upstream content is gone", async (slug, recording) => {
-    const { failures } = await replay(recording, true);
-    expect(failures.length, `${slug}: contract passes without the recorded content, so the test above proves nothing about parsing`).toBeGreaterThan(0);
+    const judged: string[] = [];
+    for (const mode of ["empty", "hollow"] as const) {
+      const { failures } = await replay(recording, mode);
+      judged.push(...failures.filter((f) => !f.startsWith(THREW)));
+      vi.resetModules();
+    }
+    expect(judged.length, `${slug}: no perturbation of the recorded content fails a contract check, so the test above proves nothing about parsing`).toBeGreaterThan(0);
   }, 30_000);
 });

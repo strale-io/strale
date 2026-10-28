@@ -168,8 +168,9 @@ async function checkOne(slug: string): Promise<string[]> {
   const recording = JSON.parse(readFileSync(path, "utf8")) as UpstreamRecording;
   const refused = await notFree(slug);
   if (refused) return [refused];
-  const { exchanges, failures } = await runLive(slug);
+  const { exchanges, failures, oversize } = await runLive(slug);
   const drift = failures.map((f) => `live contract: ${f}`);
+  for (const key of oversize) drift.push(`response now over ${MAX_RECORDED_BODY_BYTES} bytes: ${key}`);
   const live = new Map(exchanges.map((e) => [requestKey(e.request), e.response.status]));
   for (const { request, response } of recording.exchanges) {
     const status = live.get(requestKey(request));
