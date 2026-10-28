@@ -54,11 +54,12 @@ export const VOICE_PATH = "docs/company/VOICE.md";
 export const README_TARGETS = [
   "README.md", "server.json", "smithery.yaml", "glama.json", "context7.json",
   "docs/claude-md-snippet.md", "docs/api-quickstart.md", "docs/x402-listing.md", "docs/ide-rules/strale-compliance.mdc", "packages/skill/SKILL.md", "packages/mcp-server/server.json",
+  "packages/mcp-server/entry-points/company-check/server.json", "packages/mcp-server/entry-points/eu-vat-check/server.json", "packages/mcp-server/entry-points/web-reader/server.json",
 ];
 export const SOURCE_TARGETS = [
   "apps/api/src/routes/a2a.ts", "apps/api/src/routes/mcp-server-card.ts",
   "apps/api/src/routes/mcp.ts", "apps/api/src/routes/llms-txt.ts", "apps/api/src/routes/skill.ts",
-  "packages/mcp-server/src/tools.ts", "packages/semantic-kernel-strale/src/plugin.ts",
+  "packages/mcp-server/src/tools.ts", "packages/mcp-server/src/entry-points.ts", "packages/semantic-kernel-strale/src/plugin.ts",
   "apps/api/src/routes/do.ts", "apps/api/src/lib/welcome-email.ts", "apps/api/src/lib/activation-emails.ts",
   "packages/composio-strale/composio_strale/toolkit.py",
 ];

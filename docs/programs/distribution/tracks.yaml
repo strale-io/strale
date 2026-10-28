@@ -132,10 +132,18 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Test at most three narrow entry points using D1 baseline; publish
-      official registry and Smithery entries under DEC-20261027-B conditions,
-      acknowledging registry entries cannot be deleted. Apply §8 D7 success/kill
-      rule.
+    next_action: Three narrow entry points built on the shared backend (company-check,
+      eu-vat-check, web-reader at api.strale.io/mcp/<id>; calls forward with
+      src=mcp-<id>; funnel rows labelled /mcp/<id>; attribution-rollup section
+      4b compares them with the broad server). After deploy, publish each to the
+      official MCP registry with publish-mcp-entry-points.yml (one entry per run,
+      main only, entries cannot be deleted), record each entry's name, version
+      and smoke-test values here, and set the measurement start date. Smithery
+      listings need Petter's Smithery login (needs-founder ask). Baseline on
+      2026-10-28 is Smithery strale/agent-tools useCount 989 and zero narrow
+      uses; production per-tool volumes were not readable from the session.
+      Review at day 45 and retire all three if none beats the broad server's
+      weekly tools/call count.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Per-entry-point usage and payers are compared; unsuccessful servers are

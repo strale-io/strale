@@ -275,19 +275,26 @@ const FREE_TIER_SLUGS = [
 
 // ─── Capability execution ───────────────────────────────────────────────────
 
+/**
+ * `context` lets a caller other than strale_execute (the narrow entry points
+ * in entry-points.ts) label its funnel events with its own tool name and
+ * replace next-step hints that name tools it does not register.
+ */
 export async function executeCapability(
   slug: string,
   inputs: Record<string, unknown>,
   opts: StraleClientOptions,
   capabilities?: Capability[],
+  context?: { tool?: string; nextSteps?: string[] },
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  const tool = context?.tool ?? "strale_execute";
   // Determine if this is a free-tier capability
   const cap = capabilities?.find((c) => c.slug === slug);
   const isFreeTier = cap?.is_free_tier ?? FREE_TIER_SLUGS.includes(slug);
 
   if (!opts.apiKey) {
     if (!isFreeTier) {
-      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug });
+      emitFunnelEvent(opts, { type: "auth_rejected", tool, slug });
       return {
         content: [
           {
@@ -348,7 +355,7 @@ export async function executeCapability(
     };
   }
 
-  if (status === 429) emitFunnelEvent(opts, { type: "rate_limited", tool: "strale_execute", slug });
+  if (status === 429) emitFunnelEvent(opts, { type: "rate_limited", tool, slug });
 
   if (status === 429 && !opts.apiKey && (data as any).error_code === "rate_limited") {
     const details = (data as any).details;
@@ -380,9 +387,9 @@ export async function executeCapability(
     // not every 4xx (a bad slug or malformed input is a usage error, not a
     // rejection the funnel report cares about).
     if (isInsufficientBalance) {
-      emitFunnelEvent(opts, { type: "payment_rejected", tool: "strale_execute", slug, detail: errorCode });
+      emitFunnelEvent(opts, { type: "payment_rejected", tool, slug, detail: errorCode });
     } else if (status === 401 || errorCode === "unauthorized" || errorCode === "invalid_api_key") {
-      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug, detail: errorCode });
+      emitFunnelEvent(opts, { type: "auth_rejected", tool, slug, detail: errorCode });
     }
 
     let errorText = `Error (${errorCode}): ${message}`;
@@ -419,11 +426,12 @@ export async function executeCapability(
   if (r.transaction_id) meta.transaction_id = r.transaction_id;
 
   // Next-steps guidance on every successful execution
-  meta.next_steps = [
+  const nextSteps = context?.nextSteps ?? [
     `Transaction ID recorded. Call strale_transaction with id "${r.transaction_id ?? ""}" to retrieve the full audit record.`,
     `Call strale_trust_profile with slug "${slug}" to see how this source is tested and evidenced.`,
     "Call strale_search to find related capabilities.",
   ];
+  if (nextSteps.length > 0) meta.next_steps = nextSteps;
 
   return {
     content: [

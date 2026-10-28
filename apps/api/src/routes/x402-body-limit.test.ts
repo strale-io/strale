@@ -311,6 +311,7 @@ describe("the other rails are untouched", { timeout: 30_000 }, () => {
     { path: "/v1/do", limit: 1024 * 1024, name: "/v1" },
     { path: "/a2a", limit: 256 * 1024, name: "/a2a" },
     { path: "/mcp", limit: 512 * 1024, name: "/mcp" },
+    { path: "/mcp/company-check", limit: 512 * 1024, name: "/mcp/<entry>" },
   ];
 
   for (const c of cases) {

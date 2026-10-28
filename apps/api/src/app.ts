@@ -348,6 +348,7 @@ app.use("*", versionMiddleware());
 app.use("/v1/*", bodyLimit({ maxSize: API_BODY_LIMIT_BYTES }));   // 1 MB for API routes
 app.use("/a2a", bodyLimit({ maxSize: A2A_BODY_LIMIT_BYTES }));      // 256 KB for A2A
 app.use("/mcp", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));      // 512 KB for MCP
+app.use("/mcp/*", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));    // narrow MCP entry points (D7)
 
 // The x402 rail had NO body cap at all. Every other entry point above has had
 // one for months; this one was simply never added, so `/x402/:slug` buffered

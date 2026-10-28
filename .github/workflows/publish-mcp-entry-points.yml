@@ -1,0 +1,122 @@
+name: Publish (MCP registry, narrow entry points)
+
+# Publishes one narrow MCP entry point (distribution track D7) to the official
+# MCP registry (registry.modelcontextprotocol.io) from
+# packages/mcp-server/entry-points/<entry>/server.json. Registry entries cannot
+# be deleted, so this runs only by hand, one entry per run, only from main, and
+# only after the entry's live endpoint answers tools/list with at least one
+# tool. A name and version the registry already has is a no-op.
+#
+# Authentication is GitHub OIDC, as in publish-mcp-registry.yml: the registry
+# accepts it for the io.github.strale-io/* namespace. No token is stored.
+
+on:
+  workflow_dispatch:
+    inputs:
+      entry:
+        description: Entry point id (a directory under packages/mcp-server/entry-points)
+        required: true
+        type: choice
+        options:
+          - company-check
+          - eu-vat-check
+          - web-reader
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # The registry trusts any workflow in the organization; this keeps a
+    # dispatch from a feature branch from publishing that branch's file.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required: the registry login exchanges this OIDC identity
+    env:
+      # Pinned on purpose; upgrade deliberately, never via releases/latest.
+      MCP_PUBLISHER_VERSION: v1.8.1
+      ENTRY: ${{ inputs.entry }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide what to publish
+        id: plan
+        run: |
+          set -euo pipefail
+          file="packages/mcp-server/entry-points/${ENTRY}/server.json"
+          test -f "$file" || { echo "::error::$file does not exist"; exit 1; }
+          name=$(jq -r '.name' "$file")
+          version=$(jq -r '.version' "$file")
+          remote=$(jq -r '.remotes[0].url' "$file")
+          if [ "$name" != "io.github.strale-io/${ENTRY}" ]; then
+            echo "::error::$file names $name, expected io.github.strale-io/${ENTRY}"
+            exit 1
+          fi
+
+          # The registry has no delete: refuse to list an endpoint that does not
+          # answer. The probe is tagged ci-preflight so it is not counted as
+          # registry traffic in the D7 measurement.
+          probe="${remote%%\?*}?src=ci-preflight"
+          tools=$(curl --fail --silent --show-error -X POST "$probe" \
+            -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+            --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+            | sed -n 's/^data: //p' | jq '.result.tools | length')
+          if [ -z "$tools" ] || [ "$tools" -lt 1 ]; then
+            echo "::error::$probe answered tools/list with no tools"
+            exit 1
+          fi
+          echo "Live endpoint serves $tools tools."
+
+          valid=$(curl --fail --silent --show-error -X POST -H 'Content-Type: application/json' \
+            --data @"$file" "https://registry.modelcontextprotocol.io/v0/validate" | jq -r '.valid')
+          if [ "$valid" != "true" ]; then
+            echo "::error::the registry's validator rejected $file"
+            exit 1
+          fi
+
+          listed=$(curl --fail --silent --show-error --get \
+            --data-urlencode "search=${name}" --data-urlencode "limit=100" \
+            "https://registry.modelcontextprotocol.io/v0/servers" \
+            | jq -r --arg n "$name" --arg v "$version" '[(.servers // [])[] | select(.server.name == $n and .server.version == $v)] | length')
+          if [ "$listed" != "0" ]; then
+            echo "Registry already lists ${name} ${version}; nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishing ${name} ${version} to the MCP registry."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Install cosign
+        if: steps.plan.outputs.publish == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        if: steps.plan.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+
+      - name: Authenticate to the MCP registry
+        if: steps.plan.outputs.publish == 'true'
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        if: steps.plan.outputs.publish == 'true'
+        run: ./mcp-publisher publish "${{ steps.plan.outputs.file }}"
