@@ -102,6 +102,8 @@ test('published startup contract requires nonzero catalog-consistent counts and 
   assert.deepEqual(checkStartup(startup, 10, 2), [10, 2, 10, 2]);
   for (const text of ['', startup.replace('10 cap trust', '0 cap trust'), startup + '\n[strale-mcp] Warning: continuing', startup + '\n[strale_search] falling back']) assert.throws(() => checkStartup(text, 10, 2));
   assert.throws(() => checkStartup(startup, 11, 2));
+  // strale-mcp after 0.2.9 dropped the stale tool count from the running line.
+  assert.deepEqual(checkStartup(startup.replace('(6 meta-tools, ', '('), 10, 2), [10, 2, 10, 2]);
 });
 
 test('timeout issue includes Railway status and guidance; success closes it', async () => {

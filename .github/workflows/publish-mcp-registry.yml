@@ -27,9 +27,13 @@ concurrency:
 jobs:
   publish:
     # On workflow_run, head_branch is the tag that triggered the release.
+    # A manual run publishes only from main. The registry trusts any workflow
+    # in the strale-io organization, so this keeps an accidental dispatch
+    # from a feature branch from publishing that branch's server.json.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
        startsWith(github.event.workflow_run.head_branch, 'strale-mcp@'))
     runs-on: ubuntu-latest
     permissions:
@@ -61,14 +65,20 @@ jobs:
             echo "::error::Released ${RELEASE_TAG} but server.json on main says ${version}. Bump both server.json copies on main, then run this workflow by hand."
             exit 1
           fi
-          if ! npm view "strale-mcp@${version}" version >/dev/null 2>&1; then
+          # Right after a release npm can lag a little; give it a minute.
+          on_npm=false
+          for attempt in 1 2 3 4 5; do
+            if npm view "strale-mcp@${version}" version >/dev/null 2>&1; then on_npm=true; break; fi
+            sleep 15
+          done
+          if [ "$on_npm" != true ]; then
             echo "::error::strale-mcp@${version} is not on npm; the registry would reject it"
             exit 1
           fi
           listed=$(curl --fail --silent --show-error --get \
             --data-urlencode "search=io.github.strale-io/strale" --data-urlencode "limit=100" \
             "https://registry.modelcontextprotocol.io/v0/servers" \
-            | jq -r --arg v "$version" '[.servers[] | select(.server.name == "io.github.strale-io/strale" and .server.version == $v)] | length')
+            | jq -r --arg v "$version" '[(.servers // [])[] | select(.server.name == "io.github.strale-io/strale" and .server.version == $v)] | length')
           if [ "$listed" != "0" ]; then
             echo "Registry already lists ${version}; nothing to publish."
             echo "publish=false" >> "$GITHUB_OUTPUT"

@@ -12,7 +12,7 @@ export function checkStartup(stderr, capabilities, solutions) {
   // Known-good output is allowlisted. Every other package diagnostic fails,
   // including any new logged-and-continued degradation we do not know yet.
   const unknown = stderr.split('\n').filter((line) => line.includes('[strale'))
-    .filter((line) => !/\[strale-mcp\] (Loaded \d+ capabilities, \d+ solutions, \d+ cap trust, \d+ sol trust from https:\/\/api\.strale\.io|Server running on stdio \(6 meta-tools, \d+ capabilities, \d+ solutions\))$/.test(line.trim()));
+    .filter((line) => !/\[strale-mcp\] (Loaded \d+ capabilities, \d+ solutions, \d+ cap trust, \d+ sol trust from https:\/\/api\.strale\.io|Server running on stdio \((?:6 meta-tools, )?\d+ capabilities, \d+ solutions\))$/.test(line.trim()));
   if (unknown.length) throw new Error('Published package logged a degradation');
   return counts;
 }
