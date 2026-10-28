@@ -79,7 +79,6 @@ export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "
     if (item && typeof item === "object") return Object.entries(item).map(([k, v]) => walk(v, k)).find(Boolean);
     if (typeof item !== "string" && typeof item !== "number") return undefined;
     let text = String(item);
-    if (typeof item === "string" && /^(test|string|example|foo|xxx)$/i.test(item.trim())) return "placeholder example";
     try {
       // URLs and stringified payloads are still public values, not a bypass.
       for (let pass = 0; pass < 2 && /%[0-9a-f]{2}/i.test(text); pass++) text = decodeURIComponent(text);
@@ -88,6 +87,11 @@ export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "
       try { return walk(JSON.parse(text)); }
       catch { return "uninspectable structured text"; }
     }
+    // A placeholder is the whole value ("test", "value") or the whole text of a
+    // markup element (<item>test</item>). Never a substring: example.com is the
+    // reserved documentation domain and the safest example there is.
+    if (typeof item === "string" && (/^\s*(?:test|string|example|foo|xxx|value|placeholder)\s*$/i.test(text)
+      || />\s*(?:test|string|example|foo|xxx|value|placeholder)\s*</i.test(text))) return "placeholder example";
     if (/["'](?:name|full[_ -]?name|first[_ -]?name|last[_ -]?name|person|director|officer)["']\s*:/i.test(text)) return "embedded personal data field";
     const atDomains = [...text.matchAll(/@([a-z0-9.-]+)/gi)];
     if ((text.match(/@/g) ?? []).length !== atDomains.length || atDomains.some(match => !/^example\.(com|org|net)$/i.test(match[1].replace(/\.$/, "")))) return "email address";

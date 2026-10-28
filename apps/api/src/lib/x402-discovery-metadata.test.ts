@@ -118,6 +118,18 @@ describe("round 3 example publication", () => {
     expect(metadata.inputOmission).toBe("placeholder example");
     expect(metadata.outputOmission).toBe("placeholder example");
   });
+  it.each(["<item>test</item>", '{"key":"value"}', "%3Citem%3Etest%3C%2Fitem%3E"])("withholds embedded placeholder %s", value => {
+    const metadata = metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: { nested: value } }, test_fixtures: { health_check_input: { nested: value } } });
+    expect(metadata.inputOmission).toBe("placeholder example");
+    expect(metadata.outputOmission).toBe("placeholder example");
+  });
+  it("does not treat a placeholder substring as a whole word", () => {
+    expect(inputPrivacyFailure(tool, { text: "testing" })).toBeUndefined();
+  });
+  it.each([{ url: "https://example.com" }, { domain: "example.com" }, { image_url: "https://example.com/Example.jpg" }])(
+    "publishes legitimate documentation-domain examples %o", value => {
+      expect(inputPrivacyFailure(tool, value)).toBeUndefined();
+    });
   it("drops whole examples over 1024 UTF-8 JSON bytes", () => {
     const value = { text: "é".repeat(512) };
     const metadata = metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: value }, test_fixtures: { health_check_input: value } });

@@ -1,0 +1,49 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e40b1f699342bc699d44b304fe1c4d914f03ca99"
+  },
+  "at": "2026-10-28T10:21:51.442Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "payment_projection_sha256": "fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6",
+    "payment_comparison": "matching baseline and after for 1424 keyed v2 manifest method kind challenges; accepts and paymentRequirements excluding discovery outputSchema",
+    "x402": "968 passed, 2 skipped",
+    "full_api": "7395 passed, 358 skipped; 365 files passed, 35 skipped",
+    "checks": "mcp build, API typecheck, claims, models, env, docs, programs and receipts passed",
+    "initial_x402": "8 assertion failures; corrected expected placeholder and budget semantics; final passed",
+    "review": "independent review left to orchestrator"
+  },
+  "topic": "x402-discovery-coverage",
+  "raw": {
+    "ok": true,
+    "baseline": {
+      "challenges": 1424,
+      "max": 8152,
+      "p95": 6456,
+      "median": 4048,
+      "over8192": 0,
+      "extensions": 861
+    },
+    "after": {
+      "challenges": 1424,
+      "max": 8152,
+      "p95": 6544,
+      "median": 4078,
+      "over8192": 0,
+      "extensions": 880,
+      "previously_missing_retained": 19
+    },
+    "payment_projection_sha256": "fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6",
+    "payment_comparison": "matching baseline and after for 1424 keyed v2 manifest method kind challenges; accepts and paymentRequirements excluding discovery outputSchema",
+    "x402": "968 passed, 2 skipped",
+    "full_api": "7395 passed, 358 skipped; 365 files passed, 35 skipped",
+    "checks": "mcp build, API typecheck, claims, models, env, docs, programs and receipts passed",
+    "initial_x402": "8 assertion failures; corrected expected placeholder and budget semantics; final passed",
+    "review": "independent review left to orchestrator"
+  }
+}
