@@ -1195,7 +1195,7 @@ mechanisms stay blind — but now visibly, every morning, instead of silently.
 
 > The same rule stated in two places, which then diverge.
 
-**Count: 4** (the fourth is incident 4 below). The charter's escalation contract, which an earlier draft claimed
+**Count: 5** (the fifth is incident 5 below). The charter's escalation contract, which an earlier draft claimed
 to extend while contradicting; two boot-time migration blocks deriving one
 column from different sources and overwriting each other every deploy; the daily
 run procedure, which until today existed only outside the repo while three
@@ -1218,6 +1218,24 @@ the first). **Count: 4.** The investigation this family is due should start
 here: enumerate every per-call policy `routes/do.ts` applies around an executor
 and check each against the x402 gateway, rather than waiting for a customer to
 find the next one. Not done in this run.
+
+**Incident 5 (2026-10-28) — two writers on `output_schema`.** The test
+runner's `captureExampleOutput` writes a real response into
+`capabilities.output_schema.example` when none is stored; the boot text sync
+(#776, 2026-10-27) writes the manifest's `output_schema`, which usually
+declares no example. Neither knew of the other. Production settled into a
+stable state, but the strict drift sweep counted the example as drift on 28
+tools (32 of 36 `output_schema` differences across all manifests) and would
+have failed the weekly cron on 2026-11-02, the second consecutive failure, on
+a correct state; the report-only publication list was inflated the same way.
+Found by the morning run before any alarm fired. Fixed in #781: one rule,
+`withRuntimeExample` in `capability-field-authority.ts`, used by the sweep, the
+boot sync (comparison and write) and the operator sync script, with tests that
+fail without it. Same shape as incident 2 (two writers deriving one column).
+**Count: 5.** The investigation this family is due should now include the
+column-writer side: enumerate every runtime writer to a manifest-owned column
+(`FIELD_CATEGORIES` category `manifest`) and record which sub-keys each owns.
+Not done in this run.
 
 ### F9 · Incorrect founder escalation
 

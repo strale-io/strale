@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-382 files (355 with a recorded intent, 27 without).
+383 files (356 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-28 | [`handoff/_general/from-code/2026-10-28-money-path.md`](_general/from-code/2026-10-28-money-path.md) | Implement H4 on `feat/money-path` from `e871a2ad`: release database connections during sync paid execution, enforce t... |
+| 2026-10-28 | [`handoff/_general/from-code/2026-10-28-checkin-morning.md`](_general/from-code/2026-10-28-checkin-morning.md) | run the 2026-10-28 operating session under DAILY-RUN.md — sweep the |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-zapier-integration.md`](_general/from-code/2026-10-27-zapier-integration.md) | Build Distribution D5 as a real Zapier CLI integration with fixed business jobs, API-key authentication, offline test... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-secure-random.md`](_general/from-code/2026-10-27-secure-random.md) | Build the paid secure-random capability for portfolio Phase 2 item 2.12; complete offline verification and leave prod... |
 | 2026-10-27 | [`handoff/_general/from-code/2026-10-27-retire-old-daily-digest.md`](_general/from-code/2026-10-27-retire-old-daily-digest.md) | retire the old daily-digest email instead of restoring it, and stop the production watch from expecting it. |
