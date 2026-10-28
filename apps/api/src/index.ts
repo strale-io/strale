@@ -365,7 +365,8 @@ async function main() {
 }
 
 main().catch(async (err) => {
-  console.error("Fatal startup error:", err);
+  const { startupErrorDetails, formatStartupError } = await import("./lib/startup-error.js");
+  console.error("Fatal startup error:", startupErrorDetails(err));
 
   // 2026-07-02 outage: the process died silently 10 times and nobody was
   // paged. Best-effort email before exit (production only; RESEND_API_KEY
@@ -392,7 +393,7 @@ main().catch(async (err) => {
               `1) Open Railway deploy logs for the strale service. ` +
               `2) If this started right after a deploy, roll back: Railway dashboard -> ` +
               `Deployments -> previous working deploy -> Redeploy. ` +
-              `3) If nothing was deployed recently, keep this email — the stack trace below ` +
+              `3) If nothing was deployed recently, keep this email — the error diagnostics below ` +
               `is what a debugging session needs.`;
       await Promise.race([
         sendAlert({
@@ -404,7 +405,7 @@ main().catch(async (err) => {
             `CRASHED until redeployed.\n\n` +
             `${guidance}\n\n` +
             `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
-            `Error: ${err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err)}`,
+            `Error: ${formatStartupError(err)}`,
         }),
         new Promise<void>((r) => setTimeout(r, 10_000)),
       ]);

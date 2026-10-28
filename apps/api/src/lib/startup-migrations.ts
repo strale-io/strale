@@ -38,8 +38,10 @@
 
 import postgres, { type Sql } from "postgres";
 import { sql, type SQL } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { getDb } from "../db/index.js";
 import { log } from "./log.js";
+import { runStartupMigrationBlock } from "./startup-migration-block.js";
 import { getActiveProviders } from "./dependency-manifest.js";
 import { BLOCK_0064_SLUGS, BLOCK_0065_SLUGS } from "./llm-capability-costs.js";
 import { PHASE_B1_FREE_UNLIMITED_SLUGS } from "./phase-b1-free-unlimited-slugs.js";
@@ -4502,6 +4504,7 @@ export async function runStartupMigrations(): Promise<BlockResult[]> {
   });
   let connection: Awaited<ReturnType<Sql["reserve"]>> | undefined;
   let acquired = false;
+  let blockClient: Sql | undefined;
   try {
     connection = await lockClient.reserve();
     const deadline = Date.now() + STARTUP_MIGRATIONS_LOCK_WAIT_MS;
@@ -4527,8 +4530,20 @@ export async function runStartupMigrations(): Promise<BlockResult[]> {
       "startup-migrations-lock-acquired");
     log.info({ label: "startup-migrations-begin", block_count: BLOCKS.length }, "startup-migrations-begin");
 
+    const pool = (db as typeof db & { $client: Sql }).$client;
+    // A runner-owned pool can be closed if resetting a block session fails,
+    // without recycling altered settings or closing the API's traffic pool.
+    blockClient = postgres(process.env.DATABASE_URL!, {
+      max: 1,
+      connection: pool.options.connection,
+    });
+    // Match getDb()'s transparent JSON/date codecs before executing compiled
+    // SQL on reserved sessions (otherwise JSON strings are double-encoded).
+    drizzle(blockClient);
+    // Kept well inside Railway's 20 s healthcheck window, which also covers boot work.
+    const lockBudget = { remainingMs: 10_000 };
     for (const block of BLOCKS) {
-      const result = await block(db);
+      const result = await runStartupMigrationBlock(block, pool, blockClient, lockBudget);
       results.push(result);
       log.info(
         {
@@ -4573,7 +4588,8 @@ export async function runStartupMigrations(): Promise<BlockResult[]> {
       connection?.release();
       // Close the dedicated session even if unlock fails; a session-level
       // lock must never leak into a reusable pool after a failed migration.
-      await lockClient.end({ timeout: 5 });
+      try { await blockClient?.end({ timeout: 0 }); }
+      finally { await lockClient.end({ timeout: 5 }); }
     }
   }
 }

@@ -1,15 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
-import type { SQL } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
+import { DrizzleQueryError } from "drizzle-orm/errors";
+import { formatStartupError } from "./startup-error.js";
 
 const state = vi.hoisted(() => ({
   held: false,
   sessions: [] as Array<{ unsafe: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }>,
-  db: { execute: vi.fn() },
+  blockPoolEnd: vi.fn(),
+  blockOptions: [] as Array<{ parsers: Record<string, (value: string) => string>; serializers: Record<string, (value: string) => string> }>,
+  poolSessions: [] as Array<{ unsafe: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> }>,
+  db: { execute: vi.fn(), $client: { reserve: vi.fn(), options: { connection: { statement_timeout: 30_000 } } } },
 }));
 vi.mock("../db/index.js", () => ({ getDb: () => state.db }));
-vi.mock("./log.js", () => ({ log: { info: vi.fn(), warn: vi.fn() } }));
-vi.mock("postgres", () => ({ default: () => {
+vi.mock("./log.js", () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock("postgres", () => ({ default: (_url: string, options: { connection: { statement_timeout: number } }) => {
+  if (options.connection.statement_timeout !== 5_000) {
+    const codecs = { parsers: {}, serializers: {} };
+    state.blockOptions.push(codecs);
+    return { reserve: state.db.$client.reserve, end: state.blockPoolEnd, options: codecs };
+  }
   let owns = false;
   const session = {
     unsafe: vi.fn(async (query: string, binds: unknown[]) => {
@@ -41,6 +51,13 @@ beforeEach(() => {
   state.held = false;
   state.sessions = [];
   vi.clearAllMocks();
+  state.poolSessions = [];
+  state.blockOptions = [];
+  state.db.$client.reserve.mockImplementation(async () => {
+    const session = { unsafe: vi.fn(async () => []), release: vi.fn() };
+    state.poolSessions.push(session);
+    return session;
+  });
 });
 afterEach(() => { vi.useRealTimers(); });
 
@@ -146,4 +163,163 @@ describe("startup migration session lock", () => {
       expect(Buffer.isBuffer(param)).toBe(false);
     }
   });
+});
+
+function wrapped(code: string) {
+  return new DrizzleQueryError("ALTER TABLE capabilities ADD COLUMN example text", ["private-bind-value"],
+    Object.assign(new Error("canceling statement due to lock timeout"), { code }));
+}
+
+// Exercise the actual runner, including its executor and advisory-lock cleanup.
+describe("migration lock contention", () => {
+  it.each(["55P03", "40P01"])("retries wrapped %s, then succeeds", async (code) => {
+    let calls = 0;
+    const fixture = stubBlocks(async () => { if (++calls === 1) throw wrapped(code); });
+    try {
+      const pending = runStartupMigrations();
+      void pending.catch(() => undefined);
+      await vi.runAllTimersAsync();
+      expect(await pending).toHaveLength(BLOCKS.length);
+      expect(fixture.blocks[0]).toHaveBeenCalledTimes(2);
+      expect(log.warn).toHaveBeenCalledWith(expect.objectContaining({
+        label: "startup-migration-block-retry", attempt: 1, sqlstate: code,
+        message: "canceling statement due to lock timeout",
+      }), "startup-migration-block-retry");
+      expect(state.poolSessions.every((s) => s.release.mock.calls.length === 1)).toBe(true);
+    } finally { fixture.restore(); }
+  });
+
+  it("does not retry a non-lock error and logs the underlying cause", async () => {
+    const error = wrapped("42P01");
+    const fixture = stubBlocks(async () => { throw error; });
+    try {
+      await expect(runStartupMigrations()).rejects.toBe(error);
+      expect(fixture.blocks[0]).toHaveBeenCalledOnce();
+      expect(log.error).toHaveBeenCalledWith(expect.objectContaining({ sqlstate: "42P01",
+        message: error.cause.message }), "startup-migration-block-failed");
+      expect(formatStartupError(error)).toContain("SQLSTATE: 42P01");
+      expect(formatStartupError(error)).toContain(error.cause.message);
+      expect(formatStartupError(error)).not.toContain("private-bind-value");
+    } finally { fixture.restore(); }
+  });
+
+  it("exhausts retries and propagates the original error", async () => {
+    const error = wrapped("55P03");
+    const fixture = stubBlocks(async () => { throw error; });
+    try {
+      const pending = expect(runStartupMigrations()).rejects.toBe(error);
+      await vi.runAllTimersAsync();
+      await pending;
+      expect(fixture.blocks[0]).toHaveBeenCalledTimes(5);
+      expect(state.held).toBe(false);
+    } finally { fixture.restore(); }
+  });
+
+  it("shares the retry budget across blocks but always gives a first attempt the full wait", async () => {
+    let calls = 0;
+    const fixture = stubBlocks(async () => {
+      calls++;
+      // Model server lock waits without real sleeps.
+      if (calls === 1) { vi.setSystemTime(Date.now() + 5_000); throw wrapped("55P03"); }
+      if (calls === 2) { vi.setSystemTime(Date.now() + 4_400); return; }
+      if (calls === 3) { vi.setSystemTime(Date.now() + 100); throw wrapped("55P03"); }
+    });
+    try {
+      const pending = expect(runStartupMigrations()).rejects.toThrow("Failed query");
+      await vi.runAllTimersAsync();
+      await pending;
+      // The second block's first attempt still waits the full 2 s although the
+      // budget is spent; the spent budget only stops its retry.
+      expect(calls).toBe(3);
+      expect(state.poolSessions[2].unsafe).toHaveBeenCalledWith(
+        "SELECT set_config('lock_timeout', $1, false)", ["2000ms"]);
+    } finally { fixture.restore(); }
+  });
+
+  it("keeps the stack for non-database fatal errors and names the failing block", () => {
+    const plain = new TypeError("x is not a function");
+    expect(formatStartupError(plain)).toContain("Stack:");
+    expect(formatStartupError(plain)).toContain("x is not a function");
+    const db = wrapped("55P03") as Error & { startupBlock?: string };
+    db.startupBlock = "runMigration0060_marketplaceEligible";
+    expect(formatStartupError(db)).toContain("Block: runMigration0060_marketplaceEligible");
+    expect(formatStartupError(db)).not.toContain("Stack:");
+  });
+
+  it("executes on the reserved session and passes the original pool to concurrent blocks", async () => {
+    const concurrent = BLOCKS.filter((b) => /0125_|0127_|0130_/.test(b.name));
+    const original = [...BLOCKS];
+    const mutable = BLOCKS as Array<(tx: import("./startup-migrations.js").MigrationExecutor) => Promise<import("./startup-migrations.js").BlockResult>>;
+    mutable.splice(0, mutable.length, async (tx) => {
+      expect((tx as typeof state.db).$client).toBe(state.db.$client);
+      await tx.execute(sql`SELECT ${"safe-bind"}`);
+      await tx.execute(sql`SELECT ${JSON.stringify({ key: "value" })}::jsonb`);
+      return { block: "probe", outcome: "ok", duration_ms: 0 };
+    }, ...concurrent);
+    try {
+      await runStartupMigrations();
+      expect(concurrent).toHaveLength(3);
+      // Four runner reservations, plus each concurrent block's own session.
+      expect(state.poolSessions).toHaveLength(7);
+      expect(state.db.execute).not.toHaveBeenCalled();
+      expect(state.poolSessions[0].unsafe).toHaveBeenCalledWith("SELECT $1", ["safe-bind"]);
+      const jsonBind = state.poolSessions[0].unsafe.mock.calls.find(([text]) => text.includes("::jsonb"))![1][0];
+      // Use the real Drizzle-installed codec, not a double-stringifying stub.
+      const codecs = state.blockOptions[0];
+      expect(JSON.parse(codecs.serializers["3802"](jsonBind))).toEqual({ key: "value" });
+      expect(JSON.parse(codecs.serializers["114"](jsonBind))).toEqual({ key: "value" });
+      expect(codecs.parsers["1184"]("2026-10-28T12:00:00Z")).toBe("2026-10-28T12:00:00Z");
+      for (const session of state.poolSessions) {
+        expect(session.release).toHaveBeenCalledOnce();
+        expect(session.unsafe).toHaveBeenLastCalledWith("RESET lock_timeout");
+        for (const [, binds] of session.unsafe.mock.calls) for (const bind of binds ?? []) {
+          expect(bind).not.toBeInstanceOf(Date);
+          expect(Buffer.isBuffer(bind)).toBe(false);
+        }
+      }
+      expect(state.poolSessions.flatMap((s) => s.unsafe.mock.calls).some(([text]) =>
+        String(text).includes("CREATE INDEX CONCURRENTLY"))).toBe(true);
+    } finally { mutable.splice(0, mutable.length, ...original); }
+  });
+});
+
+
+it("charges successful retries against the shared contention budget", async () => {
+  let calls = 0;
+  const fixture = stubBlocks(async () => {
+    calls++;
+    vi.setSystemTime(Date.now() + (calls === 1 ? 5_000 : calls === 2 ? 4_500 : 2_000));
+    if (calls !== 2) throw wrapped("55P03");
+  });
+  try {
+    const pending = expect(runStartupMigrations()).rejects.toThrow("Failed query");
+    await vi.runAllTimersAsync();
+    await pending;
+    expect(calls).toBe(3);
+    expect(state.poolSessions[2].unsafe).toHaveBeenCalledWith(
+      "SELECT set_config('lock_timeout', $1, false)", ["2000ms"]);
+  } finally { fixture.restore(); }
+});
+
+it.each(["42P01", "55P03"])("closes the runner pool on reset failure and preserves original %s", async (code) => {
+  const original = wrapped(code);
+  state.db.$client.reserve.mockImplementation(async () => {
+    const session = { unsafe: vi.fn(async (text: string) => {
+      if (text === "RESET lock_timeout") throw new Error("reset canceled");
+      return [];
+    }), release: vi.fn() };
+    state.poolSessions.push(session);
+    return session;
+  });
+  const fixture = stubBlocks(async () => { throw original; });
+  try {
+    await expect(runStartupMigrations()).rejects.toBe(original);
+    expect(fixture.blocks[0]).toHaveBeenCalledOnce();
+    expect(state.poolSessions[0].release).not.toHaveBeenCalled();
+    expect(state.blockPoolEnd).toHaveBeenCalledWith({ timeout: 0 });
+    expect(log.error).toHaveBeenCalledWith(expect.objectContaining({
+      label: "startup-migration-session-reset-failed", message: "reset canceled",
+    }), "startup-migration-session-reset-failed");
+    expect(state.held).toBe(false);
+  } finally { fixture.restore(); }
 });
