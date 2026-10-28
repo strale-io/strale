@@ -242,4 +242,4 @@ data_access:
   acquisition_method: vendor_api
   upstream_vendor: dilisense
   checks: pending
-  checks_note: "Pending: Dilisense is used on an informal starter arrangement with vendor-granted grace (2026-04-29); the reseller service agreement is not signed (docs/research/2026-04-28-payee-assurance-build-vs-buy.md). The fallback is Serper, pending DQ-39."
+  checks_note: "Pending: Dilisense is used on an informal starter arrangement with vendor-granted grace (2026-04-29); the reseller service agreement is not signed (docs/research/2026-04-28-payee-assurance-build-vs-buy.md). The fallback is Serper, whose per-call value-added use is permitted in writing (DQ-39, accepted 2026-10-28)."
