@@ -1,4 +1,4 @@
-import { getNestedValue } from "./nested-value.js";
+import { isCheckEnforced, runKnownAnswerCheck } from "./known-answer-checks.js";
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
 import { deployCommitOrNull } from "./receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "./receipt/settle.js";
@@ -1782,7 +1782,7 @@ function validateResult(
     if (capResult) {
       const output = capResult.output;
       for (const check of rules.checks) {
-        const checkResult = runCheck(check, output);
+        const checkResult = runKnownAnswerCheck(check, output);
         if (!checkResult.passed) {
           return {
             passed: false,
@@ -1817,24 +1817,14 @@ function validateResult(
 
   const output = capResult.output;
   for (const check of rules.checks) {
-    const checkResult = runCheck(check, output);
+    const checkResult = runKnownAnswerCheck(check, output);
     if (!checkResult.passed) {
       // If field reliability is annotated, respect it:
       // - guaranteed field missing → FAIL
       // - common field missing → PASS (acceptable absence)
       // - rare field missing → PASS (silently)
       // If no reliability data, fall back to current behavior (all checks enforced)
-      if (fieldReliability && check.field) {
-        const topField = check.field.split(".")[0];
-        const level = fieldReliability[topField];
-        if (level === "rare") {
-          continue; // Silently skip
-        }
-        if (level === "common") {
-          continue; // Acceptable absence
-        }
-        // 'guaranteed' or unknown field → enforce the check (fall through to fail)
-      }
+      if (!isCheckEnforced(check, fieldReliability)) continue;
       return { passed: false, failureReason: checkResult.reason };
     }
   }
@@ -1878,115 +1868,6 @@ function validateResult(
   return { passed: true, failureReason: null };
 }
 
-function runCheck(
-  check: ValidationCheck,
-  output: Record<string, unknown>,
-): { passed: boolean; reason: string } {
-  const value = getNestedValue(output, check.field);
-
-  switch (check.operator) {
-    case "equals":
-      if (value !== check.value) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected '${check.value}', got '${value}'`,
-        };
-      }
-      return { passed: true, reason: "" };
-
-    case "not_null":
-      if (value == null) {
-        return { passed: false, reason: `${check.field}: expected non-null` };
-      }
-      return { passed: true, reason: "" };
-
-    case "is_true":
-      if (value !== true) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected true, got ${value}`,
-        };
-      }
-      return { passed: true, reason: "" };
-
-    case "is_false":
-      if (value !== false) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected false, got ${value}`,
-        };
-      }
-      return { passed: true, reason: "" };
-
-    case "contains":
-      if (
-        typeof value !== "string" ||
-        !value.toLowerCase().includes(String(check.value).toLowerCase())
-      ) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected to contain '${check.value}', got '${value}'`,
-        };
-      }
-      return { passed: true, reason: "" };
-
-    case "in":
-      if (!check.values || !check.values.includes(value)) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected one of [${check.values?.join(", ")}], got '${value}'`,
-        };
-      }
-      return { passed: true, reason: "" };
-
-    case "type": {
-      const actualType = Array.isArray(value) ? "array" : typeof value;
-      if (actualType !== check.value) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected type '${check.value}', got '${actualType}'`,
-        };
-      }
-      return { passed: true, reason: "" };
-    }
-
-    case "gt": {
-      if (typeof value !== "number" || value <= Number(check.value)) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected > ${check.value}, got ${value}`,
-        };
-      }
-      return { passed: true, reason: "" };
-    }
-
-    case "lt": {
-      if (typeof value !== "number" || value >= Number(check.value)) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected < ${check.value}, got ${value}`,
-        };
-      }
-      return { passed: true, reason: "" };
-    }
-
-    case "gte": {
-      if (typeof value !== "number" || value < Number(check.value)) {
-        return {
-          passed: false,
-          reason: `${check.field}: expected >= ${check.value}, got ${value}`,
-        };
-      }
-      return { passed: true, reason: "" };
-    }
-
-    default:
-      return {
-        passed: false,
-        reason: `Unknown operator: ${check.operator}`,
-      };
-  }
-}
 
 
 // ─── Quality recording for test executions ──────────────────────────────────
