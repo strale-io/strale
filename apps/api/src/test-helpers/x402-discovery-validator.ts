@@ -17,12 +17,13 @@ export function validateOfflineDiscovery(challenge: unknown): string[] {
   const parsed = PaymentRequiredV2Schema.safeParse(body);
   if (!parsed.success) failures.push(`v2 envelope: ${parsed.error.message}`);
   const extension = body?.extensions?.bazaar;
-  if (!extension) failures.push("missing Bazaar extension");
-  else {
+  if (extension) {
     const inputSchema = extension.schema?.properties?.input;
     const input = extension.info?.input;
     if (!extension.schema?.required?.includes("input") || !inputSchema || inputSchema.properties?.type?.const !== "http" || !inputSchema.required?.includes("type") || !inputSchema.required?.includes("method")) failures.push("missing HTTP input schema contract");
     const methods = ["POST", "PUT", "PATCH"].includes(input?.method) ? ["POST", "PUT", "PATCH"] : ["GET", "HEAD", "DELETE"];
+    if (["POST", "PUT", "PATCH"].includes(input?.method) &&
+      (!inputSchema?.required?.includes("body") || !inputSchema?.required?.includes("bodyType") || !Object.hasOwn(input ?? {}, "body"))) failures.push("POST discovery requires body and bodyType");
     const declaredMethods = inputSchema?.properties?.method?.enum;
     if (!methods.includes(input?.method) || !Array.isArray(declaredMethods) || !declaredMethods.length || declaredMethods.some((method: string) => !methods.includes(method))) failures.push("invalid HTTP method contract");
     try {

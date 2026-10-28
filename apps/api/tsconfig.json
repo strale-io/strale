@@ -8,6 +8,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    "src/test-helpers/**",
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/*.test.tsx",

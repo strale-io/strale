@@ -62,7 +62,7 @@ import {
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
 import { recordPaidInvocation } from "../lib/invocation-facts.js";
-import { logError } from "../lib/log.js";
+import { logError, logWarn } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
 import { getShareableUrl } from "../lib/audit-token.js";
@@ -457,7 +457,10 @@ function buildBazaarDiscovery(
 ): { v2Extensions: Record<string, unknown>; v1OutputSchema: Record<string, unknown> } {
   const httpMethod = method.toUpperCase();
   const isBodyMethod = ["POST", "PUT", "PATCH"].includes(httpMethod);
-  const example = metadata?.inputExample;
+  const example = metadata?.inputExample ?? (isBodyMethod && !(inputSchema?.required as unknown[] | undefined)?.length && !exampleFailure(inputSchema ?? {}, {}) ? {} : undefined);
+  // Bazaar requires both info and schema; POST info requires body. Do not
+  // advertise an incomplete extension when no safe required-body example exists.
+  if (isBodyMethod && example === undefined) return { v2Extensions: {}, v1OutputSchema: {} };
   const outputExample = metadata?.outputExample;
   // Primary sources (read 2026-10-27):
   // https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md
@@ -484,9 +487,6 @@ function buildBazaarDiscovery(
   const inputProperty = isBodyMethod ? "body" : "queryParams";
   if (example === undefined) {
     delete enrichedInfo.input[inputProperty];
-    // The SDK requires body by default; when privacy prevents a public example,
-    // retain its schema but make the example optional, as query examples are.
-    extension.schema.properties.input.required = extension.schema.properties.input.required.filter((key: string) => key !== inputProperty);
   }
   // Output format and contract remain useful when its example is withheld.
   enrichedInfo.output = { type: "json", ...(outputExample !== undefined ? { example: outputExample } : {}) };
@@ -527,6 +527,37 @@ function buildBazaarDiscovery(
 }
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
+
+const oversizedDiscoverySlugs = new Set<string>();
+
+/** Apply the budget to the final challenge, including verification failures. */
+export function encodeBudgetedPaymentRequiredHeader(body: Record<string, any>, slug: string): string {
+  const encode = () => encodePaymentRequiredHeader(body as never);
+  const fits = () => Buffer.byteLength(encode()) <= 8192;
+  const bazaar = body.extensions?.bazaar;
+  if (!fits() && bazaar?.info?.output) delete bazaar.info.output.example;
+  if (!fits() && bazaar?.info?.input) {
+    const input = bazaar.info.input;
+    if (["POST", "PUT", "PATCH"].includes(input.method)) {
+      const schema = bazaar.schema?.properties?.input?.properties?.body;
+      if (!exampleFailure(schema ?? {}, {})) input.body = {};
+      else delete body.extensions.bazaar;
+    } else delete input.queryParams;
+  }
+  if (!fits()) {
+    if (!oversizedDiscoverySlugs.has(slug)) {
+      oversizedDiscoverySlugs.add(slug);
+      logWarn("x402-discovery-header-budget", "Discovery schemas exceed the header budget; serving payment without discovery examples", { slug });
+    }
+    body.extensions = {};
+    // These are discovery-only legacy mirrors, never payment fields.
+    for (const requirement of [...(body.accepts ?? []), ...(body.paymentRequirements ?? [])]) requirement.outputSchema = {};
+  }
+  // Facilitator diagnostics can be arbitrarily long. Keep the actionable
+  // retry instructions in details, without reflecting an oversized reason.
+  if (!fits()) body.error = "Payment required. Sign a fresh payment matching accepts and retry.";
+  return encode();
+}
 
 export function build402(
   name: string,
@@ -644,12 +675,14 @@ export function build402(
           extensions: v2Extensions,
         };
 
+  Object.assign(body, { details: { fix: "Sign a fresh x402 payment matching 'accepts' and resend it in the PAYMENT-SIGNATURE header (or X-PAYMENT for v1)." } });
+  encodeBudgetedPaymentRequiredHeader(body, identity?.slug ?? new URL(resourceUrl).pathname);
+
   // v1 backward-compat header
   const headerPayload = Buffer.from(
     JSON.stringify({ x402Version: 1, accepts: [paymentRequirement] }),
   ).toString("base64");
 
-  Object.assign(body, { details: { fix: "Sign a fresh x402 payment matching 'accepts' and resend it in the PAYMENT-SIGNATURE header (or X-PAYMENT for v1)." } });
   return { body, headerPayload, paymentRequirement };
 }
 
@@ -1258,7 +1291,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       // template, 2026-08-13). A v2-encoded header doesn't retrigger the
       // @agentcash issue: that decoder chokes on v1 encodings, not v2.
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(body, sol.slug));
       }
       return c.json(body, 402);
     }
@@ -1292,7 +1325,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       const failBody = { ...solRebuild.body } as Record<string, unknown>;
       failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(failBody as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(failBody, sol.slug));
       }
       return c.json(failBody, 402);
     }
@@ -1646,7 +1679,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       );
       // See the solutions handler note: header only on v2 paths.
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(body, cap.slug));
       }
       return c.json(body, 402);
     }
@@ -1680,7 +1713,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       const failBody = { ...capRebuild.body } as Record<string, unknown>;
       failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(failBody as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(failBody, cap.slug));
       }
       return c.json(failBody, 402);
     }

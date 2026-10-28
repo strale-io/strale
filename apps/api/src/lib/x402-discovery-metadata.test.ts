@@ -94,3 +94,34 @@ describe("manifest example selection", () => {
     expect(discoveryTags("keyword-suggest", "web-intelligence")).toEqual(["web-intelligence"]);
   });
 });
+
+
+describe("round 3 example publication", () => {
+  it.each(["pep-check", "sanctions-check", "adverse-media-check", "uk-companies-house-officers", "eu-court-case-search"])("withholds both examples for %s", slug => {
+    const metadata = getDiscoveryMetadata("capability", slug)!;
+    expect(metadata).toBeDefined();
+    expect(metadata.inputExample).toBeUndefined();
+    expect(metadata.outputExample).toBeUndefined();
+  });
+  it.each(["compliance", "screening"])("withholds both examples by category %s", category => {
+    const metadata = metadataFromManifest({ ...tool, category, description: "tool", input_schema: {}, output_schema: { example: 0 }, test_fixtures: { health_check_input: {} } });
+    expect(metadata.inputExample).toBeUndefined();
+    expect(metadata.outputExample).toBeUndefined();
+  });
+  it("screens planted output personal data", () => {
+    const metadata = metadataFromManifest({ ...tool, description: "tool", output_schema: { type: "object", example: { full_name: "Synthetic Person", date_of_birth: "1980-01-01" } } });
+    expect(metadata.outputExample).toBeUndefined();
+    expect(metadata.outputOmission).toBe("personal data field");
+  });
+  it.each(["test", "TeSt", "string", "example", "foo", "xxx"])("withholds nested placeholder %s in either example", value => {
+    const metadata = metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: { nested: [value] } }, test_fixtures: { health_check_input: { nested: [value] } } });
+    expect(metadata.inputOmission).toBe("placeholder example");
+    expect(metadata.outputOmission).toBe("placeholder example");
+  });
+  it("drops whole examples over 1024 UTF-8 JSON bytes", () => {
+    const value = { text: "é".repeat(512) };
+    const metadata = metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: value }, test_fixtures: { health_check_input: value } });
+    expect(metadata.inputOmission).toBe("example exceeds 1024 bytes");
+    expect(metadata.outputOmission).toBe("example exceeds 1024 bytes");
+  });
+});

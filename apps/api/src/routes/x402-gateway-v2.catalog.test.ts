@@ -14,7 +14,7 @@
  * public route uses.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkL2ForOpenAPI,
   getOpenAPI,
@@ -67,6 +67,7 @@ vi.mock("../db/index.js", () => ({
 const {
   __resetX402CacheForTests,
   build402,
+  encodeBudgetedPaymentRequiredHeader,
   getX402Manifest,
   getX402OpenApiPaths,
   x402GatewayV2,
@@ -403,15 +404,46 @@ describe("x402 AgentCash discovery contract", () => {
 // CDP's hosted API has no offline package: exercise the published SDK parser
 // and Bazaar Ajv validator for ALL manifests, a superset of enabled DB rows.
 // Enabled status lives in the DB; a fixture does not assert production eligibility.
+import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { readdirSync, readFileSync } from "node:fs";
 import yaml from "js-yaml";
-import { metadataFromManifest, type DiscoveryManifest } from "../lib/x402-discovery-metadata.js";
-import { validateOfflineDiscovery } from "../lib/x402-discovery-validator.js";
+import { getDiscoveryMetadata, metadataFromManifest, type DiscoveryManifest } from "../lib/x402-discovery-metadata.js";
+import { validateOfflineDiscovery } from "../test-helpers/x402-discovery-validator.js";
 const manifestDirectory = new URL("../../../../manifests/", import.meta.url);
 const discoveryManifests = readdirSync(manifestDirectory).filter(file => file.endsWith(".yaml"))
   .map(file => yaml.load(readFileSync(new URL(file, manifestDirectory), "utf8")) as DiscoveryManifest);
 
 describe("D2 offline CDP/Bazaar discovery gate", () => {
+  beforeAll(() => {
+    for (const manifest of discoveryManifests) metadataFromManifest(manifest);
+    getDiscoveryMetadata("capability", discoveryManifests[0].slug);
+    validateOfflineDiscovery(build402("Warmup", "Warmup", .054, "https://api.strale.io/x402/v2/warmup", {}, "POST", {}, 2).body);
+  }, 60_000);
+  it("bounds all manifest capability and solution headers", () => {
+    const sizes: number[] = [];
+    const counts = {
+      capability: { GET: { input: 0, output: 0 }, POST: { input: 0, output: 0, emptyBody: 0 } },
+      solution: { GET: { input: 0, output: 0 }, POST: { input: 0, output: 0, emptyBody: 0 } },
+    };
+    for (const kind of ["capability", "solution"] as const) {
+      for (const manifest of discoveryManifests) {
+        for (const method of ["GET", "POST"] as const) {
+          const { body } = build402(manifest.name, manifest.description, 0.054, `https://api.strale.io/x402/v2/${kind === "solution" ? "solutions/" : ""}${manifest.slug}`, manifest.input_schema, method, manifest.output_schema, 2, { kind, slug: manifest.slug });
+          const bytes = Buffer.byteLength(encodePaymentRequiredHeader(body as never));
+          sizes.push(bytes);
+          const info = (body.extensions.bazaar as any)?.info;
+          const input = info?.input[method === "POST" ? "body" : "queryParams"];
+          const published = metadataFromManifest(manifest).inputExample;
+          if (input !== undefined && published !== undefined && kind === "capability") counts[kind][method].input++;
+          if (method === "POST" && input !== undefined && published === undefined) counts[kind].POST.emptyBody++;
+          if (info?.output.example !== undefined) counts[kind][method].output++;
+        }
+      }
+    }
+    sizes.sort((a, b) => a - b);
+    process.stdout.write("D2 header distribution " + JSON.stringify({ challenges: sizes.length, max: sizes.at(-1), p95: sizes[Math.ceil(sizes.length * .95) - 1], median: (sizes[sizes.length / 2 - 1] + sizes[sizes.length / 2]) / 2, over8192: sizes.filter(size => size > 8192).length, counts }) + "\n");
+    expect(sizes.filter(size => size > 8192)).toEqual([]);
+  }, 60_000);
   it.each(discoveryManifests.flatMap(manifest => ["GET", "POST"].map(method => [manifest.slug, method, manifest] as const)))("validates %s %s challenge", (slug, method, manifest) => {
     const { body } = build402(manifest.name, manifest.description, 0.054, `https://api.strale.io/x402/v2/${slug}`, manifest.input_schema, method, manifest.output_schema, 2, { kind: "capability", slug });
     expect(validateOfflineDiscovery(body)).toEqual([]);
@@ -419,9 +451,65 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
     expect(body.resource.serviceName).toBe("Strale");
     expect(body.resource.description).toBe(`${manifest.name}: ${manifest.description}`);
     const extension = body.extensions.bazaar as any;
-    expect(extension.info.input[method === "POST" ? "body" : "queryParams"]).toEqual(metadata.inputExample);
-    expect(extension.info.output.example).toEqual(metadata.outputExample);
-    expect(JSON.stringify(extension.info.input)).not.toMatch(/example_\w+/);
+    if (extension) {
+      expect(extension.info.input[method === "POST" ? "body" : "queryParams"]).toEqual(metadata.inputExample ?? (method === "POST" ? {} : undefined));
+      // Header budgeting may withhold an otherwise safe output example.
+      if (extension.info.output.example !== undefined) expect(extension.info.output.example).toEqual(metadata.outputExample);
+      expect(JSON.stringify(extension.info.input)).not.toMatch(/example_\w+/);
+    }
+  }, 60_000);
+  it("drops output before input as the header approaches its budget", () => {
+    const manifest = discoveryManifests.find(item => {
+      const metadata = metadataFromManifest(item);
+      return metadata.inputExample !== undefined && metadata.outputExample !== undefined;
+    })!;
+    const metadata = metadataFromManifest(manifest);
+    let sawOutputOnlyDropped = false;
+    let sawBothDropped = false;
+    for (let padding = 0; padding < 6500; padding += 16) {
+      const schema = { ...manifest.input_schema, description: "z".repeat(padding) };
+      const { body } = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${manifest.slug}`, schema, "GET", manifest.output_schema, 2, { kind: "capability", slug: manifest.slug });
+      const info = (body.extensions.bazaar as any)?.info;
+      expect(Buffer.byteLength(encodePaymentRequiredHeader(body as never))).toBeLessThanOrEqual(8192);
+      if (info?.input.queryParams === undefined) {
+        expect(info?.output.example).toBeUndefined();
+        sawBothDropped = true;
+      } else if (info.output.example === undefined) {
+        expect(info.input.queryParams).toEqual(metadata.inputExample);
+        sawOutputOnlyDropped = true;
+      }
+      if (sawBothDropped && sawOutputOnlyDropped) break;
+    }
+    expect(sawOutputOnlyDropped).toBe(true);
+    expect(sawBothDropped).toBe(true);
+  }, 60_000);
+  it.each([3000, 12000])("budgets a %i-byte verification-failure reason without changing payment fields", length => {
+    const manifest = discoveryManifests.find(item => metadataFromManifest(item).inputExample !== undefined)!;
+    const { body } = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${manifest.slug}`, manifest.input_schema, "GET", manifest.output_schema, 2, { kind: "capability", slug: manifest.slug });
+    const payment = { ...body.accepts[0] };
+    delete payment.outputSchema;
+    body.error = "Payment verification failed: " + "z".repeat(length);
+    const header = encodeBudgetedPaymentRequiredHeader(body, manifest.slug);
+    expect(Buffer.byteLength(header)).toBeLessThanOrEqual(8192);
+    const after = { ...body.accepts[0] };
+    delete after.outputSchema;
+    expect(after).toEqual(payment);
+    expect(JSON.parse(Buffer.from(header, "base64").toString())).toEqual(body);
+  });
+  it("uses an empty POST body only when the input contract accepts it", () => {
+    const make = (schema: Record<string, unknown>) => build402("Tool", "Description", .054, "https://api.strale.io/x402/v2/tool", schema, "POST", null, 2).body;
+    const empty = make({ type: "object", properties: { option: { type: "boolean" } } });
+    expect((empty.extensions.bazaar as any).info.input.body).toEqual({});
+    expect(validateOfflineDiscovery(empty)).toEqual([]);
+    for (const schema of [
+      { type: "object", required: ["query"], properties: { query: { type: "string" } } },
+      { type: "object", anyOf: [{ required: ["query"] }] },
+    ]) {
+      const required = make(schema);
+      expect(required.extensions.bazaar).toBeUndefined();
+      expect(required.resource).toMatchObject({ serviceName: "Strale", description: "Tool: Description", tags: [], iconUrl: "https://strale.dev/favicon-32x32.png" });
+      expect(validateOfflineDiscovery(required)).toEqual([]);
+    }
   });
   it.each(["email-validate", "whois-lookup", "image-to-text"])("preserves every v1 payment field for %s", slug => {
     const manifest = discoveryManifests.find(item => item.slug === slug)!;
@@ -440,11 +528,11 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
     expect(project(JSON.parse(Buffer.from(headerPayload, "base64").toString()).accepts[0])).toEqual(before);
   });
   it("does not disclose a capability's example through a solution with the same slug", () => {
-    const manifest = discoveryManifests.find(item => metadataFromManifest(item).inputExample !== undefined)!;
+    const manifest = discoveryManifests.find(item => metadataFromManifest(item).inputExample !== undefined && (item.input_schema?.required as string[] | undefined)?.length)!;
     const make = (kind: "capability" | "solution") => build402("Solution", "Solution description", 0.054, `https://api.strale.io/x402/v2/solutions/${manifest.slug}`, manifest.input_schema, "POST", manifest.output_schema, 2, { kind, slug: manifest.slug }).body;
     expect((make("capability").extensions.bazaar as any).info.input.body).toBeDefined();
     const solution = make("solution");
-    expect((solution.extensions.bazaar as any).info.input.body).toBeUndefined();
+    expect(solution.extensions.bazaar).toBeUndefined();
     expect(solution.resource.description).toBe("Solution: Solution description");
     expect(validateOfflineDiscovery(solution)).toEqual([]);
   });

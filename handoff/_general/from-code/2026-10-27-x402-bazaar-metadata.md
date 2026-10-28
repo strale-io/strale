@@ -372,3 +372,47 @@ Final two-worker full-suite result: **7226 passed, 1 failed, 346 skipped; 348 fi
 Two extra workspace lint aliases (`lint:ssrf-inventory` and `lint:no-external-column-access`) failed because those scripts expect the repository root as their working directory. Their actual CI commands (`node apps/api/scripts/check-ssrf-inventory.mjs` and `node apps/api/scripts/check-no-external-column-access.mjs`) were rerun from the root and passed, as they also did in the full root CI command run. Both unsuccessful invocations and corrected results are retained in final-check evidence; no unrelated lint script was changed.
 
 Closeout: the fresh receipt passed `receipts:check` (99 receipts; existing historical handoff warnings only). Final docs, strict PII and diff checks passed; `handoff:check` remained red under the explicit uncommitted/unpushed/other-session exceptions. [Closeout command evidence](../../../archive/sessions/2026-10-27-d2-closeout-checks.json).
+
+
+## Round 3 — 2026-10-28
+
+Intent: Fix the independent review's header-size and output-privacy blockers, enforce POST discovery requirements and leave all work uncommitted for the orchestrator. This section supersedes the earlier POST-optional-body and example-coverage statements above.
+
+### Behaviour changes
+
+- Drop each input/output example whole when its UTF-8 JSON exceeds 1,024 bytes. Both walks now apply the same privacy and placeholder screen. Capabilities declaring `processes_personal_data: true`, or category `compliance`/`screening`, publish neither example. Tests cover the five named sensitive capabilities and planted output personal data.
+- Budget the final encoded `PAYMENT-REQUIRED` header at 8,192 bytes, including all four initial/failure response sites: remove output first, then input. When schema data still exceeds the budget, log once per slug and omit discovery schemas, including legacy `outputSchema` mirrors. Payment fields are preserved. An oversized facilitator diagnostic gets a bounded actionable error only after discovery removal cannot fit it.
+- POST without a safe example uses `body: {}` only when no required properties exist and the schema accepts `{}`. This includes checking `anyOf` requirements. Otherwise omit the Bazaar extension entirely and retain `resource.serviceName`, `description`, `tags` and `iconUrl`. Never invent values.
+- `resource.description` still uses the manifest name and description. `/catalog` URLs remain as previously implemented. DQ-39 was accepted on 2026-10-28; Serper tool names remain unchanged: Google Search (`google-search`), Search Results Analysis (`serp-analyze`), Brand Mention Search (`brand-mention-search`), Google News Search (`google-news-search`), SERP Related Questions (`serp-related-questions`), Keyword Rank Check (`keyword-rank-check`), and Adverse Media Check (`adverse-media-check`, Serper fallback).
+- Move the offline validator to `src/test-helpers/x402-discovery-validator.ts`; explicitly exclude that directory from API compilation. Ajv and ajv-formats remain runtime dependencies because `x402-discovery-metadata.ts` validates manifest and runtime-schema examples with them. No package or lockfile change is needed.
+- Warm manifest/runtime Ajv validation in `beforeAll`; the aggregate catalogue header test has a 60-second timeout.
+
+### POST specification branch
+
+Re-read the [Bazaar specification](https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md) and installed `@x402/extensions` 2.10 types. Its POST example requires: `"required": ["type", "method", "bodyType", "body"]`. The extension uses `info` plus its validating `schema`; installed `BodyDiscoveryExtension` requires `info: BodyDiscoveryInfo`, and `BodyDiscoveryInfo.input` requires `body: Record<string, unknown>`. No metadata-only Bazaar declaration without `info` is specified. Therefore the chosen branch is **omit the entire Bazaar extension** for required-input POST resources lacking a safe example, while preserving the separate resource metadata. Both optional-input `{}` and required-input omission branches have tests.
+
+### Header distribution and example coverage
+
+Offline matrix: all 356 manifests, GET/POST, as both capability and solution: 1,424 challenges. Maximum 8,152 bytes; p95 6,456; median 4,048; over 8,192 bytes: **0**. Before the fix, the same regression failed on HEAD 94e3f631: maximum 46,408; p95 9,712; median 4,878; over budget 120. That baseline includes solution-shaped challenges as well as capabilities.
+
+| Fixture kind | Method | Input examples | Output examples | Empty-body fallback |
+| --- | --- | ---: | ---: | ---: |
+| Capability | GET | 108 | 18 | — |
+| Capability | POST | 108 | 9 | 34 |
+| Solution | GET | 0 | 0 | — |
+| Solution | POST | 0 | 0 | 34 |
+
+Counts describe manifest-only fixtures after privacy/schema/header filtering, not current live DB eligibility. Empty POST bodies are listed separately, not counted as newly invented examples. Actual solutions have no manifest examples; the solution matrix deliberately reuses each manifest schema with a solution identity to prove isolation and budgeting.
+
+### Verification and limits
+
+Evidence: [round 3 receipt](../../../archive/receipts/2026-10-28-test-run-x402-bazaar-round3.json) and [trimmed command results](../../../archive/sessions/2026-10-28-d2-round3-checks.json).
+
+- PASS: MCP server build, API typecheck, both touched test files, final x402 run (963 passed / 2 skipped; 17 files passed / 1 skipped), and final catalogue run (740 passed). The final x402 run includes the 3 KB / 12 KB verification-error regressions and stricter POST validator.
+- Full API suite: 7,383 passed / 358 skipped / 1 failed; 364 files passed / 35 skipped / 1 failed. The only failure was the untouched `src/lib/search/search-quality.test.ts` wall-clock test: 2,969 ms against a 2,000 ms threshold. First single-file rerun during suite load also failed (3,801 ms). After the full suite ended, the single-file rerun passed all 13 tests. Report this as a timing flake, not an unqualified green full run. The full suite started before the final verification-diagnostic guard; affected x402 tests were rerun on final code afterwards.
+- PASS: `claims:check`, `models:check`, `env:check`, `docs:check`, `programs:check`, `receipts:check` (existing historical handoff warnings only), and `git diff --check`. `tsc --listFilesOnly` confirms the moved validator is excluded from runtime compilation.
+- Expected RED: `handoff:check` reports `dirty`, `ahead` (feature branch tracks origin/main), and existing `merged-branch` findings. Its origin fetch was unavailable, so remote findings may be stale. Per explicit instructions, no commit/push or branch cleanup was attempted.
+- Independent technical and product review caught final-error re-encoding after the initial budget; all four sites now budget the final body. The technical confirmation cleared that HIGH. Its further oversized-diagnostic MEDIUM is covered by the bounded-error fallback and 12 KB regression. Product verdict: GO. No `simplify` skill was available; the manual simplification pass consolidated all final encoding into one helper.
+- Invocation correction: the initial quoted Vitest glob found no files; `vitest run x402` was used for actual x402 verification. An extra `src/lib/search*.test.ts` shell-glob run covered `search.test.ts` (11 passed); the actual failing search-quality file was then rerun explicitly as described above.
+
+ No production writes, paid requests, deployment, commit, push, PR, merge or publication was performed. No production commands are required for these fixes; deployment and external validation remain with the orchestrator. [BACKFILL] This handoff is the session record; no Notion write was requested or performed.

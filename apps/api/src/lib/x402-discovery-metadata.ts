@@ -68,7 +68,8 @@ export function exampleFailure(schema: Record<string, unknown> | undefined, valu
  * ambiguous digit strings and free text resembling personal data are withheld.
  * Never consult known_answer: it can intentionally contain invalid input.
  */
-export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "name" | "processes_personal_data">, value: unknown): string | undefined {
+export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "name" | "processes_personal_data" | "category">, value: unknown): string | undefined {
+  if (["compliance", "screening"].includes(manifest.category ?? "")) return "compliance or screening category";
   if (manifest.processes_personal_data) return "processes_personal_data";
   if (/(screen|\bpep\b|sanction|adverse.media|person|officer|director|beneficial.ownership|email.finder)/i.test(`${manifest.slug} ${manifest.name}`)) return "person lookup or screening tool";
   const walk = (item: unknown, key = ""): string | undefined => {
@@ -78,6 +79,7 @@ export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "
     if (item && typeof item === "object") return Object.entries(item).map(([k, v]) => walk(v, k)).find(Boolean);
     if (typeof item !== "string" && typeof item !== "number") return undefined;
     let text = String(item);
+    if (typeof item === "string" && /^(test|string|example|foo|xxx)$/i.test(item.trim())) return "placeholder example";
     try {
       // URLs and stringified payloads are still public values, not a bypass.
       for (let pass = 0; pass < 2 && /%[0-9a-f]{2}/i.test(text); pass++) text = decodeURIComponent(text);
@@ -128,11 +130,17 @@ export function discoveryTags(slug: string, category?: string): string[] {
   return [...new Set([...(category ? [category] : []), ...(VOCABULARY[slug] ?? [])])].slice(0, 5);
 }
 
+/** Whole examples only: measure UTF-8 JSON bytes before validation/publication. */
+export function publicExampleFailure(manifest: DiscoveryManifest, schema: Record<string, unknown> | undefined, value: unknown): string | undefined {
+  if (value !== undefined && Buffer.byteLength(JSON.stringify(value), "utf8") > 1024) return "example exceeds 1024 bytes";
+  return inputPrivacyFailure(manifest, value) ?? exampleFailure(schema, value);
+}
+
 export function metadataFromManifest(manifest: DiscoveryManifest): DiscoveryMetadata {
   const input = manifest.test_fixtures?.health_check_input;
   const output = manifest.output_schema?.example;
-  const inputOmission = inputPrivacyFailure(manifest, input) ?? exampleFailure(manifest.input_schema, input);
-  const outputOmission = exampleFailure(manifest.output_schema, output);
+  const inputOmission = publicExampleFailure(manifest, manifest.input_schema, input);
+  const outputOmission = publicExampleFailure(manifest, manifest.output_schema, output);
   return {
     name: manifest.name, description: manifest.description,
     tags: discoveryTags(manifest.slug, manifest.category),
