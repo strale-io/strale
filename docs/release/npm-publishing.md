@@ -106,6 +106,9 @@ publishing.
 ### Real release
 
 1. Bump `version` in the package's `package.json` on a branch, and merge it.
+   For `strale-mcp`, bump `version` and `packages[0].version` in **both**
+   `server.json` (repo root) and `packages/mcp-server/server.json` in the same
+   change; the two copies stay identical.
 2. Tag the merge commit `<package-name>@<version>` and push the tag:
 
 ```bash
@@ -119,6 +122,18 @@ mistake that cannot be undone — npm versions are immutable.
 You can also run the workflow manually with `dry_run: false` for a release
 without a tag, but the tag is preferred: it leaves a permanent marker of what
 shipped, and the provenance attestation points back at it.
+
+### The official MCP registry entry (`strale-mcp` only)
+
+After a successful `strale-mcp@<version>` release,
+[`.github/workflows/publish-mcp-registry.yml`](../../.github/workflows/publish-mcp-registry.yml)
+publishes `server.json` from `main` to registry.modelcontextprotocol.io as
+`io.github.strale-io/strale`. It signs in with GitHub OIDC (no stored token),
+uses a pinned, signature-verified `mcp-publisher`, and publishes only when
+`server.json` names the released version, that version is on npm, and the
+registry does not list it yet, so a rerun does nothing. If it fails because
+`server.json` was not bumped, bump both copies on `main`, then run it by hand:
+Actions → **Publish (MCP registry)** → *Run workflow*.
 
 ## What the workflow checks before it publishes
 
