@@ -54,6 +54,7 @@ import {
   type SqlLike,
 } from "../src/lib/manifest-sync-fields.js";
 import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { withRuntimeExample } from "../src/lib/capability-field-authority.js";
 import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
@@ -153,6 +154,9 @@ if (before.length === 0) {
 
 const dbRow = before[0];
 const drifts: string[] = [];
+// Same rule as the boot sync: a runtime-captured example is kept, not drift.
+// Applied before both the diff and the write so the two stay identical.
+manifest.output_schema = withRuntimeExample(manifest.output_schema, dbRow.output_schema) as typeof manifest.output_schema;
 
 /**
  * Serialise with object keys in a stable order, at every depth.
