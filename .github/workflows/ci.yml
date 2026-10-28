@@ -562,6 +562,9 @@ jobs:
       # cross-checked (dependency-manifest.ts PROVIDERS, coverage-matrix,
       # env-manifest, decision-record links, history against the base
       # branch) the same way the other cheap-extras registers are.
+      # Founder-accepted permissions: validate evidence and reject silent downgrades.
+      - run: npm run vendor-terms:check
+      - run: npm run vendor-terms:test
       - run: npm run vendors:check
       - run: npm run vendors:test
       # Shadow distribution-surfaces register (M3 batch 3, T6,

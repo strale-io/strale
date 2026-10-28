@@ -103,6 +103,10 @@ given.
       around blocks, no commercial aggregators, no resale against vendor terms.
       It honours robots.txt with an honest user agent, records the acquisition
       method in provenance, and goes through `safeFetch` or the ToS gate.
+- [ ] **Recorded permissions are settled.** A vendor or source permission recorded
+      as `written_permission` in `vendor-terms` is settled. A session never raises
+      it as "not allowed" again unless a `reopen_only_if` event has happened, and
+      it cites that event and its evidence.
 - [ ] **Root causes, not masks** ("Scoring Integrity (retired …)"). Nobody
       bends a test, fixture, threshold or allowlist to make one capability look
       healthy. Growing an allowlist needs a reason in the PR.

@@ -32,6 +32,8 @@
     "env:check": "node scripts/check-env.mjs",
     "env:test": "node --test scripts/env.test.mjs",
     "env:example": "node scripts/generate-env-example.mjs",
+    "vendor-terms:check": "node scripts/check-vendor-terms.mjs",
+    "vendor-terms:test": "node --test scripts/check-vendor-terms.test.mjs",
     "vendors:check": "node scripts/check-vendors.mjs",
     "vendors:test": "node --test scripts/vendors.test.mjs",
     "vendors:view": "node scripts/generate-vendor-view.mjs",

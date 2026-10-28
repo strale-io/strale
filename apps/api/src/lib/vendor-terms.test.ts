@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
+import { checkRecords } from "../../../../scripts/check-vendor-terms.mjs";
 import { PROHIBITED_UPSTREAM_HOSTS, VENDOR_TERMS_RECORDS, prohibitedHostsIn } from "./vendor-terms.js";
 import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
 import { getEthRpcEndpoints } from "./eth-rpc-endpoints.js";
@@ -411,5 +412,35 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     for (const r of VENDOR_TERMS_RECORDS.filter((x) => x.capabilities.length === 0)) {
       for (const h of r.hosts) expect(PROHIBITED_UPSTREAM_HOSTS.has(h), h).toBe(true);
     }
+  });
+});
+
+
+describe("founder-accepted vendor and source permissions", () => {
+  const root = resolve(SRC, "../../..");
+  const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+
+  it("every permitted row has a basis and every written permission is complete with repository evidence", () => {
+    expect(checkRecords(VENDOR_TERMS_RECORDS, read)).toEqual([]);
+    for (const record of VENDOR_TERMS_RECORDS) {
+      if (record.resale === "permitted") expect(["published_terms", "written_permission"]).toContain(record.basis);
+    }
+  });
+
+  it("Serper rests on written permission accepted by Petter", () => {
+    const record = VENDOR_TERMS_RECORDS.find(r => r.vendor === "Serper.dev")!;
+    expect(record.basis).toBe("written_permission");
+    expect(record.permission?.accepted_by).toBe("petter");
+    expect(record.permission?.decision_ref).toBe("docs/company/DECISION-QUEUE.md DQ-39");
+  });
+
+  it("removing Serper's permission fails and restoring it passes", () => {
+    const records = structuredClone(VENDOR_TERMS_RECORDS);
+    const serper = records.find(r => r.vendor === "Serper.dev")!;
+    const permission = serper.permission;
+    Reflect.deleteProperty(serper, "permission");
+    expect(checkRecords(records, read)).toContain("Serper.dev: incomplete written permission or missing evidence/decision");
+    Object.assign(serper, { permission });
+    expect(checkRecords(records, read)).toEqual([]);
   });
 });

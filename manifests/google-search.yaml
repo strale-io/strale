@@ -180,5 +180,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: serper
-  checks: pending
-  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API. Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

@@ -52,7 +52,7 @@ Under the data-access rule (DEC-20261023-A), a per-call read of a public source 
 - **Zefix is settled without a new request.** On 2026-03-20 the Federal Commercial Registry Office (zefix@bj.admin.ch) opened Strale's Zefix REST API account and stated its terms, which Petter accepted in writing the same day: use is free of charge, and "If the data is further used, its origin must be indicated and any modification of the data must be indicated." That is a written grant of further use with attribution, so `swiss-company-data` meets DEC-20261023-A's condition. Its `vendor-terms.ts` record is still to be added; per the register note above, that goes in the PR that adjusts the shared-client test.
 - **Emails sent by Petter on 2026-10-26:** the Swiss UID register (uid@bfs.admin.ch, now asking about UID only, citing the Zefix terms as precedent) and the Czech ARES register (ares@mfcr.cz). Neither had been contacted before.
 
-**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · answered 2026-10-26, open until Serper replies or the exception ends 2026-11-09 — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
+**DQ-39** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-26 · closed 2026-10-28 (Serper's written permission accepted) — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
 
 Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
 vendor's data only when the vendor's terms permit resale, checked and written
@@ -147,6 +147,13 @@ switch-off is one line in the deactivation list.
 - What this settles: the condition DEC-20261023-A sets for the vendor lane ("vendor data whose terms permit resale, SERP search data included") is now met in writing for the use we described (processed results from one search per request). The Google caveat is the vendor-lane case the rule already allows for search data.
 - What stays with Petter: relying on the permission (the reason this item is his). The entry stays open until he accepts or declines. **Recommendation: accept**; then the 2026-11-09 exception ends, `vendor-terms.ts` moves the Serper row from `resale: "unverified"` to permitted, citing this reply, and option 2 stops.
 - Separate, coming: the prepaid allowance (46,890 of 50,000 queries left on 2026-10-28) expires 2026-11-08. Renewing is a purchase, so it is his; it will be brought with usage figures before then.
+
+**Accepted 2026-10-28 by Petter, in session:** "accept Serper".
+- The time-boxed exception ending 2026-11-09 is over: the eight tools run on terms that now permit the use.
+- `vendor-terms.ts` records Serper as `resale: "permitted"`, citing the reply and its condition. The use must be value-added, returning processed results through our own per-call API, never resold raw API access. The record names the third-party (Google) caveat.
+- Option 2 (vendor replacement) stops.
+- `google-search`, the plainest of the eight, meets the condition: it maps Serper's response into Strale's own result schema, with provenance and an audit trail, one search per request. It does not pass Serper's response through as it comes.
+- Still open, separately: renewing the prepaid allowance before 2026-11-08 is a purchase, so it is Petter's.
 
 **DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology

@@ -19,8 +19,9 @@ describe("auto-register loads manifest data_access", () => {
       lane: "allowed_with_checks",
       acquisition_method: "vendor_api",
       upstream_vendor: "serper",
-      checks: "pending",
+      checks: "recorded",
     });
+    expect(getDataAccess("google-search")?.checks_note).toContain("DQ-39");
   });
 
   it("registers official-source and computed declarations", () => {
