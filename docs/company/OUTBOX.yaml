@@ -32,7 +32,8 @@ threads:
     sent: 2026-10-27
     sent_by: petter (drafted by session)
     follow_up_by: 2026-11-10
-    status: awaiting_reply
+    status: closed
+    reply: 2026-10-27 18:23 CET (inbox). They kept email and phone calls on the Cached lists (no syntax-and-domain category exists) and kept the scores, but added a "What it checks" column naming exactly what our calls test. Company enrichment and tech stack were rerun over x402 (company enrichment Data 33, Performance 14; tech stack Data 56, Performance 66). They asked whether the lists look right and invited us to a provider WhatsApp group. No reply needed to close the thread; the low company-enrichment score is a product follow-up in the 2026-10-28 operating record.
   - id: probe402-refusals
     to: zach@probe402.com
     subject: Paid x402 calls refused before settlement
@@ -50,7 +51,8 @@ threads:
     sent: 2026-10-26
     sent_by: petter (drafted by session)
     follow_up_by: 2026-11-02
-    status: awaiting_reply
+    status: closed
+    reply: 2026-10-27 19:40 CET (inbox, from support@serper.dev). Using Serper as an upstream source within a value-added commercial service, including returning processed results through our own per-call API, is permitted under its standard terms; reselling API access without added value is not. No separate reseller agreement; standard prepaid tiers. The permission does not grant third-party (Google) rights. Recorded on DQ-39, which stays with Petter.
   - id: swiss-uid-reuse
     to: uid@bfs.admin.ch
     subject: Per-call commercial reuse of public UID register data
