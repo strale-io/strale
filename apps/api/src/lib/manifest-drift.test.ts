@@ -26,3 +26,10 @@ it("uses both DB and manifest publication guards for strict drift", () => {
     expect(drift.reportOnly).toEqual(["name"]); expect(drift.writable).toEqual([]);
   }
 });
+
+it("a runtime-captured output_schema example is not drift unless the manifest declares one", () => {
+  const stored = { type: "object", properties: { a: { type: "string" } }, example: { a: "x" } };
+  expect(manifestDrift({ output_schema: { type: "object", properties: { a: { type: "string" } } } }, { output_schema: stored }, []).writable).toEqual([]);
+  expect(manifestDrift({ output_schema: { type: "object", properties: { b: { type: "string" } } } }, { output_schema: stored }, []).writable).toEqual(["output_schema"]);
+  expect(manifestDrift({ output_schema: { type: "object", properties: { a: { type: "string" } }, example: { a: "y" } } }, { output_schema: stored }, []).writable).toEqual(["output_schema"]);
+});
