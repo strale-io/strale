@@ -9,11 +9,14 @@
 // untracked or unstaged files in the working tree), and stages the result.
 //
 // The legacy-authority inventory (docs/project/legacy-authority-inventory.json)
-// hashes the staged blobs of its targets, `handoff/` among them, so a
+// hashes the staged blobs of its targets (only README.md for `handoff/`), so a
 // regenerated handoff/README.md would make the inventory stale and the
 // pre-commit inventory rule would then refuse the commit. When any inventory
 // target is staged, the inventory is regenerated and staged too. Only that
 // one file is written; the rest of `npm run context:generate` is untouched.
+//
+// Navigation and the inventory exclude historical evidence additions (H7a);
+// ordinary handoff/receipt additions produce no generated changes.
 //
 // It never overwrites a generated file that has unstaged edits in the
 // working tree: it refuses instead, so hand edits are never lost. "Unstaged

@@ -96,7 +96,7 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
   },
   output_field_reliability: {
     category: "manifest",
-    reason: "Field-level reliability map; informs test assertions and SQS.",
+    reason: "Field-level reliability map for test assertions.",
   },
 
   // ── db-canonical: operator or runtime writes; backfill preserves ────

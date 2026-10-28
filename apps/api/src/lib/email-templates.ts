@@ -199,24 +199,6 @@ export function statusBadge(status: BadgeKind, text?: string): string {
   return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${b.bg};color:${b.text};line-height:1.5;">${esc(label)}</span>`;
 }
 
-// ─── 5. SQS Grade Badge ────────────────────────────────────────────────────
-
-const SQS_GRADE_COLORS: Record<string, { bg: string; text: string }> = {
-  A: { bg: "#f0fdf4", text: "#166534" },
-  B: { bg: "#f0fdf4", text: "#166534" },
-  C: { bg: "#fefce8", text: "#854d0e" },
-  D: { bg: "#fff7ed", text: "#9a3412" },
-  E: { bg: "#fef2f2", text: "#991b1b" },
-  F: { bg: "#fef2f2", text: "#991b1b" },
-  pending: { bg: "#f5f5f4", text: "#6b7280" },
-};
-
-export function sqsGradeBadge(grade: string, score: number): string {
-  const g = SQS_GRADE_COLORS[grade] ?? SQS_GRADE_COLORS.pending;
-  const label = grade === "pending" ? "Pending" : `${grade} (${score})`;
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${g.bg};color:${g.text};line-height:1.5;">${esc(label)}</span>`;
-}
-
 // ─── 6. Check Item ──────────────────────────────────────────────────────────
 
 export function checkItem(text: string): string {
@@ -318,8 +300,6 @@ ${rowHtml}
 export function capabilityTable(
   rows: Array<{
     slug: string;
-    sqs_score: number;
-    sqs_grade: string;
     freshness: string;
     last_tested: string;
   }>,
@@ -328,7 +308,6 @@ export function capabilityTable(
 
   const header = `<tr>
   <td style="padding:8px 10px;font-size:11px;color:${COLORS.textSecondary};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid ${COLORS.borderLight};background:${COLORS.bgSecondary};">Capability</td>
-  <td style="padding:8px 10px;font-size:11px;color:${COLORS.textSecondary};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid ${COLORS.borderLight};background:${COLORS.bgSecondary};text-align:center;">SQS</td>
   <td style="padding:8px 10px;font-size:11px;color:${COLORS.textSecondary};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid ${COLORS.borderLight};background:${COLORS.bgSecondary};text-align:center;">Freshness</td>
   <td style="padding:8px 10px;font-size:11px;color:${COLORS.textSecondary};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid ${COLORS.borderLight};background:${COLORS.bgSecondary};text-align:right;">Last Tested</td>
 </tr>`;
@@ -338,7 +317,6 @@ export function capabilityTable(
       (r) =>
         `<tr>
   <td style="padding:6px 10px;font-size:12px;color:${COLORS.textPrimary};border-bottom:1px solid ${COLORS.borderLight};font-family:'SFMono-Regular',Consolas,monospace;font-weight:500;">${esc(r.slug)}</td>
-  <td style="padding:6px 10px;text-align:center;border-bottom:1px solid ${COLORS.borderLight};">${sqsGradeBadge(r.sqs_grade, r.sqs_score)}</td>
   <td style="padding:6px 10px;font-size:11px;color:${COLORS.textSecondary};text-align:center;border-bottom:1px solid ${COLORS.borderLight};">${esc(r.freshness)}</td>
   <td style="padding:6px 10px;font-size:11px;color:${COLORS.textTertiary};text-align:right;border-bottom:1px solid ${COLORS.borderLight};">${esc(r.last_tested)}</td>
 </tr>`,

@@ -578,7 +578,6 @@ async function buildSuspensionWarning(
 ): Promise<{ subject: string; html: string }> {
   const slug = payload.capabilitySlug ?? "unknown";
   const d = payload.details;
-  const sqs = d.sqs_score != null ? String(d.sqs_score) : "—";
   const reason = String(d.reason ?? "Degraded SQS below platform floor");
   const degradedDays = d.degraded_days != null ? `${Math.floor(Number(d.degraded_days))}` : "?";
   const autoSuspendAt = d.auto_suspend_at
@@ -601,7 +600,6 @@ async function buildSuspensionWarning(
     </p>` +
 
     metricGrid([
-      { label: "SQS Score", value: sqs, subtitle: "below platform floor" },
       { label: "Days degraded", value: degradedDays },
       { label: "Auto-suspend", value: autoSuspendAt.replace(" CET", ""), subtitle: "CET" },
     ]) +
@@ -626,7 +624,6 @@ async function buildSuspensionWarning(
       <p style="margin:0;font-size:13px;color:${COLORS.textWarning};line-height:1.6;">
         &bull; Removed from search, MCP, and the capability catalog<br>
         &bull; Returns 503 for API calls via /v1/do<br>
-        &bull; SQS frozen at current value<br>
         &bull; Auto-recovery check runs weekly during health sweep
       </p>
     </td></tr>

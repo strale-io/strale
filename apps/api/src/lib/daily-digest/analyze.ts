@@ -56,7 +56,6 @@ ${pa.zeroActivity ? "WARNING: ZERO ACTIVITY in the last 24 hours." : ""}
 PLATFORM HEALTH:
 - Circuit breakers open: ${ph.circuitBreakers.length > 0 ? JSON.stringify(ph.circuitBreakers) : "None (all healthy)"}
 - Test pass rate (24h): ${ph.testPassRate.rate}% (${ph.testPassRate.passed}/${ph.testPassRate.total})
-- SQS grade changes: ${ph.sqsChanges.length > 0 ? JSON.stringify(ph.sqsChanges) : "None"}
 
 YESTERDAY'S WORK (from Notion Journal + GitHub commits):
 - Journal entries: ${JSON.stringify(sl.journalEntries.map((e) => ({ title: e.title, type: e.type })))}

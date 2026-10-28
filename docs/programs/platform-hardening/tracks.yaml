@@ -112,9 +112,12 @@ tracks:
     depends_on:
       - T4
     owner: session
-    next_action: Split migrations with ledger unchanged and advisory lock, separate
-      do.ts execution/settlement, consolidate helpers and remove dead/SQS
-      remnants, then expand fixture contract coverage (§10 items 14–17).
+    next_action: H7a is built locally on chore/h7a-merge-churn-and-boot-lock;
+      orchestrator reviews the uncommitted changes and ships. Verify the boot lock
+      after deploy using the handoff. Remaining are H7b (do.ts split and one x402
+      settle), H7c (contract tests), the migrations file split with ledger
+      unchanged, and the separate ledgered SQS column drop. See
+      handoff/_general/from-code/2026-10-28-h7a-churn-and-boot-lock.md.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.

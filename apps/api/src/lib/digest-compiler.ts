@@ -29,15 +29,6 @@ export interface DigestCapabilitySnapshot {
   total: number;
 }
 
-export interface SqsDistribution {
-  excellent: number; // ≥ 90
-  good: number;      // 75–89
-  fair: number;      // 50–74
-  poor: number;      // 25–49
-  degraded: number;  // < 25
-  pending: number;   // null / no score
-}
-
 export interface WeekOverWeek {
   activeChange: number;
   degradedChange: number;
@@ -67,7 +58,6 @@ export interface Tier1Summary {
   deadUrlFixes: string[];
   fieldRenameFixes: string[];
   circuitBreakerTrips: string[];
-  upstreamExclusions: number;
 }
 
 export interface QualificationEntry {
@@ -75,7 +65,6 @@ export interface QualificationEntry {
   name: string;
   state: "probation" | "validating";
   runsCompleted: number;
-  currentSqs: number | null;
   trend: string | null;
 }
 
@@ -96,7 +85,6 @@ export interface DigestData {
   weekOf: string;       // ISO date string
   generatedAt: string;
   snapshot: DigestCapabilitySnapshot;
-  sqsDist: SqsDistribution;
   weekOverWeek: WeekOverWeek;
   tier3Proposals: Tier3Proposal[];
   tier2Actions: Tier2Action[];
@@ -116,7 +104,6 @@ export async function compileWeeklyDigest(): Promise<DigestData> {
 
   const [
     snapshot,
-    sqsDist,
     weekOverWeek,
     tier3Proposals,
     tier2Actions,
@@ -126,7 +113,6 @@ export async function compileWeeklyDigest(): Promise<DigestData> {
     infra,
   ] = await Promise.all([
     buildSnapshot(db),
-    buildSqsDistribution(db),
     buildWeekOverWeek(db, weekAgo, twoWeeksAgo),
     buildTier3Proposals(db),
     buildTier2Actions(db, weekAgo),
@@ -146,7 +132,6 @@ export async function compileWeeklyDigest(): Promise<DigestData> {
     weekOf: weekOfDate.toISOString().split("T")[0],
     generatedAt: now.toISOString(),
     snapshot,
-    sqsDist,
     weekOverWeek,
     tier3Proposals,
     tier2Actions,
@@ -188,13 +173,6 @@ async function buildSnapshot(db: ReturnType<typeof getDb>): Promise<DigestCapabi
   }
 
   return snapshot;
-}
-
-// SQS distribution retired (DEC-20260503-B). The digest still ships the
-// shape for back-compat with consumers; values are always zero until a
-// replacement substrate signal is wired in.
-async function buildSqsDistribution(_db: ReturnType<typeof getDb>): Promise<SqsDistribution> {
-  return { excellent: 0, good: 0, fair: 0, poor: 0, degraded: 0, pending: 0 };
 }
 
 // ─── Week-over-week ──────────────────────────────────────────────────────────
@@ -319,7 +297,6 @@ async function buildTier1Summary(db: ReturnType<typeof getDb>, since: Date): Pro
   const deadUrlFixes: string[] = [];
   const fieldRenameFixes: string[] = [];
   const circuitBreakerTrips: string[] = [];
-  let upstreamExclusions = 0;
 
   for (const row of rows) {
     byEventType[row.eventType] = (byEventType[row.eventType] ?? 0) + 1;
@@ -340,11 +317,7 @@ async function buildTier1Summary(db: ReturnType<typeof getDb>, since: Date): Pro
         if (state === "open" && slug) circuitBreakerTrips.push(slug);
         break;
       }
-      case "sqs_exclusion": {
-        const verdict = String(d.verdict ?? "");
-        if (verdict === "upstream_transient") upstreamExclusions++;
-        break;
-      }
+
     }
   }
 
@@ -354,7 +327,6 @@ async function buildTier1Summary(db: ReturnType<typeof getDb>, since: Date): Pro
     deadUrlFixes: [...new Set(deadUrlFixes)],
     fieldRenameFixes: [...new Set(fieldRenameFixes)],
     circuitBreakerTrips: [...new Set(circuitBreakerTrips)],
-    upstreamExclusions,
   };
 }
 
@@ -396,7 +368,6 @@ async function buildQualification(db: ReturnType<typeof getDb>): Promise<Qualifi
       name: cap.name,
       state: cap.lifecycleState as "probation" | "validating",
       runsCompleted,
-      currentSqs: null,
       trend: null,
     });
   }
@@ -477,14 +448,12 @@ async function getTestStats(db: ReturnType<typeof getDb>, since: Date) {
 
 export interface AffectedCapabilityDetail {
   slug: string;
-  sqs_score: number;
-  sqs_grade: string;
   freshness: string;
   last_tested: string;
 }
 
 /**
- * Get current SQS details for a list of capability slugs.
+ * Get freshness details for a list of capability slugs.
  * Used by capabilityTable() in email templates.
  */
 export async function getAffectedCapabilityDetails(
@@ -493,7 +462,6 @@ export async function getAffectedCapabilityDetails(
   if (slugs.length === 0) return [];
   const db = getDb();
 
-  // SQS retired (DEC-20260503-B); freshness category survives.
   const capRows = await db
     .select({
       slug: capabilities.slug,
@@ -532,8 +500,6 @@ export async function getAffectedCapabilityDetails(
 
     return {
       slug: c.slug,
-      sqs_score: 0,
-      sqs_grade: "—",
       freshness: c.freshnessCategory ?? "unknown",
       last_tested: lastTestedStr,
     };

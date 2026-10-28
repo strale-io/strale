@@ -1040,7 +1040,7 @@ export async function runDailyChecks(): Promise<MetaCheckResult[]> {
   return runScheduled("daily", true);
 }
 
-/** Weekly checks: coverage + SQS integrity (sequential — DB contention) */
+/** Weekly coverage checks (sequential — DB contention). */
 export async function runWeeklyChecks(): Promise<MetaCheckResult[]> {
   return runScheduled("weekly", false);
 }
