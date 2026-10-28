@@ -10,6 +10,14 @@
             "statusMessage": "Orienting the session (checkout, active track, last handoff gate)..."
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/scripts/bus.mjs inbox"
+          }
+        ]
       }
     ],
     "Stop": [
