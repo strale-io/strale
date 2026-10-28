@@ -1,3 +1,5 @@
+import { currentAcquisitionMethod, type AcquisitionMethod } from "./data-access.js";
+import { asSourceBlocked, SiteAccessRefusedError, STRALE_USER_AGENT } from "./site-access.js";
 /**
  * safeFetch: fetch() wrapper that resists SSRF (F-0-006).
  *
@@ -105,9 +107,35 @@ export const safeHttpAgent = new HttpAgent({ lookup: safeLookup, keepAlive: true
 export const safeHttpsAgent = new HttpsAgent({ lookup: safeLookup, keepAlive: true });
 export { safeDispatcher };
 
+/** Bound DNS validation too, before fetch can observe its AbortSignal.
+ * A late DNS result cannot resume the rejected request or open a socket.
+ */
+async function validateBeforeFetch(target: string, signal: AbortSignal | null | undefined): Promise<void> {
+  signal?.throwIfAborted();
+  if (!signal) return validateUrl(target);
+  await new Promise<void>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    validateUrl(target).then(
+      () => { signal.removeEventListener("abort", onAbort); resolve(); },
+      error => { signal.removeEventListener("abort", onAbort); reject(error); },
+    );
+  });
+}
+
 // ─── Public safeFetch ─────────────────────────────────────────────────────────
 
 export interface SafeFetchOptions extends Omit<RequestInit, "redirect"> {
+  /** Defaults to the executing capability manifest; explicit method for mixed API/page paths. */
+  acquisitionMethod?: AcquisitionMethod;
+  /** DEC-20261023-A reading confirmed by Petter (H6 round 2): robots governs
+   * page-content retrieval, not customer-named status/header/redirect probes.
+   * Only use for probes returning no page content, or robots.txt itself.
+   * SSRF, ToS and honest identification still apply on every hop.
+   */
+  purpose?: "availability_probe";
+  /** Per-hop network time, including failures, measured after robots policy checks. */
+  onRequestTiming?: (durationMs: number) => void;
   /** Maximum number of redirects to follow. Default: 3. Set to 0 to refuse. */
   maxRedirects?: number;
   /**
@@ -163,7 +191,7 @@ export async function safeFetch(
   url: string | URL,
   opts: SafeFetchOptions = {},
 ): Promise<Response> {
-  const { maxRedirects = DEFAULT_MAX_REDIRECTS, timeoutMs, returnOnRedirectCap, ...init } = opts;
+  const { maxRedirects = DEFAULT_MAX_REDIRECTS, timeoutMs, returnOnRedirectCap, purpose, acquisitionMethod = currentAcquisitionMethod(), onRequestTiming, ...init } = opts;
 
   // Per-source ToS policy is enforced at the fetch layer, not only in the
   // capabilities that remember to call it (P2, 2026-08-12 — three separate
@@ -181,12 +209,32 @@ export async function safeFetch(
     init.signal = AbortSignal.timeout(effectiveTimeout);
   }
 
+  const pageRead = acquisitionMethod === "public_page_read" || acquisitionMethod === "customer_directed_fetch";
+  if (pageRead || purpose === "availability_probe") {
+    const headers = new Headers(init.headers);
+    headers.set("User-Agent", STRALE_USER_AGENT);
+    init.headers = headers;
+  }
   return followRedirects(
     typeof url === "string" ? url : url.toString(),
     init,
     maxRedirects,
-    validateUrl,
+    async (target) => {
+      await validateBeforeFetch(target, init.signal);
+      if (pageRead && purpose !== "availability_probe") {
+        // Lazy import keeps robots.txt's own safeFetch dependency acyclic at load time.
+        const { assertRobotsAllowed } = await import("./robots-txt.js");
+        try { await assertRobotsAllowed(target); }
+        catch (err) {
+          if (acquisitionMethod === "public_page_read" && err instanceof SiteAccessRefusedError) {
+            throw asSourceBlocked(err, target);
+          }
+          throw err;
+        }
+      }
+    },
     returnOnRedirectCap ?? false,
+    onRequestTiming,
   );
 }
 
@@ -226,6 +274,7 @@ export async function followRedirects(
   maxRedirects: number,
   validate: (u: string) => Promise<void>,
   returnOnCap = false,
+  onRequestTiming?: (durationMs: number) => void,
 ): Promise<Response> {
   let current = url;
   let hop = 0;
@@ -242,7 +291,14 @@ export async function followRedirects(
       redirect: "manual",
       dispatcher: safeDispatcher,
     };
-    const response = await fetch(current, initWithDispatcher as RequestInit);
+    // Start after validate(), including its robots check, on every hop.
+    const start = Date.now();
+    let response: Response;
+    try {
+      response = await fetch(current, initWithDispatcher as RequestInit);
+    } finally {
+      onRequestTiming?.(Date.now() - start);
+    }
 
     if (!REDIRECT_STATUSES.has(response.status)) {
       return response;

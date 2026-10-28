@@ -1,0 +1,288 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e40b1f699342bc699d44b304fe1c4d914f03ca99"
+  },
+  "at": "2026-10-28T11:09:54.936Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "files": 406,
+    "passed": 7545,
+    "skipped": 358,
+    "failed": 0,
+    "touched_passed": 231,
+    "post_restoration_passed": 87,
+    "fail_before_groups": 9,
+    "isolated_flaky_reruns": 0,
+    "source_restored": true,
+    "scratch_deleted": true,
+    "uncommitted": true
+  },
+  "topic": "fetch-hardening-round2",
+  "raw": {
+    "ok": true,
+    "files": 406,
+    "passed": 7545,
+    "skipped": 358,
+    "failed": 0,
+    "touched_passed": 231,
+    "post_restoration_passed": 87,
+    "fail_before_groups": 9,
+    "isolated_flaky_reruns": 0,
+    "source_restored": true,
+    "scratch_deleted": true,
+    "uncommitted": true,
+    "inputs": {
+      "branch": "feat/fetch-hardening",
+      "base": "e40b1f699342bc699d44b304fe1c4d914f03ca99",
+      "source_sha256": {
+        "apps/api/src/capabilities/availability-probe.test.ts": "2f12eeb1bd0a14dcedc3e75b9cb98399950c29b052baf426a427109898baf6d8",
+        "apps/api/src/capabilities/fetch-context.test.ts": "5f870c1e2e263ebd76b4f91a637ce151ce5e8a46993fb6ee76c39895ce515433",
+        "apps/api/src/lib/input-validation.test.ts": "06197600e6fb11072d0f5eeec76fcb6741b7c06280bafc88ae518b44881230f6",
+        "apps/api/src/lib/input-validation.ts": "c0f959cd83077a55ac3786b97d973861178101978b1e452aab8a15b37af5c9d4",
+        "apps/api/src/lib/log-redaction.test.ts": "7b20819641a29221464bcc7dbaab96d888431516f9707d4cca176e14331c7280",
+        "apps/api/src/lib/safe-fetch-hardening.test.ts": "810aa43f06525a430a3058fb06fc750de40e90b02847306e479f41a395fa6451",
+        "apps/api/src/routes/admin-shared-auth.test.ts": "6d8258350e25cad526fa2076f09113be997f0c6f74e514403227e94f7fc72960",
+        "apps/api/src/capabilities/api-health-check.ts": "78c58386faa1fdbfed21104318f4139929ed4d6476244b35c1d027dacf851bda",
+        "apps/api/src/capabilities/index.ts": "4b0775e890b9816b1b6c539d92273dd1d219287dff5a5f37a98e4af243c1fa2a",
+        "apps/api/src/capabilities/page-exists.ts": "a94ab664744afd88f0e0df970d8e265d4e084eaf9ec4af0f5ea695cf288f60fa",
+        "apps/api/src/capabilities/paid-api-preflight.ts": "37bb8d5c84be505a74d55a29c59595429be3cf0e72c2b4da82b26677e28796f8",
+        "apps/api/src/capabilities/redirect-trace.ts": "b41e06a37e40b065bbe90b1bdaef2667ddbe6f9cdffc5ebab7a8ab506d19f47f",
+        "apps/api/src/capabilities/robots-txt-parse.ts": "f2a8016b05ade79fd92f57cb5f13521734503eb30bd641de39bbc36d89969dd0",
+        "apps/api/src/capabilities/uptime-check.ts": "386cb22b5b2a69f3624ea265ace3f5edb3d4f110382aab2f95a84f2a093a313a",
+        "apps/api/src/capabilities/url-health-check.ts": "75003725fe67ce31c9c662b75c9848bb0b7dbf550e238f1c48fe05a51669e22a",
+        "apps/api/src/lib/capability-refusal.ts": "70a79fe73658a88c4a44a4c359878362b933768dcaeb7d56aaed63ed6d034e2c",
+        "apps/api/src/lib/data-access.ts": "a3bd3784d738e92aa5c6076512f021f2a0708ed35084abb3209ed4d48b60d597",
+        "apps/api/src/lib/errors.ts": "ff261f3d8b9604f9c861b7665b905ffb8b4bdcde77fd9d1c07fd825f420421a3",
+        "apps/api/src/lib/log.ts": "b8af4e607a515b93747bf7b11e52381d12d62aa99a9cc5241a42bee0167b9ecf",
+        "apps/api/src/lib/robots-txt.test.ts": "530da32658b49caa4392dd5ed4ad7f57aa5b95c4c515f13ca691f9ffecf40e76",
+        "apps/api/src/lib/robots-txt.ts": "95312c3cb830af5554cbb0cbb623536bcbfa7849cb0b9e8a3b40be133bf9d843",
+        "apps/api/src/lib/safe-fetch.ts": "ddea57fbc0f745512bcc973108bc50efa9730bdc0535f1984ff65fc62e6c06ef",
+        "apps/api/src/lib/site-access.ts": "cf0130cc597f14c8ac1c99cb1cfb415784717983c8ba73d9718e08981cb7457a",
+        "apps/api/src/lib/url-validator.ts": "628a38a4d5e7477a1e7971d9205bbde7a202c01902b8d03ca568c3447e1406a1",
+        "apps/api/src/routes/do.core.test.ts": "2a29e9a06e9b62f1c697b88241ae8f5791ff1b2e91ab7154964190e2cf4769e1",
+        "apps/api/src/routes/do.ts": "1048ee7f837390db43b55be333f0e0113b6b409e4ca5c2001a61a5f8ae6004a8",
+        "apps/api/src/routes/internal-health-monitor.ts": "d105bfe89bcc0a6696403eb16e118908532ca9d5aa350d965fa4b9b92afc3339",
+        "apps/api/src/routes/internal-onboarding.ts": "f7bde0f7a604155afeb5db334bf5637daf3ca122dd2c057ad88c0936ba37867c",
+        "apps/api/src/routes/internal-tests.ts": "d6387d55936768e20140057eeb9d5672636ab01eaa4802033295abd7f128cca7",
+        "apps/api/src/routes/x402-body-limit.route.test.ts": "fb9e33ad3bff81fe6ac33a8cf37a106a47020ff1c6a117827cabd7c220068677",
+        "apps/api/src/routes/x402-gateway-v2.ts": "dfc822666c817bf35866577e3c43c0f0fa1a6b0e526e95fb508da089d5af5846",
+        "apps/api/src/routes/x402-money-path.test.ts": "eb883b735dd8c7c9891d9d5e68234cf7df3e8844bbd2b3874d007bc5b4121cdf",
+        "config/env-manifest.yaml": "e9d2aab80a2d0aeaee684702b4092e81d995be8109adaf2d8ab7697370dd8336"
+      }
+    },
+    "details": {
+      "commands": [
+        {
+          "command": "npm run env:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run claims:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run models:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run docs:check",
+          "exit": 0
+        },
+        {
+          "command": "npm run programs:check",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit": 0
+        },
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit": 0
+        },
+        {
+          "command": "cd apps/api && npx tsc --noEmit",
+          "exit": 0
+        },
+        {
+          "command": "cd apps/api && npx vitest run <ten touched files>",
+          "exit": 0,
+          "files": 10,
+          "passed": 231
+        },
+        {
+          "command": "cd apps/api && npx vitest run --reporter=default --reporter=json --outputFile.json=<scratch-report>",
+          "exit": 0,
+          "files": 406,
+          "passed_files": 371,
+          "skipped_files": 35,
+          "passed": 7545,
+          "skipped": 358,
+          "failed": 0
+        },
+        {
+          "command": "cd apps/api && npx vitest run <five restored regression files>",
+          "exit": 0,
+          "files": 5,
+          "passed": 87
+        },
+        {
+          "command": "git diff --check",
+          "exit": 0
+        },
+        {
+          "command": "npm run handoff:orient",
+          "exit": 0
+        },
+        {
+          "command": "npm run handoff:check",
+          "exit": 1,
+          "reason": "Expected dirty, branch/ahead/upstream, historical merged-branch findings; origin fetch unavailable."
+        },
+        {
+          "command": "npm run lint:no-bare-catch (root)",
+          "exit": 1,
+          "reason": "Missing root script; workspace invocation passed."
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:ssrf-inventory",
+          "exit": 1,
+          "reason": "Pre-existing cwd assumption; identical root node script passed."
+        },
+        {
+          "command": "npm run receipt -- --kind test-run --topic fetch-hardening-round2 --from - (first attempt)",
+          "exit": 1,
+          "reason": "Input summary nested; writer requires top-level summary values. No receipt was written on this attempt."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/uptime-check.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/url-health-check.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/page-exists.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/api-health-check.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/redirect-trace.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/paid-api-preflight.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        },
+        {
+          "command": "cd apps/api && npx tsx scripts/onboard.ts --dry-run --backfill --manifest ../../manifests/robots-txt-parse.yaml",
+          "exit": 1,
+          "reason": "ProductionAuthorityError: no production write credential; no database operation ran."
+        }
+      ],
+      "fail_before": [
+        {
+          "group": "items1-4-baseline-dispatch",
+          "exit": 1
+        },
+        {
+          "group": "item2-baseline-probes",
+          "exit": 1
+        },
+        {
+          "group": "items3-5-baseline-logging",
+          "exit": 1
+        },
+        {
+          "group": "item4-allErrors-mutation",
+          "exit": 1
+        },
+        {
+          "group": "item1-unguarded-compile",
+          "exit": 1
+        },
+        {
+          "group": "item5-native-traversal",
+          "exit": 1
+        },
+        {
+          "group": "baseline-dispatch-final",
+          "exit": 1
+        },
+        {
+          "group": "item2-probe-regression",
+          "exit": 1
+        },
+        {
+          "group": "item3-baseline-aliases",
+          "exit": 1
+        }
+      ],
+      "initial_full_run": {
+        "files": 406,
+        "passed": 7538,
+        "skipped": 358,
+        "failed": 0,
+        "stable_snapshot": false,
+        "reason": "Review fixes overlapped; final stable full run supersedes this run."
+      },
+      "touched_files": [
+        "src/lib/input-validation.test.ts",
+        "src/lib/log-redaction.test.ts",
+        "src/lib/safe-fetch-hardening.test.ts",
+        "src/lib/robots-txt.test.ts",
+        "src/capabilities/availability-probe.test.ts",
+        "src/capabilities/fetch-context.test.ts",
+        "src/routes/do.core.test.ts",
+        "src/routes/x402-money-path.test.ts",
+        "src/routes/x402-body-limit.route.test.ts",
+        "src/routes/admin-shared-auth.test.ts"
+      ],
+      "reviews": {
+        "technical": "GO after confirmation of legacy required-array guard and per-hop network timing",
+        "product": "Redirected-origin timing and alias matrix findings repaired and confirmed by technical reviewer",
+        "simplify": "Skill unavailable; manual scoped simplification pass"
+      },
+      "fail_before_method": "git show origin/main:<path> bytes saved inside checkout scratch, substituted with restoration in finally. Baseline dispatch, fetch policy and logger groups failed; origin/main predates H6 input validator and recursive serializer, so targeted individual fix reversions additionally discriminate unguarded compile, allErrors amplification, native traversal and probe gating. All source hashes matched final full-suite snapshot after restoration. No stash or branch switch. Scratch deleted.",
+      "receipts_warnings": 19,
+      "live_checks": "Not run. URL controls mocked; no production writes/settings access.",
+      "unchanged": [
+        "x402 GET enforce 400 versus 405",
+        "non-routable ::8.8.8.8 and Teredo",
+        "Railway"
+      ],
+      "database_readiness": "Unverified. Seven onboarding dry-runs blocked before DB access; no credentials sought."
+    }
+  }
+}

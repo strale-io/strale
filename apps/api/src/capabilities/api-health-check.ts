@@ -1,3 +1,4 @@
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch, type SafeFetchOptions } from "../lib/safe-fetch.js";
 import {
@@ -22,8 +23,10 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
   // F-0-006: safeFetch validates + re-validates redirects + refuses
   // DNS-rebinding. The old `redirect: "follow"` path was the classic
   // SSRF bypass (validateUrl on the first URL, then follow to private IP).
+  let networkMs = 0;
   const fetchOptions: SafeFetchOptions & { body?: BodyInit; headers: Record<string, string> } = {
     method,
+    onRequestTiming: ms => { networkMs += ms; },
     headers: {
       "User-Agent": "Strale/1.0 (api-health-check; admin@strale.io)",
       ...headers,
@@ -38,7 +41,8 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
     }
   }
 
-  const start = Date.now();
+  // safeFetch times each network hop after robots; add body-reading time below.
+  let bodyStart: number | undefined;
   let statusCode: number;
   let responseBody: unknown = null;
   let contentType: string | null = null;
@@ -46,6 +50,7 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
 
   try {
     const response = await safeFetch(fullUrl, fetchOptions);
+    bodyStart = Date.now();
     statusCode = response.status;
     contentType = response.headers.get("content-type");
     responseHeaders = Object.fromEntries(response.headers.entries());
@@ -78,7 +83,8 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
       responseBody = { note: err.message };
     }
   } catch (err) {
-    const responseTimeMs = Date.now() - start;
+    if (isCapabilityRefusal(err)) throw err;
+    const responseTimeMs = networkMs + (bodyStart === undefined ? 0 : Date.now() - bodyStart);
     return {
       output: {
         url: fullUrl,
@@ -91,7 +97,7 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
     };
   }
 
-  const responseTimeMs = Date.now() - start;
+  const responseTimeMs = networkMs + (bodyStart === undefined ? 0 : Date.now() - bodyStart);
 
   // Check expected status
   let statusValid = true;

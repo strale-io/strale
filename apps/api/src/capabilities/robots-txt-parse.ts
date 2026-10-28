@@ -14,6 +14,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   await validateUrl(robotsUrl);
 
   const response = await safeFetch(robotsUrl, {
+    purpose: "availability_probe",
     signal: AbortSignal.timeout(10000),
     headers: { "User-Agent": "StraleBot/1.0" },
   });

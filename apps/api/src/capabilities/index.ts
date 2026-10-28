@@ -5,7 +5,7 @@ import { noteUnknownCost, withExpectedLlmUsage } from "../lib/call-cost.js";
 // and returns structured output + provenance.
 
 import { getChain, executeWithFallback } from "../lib/data-provider.js";
-import { getDataAccess, stampDataAccess } from "../lib/data-access.js";
+import { getDataAccess, stampDataAccess, withAcquisitionMethod } from "../lib/data-access.js";
 
 export interface CapabilityInput {
   [key: string]: unknown;
@@ -60,7 +60,7 @@ export function getExecutor(slug: string): CapabilityExecutor | undefined {
   return async (input) => {
     if (!access || (access.acquisition_method !== "computed" &&
       !(access.acquisition_method === "vendor_api" && ["serper", "dilisense", "esortcode", "browserless", "openregister"].includes(access.upstream_vendor ?? "")))) noteUnknownCost(`unmetered_upstream:${slug}`);
-    const result = await (llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input));
+    const result = await withAcquisitionMethod(access?.acquisition_method, () => llmSlugs.has(slug) ? withExpectedLlmUsage(() => base(input)) : base(input));
     if (!access) return result;
     if (!result || typeof result.provenance !== "object" || result.provenance === null) return result;
     return { ...result, provenance: stampDataAccess(result.provenance, access) };

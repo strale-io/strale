@@ -58,7 +58,7 @@ export class CapabilityRefusalError extends Error {
    *  module-instance boundaries, which the async execution paths can cross. */
   readonly isCapabilityRefusal = true;
 
-  constructor(message: string, readonly details?: { fix: string; field?: string }) {
+  constructor(message: string, readonly details?: { fix: string; field?: string; retryable?: boolean; retry_after_seconds?: number; next_step?: string }) {
     super(message);
     this.name = "CapabilityRefusalError";
   }
@@ -187,11 +187,20 @@ export function inputRefusal(message: string, field: string, fix: string): Capab
   return new CapabilityRefusalError(message, { field, fix });
 }
 
+/** A robots transport failure is temporary; never try another route during this call. */
+export const ROBOTS_UNAVAILABLE_DETAILS = {
+  fix: "Retry the same URL after at least 5 minutes, once the site serves robots.txt again.",
+  retryable: true,
+  retry_after_seconds: 300,
+  next_step: "Wait at least 5 minutes, then retry the same URL once robots.txt is reachable. Do not retry through another fetch route.",
+};
+
 /** Safe fallback for rails that retain only a refusal's message. */
 export function refusalDetails(error: unknown): Record<string, unknown> | undefined {
   if (!isCapabilityRefusal(error)) return undefined;
-  if (error instanceof CapabilityRefusalError && error.details) return { ...error.details, retryable: false };
+  if (error instanceof CapabilityRefusalError && error.details) return { retryable: false, ...error.details };
   const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  if (isAccessPolicyRefusal(message) && message.includes("'s robots.txt could not be read (")) return { ...ROBOTS_UNAVAILABLE_DETAILS };
   if (isAccessPolicyRefusal(message)) return { retryable: false, fix: "Choose a different URL or source; this site does not permit automated access." };
   const field = /^'([a-z][a-z0-9_]{0,39})' must be /i.exec(message)?.[1];
   // Do not copy arbitrary executor text into advice: it may contain source

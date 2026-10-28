@@ -889,7 +889,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "3286ecc2c0a8456d25a6706438a6ea359f982128d4b66ea99c7d9f2ee1aef19b",
+      "sha256": "36b1c36cbc9546beb14002ca630aad1b336a4d9f00c55dc5c7a1ee9df83a947a",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -979,6 +979,8 @@
         "archive/receipts/2026-10-27-test-run-x402-bazaar-challenge-metadata.json",
         "archive/receipts/2026-10-27-test-run-zapier-integration-round2.json",
         "archive/receipts/2026-10-27-test-run-zapier-integration.json",
+        "archive/receipts/2026-10-28-test-run-fetch-hardening-round2.json",
+        "archive/receipts/2026-10-28-test-run-fetch-hardening.json",
         "archive/receipts/2026-10-28-test-run-vendor-permissions.json",
         "archive/receipts/2026-10-28-test-run-x402-bazaar-round3.json",
         "archive/receipts/README.md",
@@ -1045,6 +1047,7 @@
         "archive/sessions/2026-10-27-package-docs-review.md",
         "archive/sessions/2026-10-27-public-descriptions-copy.md",
         "archive/sessions/2026-10-28-d2-round3-checks.json",
+        "archive/sessions/2026-10-28-fetch-hardening-review.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

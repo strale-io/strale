@@ -1,6 +1,6 @@
+import { isValidAdminAuth } from "../lib/admin-auth.js";
 import { Hono } from "hono";
 import { eq, and, desc, sql, asc, inArray } from "drizzle-orm";
-import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -48,13 +48,7 @@ function setCache<T>(key: string, data: T): void {
 }
 
 /** Constant-time comparison for admin auth to prevent timing attacks. */
-function isValidAdminAuth(auth: string | undefined): boolean {
-  if (!auth || !ADMIN_SECRET) return false;
-  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
-  const provided = Buffer.from(auth, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
+
 
 // ─── Schedule intervals for next_scheduled_run computation ──────────────────
 const TIER_INTERVAL_MS: Record<string, number> = {

@@ -1,3 +1,4 @@
+import { validateDispatchInput } from "../lib/input-validation.js";
 import { claimX402Payment, beginX402Execution, openClaimedX402Intent, releaseX402Claim } from "../lib/x402-payment-claims.js";
 import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
@@ -1335,6 +1336,15 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // processed and recorded, return the cached row instead of re-running.
     // Only safe AFTER verify so an unverified replay can't probe for the
     // existence of cached rows.
+    let schemaInputs: Record<string, unknown>;
+    try {
+      schemaInputs = await extractInputs(c, sol.inputSchema);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "BodyLimitError") throw err;
+      return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
+    }
+    const schemaFailure = validateDispatchInput(sol.slug, "x402", sol.inputSchema, schemaInputs);
+    if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
     paymentHash = hashPaymentHeader(paymentHeader);
     let cached = await findCachedX402Response(paymentHash);
     if (!cached) {
@@ -1383,6 +1393,10 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   // solutions handler previously had NO input validation at all — a bad
   // or empty body ran straight into executeSolution() and surfaced
   // whichever step's raw error came back first.
+  if (sol.x402PriceUsd <= 0) {
+    const failure = validateDispatchInput(sol.slug, "x402", sol.inputSchema, inputs);
+    if (failure) return c.json(failure, failure.error_code === "capability_unavailable" ? 503 : 400);
+  }
   const solValidation = validateX402Input(inputs, sol.inputSchema);
   if (!solValidation.ok) {
     return schemaBadRequest(c, solValidation.error, sol.inputSchema);
@@ -1722,6 +1736,15 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // Cert-audit C9: replay dedup. Same logic as the solutions handler —
     // if this exact payment header already produced a recorded transaction,
     // return the cached output and don't re-execute or re-settle.
+    let schemaInputs: Record<string, unknown>;
+    try {
+      schemaInputs = await extractInputs(c, cap.inputSchema);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "BodyLimitError") throw err;
+      return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
+    }
+    const schemaFailure = validateDispatchInput(cap.slug, "x402", cap.inputSchema, schemaInputs);
+    if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
     paymentHash = hashPaymentHeader(paymentHeader);
     let cached = await findCachedX402Response(paymentHash);
     if (!cached) {
@@ -1780,6 +1803,10 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // lib/x402-input-validation.ts for the full rationale. Runs after verify
   // (per the Bazaar-indexing constraint above) and before settle (bad
   // input never costs the caller).
+  if (cap.x402PriceUsd <= 0) {
+    const failure = validateDispatchInput(cap.slug, "x402", cap.inputSchema, inputs);
+    if (failure) return c.json(failure, failure.error_code === "capability_unavailable" ? 503 : 400);
+  }
   const validation = validateX402Input(inputs, cap.inputSchema);
   if (!validation.ok) {
     // Distinct from the unknown-slug case: we sell this and they could not use

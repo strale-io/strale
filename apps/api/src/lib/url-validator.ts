@@ -9,6 +9,9 @@
 import dns from "dns/promises";
 import net from "net";
 
+/** Distinguish invalid/restricted targets from a temporary network failure. */
+export class UrlValidationError extends Error {}
+
 const BLOCKED_HOSTS = new Set([
   "localhost",
   "127.0.0.1",
@@ -27,7 +30,21 @@ const BLOCKED_HOSTS = new Set([
  * bypasses (IPv4-mapped IPv6, 100.64/10, cloud metadata IPv6).
  */
 export function isBlockedIp(addr: string): boolean {
-  const a = addr.toLowerCase();
+  let a = addr.toLowerCase();
+  // Canonicalize expanded IPv6, including mapped addresses, before prefix checks.
+  if (net.isIP(a) === 6) a = new URL(`http://[${a}]/`).hostname.slice(1, -1);
+  if (net.isIP(a) === 4) {
+    const [first, second, third] = a.split(".").map(Number);
+    if (first === 0 || first >= 224) return true;
+    if (first === 198 && (second === 18 || second === 19)) return true;
+    if ((first === 192 && second === 0 && third === 2) ||
+        (first === 198 && second === 51 && third === 100) ||
+        (first === 203 && second === 0 && third === 113)) return true;
+  }
+  // NAT64, 6to4 and documentation networks must never route a fetch.
+  if (a.startsWith("64:ff9b:") || a.startsWith("2002:") ||
+      a.startsWith("2001:db8:") || a.startsWith("ff")) return true;
+  if (a === "::" || /^f[cd][0-9a-f]{2}:/.test(a) || /^fe[89ab][0-9a-f]:/.test(a)) return true;
 
   // ── Loopback ──
   if (a === "127.0.0.1" || a === "::1" || a.startsWith("127.")) return true;
@@ -103,14 +120,14 @@ export async function validateUrl(urlString: string): Promise<void> {
   try {
     parsed = new URL(urlString);
   } catch {
-    throw new Error("Invalid URL format.");
+    throw new UrlValidationError("Invalid URL format.");
   }
 
   // Only allow http/https — every other scheme is an SSRF amplifier.
   // `file://`, `gopher://`, `dict://`, `ftp://`, `javascript:`, `data:`,
   // and friends all fall through to the reject branch.
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error(
+    throw new UrlValidationError(
       `URL scheme "${parsed.protocol}" is not allowed. Only http and https URLs are permitted.`,
     );
   }
@@ -125,18 +142,18 @@ export async function validateUrl(urlString: string): Promise<void> {
 
   // Block known dangerous hosts
   if (BLOCKED_HOSTS.has(hostname)) {
-    throw new Error("This URL targets a restricted address.");
+    throw new UrlValidationError("This URL targets a restricted address.");
   }
 
   // Block .internal domains (Railway internal networking)
   if (hostname.endsWith(".internal")) {
-    throw new Error("This URL targets a restricted address.");
+    throw new UrlValidationError("This URL targets a restricted address.");
   }
 
   // If hostname is already an IP, check it directly
   if (net.isIP(hostname)) {
     if (isBlockedIp(hostname)) {
-      throw new Error("This URL targets a restricted address.");
+      throw new UrlValidationError("This URL targets a restricted address.");
     }
     return;
   }
@@ -154,7 +171,7 @@ export async function validateUrl(urlString: string): Promise<void> {
 
     for (const addr of addresses) {
       if (isBlockedIp(addr)) {
-        throw new Error("This URL resolves to a restricted address.");
+        throw new UrlValidationError("This URL resolves to a restricted address.");
       }
     }
   } catch (err) {
@@ -171,16 +188,16 @@ export async function validateHost(hostname: string): Promise<void> {
   const clean = hostname.toLowerCase().replace(/:\d+$/, "");
 
   if (BLOCKED_HOSTS.has(clean)) {
-    throw new Error("This host targets a restricted address.");
+    throw new UrlValidationError("This host targets a restricted address.");
   }
 
   if (clean.endsWith(".internal")) {
-    throw new Error("This host targets a restricted address.");
+    throw new UrlValidationError("This host targets a restricted address.");
   }
 
   if (net.isIP(clean)) {
     if (isBlockedIp(clean)) {
-      throw new Error("This host targets a restricted address.");
+      throw new UrlValidationError("This host targets a restricted address.");
     }
     return;
   }
@@ -197,7 +214,7 @@ export async function validateHost(hostname: string): Promise<void> {
 
     for (const addr of addresses) {
       if (isBlockedIp(addr)) {
-        throw new Error("This host resolves to a restricted address.");
+        throw new UrlValidationError("This host resolves to a restricted address.");
       }
     }
   } catch (err) {

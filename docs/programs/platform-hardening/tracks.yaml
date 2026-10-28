@@ -1,7 +1,7 @@
 schema_version: 1
 program: platform-hardening
 program_status: active
-updated: 2026-10-27
+updated: 2026-10-28
 tracks:
   - id: T1
     title: "H1: Watch production"
@@ -91,9 +91,14 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: Add report-only-first dispatch validation, robots.txt, pino redact,
-      shared admin check and missing SSRF ranges; put measured Railway config in
-      code and confirm live values with its access holder (§10 items 8, 9, 11).
+    next_action: H6 built locally on feat/fetch-hardening; orchestrator reviews
+      and ships the uncommitted diff. Deploy with INPUT_VALIDATION_MODE unset
+      (report default), collect seven consecutive days of clean mismatch reports
+      with representative wallet and x402 traffic, reconcile schema drift, then
+      separately enable enforce and verify 400 invalid_input before payment
+      side effects. Railway root/config path and live settings need confirmation
+      with Petter and cold-boot measurement before adopting config as code; see
+      handoff/_general/from-code/2026-10-28-fetch-hardening.md. Keep T6 open.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Validation and fetch protections have discriminating checks.

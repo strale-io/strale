@@ -9,7 +9,7 @@
  * Reverting BOTH route callers so they convert the rethrown error back into a
  * 400 left every other test green.
  *
- * Both call sites wrap it:
+ * All call sites wrap it:
  *
  *     try { inputs = await extractInputs(c, cap.inputSchema); }
  *     catch { return c.json({ error: "Invalid request body…" }, 400); }
@@ -119,7 +119,7 @@ describe("every caller of extractInputs preserves the body-cap abort", () => {
     // look at it, which is the intent.
     const callSites = (stripComments(source).match(/await extractInputs\(/g) ?? []).length;
     expect(bodies.length, "a catch wrapping extractInputs was not located").toBe(callSites);
-    expect(callSites, "no extractInputs call sites found — has it been renamed?").toBe(2);
+    expect(callSites, "no extractInputs call sites found — has it been renamed?").toBe(4);
   });
 
   it("every one of them rethrows a BodyLimitError", () => {

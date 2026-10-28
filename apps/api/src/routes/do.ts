@@ -1,3 +1,4 @@
+import { validateDispatchInput } from "../lib/input-validation.js";
 import { persistCallCost } from "../lib/persist-call-cost.js";
 import { setCostDeadline, noteUnknownCost } from "../lib/call-cost.js";
 import { refusalDetails } from "../lib/capability-refusal.js";
@@ -980,6 +981,8 @@ doRoute.post(
 
   const capability = match.capability;
   const isFreeTier = capability.isFreeTier;
+  const schemaFailure = validateDispatchInput(capability.slug, c.get("x402_paid" as any) ? "x402" : user ? "wallet" : "free", capability.inputSchema, inputs ?? {});
+  if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
 
   if (hasMissingRequiredCredential(capability.slug)) {
     return c.json(apiError("capability_unavailable", "This capability is temporarily unavailable. Contact Strale support."), 503);
@@ -1199,7 +1202,7 @@ doRoute.post(
     );
   }
 
-  if (inputSchema?.required && inputSchema?.properties) {
+  if (Array.isArray(inputSchema?.required) && inputSchema?.properties) {
     const missingFields = inputSchema.required.filter(
       (field) => !(field in executionInput) || executionInput[field] === undefined,
     );
