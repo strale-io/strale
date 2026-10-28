@@ -23,11 +23,14 @@ import { recordQuality } from "../quality-capture.js";
 import { deployCommitOrNull } from "../receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../receipt/settle.js";
 import { executeWithTransientRetry } from "../retry.js";
-import { sanitizeFailureReason } from "../sanitize.js";
+import { sanitizeFailureReason, redactAuditTrail } from "../sanitize.js";
 import { trackBackgroundTask } from "../shutdown.js";
 import { type FreshnessInfo } from "../trust-grade.js";
 import * as reservations from "../wallet-reservations.js";
 import * as walletService from "../wallet-service.js";
+import { claimX402Payment, findCachedX402Response, beginX402Execution, releaseX402Claim } from "../x402-payment-claims.js";
+import { captureX402RecordingFailure } from "../x402-recording.js";
+import { eurCentsToUsd, extractPayerAddress } from "../x402-gateway.js";
 import { settleX402Execution } from "../x402-settle.js";
 import * as settlementIntent from "../x402-settlement-intent.js";
 import type { AppEnv } from "../../types.js";
@@ -112,6 +115,7 @@ async function executeWithRetry(
   capability: CapabilityInfo,
   actor: InvocationActor,
   deadline?: number,
+  executionStarted?: () => boolean,
 ): Promise<any> {
   const startedAt = Date.now();
   try {
@@ -126,7 +130,7 @@ async function executeWithRetry(
     });
     return result;
   } catch (err) {
-    if (deadline === undefined || Date.now() < deadline) recordFactWithoutHoldingTheLock({
+    if ((deadline === undefined || Date.now() < deadline) && (executionStarted?.() ?? true)) recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.kind === "account" ? actor.userId : null,
@@ -285,220 +289,282 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
   // would drop genuinely paid traffic out of the quality floor.
   const servedFree = computeServedFree(c.get("x402_paid"));
 
-  // Create a persisted transaction record so the audit trail is verifiable.
-  // MED-10: write client_ip_hash directly so the free-tier rate-limit query
-  // hits a top-level indexed column instead of audit_trail JSONB.
-  const reqCtxForInsert = c.get("requestContext");
-  const [txnRecord] = await db
-    .insert(transactions)
-    .values({
-      // Captured at INSERT because neither is recoverable later:
-      // the rail is not a property of the row, and the deploy commit
-      // drifts the moment anything redeploys (block 0110).
-      receiptRail: "v1_do",
-      receiptDeployCommit: deployCommitOrNull(),
-      userId: null,
-      capabilityId: capability.id,
-      status: "executing",
-      clientMeta: c.get("clientMeta") ?? null,
-      input: inputForPersistence(capability.slug, executionInput),
-      priceCents: 0,
-      transparencyMarker: marker,
-      dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
-      // The same variable the fact gets. Two derivations of one fact is what
-      // review falsified twice.
-      isFreeTier: servedFree,
-      clientIpHash: reqCtxForInsert?.ipHash ?? null,
-    })
-    .returning({ id: transactions.id });
+  const x402Verified = c.get("x402_verified");
+  const paymentHash = c.get("x402_payment_hash");
+  let claimId: string | null = null;
+  let releaseClaim = true;
+  let executionStarted = false;
+  if (x402Verified && paymentHash) {
+    let cached = await findCachedX402Response(paymentHash);
+    if (!cached) {
+      claimId = await claimX402Payment(paymentHash, capability.id, null, "v1_do");
+      if (!claimId) cached = await findCachedX402Response(paymentHash);
+    }
+    if (cached?.status === "completed") {
+      return c.json({
+        result: {
+          transaction_id: cached.id, status: "completed", capability_used: capability.slug,
+          price_cents: cached.priceCents, latency_ms: cached.latencyMs,
+          output: cached.output, provenance: cached.provenance,
+        },
+        meta: { audit: redactAuditTrail(cached.auditTrail), replayed: true },
+        free_tier: false,
+      });
+    }
+    if (!claimId) {
+      return c.json({
+        error_code: "payment_failed",
+        message: "A request with this payment is already in progress or has failed",
+        details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." },
+        meta: { replayed: true },
+      }, 502);
+    }
+  }
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "anonymous", servedFree });
-    assertBillableOutput(capability.slug, capResult.output);
-    const latencyMs = Date.now() - startTime;
+    // Create a persisted transaction record so the audit trail is verifiable.
+    // MED-10: write client_ip_hash directly so the free-tier rate-limit query
+    // hits a top-level indexed column instead of audit_trail JSONB.
+    const reqCtxForInsert = c.get("requestContext");
+    const initialValues = {
+        // Captured at INSERT because neither is recoverable later:
+        // the rail is not a property of the row, and the deploy commit
+        // drifts the moment anything redeploys (block 0110).
+        receiptRail: "v1_do" as const,
+        receiptDeployCommit: deployCommitOrNull(),
+        userId: null,
+        capabilityId: capability.id,
+        status: "executing" as const,
+        clientMeta: c.get("clientMeta") ?? null,
+        input: inputForPersistence(capability.slug, executionInput),
+        priceCents: 0,
+        transparencyMarker: marker,
+        dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
+        // The same variable the fact gets. Two derivations of one fact is what
+        // review falsified twice.
+        isFreeTier: servedFree,
+        clientIpHash: reqCtxForInsert?.ipHash ?? null,
+      };
+    const [txnRecord] = claimId
+      ? await db.update(transactions).set(initialValues)
+          .where(and(eq(transactions.id, claimId), eq(transactions.status, "executing")))
+          .returning({ id: transactions.id })
+      : await db.insert(transactions).values(initialValues).returning({ id: transactions.id });
+    if (!txnRecord) throw new Error("Payment claim is no longer owned by this request");
 
-    const audit = buildFullAudit({
-      transactionId: txnRecord.id,
-      startTime,
-      capability,
-      marker,
-      executionMode: "sync",
-      latencyMs,
-      executionInput,
-      output: capResult.output,
-      outputSchema,
-      provenance: capResult.provenance,
-      requestContext: c.get("requestContext"),
-    });
+    try {
+      const capResult = await executeWithRetry(async input => {
+        if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
+        executionStarted = true;
+        return executor(input);
+      }, executionInput, capability, { kind: "anonymous", servedFree }, undefined, () => executionStarted);
+      assertBillableOutput(capability.slug, capResult.output);
+      const latencyMs = Date.now() - startTime;
 
-    // If this call was x402-paid, settle NOW (after success). If settle
-    // fails — rare, since verify already passed — mark the transaction
-    // failed and surface a 402 so the caller knows the payment didn't land.
-    const x402Verified = c.get("x402_verified");
-    let x402SettlementId: string | null = null;
-    if (x402Verified) {
-      const settled = await settleX402Execution({
-        verified: x402Verified,
-        paymentHash: c.get("x402_payment_hash"),
-        intent: { slug: capability.slug, solutionSlug: null, priceCents: capability.priceCents },
-        policy: { kind: "v1_do", db },
+      const audit = buildFullAudit({
+        transactionId: txnRecord.id,
+        startTime,
+        capability,
+        marker,
+        executionMode: "sync",
+        latencyMs,
+        executionInput,
+        output: capResult.output,
+        outputSchema,
+        provenance: capResult.provenance,
+        requestContext: c.get("requestContext"),
       });
-      if (!settled.valid) {
+
+      // Settle only after usable output. A confirmed decline releases ownership;
+      // an unknown result keeps both the claim and intent for reconciliation.
+      let x402SettlementId: string | null = null;
+      if (x402Verified) {
+        const settled = await settleX402Execution({
+          verified: x402Verified,
+          paymentHash: c.get("x402_payment_hash"),
+          intent: { slug: capability.slug, solutionSlug: null, priceCents: capability.priceCents },
+          policy: { claimId, setReleaseClaim: (release) => { releaseClaim = release; } },
+        });
+        if (!settled.valid) {
+          if (!settled.settlementUnknown) {
+            await db
+              .update(transactions)
+              .set({
+                status: "failed",
+                ...(claimId ? { x402PaymentHash: null, complianceHashState: "pending" } : {}),
+                error: `Payment settlement failed: ${settled.error ?? "unknown"}`,
+                latencyMs,
+                completedAt: new Date(),
+              })
+              .where(eq(transactions.id, txnRecord.id));
+            await settleReceiptFor(txnRecord.id);
+          }
+          return c.json(
+            {
+              error_code: "payment_failed",
+              message: "x402 settlement failed after successful execution.",
+              details: { retryable: false, fix: "Check payment status in your wallet before signing a fresh x402 payment authorization." },
+              detail: settled.error,
+            },
+            402,
+          );
+        }
+        x402SettlementId = settled.settlementId ?? null;
+      }
+
+      try {
+        const recordQuery = db
+          .update(transactions)
+          .set({
+            status: "completed",
+            output: capResult.output,
+            provenance: capResult.provenance,
+            auditTrail: audit,
+            latencyMs,
+            completedAt: new Date(),
+            ...(claimId ? { complianceHashState: "pending" } : {}),
+            ...(x402SettlementId
+              ? { paymentMethod: "x402", x402SettlementId, isFreeTier: false, priceCents: capability.priceCents }
+              : {}),
+          })
+          .where(claimId ? and(eq(transactions.id, txnRecord.id), eq(transactions.status, "executing")) : eq(transactions.id, txnRecord.id));
+        if (claimId) {
+          const recorded = await recordQuery.returning({ id: transactions.id });
+          if (!recorded.length) throw new Error("x402 claim finalization matched no row");
+        } else {
+          await recordQuery;
+        }
+        await settleReceiptFor(txnRecord.id);
+
+        if (x402SettlementId) {
+          try {
+            await settlementIntent.markRecordedBySettlement(db, {
+              settlementId: x402SettlementId, transactionId: txnRecord.id,
+            });
+          } catch (intentErr) {
+            logError("x402-intent-mark-recorded-failed", intentErr, { settlementId: x402SettlementId });
+          }
+        }
+      } catch (recordErr) {
+        if (!x402SettlementId) throw recordErr;
+        await captureX402RecordingFailure(db, {
+          claimId, settlementId: x402SettlementId, capabilityId: capability.id,
+          solutionSlug: null, slug: capability.slug, inputs: executionInput,
+          output: capResult.output, provenance: capResult.provenance, auditTrail: audit, latencyMs,
+          priceCents: capability.priceCents, priceUsd: eurCentsToUsd(capability.priceCents),
+          payerAddress: x402Verified ? extractPayerAddress(x402Verified) : null,
+          paymentHash,
+        }, recordErr);
+      }
+
+      // Record circuit breaker + quality (fire-and-forget)
+      fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
+      recordQuality({
+        transactionId: txnRecord.id,
+        responseTimeMs: latencyMs,
+        output: capResult.output,
+        outputSchema,
+      });
+      if (capResult.output) {
+        fireAndForget(
+          () => recordPiggybackResult(capability.slug, capResult.output, outputSchema, latencyMs),
+          { label: "piggyback-record", context: { slug: capability.slug } },
+        );
+      }
+      // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
+      // by column default; jobs/integrity-hash-retry.ts will fill it in.
+
+
+      // The reserved count is request-local; a second read could race other calls.
+      const reqCtx = c.get("requestContext");
+      // Progressive unlock: record + include in response (DEC-20260410-A)
+      const ipHashForUnlock = x402Verified ? null : reqCtx?.ipHash ?? null;
+      const newlyUnlocked = ipHashForUnlock ? recordUnlock(ipHashForUnlock, capability.slug) : [];
+      const allUnlocked = ipHashForUnlock ? getUnlockedSlugs(ipHashForUnlock) : [];
+
+      return c.json({
+        result: {
+          transaction_id: txnRecord.id,
+          status: "completed",
+          capability_used: capability.slug,
+          price_cents: x402SettlementId ? capability.priceCents : 0,
+          latency_ms: latencyMs,
+          output: capResult.output,
+          provenance: capResult.provenance,
+        },
+        meta: {
+          audit,
+        },
+        free_tier: !x402SettlementId,
+        usage: c.get("freeTierUsage"),
+        ...(allUnlocked.length > 0 ? {
+          unlocked: {
+            capabilities: allUnlocked,
+            message: `${newlyUnlocked.length > 0 ? newlyUnlocked.length + " new capabilities unlocked. " : ""}These capabilities are free for you for 24 hours — no signup needed.`,
+            ttl_hours: 24,
+          },
+        } : {}),
+        ...(!x402Verified ? { upgrade: buildUpgradeBlock(capability.slug, executionInput, capResult.output as Record<string, unknown>) } : {}),
+      });
+    } catch (err) {
+      if (!executionStarted) {
+        logError("x402-execution-admission-failed", err, { slug: capability.slug });
+        return c.json({ error_code: "execution_failed", message: "Execution could not start. No payment was taken.",
+          details: { retryable: true, next_step: "Retry with exponential backoff." } }, 503);
+      }
+      const latencyMs = Date.now() - startTime;
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      const failAudit = buildFailureAudit({
+        transactionId: txnRecord.id, startTime, capability, executionInput,
+        errorMessage, executionMode: "sync",
+        requestContext: c.get("requestContext"),
+      });
+      const failProvenance = buildFailureProvenance(
+        capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+      );
+
+      if (!claimId || (releaseClaim && executionStarted)) {
         await db
           .update(transactions)
           .set({
-            status: "failed",
-            error: `Payment settlement failed: ${settled.error ?? "unknown"}`,
-            latencyMs,
-            completedAt: new Date(),
+            ...(claimId ? { x402PaymentHash: null, complianceHashState: "pending" } : {}),
+            status: "failed", error: errorMessage, latencyMs, completedAt: new Date(),
+            auditTrail: failAudit, provenance: failProvenance,
           })
           .where(eq(transactions.id, txnRecord.id));
         await settleReceiptFor(txnRecord.id);
-        return c.json(
-          {
-            error_code: "payment_failed",
-            message: "x402 settlement failed after successful execution.",
-            details: { retryable: false, fix: "Check payment status in your wallet before signing a fresh x402 payment authorization." },
-            detail: settled.error,
-          },
-          402,
-        );
       }
-      x402SettlementId = settled.settlementId ?? null;
-    }
 
-    // H7b-FINDING: unlike the gateway, a failed post-settle write reaches the
-    // execution catch (500, failed row), without transaction-level orphan capture.
-    await db
-      .update(transactions)
-      .set({
-        status: "completed",
-        output: capResult.output,
-        provenance: capResult.provenance,
-        auditTrail: audit,
-        latencyMs,
-        completedAt: new Date(),
-        ...(x402SettlementId
-          ? { paymentMethod: "x402", x402SettlementId, isFreeTier: false }
-          : {}),
-      })
-      .where(eq(transactions.id, txnRecord.id));
-    await settleReceiptFor(txnRecord.id);
-
-    // WP5: the row exists, so the intent is discharged. Review finding — this
-    // rail opened intents and never closed them, because markRecordedBySettlement
-    // lives inside recordX402Transaction, which /v1/do does not use. Every paid
-    // call therefore left a 'settled' intent that the reconciler picked up five
-    // minutes later as "abandoned", routing the NORMAL path through the
-    // crash-recovery path and permanently contending its bounded queue.
-    // H7b-FINDING: mark-recorded is not best-effort on v1_do. Its rejection
-    // reaches the execution catch and overwrites the completed row as failed.
-    if (x402SettlementId) {
-      await settlementIntent.markRecordedBySettlement(db, {
-        settlementId: x402SettlementId,
+      // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
+      // by column default; jobs/integrity-hash-retry.ts will fill it in.
+      // WP4 remediation: a refusal is the guarded executor working, not a broken
+      // capability. Recording it here delisted capabilities for correctly
+      // refusing bad input — the quality floor is armed in production.
+      if (releaseClaim && executionStarted && shouldCountAgainstCapability(err)) {
+        fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+        fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+      }
+      recordQuality({
         transactionId: txnRecord.id,
+        responseTimeMs: latencyMs,
+        output: null,
+        outputSchema,
+        error: errorMessage,
       });
+
+      return c.json({
+        ...apiError(
+          "execution_failed",
+          "The capability failed to execute.",
+          { error: sanitizeFailureReason(errorMessage), ...refusalDetails(err) },
+        ),
+        free_tier: true,
+        upgrade: buildUpgradeBlock(capability.slug, executionInput),
+      }, 500);
     }
-
-    // Record circuit breaker + quality (fire-and-forget)
-    fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
-    recordQuality({
-      transactionId: txnRecord.id,
-      responseTimeMs: latencyMs,
-      output: capResult.output,
-      outputSchema,
-    });
-    if (capResult.output) {
-      fireAndForget(
-        () => recordPiggybackResult(capability.slug, capResult.output, outputSchema, latencyMs),
-        { label: "piggyback-record", context: { slug: capability.slug } },
-      );
-    }
-    // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
-    // by column default; jobs/integrity-hash-retry.ts will fill it in.
-
-
-    // The reserved count is request-local; a second read could race other calls.
-    const reqCtx = c.get("requestContext");
-    // Progressive unlock: record + include in response (DEC-20260410-A)
-    const ipHashForUnlock = reqCtx?.ipHash ?? null;
-    const newlyUnlocked = ipHashForUnlock ? recordUnlock(ipHashForUnlock, capability.slug) : [];
-    const allUnlocked = ipHashForUnlock ? getUnlockedSlugs(ipHashForUnlock) : [];
-
-    // H7b-FINDING: paid x402 calls still use this free-tier envelope (zero
-    // price_cents, free_tier: true); their transaction priceCents also stays zero.
-    return c.json({
-      result: {
-        transaction_id: txnRecord.id,
-        status: "completed",
-        capability_used: capability.slug,
-        price_cents: 0,
-        latency_ms: latencyMs,
-        output: capResult.output,
-        provenance: capResult.provenance,
-      },
-      meta: {
-        audit,
-      },
-      free_tier: true,
-      usage: c.get("freeTierUsage"),
-      ...(allUnlocked.length > 0 ? {
-        unlocked: {
-          capabilities: allUnlocked,
-          message: `${newlyUnlocked.length > 0 ? newlyUnlocked.length + " new capabilities unlocked. " : ""}These capabilities are free for you for 24 hours — no signup needed.`,
-          ttl_hours: 24,
-        },
-      } : {}),
-      upgrade: buildUpgradeBlock(capability.slug, executionInput, capResult.output as Record<string, unknown>),
-    });
-  } catch (err) {
-    const latencyMs = Date.now() - startTime;
-    const errorMessage = err instanceof Error ? err.message : String(err);
-
-    const failAudit = buildFailureAudit({
-      transactionId: txnRecord.id, startTime, capability, executionInput,
-      errorMessage, executionMode: "sync",
-      requestContext: c.get("requestContext"),
-    });
-    const failProvenance = buildFailureProvenance(
-      capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
-    );
-
-    await db
-      .update(transactions)
-      .set({
-        status: "failed", error: errorMessage, latencyMs, completedAt: new Date(),
-        auditTrail: failAudit, provenance: failProvenance,
-      })
-      .where(eq(transactions.id, txnRecord.id));
-    await settleReceiptFor(txnRecord.id);
-
-    // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
-    // by column default; jobs/integrity-hash-retry.ts will fill it in.
-    // WP4 remediation: a refusal is the guarded executor working, not a broken
-    // capability. Recording it here delisted capabilities for correctly
-    // refusing bad input — the quality floor is armed in production.
-    if (shouldCountAgainstCapability(err)) {
-      fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
-      fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
-    }
-    recordQuality({
-      transactionId: txnRecord.id,
-      responseTimeMs: latencyMs,
-      output: null,
-      outputSchema,
-      error: errorMessage,
-    });
-
-    return c.json({
-      ...apiError(
-        "execution_failed",
-        "The capability failed to execute.",
-        { error: sanitizeFailureReason(errorMessage), ...refusalDetails(err) },
-      ),
-      free_tier: true,
-      upgrade: buildUpgradeBlock(capability.slug, executionInput),
-    }, 500);
+  } finally {
+    if (claimId && paymentHash && releaseClaim) await releaseX402Claim(claimId, paymentHash, executionStarted);
   }
 }
 

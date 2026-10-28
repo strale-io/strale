@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => ({
   insertRejection: null as unknown,
   pendingClaim: false,
   updates: [] as any[],
+  claimRail: "x402" as "x402" | "v1_do",
   logErrorCalls: [] as Array<{ label: string; err: unknown }>,
 }));
 
@@ -66,6 +67,7 @@ vi.mock("../db/index.js", () => ({
           const query = new PgDialect().sqlToQuery(q);
           expect(query.params.some(v => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
           mocks.updates.push(values);
+          if (values.status === "failed") mocks.claimRail = values.receiptRail ?? mocks.claimRail;
           return Object.assign(Promise.resolve(), { returning: async () => [{ id: "claimed-txn-id" }] });
         },
       }),
@@ -187,6 +189,14 @@ it("H4 recovers a settled pre-execution claim in place instead of colliding on i
   expect(summary.failed).toBe(0);
   expect(mocks.updates).toContainEqual(expect.objectContaining({ status: "failed", x402PaymentHash: ABANDONED_INTENT.paymentHash,
     x402SettlementId: ABANDONED_INTENT.settlementId, complianceHashState: "pending" }));
+});
+
+it.each(["v1_do", "x402"] as const)("keeps the %s rail when recovering a stranded claim", async (rail) => {
+  mocks.pendingClaim = true;
+  mocks.claimRail = rail;
+  const summary = await reconcileSettlementsOnce();
+  expect(summary.recovered).toBe(1);
+  expect(mocks.claimRail).toBe(rail);
 });
 
 it("Round 2 existing sweeper releases stale pre-intent claims", async () => {

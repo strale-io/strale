@@ -119,9 +119,10 @@ vi.mock("../lib/invocation-facts.js", () => ({ recordPaidInvocation: vi.fn(), re
 vi.mock("../lib/log.js", () => ({ logError: state.logError, logWarn: state.logWarn, log: { debug: vi.fn() } }));
 import { x402GatewayV2, __resetX402CacheForTests } from "./x402-gateway-v2.js";
 import { doRoute } from "./do.js";
+import { recordAnonymousInvocation } from "../lib/invocation-facts.js";
 vi.mock("../lib/matching.js", () => ({ matchCapability: async () => ({ capability: {
   id: "22222222-2222-2222-2222-222222222222", slug: "test-capability", name: "Test", priceCents: 5,
-  isFreeTier: false, capabilityType: "deterministic", transparencyTag: "algorithmic", processesPersonalData: false,
+  isFreeTier: false, capabilityType: state.capabilityType, transparencyTag: "algorithmic", processesPersonalData: false,
   inputSchema: { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
 } }) }));
 vi.mock("../lib/circuit-breaker.js", () => ({ checkCircuitBreaker: async () => ({ allowed: true }), recordSuccess: vi.fn(), recordFailure: vi.fn() }));
@@ -162,7 +163,7 @@ async function observed(response: Response) {
     body: await response.text(), rows: state.rows, intents: state.intents, orphans: state.orphanRows,
     events: state.events, logs: state.logError.mock.calls.map(([name]) => name) };
 }
-// Route-level golden characterization of origin/main. Real intent/claim code,
+// Route-level golden characterization; H4b updates only the /v1/do rail. Real intent/claim code,
 // real Drizzle predicates and scalar raw-SQL binds; only the DB and vendors are simulated.
 // Snapshots include the full response, headers, writes, event order and log names.
 describe.each(routes)("H7b %s settlement characterization", route => {
@@ -192,8 +193,8 @@ describe.each(routes)("H7b %s settlement characterization", route => {
   it("post-settlement transaction write failure preserves current orphan policy", async () => {
     state.failRecord = true;
     const response = await request(route);
-    expect(response.status).toBe(route === "do" ? 500 : 200);
-    expect(state.orphanRows).toHaveLength(route === "do" ? 0 : 1);
+    expect(response.status).toBe(200);
+    expect(state.orphanRows).toHaveLength(1);
     expect(await observed(response)).toMatchSnapshot();
   });
   it("intent settlement write failure captures the orphan and surfaces its log", async () => {
@@ -207,14 +208,14 @@ describe.each(routes)("H7b %s settlement characterization", route => {
   it("mark-recorded failure preserves the caller's current response and log policy", async () => {
     state.failRecorded = true;
     const response = await request(route);
-    expect(response.status).toBe(route === "do" ? 500 : 200);
+    expect(response.status).toBe(200);
     expect(await observed(response)).toMatchSnapshot();
   });
   it("same payment replay preserves execution count and response", async () => {
     expect((await request(route)).status).toBe(200);
     const response = await request(route);
-    expect(response.status).toBe(route === "do" ? 500 : 200);
-    expect(route === "solution" ? state.solution : state.executor).toHaveBeenCalledTimes(route === "do" ? 2 : 1);
+    expect(response.status).toBe(200);
+    expect(route === "solution" ? state.solution : state.executor).toHaveBeenCalledTimes(1);
     expect(state.settle).toHaveBeenCalledTimes(1);
     expect(await observed(response)).toMatchSnapshot();
   });
@@ -222,7 +223,7 @@ describe.each(routes)("H7b %s settlement characterization", route => {
     state.settle.mockResolvedValue({ valid: false, settlementUnknown: true, error: "transport lost" });
     const response = await request(route);
     expect(response.status).toBe(402);
-    expect(state.intents[0].state).toBe(route === "do" ? "failed" : "settling");
+    expect(state.intents[0].state).toBe("settling");
     expect(await observed(response)).toMatchSnapshot();
   });
   it("a thrown facilitator call preserves the claim and intent policy", async () => {
@@ -246,5 +247,167 @@ describe.each(routes)("H7b %s settlement characterization", route => {
     expect(response.status).toBe(route === "do" ? 500 : route === "solution" ? 502 : 400);
     expect(state.intents).toHaveLength(0); expect(state.settle).not.toHaveBeenCalled();
     expect(await observed(response)).toMatchSnapshot();
+  });
+});
+
+// DEC-20260504-A: these assertions are also run against scratch origin/main
+// production modules. Every H4b regression below must fail there.
+describe("H4b /v1/do x402 parity regressions", () => {
+  it("returns an unpaid 503 when execution admission fails", async () => {
+    state.failBegin = true;
+    const response = await request("do");
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error_code: "execution_failed", message: "Execution could not start. No payment was taken.", details: { retryable: true, next_step: "Retry with exponential backoff." } });
+    expect(state.executor).not.toHaveBeenCalled();
+    expect(state.settle).not.toHaveBeenCalled();
+  });
+
+  it("does not record an invocation fact when execution admission fails", async () => {
+    state.failBegin = true;
+    await request("do");
+    expect(recordAnonymousInvocation).not.toHaveBeenCalled();
+  });
+  it("replays a completed hash with the cached result, no second execution or settlement", async () => {
+    const first = await (await request("do")).json();
+    const replay = await request("do");
+    expect(replay.status).toBe(200);
+    const body = await replay.json();
+    expect(body.result).toEqual(first.result);
+    expect(body.meta.audit).toEqual(first.meta.audit);
+    expect(body.meta.replayed).toBe(true);
+    expect(state.executor).toHaveBeenCalledTimes(1);
+    expect(state.settle).toHaveBeenCalledTimes(1);
+    expect(state.rows).toHaveLength(1);
+  });
+  it("redacts legacy stored audit error text on completed replay", async () => {
+    state.rows.push({ id: "prior", status: "completed", x402PaymentHash: "same-payment-hash",
+      priceCents: 5, output: output.output, provenance: output.provenance, latencyMs: 7,
+      auditTrail: { execution: { error: "getaddrinfo ENOTFOUND internal.example.test" } },
+    });
+    const response = await request("do");
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.meta.audit).toEqual({ execution: { error: "Service temporarily unreachable" } });
+    expect(state.rows[0].auditTrail.execution.error).toContain("internal.example.test");
+    expect(state.executor).not.toHaveBeenCalled();
+    expect(state.settle).not.toHaveBeenCalled();
+  });
+  it("refuses concurrent use with the gateway's 502 and retry guidance", async () => {
+    let finish!: (value: typeof output) => void;
+    let entered!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    state.executor.mockImplementation(() => { entered(); return new Promise(resolve => { finish = resolve; }); });
+    const first = request("do");
+    await started;
+    // Resolve any accidental second executor immediately so a broken guard
+    // fails assertions instead of timing out.
+    state.executor.mockResolvedValue(output);
+    const second = await request("do");
+    finish(output);
+    expect((await first).status).toBe(200);
+    expect(second.status).toBe(502);
+    expect(await second.json()).toMatchObject({ error_code: "payment_failed", details: { retryable: false } });
+    expect(state.executor).toHaveBeenCalledTimes(1);
+    expect(state.settle).toHaveBeenCalledTimes(1);
+  });
+  it("refuses a stored failed hash without executing or settling", async () => {
+    state.rows.push({ id: "prior", status: "failed", x402PaymentHash: "same-payment-hash" });
+    expect((await request("do")).status).toBe(502);
+    expect(state.executor).not.toHaveBeenCalled();
+    expect(state.settle).not.toHaveBeenCalled();
+  });
+  it("releases failed execution claims but refuses a third execution for the hash", async () => {
+    state.executor.mockRejectedValue(new Error("execution failed"));
+    expect((await request("do")).status).toBe(500);
+    expect((await request("do")).status).toBe(500);
+    expect((await request("do")).status).toBe(502);
+    expect(state.executor).toHaveBeenCalledTimes(2);
+    expect(state.settle).not.toHaveBeenCalled();
+    expect(state.rows.map(r => r.x402ExecutionAttempts.count)).toEqual([1, 1]);
+    expect(state.rows.every(r => r.x402PaymentHash === null)).toBe(true);
+  });
+  it("counts transient retries in the same two-execution budget", async () => {
+    state.capabilityType = "external_api";
+    state.executor.mockRejectedValue(new Error("HTTP 503"));
+    const first = request("do");
+    await vi.advanceTimersByTimeAsync(1500);
+    expect((await first).status).toBe(500);
+    const second = request("do");
+    await vi.advanceTimersByTimeAsync(1500);
+    expect((await second).status).toBe(502);
+    expect(state.executor).toHaveBeenCalledTimes(2);
+    expect(state.rows[0].x402ExecutionAttempts.count).toBe(2);
+  });
+  it("retains unknown settlement intent and claim for reconciliation", async () => {
+    state.settle.mockResolvedValue({ valid: false, settlementUnknown: true, error: "transport lost" });
+    expect((await request("do")).status).toBe(402);
+    expect(state.intents[0].state).toBe("settling");
+    expect(state.rows[0]).toMatchObject({ status: "executing", x402PaymentHash: "same-payment-hash" });
+    expect((await request("do")).status).toBe(502);
+    expect(state.executor).toHaveBeenCalledTimes(1);
+    expect(state.settle).toHaveBeenCalledTimes(1);
+  });
+  it("retains a thrown facilitator call's claim and never counts it against health", async () => {
+    state.settle.mockRejectedValue(new Error("transport threw"));
+    expect((await request("do")).status).toBe(500);
+    expect(state.rows[0]).toMatchObject({ status: "executing", x402PaymentHash: "same-payment-hash" });
+    expect(state.intents[0].state).toBe("settling");
+    expect((await request("do")).status).toBe(502);
+    const { recordFailure } = await import("../lib/circuit-breaker.js");
+    expect(recordFailure).not.toHaveBeenCalled();
+  });
+  it("captures terminal-write failure after settlement and returns the paid result", async () => {
+    state.failRecord = true;
+    const response = await request("do");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ free_tier: false, result: { output: output.output, price_cents: 5 } });
+    expect(state.orphanRows).toHaveLength(1);
+    expect(state.orphanRows[0]).toMatchObject({ settlementId: "settled-payment", priceCents: 5 });
+    expect(state.logError.mock.calls.map(([name]) => name)).toEqual([
+      "x402-transaction-recording-failed", "x402-orphan-settlement-recorded",
+    ]);
+    expect(state.rows[0].status).toBe("executing");
+    const { recordFailure } = await import("../lib/circuit-breaker.js");
+    expect(recordFailure).not.toHaveBeenCalled();
+  });
+  it("logs double storage failure and still returns success with the durable intent", async () => {
+    state.failRecord = true; state.failOrphan = true;
+    expect((await request("do")).status).toBe(200);
+    expect(state.intents[0].state).toBe("settled");
+    expect(state.logError.mock.calls.map(([name]) => name)).toContain("x402-orphan-settlement-write-also-failed");
+  });
+  it("keeps the completed transaction on mark-recorded failure and logs it", async () => {
+    state.failRecorded = true;
+    expect((await request("do")).status).toBe(200);
+    expect(state.rows[0]).toMatchObject({ status: "completed", priceCents: 5 });
+    expect(state.logError.mock.calls.map(([name]) => name)).toContain("x402-intent-mark-recorded-failed");
+    const { recordFailure } = await import("../lib/circuit-breaker.js");
+    expect(recordFailure).not.toHaveBeenCalled();
+  });
+  it("returns and stores the catalogue price as paid, without upgrade text", async () => {
+    const response = await request("do");
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({ free_tier: false, result: { price_cents: 5 } });
+    expect(body).not.toHaveProperty("upgrade");
+    expect(body).not.toHaveProperty("unlocked");
+    expect(state.rows[0]).toMatchObject({ priceCents: 5, paymentMethod: "x402", isFreeTier: false, receiptRail: "v1_do", complianceHashState: "pending" });
+  });
+  it("makes /v1/do claims visible to the existing stale janitor and fences late settlement", async () => {
+    let finish!: (value: typeof output) => void;
+    let entered!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    state.executor.mockImplementation(() => { entered(); return new Promise(resolve => { finish = resolve; }); });
+    const pending = request("do");
+    await started;
+    vi.setSystemTime(Date.now() + 660_000);
+    const { getDb } = await import("../db/index.js");
+    const { releaseStaleX402Claims } = await import("../lib/x402-payment-claims.js");
+    const released = await releaseStaleX402Claims(getDb(), 10);
+    finish(output);
+    const response = await pending;
+    expect(released).toBe(1);
+    expect(response.status).toBe(500);
+    expect(state.settle).not.toHaveBeenCalled();
   });
 });

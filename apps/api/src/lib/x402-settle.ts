@@ -4,15 +4,11 @@ import { openClaimedX402Intent } from "./x402-payment-claims.js";
 import * as settlementIntent from "./x402-settlement-intent.js";
 
 type IntentParams = Parameters<typeof settlementIntent.openIntent>[1];
-type SettlementPolicy =
-  | { kind: "v1_do"; db: ReturnType<typeof getDb> }
-  | {
-      kind: "gateway";
-      claimId: string | null;
-      // Update the caller's finally policy at the same points as before,
-      // including when the facilitator or a bookkeeping call throws.
-      setReleaseClaim: (release: boolean) => void;
-    };
+type SettlementPolicy = {
+  claimId: string | null;
+  // Update finally ownership even when the facilitator throws.
+  setReleaseClaim: (release: boolean) => void;
+};
 
 /**
  * Settle only after the caller has executed and checked billability (DEC-14).
@@ -31,30 +27,24 @@ export async function settleX402Execution(options: {
   // died", when it never runs either. A settlement is irreversible, so the
   // window between it succeeding and the row landing is the one place on the
   // platform where a crash costs a customer money with no record at all.
-  // H7b-FINDING: v1_do has no pre-execution claim/replay guard. Preserve its
-  // direct intent write; only the gateway locks and checks claim ownership.
   const intent = paymentHash
-    ? policy.kind === "gateway"
-      ? await openClaimedX402Intent(policy.claimId!, { paymentHash, ...options.intent })
-      : await settlementIntent.openIntent(policy.db, { paymentHash, ...options.intent })
+    ? await openClaimedX402Intent(policy.claimId!, { paymentHash, ...options.intent })
     : null;
 
   // A thrown facilitator call is ambiguous: never reopen its authorization.
-  if (policy.kind === "gateway") policy.setReleaseClaim(false);
+  policy.setReleaseClaim(false);
   const settled = await settleX402Payment(verified);
-  if (policy.kind === "gateway" && !settled.valid && !settled.settlementUnknown) {
+  if (!settled.valid && !settled.settlementUnknown) {
     policy.setReleaseClaim(true);
   }
   if (intent) {
     if (settled.valid && settled.settlementId) {
-      await settlementIntent.markSettled(policy.kind === "v1_do" ? policy.db : getDb(), {
+      await settlementIntent.markSettled(getDb(), {
         intentId: intent.id,
         settlementId: settled.settlementId,
       });
-    } else if (policy.kind === "v1_do" || !settled.settlementUnknown) {
-      // H7b-FINDING: v1_do marks ambiguous outcomes failed; the gateway leaves
-      // them settling for reconciliation. Preserve both policies in this refactor.
-      await settlementIntent.markFailed(policy.kind === "v1_do" ? policy.db : getDb(), {
+    } else if (!settled.settlementUnknown) {
+      await settlementIntent.markFailed(getDb(), {
         intentId: intent.id,
         reason: settled.error ?? "settlement returned invalid",
       });
