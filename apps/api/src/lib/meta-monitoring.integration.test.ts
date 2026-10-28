@@ -20,8 +20,14 @@ let closeDbPool: typeof import("../db/index.js")["closeDbPool"];
 
 describeMaybe("daily meta checks against disposable Postgres", () => {
   const slug = "test-meta-daily-free-tier";
+  // runDailyChecks syncs the [stuck-validating] GitHub issues, and a disposable
+  // database has nothing stuck: with a real GITHUB_TOKEN in the environment it
+  // would close every such issue in the live repository. Without a token the
+  // sync logs and skips (github-issues.ts), so remove it for this suite.
+  const savedGithubToken = process.env.GITHUB_TOKEN;
 
   beforeAll(async () => {
+    delete process.env.GITHUB_TOKEN;
     ({ getDb, closeDbPool } = await import("../db/index.js"));
     await getDb().delete(capabilities).where(eq(capabilities.slug, slug));
     await getDb().insert(capabilities).values({ slug, name: slug, description: "meta-daily fixture", category: "validation", priceCents: 0, isActive: true, visible: true, x402Enabled: false, isFreeTier: true, transparencyTag: "algorithmic", inputSchema: {}, outputSchema: {} });
@@ -30,6 +36,7 @@ describeMaybe("daily meta checks against disposable Postgres", () => {
   afterAll(async () => {
     await getDb().delete(capabilities).where(eq(capabilities.slug, slug));
     await closeDbPool();
+    if (savedGithubToken !== undefined) process.env.GITHUB_TOKEN = savedGithubToken;
   });
 
   it("free_tier_health runs on the server and sees the flagged capability", async () => {

@@ -30,7 +30,8 @@ const FRAGMENTS: Record<string, string[]> = {
   "src/lib/daily-digest/fetch-platform.ts": ["internalUserIdList"],
 };
 
-const ANY_INTERPOLATION = /\bANY\(\s*\$\{\s*([A-Za-z_$][\w$.]*)\s*\}\s*\)/g;
+// ALL() fails the same way; SQL keywords are case-insensitive and may take a space.
+const ANY_INTERPOLATION = /\b(?:ANY|ALL)\s*\(\s*\$\{\s*([A-Za-z_$][\w$.]*)\s*\}\s*\)/gi;
 const IMPORTS_DRIZZLE_SQL = /import\s*\{[^}]*\bsql\b[^}]*\}\s*from\s*["']drizzle-orm["']/;
 
 function sourceFiles(dir: string): string[] {
@@ -83,6 +84,7 @@ describe("drizzle sql templates never interpolate a JS array into ANY()", () => 
     const fake = (body: string) => () => body;
     const drizzle = 'import { sql } from "drizzle-orm";\n';
     expect(findDrizzleAnyArrays([join(apiRoot, "src/x.ts")], fake(`${drizzle}sql\`WHERE slug = ANY(\${slugs})\``))).toEqual(["src/x.ts:slugs"]);
+    expect(findDrizzleAnyArrays([join(apiRoot, "src/x.ts")], fake(`${drizzle}sql\`x <> all (\${ids})\``))).toEqual(["src/x.ts:ids"]);
     expect(findDrizzleAnyArrays([join(apiRoot, "src/x.ts")], fake(`${drizzle}// never ANY(\${slugs})\n/* ANY(\${ids}) */`))).toEqual([]);
     expect(findDrizzleAnyArrays([join(apiRoot, "src/x.ts")], fake('import postgres from "postgres";\nsql`x = ANY(${slugs})`'))).toEqual([]);
   });
