@@ -181,6 +181,8 @@ export const INVENTORY_TARGETS = Object.freeze([
   { path: "docs/company", owner_area: "company-governance" },
   { path: "docs/strategy", owner_area: "strategy-evidence" },
   { path: "docs/remediation", owner_area: "remediation-program" },
+  // Historical session/evidence files are not authority. Hash the stable
+  // entrypoint, not every independent handoff addition.
   { path: "handoff", owner_area: "session-handoffs" },
 ]);
 
@@ -556,6 +558,10 @@ function hashFiles(files, blobIds) {
 function searchableFiles(root, allTracked) {
   return allTracked.filter((file) => {
     if (
+      // Evidence can cite authority, but is not an authority consumer whose
+      // addition should rewrite the migration inventory on every branch.
+      file.startsWith("handoff/") ||
+      file.startsWith("archive/") ||
       file.startsWith("docs/project/") ||
       file.startsWith("docs/decisions/") ||
       file.startsWith("docs/governance/") ||
@@ -591,7 +597,9 @@ export function buildInventory(root) {
   const blobIds = indexedBlobIds(root);
   const textFiles = searchableFiles(root, allTracked);
   const entries = INVENTORY_TARGETS.map((target) => {
-    const files = filesForTarget(root, target.path, allTracked);
+    // Keep the namespace identity used by the M2 closure register. Session
+    // evidence is historical; only its stable navigation is an entrypoint.
+    const files = filesForTarget(root, target.path === "handoff" ? "handoff/README.md" : target.path, allTracked);
     return {
       path: target.path,
       owner_area: target.owner_area,

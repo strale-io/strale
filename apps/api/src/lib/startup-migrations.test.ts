@@ -40,6 +40,12 @@ vi.mock("../db/index.js", () => ({
   closeDbPool: () => Promise.resolve(),
 }));
 
+// The runner uses a dedicated lock session; per-block tests stay DB-free.
+vi.mock("postgres", () => ({ default: () => ({
+  reserve: async () => ({ unsafe: async () => [{ acquired: true }], release() {} }),
+  end: async () => {},
+}) }));
+
 import {
   BLOCKS,
   runMigration0029_actualCostCents,

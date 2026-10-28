@@ -501,7 +501,7 @@ test("inventory hashes canonical Git content, not checkout line endings", () => 
 
     for (const { path } of INVENTORY_TARGETS) {
       const isFile = /\.(?:json|md|yaml)$/.test(path);
-      const file = isFile ? path : `${path}/marker.md`;
+      const file = path === "handoff" ? "handoff/README.md" : isFile ? path : `${path}/marker.md`;
       const absolute = join(root, file);
       mkdirSync(dirname(absolute), { recursive: true });
       writeFileSync(absolute, `tracked content for ${path}\n`, "utf8");

@@ -36,7 +36,7 @@
  * with the same input is a no-op).
  */
 
-import type { Sql } from "postgres";
+import postgres, { type Sql } from "postgres";
 import { sql, type SQL } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log } from "./log.js";
@@ -4483,43 +4483,99 @@ export async function runMigration0086_srcBasis(
  * ignores the return value; the throw-on-failure semantics is what
  * matters there.
  */
+// Fixed signed bigint key reserved for the startup runner (ASCII STRALE).
+// String binding avoids JS precision loss for 64-bit advisory-lock keys.
+const STARTUP_MIGRATIONS_LOCK_KEY = "91621622369349";
+const STARTUP_MIGRATIONS_LOCK_WAIT_MS = 60_000;
+
 export async function runStartupMigrations(): Promise<BlockResult[]> {
   const startedAt = Date.now();
   const db = getDb();
   const results: BlockResult[] = [];
+  // A separate one-session client prevents pool starvation: blocks 0125,
+  // 0127 and 0130 reserve their own main-pool connections for CONCURRENTLY.
+  // Never run those blocks on this session or inside a transaction.
+  const lockClient = postgres(process.env.DATABASE_URL!, {
+    max: 1,
+    connect_timeout: 5,
+    connection: { statement_timeout: 5_000 },
+  });
+  let connection: Awaited<ReturnType<Sql["reserve"]>> | undefined;
+  let acquired = false;
+  try {
+    connection = await lockClient.reserve();
+    const deadline = Date.now() + STARTUP_MIGRATIONS_LOCK_WAIT_MS;
+    while (Date.now() < deadline) {
+      const rows = await connection.unsafe<{ acquired: boolean }[]>(
+        "SELECT pg_try_advisory_lock($1::bigint) AS acquired",
+        [STARTUP_MIGRATIONS_LOCK_KEY],
+      );
+      if (rows[0]?.acquired) {
+        acquired = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (!acquired) {
+      log.warn({ label: "startup-migrations-lock-timeout", wait_ms: Date.now() - startedAt },
+        "startup-migrations-lock-timeout");
+      // Boot ignores the result; the emergency admin caller needs an
+      // explicit skip outcome instead of an empty apparent success.
+      return [{ block: "startup-migrations-lock", outcome: "skipped (advisory lock timeout; no migrations ran)", duration_ms: Date.now() - startedAt }];
+    }
+    log.info({ label: "startup-migrations-lock-acquired", wait_ms: Date.now() - startedAt },
+      "startup-migrations-lock-acquired");
+    log.info({ label: "startup-migrations-begin", block_count: BLOCKS.length }, "startup-migrations-begin");
 
-  log.info({ label: "startup-migrations-begin", block_count: BLOCKS.length }, "startup-migrations-begin");
+    for (const block of BLOCKS) {
+      const result = await block(db);
+      results.push(result);
+      log.info(
+        {
+          label: "startup-migration-block",
+          block: result.block,
+          outcome: result.outcome,
+          rows_affected: result.rows_affected ?? null,
+          duration_ms: result.duration_ms,
+        },
+        `startup-migration-block ${result.block}`,
+      );
+    }
 
-  for (const block of BLOCKS) {
-    const result = await block(db);
-    results.push(result);
     log.info(
       {
-        label: "startup-migration-block",
-        block: result.block,
-        outcome: result.outcome,
-        rows_affected: result.rows_affected ?? null,
-        duration_ms: result.duration_ms,
+        label: "startup-migrations-complete",
+        block_count: results.length,
+        total_duration_ms: Date.now() - startedAt,
+        blocks: results.map((r) => ({
+          block: r.block,
+          outcome: r.outcome,
+          rows_affected: r.rows_affected ?? null,
+        })),
       },
-      `startup-migration-block ${result.block}`,
+      "startup-migrations-complete",
     );
+
+    return results;
+  } finally {
+    try {
+      if (acquired) {
+        // A dead lock session already lost the lock; a failed unlock must not
+        // turn a completed migration run into a boot failure.
+        try {
+          await connection!.unsafe("SELECT pg_advisory_unlock($1::bigint)", [STARTUP_MIGRATIONS_LOCK_KEY]);
+        } catch (err) {
+          const { log } = await import("./log.js");
+          log.warn({ label: "startup-migrations-unlock-failed", err: err instanceof Error ? err.message : String(err) }, "advisory unlock failed; session is closed below");
+        }
+      }
+    } finally {
+      connection?.release();
+      // Close the dedicated session even if unlock fails; a session-level
+      // lock must never leak into a reusable pool after a failed migration.
+      await lockClient.end({ timeout: 5 });
+    }
   }
-
-  log.info(
-    {
-      label: "startup-migrations-complete",
-      block_count: results.length,
-      total_duration_ms: Date.now() - startedAt,
-      blocks: results.map((r) => ({
-        block: r.block,
-        outcome: r.outcome,
-        rows_affected: r.rows_affected ?? null,
-      })),
-    },
-    "startup-migrations-complete",
-  );
-
-  return results;
 }
 
 

@@ -36,7 +36,6 @@ const defaultPlatformActivity: PlatformActivity = {
 const defaultPlatformHealth: PlatformHealth = {
   circuitBreakers: [],
   testPassRate: { passed: 0, failed: 0, total: 0, rate: 0 },
-  sqsChanges: [],
 };
 
 const defaultShipLog: ShipLog = {

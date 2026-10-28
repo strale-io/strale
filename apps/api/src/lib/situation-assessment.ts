@@ -524,7 +524,6 @@ export async function assessSchedulerStale(lastHeartbeat: Date | null): Promise<
         "If crashed: check recent deployments for breaking changes",
       ],
       automaticActions: [
-        "Freshness decay is gradually reducing SQS scores for all capabilities",
         "This alert will re-fire on each meta-monitoring check until resolved",
       ],
     },

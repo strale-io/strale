@@ -171,9 +171,6 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
   const breakerHtml = ph.circuitBreakers.length > 0
     ? ph.circuitBreakers.map((b) => `<span style="color:${RED};">${escHtml(b.slug)} (${b.state}, ${b.consecutiveFailures} failures)</span>`).join("<br>")
     : `<span style="color:${GREEN};">All closed ✓</span>`;
-  const sqsHtml = ph.sqsChanges.length > 0
-    ? ph.sqsChanges.map((s) => `${escHtml(s.slug)}: ${s.oldGrade} → ${s.newGrade} ${s.direction === "up" ? `<span style="color:${GREEN};">▲</span>` : `<span style="color:${RED};">▼</span>`}`).join("<br>")
-    : "None";
 
   const healthHtml = `
     ${sectionHeader("🏥", "Platform Health")}
@@ -181,7 +178,6 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px;">
         <tr><td style="padding: 3px 0; color: ${MUTED};">Test Pass Rate</td><td style="padding: 3px 0; text-align: right; font-weight: 600;">${ph.testPassRate.rate}% (${fmt(ph.testPassRate.passed)}/${fmt(ph.testPassRate.total)})</td></tr>
         <tr><td style="padding: 3px 0; color: ${MUTED};">Circuit Breakers</td><td style="padding: 3px 0; text-align: right;">${breakerHtml}</td></tr>
-        <tr><td style="padding: 3px 0; color: ${MUTED};">SQS Changes</td><td style="padding: 3px 0; text-align: right;">${sqsHtml}</td></tr>
       </table>
     </td></tr>`;
 

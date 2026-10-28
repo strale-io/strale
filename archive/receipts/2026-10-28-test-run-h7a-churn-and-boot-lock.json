@@ -1,0 +1,153 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "2fa97a9e77bd5dcaf8fc89fb3c8d1758317daa1b"
+  },
+  "at": "2026-10-28T11:50:42.953Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "worktree_state": "uncommitted",
+    "base_commit": "2fa97a9e77bd5dcaf8fc89fb3c8d1758317daa1b",
+    "branch": "chore/h7a-merge-churn-and-boot-lock",
+    "api_passed": 7557,
+    "api_skipped": 358,
+    "api_failed": 0,
+    "index_hook_passed": 20,
+    "context_passed": 180,
+    "migration_ledger_unchanged": true,
+    "merge_fail_before_proved": true,
+    "runner_fail_before_proved": true,
+    "handoff_gate_passed": false,
+    "production_verified": false
+  },
+  "topic": "h7a-churn-and-boot-lock",
+  "raw": {
+    "ok": true,
+    "worktree_state": "uncommitted",
+    "base_commit": "2fa97a9e77bd5dcaf8fc89fb3c8d1758317daa1b",
+    "branch": "chore/h7a-merge-churn-and-boot-lock",
+    "api_passed": 7557,
+    "api_skipped": 358,
+    "api_failed": 0,
+    "index_hook_passed": 20,
+    "context_passed": 180,
+    "migration_ledger_unchanged": true,
+    "merge_fail_before_proved": true,
+    "runner_fail_before_proved": true,
+    "handoff_gate_passed": false,
+    "production_verified": false,
+    "checks": {
+      "claims:check": {
+        "exit_code": 0
+      },
+      "models:check": {
+        "exit_code": 0
+      },
+      "env:check": {
+        "exit_code": 0
+      },
+      "migrations:check": {
+        "exit_code": 0
+      },
+      "migrations:test": {
+        "exit_code": 0
+      },
+      "receipts:check": {
+        "exit_code": 0
+      },
+      "programs:check": {
+        "exit_code": 0
+      },
+      "docs:check": {
+        "exit_code": 0
+      },
+      "archive:index:test": {
+        "exit_code": 0
+      },
+      "handoff:test": {
+        "exit_code": 0
+      },
+      "mcp-server build": {
+        "exit_code": 0
+      },
+      "API typecheck": {
+        "exit_code": 0
+      },
+      "API vitest full final": {
+        "exit_code": 0,
+        "files_passed": 372,
+        "files_skipped": 35,
+        "passed": 7557,
+        "skipped": 358,
+        "failed": 0
+      },
+      "migration files isolated": {
+        "exit_code": 0,
+        "passed": 217,
+        "failed": 0
+      },
+      "context:check": {
+        "exit_code": 0,
+        "warnings": 0
+      },
+      "context:test normal index": {
+        "exit_code": 0,
+        "passed": 180,
+        "failed": 0
+      },
+      "context focused": {
+        "exit_code": 0,
+        "passed": 2,
+        "failed": 0
+      },
+      "archive and hook final": {
+        "exit_code": 0,
+        "passed": 20,
+        "failed": 0
+      },
+      "archive:index --check": {
+        "exit_code": 0
+      },
+      "archive:index --detail": {
+        "exit_code": 0
+      },
+      "handoff:check": {
+        "exit_code": 1,
+        "expected": "Uncommitted/unpushed isolated clone, primary branch shape, existing merged branches; fetch unavailable"
+      },
+      "knip@5.66.0 final": {
+        "exit_code": 1,
+        "file_findings": 469,
+        "export_findings": 380,
+        "artifact": "archive/sessions/2026-10-28-h7a-knip-remaining.json"
+      }
+    },
+    "fail_before": {
+      "merge": "origin/main generators copied with git show into in-checkout scratch; merge failed with textual conflicts in archive/README.md, handoff/README.md and docs/project/legacy-authority-inventory.json; same test passes after fix",
+      "runner": "origin/main runner copied with git show into in-checkout scratch; paused-first-runner assertion expected 1 visit, got 74; same test passes with lock",
+      "scratch_removed": true
+    },
+    "unsuccessful_attempts": [
+      "Initial API full run mixed cached old key and edited test key: 4 failed, 7553 passed, 358 skipped, 3 unhandled errors. Isolated rerun and final full suite passed; this was author edit-during-test error, not a flake.",
+      "Initial knip install failed on read-only npm cache; next invocation needed dummy DATABASE_URL_TEST to load drizzle config. Final scan completed with findings, no DB connection.",
+      "context:generate refused primary-clone guard. Used inventory-only builder without modifying guard.",
+      "Alternate-index context experiments invalidated fixture Git state via inherited GIT_INDEX_FILE and failed; normal-index context suite and focused context checks passed."
+    ],
+    "review": {
+      "technical": "GO round 1",
+      "product_safety": "GO rounds 2",
+      "open_high": 0,
+      "open_medium": 0
+    },
+    "limits": [
+      "No live PostgreSQL overlap exercise",
+      "No production/live deploy checks",
+      "DB-dependent API tests skipped without a test database",
+      "Orchestrator must stage and let pre-commit regenerate inventory for committed blob IDs"
+    ]
+  }
+}
