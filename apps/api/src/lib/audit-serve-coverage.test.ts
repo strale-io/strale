@@ -149,7 +149,7 @@ describe("stored audit bodies are redacted wherever they are served", () => {
     // grep for `audit_trail:` missed.
     for (const expected of [
       "routes/transactions.ts",
-      "routes/do.ts",
+      "lib/do/idempotency.ts",
       "routes/solution-execute.ts",
       "routes/audit.ts",
     ]) {

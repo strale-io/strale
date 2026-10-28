@@ -3,11 +3,11 @@ import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 const route = (name: string) => readFileSync(new URL(`../routes/${name}.ts`, import.meta.url), "utf8");
 it("API-key sync cost write is reached only after the wallet transaction commits", () => {
-  const source = route("do");
+  const source = readFileSync(new URL("./do/dispatch.ts", import.meta.url), "utf8");
   const committed = source.indexOf("// The wallet transaction has committed.");
   expect(committed).toBeGreaterThan(0);
   expect(source.slice(committed)).toMatch(/await settleReceiptFor\(\(result/);
-  expect(source.slice(source.indexOf("async function settleReceiptFor"), source.indexOf("export const doRoute"))).toContain("persistCallCost(transactionId)");
+  expect(source.slice(source.indexOf("async function settleReceiptFor"), source.indexOf("// Build usage summary"))).toContain("persistCallCost(transactionId)");
 });
 it("x402 writes cost only after its transaction INSERT returns", () => {
   const source = route("x402-gateway-v2");

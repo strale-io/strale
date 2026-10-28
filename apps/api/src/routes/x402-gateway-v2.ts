@@ -1,5 +1,6 @@
+import { settleX402Execution } from "../lib/x402-settle.js";
 import { validateDispatchInput } from "../lib/input-validation.js";
-import { claimX402Payment, beginX402Execution, openClaimedX402Intent, releaseX402Claim } from "../lib/x402-payment-claims.js";
+import { claimX402Payment, beginX402Execution, releaseX402Claim } from "../lib/x402-payment-claims.js";
 import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * x402 Scalable Gateway — DB-driven capability exposure via USDC payments.
@@ -34,7 +35,6 @@ import {
   isX402Configured,
   verifyX402PaymentOnly,
   hashPaymentHeader,
-  settleX402Payment,
   extractPaymentHeader,
   extractPayerAddress,
   eurCentsToUsd,
@@ -1495,38 +1495,11 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
 
   let settlementId: string | undefined;
   if (verified) {
-    // WP5: durable intent BEFORE the facilitator is called. That ordering is
-    // the whole point — the orphan capture below is a catch block in this
-    // process, so it handles "the INSERT threw" and cannot handle "the process
-    // died", when it never runs either. A settlement is irreversible, so the
-    // window between it succeeding and the row landing is the one place on the
-    // platform where a crash costs a customer money with no record at all.
-    const intent = paymentHash
-      ? await openClaimedX402Intent(claimId!, {
-          paymentHash,
-          slug: sol.slug,
-          solutionSlug: sol.slug,
-          priceCents: sol.priceCents,
-          priceUsd: sol.x402PriceUsd,
-        })
-      : null;
-
-    releaseClaim = false; // A thrown facilitator call is ambiguous: never reopen its authorization.
-    const settled = await settleX402Payment(verified);
-    if (!settled.valid && !settled.settlementUnknown) releaseClaim = true;
-    if (intent) {
-      if (settled.valid && settled.settlementId) {
-        await settlementIntent.markSettled(getDb(), {
-          intentId: intent.id,
-          settlementId: settled.settlementId,
-        });
-      } else if (!settled.settlementUnknown) {
-        await settlementIntent.markFailed(getDb(), {
-          intentId: intent.id,
-          reason: settled.error ?? "settlement returned invalid",
-        });
-      }
-    }
+    const settled = await settleX402Execution({
+      verified, paymentHash,
+      intent: { slug: sol.slug, solutionSlug: sol.slug, priceCents: sol.priceCents, priceUsd: sol.x402PriceUsd },
+      policy: { kind: "gateway", claimId, setReleaseClaim: (release) => { releaseClaim = release; } },
+    });
     if (!settled.valid) {
       return c.json(
         { details: { retryable: false, fix: "Check the payment status with your wallet before signing a fresh x402 payment matching the current accepts requirements." }, error: "Payment settlement failed", detail: settled.error },
@@ -1958,38 +1931,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // already passed) surface a clear error; the client can retry the paid call.
   let settlementId: string | undefined;
   if (verified) {
-    // WP5: durable intent BEFORE the facilitator is called. That ordering is
-    // the whole point — the orphan capture below is a catch block in this
-    // process, so it handles "the INSERT threw" and cannot handle "the process
-    // died", when it never runs either. A settlement is irreversible, so the
-    // window between it succeeding and the row landing is the one place on the
-    // platform where a crash costs a customer money with no record at all.
-    const intent = paymentHash
-      ? await openClaimedX402Intent(claimId!, {
-          paymentHash,
-          slug: cap.slug,
-          solutionSlug: null,
-          priceCents: cap.priceCents,
-          priceUsd: cap.x402PriceUsd,
-        })
-      : null;
-
-    releaseClaim = false; // A thrown facilitator call is ambiguous: never reopen its authorization.
-    const settled = await settleX402Payment(verified);
-    if (!settled.valid && !settled.settlementUnknown) releaseClaim = true;
-    if (intent) {
-      if (settled.valid && settled.settlementId) {
-        await settlementIntent.markSettled(getDb(), {
-          intentId: intent.id,
-          settlementId: settled.settlementId,
-        });
-      } else if (!settled.settlementUnknown) {
-        await settlementIntent.markFailed(getDb(), {
-          intentId: intent.id,
-          reason: settled.error ?? "settlement returned invalid",
-        });
-      }
-    }
+    const settled = await settleX402Execution({
+      verified, paymentHash,
+      intent: { slug: cap.slug, solutionSlug: null, priceCents: cap.priceCents, priceUsd: cap.x402PriceUsd },
+      policy: { kind: "gateway", claimId, setReleaseClaim: (release) => { releaseClaim = release; } },
+    });
     if (!settled.valid) {
       return c.json(
         { details: { retryable: false, fix: "Check the payment status with your wallet before signing a fresh x402 payment matching the current accepts requirements." }, error: "Payment settlement failed", detail: settled.error },

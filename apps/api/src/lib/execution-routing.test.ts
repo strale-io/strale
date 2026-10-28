@@ -60,7 +60,7 @@ describe("the threshold and the wall", () => {
   it("the wall constant matches the one the sync path actually sets", () => {
     // A restated constant that drifts from the SET LOCAL it describes would
     // make the audit script quietly wrong, which is worse than not having it.
-    const doSrc = readFileSync(resolve(__dirname, "../routes/do.ts"), "utf-8");
+    const doSrc = readFileSync(resolve(__dirname, "./do/dispatch.ts"), "utf-8");
     const seconds = SYNC_TRANSACTION_WALL_MS / 1000;
     expect(doSrc).toContain(`SET LOCAL idle_in_transaction_session_timeout = '${seconds}s'`);
   });

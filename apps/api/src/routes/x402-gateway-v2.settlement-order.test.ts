@@ -13,12 +13,12 @@
  * handlers in the file — the solution handler and the wildcard capability
  * handler — must satisfy:
  *
- *   1. Every `settleX402Payment(` call sits AFTER the first
+ *   1. Every `settleX402Execution(` call sits AFTER the first
  *      `executor(` / `executeSolution(` call in source order.
- *   2. The executor's catch block contains NO `settleX402Payment(` call —
+ *   2. The executor's catch block contains NO `settleX402Execution(` call —
  *      a thrown executor must never trigger settlement.
  *   3. Input-validation early-returns (`Missing required fields`,
- *      `Invalid request body`) precede every `settleX402Payment(` call.
+ *      `Invalid request body`) precede every `settleX402Execution(` call.
  *
  * Re-running the un-fixed code (settle inside the verify block, before
  * executor) fails check 1. Wrapping the executor try/catch around the
@@ -56,7 +56,7 @@ beforeAll(() => {
  * downstream by `expect(settles.length).toBeGreaterThan(0)` — a body
  * that doesn't contain a settle call fails loudly. If a future refactor
  * pushes template literals into the handler body and the extract stops
- * reaching `settleX402Payment(`, the test errors rather than silently
+ * reaching `settleX402Execution(`, the test errors rather than silently
  * passing. If that happens, swap this for ts.createSourceFile.
  */
 function extractHandlerBody(src: string, marker: string): string {
@@ -76,9 +76,9 @@ function extractHandlerBody(src: string, marker: string): string {
   throw new Error(`unterminated body for marker: ${marker}`);
 }
 
-/** Indices of every `settleX402Payment(` call in a handler body, in source order. */
+/** Indices of every `settleX402Execution(` call in a handler body, in source order. */
 function settleIndices(handlerBody: string): number[] {
-  const re = /settleX402Payment\s*\(/g;
+  const re = /settleX402(?:Payment|Execution)\s*\(/g;
   const out: number[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(handlerBody)) !== null) out.push(m.index);
@@ -102,7 +102,7 @@ function assertValidationPrecedesEverySettle(
   for (const idx of settles) {
     expect(
       idx,
-      `settleX402Payment at offset ${idx} must come after "${validationMarker}" guard at ${validationIdx}`,
+      `settleX402Execution at offset ${idx} must come after "${validationMarker}" guard at ${validationIdx}`,
     ).toBeGreaterThan(validationIdx);
   }
 }
@@ -111,7 +111,7 @@ function assertValidationPrecedesEverySettle(
  * Walk every `catch (…) { … }` block in the handler body and return their
  * full source slices (including braces). Used by handlers that don't have
  * a single canonical catch block to extract — the assertion is generic:
- * no catch, anywhere, may call settleX402Payment.
+ * no catch, anywhere, may call settleX402Execution.
  */
 function allCatchBlocks(handlerBody: string): string[] {
   const re = /catch\s*\([^)]*\)\s*\{/g;
@@ -180,6 +180,10 @@ function extractExecutorCatchBlock(handlerBody: string): string {
 }
 
 describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
+  it.each(["settleX402Payment", "settleX402Execution"])("recognizes %s so direct calls cannot bypass the ordering guard", name => {
+    expect(settleIndices(`before; ${name}(verified); after;`)).toEqual([8]);
+  });
+
   describe("wildcard capability handler /:slug", () => {
     let body: string;
     beforeAll(() => {
@@ -189,7 +193,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       );
     });
 
-    it("settleX402Payment is called only after executor() returns", () => {
+    it("settleX402Execution is called only after executor() returns", () => {
       const execIdx = body.indexOf(EXECUTOR_CALL);
       expect(execIdx, "executor call must exist").toBeGreaterThan(-1);
 
@@ -198,14 +202,14 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       for (const idx of settles) {
         expect(
           idx,
-          `settleX402Payment at offset ${idx} must come after executor() at ${execIdx}`,
+          `settleX402Execution at offset ${idx} must come after executor() at ${execIdx}`,
         ).toBeGreaterThan(execIdx);
       }
     });
 
-    it("executor catch block does not call settleX402Payment", () => {
+    it("executor catch block does not call settleX402Execution", () => {
       const catchBlock = extractExecutorCatchBlock(body);
-      expect(catchBlock).not.toMatch(/settleX402Payment\s*\(/);
+      expect(catchBlock).not.toMatch(/settleX402(?:Payment|Execution)\s*\(/);
     });
 
     it("validateX402Input(...) guard precedes every settle call", () => {
@@ -241,7 +245,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       );
     });
 
-    it("settleX402Payment is called only after executeSolution() returns", () => {
+    it("settleX402Execution is called only after executeSolution() returns", () => {
       const execIdx = body.indexOf("await executeSolution(");
       expect(execIdx, "executeSolution() call must exist").toBeGreaterThan(-1);
 
@@ -250,7 +254,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       for (const idx of settles) {
         expect(
           idx,
-          `settleX402Payment at offset ${idx} must come after executeSolution() at ${execIdx}`,
+          `settleX402Execution at offset ${idx} must come after executeSolution() at ${execIdx}`,
         ).toBeGreaterThan(execIdx);
       }
     });
@@ -287,13 +291,13 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       assertValidationPrecedesEverySettle(body, "validateX402Input(", "validation call must exist");
     });
 
-    it("no catch block in the solutions handler calls settleX402Payment", () => {
+    it("no catch block in the solutions handler calls settleX402Execution", () => {
       // Forward-looking: today the solutions handler has no try/catch
       // around executeSolution() (errors propagate uncaught and the all-
       // failed-steps path returns 502 before settle). If a future edit
       // adds a try/catch and settles inside it on failure, this test trips.
       for (const catchBody of allCatchBlocks(body)) {
-        expect(catchBody).not.toMatch(/settleX402Payment\s*\(/);
+        expect(catchBody).not.toMatch(/settleX402(?:Payment|Execution)\s*\(/);
       }
     });
   });
