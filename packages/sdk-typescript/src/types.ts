@@ -61,7 +61,7 @@ export interface DoResponse extends DoResult {
   /** Execution metadata (execution guidance and audit context). */
   meta: DoMeta;
   free_tier?: boolean;
-  usage?: { calls_today: number; daily_limit: number; resets_at: string };
+  usage?: { calls_this_month: number; monthly_limit: number; resets_at: string };
   upgrade?: Record<string, unknown>;
 }
 

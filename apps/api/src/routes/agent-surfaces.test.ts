@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { compute, record } = vi.hoisted(() => ({ compute: vi.fn(), record: vi.fn() }));
-vi.mock("../lib/platform-facts.js", () => ({ computePlatformFacts: compute }));
+vi.mock("../lib/platform-facts.js", () => ({ computePlatformFacts: compute, STATIC_FACTS: { free_tier_monthly_limit: 731 } }));
 vi.mock("../lib/attribution.js", () => ({ recordDiscoveryHit: record }));
 vi.mock("../lib/trial-eligibility.js", () => ({ TRIAL_CREDITS_CENTS: 731 }));
 vi.mock("../lib/pricing-constants.js", () => ({ MIN_TOPUP_CENTS: 2345 }));
@@ -16,6 +16,7 @@ const facts = {
   solution_count_active: 63,
   countries: { company_data_active_iso: ["SE", "US", "JP"] },
   price_floor_cents: 7,
+  static: { free_tier_monthly_limit: 731 },
 };
 const retired = /trust layer|can trust|quality[- ]scored|\bSQS\b|independently tested|verified data/i;
 
@@ -37,6 +38,7 @@ describe("public agent skill", () => {
       expect(text).toMatch(/^---\nname: strale\ndescription: >\n/);
       expect(text).toContain('Triggers on: "validate"');
       expect(text).not.toMatch(retired);
+      expect(text).toContain(`${facts.static.free_tier_monthly_limit} calls per calendar month (UTC) per IP`);
       for (const value of ["417 tools", "63 bundled checks", "3 countries", "2 free-tier tools", "test-free-a", "test-free-b", "€0.07", "€7.31", "€23.45", "/v1/do", "/v1/capabilities", "/v1/suggest", "/x402/catalog"]) {
         expect(text).toContain(value);
       }

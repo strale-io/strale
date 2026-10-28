@@ -2,7 +2,7 @@
 
 ## Free capabilities (no API key needed)
 
-These capabilities work without signup or authentication. IP rate limited to 10 requests/day.
+These capabilities work without signup or authentication. The anonymous per-IP allowance resets each calendar month (UTC); read `static.free_tier_monthly_limit` from `GET https://api.strale.io/v1/platform/facts` for the current number. An hourly anti-abuse guard also applies.
 
 ### Validate an email
 

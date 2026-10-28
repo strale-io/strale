@@ -340,8 +340,9 @@ drift:
 - Free-tier flag is `is_free_tier = true` in the `capabilities` table;
   `free_tier_slugs` on `/v1/platform/facts` lists the servable ones
   (`getFreeTierSlugs`). The
-  per-IP daily limit is FREE_TIER_DAILY_LIMIT in `src/routes/do.ts` — read
-  it there, don't restate it.
+  per-IP calendar-month UTC allowance is `STATIC_FACTS.free_tier_monthly_limit`
+  in `src/lib/platform-facts.ts`, enforced by `free-tier-allowance.ts` with
+  an hourly anti-abuse guard — read it there, don't restate it.
 - x402 pay-per-use (rail details: `platform-facts.ts`) is DB-driven: `x402_enabled` on the
   `capabilities` row. Catalog: `GET /x402/catalog`.
 - KYB Essentials/Complete and Invoice Verify solution families (multi-country

@@ -102,6 +102,7 @@ describe("GET /.well-known/agent-card.json", () => {
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
         capability_counts: { active_visible: 0, free_tier_slugs: [] },
+        static: { free_tier_monthly_limit: 731 },
         countries: { company_data_active: [], company_data_active_iso: [] },
       }),
     }));
@@ -125,6 +126,7 @@ describe("GET /llms-full.txt", () => {
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
         capability_counts: { active_visible: 0, free_tier_slugs: [] },
+        static: { free_tier_monthly_limit: 731 },
         countries: { company_data_active: [], company_data_active_iso: [] },
         free_tier_slugs: [],
       }),

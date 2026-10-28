@@ -186,9 +186,11 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Implement the adopted monthly-number allowance on the same
-      zero-cost tools and its texts per DEC-20261027-B §9 item 5. Measure free
-      callers and conversions against §8 D10; revert if no rise in 45 days.
+    next_action: Review and deploy the prepared monthly allowance; verify the
+      platform facts value and free-call headers, then update the sibling frontend.
+      Record rollout date and review free callers plus signup and paid conversions
+      weekly with commercial-brief. Compare against the August base of two callers
+      in 90 days; revert if no rise after 45 days. See the handoff for exact checks.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Monthly allowance and texts match the adopted pricing scope.

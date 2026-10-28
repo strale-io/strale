@@ -65,7 +65,7 @@ Pay with USDC on Base
 ## Free Tier
 
 ${facts.capability_counts.free_tier_slugs.length} free tools: ${facts.capability_counts.free_tier_slugs.join(", ") || "none currently listed"}.
-Use POST /v1/do without an API key for eligible free tools, subject to the per-IP daily limit.
+Use POST /v1/do without an API key for eligible free tools, with ${facts.static.free_tier_monthly_limit} calls per calendar month (UTC) per IP and an hourly anti-abuse guard.
 
 ## Discovery
 

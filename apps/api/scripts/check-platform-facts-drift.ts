@@ -283,6 +283,24 @@ for (const file of surfaceFiles) {
   }
 }
 
+// Allowance consumers must read the canonical fact, even if a literal matches it.
+const allowanceSurfaces = new Set([...surfaceFiles,
+  resolve(repoRoot, "README.md"), resolve(repoRoot, "apps/api/src/openapi.ts"),
+  ...walk(resolve(repoRoot, "packages"), [".ts", ".md", ".txt"]),
+  ...walk(resolve(repoRoot, "docs/listings"), [".md", ".txt", ".json"]),
+  resolve(repoRoot, "docs/api-quickstart.md"), resolve(repoRoot, "docs/x402-listing.md"),
+]);
+for (const file of allowanceSurfaces) {
+  if (!existsSync(file) || /\.test\./.test(file)) continue;
+  readFileSync(file, "utf8").split("\n").forEach((line, i) => {
+    if (isCommentLine(line)) return;
+    if (new RegExp(`\\b${STATIC_FACTS.free_tier_monthly_limit}\\s+(?:free\\s+)?calls?\\b|(?:allowance|monthly[_-]?limit)[^;\\n]*\\b${STATIC_FACTS.free_tier_monthly_limit}\\b`).test(line)
+        || /\b10\s*(?:\/\s*day|(?:free\s+)?calls?\s+(?:a|per)\s+day)\b/i.test(line)) {
+      flag(file, i + 1, "hardcoded free-tier allowance", "read static.free_tier_monthly_limit from GET /v1/platform/facts");
+    }
+  });
+}
+
 // ─── Report ────────────────────────────────────────────────────────────────
 
 console.log(`platform-facts drift sweep: scanned ${surfaceFiles.length} surface file(s)`);
@@ -308,7 +326,7 @@ for (const [file, items] of groupedByFile) {
   }
 }
 
-if (strict) {
+if (strict || findings.some(f => f.problem === "hardcoded free-tier allowance")) {
   console.error("\nDrift detected. Update the surface files to consume PLATFORM_FACTS, or update STATIC_FACTS if the value changed.");
   process.exit(1);
 }

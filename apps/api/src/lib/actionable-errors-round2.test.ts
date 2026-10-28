@@ -33,17 +33,6 @@ for (const file of ["lib/admin-auth", "routes/internal-health-monitor", "routes/
   });
 }
 
-it("free-tier rate limit names both reset and signup", () => {
-  const src = source("routes/do");
-  const call = nodes(src, ts.isCallExpression).find(n => n.expression.getText(src) === "apiError" && n.arguments[1]?.getText(src).includes("Free-tier daily limit reached"))!;
-  vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-27T12:00:00Z"));
-  const details = run(call, src, { apiError, cap: 10, retryAfterSeconds: 43200, nextMidnight: new Date("2026-10-28T00:00:00Z") }).details;
-  expect(details.fix).toContain("2026-10-28T00:00:00.000Z");
-  expect(details.fix).toContain("https://strale.dev/signup");
-  expect(details.fix).toContain("€2");
-  expect(details.fix).toContain("API key");
-});
-
 it.each(["", "synthetic"])("MCP preserves the 429 funnel event with apiKey=%s", async apiKey => {
   const onFunnelEvent = vi.fn();
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error_code: "rate_limited", message: "Limit reached.", details: { fix: "Retry after reset." } }), { status: 429 })));

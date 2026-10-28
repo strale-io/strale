@@ -17,7 +17,7 @@ For REST, send `POST https://api.strale.io/v1/do?src=skill` with
 
 Eligible tools also accept x402 payments without a Strale signup. Check
 https://api.strale.io/x402/catalog?src=skill for eligibility and quotes.
-A subset of tools works without credentials, subject to daily limits.
+A subset of tools works without credentials, under a monthly per-IP allowance (see `GET /v1/platform/facts`, `static.free_tier_monthly_limit`).
 Read https://api.strale.io/v1/platform/facts for the live
 catalogue size, coverage and free-tier list.
 

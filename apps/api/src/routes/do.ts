@@ -1,3 +1,4 @@
+import { enforceFreeTierAllowance } from "../lib/free-tier-allowance.js";
 import { validateDispatchInput } from "../lib/input-validation.js";
 import { persistCallCost } from "../lib/persist-call-cost.js";
 import { setCostDeadline, noteUnknownCost } from "../lib/call-cost.js";
@@ -653,13 +654,13 @@ async function replaySyncRequest(c: any, db: any, existing: any, fingerprint: st
 export const doRoute = new Hono<AppEnv>();
 
 // POST /v1/do — Core endpoint: execute a capability
-// DEC-21: 10 req/sec per API key (authenticated), 10/day per IP (free-tier)
+// DEC-21: 10 req/sec per API key (authenticated), calendar-month allowance per IP (free-tier)
 doRoute.post(
   "/do",
   rateLimitByIp(60, 60_000),         // IP rate limit BEFORE auth — catches invalid Bearer token bypass (S-5)
   optionalAuthMiddleware,
   rateLimitByKey(10, 1000),         // applies only if user is set
-  // Free-tier daily cap (10/day) enforced in-handler via DB counter — restart-safe
+  // Free-tier monthly allowance enforced in-handler via DB counter — restart-safe
   async (c) => {
   const user = c.get("user") as any | undefined;
   const db = getDb();
@@ -1308,58 +1309,15 @@ doRoute.post(
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, freshness);
   }
 
-  // Free-tier or progressively unlocked: enforce daily cap (DB-based, restart-safe)
+  // Free-tier or progressively unlocked: enforce monthly allowance (DB-based, restart-safe)
   const reqCtxForUnlock = c.get("requestContext" as any) as { ipHash?: string | null } | undefined;
   const isUnlockedForIp = !user && !isFreeTier && reqCtxForUnlock?.ipHash
     ? isUnlocked(reqCtxForUnlock.ipHash, capability.slug)
     : false;
 
   if (!user && (isFreeTier || isUnlockedForIp)) {
-    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
-    const ipHash = reqCtx?.ipHash ?? null;
-    const fpHash = reqCtx?.fingerprintHash ?? null;
-    // F-0-020: getFreeTierUsageToday used to catch DB errors and return
-    // count=0 — silently disabling the cap on any hiccup. It now throws
-    // FreeTierCheckUnavailable; we translate that into 503 so the request
-    // is refused, not allowed.
-    let callsToday: number;
-    let identifiedBy: "ip" | "fingerprint" | "none";
-    try {
-      const usage = await getFreeTierUsageToday(db, ipHash, fpHash);
-      callsToday = usage.count;
-      identifiedBy = usage.identifiedBy;
-    } catch (err) {
-      if (err instanceof FreeTierCheckUnavailable) {
-        c.header("Retry-After", "30");
-        return c.json(
-          apiError(
-            "rate_limited",
-            "Free-tier usage counter is temporarily unavailable. Retry in a few seconds, or sign up for an API key to bypass.",
-            { retry_after_seconds: 30 },
-          ),
-          503,
-        );
-      }
-      throw err;
-    }
-    const cap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
-
-    if (callsToday >= cap) {
-      const nextMidnight = new Date();
-      nextMidnight.setUTCHours(24, 0, 0, 0);
-      const retryAfterSeconds = Math.ceil((nextMidnight.getTime() - Date.now()) / 1000);
-      c.header("X-RateLimit-Limit", String(cap));
-      c.header("X-RateLimit-Remaining", "0");
-      c.header("X-RateLimit-Reset", String(Math.ceil(nextMidnight.getTime() / 1000)));
-      c.header("Retry-After", String(retryAfterSeconds));
-      return c.json(
-        apiError("rate_limited",
-          `Free-tier daily limit reached (${cap} calls/day). Sign up at strale.dev/signup for unlimited access.`,
-          { retry_after_seconds: retryAfterSeconds, limit: cap, fix: `Retry after ${nextMidnight.toISOString()}, or sign up at https://strale.dev/signup for €2 of free credits and send an API key in the Authorization: Bearer <api_key> header.` },
-        ),
-        429,
-      );
-    }
+    const refusal = await enforceFreeTierAllowance(c, db);
+    if (refusal) return refusal;
 
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, freshness);
   }
@@ -1388,76 +1346,6 @@ doRoute.post(
     return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness, timeoutSeconds * 1000);
   }
 });
-
-// ─── Free-tier daily limit (DB-based, restart-safe) ───────────────────────────
-// Single source of truth for the daily cap. The DB counter survives Railway
-// redeploys — no in-memory state to lose.
-
-const FREE_TIER_DAILY_LIMIT = 10;       // 10 calls/day per identified IP
-const FREE_TIER_FINGERPRINT_LIMIT = 3;  // 3 calls/day per fingerprint (conservative — may collide)
-
-interface FreeTierUsage {
-  count: number;
-  identifiedBy: "ip" | "fingerprint" | "none";
-}
-
-/**
- * F-0-020: thrown when the counter query fails. The caller must translate
- * this into 503 (fail closed). Returning `count: 0` here would silently
- * disable the free-tier cap — exactly the bypass the finding flagged.
- */
-export class FreeTierCheckUnavailable extends Error {
-  constructor(cause?: unknown) {
-    super("Free-tier usage counter is temporarily unavailable");
-    this.name = "FreeTierCheckUnavailable";
-    if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
-  }
-}
-
-async function getFreeTierUsageToday(
-  db: ReturnType<typeof getDb>,
-  ipHash: string | null,
-  fingerprintHash: string | null,
-): Promise<FreeTierUsage> {
-  // Prefer IP identification; fall back to fingerprint.
-  // F-0-020: any DB error now throws FreeTierCheckUnavailable — fail CLOSED.
-  if (ipHash) {
-    try {
-      // MED-10: read from top-level client_ip_hash column (migration 0055).
-      // Pre-fix this read from audit_trail->'request_context'->>'ipHash' which
-      // (a) couldn't use a native index, and (b) raced the post-INSERT
-      // audit_trail UPDATE on async paths. Now hits a partial index built on
-      // (client_ip_hash, created_at) WHERE is_free_tier AND user_id IS NULL.
-      const [row] = await db.execute(sql`
-        SELECT COUNT(*)::int AS cnt FROM transactions
-        WHERE created_at >= CURRENT_DATE
-          AND user_id IS NULL
-          AND is_free_tier = true
-          AND client_ip_hash = ${ipHash}
-      `);
-      return { count: (row as any)?.cnt ?? 0, identifiedBy: "ip" };
-    } catch (err) {
-      logError("free-tier-counter-read-failed", err, { identifiedBy: "ip" });
-      throw new FreeTierCheckUnavailable(err);
-    }
-  }
-  if (fingerprintHash) {
-    try {
-      const [row] = await db.execute(sql`
-        SELECT COUNT(*)::int AS cnt FROM transactions
-        WHERE created_at >= CURRENT_DATE
-          AND user_id IS NULL
-          AND is_free_tier = true
-          AND audit_trail->'request_context'->>'fingerprintHash' = ${fingerprintHash}
-      `);
-      return { count: (row as any)?.cnt ?? 0, identifiedBy: "fingerprint" };
-    } catch (err) {
-      logError("free-tier-counter-read-failed", err, { identifiedBy: "fingerprint" });
-      throw new FreeTierCheckUnavailable(err);
-    }
-  }
-  return { count: 0, identifiedBy: "none" };
-}
 
 // Build usage summary for conversion emails (DEC-20260410-A)
 async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: string) {
@@ -1518,22 +1406,6 @@ async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: st
  */
 export async function buildUsageSummaryForUserForTest(userId: string) {
   return buildUsageSummaryForUser(getDb(), userId);
-}
-
-function buildUsageBlock(callsToday: number, cap: number): Record<string, unknown> {
-  const nextMidnight = new Date();
-  nextMidnight.setUTCHours(24, 0, 0, 0);
-
-  const exceeded = callsToday >= cap;
-  return {
-    calls_today: callsToday,
-    daily_limit: cap,
-    resets_at: nextMidnight.toISOString(),
-    ...(exceeded ? {
-      limit_exceeded: true,
-      message: "You've exceeded today's free limit. Create an account to continue with paid access; trial credits are available where eligible.",
-    } : {}),
-  };
 }
 
 // ─── Free-tier execution: unauthenticated, no wallet, persisted for audit ───
@@ -1712,24 +1584,8 @@ async function executeFreeTier(
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
 
 
-    // Usage counter for free-tier calls (informational block in response).
-    // F-0-020: enforcement above is fail-closed. This call site only builds
-    // the informational `usage` block shown in a successful response, so a
-    // counter read error here should NOT 500 the already-successful
-    // execution — fall back to reporting the cap with count=0.
-    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
-    let callsToday = 0;
-    let identifiedBy: "ip" | "fingerprint" | "none" = reqCtx?.ipHash ? "ip" : reqCtx?.fingerprintHash ? "fingerprint" : "none";
-    try {
-      const usage = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null, reqCtx?.fingerprintHash ?? null);
-      callsToday = usage.count;
-      identifiedBy = usage.identifiedBy;
-    } catch (err) {
-      if (!(err instanceof FreeTierCheckUnavailable)) throw err;
-      // already logged inside getFreeTierUsageToday; carry the identifiedBy default
-    }
-    const usageCap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
-
+    // The reserved count is request-local; a second read could race other calls.
+    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null } | undefined;
     // Progressive unlock: record + include in response (DEC-20260410-A)
     const ipHashForUnlock = reqCtx?.ipHash ?? null;
     const newlyUnlocked = ipHashForUnlock ? recordUnlock(ipHashForUnlock, capability.slug) : [];
@@ -1749,7 +1605,7 @@ async function executeFreeTier(
         audit,
       },
       free_tier: true,
-      usage: buildUsageBlock(callsToday, usageCap),
+      usage: c.get("freeTierUsage" as any),
       ...(allUnlocked.length > 0 ? {
         unlocked: {
           capabilities: allUnlocked,
