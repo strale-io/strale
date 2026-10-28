@@ -319,6 +319,8 @@ describe("db-retention bounded-batch pagination", () => {
     // break on Postgres if the rate_limit_counters table ever grows
     // past one batch.
     expect(text).toMatch(/\(bucket_key,\s*window_start\)\s+IN/i);
+    expect(text).toContain("bucket_key NOT LIKE 'free-tier:month:%'");
+    expect(text).toContain("date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'");
     expect(text).toMatch(/SELECT\s+bucket_key,\s*window_start/i);
   });
 });

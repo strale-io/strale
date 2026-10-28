@@ -12,7 +12,7 @@ import { noteJobFailure } from "../lib/job-run-context.js";
  *   health_monitor_events     > 30 days   (internal telemetry)
  *   failed_requests           > 90 days   (no-match diagnostics)
  *   test_run_log              > 180 days  (cost tracking history)
- *   rate_limit_counters       > 7 days    (well past the longest live window)
+ *   rate_limit_counters       > 7 days; monthly allowance rows only after month end
  *
  * Does NOT prune: transactions, transaction_quality (EU AI Act audit trail — retained for compliance).
  * Does NOT VACUUM FULL (takes exclusive locks; disruptive to live API).
@@ -177,6 +177,10 @@ export async function runOneRulePaginated(
           SELECT ${sql.raw(rule.idCols)}
           FROM ${sql.raw(rule.table)}
           WHERE ${sql.raw(rule.column)} < ${cutoffIso}::timestamptz
+            ${rule.table === "rate_limit_counters" ? sql`AND (
+              bucket_key NOT LIKE 'free-tier:month:%'
+              OR window_start < date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+            )` : sql``}
           ORDER BY ${sql.raw(rule.orderClause)}
           LIMIT ${BATCH_SIZE}
         )

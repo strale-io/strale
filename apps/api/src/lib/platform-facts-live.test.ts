@@ -4,13 +4,14 @@ import { PgDialect } from "drizzle-orm/pg-core";
 const { execute } = vi.hoisted(() => ({ execute: vi.fn() }));
 vi.mock("./free-tier.js", () => ({ getFreeTierSlugs: vi.fn().mockResolvedValue(["servable-free-tool"]) }));
 vi.mock("../db/index.js", () => ({ getDb: () => ({ execute }) }));
-import { computePlatformFacts } from "./platform-facts.js";
+import { STATIC_FACTS, computePlatformFacts } from "./platform-facts.js";
 
 describe("live catalogue pricing facts", () => {
   it("returns the database price floor and restricts its aggregate to visible active paid tools", async () => {
     execute.mockResolvedValueOnce([{ active_visible: 417, price_floor_cents: 7 }]).mockResolvedValueOnce([{ n: 63 }]);
     const facts = await computePlatformFacts();
     expect(facts.price_floor_cents).toBe(7);
+    expect(facts.static.free_tier_monthly_limit).toBe(STATIC_FACTS.free_tier_monthly_limit);
     expect(facts.capability_counts.free_tier_slugs).toEqual(["servable-free-tool"]);
     const query = new PgDialect().sqlToQuery(execute.mock.calls[0][0]).sql;
     expect(query).toMatch(/MIN\(price_cents\) FILTER \(WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND marketplace_eligible = true AND price_cents > 0\)::int AS price_floor_cents/);
@@ -21,4 +22,12 @@ describe("live catalogue pricing facts", () => {
     execute.mockResolvedValueOnce([{ price_floor_cents: null }]).mockResolvedValueOnce([{ n: 0 }]);
     expect((await computePlatformFacts()).price_floor_cents).toBeNull();
   });
+});
+
+it("GET platform facts exposes the canonical monthly allowance", async () => {
+  execute.mockResolvedValueOnce([{}]).mockResolvedValueOnce([{ n: 0 }]);
+  const { platformFactsRoute } = await import("../routes/platform-facts.js");
+  const response = await platformFactsRoute.request("/");
+  expect(response.status).toBe(200);
+  expect((await response.json()).static.free_tier_monthly_limit).toBe(STATIC_FACTS.free_tier_monthly_limit);
 });

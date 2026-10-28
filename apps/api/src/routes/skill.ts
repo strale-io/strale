@@ -40,7 +40,7 @@ Register with \`POST https://api.strale.io/v1/auth/register?src=skill\` (or at h
 response carries your API key and \`wallet_balance_cents\`. Eligible first-time addresses can receive
 ${euros(TRIAL_CREDITS_CENTS)} in trial credits; read the granted balance from the signup
 response rather than assuming eligibility. No credit card is required for the trial.
-Free tools can be called without an API key, subject to the per-IP daily limit.
+Free tools can be called without an API key, with ${facts.static.free_tier_monthly_limit} calls per calendar month (UTC) per IP and an hourly anti-abuse guard.
 
 ## Call a tool: POST https://api.strale.io/v1/do?src=skill
 

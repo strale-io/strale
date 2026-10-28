@@ -42,6 +42,8 @@ import { logWarn } from "./log.js";
 // ─── Static facts (compile-time constants) ──────────────────────────────────
 
 export const STATIC_FACTS = {
+  /** Anonymous allowance per IP, calendar month in UTC (DEC-20261027-B). */
+  free_tier_monthly_limit: 300,
   /**
    * The canonical vendor for each compliance capability category
    * (DEC-20260429-A; vendor data allowed under DEC-20261023-A, which

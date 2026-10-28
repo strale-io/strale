@@ -1,3 +1,4 @@
+import { STATIC_FACTS } from "./lib/platform-facts.js";
 import { additionalPublicPaths } from "./openapi-public-paths.js";
 /**
  * OpenAPI 3.1.0 specification for the Strale API.
@@ -224,7 +225,7 @@ export const openApiSpec = {
               audit: { type: "object" as const, description: "EU AI Act compliant audit trail." },
             },
           },
-          free_tier: { type: "boolean" as const, description: "True for unauthenticated free-tier calls." },
+          free_tier: { type: "boolean" as const, description: `True for unauthenticated free-tier calls. Anonymous allowance: ${STATIC_FACTS.free_tier_monthly_limit} calls per calendar month (UTC) per IP, with an hourly anti-abuse guard. Authenticated free tools have no wallet debit and retain normal rate limits. Monthly usage is returned as calls_this_month, monthly_limit and resets_at; X-RateLimit-Limit/Remaining/Reset describe the allowance (Reset is Unix seconds).` },
           usage: { type: "object" as const, description: "Free-tier usage counter (unauthenticated only)." },
           upgrade: { type: "object" as const, description: "Upgrade prompt with paid capability examples (free-tier only)." },
         },

@@ -114,7 +114,7 @@ export function rateLimitByKey(maxRequests: number, windowMs: number, scope: "ke
     const user = c.get("user") as { id: string } | undefined;
     if (!user) {
       // No user set — expected for unauthenticated free-tier requests.
-      // Free-tier daily limit is enforced in the handler (DB-based counter in do.ts).
+      // Free-tier monthly allowance is enforced in the handler (DB-based counter in do.ts).
       return next();
     }
 

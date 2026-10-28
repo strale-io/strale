@@ -312,7 +312,7 @@ export async function executeCapability(
                 how: "If a human can complete a web form, https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
                 then: "Reconnect with Authorization: Bearer sk_live_YOUR_KEY",
               },
-              free_without_either: `${FREE_TIER_SLUGS.length} capabilities need no key and no payment (10/day per IP): ${FREE_TIER_SLUGS.join(", ")}.`,
+              free_without_either: `${FREE_TIER_SLUGS.length} capabilities need no key and no payment (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit): ${FREE_TIER_SLUGS.join(", ")}.`,
             }),
           },
         ],
@@ -358,7 +358,7 @@ export async function executeCapability(
         {
           type: "text",
           text: JSON.stringify({
-            error: "Free tier rate limit reached (10 executions/day).",
+            error: typeof (data as any).message === "string" ? (data as any).message : "Free-tier rate limit reached.",
             fix: typeof details?.fix === "string" && details.fix.includes("https://strale.dev/signup")
               ? details.fix
               : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for paid access and send an API key.`,
@@ -628,7 +628,7 @@ export function registerStraleTools(
                 ...(EXAMPLES[slug] ? { example_input: EXAMPLES[slug] } : {}),
               })),
               try_now:
-                "Call strale_execute with any free capability above — no API key, no payment (10/day per IP).",
+                "Call strale_execute with any free capability above — no API key, no payment (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit).",
               // The route an agent can actually take on its own.
               pay_per_call_no_signup: {
                 how: "POST to /x402/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
@@ -653,7 +653,7 @@ export function registerStraleTools(
       title: "Execute a paid tool",
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
       description:
-        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (10/day limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
+        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
         slug: z
           .string()

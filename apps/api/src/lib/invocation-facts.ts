@@ -159,8 +159,8 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * while every hop the value took afterwards was pinned. Inverted to always-true
  * the anonymous rail becomes permanently invisible to the floor; inverted to
  * always-false, genuine free traffic is scored as customer experience AND the
- * same variable disables the 10/day per-IP free cap, since that counter reads
- * `is_free_tier = true`.
+ * same variable decides whether the anonymous free-tier allowance
+ * (lib/free-tier-allowance.ts, counted in rate_limit_counters) applies.
  */
 export function computeServedFree(x402Paid: unknown): boolean {
   return !x402Paid;

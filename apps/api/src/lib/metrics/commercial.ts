@@ -30,7 +30,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import type { Measurement, Window } from "./types.js";
 import { coversWindow, evidenceFor, instrumentEnabledAt } from "./instruments.js";
-import { externalCustomers } from "./populations.js";
+import { externalCustomers, internalUserIds } from "./populations.js";
 import { ACTOR_KEY_SQL } from "./actor-identity.js";
 
 /** ISO strings only. See the module docstring. */
@@ -875,4 +875,61 @@ export async function marginPerTool(window: Window): Promise<ToolMargin[]> {
     GROUP BY 1 ORDER BY SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END) DESC`);
   return result.map((r) => toolMargin({ tool: r.tool!, calls: Number(r.calls), revenue_cents: Number(r.revenue_cents),
     known_calls: Number(r.known_calls), known_cost_cents: Number(r.known_cost_cents), cohort_cost_cents: Number(r.cohort_cost_cents), known_revenue_cents: Number(r.known_revenue_cents) }));
+}
+
+/** D10. Aggregates only: IP hashes are joined in SQL and never returned.
+ * IP-to-signup matches are indicative (shared IPs and missing hashes limit attribution).
+ * The cohort is grouped by signup month; paid conversions are observed through w.to.
+ */
+export async function monthlyFreeFunnel(w: Window) {
+  const monthly = await rows<{ month: string; src: string | null; free_ips: number; free_calls: number }>(sql`
+    SELECT to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+      t.client_meta->>'src' AS src,
+      COUNT(DISTINCT t.client_ip_hash)::int AS free_ips,
+      COUNT(*)::int AS free_calls
+    FROM transactions t
+    WHERE t.is_free_tier = true AND t.user_id IS NULL AND t.status = 'completed'
+      AND t.created_at >= ${iso(w.from)}::timestamptz AND t.created_at < ${iso(w.to)}::timestamptz
+      AND ${externalCustomers("t")}
+    GROUP BY 1, 2 ORDER BY 1, 2`);
+  const [windowTotals] = await rows<{ free_ips: number; free_calls: number }>(sql`
+    SELECT COUNT(DISTINCT t.client_ip_hash)::int AS free_ips, COUNT(*)::int AS free_calls
+    FROM transactions t
+    WHERE t.is_free_tier = true AND t.user_id IS NULL AND t.status = 'completed'
+      AND t.created_at >= ${iso(w.from)}::timestamptz AND t.created_at < ${iso(w.to)}::timestamptz
+      AND ${externalCustomers("t")}`);
+  // A distinct-IP total cannot be summed over source tags: one IP may use several.
+  const totals = await rows<{ month: string; free_ips: number; free_calls: number }>(sql`
+    SELECT to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+      COUNT(DISTINCT t.client_ip_hash)::int AS free_ips, COUNT(*)::int AS free_calls
+    FROM transactions t
+    WHERE t.is_free_tier = true AND t.user_id IS NULL AND t.status = 'completed'
+      AND t.created_at >= ${iso(w.from)}::timestamptz AND t.created_at < ${iso(w.to)}::timestamptz
+      AND ${externalCustomers("t")}
+    GROUP BY 1 ORDER BY 1`);
+  const signups = await rows<{ month: string; signup_src: string | null; first_call_src: string | null; first_free_signups: number; paid_conversions: number }>(sql`
+    SELECT to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+      u.signup_src, first_call.client_meta->>'src' AS first_call_src,
+      COUNT(*)::int AS first_free_signups,
+      COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM transactions p WHERE p.user_id = u.id AND p.status = 'completed'
+          AND p.price_cents > 0 AND p.created_at >= u.created_at AND p.created_at < ${iso(w.to)}::timestamptz
+      ))::int AS paid_conversions
+    FROM users u
+    JOIN LATERAL (
+      SELECT t.is_free_tier, t.client_meta FROM transactions t
+      WHERE (t.user_id = u.id OR (t.user_id IS NULL AND u.signup_ip_hash IS NOT NULL
+        AND t.client_ip_hash = u.signup_ip_hash AND t.created_at <= u.created_at))
+        AND t.status = 'completed' AND t.created_at < ${iso(w.to)}::timestamptz
+        AND ${externalCustomers("t")}
+      ORDER BY t.created_at, t.id LIMIT 1
+    ) first_call ON first_call.is_free_tier = true
+    WHERE u.created_at >= ${iso(w.from)}::timestamptz AND u.created_at < ${iso(w.to)}::timestamptz
+      AND u.id NOT IN (${internalUserIds()})
+    GROUP BY 1, 2, 3 ORDER BY 1, 2, 3`);
+  return {
+    window: { from: iso(w.from), to: iso(w.to) }, window_totals: windowTotals, totals, by_src: monthly, signups,
+    comparison: { august_free_callers: 2, august_window_days: 90, caller_target_multiplier: 5, paid_conversion_target: 2, stop_after_days: 45 },
+    caveat: "Completed anonymous free calls only. Missing hashes cannot identify callers; IP joins can conflate shared networks. Signup cohorts and observed paid conversions are not proof of causation. Source slices are not additive distinct-IP totals.",
+  };
 }

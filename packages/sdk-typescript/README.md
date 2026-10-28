@@ -81,7 +81,7 @@ Each bundle's inputs and price are on its page at [strale.dev/solutions](https:/
 
 ## Free tools
 
-This client always sends an API key. Free tools cost nothing with a key. They also work without any key at a small daily limit, if you call the REST API directly:
+This client always sends an API key. Free tools cost nothing with a key. They also work without any key under a monthly per-IP allowance (see `GET /v1/platform/facts`, `static.free_tier_monthly_limit`), if you call the REST API directly:
 
 ```bash
 curl -X POST https://api.strale.io/v1/do?src=npm-readme \

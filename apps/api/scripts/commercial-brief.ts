@@ -22,7 +22,7 @@ const REPO = resolve(HERE, "../../..");
 config({ path: resolve(REPO, ".env") });
 
 const {
-  marginPerTool, discreteWeeks, growth, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
+  monthlyFreeFunnel, marginPerTool, discreteWeeks, growth, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
   trailingQuietWindow,
   startOfIsoWeek,
 } = await import("../src/lib/metrics/commercial.js");
@@ -63,6 +63,10 @@ async function main() {
   const lastFull = { from: lastFullStart, to: weekStart, label: "last completed week" };
   const priorFull = { from: priorFullStart, to: lastFullStart, label: "the week before that" };
 
+  const freeFunnel = await monthlyFreeFunnel({
+    from: new Date(now.getTime() - 90 * 86_400_000),
+    to: now, label: "D10: rolling 90 days, grouped by UTC calendar month",
+  });
   const margins = await marginPerTool(lastFull);
   const factsM = await payerFacts(lastFull);
   const facts = factsM.status === "unavailable" ? [] : factsM.value.payers;
@@ -110,7 +114,7 @@ async function main() {
 
   if (asJson) {
     console.log(JSON.stringify({
-      margins, weeks, growth: g,
+      freeFunnel, margins, weeks, growth: g,
       concentration: conc ? { ...conc, newPayerKeys: [...conc.newPayerKeys] } : null,
       quiet,
       quietNarrowedSince: quietNarrowedSince ? quietNarrowedSince.toISOString() : null,
@@ -120,6 +124,7 @@ async function main() {
     return;
   }
   console.log("Per-tool marginal upstream cost (EUR estimate, matched known-cost cohort; flags after 20 calls):");
+  console.log("D10 monthly free funnel", JSON.stringify(freeFunnel));
   console.table(margins);
 
 

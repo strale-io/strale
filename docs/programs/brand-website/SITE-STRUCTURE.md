@@ -113,7 +113,7 @@ Each page answers one reader question and has one primary call to action (CTA).
 - **Question:** *Will this tool do my job, what does it cost, and how do I call it?*
 - **Sections:**
   1. Name and the one-line job it does.
-  2. Example input and output. A live **Try it** only for free tools (10 calls a day per IP); every other tool shows the labelled manifest example.
+  2. Example input and output. A live **Try it** only for free tools (monthly per-IP allowance from platform facts); every other tool shows the labelled manifest example.
   3. Inputs.
   4. Output fields and how reliably each appears.
   5. Price in EUR, plus the USD price on x402 where the tool is eligible.
