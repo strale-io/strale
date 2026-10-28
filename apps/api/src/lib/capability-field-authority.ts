@@ -393,6 +393,20 @@ export function decideFieldAuthority(
   return { action: "strip-hybrid-dbset" };
 }
 
+/**
+ * `output_schema.example` has a second writer: the test runner stores a real
+ * response there when the stored schema has none (`captureExampleOutput` in
+ * test-runner.ts). When the manifest declares no example, the stored one is
+ * runtime-owned: keep it on write and do not count it as drift. A manifest
+ * that declares an example still wins.
+ */
+export function withRuntimeExample(manifestSchema: unknown, storedSchema: unknown): unknown {
+  const isObject = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
+  if (!isObject(manifestSchema) || "example" in manifestSchema) return manifestSchema;
+  if (!isObject(storedSchema) || storedSchema.example === undefined) return manifestSchema;
+  return { ...manifestSchema, example: storedSchema.example };
+}
+
 export function valuesEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null) return a == null && b == null;
