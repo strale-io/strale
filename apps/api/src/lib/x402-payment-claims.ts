@@ -17,12 +17,12 @@ async function attemptsForHash(tx: WalletTx, paymentHash: string): Promise<numbe
 }
 
 /** The unique hash slot serializes admission, including the durable retry budget. */
-export async function claimX402Payment(paymentHash: string, capabilityId: string | null, solutionSlug: string | null): Promise<string | null> {
+export async function claimX402Payment(paymentHash: string, capabilityId: string | null, solutionSlug: string | null, receiptRail: "x402" | "v1_do" = "x402"): Promise<string | null> {
   return getDb().transaction(async tx => {
     const [row] = await tx.insert(transactions).values({
       userId: null, capabilityId, solutionSlug, status: "executing", input: {}, priceCents: 0,
       paymentMethod: "x402", x402PaymentHash: paymentHash, isFreeTier: false,
-      receiptRail: "x402", receiptDeployCommit: deployCommitOrNull(), complianceHashState: "deferred",
+      receiptRail, receiptDeployCommit: deployCommitOrNull(), complianceHashState: "deferred",
       x402ExecutionAttempts: { paymentHash, count: 0 },
     }).onConflictDoNothing().returning({ id: transactions.id });
     if (!row) return null;
@@ -104,4 +104,25 @@ export async function releaseStaleX402Claims(tx: WalletTx, limit: number): Promi
     released++;
   }
   return released;
+}
+
+export async function findCachedX402Response(
+  paymentHash: string,
+): Promise<Pick<typeof transactions.$inferSelect, "id" | "status" | "output" | "latencyMs" | "priceCents" | "provenance" | "auditTrail"> & { settlementId: string | null } | null> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: transactions.id,
+      priceCents: transactions.priceCents,
+      provenance: transactions.provenance,
+      auditTrail: transactions.auditTrail,
+      status: transactions.status,
+      output: transactions.output,
+      latencyMs: transactions.latencyMs,
+      settlementId: transactions.x402SettlementId,
+    })
+    .from(transactions)
+    .where(eq(transactions.x402PaymentHash, paymentHash))
+    .limit(1);
+  return rows[0] ?? null;
 }

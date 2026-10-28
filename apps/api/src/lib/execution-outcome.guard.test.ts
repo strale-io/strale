@@ -38,7 +38,7 @@ import { join } from "node:path";
 const API_SRC = join(import.meta.dirname, "..");
 
 const RAIL_FILES = [
-  "routes/do.ts",
+  "lib/do/dispatch.ts",
   "routes/solution-execute.ts",
   "routes/x402-gateway-v2.ts",
 ];
@@ -55,7 +55,7 @@ const CANONICAL = "lib/execution-outcome.ts";
  * the architecture working rather than a defect.
  */
 const MOVES_MONEY =
-  /walletService\.debit\(|\bdebit\(|settleX402Payment\(|reservations\.capture\(/;
+  /walletService\.debit\(|\bdebit\(|settleX402(?:Payment|Execution)\(|reservations\.capture\(/;
 
 /** Evidence that the enclosing handler asked the canonical module first. */
 const CONSULTS_BILLABILITY =
@@ -124,7 +124,7 @@ function readdirRecursive(dir: string): string[] {
 
 describe("no rail decides billability on its own", () => {
   it.each(RAIL_FILES)("%s reads the canonical outcome", (rel) => {
-    expect(read(rel)).toMatch(/from "\.\.\/lib\/execution-outcome\.js"/);
+    expect(read(rel)).toMatch(/from "(?:\.\.\/lib|\.\.)\/execution-outcome\.js"/);
   });
 
   it.each(RAIL_FILES)(
@@ -228,7 +228,7 @@ describe("no rail decides billability on its own", () => {
     // bare `debit(` from a direct import rather than the `walletService.`
     // namespace.
     const MONEY =
-      /walletService\.debit\(|\bdebit\(|settleX402Payment\(|reservations\.(reserve|capture|release)\(/;
+      /walletService\.debit\(|\bdebit\(|settleX402(?:Payment|Execution)\(|reservations\.(reserve|capture|release)\(/;
 
     const candidates = ["routes", "lib", "jobs"].flatMap((dir) =>
       readdirRecursive(join(API_SRC, dir))
@@ -246,6 +246,9 @@ describe("no rail decides billability on its own", () => {
       // Defines settleX402Payment. WP4 deleted the one function here that DID
       // decide — verifyX402Payment, which settled before execution.
       "lib/x402-gateway.ts",
+      // Shared settlement primitive; callers still must consult billability.
+      // MOVES_MONEY also matches settleX402Execution at every call site.
+      "lib/x402-settle.ts",
       // The WP3 reconciler releases abandoned reservations. It refunds; it
       // never charges, so there is no billability question for it to answer.
       "jobs/reservation-reconciler.ts",

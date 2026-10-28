@@ -1,0 +1,54 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d8eb0c522cd6aeb114f23c64b8bc14531ff89f78"
+  },
+  "at": "2026-10-28T17:23:09.917Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5fc8ac41-810f-502d-865f-3b140f78d51d/scratchpad/verify-ip-2026-10-28.json"
+  },
+  "summary": {
+    "all_ipHash_identical": true,
+    "distinct_ipHash_count": 1,
+    "conclusion": "Client-supplied X-Forwarded-For / X-Real-IP did NOT change the extracted IP: the edge proxy overwrites/strips these headers before the app sees them. Leftmost-XFF extraction is not spoofable through this path."
+  },
+  "topic": "verify-ip-proxy-hops-recheck",
+  "raw": {
+    "results": [
+      {
+        "label": "baseline",
+        "status": 200,
+        "ipHash": "5655be4a99042882",
+        "usage": {
+          "calls_this_month": 1,
+          "monthly_limit": 300,
+          "resets_at": "2026-11-01T00:00:00.000Z"
+        }
+      },
+      {
+        "label": "spoofed-single",
+        "status": 200,
+        "ipHash": "5655be4a99042882",
+        "usage": {
+          "calls_this_month": 2,
+          "monthly_limit": 300,
+          "resets_at": "2026-11-01T00:00:00.000Z"
+        }
+      },
+      {
+        "label": "spoofed-multi",
+        "status": 200,
+        "ipHash": "5655be4a99042882",
+        "usage": {
+          "calls_this_month": 3,
+          "monthly_limit": 300,
+          "resets_at": "2026-11-01T00:00:00.000Z"
+        }
+      }
+    ],
+    "all_ipHash_identical": true,
+    "distinct_ipHash_count": 1,
+    "conclusion": "Client-supplied X-Forwarded-For / X-Real-IP did NOT change the extracted IP: the edge proxy overwrites/strips these headers before the app sees them. Leftmost-XFF extraction is not spoofable through this path."
+  }
+}

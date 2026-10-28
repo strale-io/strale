@@ -112,12 +112,13 @@ tracks:
     depends_on:
       - T4
     owner: session
-    next_action: H7a is built locally on chore/h7a-merge-churn-and-boot-lock;
-      orchestrator reviews the uncommitted changes and ships. Verify the boot lock
-      after deploy using the handoff. Remaining are H7b (do.ts split and one x402
-      settle), H7c (contract tests), the migrations file split with ledger
-      unchanged, and the separate ledgered SQS column drop. See
-      handoff/_general/from-code/2026-10-28-h7a-churn-and-boot-lock.md.
+    next_action: H7a (PR 787), the boot-lock retry fix (PR 790), H7b (PR 793,
+      one x402 settle path and the do.ts split) and H4b (PR 794, /v1/do x402
+      claim, replay and recording parity) are merged and verified live
+      (GET /health commit e4493594a318). Remaining H7 work is H7c contract
+      tests, the migrations file split with the ledger unchanged, the separate
+      ledgered SQS column drop, and the applied-block-hash skip. See
+      handoff/_general/from-code/2026-10-28-orchestrator-checkpoint.md.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.
