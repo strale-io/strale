@@ -36,8 +36,10 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
         ADD COLUMN IF NOT EXISTS guidance_strategy text,
         ADD COLUMN IF NOT EXISTS guidance_confidence decimal(5,1)
     `);
+    // Start from exactly the rows seeded here, whatever an earlier run left.
+    await db.execute(sql`DROP TABLE IF EXISTS sqs_daily_snapshot`);
     await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS sqs_daily_snapshot (
+      CREATE TABLE sqs_daily_snapshot (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         capability_slug varchar(100) NOT NULL,
         snapshot_date date NOT NULL,
