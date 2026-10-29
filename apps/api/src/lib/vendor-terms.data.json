@@ -313,5 +313,23 @@
     ],
     "decision_ref": "docs/security/2026-09-10-vendor-terms-audit-batch-2.md",
     "basis": "published_terms"
+  },
+  {
+    "vendor": "registercheck.de (Openlaw GmbH)",
+    "hosts": [
+      "api.registercheck.de",
+      "mcp.registercheck.de"
+    ],
+    "capabilities": [],
+    "resale": "unverified",
+    "terms_url": "https://www.registercheck.de/rechtliches/impressum",
+    "accessed": "2026-10-29",
+    "how_read": "Not read. registercheck.de answered the 2026-10-29 session with HTTP 429, and anchorterminal.com reports its terms, privacy policy and plan prices as unreadable behind a bot check. Read instead: docs.registercheck.de (overview and data-coverage pages) and the anchorterminal.com listing. The URL above is the imprint; the terms URL is not yet known.",
+    "findings": [
+      "The OpenAPI document names a proprietary licence, LicenseRef-Registercheck-Terms, per anchorterminal.com; its text is not on record.",
+      "The data-coverage page says register entries are re-read on a cycle rather than pushed by the courts, with fields extracted from filed documents; how the copy is obtained (licence, per-document purchase or automated retrieval from handelsregister.de) is not stated.",
+      "Not in use: no executor calls these hosts, and no account or key exists. Questions are drafted in docs/company/OUTBOX.yaml row registercheck-terms-provenance."
+    ],
+    "decision_ref": "DEC-20261023-A vendor lane; open question in docs/company/OUTBOX.yaml registercheck-terms-provenance"
   }
 ]

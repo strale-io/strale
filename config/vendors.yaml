@@ -2173,3 +2173,27 @@ vendors:
         note: PDL1.0 section 1 permits reproduction, public transmission and commercial use with attribution and modification notice.
     authorization:
       status: unknown
+
+  - id: registercheck
+    name: registercheck.de (Openlaw GmbH)
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Under evaluation as a second German commercial-register source beside OpenRegister, under the vendor-data lane of DEC-20261023-A (no record file under docs/decisions/records/, so decision stays unknown; text in docs/strategy/2026-10-23-data-access-risk-rule-proposal.md). Not in use: no account, no API key, no calls. Openlaw's terms were unreadable behind a bot check, and its docs say register entries are re-read on a cycle, so how the register copy is obtained is the open question. Questions drafted in docs/company/OUTBOX.yaml row registercheck-terms-provenance; comparison plan in docs/research/2026-10-29-registercheck-coverage-comparison.md."
+    reevaluation_triggers:
+      - kind: licensing
+        condition: Openlaw answers the OUTBOX row registercheck-terms-provenance in writing on resale with attribution and on how the register copy is obtained.
+        source: docs/company/OUTBOX.yaml
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown

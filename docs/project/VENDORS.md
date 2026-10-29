@@ -87,6 +87,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | publicnode | PublicNode Ethereum RPC | retired | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
 | pypi | PyPI | active | 2026-10-27 | unknown | conditional (verified 2026-10-27) |
 | railway | Railway | active | 2026-09-10 | unknown | unknown |
+| registercheck | registercheck.de (Openlaw GmbH) | evaluating | 2026-10-29 | unknown | unknown |
 | registru-centras | Registru centras | active | 2026-09-10 | unknown | unknown |
 | rekt-database | Rekt Database | active | 2026-09-10 | unknown | unknown |
 | resend | Resend | active | 2026-09-10 | unknown | unknown |
