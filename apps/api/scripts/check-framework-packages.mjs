@@ -50,6 +50,11 @@ const FRAMEWORK_RULES = [
     label: "zapier-platform-core with defineApp and defineCreate actions",
   },
   {
+    dirMatch: /^n8n-nodes-strale$/,
+    imports: [/^import\s[\s\S]{0,300}?from\s+['"]n8n-workflow['"]/m],
+    label: "n8n-workflow with an INodeType node (execute), an ICredentialType credential and a test on n8n-workflow",
+  },
+  {
     dirMatch: /^langchain-strale$/,
     imports: [/^from\s+langchain(?:_core|_community)?[\.\w]*\s+import/m],
     label: "langchain (top-level 'from langchain... import')",
@@ -194,6 +199,29 @@ for (const pkg of requireInputs(packages.filter((pkg) => FRAMEWORK_RULES.some((r
       && /authentication:/.test(entry) && /inputFields:/.test(entry)
       && /outputFields:/.test(entry) && /perform:/.test(entry)
       && /creates,/.test(entry);
+  }
+  if (matched && pkg === "n8n-nodes-strale") {
+    // The node and credential files are the shipped entry points; an import
+    // of n8n-workflow elsewhere (a helper, a test) does not make a node.
+    const read = (file) => {
+      const path = join(pkgDir, file);
+      return existsSync(path) ? readFileSync(path, "utf8") : "";
+    };
+    const nodeSrc = read("nodes/Strale/Strale.node.ts");
+    const credSrc = read("credentials/StraleApi.credentials.ts");
+    const manifest = JSON.parse(read("package.json") || "{}");
+    matched = rule.imports.some((pattern) => pattern.test(nodeSrc))
+      && /export class \w+ implements INodeType\b/.test(nodeSrc)
+      && /description: INodeTypeDescription = \{/.test(nodeSrc)
+      && /async execute\(this: IExecuteFunctions\)/.test(nodeSrc)
+      && /properties: \[/.test(nodeSrc)
+      && rule.imports.some((pattern) => pattern.test(credSrc))
+      && /export class \w+ implements ICredentialType\b/.test(credSrc)
+      && manifest.n8n?.nodes?.includes("dist/nodes/Strale/Strale.node.js")
+      && manifest.n8n?.credentials?.includes("dist/credentials/StraleApi.credentials.js")
+      && manifest.dependencies === undefined
+      // DEC-20260422-A step 4b: a test that drives n8n's own primitives.
+      && /require\(['"]n8n-workflow['"]\)/.test(read("test/node.test.js"));
   }
   if (matched && pkg === "ai-sdk-strale") {
     const entryPath = join(pkgDir, "src", "index.ts");

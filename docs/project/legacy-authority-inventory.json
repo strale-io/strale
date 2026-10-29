@@ -241,7 +241,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "a68a9b4ea75f0249bf717ba39426232c1c492b8a9d4dd99786a9dce1a45d4f76",
+      "sha256": "fd608e87bd49dec4f8912278253a7c480d0f39085c5fbb0718f9c2513214861b",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -279,6 +279,7 @@
         "docs/programs/brand-website/homepage-brief.json",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
+        "docs/programs/distribution/tracks.yaml",
         "docs/remediation/DECISION-BRIEFS.md",
         "docs/remediation/REMEDIATION-LEDGER.md",
         "docs/remediation/packages/WP17.yaml",
