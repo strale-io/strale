@@ -110,20 +110,19 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: H7a (PR 787), the boot-lock retry (PR 790), H7b (PR 793), H7c batches 1
-      and 2 (PRs 799, 802) and H7d PRs 1 and 2 (PRs 805, 807, live 2026-10-29)
-      are merged. H7d PR 3 adds block 0132, which drops the residual SQS columns
-      and sqs_daily_snapshot only after a build without those drizzle fields has
-      recorded after listen that it serves (marker
-      0132_sqs_fields_removed_and_serving in startup_migration_ledger) and that
-      marker is ten minutes old, so the drop lands on the deploy after PR 3.
-      After that deploy, read the boot log for the 0132 outcome with the rows
-      and bytes dropped, and do not roll back past PR 3 once it has dropped.
-      Still open in T7, the H7c known_answer tightening in
-      apps/api/src/capabilities/__fixtures__/upstream/README.md, a production
-      read of startup_migration_applied (expect 75 rows) and the
-      capability_health to source_health rename. See handoff/_general/from-
-      code/2026-10-29-h7d-migrations.md.
+    next_action: H7a to H7c (PRs 787, 790, 793, 799, 802) and H7d (PRs 805, 807, 808, all
+      live 2026-10-29, the last at 04:01 Swedish time) are merged. Block 0132
+      drops the residual SQS columns and sqs_daily_snapshot on the first boot
+      after its heartbeat has run for ten minutes, normally the deploy after PR
+      808. Next, read that deploy's boot log for the 0132 outcome (rows and
+      bytes dropped) and query production for startup_migration_applied (expect
+      75 rows) and the absence of the columns; this session had no DB or Railway
+      log access. Do not roll back past PR 808 once it has dropped. Remaining T7
+      work, the H7c known_answer tightening in
+      apps/api/src/capabilities/__fixtures__/upstream/README.md, the
+      capability_health to source_health rename (22 files), and the pre-existing
+      block issues 0087, 0089 and 0030 listed in handoff/_general/from-
+      code/2026-10-29-h7d-migrations.md, each fixed by a new block.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.
