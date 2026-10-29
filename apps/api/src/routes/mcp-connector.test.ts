@@ -28,7 +28,10 @@ const CATALOG = [
   cap("eth-address-validate", "validation", true),
   cap("wallet-risk-score", "web3", false),
 ];
-const SOLUTIONS = [{ slug: "kyb-essentials-se", name: "KYB SE", description: "Bundle", category: "compliance", price_cents: 150, geography: "se", step_count: 3, capabilities: [] }];
+const SOLUTIONS = [
+  { slug: "kyb-essentials-se", name: "KYB SE", description: "Bundle", category: "compliance", price_cents: 150, geography: "se", step_count: 3, capabilities: [] },
+  { slug: "web3-pre-trade", name: "Pre-trade", description: "Bundle", category: "web3", price_cents: 50, geography: null, step_count: 3, capabilities: [] },
+];
 
 vi.mock("strale-mcp/tools", async (importOriginal) => ({
   ...(await importOriginal<typeof import("strale-mcp/tools")>()),
@@ -124,7 +127,7 @@ describe("lazy authentication on /mcp/connector", () => {
   });
 
   it("refuses a crypto tool by name or category without calling it", async () => {
-    for (const slug of ["eth-address-validate", "wallet-risk-score"]) {
+    for (const slug of ["eth-address-validate", "wallet-risk-score", "web3-pre-trade"]) {
       fetchCalls.length = 0;
       const res = await post("/mcp/connector", call("strale_execute", { slug, inputs: {} }));
       expect(res.status).toBe(200);

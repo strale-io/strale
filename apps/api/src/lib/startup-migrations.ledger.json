@@ -1030,7 +1030,7 @@
       "title": "OAuth for the Claude connector (distribution D4)",
       "added": "2026-10-29",
       "columns_written": [],
-      "sha256": "504fa3fa960fd0e66c8dbcce88cb8372c96427b0091f43c806f2fc49a9409f1c"
+      "sha256": "d4dbc4bf8ca92240b636c1237c2933ba4b51a45aa4298020b49e9a324299fe20"
     }
   ],
   "known_overlaps": [

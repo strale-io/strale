@@ -21,6 +21,8 @@
  * - Every token, code and stored value is SHA-256 hex; raw values are never
  *   stored or logged.
  * - One scope, `strale:tools`, and one resource, the connector URL (RFC 8707).
+ *   The resource is enforced on /mcp/connector. On /v1 a token is accepted as
+ *   the grant's additional key, which is what the consent page says it is.
  */
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
@@ -40,6 +42,8 @@ export const OAUTH_SCOPE = "strale:tools";
 export const ACCESS_TOKEN_TTL_SECONDS = 3600;
 export const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 3600;
 export const AUTHORIZATION_CODE_TTL_SECONDS = 300;
+/** A rotated refresh token presented again this soon is refused without revoking the grant. */
+export const REFRESH_REUSE_GRACE_MS = 30_000;
 /** Hourly spend cap on the key a grant creates; the owner can change it with the primary key. */
 export const CONNECTOR_KEY_HOURLY_CAP_CENTS = 500;
 export const CONNECTOR_KEY_LABEL = "Claude connector";
@@ -261,6 +265,13 @@ export async function exchangeAuthorizationCode(input: {
       .where(and(eq(users.id, row.userId), isNull(users.deletedAt)));
     if (!account) return INVALID_CODE;
 
+    // Reconnecting the same app replaces its earlier connection, so stale
+    // refresh tokens and "Claude connector" keys do not pile up when the
+    // client disconnects without calling /oauth/revoke.
+    const earlier = await tx.select({ id: oauthGrants.id }).from(oauthGrants)
+      .where(and(eq(oauthGrants.userId, row.userId), eq(oauthGrants.clientId, row.clientId), isNull(oauthGrants.revokedAt)));
+    for (const g of earlier) await revokeGrant(tx, g.id);
+
     let apiKeyId: string;
     let keyMinted = false;
     if (row.sourceApiKeyId) {
@@ -306,7 +317,10 @@ export async function refreshAccessToken(input: { refreshToken: string; clientId
     if (!row) return INVALID_REFRESH;
     if (row.grant.clientId !== input.clientId) return INVALID_REFRESH;
     if (row.token.rotatedAt) {
-      // A rotated token came back: one of the two holders is not the client.
+      // Within a few seconds of rotation this is most likely the client
+      // refreshing twice at once: refuse, but keep the connection.
+      if (Date.now() - row.token.rotatedAt.getTime() < REFRESH_REUSE_GRACE_MS) return INVALID_REFRESH;
+      // Later, a rotated token coming back means one of its holders is not the client.
       await revokeGrant(tx, row.grant.id);
       return INVALID_REFRESH;
     }

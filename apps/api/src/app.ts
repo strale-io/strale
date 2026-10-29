@@ -234,7 +234,7 @@ app.use("*", async (c, next) => {
   await next();
   c.header("X-Content-Type-Options", "nosniff");
   c.header("X-Frame-Options", "DENY");
-  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!c.res.headers.has("Referrer-Policy")) c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   c.header("X-XSS-Protection", "0"); // modern browsers use CSP instead
   c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
@@ -328,7 +328,11 @@ app.use("/llms-full.txt", publicCors);
 app.use("/SKILL.md", rateLimitByIp(120, 60_000));
 app.use("/llms.txt", rateLimitByIp(120, 60_000));
 app.use("/llms-full.txt", rateLimitByIp(120, 60_000));
-app.use("/.well-known/*", rateLimitByIp(120, 60_000));
+// The OAuth discovery documents are fetched from Claude's shared IP range for
+// every Claude user, so they get their own scoped limiter (routes/oauth.ts)
+// instead of this per-IP bucket.
+const wellKnownLimit = rateLimitByIp(120, 60_000);
+app.use("/.well-known/*", (c, next) => (c.req.path.startsWith("/.well-known/oauth-") ? next() : wellKnownLimit(c, next)));
 app.use("/openapi.json", publicCors);
 app.use("/robots.txt", publicCors);
 app.use("/sitemap.xml", publicCors);

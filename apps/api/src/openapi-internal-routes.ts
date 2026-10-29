@@ -126,6 +126,7 @@ const groups: Array<{ reason: string; routes: string[] }> = [
   ] },
   { reason: "OAuth 2.1 authorization server for the Claude connector; its contract is RFC 6749, 7591, 7009, 8414 and 9728, advertised in its own discovery documents.", routes: [
     "ALL /oauth/*",
+    "ALL /.well-known/oauth-*",
     "GET /oauth/authorize",
     "POST /oauth/authorize",
     "POST /oauth/token",

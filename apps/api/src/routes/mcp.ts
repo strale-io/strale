@@ -42,6 +42,7 @@ import {
   authenticateOAuthAccessToken,
   isOAuthAccessToken,
 } from "../lib/oauth.js";
+import { authenticateApiKey } from "../lib/api-keys.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -298,7 +299,9 @@ export function connectorChallenge(error?: "invalid_token"): Response {
 /** A 401 to send instead of running the request, or null to run it. */
 async function connectorAuthGate(req: Request, bearer: string, clientIp: string): Promise<Response | null> {
   if (bearer) {
-    if (bearer.startsWith("sk_live_")) return null; // an API key works here as on /mcp
+    // An API key works here as on /mcp; a dead one gets the challenge, so
+    // Claude offers to reconnect instead of showing a tool error.
+    if (bearer.startsWith("sk_live_")) return (await authenticateApiKey(bearer)) ? null : connectorChallenge("invalid_token");
     if (!isOAuthAccessToken(bearer)) return connectorChallenge("invalid_token");
     const identity = await authenticateOAuthAccessToken(bearer);
     if (!identity || identity.resource !== CONNECTOR_RESOURCE) return connectorChallenge("invalid_token");

@@ -55,7 +55,7 @@ export async function runMigration0133_oauthConnector(tx: MigrationExecutor): Pr
     CREATE TABLE IF NOT EXISTS oauth_tokens (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       grant_id uuid NOT NULL REFERENCES oauth_grants(id),
-      kind text NOT NULL,
+      kind text NOT NULL CHECK (kind IN ('access', 'refresh')),
       token_hash text NOT NULL UNIQUE,
       expires_at timestamptz NOT NULL,
       created_at timestamptz NOT NULL DEFAULT now(),

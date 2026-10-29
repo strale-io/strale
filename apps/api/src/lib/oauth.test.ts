@@ -62,7 +62,7 @@ describe("Client ID Metadata Documents", () => {
 
   it("fetches only https documents on Claude's hosts", () => {
     expect(cimdUrlAllowed(id)).toBe(true);
-    for (const bad of ["http://claude.ai/x", "https://claude.ai.evil.example/x", "https://evil.example/x", "https://claude.ai:444/x", "https://u@claude.ai/x", "https://claude.ai/"]) {
+    for (const bad of ["http://claude.ai/x", "https://claude.ai.evil.example/x", "https://evil.example/x", "https://claude.ai:444/x", "https://u@claude.ai/x", "https://claude.ai/", "https://claude.ai/x?n=1"]) {
       expect(cimdUrlAllowed(bad), bad).toBe(false);
     }
   });
@@ -93,6 +93,14 @@ describe("Client ID Metadata Documents", () => {
   it("drops foreign-origin redirects from a valid document", async () => {
     setCimdFetcherForTests(async () => new Response(doc({ redirect_uris: ["https://claude.ai/api/mcp/auth_callback", "https://evil.example/cb"] })));
     expect((await resolveClient(id))?.redirectUris).toEqual(["https://claude.ai/api/mcp/auth_callback"]);
+  });
+
+  it("caches a miss, so a repeated unknown client_id is fetched once", async () => {
+    let calls = 0;
+    setCimdFetcherForTests(async () => { calls++; return new Response("nope", { status: 404 }); });
+    expect(await resolveClient("https://claude.ai/oauth/missing")).toBeNull();
+    expect(await resolveClient("https://claude.ai/oauth/missing")).toBeNull();
+    expect(calls).toBe(1);
   });
 
   it("never fetches a host outside the list", async () => {

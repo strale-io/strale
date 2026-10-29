@@ -201,6 +201,14 @@ describeDb("Claude connector OAuth against real Postgres", () => {
     const otherClient = await token({ grant_type: "refresh_token", refresh_token: second.refresh_token, client_id: "https://claude.ai/oauth/other" });
     expect(otherClient.status).toBe(400);
 
+    // Straight after rotation a second presentation is a concurrent refresh:
+    // refused, but the connection survives.
+    const racing = await token({ grant_type: "refresh_token", refresh_token: first.refresh_token, client_id: CLIENT_ID });
+    expect(racing.status).toBe(400);
+    expect((await app.request("http://localhost/v1/wallet/balance", { headers: { Authorization: `Bearer ${second.access_token}` } })).status).toBe(200);
+
+    // Past the grace window the same reuse revokes the grant.
+    await db.update(oauthTokens).set({ rotatedAt: new Date(Date.now() - 60_000) }).where(eq(oauthTokens.tokenHash, createHash("sha256").update(first.refresh_token).digest("hex")));
     const reuse = await token({ grant_type: "refresh_token", refresh_token: first.refresh_token, client_id: CLIENT_ID });
     expect(reuse.status).toBe(400);
     expect(await reuse.json()).toMatchObject({ error: "invalid_grant" });
@@ -214,6 +222,25 @@ describeDb("Claude connector OAuth against real Postgres", () => {
     const r = await app.request("http://localhost/oauth/revoke", { method: "POST", body: new URLSearchParams({ token: refresh_token }), headers: { "Content-Type": "application/x-www-form-urlencoded" } });
     expect(r.status).toBe(200);
     expect((await app.request("http://localhost/v1/wallet/balance", { headers: { Authorization: `Bearer ${access_token}` } })).status).toBe(401);
+  });
+
+  it("reconnecting the same app replaces the earlier connection and its key", async () => {
+    const first = await (await signIn()).exchanged.json();
+    const second = await (await signIn()).exchanged.json();
+    expect((await app.request("http://localhost/v1/wallet/balance", { headers: { Authorization: `Bearer ${first.access_token}` } })).status).toBe(401);
+    expect((await token({ grant_type: "refresh_token", refresh_token: first.refresh_token, client_id: CLIENT_ID })).status).toBe(400);
+    expect((await app.request("http://localhost/v1/wallet/balance", { headers: { Authorization: `Bearer ${second.access_token}` } })).status).toBe(200);
+    const live = (await db.select().from(apiKeys).where(eq(apiKeys.userId, userId))).filter((k) => !k.revokedAt);
+    expect(live).toHaveLength(1);
+  });
+
+  it("a dead API key on the connector gets a reconnect challenge", async () => {
+    const res = await app.request("http://localhost/mcp/connector", {
+      method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", Authorization: `Bearer ${generateApiKey()}` },
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("WWW-Authenticate")).toContain('error="invalid_token"');
   });
 
   it("account closure revokes every connection and deletes pending codes", async () => {

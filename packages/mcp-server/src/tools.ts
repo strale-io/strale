@@ -605,6 +605,9 @@ export function registerStraleTools(
   // strale_execute looks categories up in the full list, so an excluded slug
   // is refused by category even though search no longer shows it.
   const allCapabilities = capabilities;
+  const excludedSolutionSlugs = new Set(
+    opts.connector ? solutions.filter((s) => isConnectorExcluded(s.slug, s.category)).map((s) => s.slug) : [],
+  );
   if (opts.connector) {
     capabilities = capabilities.filter((c) => !isConnectorExcluded(c.slug, c.category));
     solutions = solutions.filter((s) => !isConnectorExcluded(s.slug, s.category));
@@ -778,6 +781,14 @@ export function registerStraleTools(
       }),
     },
     async ({ slug, inputs, max_price_cents }) => {
+      if (excludedSolutionSlugs.has(slug)) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({ error: `'${slug}' is not available in this connector.`, details: { fix: "Call strale_search to find an available tool." } }),
+          }],
+        };
+      }
       return executeCapability(
         slug,
         inputs as Record<string, unknown>,

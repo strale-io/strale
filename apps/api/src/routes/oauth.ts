@@ -47,6 +47,8 @@ import { registerClient, resolveClient, type ResolvedClient } from "../lib/oauth
 
 export const oauthWellKnownRoute = new Hono();
 
+oauthWellKnownRoute.use("/oauth-*", rateLimitByIp(600, 60_000, "oauth-discovery"));
+
 oauthWellKnownRoute.get("/oauth-authorization-server", (c) => {
   c.header("Cache-Control", "public, max-age=300");
   return c.json(authorizationServerMetadata());
@@ -194,7 +196,8 @@ function csrfMatches(cookie: string | undefined, field: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-oauthRoute.get("/authorize", async (c) => {
+// Each new client_id can cause a CIMD fetch, so the page is limited too.
+oauthRoute.get("/authorize", rateLimitByIp(60, 60_000, "oauth-authorize"), async (c) => {
   const p = readParams(c.req.query());
   const v = await validateAuthorizeRequest(p);
   if (v.kind === "page_error") return errorPage(v.message);
@@ -263,7 +266,7 @@ async function readTokenBody(c: Context): Promise<Record<string, string> | null>
   return out;
 }
 
-oauthRoute.post("/token", rateLimitByIp(600, 60_000), async (c) => {
+oauthRoute.post("/token", rateLimitByIp(600, 60_000, "oauth-token"), async (c) => {
   const body = await readTokenBody(c);
   if (!body) return oauthError("invalid_request", "Send the request as application/x-www-form-urlencoded.");
   if (c.req.header("Authorization") || body.client_secret) {
@@ -295,7 +298,8 @@ oauthRoute.post("/token", rateLimitByIp(600, 60_000), async (c) => {
   }
 });
 
-oauthRoute.post("/register", rateLimitByIp(120, 60_000), async (c) => {
+// Claude prefers CIMD, so registration stays narrow.
+oauthRoute.post("/register", rateLimitByIp(20, 60_000, "oauth-register"), async (c) => {
   const body = await c.req.json().catch(() => null);
   try {
     const result = await registerClient(body);
@@ -306,7 +310,7 @@ oauthRoute.post("/register", rateLimitByIp(120, 60_000), async (c) => {
   }
 });
 
-oauthRoute.post("/revoke", rateLimitByIp(120, 60_000), async (c) => {
+oauthRoute.post("/revoke", rateLimitByIp(120, 60_000, "oauth-revoke"), async (c) => {
   const body = await readTokenBody(c);
   if (!body?.token) return oauthError("invalid_request", "token is required, sent as application/x-www-form-urlencoded.");
   try {

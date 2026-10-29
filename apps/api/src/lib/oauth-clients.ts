@@ -51,7 +51,16 @@ export function setCimdFetcherForTests(next: Fetcher | null): void {
   cimdCache.clear();
 }
 
-const cimdCache = new Map<string, { client: ResolvedClient; expiresAt: number }>();
+// A miss is cached briefly too, so repeated unknown client_ids cannot turn
+// the authorize page into a stream of requests to Claude's hosts.
+const cimdCache = new Map<string, { client: ResolvedClient | null; expiresAt: number }>();
+const CIMD_MISS_TTL_MS = 60 * 1000;
+
+function cacheCimd(clientId: string, client: ResolvedClient | null): ResolvedClient | null {
+  if (cimdCache.size >= CIMD_CACHE_MAX) cimdCache.delete(cimdCache.keys().next().value!);
+  cimdCache.set(clientId, { client, expiresAt: Date.now() + (client ? CIMD_CACHE_TTL_MS : CIMD_MISS_TTL_MS) });
+  return client;
+}
 
 export function cimdUrlAllowed(clientId: string): boolean {
   let url: URL;
@@ -60,7 +69,7 @@ export function cimdUrlAllowed(clientId: string): boolean {
   } catch {
     return false;
   }
-  return url.protocol === "https:" && !url.port && !url.username && !url.password && !url.hash
+  return url.protocol === "https:" && !url.port && !url.username && !url.password && !url.hash && !url.search
     && CIMD_ALLOWED_HOSTS.has(url.hostname) && url.pathname.length > 1;
 }
 
@@ -68,6 +77,10 @@ async function resolveCimd(clientId: string): Promise<ResolvedClient | null> {
   if (!cimdUrlAllowed(clientId)) return null;
   const cached = cimdCache.get(clientId);
   if (cached && cached.expiresAt > Date.now()) return cached.client;
+  return cacheCimd(clientId, await fetchCimd(clientId));
+}
+
+async function fetchCimd(clientId: string): Promise<ResolvedClient | null> {
   let doc: unknown;
   try {
     const resp = await fetcher(clientId, {
@@ -102,10 +115,7 @@ async function resolveCimd(clientId: string): Promise<ResolvedClient | null> {
     })
     .slice(0, MAX_REDIRECT_URIS);
   if (redirectUris.length === 0) return null;
-  const client: ResolvedClient = { clientId, kind: "cimd", displayName: new URL(clientId).hostname, redirectUris };
-  if (cimdCache.size >= CIMD_CACHE_MAX) cimdCache.delete(cimdCache.keys().next().value!);
-  cimdCache.set(clientId, { client, expiresAt: Date.now() + CIMD_CACHE_TTL_MS });
-  return client;
+  return { clientId, kind: "cimd", displayName: new URL(clientId).hostname, redirectUris };
 }
 
 const DCR_CLIENT_ID = /^stc_[0-9a-f]{32}$/;

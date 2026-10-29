@@ -118,6 +118,24 @@ need the primary key. Revoking the key ends the grant.
    fall back to DCR, which still works. The custom-connector test at
    submission confirms which path Claude takes.
 
+## Open follow-ups from the independent review (2026-10-29)
+
+Fixed before merge: separate rate-limit buckets for the OAuth endpoints and
+discovery documents; a limit and a miss cache on the consent page's CIMD
+fetch, with no query strings in client IDs; a reconnect replaces the earlier
+connection and its key; a 30-second grace for concurrent refreshes; web3
+bundles refused; a dead API key on the connector gets the reconnect
+challenge. Still open, none blocking submission:
+
+- No retention pruning yet for `oauth_tokens`, used codes or unused DCR
+  clients. At launch volumes this is two token rows per connection per hour.
+  Add a self-throttled pruning rule (DEC-20260504-B) before volume grows.
+- OAuth use does not update `api_keys.last_used_at`, so a "Claude connector"
+  key reads as unused in `GET /v1/api-keys`.
+- A reconnect replaces the earlier connection only for the same client ID.
+  CIMD IDs are stable, so this covers Claude; DCR clients get a new ID each
+  time.
+
 ## Thresholds to measure after listing (§8 D4)
 
 - Listed: yes or no, within **45 days** of submission.
