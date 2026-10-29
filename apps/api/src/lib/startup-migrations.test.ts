@@ -143,7 +143,7 @@ function makeStub(canned: { default?: unknown; queue?: unknown[] }) {
 }
 
 // Block 0028 (sqs_daily_snapshot) tests retired with the SQS engine
-// (DEC-20260503-B). The table is dropped in PR2.
+// (DEC-20260503-B). The table was dropped by block 0132.
 
 describe("startup-migrations — block 0029 (actual_cost_cents)", () => {
   it("first run: adds column when information_schema reports absence", async () => {

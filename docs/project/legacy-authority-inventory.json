@@ -32,7 +32,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "9331668675b929087fb3c8371d88357e6a7ae19fd4b64ed64c3439a5ca6b58d7",
+      "sha256": "3a2f5b68752dd0a64c4b89f8583e5c9421a895fd41281320dc1720eac5c3e8d6",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

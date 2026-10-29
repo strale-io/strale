@@ -155,26 +155,6 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
     category: "db",
     reason: "Measured at runtime by test runner.",
   },
-  qp_score: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  rp_score: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  matrix_sqs: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  matrix_sqs_raw: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  trend: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
   freshness_level: {
     category: "db",
     reason: "Computed by staleness-refresh job.",
@@ -194,18 +174,6 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
   dataset_last_updated: {
     category: "db",
     reason: "Runtime-tracked dataset update timestamp.",
-  },
-  guidance_usable: {
-    category: "db",
-    reason: "Retired with execution-guidance (DEC-20260503-B); column drop in PR2.",
-  },
-  guidance_strategy: {
-    category: "db",
-    reason: "Retired with execution-guidance (DEC-20260503-B); column drop in PR2.",
-  },
-  guidance_confidence: {
-    category: "db",
-    reason: "Retired with execution-guidance (DEC-20260503-B); column drop in PR2.",
   },
   fallback_capability_slug: {
     category: "db",
