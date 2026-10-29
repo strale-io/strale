@@ -1010,6 +1010,14 @@
   set_in:
     - none
   cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
+- name: STARTUP_MIGRATIONS_FORCE
+  purpose: Set to 1 to run every startup-migration block on the next boot, including blocks recorded as applied (recovery when a hand-dropped object fails schema validation). Unset in normal operation.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
 - name: STRALE_API_KEY
   purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds.
   provider: internal

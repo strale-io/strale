@@ -67,23 +67,29 @@ Railway boot log was not read (no Railway access in that session).
   table nothing is skipped, so the first boot after deploy runs all 74 blocks
   as today and records them (the 73 earlier ones are recorded right after
   0131 runs).
-- `run-policy.ts` classifies every block: 37 `once`, 36 `every_boot`, plus
+- `run-policy.ts` classifies every block: 28 `once`, 45 `every_boot`, plus
   0131 `once`. The classification was done by three read-only agents against
   a fixed rubric (every normal return means done; no live inputs; not a
   reconciler; re-run is a no-op; unsure means every_boot); 0103 and 0106 were
   moved to every_boot because they re-create redaction and immutability
-  triggers. A test requires a policy for every registered block.
+  triggers. After review, every block that creates something schema
+  validation cannot see (a unique index, CHECK, view or trigger: 0067, 0070,
+  0079, 0080, 0085, 0096, 0102, 0110, 0126) is every_boot too, so a dropped
+  money-path unique index is still restored on the next boot. A test requires
+  a policy for every registered block.
 - A recorded hash that differs from the ledger hash is a `StartupFatalError`
   (boot fails), never a skip. The admin apply-migrations endpoint passes
   `force: true` and runs every block.
 - Not what the brief literally asked: a second boot does not run nothing; the
-  36 every-boot blocks still run, because skipping them would change what
+  45 every-boot blocks still run, because skipping them would change what
   production does.
 - Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-applied-block-skip.json).
-- Recovery if a skipped block's schema object is dropped by hand: schema
-  validation fails boot (as it would today for any missing artifact); roll
-  back to the previous deploy or delete that block's row from
-  `startup_migration_applied`, and the next boot re-runs it.
+- Recovery if a skipped block's column or table is dropped by hand: schema
+  validation fails boot, and its alert now says to set
+  `STARTUP_MIGRATIONS_FORCE=1` in Railway, redeploy, then remove it (the
+  admin endpoint needs a running API). Tested on real Postgres.
+- A failure to record a block is logged, not fatal; that block runs again on
+  the next boot.
 
 ## PR 3
 

@@ -65,6 +65,9 @@ describe("BLOCK_RUN_POLICY", () => {
       "runMigration0069_reconcileEligibilityFromCostClass",
       "runMigration0090_capabilityOutputContracts",
       "runMigration0095_walletReservations",
+      // Unique indexes on the money path that schema validation cannot see.
+      "runMigration0096_x402SettlementIntents",
+      "runMigration0102_accountLifecycleTables",
       "runMigration0098_perCustomerIdempotency",
       "runMigration0099_noHalfQuarantine",
       "runMigration0101_capabilityInvocations",

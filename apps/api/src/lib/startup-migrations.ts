@@ -360,13 +360,17 @@ export async function runStartupMigrations(
     const lockBudget = { remainingMs: 10_000 };
     // null until block 0131 has created the table: nothing is skipped, and
     // blocks that ran before it are recorded as soon as it exists.
+    // STARTUP_MIGRATIONS_FORCE=1 is the recovery path when boot itself fails
+    // (the admin endpoint needs a running API).
+    const force = options.force === true || process.env.STARTUP_MIGRATIONS_FORCE === "1";
+    if (force) log.warn({ label: "startup-migrations-force" }, "startup-migrations-force: every block runs");
     let applied = await readApplied(db);
     const unrecorded: LedgerRow[] = [];
     let skipped = 0;
     for (const block of BLOCKS) {
       const ledgerRow = LEDGER_BY_FUNCTION.get(block.name);
       const plan = planBlock(block.name, ledgerRow, applied?.get(block.name),
-        BLOCK_RUN_POLICY[block.name]?.policy, options.force === true);
+        BLOCK_RUN_POLICY[block.name]?.policy, force);
       if (plan.action === "skip") {
         skipped++;
         const result = { block: block.name, outcome: `skipped (applied; ledger ${plan.ledgerId} hash recorded)`, duration_ms: 0 };
@@ -382,8 +386,14 @@ export async function runStartupMigrations(
       if (applied === null && block === runMigration0131_startupMigrationApplied) applied = await readApplied(db);
       if (applied) {
         for (const row of unrecorded.splice(0)) {
-          await recordApplied(db, row);
-          applied.set(row.function, row.sha256);
+          // Not fatal: an unrecorded block only runs again on the next boot.
+          try {
+            await recordApplied(db, row);
+            applied.set(row.function, row.sha256);
+          } catch (err) {
+            log.error({ label: "startup-migration-record-failed", block: row.function,
+              err: err instanceof Error ? err.message : String(err) }, "startup-migration-record-failed");
+          }
         }
       }
       log.info(
