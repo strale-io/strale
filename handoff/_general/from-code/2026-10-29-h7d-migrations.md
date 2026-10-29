@@ -110,10 +110,16 @@ next deploy's `skipped_count: 29` were not read (no DB or Railway log access).
   rows (`matching.ts`, `capability-onboarding.ts`, `manifest-text-sync.ts`
   and others), so drizzle names these columns, and that instance serves while
   the next one boots. Dropping in the same deploy would fail its catalogue and
-  `/v1/do` queries for the overlap. So the build records after listen
-  (`0132_sqs_fields_removed_and_serving` in `startup_migration_ledger`) and
-  block 0132 drops only once that marker is ten minutes old: the drop lands on
-  the first boot after that, normally the next deploy.
+  `/v1/do` queries for the overlap. Listening is not proof of serving either
+  (independent review, FAIL round 1): Railway cuts over only after
+  `/health/deep` passes. So a heartbeat starts five minutes after listen,
+  past the healthcheck window, and repeats every two minutes
+  (`0132_sqs_fields_removed_and_serving` first beat,
+  `0132_sqs_fields_removed_last_beat` latest, in `startup_migration_ledger`).
+  Block 0132 drops only when the first beat is at least ten minutes old and
+  the latest is under seven, so a failed deploy or a rollback to old code
+  defers it. The drop lands on the first boot after that, normally the next
+  deploy.
 - Measured into the boot log before dropping: column count, capabilities row
   count, snapshot rows and bytes. Production numbers were not readable from
   this session; they appear in the 0132 outcome line of that boot.
@@ -130,3 +136,4 @@ marker after listen, boot 2 deferred, boot 3 (marker backdated 11 minutes)
 dropped 8 columns from 356 capabilities rows and the table (500 rows,
 98304 bytes) with schema validation green, boot 4 skipped. Receipt below.
 Receipt: [h7d-drop-sqs-residual-schema](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-residual-schema.json).
+Round 2 (heartbeat): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-heartbeat.json).
