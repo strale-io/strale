@@ -19,19 +19,19 @@ Intent: H7e PR A (platform-hardening T7), fix the pre-existing startup-migration
 - New run policy `retired` (`run-policy.ts`, `applied.ts`): like `once`, but
   `force` / `STARTUP_MIGRATIONS_FORCE=1` does not re-run it either. Still runs
   on a database where it never ran. 0087 and 0089 are `retired`.
-- **0136** (every_boot) replaces the trigger function: the reason may change
+- **0137** (every_boot) replaces the trigger function: the reason may change
   only when the old reason is a content redaction and the row is deleted after
   the update. Art. 17 `account_closure_erasure` stays pinned (tested). Takes
   over 0103's restore-the-trigger duty; 0103 is now `once`, so it no longer
   writes the old function back each boot.
-- **0137** (once) re-deletes the affected rows: redacted, retention reason,
+- **0138** (once) re-deletes the affected rows: redacted, retention reason,
   `transaction_quality.deleted_at` set (only the user-delete route writes that
   column). `deleted_at` = the quality row's time when NULL, reason
   `user_request`. Batches of 1000, measured first, throws if any remain.
   Rows without a quality row cannot be identified and are left alone.
-- **0135** (once) ensures all three 0030 columns and the index; 0030 is `once`.
-- Ledger M078-M080; known_overlaps added for 0030/0135 (ADD COLUMN only) and
-  0087/0137 (resolved by retiring 0087).
+- **0136** (once) ensures all three 0030 columns and the index; 0030 is `once`.
+- Ledger M079-M081; known_overlaps added for 0030/0136 (ADD COLUMN only) and
+  0087/0138 (resolved by retiring 0087).
 
 Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7-migration-block-repairs.json),
 [after review](../../../archive/receipts/2026-10-29-test-run-h7-migration-block-repairs-review.json).
@@ -39,7 +39,7 @@ Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7-migration-b
 Independent review (fresh read-only Claude context): PASS WITH NITS. Fixed:
 a redacted row with a NULL reason is now deliberately allowed to take its
 deletion's reason (it was by accident, `NULL IN (...)`), a ledger note, and
-four test gaps. Kept: 0137 ignores legal hold (the route would have left a
+four test gaps. Kept: 0138 ignores legal hold (the route would have left a
 held row deleted too).
 
 ## Known gaps
@@ -50,11 +50,11 @@ held row deleted too).
   `DELETE /v1/transactions/:id`, which this session could not read.
 - Rollback hazard: a build from before this PR runs 0103 every boot and puts
   the old trigger function back, so the bug returns until a later build runs
-  0136 again. Rows 0137 fixed stay fixed (their reason is `user_request`).
+  0137 again. Rows 0138 fixed stay fixed (their reason is `user_request`).
 
 ## Owed in production (no DB or Railway log access in this session)
 
-After deploy, the boot log's `0137_redeleteCustomerDeletedRedactedRows` outcome
+After deploy, the boot log's `0138_redeleteCustomerDeletedRedactedRows` outcome
 gives the number of customer deletions that had been undone. Daily run query:
 
 ```sql
@@ -62,8 +62,8 @@ SELECT count(*) FROM transactions t JOIN transaction_quality q ON q.transaction_
  WHERE t.redacted_at IS NOT NULL AND q.deleted_at IS NOT NULL
    AND t.deletion_reason IN ('content_retention_purge','pii_retention_purge');  -- expect 0
 SELECT function_name FROM startup_migration_applied
- WHERE function_name LIKE 'runMigration013%';  -- expect 0130 to 0137
+ WHERE function_name LIKE 'runMigration013%';  -- expect 0130 to 0138
 ```
 
-If 0137 restored any rows, those customers saw deleted transactions reappear
+If 0138 restored any rows, those customers saw deleted transactions reappear
 in their history for a while; whether that needs telling them is Petter's call.

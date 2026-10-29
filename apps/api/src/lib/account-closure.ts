@@ -258,6 +258,15 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
       "rows are resolved by the reconciler within their deadline and do not accumulate.",
   },
   {
+    table: "batch_orders",
+    columns: ["user_id"],
+    disposition: "retained",
+    reason:
+      "The order record for each batch call: which tool, how many items, the quoted price and the ids of the item holds. " +
+      "It holds no inputs or outputs — those are on the item transactions, which closure clears as above. " +
+      "`user_id` is NOT NULL on this table, so it cannot be cleared; the row is what the retained ledger debits of a batch trace back to.",
+  },
+  {
     table: "capability_invocations",
     columns: ["user_id"],
     disposition: "retained",

@@ -1042,7 +1042,15 @@
     },
     {
       "id": "M078",
-      "function": "runMigration0135_completeComplianceColumns",
+      "function": "runMigration0135_batchOrders",
+      "title": "batch orders (portfolio plan Phase 3 item 5)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "3a543a4e7784c7bb4103a3a8aa2634e60bebc37564b24832eb4ae75de73e47a0"
+    },
+    {
+      "id": "M079",
+      "function": "runMigration0136_completeComplianceColumns",
       "title": "Complete Compliance Columns",
       "added": "2026-10-29",
       "columns_written": [
@@ -1050,26 +1058,26 @@
         "transactions.legal_hold",
         "transactions.previous_hash"
       ],
-      "sha256": "9e4dd3f753242dd8b8c75e73807adbf01d9699fe85df1f145ee7bceb5db3ea6b"
-    },
-    {
-      "id": "M079",
-      "function": "runMigration0136_redactedRowDeletionReason",
-      "title": "Redacted Row Deletion Reason",
-      "added": "2026-10-29",
-      "columns_written": [],
-      "sha256": "25890c834d2e4c508f0afc91593e05766ed82982995c1b2ee7b5cd92e8421b36"
+      "sha256": "d6a0a56ca32d1abc1001d9eeffbbee1b513e8bfc443e1db8f18b0965ae9e4950"
     },
     {
       "id": "M080",
-      "function": "runMigration0137_redeleteCustomerDeletedRedactedRows",
+      "function": "runMigration0137_redactedRowDeletionReason",
+      "title": "Redacted Row Deletion Reason",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "6e30f084b2d70349e639c0cfdfffe8201dfa15a3400e60d6e45d78a475bbe8f8"
+    },
+    {
+      "id": "M081",
+      "function": "runMigration0138_redeleteCustomerDeletedRedactedRows",
       "title": "Redelete Customer Deleted Redacted Rows",
       "added": "2026-10-29",
       "columns_written": [
         "transactions.deleted_at",
         "transactions.deletion_reason"
       ],
-      "sha256": "727ee28cee46254486dc6d5a3ac7a4236114cd14edb4bd2bd24c731e84648cdf"
+      "sha256": "306a3d4a9afe2eb23e986df4686af8095dcab9a7f90f99b42d2572ecf182f6a4"
     }
   ],
   "known_overlaps": [
@@ -1537,41 +1545,41 @@
       "column": "transactions.integrity_hash",
       "blocks": [
         "M002",
-        "M078"
+        "M079"
       ],
-      "note": "Block 0135 (M078, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0135 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+      "note": "Block 0136 (M079, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0136 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
     },
     {
       "column": "transactions.previous_hash",
       "blocks": [
         "M002",
-        "M078"
+        "M079"
       ],
-      "note": "Block 0135 (M078, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0135 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+      "note": "Block 0136 (M079, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0136 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
     },
     {
       "column": "transactions.legal_hold",
       "blocks": [
         "M002",
-        "M078"
+        "M079"
       ],
-      "note": "Block 0135 (M078, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0135 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+      "note": "Block 0136 (M079, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0136 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
     },
     {
       "column": "transactions.deleted_at",
       "blocks": [
         "M047",
-        "M080"
+        "M081"
       ],
-      "note": "Block 0137 (M080, 2026-10-29) undoes what 0087 (M047) did to customer-deleted redacted rows: 0087 cleared deleted_at on rows 0137 re-deletes, which is exactly the fight this check exists for. It is resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0137 has run. Disjoint thereafter by construction, not by predicate."
+      "note": "Block 0138 (M081, 2026-10-29) undoes what 0087 (M047) did to customer-deleted redacted rows: 0087 cleared deleted_at on rows 0138 re-deletes, which is exactly the fight this check exists for. It is resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0138 has run. Disjoint thereafter by construction, not by predicate."
     },
     {
       "column": "transactions.deletion_reason",
       "blocks": [
         "M047",
-        "M080"
+        "M081"
       ],
-      "note": "Block 0087 (M047) renamed pii_retention_purge to content_retention_purge; block 0137 (M080, 2026-10-29) sets user_request on customer-deleted redacted rows that still carry either retention reason, so on those rows the two write opposite values. Resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0137 has run."
+      "note": "Block 0087 (M047) renamed pii_retention_purge to content_retention_purge; block 0138 (M081, 2026-10-29) sets user_request on customer-deleted redacted rows that still carry either retention reason, so on those rows the two write opposite values. Resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0138 has run."
     }
   ]
 }

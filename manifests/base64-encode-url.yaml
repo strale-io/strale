@@ -47,7 +47,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://example.com
+      url: https://strale.dev
     expected_fields:
       - field: base64
         operator: not_null
@@ -77,6 +77,14 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: string
+      - field: size_bytes
+        operator: gt
+        reliability: guaranteed
+        value: 2000
+      - field: size_bytes
+        operator: lt
+        reliability: guaranteed
+        value: 1000000
   health_check_input:
     url: https://example.com
 output_field_reliability:

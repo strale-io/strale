@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
 
 /**
- * Block 0135 — finish what block 0030 may have left half done.
+ * Block 0136 — finish what block 0030 may have left half done.
  *
  * Block 0030 adds three `transactions` columns and an index, but decides
  * whether to run by looking at the first column only, and the runner opens no
@@ -19,7 +19,7 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * `legal_hold` changes nothing: Postgres skips the whole clause, default and
  * NOT NULL included.
  */
-export async function runMigration0135_completeComplianceColumns(
+export async function runMigration0136_completeComplianceColumns(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
@@ -39,7 +39,7 @@ export async function runMigration0135_completeComplianceColumns(
   await tx.execute(sql`CREATE INDEX IF NOT EXISTS "transactions_integrity_hash_idx" ON "transactions" ("integrity_hash")`);
 
   return {
-    block: "0135_completeComplianceColumns",
+    block: "0136_completeComplianceColumns",
     outcome:
       missing.length === 0
         ? "no change (all three compliance columns present; index ensured)"

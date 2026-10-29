@@ -406,6 +406,105 @@ export const openApiSpec = {
       },
     },
 
+    "/v1/do/batch": {
+      post: {
+        tags: ["capabilities"],
+        summary: "Run one capability over many inputs",
+        description:
+          "Run one paid capability over up to 100 inputs in one request: one quote, one reservation of the whole quote, results per item in input order.\n\n" +
+          "The quote is `price_cents × number of inputs` and must not exceed `max_total_price_cents`. The whole quote is held on the wallet before anything runs; each item is then charged only if it succeeds. Failed items, and items not started because the batch's 90-second budget ran out (`status: \"not_run\"`), are not charged.\n\n" +
+          "Every input is validated first; one invalid input refuses the whole batch with its index, and nothing is charged. Free tools and tools that run asynchronously cannot be batched.\n\n" +
+          "Limits count items, not requests: 300 items per minute per API key, and the hourly spend cap and per-key spend limits count the whole quote. One `Idempotency-Key` covers the whole batch; a retry with the same key returns the recorded results without charging again. API key and wallet only for now; x402 batches are not available.",
+        security: [{ BearerAuth: [] }],
+        "x-ratelimit": { limit: 300, window: "1m", scope: "items per API key" },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object" as const,
+                required: ["capability_slug", "inputs", "max_total_price_cents"],
+                properties: {
+                  capability_slug: { type: "string" as const, example: "vat-validate" },
+                  inputs: {
+                    type: "array" as const, minItems: 1, maxItems: 100,
+                    description: "One object of the tool's parameters per item, as `inputs` on POST /v1/do.",
+                    items: { type: "object" as const, additionalProperties: true },
+                    example: [{ vat_number: "SE556703748501" }, { vat_number: "DE811569869" }],
+                  },
+                  max_total_price_cents: { type: "integer" as const, minimum: 1, maximum: 10000, description: "The most the whole batch may cost, in EUR cents." },
+                  timeout_seconds: { type: "number" as const, exclusiveMinimum: 0, default: 30, description: "Time budget per item in seconds; values are clamped to 5–60." },
+                  dry_run: { type: "boolean" as const, description: "Validate and quote without reserving or running anything." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "The batch ran. Check `status` and each item's `status`; only completed items were charged. With `dry_run: true`, the body is instead `{dry_run, would_execute, item_count, unit_price_cents, quoted_total_cents, wallet_balance_cents, wallet_sufficient}` and nothing is reserved.",
+            headers: {
+              "X-Credits-Remaining": { description: "Wallet balance in EUR cents after the batch", schema: { type: "integer" as const } },
+              "X-Cost-Cents": { description: "What the batch was charged in EUR cents", schema: { type: "integer" as const } },
+            },
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    batch_id: { type: "string" as const, format: "uuid" },
+                    status: { type: "string" as const, enum: ["completed", "partial", "failed"] },
+                    capability_used: { type: "string" as const },
+                    item_count: { type: "integer" as const },
+                    succeeded: { type: "integer" as const },
+                    failed: { type: "integer" as const },
+                    not_run: { type: "integer" as const },
+                    unit_price_cents: { type: "integer" as const },
+                    quoted_total_cents: { type: "integer" as const },
+                    charged_cents: { type: "integer" as const },
+                    released_cents: { type: "integer" as const, description: "Held but not charged: quoted_total_cents − charged_cents." },
+                    wallet_balance_cents: { type: "integer" as const },
+                    results: {
+                      type: "array" as const,
+                      items: {
+                        type: "object" as const,
+                        properties: {
+                          index: { type: "integer" as const },
+                          status: { type: "string" as const, enum: ["completed", "failed", "not_run"] },
+                          transaction_id: { type: ["string", "null"], format: "uuid" },
+                          price_cents: { type: "integer" as const, description: "Charged for this item: the unit price if completed, else 0." },
+                          latency_ms: { type: ["integer", "null"] },
+                          output: { description: "The tool's output, as on POST /v1/do." },
+                          provenance: { description: "Source and fetch time, as on POST /v1/do." },
+                          error: {
+                            type: "object" as const,
+                            properties: {
+                              error_code: { type: "string" as const },
+                              message: { type: "string" as const },
+                              retryable: { type: "boolean" as const },
+                              detail: { type: "string" as const },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    meta: { type: "object" as const, properties: { idempotency_replay: { type: "boolean" as const } } },
+                  },
+                },
+              },
+            },
+          },
+          "400": errorResponse("invalid_request", "1 of 3 inputs are invalid; nothing was run or charged."),
+          "401": errorResponse("unauthorized", "An API key is required for batches."),
+          "402": errorResponse("insufficient_balance", "The wallet cannot fund the whole quote, or the quote exceeds max_total_price_cents (budget_exceeded)."),
+          "404": errorResponse("no_matching_capability", "No servable capability with this slug."),
+          "409": errorResponse("idempotency_key_reused", "The Idempotency-Key was used for other work, or the original batch is still running (request_in_progress)."),
+          "429": errorResponse("rate_limited", "Item rate limit, hourly spend cap or key spend limit would be exceeded."),
+          "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable, or the wallet was busy and nothing was reserved (timeout_exceeded)."),
+        },
+      },
+    },
+
     // ─── Web3 Assurance ────────────────────────────────────────────────
     "/v1/web3-assurance": {
       post: {

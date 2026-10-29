@@ -1,0 +1,43 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "17a1b5d8ae02c3b0b250c943e99688db0212b40f"
+  },
+  "at": "2026-10-29T16:24:53.699Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/83a1f845-5385-5263-837d-f5fff3a8d589/scratchpad/receipt-src.json"
+  },
+  "summary": {
+    "tests_total": 414,
+    "tests_failed": 0
+  },
+  "topic": "batch-calls",
+  "raw": {
+    "ok": true,
+    "suite": "apps/api integration lane (vitest --no-file-parallelism integration.test.ts)",
+    "database": "local throwaway postgres 16 (strale_test)",
+    "tests_total": 414,
+    "tests_passed": 414,
+    "tests_failed": 0,
+    "files": 87,
+    "batch_tests": [
+      "charges every item once when all succeed, in input order",
+      "captures only the items that succeeded and releases the rest (DEC-14)",
+      "refuses the whole batch when the wallet cannot fund the quote, reserving nothing",
+      "refuses a quote above max_total_price_cents before reserving",
+      "refuses the whole batch when any item is invalid, naming it by index",
+      "counts every item against the hourly spend cap",
+      "holds the spend cap for items that have not started yet",
+      "replays a batch for the same Idempotency-Key without charging again",
+      "refuses the same Idempotency-Key for different inputs",
+      "refuses a key already spent on a single call",
+      "counts the whole quote against an additional key's total limit, and debits under that key",
+      "releases items the time budget never reached, with no transaction row, and replays them as not_run",
+      "answers a retry 409 request_in_progress while the first batch's holds are open",
+      "lets only one of two concurrent batches reserve when the wallet funds one",
+      "refuses a single call that reuses a key already spent on a batch",
+      "leaves holds the reconciler can release when a crash strands them"
+    ]
+  }
+}

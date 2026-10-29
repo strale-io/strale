@@ -255,6 +255,15 @@ describe("evidence completeness", () => {
 // Assert the delegation as well as inspecting their implementation.
 function servingSource(file: string): string {
   const body = readFileSync(file, "utf8");
+  if (file === join(SRC, "routes/do-batch.ts")) {
+    // The batch route gates once, then runs every item through the same
+    // executeWithRetry wrapper /v1/do uses, which is where the fact is recorded.
+    expect(body).toContain('from "../lib/do/batch.js"');
+    expect(body).toContain("await runBatch({");
+    const batch = readFileSync(join(SRC, "lib/do/batch.ts"), "utf8");
+    expect(batch).toContain("executeWithRetry((inp) =>");
+    return body + batch + readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
+  }
   if (file !== join(SRC, "routes/do.ts")) return body;
   expect(body).toContain('from "../lib/do/dispatch.js"');
   for (const fn of ["executeFreeTier", "executeFreeTierAuthenticated", "executeSync", "executeAsync"]) {
@@ -318,6 +327,7 @@ describe("no serving path may skip the fact", () => {
     expect(covered).toEqual([
       "capabilities/guarded-executor.ts",
       "lib/solution-executor.ts",
+      "routes/do-batch.ts",
       "routes/do.ts",
       "routes/x402-gateway-v2.ts",
     ]);

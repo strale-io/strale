@@ -1,0 +1,68 @@
+{
+  "slug": "website-carbon-estimate",
+  "recorded_at": "2026-10-29T16:05:10.819Z",
+  "input": {
+    "url": "https://strale.dev"
+  },
+  "redactions": [
+    "2 e-mail address(es) replaced with redacted@example.invalid"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://strale.dev/robots.txt"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cache-control": "public, max-age=14400, must-revalidate",
+          "cf-cache-status": "REVALIDATED",
+          "cf-ray": "a5236b97d9c1e09e-ATL",
+          "content-type": "text/plain; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:11 GMT",
+          "etag": "W/\"c93521b959a6c47f42f50f2f31a8fc47\"",
+          "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=yABUwUbnrv2%2F7a5%2FgtbW57ecX0BGTTqZ3Ec0a3DU5GPugkA24wDnV2FeU8cqzQEpXrvrWJgm7KRwf1ye0f%2Fd3TwyrYcC06sfbA17Kw46cBJELDLYYZ5jZEh7wImr\"}]}",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains",
+          "vary": "accept-encoding",
+          "x-content-type-options": "nosniff"
+        },
+        "body": "# Search engines\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\n# Social\nUser-agent: Twitterbot\nAllow: /\n\nUser-agent: facebookexternalhit\nAllow: /\n\n# AI crawlers welcome\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: Claude-Web\nAllow: /\n\nUser-agent: anthropic-ai\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: Amazonbot\nAllow: /\n\nUser-agent: cohere-ai\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: *\nAllow: /\nAllow: /.well-known/\n\nSitemap: https://strale.dev/sitemap.xml\n",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://strale.dev"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cache-control": "public, max-age=0, must-revalidate",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "a5236b985bd9e09e-ATL",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:11 GMT",
+          "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=AnCQM%2F9D%2BnKq6zpuMVkC9tkWLkcZI%2FdbEC80hiEybNo%2Ff3GSBuvZ6ocxP82l1y%2BoGI3UyBRmw9JExT50y%2FB3b0k2gZRdpGUhzOhAX4mxhjtmWmpSLcNgeOdYxPXI\"}]}",
+          "server": "cloudflare",
+          "server-timing": "cfCacheStatus;desc=\"DYNAMIC\", cfEdge;dur=26,cfOrigin;dur=50",
+          "strict-transport-security": "max-age=31536000; includeSubDomains",
+          "vary": "accept-encoding",
+          "x-content-type-options": "nosniff"
+        },
+        "body": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <link rel=\"icon\" type=\"image/x-icon\" href=\"/favicon.ico\">\n    <link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon-32x32.png\" />\n    <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon-16x16.png\" />\n    <link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/apple-touch-icon.png\" />\n    <link rel=\"help\" type=\"text/plain\" href=\"/llms.txt\" />\n    <title>Strale — Trust and Quality Infrastructure for AI Agents</title>\n    <meta name=\"description\" content=\"Company data, compliance checks, financial validation. Structured JSON with audit trails on every call.\">\n    <meta name=\"author\" content=\"Strale\" />\n\n    <!-- Security header backstops via meta tags. Server-side headers (set by Cloudflare Pages via public/_headers) are authoritative; these mirror the subset that meta tags can express. -->\n    <meta http-equiv=\"X-Content-Type-Options\" content=\"nosniff\" />\n    <meta http-equiv=\"X-DNS-Prefetch-Control\" content=\"on\" />\n    <meta name=\"referrer\" content=\"strict-origin-when-cross-origin\" />\n\n    <!-- Google Search Console verification -->\n    <meta name=\"google-site-verification\" content=\"XQvx0pAgAE14Bs50A6mWPLPjTohQIA6gs4m-WseUizo\" />\n\n    <!-- Umami Analytics (cookieless, GDPR-compliant) -->\n    <script defer src=\"https://cloud.umami.is/script.js\" data-website-id=\"9f534d25-6ff4-43e0-aa20-780c2e087db4\"></script>\n\n    <meta property=\"og:type\" content=\"website\" />\n    <meta property=\"og:title\" content=\"Strale — Trust and Quality Infrastructure for AI Agents\">\n    <meta property=\"og:description\" content=\"Company data, compliance checks, financial validation. Structured JSON with audit trails on every call.\">\n    <meta property=\"og:image\" content=\"https://strale.dev/og-image.png\">\n\n    <meta name=\"twitter:card\" content=\"summary_large_image\" />\n    <meta name=\"twitter:title\" content=\"Strale — Trust and Quality Infrastructure for AI Agents\">\n    <meta name=\"twitter:description\" content=\"Company data, compliance checks, financial validation. Structured JSON with audit trails on every call.\">\n    <meta name=\"twitter:image\" content=\"https://strale.dev/og-image.png\">\n\n    <script type=\"application/ld+json\">\n    {\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"SoftwareApplication\",\n      \"name\": \"Strale\",\n      \"description\": \"One API call. Verified data your agent can trust. Independently tested capabilities across the supported country set (live count at https://api.strale.io/v1/platform/facts), accessible via MCP, A2A, REST API, and x402.\",\n      \"url\": \"https://strale.dev\",\n      \"applicationCategory\": \"DeveloperApplication\",\n      \"operatingSystem\": \"Any (API/MCP)\",\n      \"offers\": {\n        \"@type\": \"Offer\",\n        \"price\": \"0\",\n        \"priceCurrency\": \"EUR\",\n        \"description\": \"Free tier available with IBAN validation. Paid capabilities from €0.03/call.\"\n      },\n      \"author\": {\n        \"@type\": \"Organization\",\n        \"name\": \"Strale\",\n        \"url\": \"https://strale.dev\",\n        \"email\": \"redacted@example.invalid\",\n        \"sameAs\": [\n          \"https://x.com/strale_io\",\n          \"https://github.com/petterlindstrom79/strale\",\n          \"https://dev.to/strale\"\n        ]\n      },\n      \"featureList\": [\n        \"IBAN validation\",\n        \"VAT number validation across EU\",\n        \"Company data lookup across the supported country set\",\n        \"Sanctions screening\",\n        \"SSL certificate checking\",\n        \"Currency exchange rates\",\n        \"Invoice and receipt extraction\",\n        \"MCP server exposing the full capability catalogue as tools\",\n        \"A2A Agent Card for agent-to-agent communication\",\n        \"x402 pay-per-request micropayments\",\n        \"Hash-chained audit records for every call\"\n      ],\n      \"softwareRequirements\": \"MCP client (Claude, Cursor, Windsurf) or HTTP client\"\n    }\n    </script>\n    <script type=\"application/ld+json\">\n    {\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"Organization\",\n      \"name\": \"Strale\",\n      \"url\": \"https://strale.dev\",\n      \"logo\": \"https://strale.dev/logo.png\",\n      \"description\": \"One API call. Verified data your agent can trust.\",\n      \"contactPoint\": {\n        \"@type\": \"ContactPoint\",\n        \"email\": \"redacted@example.invalid\",\n        \"contactType\": \"customer service\"\n      },\n      \"sameAs\": [\n        \"https://x.com/strale_io\",\n        \"https://github.com/petterlindstrom79/strale\"\n      ]\n    }\n    </script>\n    <script type=\"module\" crossorigin src=\"/assets/index-C1608m23.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-DQDHs275.css\">\n  </head>\n\n  <body>\n    <div id=\"root\"></div>\n  <script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092\" integrity=\"sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"35d0f6f3138941839b85b1967e9b7ce6\",\"r\":1,\"spa\":2}' crossorigin=\"anonymous\"></script>\n</body>\n</html>\n",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

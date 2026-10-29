@@ -37,6 +37,8 @@ import { spendCapWouldExceed } from "./do.js";
 
 interface MockTxState {
   spendSumCents: number;
+  /** Open batch-item holds with no transaction row yet (second select). */
+  unlinkedHoldCents?: number;
   executeCalls: SQL[];
   whereCalls: unknown[];
 }
@@ -50,7 +52,8 @@ function makeMockTx(state: MockTxState) {
       from: vi.fn(() => ({
         where: vi.fn((cond: unknown) => {
           state.whereCalls.push(cond);
-          return Promise.resolve([{ total: String(state.spendSumCents) }]);
+          const total = state.whereCalls.length === 1 ? state.spendSumCents : state.unlinkedHoldCents ?? 0;
+          return Promise.resolve([{ total: String(total) }]);
         }),
       })),
     })),
@@ -141,7 +144,21 @@ describe("spendCapWouldExceed (in-tx authoritative spend-cap re-check)", () => {
     // The fix path runs through tx.select(...).from(...).where(...).
     // If a future change reverts to tx.execute(sql``), this fails and
     // the assertion above (no Date chunks) becomes the safety net.
-    expect(tx.select).toHaveBeenCalledTimes(1);
-    expect(state.whereCalls.length).toBe(1);
+    // Two typed-column reads: committed/in-flight transactions, then
+    // unlinked batch-item holds.
+    expect(tx.select).toHaveBeenCalledTimes(2);
+    expect(state.whereCalls.length).toBe(2);
+  });
+
+  it("counts open batch-item holds that have no transaction row yet", async () => {
+    // 40 spent on transactions, 50 held by a batch whose items have not
+    // started: a 25-cent request would put the hour at 115 > 100. Counting
+    // only transaction rows (the pre-batch query) sees 65 and lets it through.
+    const state: MockTxState = { spendSumCents: 40, unlinkedHoldCents: 50, executeCalls: [], whereCalls: [] };
+    const tx = makeMockTx(state);
+
+    const result = await spendCapWouldExceed(tx, "user-uuid", 25, 100);
+
+    expect(result).toEqual({ spent: 90 });
   });
 });

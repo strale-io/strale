@@ -346,7 +346,10 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
     select: vi.fn(() => ({
       from: vi.fn((table: unknown) => ({
         where: vi.fn((cond: unknown) => ({
-          then: table === transactions ? (resolve: any) => Promise.resolve([{ total: transactionRows.filter(r => ["executing", "completed"].includes(r.status)).reduce((sum, r) => sum + r.priceCents, 0) }]).then(resolve) : undefined,
+          then: table === transactions ? (resolve: any) => Promise.resolve([{ total: transactionRows.filter(r => ["executing", "completed"].includes(r.status)).reduce((sum, r) => sum + r.priceCents, 0) }]).then(resolve)
+            // spendCapWouldExceed's second read: open holds with no transaction row (batch items not yet started).
+            : table === walletReservations ? (resolve: any) => Promise.resolve([{ total: reservationRows.filter(r => r.mode === "hold" && ["reserved", "executing"].includes(r.state) && r.transactionId == null).reduce((sum, r) => sum + r.amountCents, 0) }]).then(resolve)
+            : undefined,
           orderBy: () => ({ limit: async (n: number) => reservationRows.filter(r => ["reserved", "executing"].includes(r.state) && r.deadlineAt < new Date()).slice(0, n) }),
           limit: async () => table === transactions
             ? transactionRows.filter(r => whereReferences(cond, transactions, "idempotency_key", { eq: r.idempotencyKey }))

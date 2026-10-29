@@ -61,25 +61,26 @@ tracks:
     evidence: []
   - id: T4
     title: "H4: Money path"
-    status: queued
+    status: done
     gate: none
     depends_on:
       - T2
     owner: session
-    next_action: Shipped in PR 779 (sync reserve, execute outside the transaction, capture,
-      timeout_seconds) and PR 794 (/v1/do x402 claim, replay and recording
-      parity). The two review items close on branch fix/x402-replay-capability-binding,
-      a replayed payment for different work is refused with 409
-      payment_already_used on both rails, and a thrown settlement on /v1/do
-      returns 402 payment_failed. Mark done after merge and the production
-      check in that PR. Out of scope and still open, a thrown settlement on the
-      /x402 gateway returns a plain-text 500.
+    next_action: Done. PR 779 (sync reserve, execute outside the transaction, capture,
+      timeout_seconds), PR 794 (/v1/do x402 claim, replay and recording parity)
+      and PR 829 (a payment is bound to its capability or solution, 409
+      payment_already_used on both rails; a thrown settlement on /v1/do is a
+      structured payment_failed) are live, PR 829 since 2026-10-29 17:20 Swedish
+      time. Follow-up outside T4, a thrown settlement on the /x402 gateway still
+      returns the generic 500.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Reservation and capture regression tests discriminate the repaired money
         path.
       - Timeout and concurrent x402 replay behavior are verified.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-10-29-test-run-h4-x402-payment-binding.json
+      - apps/api/src/routes/x402-settlement-characterization.test.ts
   - id: T5
     title: "H5: Cost recording and Anthropic client"
     status: queued
@@ -118,11 +119,11 @@ tracks:
     depends_on: []
     owner: session
     next_action: H7a to H7d (PRs 787 to 808) and the source_health rename (PR 832, block
-      0134) are merged. H7e PR A (PR 834, blocks 0135 to 0137, 0087 and 0089 retired)
+      0134) are merged. H7e PR A (PR 834, blocks 0136 to 0138, 0087 and 0089 retired)
       fixes the pre-existing block issues 0087, 0089 and 0030; its state and the
       production queries still owed are in
-      handoff/_general/from-code/2026-10-29-h7-block-repairs.md. H7e PR B (PR 837) is
-      the H7c known_answer tightening. Still owed, read the 0132 outcome in the boot
+      handoff/_general/from-code/2026-10-29-h7-block-repairs.md. H7e PR B (PR 837,
+      the H7c known_answer tightening) is merged. Still owed, read the 0132 outcome in the boot
       log and confirm the SQS columns are gone in production, and the source_health
       contract step (once production has run the renamed build with no reads of the
       old name, a new block drops the capability_health view, see

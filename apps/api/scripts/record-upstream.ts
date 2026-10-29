@@ -54,9 +54,9 @@ import { findProhibitedTarget } from "../src/lib/tos-blocklist.js";
 const FREE_COST_CLASSES = new Set(["free_unlimited", "free_quota"]);
 
 /**
- * Per-slug body reductions for content the executor never reads but that
- * names people or bloats the file. Each says what it removed; the replay
- * test is the proof the executor did not need it.
+ * Per-slug body reductions for content that names people or bloats the file
+ * and that the known_answer contract does not depend on. Each says what it
+ * removed; the replay test is the proof the contract still holds without it.
  */
 const REDUCERS: Record<string, { what: string; reduce: (body: string) => string }> = {
   "pypi-package-info": {
@@ -64,6 +64,42 @@ const REDUCERS: Record<string, { what: string; reduce: (body: string) => string 
     reduce: (body) => {
       const data = JSON.parse(body) as { info?: { description?: string } };
       if (data.info?.description) data.info.description = "Fixture README: removed by the recorder.";
+      return JSON.stringify(data);
+    },
+  },
+  "cve-lookup": {
+    what: "every advisory's details text replaced with a placeholder (advisory prose can credit a named reporter); summary kept",
+    reduce: (body) => {
+      const data = JSON.parse(body) as { vulns?: Array<Record<string, unknown>> };
+      for (const vuln of data.vulns ?? []) {
+        if (typeof vuln.details === "string") vuln.details = "Fixture details: removed by the recorder.";
+        delete vuln.credits;
+      }
+      return JSON.stringify(data);
+    },
+  },
+  "cve-details": {
+    what: "references hosted on twitter.com, x.com or github.com dropped (they name individual researchers)",
+    reduce: (body) => {
+      const data = JSON.parse(body) as { vulnerabilities?: Array<{ cve?: { references?: Array<{ url?: string }> } }> };
+      for (const v of data.vulnerabilities ?? []) {
+        if (v.cve?.references) {
+          v.cve.references = v.cve.references.filter((r) => !/^https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|github\.com)\//i.test(r.url ?? ""));
+        }
+      }
+      return JSON.stringify(data);
+    },
+  },
+  "ted-procurement": {
+    what: "every notice's description-proc text replaced with a placeholder (free text that can name a buyer's contact person)",
+    reduce: (body) => {
+      const data = JSON.parse(body) as { notices?: Array<Record<string, unknown>> };
+      for (const notice of data.notices ?? []) {
+        const desc = notice["description-proc"];
+        if (desc && typeof desc === "object") {
+          notice["description-proc"] = Object.fromEntries(Object.keys(desc).map((lang) => [lang, "Fixture description: removed by the recorder."]));
+        }
+      }
       return JSON.stringify(data);
     },
   },

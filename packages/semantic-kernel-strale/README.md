@@ -1,5 +1,13 @@
 # strale-semantic-kernel
 
+> **Deprecated (2026-10-29).** This package is built on
+> [`semantic-kernel` on npm](https://www.npmjs.com/package/semantic-kernel),
+> an unofficial community port of Semantic Kernel to JavaScript
+> (`afshinm/semantic-kernel-js`), not a Microsoft package. It gets no new
+> features or fixes. Use the Strale MCP server instead: connect to
+> `https://api.strale.io/mcp?src=npm-readme`, or run `npx strale-mcp`.
+> Semantic Kernel for Python and .NET can load MCP servers as plugins.
+
 [Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
 
 ## Install
