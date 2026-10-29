@@ -1,0 +1,28 @@
+---
+description: When to reach for the Strale MCP tools instead of writing a lookup or validator by hand
+alwaysApply: false
+---
+
+# Using Strale tools
+
+Strale is connected as an MCP server. Use it when a task needs data or a
+check that comes from an outside source, rather than writing code that
+guesses at it.
+
+- Find a tool first: call `strale_search` with a plain-language query
+  ("UK company by number", "EU VAT number", "sanctions screening").
+- Run it with `strale_execute`, passing the `slug` from the search result
+  and the inputs its schema asks for.
+- Read `provenance` in the result before relying on it, and pass it on
+  when the result is shown to a person.
+- Paid tools need an API key. Search, the free tools and the read-only
+  tools work without one. Call `strale_getting_started` to see which.
+- Call `strale_balance` before a run of paid calls.
+
+Do not:
+
+- validate an IBAN or VAT number with a regular expression and call it
+  checked; use the validator and keep its result;
+- present a screening result as a final decision about a person or a
+  company; it is a signal for a person to review;
+- put an API key in source code; read it from the environment.

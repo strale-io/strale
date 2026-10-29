@@ -26,14 +26,15 @@ Checkbox:
 
 **Approved** (verified real integrations, as of 2026-04-22):
 - `langchain-strale` — subclasses LangChain `BaseTool` / `BaseToolkit`
-- `crewai-strale` — subclasses CrewAI `BaseTool`
-- `composio-strale` — uses `@composio.tools.custom_tool` decorator
-- `semantic-kernel-strale` (npm) — uses `semantic-kernel`'s `kernelFunction`
+- `crewai-strale` — subclasses CrewAI `BaseTool` (frozen 2026-10-29: maintenance only, no new features; prefer the MCP server in new PRs)
+- `composio-strale` — uses `@composio.tools.custom_tool` decorator (frozen 2026-10-29, as above)
+- `strale-mcp` (npm) — the MCP server (stdio), plus the hosted remote server at `https://api.strale.io/mcp`; does not claim any framework integration. Added 2026-10-29 after a production smoke test of 0.2.9 (`npx -y strale-mcp@0.2.9`: initialize, tools/list, a free `iban-validate` call)
 - `n8n-nodes-strale` (npm; source in `packages/n8n-nodes-strale` from 1.0.0, earlier releases from the `strale-io/n8n-nodes-strale` repo) — implements n8n's `INodeType` / `ICredentialType` from `n8n-workflow`
 - `straleio` — generic Python SDK; does not claim any framework integration
 - `@strale/sdk` (npm) — generic TypeScript SDK
 
 **Deprecated / yanked** (do NOT reference in new PRs):
+- `strale-semantic-kernel` (npm) — deprecated 2026-10-29: built on `semantic-kernel` on npm, an unofficial community port (`afshinm/semantic-kernel-js`), not Microsoft's
 - `pydantic-ai-strale` — yanked 2026-04-22
 - `google-adk-strale` — yanked 2026-04-22
 - `openai-agents-strale` — yanked 2026-04-22

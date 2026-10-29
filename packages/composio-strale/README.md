@@ -1,5 +1,8 @@
 # composio-strale
 
+> **Maintenance only (frozen 2026-10-29).** This package keeps working and
+> gets fixes for breakage, but no new features. For new work, connect to the Strale MCP server at `https://api.strale.io/mcp?src=pypi-readme`, which any MCP client can use.
+
 [Composio](https://composio.dev) integration for [Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — available pay-per-call tools as Composio custom tools.
 
 ## Install

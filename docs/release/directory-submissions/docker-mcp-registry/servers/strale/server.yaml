@@ -1,0 +1,31 @@
+name: strale
+type: remote
+meta:
+  category: data-analytics
+  tags:
+    - company-data
+    - compliance
+    - validation
+    - remote
+about:
+  title: Strale
+  description: >-
+    Pay-per-call tools for agents: company records from official registries,
+    EU VAT checks, sanctions and PEP screening, IBAN and identifier
+    validation, and web page reading. Search and the free tools work without
+    an API key.
+  icon: https://strale.dev/apple-touch-icon.png
+remote:
+  transport_type: streamable-http
+  url: https://api.strale.io/mcp?src=docker-mcp
+  headers:
+    Authorization: "Bearer ${STRALE_API_KEY}"
+config:
+  description: >-
+    Optional. Add a Strale API key (from https://strale.dev/signup) to run
+    paid tools. Search and the free tools work without one.
+  secrets:
+    - name: strale.api_key
+      env: STRALE_API_KEY
+      example: <STRALE_API_KEY>
+      required: false

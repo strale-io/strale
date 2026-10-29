@@ -156,16 +156,16 @@ surfaces:
     kind: registry-listing
     target: docker/mcp-registry
     status: open
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://github.com/docker/mcp-registry/pull/2202
     notes: >-
-      Re-checked 2026-09-11 with `gh pr view
-      https://github.com/docker/mcp-registry/pull/2202 --json
-      state,createdAt,mergedAt`: state OPEN, created 2026-04-01, not
-      merged. archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
-      (section 2.5, as of 2026-08-12) records Strale as not listed in the
-      Docker MCP Catalog, a weak negative, consistent with the submission
-      still awaiting merge. Previously: open, as of 2026-04-27, per the same PR.
+      Re-checked 2026-10-29 (PR page): still open since 2026-04-01, no
+      reviews, last activity 2026-04-27. Its files carry retired claims
+      (country count, trial-credit amount, quality scores), an icon URL that
+      serves HTML, and no tools.json. A corrected entry is prepared in
+      docs/release/directory-submissions/docker-mcp-registry/ for a push to
+      the PR's existing branch (petterlindstrom79's fork); a new PR would
+      duplicate it. Previously: open, as of 2026-09-11, per gh pr view.
 
   # -- docs/company/DIRECTORY-MAP.md as a named population source (review
   #    round 1): the crawler-hit table and the Coinbase x402 Bazaar finding
@@ -556,8 +556,15 @@ surfaces:
     kind: package
     target: npm
     status: published
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://www.npmjs.com/package/strale-semantic-kernel
+    notes: >-
+      Deprecation prepared 2026-10-29 (distribution T12): README notice and
+      package description in the repo. npm still serves 0.1.4 without a
+      deprecation flag; the npm deprecate command is in
+      docs/release/directory-submissions/package-housekeeping.md and needs an
+      npm owner. Becomes withdrawn when the flag is set. Built on the
+      unofficial community port semantic-kernel (afshinm/semantic-kernel-js).
 
   - id: pkg-langchain-ts
     surface: straleio-langchain
@@ -580,16 +587,24 @@ surfaces:
     kind: package
     target: PyPI
     status: published
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://pypi.org/project/crewai-strale/
+    notes: >-
+      Frozen 2026-10-29 (distribution T12): maintenance only, fixes for
+      breakage, no new features; README notice in the repo, shown on PyPI at
+      the next release. PyPI serves 0.1.4.
 
   - id: pkg-composio-strale
     surface: composio-strale
     kind: package
     target: PyPI
     status: published
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://pypi.org/project/composio-strale/
+    notes: >-
+      Frozen 2026-10-29 (distribution T12): maintenance only, fixes for
+      breakage, no new features; README notice in the repo, shown on PyPI at
+      the next release. PyPI serves 0.1.4.
 
   - id: pkg-google-adk-strale
     surface: google-adk-strale
@@ -900,3 +915,39 @@ surfaces:
       fails the current n8n scanner with 7 errors. Publish needs the npm
       trusted publisher for release-npm.yml and the npm-release approval;
       Creator Portal submission needs Petter's account.
+
+  - id: cline-marketplace-submission
+    surface: Cline MCP Marketplace
+    kind: directory
+    target: cline/mcp-marketplace
+    status: proposed
+    status_date: 2026-10-29
+    evidence: docs/release/directory-submissions/README.md
+    notes: >-
+      Issue text, llms-install.md and 400x400 logo prepared 2026-10-29. Needs a
+      person to test the install in Cline and open the issue from a GitHub
+      account.
+
+  - id: awesome-remote-mcp-servers-pr
+    surface: punkpeye/awesome-remote-mcp-servers README entry
+    kind: directory
+    target: punkpeye/awesome-remote-mcp-servers
+    status: proposed
+    status_date: 2026-10-29
+    evidence: docs/release/directory-submissions/README.md
+    notes: >-
+      Three-line Aggregators entry prepared 2026-10-29 with the Glama connector
+      badge (io.github.strale-io/strale, live). The opening account must star
+      the repository.
+
+  - id: cursor-plugin-submission
+    surface: Cursor plugin marketplace
+    kind: directory
+    target: cursor.com/marketplace
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/cursor-plugin/.cursor-plugin/plugin.json
+    notes: >-
+      Plugin (remote MCP server plus one rule) built 2026-10-29 and validated
+      against Cursor's plugin schema. Submission at
+      cursor.com/marketplace/publish needs a Cursor account.
