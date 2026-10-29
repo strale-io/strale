@@ -48,6 +48,8 @@ const EXEMPT: Record<string, string> = {
     "keys in SQL to report what erasure cleared. Nothing is served.",
   "startup-migrations/blocks/0103-redacted-content-stays-redacted.ts":
     "a trigger body that NULLs audit_trail on redaction. A write, not a read.",
+  "startup-migrations/blocks/0135-redacted-row-deletion-reason.ts":
+    "replaces 0103's trigger function, which sets audit_trail to NULL on a redacted row; it never reads or serves it",
   "lib/integrity-hash.ts":
     "BUILDS the chain payload. The stored audit body is hashed material, not " +
     "served output -- same reason as verify.ts.",

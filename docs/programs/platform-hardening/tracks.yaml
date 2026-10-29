@@ -115,19 +115,14 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: H7a to H7c (PRs 787, 790, 793, 799, 802) and H7d (PRs 805, 807, 808, all
-      live 2026-10-29, the last at 04:01 Swedish time) are merged. Block 0132
-      drops the residual SQS columns and sqs_daily_snapshot on the first boot
-      after its heartbeat has run for ten minutes, normally the deploy after PR
-      808. Next, read that deploy's boot log for the 0132 outcome (rows and
-      bytes dropped) and query production for startup_migration_applied (expect
-      75 rows) and the absence of the columns; this session had no DB or Railway
-      log access. Do not roll back past PR 808 once it has dropped. Remaining T7
-      work, the H7c known_answer tightening in
-      apps/api/src/capabilities/__fixtures__/upstream/README.md, the
-      capability_health to source_health rename (22 files), and the pre-existing
-      block issues 0087, 0089 and 0030 listed in handoff/_general/from-
-      code/2026-10-29-h7d-migrations.md, each fixed by a new block.
+    next_action: H7a to H7d are merged (PRs 787 to 808). H7e PR A (blocks 0134 to 0136,
+      0087 and 0089 retired) fixes the pre-existing block issues 0087, 0089 and 0030
+      from handoff/_general/from-code/2026-10-29-h7d-migrations.md; see
+      handoff/_general/from-code/2026-10-29-h7-block-repairs.md for its state and the
+      production queries still owed. Next, H7e PR B, the H7c known_answer tightening
+      in apps/api/src/capabilities/__fixtures__/upstream/README.md. Still owed from
+      H7d, read the 0132 outcome in the boot log and confirm the SQS columns are gone
+      in production. The capability_health to source_health rename is another lane.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.

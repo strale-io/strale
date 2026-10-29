@@ -1031,6 +1031,37 @@
       "added": "2026-10-29",
       "columns_written": [],
       "sha256": "d4dbc4bf8ca92240b636c1237c2933ba4b51a45aa4298020b49e9a324299fe20"
+    },
+    {
+      "id": "M077",
+      "function": "runMigration0134_completeComplianceColumns",
+      "title": "Complete Compliance Columns",
+      "added": "2026-10-29",
+      "columns_written": [
+        "transactions.integrity_hash",
+        "transactions.legal_hold",
+        "transactions.previous_hash"
+      ],
+      "sha256": "970bdf44327f53afa3739054d1cfda31823df4f1cc6cb6a63af6f007978a398c"
+    },
+    {
+      "id": "M078",
+      "function": "runMigration0135_redactedRowDeletionReason",
+      "title": "Redacted Row Deletion Reason",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "de7578302364d2059731d305715f7acf616a537305bda6873857146515f6a94c"
+    },
+    {
+      "id": "M079",
+      "function": "runMigration0136_redeleteCustomerDeletedRedactedRows",
+      "title": "Redelete Customer Deleted Redacted Rows",
+      "added": "2026-10-29",
+      "columns_written": [
+        "transactions.deleted_at",
+        "transactions.deletion_reason"
+      ],
+      "sha256": "5ee4477857afd13cfd2a2e524073bb066abf71b2533bdc2f8526523b4379d8ab"
     }
   ],
   "known_overlaps": [
@@ -1493,6 +1524,46 @@
         "M066"
       ],
       "note": "M064 (0121, 2026-10-23) rewrote kyb-complete-se's long_description once (ledgered), guarded on the exact pre-repair text. M066 (0123, 2026-10-26, catalogue copy) rewrites the long_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value; for kyb-complete-se that guard is M064's own target, so on a fresh database they apply in order (M064, then M066). They cannot fight: M064 never fires again, and M066's new text is not M064's old text (startup-migrations.test.ts asserts the chain)."
+    },
+    {
+      "column": "transactions.integrity_hash",
+      "blocks": [
+        "M002",
+        "M077"
+      ],
+      "note": "Block 0134 (M077, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0134 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+    },
+    {
+      "column": "transactions.previous_hash",
+      "blocks": [
+        "M002",
+        "M077"
+      ],
+      "note": "Block 0134 (M077, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0134 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+    },
+    {
+      "column": "transactions.legal_hold",
+      "blocks": [
+        "M002",
+        "M077"
+      ],
+      "note": "Block 0134 (M077, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0134 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+    },
+    {
+      "column": "transactions.deleted_at",
+      "blocks": [
+        "M047",
+        "M079"
+      ],
+      "note": "Block 0136 (M079, 2026-10-29) undoes what 0087 (M047) did to customer-deleted redacted rows: 0087 cleared deleted_at on rows 0136 re-deletes, which is exactly the fight this check exists for. It is resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0136 has run. Disjoint thereafter by construction, not by predicate."
+    },
+    {
+      "column": "transactions.deletion_reason",
+      "blocks": [
+        "M047",
+        "M079"
+      ],
+      "note": "Block 0136 (M079, 2026-10-29) undoes what 0087 (M047) did to customer-deleted redacted rows: 0087 cleared deleted_at on rows 0136 re-deletes, which is exactly the fight this check exists for. It is resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0136 has run. Disjoint thereafter by construction, not by predicate."
     }
   ]
 }
