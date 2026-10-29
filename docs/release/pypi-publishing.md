@@ -29,9 +29,13 @@ The npm packages have their own workflow and guide:
 
 1. Open <https://github.com/strale-io/strale/settings/environments>.
 2. Click **New environment**, type `pypi-release`, click **Configure environment**.
-3. Tick **Required reviewers**, add yourself, click **Save protection rules**.
+3. Tick **Required reviewers** and add yourself. Leave **Prevent self-review**
+   unticked: you push the tag and approve the run, and with it ticked GitHub
+   would refuse your own approval. Click **Save protection rules**.
 4. Under **Deployment branches and tags**, choose **Selected branches and tags**
-   and add two rules: branch `main` and tag `pypi/*`. Save.
+   and add two rules: branch `main` and tag `pypi/*/v*` (exactly that; in these
+   rules `*` does not cross a `/`, so `pypi/*` would not match
+   `pypi/langchain-strale/v0.2.0` and the tag release would be refused). Save.
 
 Without this the environment is created on first use with no protection, and a
 tag push publishes without anyone approving it.

@@ -69,6 +69,10 @@ def fail(msg: str) -> None:
     sys.exit(1)
 
 
+def normalize_dir(d: str) -> str:
+    return d.replace("\\", "/").rstrip("/")
+
+
 def read_project(pkg_dir: str) -> dict:
     path = Path(pkg_dir) / "pyproject.toml"
     if not path.is_file():
@@ -90,7 +94,7 @@ def cmd_resolve(args: argparse.Namespace) -> None:
             fail(f'tag names package "{name}", which this workflow does not publish. Known: {known}')
         pkg_dir = matches[0]
     else:
-        pkg_dir = args.dir.replace("\\", "/").rstrip("/")
+        pkg_dir = normalize_dir(args.dir)
         if pkg_dir not in PACKAGES:
             fail(f'"{args.dir}" is not a package this workflow publishes. Known: {", ".join(PACKAGES)}')
 
@@ -150,7 +154,7 @@ class _CatalogHandler(http.server.BaseHTTPRequestHandler):
 
 
 def cmd_smoke(args: argparse.Namespace) -> None:
-    pkg = PACKAGES.get(args.dir.rstrip("/"))
+    pkg = PACKAGES.get(normalize_dir(args.dir))
     if not pkg:
         fail(f'"{args.dir}" is not a package this workflow publishes')
 

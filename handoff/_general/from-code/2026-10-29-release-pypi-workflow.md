@@ -25,7 +25,7 @@ Intent: add a PyPI trusted-publishing release workflow mirroring release-npm.yml
 
 ## Next (Petter, then a session)
 
-1. Create GitHub environment `pypi-release` with required reviewer, limited to `main` and `pypi/*` tags.
+1. Create GitHub environment `pypi-release` with required reviewer, limited to `main` and `pypi/*/v*` tags.
 2. On pypi.org, add the trusted publisher on `langchain-strale` (strale-io / strale / release-pypi.yml /
    pypi-release). Steps in docs/release/pypi-publishing.md.
 3. Dry-run dispatch, then tag `pypi/langchain-strale/v0.2.0` on main; approve; run the production
