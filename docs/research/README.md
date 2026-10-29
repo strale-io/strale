@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 49 (47 topics with a current answer, 1 historical).
+Total files: 50 (48 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -59,6 +59,7 @@ Total files: 49 (47 topics with a current answer, 1 historical).
 | shared-access-illustration | [2026-09-06-shared-access-illustration.md](2026-09-06-shared-access-illustration.md) | How should the retained Quiet Material system explain shared tool access without implying an execution trace? | 2026-09-06 | 0 |
 | si-registry-build-path | [2026-05-06-si-registry-build-path.md](2026-05-06-si-registry-build-path.md) | What is the build path for ingesting Slovenia's AJPES business register? | 2026-05-06 | 0 |
 | sk-registry-build-path | [2026-05-06-sk-registry-build-path.md](2026-05-06-sk-registry-build-path.md) | What is the build path for Slovakia's company registry, given the corrected discovery of the free api.statistics.sk RPO REST endpoint? | 2026-05-06 | 0 |
+| transcription-and-bulk-ocr-vendors | [2026-10-29-transcription-and-bulk-ocr-vendors.md](2026-10-29-transcription-and-bulk-ocr-vendors.md) | Which speech-to-text and bulk-OCR source should serve portfolio items 2.3 and 2.4, judged first on whether its terms permit use inside Strale's paid API, then on EU processing, retention, price per minute or page, free tier and sign-up, and does a self-hosted option on Railway avoid a vendor account altogether? | 2026-10-29 | 0 |
 | ubo-aggregators-non-openownership-eu | [2026-04-28-ubo-aggregators-non-openownership-eu.md](2026-04-28-ubo-aggregators-non-openownership-eu.md) | Is there a Tier-2-compliant, PAYG, embed-and-bill UBO data path for the eight EU jurisdictions not covered by free OpenOwnership sources? | 2026-04-28 | 0 |
 | us-business-data-vendor-longlist | [2026-04-28-us-business-data-vendor-longlist.md](2026-04-28-us-business-data-vendor-longlist.md) | Which commercial vendor best supplies US private-company identity data (EIN match, legal name, address, officers) on a PAYG reseller-rights basis? | 2026-04-28 | 0 |
 | us-company-registry-ein-research | [2026-04-21-us-company-registry-and-ein-research.md](2026-04-21-us-company-registry-and-ein-research.md) | What registry and EIN/tax-ID data sources exist for covering US private companies under Payee Assurance v1.1? | 2026-04-21 | 0 |

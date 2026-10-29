@@ -2275,3 +2275,327 @@ vendors:
         status: unknown
     authorization:
       status: unknown
+  - id: speechmatics
+    name: Speechmatics
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Reserve vendor for 2.3 if self-hosted Whisper fails a real-audio check: integrated-product clause, self-serve EU endpoint, no training by default."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Terms §3.1.1 permit Integrated Products; §4.4 bars sale as a standalone product; confirm in writing that a per-call capability is an Integrated Product before use."
+    authorization:
+      status: unknown
+  - id: deepgram
+    name: Deepgram
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.3; not recommended: trains on content by default and its competing-services clause sits close to a transcription endpoint."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Terms §2.4(4) allow integration only where the application contributes material independent functionality; §2.4(9) bars competing products or services."
+    authorization:
+      status: unknown
+  - id: openai-api
+    name: OpenAI API (speech-to-text)
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.3; terms permit, but EU processing needs sales approval and zero retention approval."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: permitted
+        note: "Services Agreement §2.2 permits making Customer Applications available to End Users; §3.1 bars reselling account access."
+    authorization:
+      status: unknown
+  - id: groq
+    name: Groq
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.3 (hosted Whisper); resale needs Groq's approval and a similar-or-competing clause applies."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Services Agreement §6.3(c) bars resale except as expressly approved by Groq; §6.3(e) bars similar or competing products."
+    authorization:
+      status: unknown
+  - id: mistral
+    name: Mistral AI
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3, 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Reserve vendor for 2.4 (Mistral OCR) if self-hosted Tesseract fails a real-scan check: licence sublicensable to End Users of a Customer Offering, EU hosting by default. Voxtral does not list Swedish, so not for 2.3."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: permitted
+        note: "Commercial Terms §2.1 licence is sublicensable to End Users; §1.4 defines Customer Offering as products made available to third parties."
+    authorization:
+      status: unknown
+  - id: azure-document-intelligence
+    name: Azure AI Document Intelligence
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.4; Customer Solution clause requires primary and significant functionality, not a substitute."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Product Terms permit third-party use only through a Customer Solution that is not primarily a substitute for the Azure service; Foundry Tools bar competing products."
+    authorization:
+      status: unknown
+  - id: google-document-ai
+    name: Google Cloud Document AI
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.4; the only OCR vendor documenting Swedish handwriting."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Cloud Terms §1.1 require a Customer Application with material value independent of the Services; §3.3(c) bars resale."
+    authorization:
+      status: unknown
+  - id: assemblyai
+    name: AssemblyAI
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Self-serve licence is for internal business purposes and bars making the Services available to any third party (§2.1, §2.4(d))."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: prohibited
+        note: "Terms §2.4(d) bar use for the benefit of a third party."
+    authorization:
+      status: unknown
+  - id: gladia
+    name: Gladia
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Terms bar transferring the API for valuable consideration and any sublicence (§4.1); trains on content by default."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: prohibited
+        note: "Terms §4.1 bar transfer for consideration and sublicensing; read as not permitting resale."
+    authorization:
+      status: unknown
+  - id: elevenlabs
+    name: ElevenLabs
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Making Scribe available to third parties needs the OEM terms on a Scale plan or higher, a spend decision not taken."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "OEM Terms permit Making Available only on Scale, Business or Enterprise plans."
+    authorization:
+      status: unknown
+  - id: aws-textract
+    name: AWS Textract
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Swedish is not supported (no å in its character list) and AWS may use content to improve the service by default."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Customer Agreement §6.4(c) bars resale of the Services; use for End Users inside an application is not barred."
+    authorization:
+      status: unknown
