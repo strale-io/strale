@@ -14,6 +14,7 @@ import postgres from "postgres";
 import { useTestDatabase } from "../test-support/integration-db.js";
 import { runMigration0132_dropSqsResidualSchema } from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
 import {
+  clearSqsRetirementBeat,
   recordSqsFieldsRemovedAndServing,
   SQS_RETIREMENT_LAST_BEAT,
   SQS_RETIREMENT_MARKER,
@@ -98,7 +99,10 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
   for (const [name, first, last] of [
     ["no build without the fields has beaten", null, null],
     ["that build has been live for less than the delay", 2, 0],
-    ["its beats stopped (a rollback to old code)", 60, 30],
+    ["that build has been live for just under the delay", 9, 1],
+    ["its latest beat is just past the freshness window (a killed build)", 15, 4],
+    ["its beats stopped long ago (a rollback to old code)", 60, 30],
+    ["its latest beat was withdrawn on shutdown", 15, null],
   ] as const) {
     it(`defers when ${name}`, async () => {
       await setBeats(first, last);
@@ -112,7 +116,7 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
 
   it("the heartbeat writes both keys and keeps the first one fixed", async () => {
     await setBeats(null, null);
-    await recordSqsFieldsRemovedAndServing(db);
+    expect(await recordSqsFieldsRemovedAndServing(db)).toBe(true);
     await db.execute(sql`UPDATE startup_migration_ledger SET applied_at = now() - interval '1 hour'
       WHERE block IN (${SQS_RETIREMENT_MARKER}, ${SQS_RETIREMENT_LAST_BEAT})`);
     await recordSqsFieldsRemovedAndServing(db);
@@ -126,8 +130,16 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
     });
   });
 
-  it("drops every column and the table once that build has been live long enough and still beats; a re-run does nothing", async () => {
+  it("a graceful shutdown withdraws the latest beat, so the drop defers", async () => {
     await setBeats(15, 1);
+    await clearSqsRetirementBeat(db);
+    const result = await runMigration0132_dropSqsResidualSchema(db);
+    expect(result.outcome).toMatch(/^deferred/);
+    expect(await sqsColumnCount()).toBe(8);
+  });
+
+  it("drops every column and the table once that build has been live long enough and still beats; a re-run does nothing", async () => {
+    await setBeats(15, 2);
     const result = await runMigration0132_dropSqsResidualSchema(db);
     expect(result.rows_affected).toBe(3);
     expect(result.outcome).toMatch(/^dropped 8 SQS columns from \d+ capabilities rows and sqs_daily_snapshot \(3 rows, \d+ bytes\)$/);
@@ -143,6 +155,8 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
 
     const again = await runMigration0132_dropSqsResidualSchema(db);
     expect(again).toMatchObject({ outcome: "skipped (already dropped)", rows_affected: 0 });
+    // And the heartbeat stops: nothing left to vouch for.
+    expect(await recordSqsFieldsRemovedAndServing(db)).toBe(false);
   });
 
   it("finishes a partial drop where only the table is left", async () => {
