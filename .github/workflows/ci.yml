@@ -408,6 +408,9 @@ jobs:
       # D6: the AI SDK package's offline tool-loop test (mock model, mocked API).
       - if: needs.classify.outputs.docs_only == 'false'
         run: npm test --workspace=packages/ai-sdk-strale
+      # Portfolio Phase 3 item 3: the agent-safe CLI, offline (mocked HTTP).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm test --workspace=packages/cli
       - if: needs.classify.outputs.docs_only == 'false'
         run: node --test apps/api/scripts/check-framework-packages.test.mjs
       # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
