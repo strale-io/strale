@@ -96,5 +96,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0129_transactionCost: { policy: "once", reason: "guarded ADD COLUMNs in one DO block" },
   runMigration0130_syncWalletHolds: { policy: "every_boot", reason: "CREATE INDEX CONCURRENTLY IF NOT EXISTS can return with an invalid index" },
   runMigration0131_startupMigrationApplied: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS" },
-  runMigration0132_dropSqsResidualSchema: { policy: "once", reason: "drops dead columns and a table with IF EXISTS; creates nothing" },
+  runMigration0132_dropSqsResidualSchema: { policy: "every_boot", reason: "returns deferred until a build without the SQS fields has served; then drops once" },
 };

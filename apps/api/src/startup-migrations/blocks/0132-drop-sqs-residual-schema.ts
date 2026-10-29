@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
+import { SQS_RETIREMENT_DROP_DELAY, SQS_RETIREMENT_MARKER } from "../sqs-schema-retirement.js";
 
 // ─── Block 0132: drop the residual SQS schema (H7d) ──────────────────────────
 //
@@ -14,7 +15,14 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
 // DROP TABLE frees the table at once, so this is not a bulk operation
 // (DEC-20260504-B). Once both are gone a re-run measures nothing and drops
 // nothing.
+//
+// Expand/contract: code deployed before this block selects whole capability
+// rows, naming these columns, and keeps serving while a new deployment boots.
+// So the drop waits until a build without the fields has recorded that it is
+// serving (sqs-schema-retirement.ts) at least SQS_RETIREMENT_DROP_DELAY ago;
+// until then the block returns "deferred" and the next boot tries again.
 export async function runMigration0132_dropSqsResidualSchema(tx: MigrationExecutor): Promise<BlockResult> {
+  // migration-data: apps/api/src/startup-migrations/sqs-schema-retirement.ts
   const startedAt = Date.now();
   const rows = (await tx.execute(sql`
     SELECT
@@ -31,6 +39,19 @@ export async function runMigration0132_dropSqsResidualSchema(tx: MigrationExecut
 
   if (columnsPresent === 0 && !snapshotPresent) {
     return { block: "0132_dropSqsResidualSchema", outcome: "skipped (already dropped)", rows_affected: 0, duration_ms: Date.now() - startedAt };
+  }
+
+  const marker = (await tx.execute(sql`
+    SELECT (applied_at <= now() - ${SQS_RETIREMENT_DROP_DELAY}::interval) AS ready
+    FROM startup_migration_ledger WHERE block = ${SQS_RETIREMENT_MARKER}
+  `)) as unknown as Array<{ ready: boolean }>;
+  if (!marker[0]?.ready) {
+    return {
+      block: "0132_dropSqsResidualSchema",
+      outcome: `deferred (waits until a build without the SQS fields has served for ${SQS_RETIREMENT_DROP_DELAY})`,
+      rows_affected: 0,
+      duration_ms: Date.now() - startedAt,
+    };
   }
 
   let snapshotRows = 0;

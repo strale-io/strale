@@ -338,6 +338,19 @@ async function main() {
       log.warn({ label: "manifest-text-sync-summary", updated: 0, unchanged: 0, report_only: 0, failed: 1 }, "manifest-text-sync-summary");
     });
 
+    // Block 0132 drops the residual SQS columns only after this build, which
+    // no longer selects them, has served for a while. Non-fatal by design.
+    void import("./startup-migrations/sqs-schema-retirement.js")
+      .then(async ({ recordSqsFieldsRemovedAndServing }) => {
+        const { getDb } = await import("./db/index.js");
+        await recordSqsFieldsRemovedAndServing(getDb());
+      })
+      .catch(async (err: unknown) => {
+        const { log } = await import("./lib/log.js");
+        log.warn({ label: "sqs-retirement-marker-failed", err: err instanceof Error ? err.message : String(err) },
+          "sqs-retirement-marker-failed");
+      });
+
     // Pre-warm suggest catalog after env + server are ready
     warmCatalog().catch((err: Error) =>
       console.warn("[suggest] Catalog warm-up failed:", err.message),

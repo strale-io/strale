@@ -11,6 +11,7 @@ import postgres from "postgres";
 
 import { useTestDatabase } from "../test-support/integration-db.js";
 import { runMigration0132_dropSqsResidualSchema } from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
+import { recordSqsFieldsRemovedAndServing, SQS_RETIREMENT_MARKER } from "../startup-migrations/sqs-schema-retirement.js";
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
@@ -49,6 +50,32 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
     await db.execute(sql`
       INSERT INTO sqs_daily_snapshot (capability_slug, snapshot_date, matrix_sqs)
       VALUES ('a', '2026-05-01', 80), ('b', '2026-05-01', 70), ('c', '2026-05-02', 60)
+    `);
+    await db.execute(sql`DELETE FROM startup_migration_ledger WHERE block = ${SQS_RETIREMENT_MARKER}`);
+  });
+
+  const sqsColumnCount = async () => ((await db.execute(sql`
+    SELECT count(*)::int AS n FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'capabilities' AND column_name = ANY(${`{${SQS_COLUMNS.join(",")}}`}::text[])
+  `)) as unknown as Array<{ n: number }>)[0].n;
+
+  it("defers while no build without the SQS fields has recorded that it serves", async () => {
+    const result = await runMigration0132_dropSqsResidualSchema(db);
+    expect(result).toMatchObject({ rows_affected: 0 });
+    expect(result.outcome).toMatch(/^deferred/);
+    expect(await sqsColumnCount()).toBe(8);
+  });
+
+  it("still defers when that build started serving less than the delay ago", async () => {
+    await recordSqsFieldsRemovedAndServing(db);
+    await recordSqsFieldsRemovedAndServing(db); // idempotent
+    const result = await runMigration0132_dropSqsResidualSchema(db);
+    expect(result.outcome).toMatch(/^deferred/);
+    expect(await sqsColumnCount()).toBe(8);
+    // The old instance has been gone for a while by the next boot.
+    await db.execute(sql`
+      UPDATE startup_migration_ledger SET applied_at = now() - interval '11 minutes'
+      WHERE block = ${SQS_RETIREMENT_MARKER}
     `);
   });
 

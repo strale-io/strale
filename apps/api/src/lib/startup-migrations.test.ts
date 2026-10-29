@@ -1486,6 +1486,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0129_transactionCost",
       "runMigration0130_syncWalletHolds",
       "runMigration0131_startupMigrationApplied",
+      "runMigration0132_dropSqsResidualSchema",
     ]);
   });
 });
@@ -2331,7 +2332,9 @@ describe("startup-migrations — block identity is unique, not just the function
     // had already run -- the ledger collision, arriving through the query
     // instead of through the id. Production's ledger holds 0100 today, so this
     // is not hypothetical.
-    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{BLOCK\}/g)];
+    // Exact on the block's own id, or on block 0132's named retirement marker
+    // (an exact key, written by the build that removed the SQS fields).
+    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{(?:BLOCK|SQS_RETIREMENT_MARKER)\}/g)];
     const anyLedgerRead = [...src.matchAll(/FROM startup_migration_ledger WHERE /g)];
     expect(lookups.length).toBe(anyLedgerRead.length);
     expect(lookups.length).toBeGreaterThanOrEqual(2);
@@ -2369,7 +2372,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(131);
+    expect(Math.max(...numbers)).toBe(132);
   });
 });
 
