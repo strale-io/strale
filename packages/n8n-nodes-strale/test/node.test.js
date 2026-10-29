@@ -380,9 +380,9 @@ test('the second screening check is not started without its full time budget', a
 	const ctx = context([{ resource: 'person', operation: 'screenName', name: 'Example Person' }], (options) =>
 		options.method === 'POST' ? ok(options.body.capability_slug) : { statusCode: 404, body: {} },
 	);
-	// Each clock read advances 35 s: the first POST starts with 90 s left, the
-	// second would have under its 30 s budget.
-	await withFastClock(35_000, () =>
+	// Each clock read advances 25 s: the first POST starts with 65 s left, the
+	// second would start with 15 s, positive but under its 30 s budget.
+	await withFastClock(25_000, () =>
 		assert.rejects(node.execute.call(ctx), (error) => {
 			assert.ok(error instanceof NodeApiError);
 			assert.match(error.message, /time limit/);
