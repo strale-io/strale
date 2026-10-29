@@ -136,7 +136,7 @@ tracks:
       2026-10-29) at api.strale.io/mcp/company-check (28 tools), eu-vat-check
       (7) and web-reader (5), verified in production. Calls forward with
       src=mcp-<id>; attribution-rollup section 4b compares executions with the
-      broad server. Waiting on Petter for two acts, asked on PR 805
+      broad server. Waiting on Petter for two acts, asked on PR 806
       (bus returned 403). First, run publish-mcp-entry-points.yml from main
       once per entry, since the session gets 403 on dispatch. Second, add the
       three URL servers on Smithery. After each publish, record name, version
