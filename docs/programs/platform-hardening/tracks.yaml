@@ -118,22 +118,16 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: H7a to H7c (PRs 787, 790, 793, 799, 802) and H7d (PRs 805, 807, 808, all
-      live 2026-10-29, the last at 04:01 Swedish time) are merged. Block 0132
-      drops the residual SQS columns and sqs_daily_snapshot on the first boot
-      after its heartbeat has run for ten minutes, normally the deploy after PR
-      808. Next, read that deploy's boot log for the 0132 outcome (rows and
-      bytes dropped) and query production for startup_migration_applied (expect
-      75 rows) and the absence of the columns; this session had no DB or Railway
-      log access. Do not roll back past PR 808 once it has dropped. Remaining T7
-      work, the H7c known_answer tightening in
-      apps/api/src/capabilities/__fixtures__/upstream/README.md, the
-      source_health contract step (block 0134 renamed capability_health and left
-      a view under the old name; once production has run the renamed build with
-      no reads of the old name, a new block drops the view, see
-      handoff/_general/from-code/2026-10-29-h7-source-health-rename.md), and the pre-existing
-      block issues 0087, 0089 and 0030 listed in handoff/_general/from-
-      code/2026-10-29-h7d-migrations.md, each fixed by a new block.
+    next_action: H7a to H7d (PRs 787 to 808) and the source_health rename (PR 832, block
+      0134) are merged. H7e PR A (PR 834, blocks 0137 to 0139, 0087 and 0089 retired)
+      fixes the pre-existing block issues 0087, 0089 and 0030; its state and the
+      production queries still owed are in
+      handoff/_general/from-code/2026-10-29-h7-block-repairs.md. H7e PR B (PR 837,
+      the H7c known_answer tightening) is merged. Still owed, read the 0132 outcome in the boot
+      log and confirm the SQS columns are gone in production, and the source_health
+      contract step (once production has run the renamed build with no reads of the
+      old name, a new block drops the capability_health view, see
+      handoff/_general/from-code/2026-10-29-h7-source-health-rename.md).
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.

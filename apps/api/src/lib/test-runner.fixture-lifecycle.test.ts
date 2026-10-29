@@ -123,13 +123,16 @@ beforeEach(() => {
 
 describe("HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)", () => {
   it("a fresh fixture (refreshed today) is NOT stale — replays without a live call", () => {
+    // One instant for all three: two `new Date()` calls can straddle a
+    // millisecond, which made capture precede the edit and read as stale.
+    const now = new Date();
     const suite = {
       baselineOutput: { ok: true },
-      baselineCapturedAt: new Date(),
-      updatedAt: new Date(),
-      fixtureLastRefreshed: new Date(),
+      baselineCapturedAt: now,
+      updatedAt: now,
+      fixtureLastRefreshed: now,
     };
-    const result = checkBaselineStaleness(suite);
+    const result = checkBaselineStaleness(suite, now);
     expect(result.stale).toBe(false);
     expect(result.reason).toBe("not_stale");
   });

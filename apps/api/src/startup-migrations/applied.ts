@@ -10,7 +10,8 @@ import type { MigrationExecutor } from "./types.js";
  * (block 0131). On later boots a block whose run policy is "once" is skipped
  * while its recorded hash equals its ledger hash. Until that table exists
  * (the first boot after this shipped) nothing is skipped, so that boot runs
- * every block exactly as before and then records them.
+ * every block exactly as before and then records them. A "retired" block is
+ * skipped once recorded even under `force`, because re-running it does harm.
  */
 
 export interface LedgerRow { id: string; function: string; sha256: string }
@@ -41,6 +42,9 @@ export function planBlock(
         `This will not fix itself by restarting. Roll back: Railway dashboard -> Deployments -> ` +
         `previous working deploy -> Redeploy, and ask for the edit to be made as a new block.`,
     );
+  }
+  if (policy === "retired" && ledgerRow && recordedSha === ledgerRow.sha256) {
+    return { action: "skip", ledgerId: ledgerRow.id };
   }
   if (!force && policy === "once" && ledgerRow && recordedSha === ledgerRow.sha256) {
     return { action: "skip", ledgerId: ledgerRow.id };

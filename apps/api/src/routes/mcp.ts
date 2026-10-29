@@ -43,6 +43,7 @@ import {
   isOAuthAccessToken,
 } from "../lib/oauth.js";
 import { authenticateApiKey } from "../lib/api-keys.js";
+import { readBearer } from "../lib/bearer-placeholder.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -395,12 +396,10 @@ async function handleStatelessRequest(
 
 // ─── Extract API key from request ───────────────────────────────────────────
 
+// An unexpanded placeholder (`Bearer ${STRALE_API_KEY}`) reads as no key, so
+// free tools and x402 still work from a config that ships the header.
 function extractApiKey(req: Request): string {
-  const authHeader = req.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.slice(7);
-  }
-  return "";
+  return readBearer(req.headers.get("Authorization"), new URL(req.url).pathname) ?? "";
 }
 
 // ─── Extract client IP for free-tier rate limiting ──────────────────────────

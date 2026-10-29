@@ -2,7 +2,8 @@ import { recoveryDetails } from "../lib/errors.js";
 import { Hono } from "hono";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { transactions, capabilities, transactionQuality } from "../db/schema.js";
+import { transactions, capabilities, transactionQuality, jobCallbacks } from "../db/schema.js";
+import { apiOrigin, listFilesWithUrls } from "../lib/jobs/files.js";
 import { requirePrimaryKey, authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
@@ -164,7 +165,30 @@ transactionsRoute.get(
         return c.json(apiError("not_found", "Transaction not found."), 404);
       }
 
-      return c.json(formatRow(row));
+      // Portfolio 2.11: async-job extras. Files carry a URL minted on this
+      // read and valid for an hour, so a poll is also how a link is renewed.
+      // Both lookups are by primary/indexed key and return nothing for the
+      // vast majority of transactions.
+      const [files, [callback]] = await Promise.all([
+        listFilesWithUrls(db, id, apiOrigin()),
+        db
+          .select({
+            state: jobCallbacks.state,
+            attempts: jobCallbacks.attempts,
+            next_attempt_at: jobCallbacks.nextAttemptAt,
+            last_status_code: jobCallbacks.lastStatusCode,
+            delivered_at: jobCallbacks.deliveredAt,
+          })
+          .from(jobCallbacks)
+          .where(eq(jobCallbacks.transactionId, id))
+          .limit(1),
+      ]);
+
+      return c.json({
+        ...formatRow(row),
+        ...(files.length > 0 ? { files } : {}),
+        ...(callback ? { callback } : {}),
+      });
     }
 
     // F-A-005: Unauthenticated lookups return a redacted envelope — body fields

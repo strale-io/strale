@@ -1,0 +1,63 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "69c317bd24ce1d8f59d5ba18a85d78566913395c"
+  },
+  "at": "2026-10-29T15:59:09.409Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r.json"
+  },
+  "summary": {
+    "ok": true,
+    "postgres": "16 (local, /usr/lib/postgresql/16/bin)"
+  },
+  "topic": "h7-migration-block-repairs",
+  "raw": {
+    "ok": true,
+    "postgres": "16 (local, /usr/lib/postgresql/16/bin)",
+    "blocks_added": [
+      "0134_completeComplianceColumns (once)",
+      "0135_redactedRowDeletionReason (every_boot)",
+      "0136_redeleteCustomerDeletedRedactedRows (once)"
+    ],
+    "policy_changes": {
+      "0030": "every_boot -> once",
+      "0087": "every_boot -> retired",
+      "0089": "every_boot -> retired",
+      "0103": "every_boot -> once"
+    },
+    "fresh_database": {
+      "boot_1": "79 blocks ran, 0134 no change, 0135 trigger verified, 0136 no change",
+      "boot_2_skipped_count": 35,
+      "applied_rows": 79
+    },
+    "integration_lane": {
+      "test_files_passed": 42,
+      "tests_passed": 406,
+      "failed": 0
+    },
+    "api_suite": {
+      "files_passed": 388,
+      "tests_passed": 7825,
+      "failed": 0
+    },
+    "new_integration_tests": [
+      "first boot runs 0134-0136 and leaves the trigger with the deletion-reason rule",
+      "reproduces the defect: under 0103's function a customer delete keeps the retention reason, and 0087 un-deletes it",
+      "already-migrated boot skips 0087 and 0103, restores the rule, deletes the restored row again (deleted_at = the request time) and corrects a still-deleted row's reason",
+      "with the new rule a customer delete records user_request; neither a boot nor a forced run brings it back",
+      "the trigger still pins the reason and clears content on other updates",
+      "an Art. 17 closure reason survives the later 1095-day purge",
+      "a recorded 0089 no longer re-deactivates us-court-search, even under force",
+      "0134 completes a partial 0030 that 0030's own skip check never would"
+    ],
+    "mutations_caught": [
+      "0087 back to every_boot",
+      "0089 back to every_boot",
+      "retired ignored under force",
+      "0103 back to every_boot",
+      "0135 rule limited to the NULL-to-deleted transition (0136 threw)"
+    ]
+  }
+}

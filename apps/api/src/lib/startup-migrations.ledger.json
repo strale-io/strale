@@ -1047,6 +1047,45 @@
       "added": "2026-10-29",
       "columns_written": [],
       "sha256": "3a543a4e7784c7bb4103a3a8aa2634e60bebc37564b24832eb4ae75de73e47a0"
+    },
+    {
+      "id": "M079",
+      "function": "runMigration0136_asyncJobFiles",
+      "title": "async jobs with file output (portfolio plan 2.11)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "98a23e9bfd1a15165dfd27e6f2511e1f5ef296cd06049669022ed8662efd36c2"
+    },
+    {
+      "id": "M080",
+      "function": "runMigration0137_completeComplianceColumns",
+      "title": "Complete Compliance Columns",
+      "added": "2026-10-29",
+      "columns_written": [
+        "transactions.integrity_hash",
+        "transactions.legal_hold",
+        "transactions.previous_hash"
+      ],
+      "sha256": "b13f1b4bdd853dd89c953bc02052d2d035f16e056eb8ad91f290f6048c37d1ce"
+    },
+    {
+      "id": "M081",
+      "function": "runMigration0138_redactedRowDeletionReason",
+      "title": "Redacted Row Deletion Reason",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "c46c656162d508cd3504d1ace6959a86c07092dc775c97d644fd85397840d332"
+    },
+    {
+      "id": "M082",
+      "function": "runMigration0139_redeleteCustomerDeletedRedactedRows",
+      "title": "Redelete Customer Deleted Redacted Rows",
+      "added": "2026-10-29",
+      "columns_written": [
+        "transactions.deleted_at",
+        "transactions.deletion_reason"
+      ],
+      "sha256": "5acd1d17abdcfabd656fae2d296ac3bc1a29c394b68464710d134a2b36253039"
     }
   ],
   "known_overlaps": [
@@ -1509,6 +1548,46 @@
         "M066"
       ],
       "note": "M064 (0121, 2026-10-23) rewrote kyb-complete-se's long_description once (ledgered), guarded on the exact pre-repair text. M066 (0123, 2026-10-26, catalogue copy) rewrites the long_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value; for kyb-complete-se that guard is M064's own target, so on a fresh database they apply in order (M064, then M066). They cannot fight: M064 never fires again, and M066's new text is not M064's old text (startup-migrations.test.ts asserts the chain)."
+    },
+    {
+      "column": "transactions.integrity_hash",
+      "blocks": [
+        "M002",
+        "M080"
+      ],
+      "note": "Block 0137 (M080, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0137 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+    },
+    {
+      "column": "transactions.previous_hash",
+      "blocks": [
+        "M002",
+        "M080"
+      ],
+      "note": "Block 0137 (M080, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0137 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+    },
+    {
+      "column": "transactions.legal_hold",
+      "blocks": [
+        "M002",
+        "M080"
+      ],
+      "note": "Block 0137 (M080, 2026-10-29) completes a partial run of 0030 (M002): both only ADD COLUMN, 0137 with IF NOT EXISTS, and 0030 skips once integrity_hash exists. Neither writes a row value, so they cannot fight; 0030 is run policy once."
+    },
+    {
+      "column": "transactions.deleted_at",
+      "blocks": [
+        "M047",
+        "M082"
+      ],
+      "note": "Block 0139 (M082, 2026-10-29) undoes what 0087 (M047) did to customer-deleted redacted rows: 0087 cleared deleted_at on rows 0139 re-deletes, which is exactly the fight this check exists for. It is resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0139 has run. Disjoint thereafter by construction, not by predicate."
+    },
+    {
+      "column": "transactions.deletion_reason",
+      "blocks": [
+        "M047",
+        "M082"
+      ],
+      "note": "Block 0087 (M047) renamed pii_retention_purge to content_retention_purge; block 0139 (M082, 2026-10-29) sets user_request on customer-deleted redacted rows that still carry either retention reason, so on those rows the two write opposite values. Resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0139 has run."
     }
   ]
 }

@@ -24,6 +24,7 @@ const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
 
 const ONCE = BLOCKS.map((b) => b.name).filter((n) => BLOCK_RUN_POLICY[n]?.policy === "once");
 const EVERY_BOOT = BLOCKS.map((b) => b.name).filter((n) => BLOCK_RUN_POLICY[n]?.policy === "every_boot");
+const RETIRED = BLOCKS.map((b) => b.name).filter((n) => BLOCK_RUN_POLICY[n]?.policy === "retired");
 const isSkip = (outcome: string) => outcome.startsWith("skipped (applied;");
 
 describeMaybe("startup migrations skip blocks whose ledger hash is recorded", () => {
@@ -58,17 +59,18 @@ describeMaybe("startup migrations skip blocks whose ledger hash is recorded", ()
     }
   });
 
-  it("a second boot skips every once block and runs only the every-boot blocks", async () => {
+  it("a second boot skips every once and retired block and runs only the every-boot blocks", async () => {
     expect(ONCE.length).toBeGreaterThan(20);
     const results = await runStartupMigrations();
     const skipped = results.filter((r) => isSkip(r.outcome)).map((r) => r.block).sort();
-    expect(skipped).toEqual([...ONCE].sort());
+    expect(skipped).toEqual([...ONCE, ...RETIRED].sort());
     expect(results.length - skipped.length).toBe(EVERY_BOOT.length);
   });
 
-  it("force runs every block even when recorded (the admin endpoint)", async () => {
+  it("force runs every block even when recorded (the admin endpoint), except a retired one", async () => {
+    expect(RETIRED.length).toBeGreaterThan(0);
     const results = await runStartupMigrations({ force: true });
-    expect(results.filter((r) => isSkip(r.outcome))).toEqual([]);
+    expect(results.filter((r) => isSkip(r.outcome)).map((r) => r.block).sort()).toEqual([...RETIRED].sort());
     expect(results).toHaveLength(BLOCKS.length);
   });
 
@@ -96,7 +98,7 @@ describeMaybe("startup migrations skip blocks whose ledger hash is recorded", ()
       process.env.STARTUP_MIGRATIONS_FORCE = "1";
       try {
         const forced = await runStartupMigrations();
-        expect(forced.filter((r) => isSkip(r.outcome))).toEqual([]);
+        expect(forced.filter((r) => isSkip(r.outcome)).map((r) => r.block).sort()).toEqual([...RETIRED].sort());
       } finally {
         delete process.env.STARTUP_MIGRATIONS_FORCE;
       }

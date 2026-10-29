@@ -15,7 +15,7 @@ vi.mock("./api-keys.js", () => ({
   authenticateApiKey: vi.fn(async (key: string) => VALID.get(key) ?? null),
 }));
 
-const { optionalAuthIpLimitedUnlessKeyed } = await import("./middleware.js");
+const { authMiddleware, optionalAuthIpLimitedUnlessKeyed, optionalAuthMiddleware } = await import("./middleware.js");
 const { rateLimitByKey } = await import("./rate-limit.js");
 const { authenticateApiKey } = await import("./api-keys.js");
 
@@ -114,6 +114,27 @@ describe("POST /v1/do rate limits", () => {
     expect((await send()).status).toBe(429);
   });
 
+  it.each(["${STRALE_API_KEY}", "<your-key>", "YOUR_API_KEY"])(
+    "serves placeholder key %j anonymously, from the same IP bucket as no key, without a key lookup",
+    async (placeholder) => {
+      const app = makeApp();
+      const ip = freshIp();
+      const res = await call(app, ip, placeholder);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ user: null });
+      expect(vi.mocked(authenticateApiKey)).not.toHaveBeenCalled();
+      for (let i = 0; i < 29; i++) await call(app, ip, placeholder);
+      for (let i = 0; i < 30; i++) expect((await call(app, ip)).status).toBe(200);
+      expect((await call(app, ip, placeholder)).status).toBe(429);
+    },
+  );
+
+  it.each(["sk_live_${STRALE_API_KEY}", "not-a-key", "sk_test_abc"])("still refuses malformed key %j", async (key) => {
+    const res = await call(makeApp(), freshIp(), key);
+    expect(res.status).toBe(401);
+    expect((await res.json()).error_code).toBe("unauthorized");
+  });
+
   it("still serves a valid key from an IP whose anonymous bucket is full", async () => {
     const app = makeApp();
     const ip = freshIp();
@@ -131,5 +152,32 @@ describe("POST /v1/do rate limits", () => {
     expect(route).toMatch(/optionalAuthIpLimitedUnlessKeyed\(60, 60_000\),[\s\S]*rateLimitByKey\(10, 1000\)/);
     expect(route).not.toMatch(/rateLimitByIp\(/);
     expect(route).not.toMatch(/optionalAuthMiddleware/);
+  });
+});
+
+// The other two bearer readers: a placeholder is the same as no header.
+describe("authMiddleware and optionalAuthMiddleware with a placeholder key", () => {
+  const who = (c: any) => c.json({ user: c.get("user")?.id ?? null });
+  const send = (app: Hono, header?: string) =>
+    app.request("/x", { headers: header === undefined ? {} : { Authorization: header } });
+
+  it.each(["Bearer ${STRALE_API_KEY}", "Bearer <your-key>"])("optionalAuthMiddleware proceeds anonymously on %j", async (header) => {
+    const app = new Hono().get("/x", optionalAuthMiddleware, who);
+    const res = await send(app, header);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ user: null });
+  });
+
+  it("optionalAuthMiddleware still refuses a malformed key", async () => {
+    const app = new Hono().get("/x", optionalAuthMiddleware, who);
+    expect((await send(app, "Bearer not-a-key")).status).toBe(401);
+  });
+
+  it("authMiddleware answers a placeholder exactly like a missing header", async () => {
+    const app = new Hono().get("/x", authMiddleware, who);
+    const missing = await send(app);
+    const placeholder = await send(app, "Bearer ${STRALE_API_KEY}");
+    expect(placeholder.status).toBe(401);
+    expect(await placeholder.json()).toEqual(await missing.json());
   });
 });

@@ -45,11 +45,14 @@ vi.mock("strale-mcp/tools", async (importOriginal) => ({
 import { connectorProtectedCall, mcpRoute } from "./mcp.js";
 
 const fetchCalls: string[] = [];
+const fetchAuth: Array<string | null> = [];
 beforeEach(() => {
   vi.clearAllMocks();
   fetchCalls.length = 0;
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+  fetchAuth.length = 0;
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     fetchCalls.push(String(url));
+    fetchAuth.push(new Headers(init?.headers).get("Authorization"));
     if (String(url).includes("/v1/suggest/typeahead")) {
       return new Response(JSON.stringify({
         total: 2,
@@ -145,6 +148,35 @@ describe("lazy authentication on /mcp/connector", () => {
 
   it("the broad /mcp keeps its x402 hand-off and never answers 401", async () => {
     const res = await post("/mcp", call("strale_execute", { slug: "vat-validate", inputs: {} }));
+    expect(res.status).toBe(200);
+    expect((await rpcResult(res)).content[0].text).toContain("/x402/v2/vat-validate");
+  });
+});
+
+// A directory config that ships `Authorization: Bearer ${STRALE_API_KEY}` to a
+// user with no key must behave exactly as if no header were sent.
+describe("an unexpanded placeholder bearer reads as no token", () => {
+  const PLACEHOLDERS = ["${STRALE_API_KEY}", "<your-key>", "YOUR_API_KEY"];
+
+  it.each(PLACEHOLDERS)("runs a free tool anonymously with %j, forwarding no Authorization", async (placeholder) => {
+    const res = await post("/mcp/connector", call("strale_execute", { slug: "iban-validate", inputs: { iban: "x" } }), placeholder);
+    expect(res.status).toBe(200);
+    expect((await rpcResult(res)).content[0].text).toContain("valid");
+    const doIdx = fetchCalls.findIndex((u) => u.includes("/v1/do"));
+    expect(doIdx).toBeGreaterThanOrEqual(0);
+    expect(fetchAuth[doIdx]).toBeNull();
+  });
+
+  it.each(PLACEHOLDERS)("answers a paid tool with %j with the no-token challenge, not invalid_token", async (placeholder) => {
+    const res = await post("/mcp/connector", call("strale_execute", { slug: "vat-validate", inputs: {} }), placeholder);
+    expect(res.status).toBe(401);
+    expect(res.headers.get("WWW-Authenticate")).toBe(
+      'Bearer resource_metadata="https://api.strale.io/.well-known/oauth-protected-resource/mcp/connector", scope="strale:tools"',
+    );
+  });
+
+  it("keeps the broad /mcp x402 hand-off for a paid tool with a placeholder", async () => {
+    const res = await post("/mcp", call("strale_execute", { slug: "vat-validate", inputs: {} }), "${STRALE_API_KEY}");
     expect(res.status).toBe(200);
     expect((await rpcResult(res)).content[0].text).toContain("/x402/v2/vat-validate");
   });
