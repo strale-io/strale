@@ -1,0 +1,46 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "cd09a6f89e73e0f4efa7c89d675a399681beb769"
+  },
+  "at": "2026-10-29T10:02:55.112Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r2b.json"
+  },
+  "summary": {
+    "ok": true,
+    "supersedes_counts_in": "archive/receipts/2026-10-29-test-run-x402-v2-output-examples.json",
+    "change": "review follow-up: person-holding output keys (author, owner, applicant, holder, signer, registrant, contact, ceo, founder, inventor) added to the personal-field screen; url-to-text manifest example refreshed from the live strale.dev page (stale capability count removed)",
+    "payment_projection_sha256": "fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6",
+    "full_api": "384 files passed, 40 skipped; 7773 tests passed, 383 skipped",
+    "checks": "API typecheck, claims, context, models passed",
+    "independent_review": "fresh read-only agent, PASS-WITH-NITS; nits addressed except npm strale-mcp republish and strale-frontend llms.txt (out of this PR)"
+  },
+  "topic": "x402-v2-output-examples-review",
+  "raw": {
+    "ok": true,
+    "supersedes_counts_in": "archive/receipts/2026-10-29-test-run-x402-v2-output-examples.json",
+    "change": "review follow-up: person-holding output keys (author, owner, applicant, holder, signer, registrant, contact, ceo, founder, inventor) added to the personal-field screen; url-to-text manifest example refreshed from the live strale.dev page (stale capability count removed)",
+    "payment_projection_sha256": "fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6",
+    "output_examples_all_manifests_capability_GET": {
+      "before": 18,
+      "after": 62
+    },
+    "output_examples_all_manifests_capability_POST": {
+      "before": 9,
+      "after": 24
+    },
+    "input_examples_all_manifests_capability_GET": {
+      "before": 106,
+      "after": 106
+    },
+    "output_examples_live_enabled_275": {
+      "before": 13,
+      "after": 59
+    },
+    "full_api": "384 files passed, 40 skipped; 7773 tests passed, 383 skipped",
+    "checks": "API typecheck, claims, context, models passed",
+    "independent_review": "fresh read-only agent, PASS-WITH-NITS; nits addressed except npm strale-mcp republish and strale-frontend llms.txt (out of this PR)"
+  }
+}

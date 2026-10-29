@@ -133,9 +133,12 @@ describe("round 3 example publication", () => {
     expect(metadata.inputOmission).toBe("possible personal name");
   });
   it.each([
-    [{ owner: "jane@acme.io" }, "email address"],
-    [{ contact: "+46 70 123 45 67" }, "phone or card number"],
+    [{ reply_to: "jane@acme.io" }, "email address"],
+    [{ support_line: "+46 70 123 45 67" }, "phone or card number"],
     [{ full_name: "Jane Doe" }, "personal data field"],
+    [{ trademarks: [{ applicant: "Jane Smith" }] }, "personal data field"],
+    [{ commit: { author: "Jane Smith" } }, "personal data field"],
+    [{ repo_owner: "jsmith" }, "personal data field"],
     [{ text: "12 Example Street" }, "street address"],
   ])("still withholds output example %j (%s)", (value, reason) => {
     expect(metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: value } }).outputOmission).toBe(reason);

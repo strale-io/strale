@@ -74,7 +74,7 @@ export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "
   if (/(screen|\bpep\b|sanction|adverse.media|person|officer|director|beneficial.ownership|email.finder)/i.test(`${manifest.slug} ${manifest.name}`)) return "person lookup or screening tool";
   const walk = (item: unknown, key = ""): string | undefined => {
     const field = key.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    if (/(^|_)(name|full_name|first_name|last_name|persons?|directors?|officers?|surname|given_name|family_name|dob|birth|birthday|birthdate|address|street|phone|mobile|iban|card)(_|$)/.test(field)) return "personal data field";
+    if (/(^|_)(name|full_name|first_name|last_name|persons?|directors?|officers?|surname|given_name|family_name|dob|birth|birthday|birthdate|address|street|phone|mobile|iban|card|authors?|owners?|applicants?|holders?|signers?|registrants?|contacts?|ceo|founders?|inventors?)(_|$)/.test(field)) return "personal data field";
     if (Array.isArray(item)) return item.map(v => walk(v, key)).find(Boolean);
     if (item && typeof item === "object") return Object.entries(item).map(([k, v]) => walk(v, k)).find(Boolean);
     if (typeof item !== "string" && typeof item !== "number") return undefined;
@@ -112,8 +112,10 @@ export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "
     // finding no personal name (checked 2026-10-29 across the 66 live tools it
     // alone withheld). An output reaching this line already passed the tool
     // gates above (no personal data, no screening, no person lookup) and every
-    // field, email, phone, IBAN, IP, address and date check, and the same
-    // example is public at GET /v1/capabilities/:slug.
+    // field, email, phone, IBAN, IP, address and date check; the field list
+    // names the person-holding keys (author, owner, applicant, ...) that this
+    // heuristic used to backstop. The same example is public at
+    // GET /v1/capabilities/:slug.
     if (kind === "input" && /\b[\p{L}][\p{L}’'-]+\s+[\p{L}][\p{L}’'-]+\b/u.test(text.replace(/[^\s@]+@[^\s@]+/g, ""))) return "possible personal name";
     return undefined;
   };
