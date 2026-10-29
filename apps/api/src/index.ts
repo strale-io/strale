@@ -376,6 +376,9 @@ async function main() {
   const { onShutdown, installShutdownHandlers } = await import("./lib/shutdown.js");
   const { closeDbPool } = await import("./db/index.js");
 
+  // Registered first, so it runs last (LIFO): the drain's own log lines ship too.
+  const { closeLogSink } = await import("./lib/log.js");
+  onShutdown("log-sink", () => closeLogSink());
   onShutdown("db-pool", () => closeDbPool());
   onShutdown(
     "http-server",

@@ -32,7 +32,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "3a2f5b68752dd0a64c4b89f8583e5c9421a895fd41281320dc1720eac5c3e8d6",
+      "sha256": "1a2c5a4dae0a141467e8cc742e8e1ed0291ade43f94dfce1ed28531ce162943b",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -241,7 +241,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "fd608e87bd49dec4f8912278253a7c480d0f39085c5fbb0718f9c2513214861b",
+      "sha256": "2a1b288048e38773dfee748e335d65169cbe3cf29847791d46a841f565c0b6ee",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",

@@ -297,3 +297,17 @@
     Enforcement is apps/api/src/lib/free-tier-allowance.ts: anonymous callers
     share a per-IP calendar-month UTC allowance on the existing free tools.
     An hourly anti-abuse guard also applies; authenticated behaviour is unchanged.
+
+- id: logs-processed-in-eu
+  claim: /\blogs?\b[^.]{0,60}\b(Better Stack|EU|European Union)\b/
+  is_regex: true
+  status: needs_evidence
+  evidence: apps/api/src/lib/log-sink.ts
+  surfaces: [privacy notice, security page]
+  decided_by: DEC-20261029-A
+  note: >
+    Sub-processor disclosure for the log sink: Better Stack, EU data region,
+    application logs with secrets, customer inputs and emails redacted, kept
+    3 days on the free tier. True only while GET /v1/platform/facts reports
+    log_sink_shipping true and the source was created in the EU region; read
+    the vendor, region and retention from facts `static.log_sink`.

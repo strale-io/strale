@@ -18,10 +18,10 @@ import { computeIdempotencyFingerprint } from "../lib/idempotency-fingerprint.js
 import { validateDispatchInput } from "../lib/input-validation.js";
 import { logError } from "../lib/log.js";
 import { matchCapability } from "../lib/matching.js";
-import { getClientIp, hashIp, optionalAuthMiddleware } from "../lib/middleware.js";
+import { getClientIp, hashIp, optionalAuthIpLimitedUnlessKeyed } from "../lib/middleware.js";
 import { inputForFingerprint } from "../lib/never-persist-inputs.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
-import { rateLimitByIp, rateLimitByKey } from "../lib/rate-limit.js";
+import { rateLimitByKey } from "../lib/rate-limit.js";
 import { recoveredValuesHint, recoverValuesFromTask, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { computeFreshnessGrade } from "../lib/trust-grade.js";
 import { isX402PayableCapability } from "../lib/x402-eligibility.js";
@@ -128,8 +128,9 @@ export const doRoute = new Hono<AppEnv>();
 // DEC-21: 10 req/sec per API key (authenticated), calendar-month allowance per IP (free-tier)
 doRoute.post(
   "/do",
-  rateLimitByIp(60, 60_000),         // IP rate limit BEFORE auth — catches invalid Bearer token bypass (S-5)
-  optionalAuthMiddleware,
+  // Per IP for anonymous and invalid-key requests (S-5); a valid key skips it,
+  // so keyed traffic from shared integration IPs is limited per key instead.
+  optionalAuthIpLimitedUnlessKeyed(60, 60_000),
   rateLimitByKey(10, 1000),         // applies only if user is set
   // Free-tier monthly allowance enforced in-handler via DB counter — restart-safe
   async (c) => {

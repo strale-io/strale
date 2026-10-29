@@ -66,6 +66,12 @@ describe("platform-facts STATIC_FACTS", () => {
     expect(STATIC_FACTS.vendors.pep).toBe("Dilisense");
   });
 
+  it("log sink disclosure names the same vendor, EU, and the free-tier retention (DEC-20261029-A)", () => {
+    expect(STATIC_FACTS.log_sink.vendor).toBe(STATIC_FACTS.vendors.log_sink);
+    expect(STATIC_FACTS.log_sink.data_region).toBe("EU");
+    expect(STATIC_FACTS.log_sink.retention_days).toBe(3);
+  });
+
   it("tos_version_current matches the routes/auth.ts CURRENT_TOS_VERSION shape", () => {
     // YYYY-MM-DD, so it sorts and is unambiguous. Bump in lockstep
     // with the Terms page LAST_UPDATED.

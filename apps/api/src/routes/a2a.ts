@@ -242,7 +242,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         ? " FREE — no API key, no payment, no signup."
         : payable
           ? ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call — pay per use` +
-            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}?src=a2a-card, no signup needed.`
+            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/v2/${cap.slug}?src=a2a-card, no signup needed.`
           : ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call via API key.` +
             ` Pay-per-call is not available for this one.`;
       return {
@@ -254,7 +254,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         // Extension fields (ignored by strict A2A parsers, actionable by the rest)
         price_cents: cap.isFreeTier ? 0 : cap.priceCents ?? 0,
         currency: "EUR",
-        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/${cap.slug}?src=a2a-card` : undefined,
+        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/v2/${cap.slug}?src=a2a-card` : undefined,
       };
     });
 

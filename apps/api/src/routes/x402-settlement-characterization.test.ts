@@ -131,7 +131,7 @@ vi.mock("../lib/event-triggers.js", () => ({ triggerOnFailure: vi.fn() }));
 vi.mock("../lib/piggyback-monitor.js", () => ({ recordPiggybackResult: vi.fn() }));
 vi.mock("../lib/progressive-unlock.js", () => ({ isUnlocked: () => false, recordUnlock: () => [], getUnlockedSlugs: () => [] }));
 vi.mock("../lib/audit-token.js", () => ({ getShareableUrl: () => ({ url: "https://example.test/audit", expiresAt: "2026-10-29T00:00:00.000Z" }) }));
-vi.mock("../lib/rate-limit.js", () => ({ rateLimitByIp: () => async (_c: unknown, next: () => Promise<void>) => next(), rateLimitByKey: () => async (_c: unknown, next: () => Promise<void>) => next() }));
+vi.mock("../lib/rate-limit.js", () => ({ consumeIpRate: () => null, rateLimitByIp: () => async (_c: unknown, next: () => Promise<void>) => next(), rateLimitByKey: () => async (_c: unknown, next: () => Promise<void>) => next() }));
 const call = (inputs: any = { value: "test" }) => new Hono().route("/x402", x402GatewayV2).request("/x402/v2/test-capability", {
   method: "POST", headers: { "content-type": "application/json", "X-Payment": "signed-payment" }, body: JSON.stringify(inputs),
 });

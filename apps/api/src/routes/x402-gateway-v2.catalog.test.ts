@@ -552,6 +552,29 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
     expect(solution.resource.description).toBe("Solution: Solution description");
     expect(validateOfflineDiscovery(solution)).toEqual([]);
   });
+  it("publishes manifest output examples on v2 without touching v1 payment fields", () => {
+    // Text tools whose examples the input-only name heuristic used to withhold.
+    for (const slug of ["redirect-trace", "summarize", "translate"]) {
+      const manifest = discoveryManifests.find(item => item.slug === slug)!;
+      const expected = (manifest.output_schema as any).example;
+      const v2 = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${slug}`, manifest.input_schema, "GET", manifest.output_schema, 2, { kind: "capability", slug });
+      expect((v2.body.extensions.bazaar as any).info.output.example).toEqual(expected);
+      expect(validateOfflineDiscovery(v2.body)).toEqual([]);
+
+      // Legacy /x402/<slug> serves v1 to today's payers. Its payment fields and
+      // X-PAYMENT header must be byte-identical with and without the example.
+      const legacy = `https://api.strale.io/x402/${slug}`;
+      const withExample = build402(manifest.name, manifest.description, .054, legacy, manifest.input_schema, "GET", manifest.output_schema, 1, { kind: "capability", slug });
+      const withoutExample = build402(manifest.name, manifest.description, .054, legacy, manifest.input_schema, "GET", manifest.output_schema, 1);
+      expect(withExample.body.x402Version).toBe(1);
+      expect(withExample.headerPayload).toBe(withoutExample.headerPayload);
+      expect(withExample.body.accepts).toEqual(withoutExample.body.accepts);
+      expect(withExample.body.paymentRequirements).toEqual(withoutExample.body.paymentRequirements);
+      expect(withExample.paymentRequirement).toEqual(withoutExample.paymentRequirement);
+      expect(JSON.parse(Buffer.from(withExample.headerPayload, "base64").toString())).toEqual({ x402Version: 1, accepts: [withExample.paymentRequirement] });
+      expect(withExample.paymentRequirement).toMatchObject({ scheme: "exact", resource: legacy, maxAmountRequired: "54000" });
+    }
+  });
   it("rejects malformed discovery metadata and v1 envelopes", () => {
     const body = build402("Tool", "Description", 0.054, "https://api.strale.io/x402/v2/tool", null, "POST", null, 2).body;
     expect(validateOfflineDiscovery(body)).toEqual([]);
