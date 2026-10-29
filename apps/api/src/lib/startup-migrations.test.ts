@@ -1490,9 +1490,10 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0133_oauthConnector",
       "runMigration0134_renameCapabilityHealthToSourceHealth",
       "runMigration0135_batchOrders",
-      "runMigration0136_completeComplianceColumns",
-      "runMigration0137_redactedRowDeletionReason",
-      "runMigration0138_redeleteCustomerDeletedRedactedRows",
+      "runMigration0136_asyncJobFiles",
+      "runMigration0137_completeComplianceColumns",
+      "runMigration0138_redactedRowDeletionReason",
+      "runMigration0139_redeleteCustomerDeletedRedactedRows",
     ]);
   });
 });
@@ -2397,7 +2398,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(138);
+    expect(Math.max(...numbers)).toBe(139);
   });
 });
 

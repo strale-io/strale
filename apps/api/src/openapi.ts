@@ -192,6 +192,7 @@ export const openApiSpec = {
           max_price_cents: { type: "integer" as const, description: "Maximum price willing to pay (EUR cents). Required for authenticated requests to paid capabilities." },
           timeout_seconds: { type: "integer" as const, description: "Execution budget for synchronous paid wallet calls, in seconds (default 30; effective minimum 5 and maximum 60). Positive values below 5, including fractional values from existing clients, are clamped to 5; values above 60 are clamped to 60. Starts immediately before execution, including retries, and also bounds Anthropic SDK calls. On expiry: HTTP 503 timeout_exceeded, no wallet charge, reservation released. Late executor completion cannot charge. Does not change free-tier, async or solution execution. An executing Idempotency-Key returns HTTP 409 request_in_progress with details.retryable=true and details.retry_after_seconds=2; a completed key replays HTTP 200 with meta.idempotency_replay=true; use a new key to attempt execution again." },
           dry_run: { type: "boolean" as const, description: "If true, returns matched capability without executing.", default: false },
+          callback_url: { type: "string" as const, format: "uri", description: "Optional public https URL that receives one signed POST when an async execution (HTTP 202) reaches a terminal state. Body: {event: job.completed|job.failed, transaction_id, status, capability_slug, completed_at, poll_url}; no output is sent, read it from poll_url. Headers: Strale-Signature (t=<unix seconds>,v1=<hex HMAC-SHA256 of '<t>.<raw body>'> keyed by the secret from GET /v1/jobs/webhook-secret) and Strale-Event-Id (the transaction id, stable across retries). Up to 6 attempts over about 7 hours on a non-2xx answer; redirects are not followed. Ignored when the capability executes synchronously, since the result is in the response. An invalid or non-public URL is HTTP 400 before any charge." },
         },
       },
       DoResponse: {
@@ -1009,6 +1010,33 @@ export const openApiSpec = {
                     created_at: { type: "string" as const, format: "date-time" },
                     completed_at: { type: "string" as const, format: "date-time", nullable: true },
                     body_redacted: { type: "boolean" as const, description: "Present and true on unauth free-tier lookups; indicates body fields are redacted." },
+                    files: {
+                      type: "array" as const,
+                      description: "Present when an async execution produced files. Each url is signed, needs no API key, and expires an hour after this read; poll again for a fresh one. Files are deleted with the transaction's content (90 days, or on DELETE).",
+                      items: {
+                        type: "object" as const,
+                        properties: {
+                          file_id: { type: "string" as const, format: "uuid" },
+                          name: { type: "string" as const },
+                          content_type: { type: "string" as const },
+                          size_bytes: { type: "integer" as const },
+                          sha256: { type: "string" as const },
+                          url: { type: "string" as const, format: "uri" },
+                          url_expires_at: { type: "string" as const, format: "date-time" },
+                        },
+                      },
+                    },
+                    callback: {
+                      type: "object" as const,
+                      description: "Present when the request set callback_url. state is pending, delivered or failed.",
+                      properties: {
+                        state: { type: "string" as const, enum: ["pending", "delivered", "failed"] },
+                        attempts: { type: "integer" as const },
+                        next_attempt_at: { type: "string" as const, format: "date-time", nullable: true },
+                        last_status_code: { type: "integer" as const, nullable: true },
+                        delivered_at: { type: "string" as const, format: "date-time", nullable: true },
+                      },
+                    },
                     body_redacted_reason: { type: "string" as const, description: "Human-readable explanation of why the body is redacted." },
                   },
                 },
@@ -1016,6 +1044,39 @@ export const openApiSpec = {
             },
           },
           "404": errorResponse("not_found", "Transaction not found."),
+        },
+      },
+    },
+
+    // ─── Async jobs (portfolio plan 2.11) ─────────────────────────────
+    "/v1/files/{id}": {
+      get: {
+        tags: ["transactions"],
+        summary: "Download an async job's output file",
+        description: "Signed, expiring link minted by GET /v1/transactions/{id}. The signature is the credential: no API key. 403 for an invalid signature, 410 for an expired link (poll for a fresh one), 404 once the file is deleted under the retention policy.",
+        parameters: [
+          { name: "id", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } },
+          { name: "expires", in: "query" as const, required: true, schema: { type: "integer" as const } },
+          { name: "sig", in: "query" as const, required: true, schema: { type: "string" as const } },
+        ],
+        responses: {
+          "200": { description: "The file bytes, with its content type and an attachment filename.", content: { "application/octet-stream": { schema: { type: "string" as const, format: "binary" } } } },
+          "403": errorResponse("unauthorized", "This file link is not valid."),
+          "404": errorResponse("not_found", "File not found."),
+          "410": errorResponse("token_expired", "This file link has expired."),
+        },
+      },
+    },
+    "/v1/jobs/webhook-secret": {
+      get: {
+        tags: ["transactions"],
+        summary: "Get the callback signing secret",
+        description: "Primary key required. The secret that signs completion callbacks (Strale-Signature) for this account.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          ...primaryKeyError,
+          "200": keyResponse("Signing secret and format", { type: "object", properties: { secret: { type: "string" }, signature_header: { type: "string" }, signature_format: { type: "string" }, event_id_header: { type: "string" } } }),
+          "401": errorResponse("unauthorized", "Invalid API key."),
         },
       },
     },

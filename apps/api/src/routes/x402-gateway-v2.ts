@@ -1,4 +1,5 @@
 import { captureX402RecordingFailure } from "../lib/x402-recording.js";
+import { assertNoFilesOffAsyncPath } from "../lib/jobs/files.js";
 import { settleX402Execution } from "../lib/x402-settle.js";
 import { validateDispatchInput } from "../lib/input-validation.js";
 import { claimX402Payment, beginX402Execution, releaseX402Claim, findCachedX402Response, x402PaymentBoundElsewhere } from "../lib/x402-payment-claims.js";
@@ -1823,6 +1824,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // failed x402 transaction and deliberately does not settle (CRIT-9,
     // DEC-14), which is exactly the handling an unusable output needs.
     assertBillableOutput(cap.slug, result.output);
+    assertNoFilesOffAsyncPath(cap.slug, (result as { files?: unknown }).files);
   } catch (err) {
     if (!executionStarted) {
       logError("x402-execution-admission-failed", err, { slug: cap.slug });

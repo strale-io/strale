@@ -1,5 +1,5 @@
 /**
- * Blocks 0136-0138 and the retirement of 0087 and 0089, on a real Postgres
+ * Blocks 0137-0139 and the retirement of 0087 and 0089, on a real Postgres
  * (platform-hardening T7).
  *
  * Reproduces each defect on an already-migrated database first (0103's old
@@ -21,14 +21,14 @@ import {
   runMigration0103_redactedContentStaysRedacted,
   US_COURT_SEARCH_DEACTIVATION_REASON,
 } from "./startup-migrations.js";
-import { REDACTED_ROW_DELETION_RULE } from "../startup-migrations/blocks/0137-redacted-row-deletion-reason.js";
+import { REDACTED_ROW_DELETION_RULE } from "../startup-migrations/blocks/0138-redacted-row-deletion-reason.js";
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
 
 type Row = { deleted_at: Date | null; deletion_reason: string | null; redacted_at: Date | null };
 
-describeMaybe("startup migrations 0136-0138: a deleted redacted row stays deleted", () => {
+describeMaybe("startup migrations 0137-0139: a deleted redacted row stays deleted", () => {
   let client: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle>;
   const created: string[] = [];
@@ -97,7 +97,7 @@ describeMaybe("startup migrations 0136-0138: a deleted redacted row stays delete
   it("a first boot runs every new block and leaves the trigger with the deletion-reason rule", async () => {
     await db.execute(sql`DROP TABLE IF EXISTS startup_migration_applied`);
     const results = await runStartupMigrations();
-    for (const label of ["0136_completeComplianceColumns", "0137_redactedRowDeletionReason", "0138_redeleteCustomerDeletedRedactedRows"]) {
+    for (const label of ["0137_completeComplianceColumns", "0138_redactedRowDeletionReason", "0139_redeleteCustomerDeletedRedactedRows"]) {
       expect(results.find((r) => r.block === label)?.outcome, label).not.toMatch(/^skipped/);
     }
     expect(await triggerBody()).toContain(REDACTED_ROW_DELETION_RULE);
@@ -129,13 +129,13 @@ describeMaybe("startup migrations 0136-0138: a deleted redacted row stays delete
     const before = await read(stillDeleted);
     expect(before.deletion_reason).toBe("content_retention_purge");
 
-    // 0138 is recorded from the first boot; a new deploy is its first run in
+    // 0139 is recorded from the first boot; a new deploy is its first run in
     // production, so clear its record to stand for that.
-    await db.execute(sql`DELETE FROM startup_migration_applied WHERE function_name = 'runMigration0138_redeleteCustomerDeletedRedactedRows'`);
+    await db.execute(sql`DELETE FROM startup_migration_applied WHERE function_name = 'runMigration0139_redeleteCustomerDeletedRedactedRows'`);
     const results = await runStartupMigrations();
     expect(results.find((r) => r.block === "runMigration0087_unhideRedactedRows")?.outcome).toMatch(/^skipped \(applied;/);
     expect(results.find((r) => r.block === "runMigration0103_redactedContentStaysRedacted")?.outcome).toMatch(/^skipped \(applied;/);
-    expect(results.find((r) => r.block === "0138_redeleteCustomerDeletedRedactedRows")?.rows_affected).toBe(2);
+    expect(results.find((r) => r.block === "0139_redeleteCustomerDeletedRedactedRows")?.rows_affected).toBe(2);
     expect(await triggerBody()).toContain(REDACTED_ROW_DELETION_RULE);
 
     const repaired = await read(victim);
@@ -158,7 +158,7 @@ describeMaybe("startup migrations 0136-0138: a deleted redacted row stays delete
     await runStartupMigrations({ force: true });
     expect((await read(id)).deleted_at).not.toBeNull();
     expect((await read(id)).deletion_reason).toBe("user_request");
-    // Force re-runs 0103 (old function) before 0137; 0137 must win.
+    // Force re-runs 0103 (old function) before 0138; 0138 must win.
     expect(await triggerBody()).toContain(REDACTED_ROW_DELETION_RULE);
   });
 
@@ -228,9 +228,9 @@ describeMaybe("startup migrations 0136-0138: a deleted redacted row stays delete
     expect(rows[0].deactivation_reason).not.toBe(US_COURT_SEARCH_DEACTIVATION_REASON);
   });
 
-  it("0136 completes a partial 0030, which a recorded or column-checking 0030 never revisits", async () => {
+  it("0137 completes a partial 0030, which a recorded or column-checking 0030 never revisits", async () => {
     await db.execute(sql`ALTER TABLE transactions DROP COLUMN previous_hash`);
-    await db.execute(sql`DELETE FROM startup_migration_applied WHERE function_name = 'runMigration0136_completeComplianceColumns'`);
+    await db.execute(sql`DELETE FROM startup_migration_applied WHERE function_name = 'runMigration0137_completeComplianceColumns'`);
     const results = await runStartupMigrations();
     expect(results.find((r) => r.block === "runMigration0030_complianceColumns")?.outcome).toMatch(/^skipped/);
     // 0030 itself, unrecorded, also skips: its check sees integrity_hash only.
@@ -238,7 +238,7 @@ describeMaybe("startup migrations 0136-0138: a deleted redacted row stays delete
     await db.execute(sql`ALTER TABLE transactions DROP COLUMN previous_hash`);
     expect((await runMigration0030_complianceColumns(db)).outcome).toMatch(/^skipped \(columns already exist\)/);
     await db.execute(sql`ALTER TABLE transactions ADD COLUMN previous_hash varchar(128)`);
-    expect(results.find((r) => r.block === "0136_completeComplianceColumns")?.outcome).toMatch(/previous_hash/);
+    expect(results.find((r) => r.block === "0137_completeComplianceColumns")?.outcome).toMatch(/previous_hash/);
     const cols = (await db.execute(sql`
       SELECT column_name FROM information_schema.columns
        WHERE table_name = 'transactions' AND column_name IN ('integrity_hash', 'previous_hash', 'legal_hold')

@@ -124,9 +124,10 @@ import { runMigration0132_dropSqsResidualSchema } from "../startup-migrations/bl
 import { runMigration0133_oauthConnector } from "../startup-migrations/blocks/0133-oauth-connector.js";
 import { runMigration0134_renameCapabilityHealthToSourceHealth } from "../startup-migrations/blocks/0134-rename-capability-health-to-source-health.js";
 import { runMigration0135_batchOrders } from "../startup-migrations/blocks/0135-batch-orders.js";
-import { runMigration0136_completeComplianceColumns } from "../startup-migrations/blocks/0136-complete-compliance-columns.js";
-import { runMigration0137_redactedRowDeletionReason } from "../startup-migrations/blocks/0137-redacted-row-deletion-reason.js";
-import { runMigration0138_redeleteCustomerDeletedRedactedRows } from "../startup-migrations/blocks/0138-redelete-customer-deleted-redacted-rows.js";
+import { runMigration0136_asyncJobFiles } from "../startup-migrations/blocks/0136-async-job-files.js";
+import { runMigration0137_completeComplianceColumns } from "../startup-migrations/blocks/0137-complete-compliance-columns.js";
+import { runMigration0138_redactedRowDeletionReason } from "../startup-migrations/blocks/0138-redacted-row-deletion-reason.js";
+import { runMigration0139_redeleteCustomerDeletedRedactedRows } from "../startup-migrations/blocks/0139-redelete-customer-deleted-redacted-rows.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -212,9 +213,10 @@ export * from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
 export * from "../startup-migrations/blocks/0133-oauth-connector.js";
 export * from "../startup-migrations/blocks/0134-rename-capability-health-to-source-health.js";
 export * from "../startup-migrations/blocks/0135-batch-orders.js";
-export * from "../startup-migrations/blocks/0136-complete-compliance-columns.js";
-export * from "../startup-migrations/blocks/0137-redacted-row-deletion-reason.js";
-export * from "../startup-migrations/blocks/0138-redelete-customer-deleted-redacted-rows.js";
+export * from "../startup-migrations/blocks/0136-async-job-files.js";
+export * from "../startup-migrations/blocks/0137-complete-compliance-columns.js";
+export * from "../startup-migrations/blocks/0138-redacted-row-deletion-reason.js";
+export * from "../startup-migrations/blocks/0139-redelete-customer-deleted-redacted-rows.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -300,10 +302,11 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0133_oauthConnector,
   runMigration0134_renameCapabilityHealthToSourceHealth,
   runMigration0135_batchOrders,
-  runMigration0136_completeComplianceColumns,
-  // 0138 needs 0137's trigger rule to change deletion_reason.
-  runMigration0137_redactedRowDeletionReason,
-  runMigration0138_redeleteCustomerDeletedRedactedRows,
+  runMigration0136_asyncJobFiles,
+  runMigration0137_completeComplianceColumns,
+  // 0139 needs 0138's trigger rule to change deletion_reason.
+  runMigration0138_redactedRowDeletionReason,
+  runMigration0139_redeleteCustomerDeletedRedactedRows,
 ];
 
 /**

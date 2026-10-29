@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
 
 /**
- * Block 0137 — a redacted row that is later deleted records why.
+ * Block 0138 — a redacted row that is later deleted records why.
  *
  * Block 0103's trigger keeps a redacted row's customer content cleared, and it
  * also pins `deletion_reason` to its old value on every update. That second
@@ -18,12 +18,12 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * change only when the old reason is a content redaction
  * (`content_retention_purge`, or the older `pii_retention_purge`) or absent
  * (a redacted row from before reasons were written), and the row is deleted
- * after the update: the delete itself, or block 0138 correcting a row deleted
+ * after the update: the delete itself, or block 0139 correcting a row deleted
  * under the old function. The NULL case is spelled out because
  * `NULL IN (...)` is NULL, which would skip the pin by accident. Every other update pins the reason as
  * before, so an Art. 17 `account_closure_erasure` is never overwritten by the
  * later 1095-day purge. Content stays cleared and `redacted_at` stays pinned. Block 0087 is retired in
- * run-policy.ts and block 0138 re-deletes the rows it restored.
+ * run-policy.ts and block 0139 re-deletes the rows it restored.
  *
  * Runs every boot, taking over 0103's job of restoring the trigger if it was
  * dropped (0103 is now "once", so it no longer overwrites this function with
@@ -35,7 +35,7 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
 export const REDACTED_ROW_DELETION_RULE =
   "(OLD.deletion_reason IS NULL OR OLD.deletion_reason IN ('content_retention_purge', 'pii_retention_purge')) AND NEW.deleted_at IS NOT NULL";
 
-export async function runMigration0137_redactedRowDeletionReason(
+export async function runMigration0138_redactedRowDeletionReason(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
@@ -95,7 +95,7 @@ export async function runMigration0137_redactedRowDeletionReason(
   }
 
   return {
-    block: "0137_redactedRowDeletionReason",
+    block: "0138_redactedRowDeletionReason",
     outcome: "trigger present, enabled and verified — content stays cleared; a delete records its own reason",
     duration_ms: Date.now() - startedAt,
   };

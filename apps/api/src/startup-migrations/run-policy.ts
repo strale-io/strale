@@ -27,7 +27,7 @@ export type BlockRunPolicy = "once" | "every_boot" | "retired";
 
 export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy; reason: string }>> = {
   runMigration0029_actualCostCents: { policy: "once", reason: "single ADD COLUMN; its skip check covers the whole change" },
-  runMigration0030_complianceColumns: { policy: "once", reason: "a re-run only repeats its first-column check; block 0136 completes a partial run" },
+  runMigration0030_complianceColumns: { policy: "once", reason: "a re-run only repeats its first-column check; block 0137 completes a partial run" },
   runMigration0031_testResultsCompositeIdx: { policy: "once", reason: "one CREATE INDEX IF NOT EXISTS" },
   runMigration0060_marketplaceEligible: { policy: "once", reason: "ADD COLUMN IF NOT EXISTS only" },
   runMigration0062_paidVendorCosts: { policy: "every_boot", reason: "post-condition re-checks suites created after it first ran" },
@@ -55,7 +55,7 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0084_danishQuotaHeadroom: { policy: "every_boot", reason: "returns normally when its capability is absent" },
   runMigration0085_actorIdentity: { policy: "every_boot", reason: "re-creates its view each run; schema validation does not check views" },
   runMigration0086_srcBasis: { policy: "once", reason: "ADD COLUMN and CREATE INDEX IF NOT EXISTS only" },
-  runMigration0087_unhideRedactedRows: { policy: "retired", reason: "its work finished 2026-08; since then it only matched customer-deleted redacted rows and restored them (blocks 0137, 0138)" },
+  runMigration0087_unhideRedactedRows: { policy: "retired", reason: "its work finished 2026-08; since then it only matched customer-deleted redacted rows and restored them (blocks 0138, 0139)" },
   runMigration0088_solutionGateCondition: { policy: "once", reason: "one ADD COLUMN IF NOT EXISTS" },
   runMigration0089_deactivateUsCourtSearch: { policy: "retired", reason: "a re-run re-deactivates us-court-search after an operator switched it back on, against its own header" },
   runMigration0090_capabilityOutputContracts: { policy: "every_boot", reason: "re-syncs rows from the live lib/capability-output-contracts.js" },
@@ -71,7 +71,7 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0100_relistUrlToMarkdown: { policy: "once", reason: "already one-shot through startup_migration_ledger" },
   runMigration0101_capabilityInvocations: { policy: "every_boot", reason: "defer-not-throw: returns normally with the work deferred" },
   runMigration0102_accountLifecycleTables: { policy: "every_boot", reason: "its unique index guards Stripe sessions against double crediting and is not checked by schema validation" },
-  runMigration0103_redactedContentStaysRedacted: { policy: "once", reason: "block 0137 replaces its function and restores the trigger every boot; a re-run would put the old function back until 0137 runs" },
+  runMigration0103_redactedContentStaysRedacted: { policy: "once", reason: "block 0138 replaces its function and restores the trigger every boot; a re-run would put the old function back until 0138 runs" },
   runMigration0104_jobSchedule: { policy: "once", reason: "IF NOT EXISTS DDL; verification throws" },
   runMigration0105_onboardingHookFailures: { policy: "once", reason: "one ADD COLUMN IF NOT EXISTS" },
   runMigration0106_executionManifestSnapshots: { policy: "every_boot", reason: "drops and recreates its immutability triggers each run" },
@@ -104,7 +104,8 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0133_oauthConnector: { policy: "every_boot", reason: "creates a UNIQUE and a CHECK constraint, which schema validation does not check; when in doubt, every_boot" },
   runMigration0134_renameCapabilityHealthToSourceHealth: { policy: "every_boot", reason: "creates a view, which schema validation does not check; a re-run costs one catalogue query and skips unless capability_health is a table" },
   runMigration0135_batchOrders: { policy: "every_boot", reason: "creates a partial UNIQUE index, which schema validation does not check" },
-  runMigration0136_completeComplianceColumns: { policy: "once", reason: "ADD COLUMN and CREATE INDEX IF NOT EXISTS only" },
-  runMigration0137_redactedRowDeletionReason: { policy: "every_boot", reason: "replaces the redaction trigger function and recreates the trigger if it was dropped" },
-  runMigration0138_redeleteCustomerDeletedRedactedRows: { policy: "once", reason: "repair; throws unless no matching row is left, and the cause is fixed by 0137 and 0087's retirement" },
+  runMigration0136_asyncJobFiles: { policy: "every_boot", reason: "creates a CHECK constraint, which schema validation does not check; when in doubt, every_boot" },
+  runMigration0137_completeComplianceColumns: { policy: "once", reason: "ADD COLUMN and CREATE INDEX IF NOT EXISTS only" },
+  runMigration0138_redactedRowDeletionReason: { policy: "every_boot", reason: "replaces the redaction trigger function and recreates the trigger if it was dropped" },
+  runMigration0139_redeleteCustomerDeletedRedactedRows: { policy: "once", reason: "repair; throws unless no matching row is left, and the cause is fixed by 0138 and 0087's retirement" },
 };
