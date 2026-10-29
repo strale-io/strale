@@ -1,0 +1,57 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/src/routes/x402-settlement-characterization.test.ts",
+    "commit": "e5db1fbf6a8dd60b25587669e2e512af542e24f3"
+  },
+  "at": "2026-10-29T15:48:50.001Z",
+  "inputs": {
+    "fail_before": "source files errors.ts, x402-payment-claims.ts, x402-gateway-v2.ts, do/dispatch.ts, openapi.ts at origin/main 69c317b; tests at fix commit",
+    "pass_after": "fix commit"
+  },
+  "summary": {
+    "fail_before_failed": 15,
+    "fail_before_passed": 45,
+    "pass_after_targeted": 272,
+    "full_suite_passed": 7836,
+    "full_suite_skipped": 402
+  },
+  "topic": "h4-x402-payment-binding",
+  "raw": {
+    "ok": true,
+    "log": [
+      "## fail-before: source files at origin/main (69c317b), tests at HEAD e5db1fb",
+      " ❯ src/routes/x402-settlement-characterization.test.ts (60 tests | 15 failed)",
+      "     × intent write failure prevents any settlement",
+      "     × a thrown facilitator call preserves the claim and intent policy",
+      "     × retains a thrown facilitator call's claim and never counts it against health",
+      "     × makes /v1/do claims visible to the existing stale janitor and fences late settlement",
+      "     × do refuses a completed payment claimed for a different capability",
+      "     × capability refuses a completed payment claimed for a different capability",
+      "     × solution refuses a completed payment claimed for a different capability",
+      "     × do refuses a payment claimed for a solution",
+      "     × capability refuses a payment claimed for a solution",
+      "     × solution refuses a payment claimed for a solution",
+      "     × do refuses an in-flight payment claimed for different work",
+      "     × capability refuses an in-flight payment claimed for different work",
+      "     × solution refuses an in-flight payment claimed for different work",
+      "     × returns payment_failed with a fix and counts nothing against the capability",
+      "     × a thrown intent write takes no payment and releases the hash",
+      "⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:189:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:232:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:352:42",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:410:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:429:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:441:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:448:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:467:29",
+      " ❯ src/routes/x402-settlement-characterization.test.ts:483:29",
+      "             ↳ src/routes/x402-settlement-characterization.test.ts",
+      "      Tests  15 failed | 45 passed (60)",
+      "## pass-after: HEAD",
+      "      Tests  272 passed (272)",
+      "## full apps/api suite at HEAD: Test Files 388 passed | 41 skipped; Tests 7836 passed | 402 skipped"
+    ]
+  }
+}

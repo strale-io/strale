@@ -87,12 +87,16 @@ test('n8n jobs send the same tool calls and return the same fields as the Zapier
 	}
 });
 
+// Zapier jobs n8n does not port yet. Listing them here makes a new Zapier job
+// a deliberate choice for n8n rather than a silent gap.
+const zapierOnly = new Set(['check_iban', 'check_email']);
+
 test('n8n exposes only the Zapier jobs that are publicly visible', { skip: !available }, () => {
 	const { jobs: zapierJobs } = require(zapierJobsPath);
 	const n8nJobs = require('../dist/nodes/Strale/jobs.js');
-	const visible = Object.values(zapierJobs)
-		.filter((job) => !job.hidden)
-		.flatMap((job) => job.tools)
+	const visible = Object.entries(zapierJobs)
+		.filter(([key, job]) => !job.hidden && !zapierOnly.has(key))
+		.flatMap(([, job]) => job.tools)
 		.sort();
 	assert.deepEqual(Object.values(n8nJobs.jobTools).flat().sort(), visible);
 });

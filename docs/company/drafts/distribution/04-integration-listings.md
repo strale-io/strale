@@ -22,6 +22,8 @@ describe the same thing everywhere:
 
 ## 1. Zapier (experiment D5)
 
+*Superseded for D5 on 2026-10-29 by `packages/zapier-strale/README.md` (0.2.0): five visible actions ship (Look Up a Company, Check an EU VAT Number, Check an IBAN, Check an Email Address, Screen a Name), because the company status and invoice issuer tools are not public. The listing short description is the package description.*
+
 **App name:** Strale
 **Category:** Business Intelligence (a finance or accounting category waits for research §9 item 8)
 **Short description (≤140):**

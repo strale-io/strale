@@ -355,7 +355,7 @@ async function checkOpenBreakers(sql: postgres.Sql): Promise<void> {
       SELECT ch.capability_slug AS slug,
              ch.consecutive_failures AS failures,
              ch.opened_at AS opened
-      FROM capability_health ch
+      FROM source_health ch
       JOIN capabilities c ON c.slug = ch.capability_slug
       WHERE ch.state = 'open'
         AND c.is_active = true

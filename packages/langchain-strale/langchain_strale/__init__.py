@@ -1,9 +1,10 @@
-"""langchain-strale — All available Strale capabilities as LangChain tools."""
+"""langchain-strale — Strale tools as LangChain tools."""
 
 from .client import StraleClient
 from .toolkit import StraleToolkit
 from .tools import (
     StraleBalanceTool,
+    StraleExecuteTool,
     StraleGenericInput,
     StraleSearchTool,
     StraleTool,
@@ -14,6 +15,7 @@ __all__ = [
     "StraleToolkit",
     "StraleTool",
     "StraleSearchTool",
+    "StraleExecuteTool",
     "StraleBalanceTool",
     "StraleGenericInput",
 ]

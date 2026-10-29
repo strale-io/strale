@@ -1,8 +1,8 @@
 {
   "name": "zapier-strale",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Strale is a tool library for company lookups, EU VAT validation, name screening and invoice issuer checks.",
+  "description": "Strale is a tool library for company lookups, EU VAT, IBAN and email checks, and name screening. Pay per call with an API key.",
   "main": "index.js",
   "exports": {
     ".": "./index.js",

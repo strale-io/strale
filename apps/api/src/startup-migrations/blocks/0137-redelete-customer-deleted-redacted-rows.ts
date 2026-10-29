@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
 
 /**
- * Block 0136 — delete again the transactions a customer deleted and block 0087
+ * Block 0137 — delete again the transactions a customer deleted and block 0087
  * brought back.
  *
- * Block 0135 records the cause: a customer deleting an already content-redacted
+ * Block 0136 records the cause: a customer deleting an already content-redacted
  * transaction kept `deletion_reason = 'content_retention_purge'`, and 0087 then
  * cleared its `deleted_at` on the next boot. Those rows are identifiable:
  * `DELETE /v1/transactions/:id` also sets `transaction_quality.deleted_at` in
@@ -20,10 +20,10 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * redacted one and is left alone.
  *
  * The 1095-day purge needs no repair: its selector is `deleted_at IS NULL`, so
- * it re-deletes any row 0087 restored on its next daily run, and with 0135 in
+ * it re-deletes any row 0087 restored on its next daily run, and with 0136 in
  * place the reason now sticks.
  *
- * Must run after 0135: under 0103's function the reason could not change.
+ * Must run after 0136: under 0103's function the reason could not change.
  *
  * DEC-20260504-B: bounded by how many customers deleted a transaction older
  * than 90 days through the API, expected to be small; production was not
@@ -40,7 +40,7 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  */
 const BATCH = 1000;
 
-export async function runMigration0136_redeleteCustomerDeletedRedactedRows(
+export async function runMigration0137_redeleteCustomerDeletedRedactedRows(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
@@ -82,7 +82,7 @@ export async function runMigration0136_redeleteCustomerDeletedRedactedRows(
     if (count < BATCH) break;
   }
 
-  // If any remain, the trigger did not let the reason change (0135 absent or
+  // If any remain, the trigger did not let the reason change (0136 absent or
   // overwritten): fail loudly, not "done".
   const left = (await tx.execute(sql`
     SELECT COUNT(*)::int AS n
@@ -96,12 +96,12 @@ export async function runMigration0136_redeleteCustomerDeletedRedactedRows(
   if (remaining !== 0) {
     throw new Error(
       `${remaining} customer-deleted redacted transaction(s) are still visible after the repair ` +
-        `(found ${found}, updated ${restored}). The deletion-reason rule from block 0135 is not in effect.`,
+        `(found ${found}, updated ${restored}). The deletion-reason rule from block 0136 is not in effect.`,
     );
   }
 
   return {
-    block: "0136_redeleteCustomerDeletedRedactedRows",
+    block: "0137_redeleteCustomerDeletedRedactedRows",
     outcome:
       found === 0
         ? "no change (no customer-deleted redacted transaction was visible)"
