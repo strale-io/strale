@@ -118,10 +118,12 @@ export interface StraleClientOptions {
 }
 
 // Crypto tools the connector leaves out: every web3 tool plus the crypto
-// tools filed under other categories.
+// tools and bundles filed under other categories (found in the live catalog
+// on 2026-10-29), and the x402 payment probe.
 const CONNECTOR_EXCLUDED_SLUGS = new Set([
   "bitcoin-address-validate", "dogecoin-address-validate", "eth-address-validate",
   "solana-address-validate", "tron-address-validate", "xrp-address-validate", "crypto-price",
+  "paid-api-preflight", "crypto-counterparty-kyb", "defi-risk-check", "defi-protocol-risk",
 ]);
 
 /** True when the connector must not offer this tool or bundle. */

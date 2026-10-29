@@ -92,11 +92,12 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: "Connector built (branch feat/claude-connector-directory)
-      at https://api.strale.io/mcp/connector with titled and annotated tools,
-      no-auth search and free tools, no crypto tools or x402 hand-off, and an
-      OAuth 2.1 server mapping sign-in to a capped additional API key.
-      Requirements read 2026-10-29 are in
+    next_action: "Connector live since PR 816 (commit a1aa2016, verified in
+      production 2026-10-29 at 11:40 Swedish time) at
+      https://api.strale.io/mcp/connector. Eight titled and annotated tools,
+      OAuth discovery served, 401 challenge on paid calls, consent page
+      working with Claude Code's real client document, no crypto tools. The
+      requirements read 2026-10-29 are in
       docs/research/2026-10-29-claude-connector-directory-requirements.md and
       the portal text in docs/claude-connector-listing.md. Waiting on Petter
       (one ask on needs-founder) to test it as a custom connector, fund a
@@ -104,7 +105,8 @@ tracks:
       submit. After listing, measure §8 D4 from discovery_hits
       /mcp/connector rows (listed within 45 days; at least 20 Claude tool
       calls a week by day 90; kill if refused or under 5 a week 30 days
-      after listing)."
+      after listing). Follow-ups in the research file (OAuth table pruning,
+      last_used_at for OAuth use)."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Eligible submission records Petter's terms and paid-plan acts.
