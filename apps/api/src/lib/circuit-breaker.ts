@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilityHealth } from "../db/schema.js";
+import { sourceHealth } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
 import { fireAndForget } from "./fire-and-forget.js";
@@ -38,8 +38,8 @@ export async function checkCircuitBreaker(
   return db.transaction(async (tx) => {
     const [health] = await tx
       .select()
-      .from(capabilityHealth)
-      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .from(sourceHealth)
+      .where(eq(sourceHealth.capabilitySlug, slug))
       .limit(1)
       .for("update");
 
@@ -62,9 +62,9 @@ export async function checkCircuitBreaker(
       if (nextRetry && now >= nextRetry) {
         // Transition to half_open — allow one test request
         await tx
-          .update(capabilityHealth)
+          .update(sourceHealth)
           .set({ state: "half_open", updatedAt: now })
-          .where(eq(capabilityHealth.id, health.id));
+          .where(eq(sourceHealth.id, health.id));
 
         return { allowed: true, state: "half_open" };
       }
@@ -96,14 +96,14 @@ export async function recordSuccess(slug: string): Promise<void> {
   const previousState = await db.transaction(async (tx) => {
     const [health] = await tx
       .select()
-      .from(capabilityHealth)
-      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .from(sourceHealth)
+      .where(eq(sourceHealth.capabilitySlug, slug))
       .limit(1)
       .for("update");
 
     if (!health) {
       // First success — create record in closed state
-      await tx.insert(capabilityHealth).values({
+      await tx.insert(sourceHealth).values({
         capabilitySlug: slug,
         state: "closed",
         consecutiveFailures: 0,
@@ -118,7 +118,7 @@ export async function recordSuccess(slug: string): Promise<void> {
 
     // Reset to closed on any success
     await tx
-      .update(capabilityHealth)
+      .update(sourceHealth)
       .set({
         state: "closed",
         consecutiveFailures: 0,
@@ -129,7 +129,7 @@ export async function recordSuccess(slug: string): Promise<void> {
         nextRetryAt: null,
         updatedAt: now,
       })
-      .where(eq(capabilityHealth.id, health.id));
+      .where(eq(sourceHealth.id, health.id));
 
     return health.state;
   });
@@ -269,8 +269,8 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
   const result = await db.transaction(async (tx) => {
     const [health] = await tx
       .select()
-      .from(capabilityHealth)
-      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .from(sourceHealth)
+      .where(eq(sourceHealth.capabilitySlug, slug))
       .limit(1)
       .for("update");
 
@@ -278,7 +278,7 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
       // First failure — non-retryable trips immediately, transient stays closed
       if (!retryable) {
         const nextRetry = new Date(now.getTime() + MAX_BACKOFF_MINUTES * 60_000);
-        await tx.insert(capabilityHealth).values({
+        await tx.insert(sourceHealth).values({
           capabilitySlug: slug,
           state: "open",
           consecutiveFailures: 1,
@@ -293,7 +293,7 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
         return { action: "first-tripped-immediate" as const };
       }
 
-      await tx.insert(capabilityHealth).values({
+      await tx.insert(sourceHealth).values({
         capabilitySlug: slug,
         state: "closed",
         consecutiveFailures: 1,
@@ -324,7 +324,7 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
       const nextRetry = new Date(now.getTime() + backoff * 60_000);
 
       await tx
-        .update(capabilityHealth)
+        .update(sourceHealth)
         .set({
           state: "open",
           consecutiveFailures: newConsecutive,
@@ -335,21 +335,21 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
           backoffMinutes: backoff,
           updatedAt: now,
         })
-        .where(eq(capabilityHealth.id, health.id));
+        .where(eq(sourceHealth.id, health.id));
 
       return { action: "tripped" as const, newConsecutive, backoff };
     }
 
     // Increment failure count but stay closed (transient failure, below threshold)
     await tx
-      .update(capabilityHealth)
+      .update(sourceHealth)
       .set({
         consecutiveFailures: newConsecutive,
         totalFailures: newTotalFailures,
         lastFailureAt: now,
         updatedAt: now,
       })
-      .where(eq(capabilityHealth.id, health.id));
+      .where(eq(sourceHealth.id, health.id));
 
     return { action: "incremented" as const };
   });
@@ -403,8 +403,8 @@ export async function recordTestEvidence(slug: string): Promise<void> {
   const result = await db.transaction(async (tx) => {
     const [health] = await tx
       .select()
-      .from(capabilityHealth)
-      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .from(sourceHealth)
+      .where(eq(sourceHealth.capabilitySlug, slug))
       .limit(1)
       .for("update");
 
@@ -415,7 +415,7 @@ export async function recordTestEvidence(slug: string): Promise<void> {
     if (state === "half_open" || (state === "open" && health.nextRetryAt && now >= health.nextRetryAt)) {
       // Retry window passed or already half_open — close immediately
       await tx
-        .update(capabilityHealth)
+        .update(sourceHealth)
         .set({
           state: "closed",
           consecutiveFailures: 0,
@@ -425,7 +425,7 @@ export async function recordTestEvidence(slug: string): Promise<void> {
           nextRetryAt: null,
           updatedAt: now,
         })
-        .where(eq(capabilityHealth.id, health.id));
+        .where(eq(sourceHealth.id, health.id));
 
       return { action: "recovered" as const, previousState: state };
     }
@@ -433,9 +433,9 @@ export async function recordTestEvidence(slug: string): Promise<void> {
     // Open but still in backoff — move to half_open so next call goes through
     if (state === "open") {
       await tx
-        .update(capabilityHealth)
+        .update(sourceHealth)
         .set({ state: "half_open", updatedAt: now })
-        .where(eq(capabilityHealth.id, health.id));
+        .where(eq(sourceHealth.id, health.id));
 
       return { action: "half-opened" as const };
     }
@@ -485,7 +485,7 @@ export async function getAllHealth(): Promise<
 > {
   const db = getDb();
 
-  const rows = await db.select().from(capabilityHealth);
+  const rows = await db.select().from(sourceHealth);
 
   return rows.map((r) => ({
     capability_slug: r.capabilitySlug,

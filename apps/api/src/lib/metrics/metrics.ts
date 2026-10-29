@@ -344,7 +344,7 @@ export interface PlatformHealth { breakersOpen: number; active: number; withheld
  */
 export async function platformHealth(): Promise<Measurement<PlatformHealth>> {
   const r = await rows<{ breakers: string; active: string; withheld_from_catalog: string }>(sql`
-    SELECT (SELECT COUNT(*)::int FROM capability_health WHERE state <> 'closed') AS breakers,
+    SELECT (SELECT COUNT(*)::int FROM source_health WHERE state <> 'closed') AS breakers,
            (SELECT COUNT(*)::int FROM capabilities WHERE is_active) AS active,
            (SELECT COUNT(*)::int FROM capabilities
              WHERE is_active AND NOT visible) AS withheld_from_catalog`);
