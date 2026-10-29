@@ -354,7 +354,11 @@ async function main() {
           err: err instanceof Error ? err.message : String(err) }, "sqs-retirement-beat-failed"),
         shuttingDown: isShuttingDown,
       });
-    }).catch((err: unknown) => console.warn("[sqs-retirement] heartbeat not started:", err));
+    }).catch(async (err: unknown) => {
+      const { log } = await import("./lib/log.js");
+      log.warn({ label: "sqs-retirement-beat-not-started", err: err instanceof Error ? err.message : String(err) },
+        "sqs-retirement-beat-not-started");
+    });
 
     // Pre-warm suggest catalog after env + server are ready
     warmCatalog().catch((err: Error) =>
