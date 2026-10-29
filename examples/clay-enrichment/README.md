@@ -54,9 +54,9 @@ The exact configuration of both columns is in [`recipes.json`](recipes.json).
    ```
 
 6. Under the run settings, set it to run only when **Country code** and
-   **Company number** are not empty, so empty rows are not sent. Set the column's rate limit to 1 request a second or lower. Strale
-   allows 60 calls a minute from one IP address before it checks the key,
-   and Clay may send many users' rows from the same addresses.
+   **Company number** are not empty, so empty rows are not sent. Set the column's rate limit to 10 requests a second or lower. Strale
+   limits calls with a valid key to 10 a second per key, whichever IP
+   address Clay sends them from.
 7. Run it on one row first. When the response appears, add these fields as
    columns:
 
@@ -119,7 +119,7 @@ Strale answers with a JSON error that Clay shows in the cell:
 | `execution_failed` | the tool could not answer this row, for example a number in the wrong format, an unsupported country or a registry that is down; you are not charged | `details.error` says why; retry later if `details.retryable` is true |
 | `invalid_input` | the request itself is malformed, for example a missing input | compare the body with the recipe |
 | `budget_exceeded` | the tool now costs more than the recipe's price cap | check the new price, then raise `max_price_cents` if you accept it |
-| `rate_limited` | more than 60 calls a minute from one IP address, or 10 a second on one key | lower the column's rate limit in Clay's run settings |
+| `rate_limited` | more than 10 calls a second on one key (or, without a valid key, 60 a minute from one IP address) | lower the column's rate limit in Clay's run settings |
 
 Errors also carry a `details.fix` or `details.next_step` line saying what to do.
 

@@ -11,7 +11,7 @@ import { apiError } from "./errors.js";
 // abuse-class limits (signup, auth) MUST use lib/db-rate-limit.ts instead.
 //
 // Legitimate current users (sub-minute, burst-level):
-//   - POST /v1/do                        rateLimitByIp(60, 60_000)
+//   - POST /v1/do                        60/min per IP (anonymous or invalid key)
 //   - POST /v1/do                        rateLimitByKey(10, 1000)
 //   - /mcp all methods                   rateLimitByIp(60, 60_000)
 //   - /a2a all methods                   rateLimitByIp(60, 60_000)
@@ -143,6 +143,44 @@ function isPlausibleIp(value: string): boolean {
   return IPV4_RE.test(value) || IPV6_RE.test(value);
 }
 
+/** The client IP the limiter keys on, or null when it cannot be detected. */
+function rateLimitIp(c: Context): string | null {
+  // Extract IP from proxy headers, validating format to prevent
+  // header spoofing from creating arbitrary rate-limit buckets.
+  const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+  const cfIp = c.req.header("cf-connecting-ip")?.trim();
+  const realIp = c.req.header("x-real-ip")?.trim();
+  // NOTE: When running behind Railway's proxy, x-forwarded-for is set by
+  // the load balancer and cannot be spoofed by clients. If deployed
+  // behind a different proxy, configure trusted proxy headers accordingly.
+  if (forwarded && isPlausibleIp(forwarded)) return forwarded;
+  if (cfIp && isPlausibleIp(cfIp)) return cfIp;
+  if (realIp && isPlausibleIp(realIp)) return realIp;
+  return null;
+}
+
+/**
+ * Count one request against the caller's IP bucket. Returns the 429 response
+ * when the bucket is full, null when the request may proceed.
+ */
+export function consumeIpRate(c: Context, maxRequests: number, windowMs: number, scope?: string): Response | null {
+  const ip = rateLimitIp(c);
+  // Skip rate limiting if IP can't be detected — don't share a single
+  // "unknown" bucket across all unidentified users.
+  if (ip === null) return null;
+
+  // A scope gives a route its own bucket instead of sharing the IP's.
+  const result = checkRate(scope ? `${scope}:ip:${ip}` : `ip:${ip}`, maxRequests, windowMs);
+  setRateLimitHeaders(c, result);
+  if (result.allowed) return null;
+  return c.json(
+    apiError("rate_limited", `Rate limit exceeded. Try again in ${result.retryAfterSeconds} seconds.`, {
+      retry_after_seconds: result.retryAfterSeconds,
+    }),
+    429,
+  );
+}
+
 /**
  * Rate limit by IP address. For unauthenticated endpoints.
  * @param maxRequests - max requests per window
@@ -150,42 +188,8 @@ function isPlausibleIp(value: string): boolean {
  */
 export function rateLimitByIp(maxRequests: number, windowMs: number, scope?: string) {
   return async (c: Context, next: Next) => {
-    // Extract IP from proxy headers, validating format to prevent
-    // header spoofing from creating arbitrary rate-limit buckets.
-    const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-    const cfIp = c.req.header("cf-connecting-ip")?.trim();
-    const realIp = c.req.header("x-real-ip")?.trim();
-
-    let ip = "unknown";
-    if (forwarded && isPlausibleIp(forwarded)) {
-      ip = forwarded;
-    } else if (cfIp && isPlausibleIp(cfIp)) {
-      ip = cfIp;
-    } else if (realIp && isPlausibleIp(realIp)) {
-      ip = realIp;
-    }
-    // NOTE: When running behind Railway's proxy, x-forwarded-for is set by
-    // the load balancer and cannot be spoofed by clients. If deployed
-    // behind a different proxy, configure trusted proxy headers accordingly.
-
-    // Skip rate limiting if IP can't be detected — don't share a single
-    // "unknown" bucket across all unidentified users.
-    if (ip === "unknown") return next();
-
-    // A scope gives a route its own bucket instead of sharing the IP's.
-    const key = scope ? `${scope}:ip:${ip}` : `ip:${ip}`;
-    const result = checkRate(key, maxRequests, windowMs);
-    setRateLimitHeaders(c, result);
-
-    if (!result.allowed) {
-      return c.json(
-        apiError("rate_limited", `Rate limit exceeded. Try again in ${result.retryAfterSeconds} seconds.`, {
-          retry_after_seconds: result.retryAfterSeconds,
-        }),
-        429,
-      );
-    }
-
+    const limited = consumeIpRate(c, maxRequests, windowMs, scope);
+    if (limited) return limited;
     return next();
   };
 }
