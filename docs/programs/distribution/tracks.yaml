@@ -121,10 +121,14 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Build and test five typed actions as general business tools; check
-      listing text against claims.yaml and pass DEC-20260422-A before publishing
-      under DEC-20261027-B. Hold compliance targeting per §9 item 8; measure
-      installs and weekly repeat callers.
+    next_action: zapier-strale 0.2.0 has five visible fixed actions (company
+      lookup, EU VAT, IBAN, email, name screening), offline tests and the
+      DEC-20260422-A preflight; the two non-public hidden actions were removed.
+      Waiting on Petter to register and push the app from his Zapier account,
+      run one live Zap per action and submit for review, following
+      handoff/_general/from-code/2026-10-29-zapier-general-business-actions.md.
+      After publishing, report installs and weekly repeat callers with the
+      queries in that handoff against the D5 thresholds.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Integration publication and contract verification are recorded.
