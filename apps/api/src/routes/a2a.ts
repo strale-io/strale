@@ -24,6 +24,7 @@ import { authenticateApiKey } from "../lib/api-keys.js";
 import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { getClientIp } from "../lib/middleware.js";
+import { readBearer } from "../lib/bearer-placeholder.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import type { AppEnv } from "../types.js";
@@ -566,10 +567,11 @@ async function handleMessageSend(
   }
 
   // Auth: pass through if present, or omit for free-tier
-  const authHeader = c.req.header("Authorization");
+  // An unexpanded placeholder is not forwarded, so it reads as no key.
+  const bearer = readBearer(c.req.header("Authorization"), c.req.path);
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (authHeader?.startsWith("Bearer ")) {
-    headers.Authorization = authHeader;
+  if (bearer !== null) {
+    headers.Authorization = `Bearer ${bearer}`;
   }
   // WP6: forward the caller's idempotency key. This rail proxies to /v1/do,
   // which supports idempotency — but only Content-Type and Authorization were
@@ -649,7 +651,7 @@ async function handleMessageSend(
       let helpText = String(errorMsg);
       const fix = (data.details as Record<string, unknown> | undefined)?.fix;
       if (typeof fix === "string") helpText += ` ${fix}`;
-      if (errorCode === "unauthorized" && !authHeader) {
+      if (errorCode === "unauthorized" && bearer === null) {
         helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, create an account; trial credits are available where eligible at https://strale.dev";
       }
 
@@ -752,8 +754,8 @@ async function handleTasksGet(
   }
 
   // Auth required
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const apiKey = readBearer(c.req.header("Authorization"), c.req.path);
+  if (apiKey === null) {
     return c.json({
       jsonrpc: "2.0",
       error: { data: { details: {"fix":"Send a valid API key in the Authorization: Bearer <api_key> header."} },
@@ -766,7 +768,6 @@ async function handleTasksGet(
   }
 
   // Resolve API key to user for ownership check
-  const apiKey = authHeader.slice(7);
   const user = await resolveApiKeyToUser(apiKey);
   if (!user) {
     return c.json({

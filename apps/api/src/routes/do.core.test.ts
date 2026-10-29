@@ -167,6 +167,9 @@ vi.mock("../db/index.js", () => {
 });
 
 vi.mock("../lib/matching.js", () => ({ matchCapability: vi.fn() }));
+// The free-tier allowance's DB counters are not modelled here; the anonymous
+// free-tier tests assert only that the request reached that branch unkeyed.
+vi.mock("../lib/free-tier-allowance.js", () => ({ enforceFreeTierAllowance: vi.fn(async () => undefined) }));
 
 vi.mock("../capabilities/index.js", () => ({
   getExecutor: vi.fn(),
@@ -453,6 +456,7 @@ import { doRoute } from "./do.js";
 import { matchCapability } from "../lib/matching.js";
 import { isX402Configured, build402Response } from "../lib/x402-gateway.js";
 import { resetFreeTierCache } from "../lib/free-tier.js";
+import { enforceFreeTierAllowance } from "../lib/free-tier-allowance.js";
 import { getExecutor } from "../capabilities/index.js";
 
 const mockMatchCapability = matchCapability as unknown as ReturnType<typeof vi.fn>;
@@ -985,6 +989,85 @@ describe("POST /v1/do — anonymous, task-based, paid capability", () => {
 
     expect(executorSpy).not.toHaveBeenCalled();
     expect(mocks.dbTransactionCalls).toBe(0);
+  });
+});
+
+// ─── Unexpanded placeholder Authorization header ───────────────────────────
+//
+// Directory and integration configs ship `Authorization: Bearer
+// ${STRALE_API_KEY}`. A caller without a key sent the template as written and
+// was refused with "Invalid API key format" before the route could serve a free
+// tool or quote an x402 price. Each case below compares the placeholder request
+// with the same request carrying no Authorization header.
+
+const PLACEHOLDER_HEADERS = ["Bearer ${STRALE_API_KEY}", "Bearer <your-key>", "Bearer YOUR_API_KEY"];
+
+describe("POST /v1/do — placeholder Authorization reads as no key", () => {
+  async function anonymousCall(header: string | undefined, body: Record<string, unknown>) {
+    const headers: Record<string, string> = { "content-type": "application/json", "x-forwarded-for": "203.0.113.9" };
+    if (header !== undefined) headers.Authorization = header;
+    const res = await makeApp().request("/v1/do", { method: "POST", headers, body: JSON.stringify(body) });
+    return { status: res.status, body: await res.json() };
+  }
+
+  it.each(PLACEHOLDER_HEADERS)("serves a free-tier capability anonymously with %j", async (header) => {
+    resetFreeTierCache();
+    const free = { ...CAPABILITY_FIXTURE, slug: "iban-validate", priceCents: 0, isFreeTier: true };
+    mocks.outerSelectQueue.push([{ isFreeTier: true, isActive: true, priceCents: 0, name: free.name, x402Enabled: false, marketplaceEligible: true, visible: true, lifecycleState: "active" }]);
+    mockMatchCapability.mockResolvedValue({ capability: free });
+    const executorFn = vi.fn(async () => ({ output: { valid: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+    mockGetExecutor.mockReturnValue(executorFn);
+
+    const res = await anonymousCall(header, { capability_slug: "iban-validate", inputs: { iban: "x" } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.result.output).toEqual({ valid: true });
+    expect(executorFn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(enforceFreeTierAllowance)).toHaveBeenCalled();
+    // No key lookup: the users table was never read.
+    expect(mocks.recordedSelects.some((r) => r.table === users)).toBe(false);
+    expect(mocks.dbTransactionCalls).toBe(0);
+  });
+
+  it.each(PLACEHOLDER_HEADERS)("quotes the same x402 402 as no header for a paid capability with %j", async (header) => {
+    const payable = { ...CAPABILITY_FIXTURE, x402Enabled: true, marketplaceEligible: true };
+    const body = { task: "do the paid thing", inputs: { value: "x" }, max_price_cents: 100 };
+    const run = async (h: string | undefined) => {
+      resetFreeTierCache();
+      mockMatchCapability.mockResolvedValue({ capability: payable });
+      mockGetExecutor.mockReturnValue(vi.fn());
+      vi.mocked(isX402Configured).mockReturnValue(true);
+      vi.mocked(build402Response).mockReturnValue({ body: { x402Version: 1, error: "Payment required." } } as any);
+      return anonymousCall(h, body);
+    };
+    const none = await run(undefined);
+    const placeholder = await run(header);
+    expect(none.status).toBe(402);
+    expect(placeholder).toEqual(none);
+    expect(mocks.dbTransactionCalls).toBe(0);
+  });
+
+  it.each(PLACEHOLDER_HEADERS)("answers the same 401 as no header when x402 is off, with %j", async (header) => {
+    const body = { task: "do the paid thing", inputs: { value: "x" }, max_price_cents: 100 };
+    const freeRows = [{ slug: "dns-lookup", priceCents: 0, description: "d", isActive: true, visible: true, lifecycleState: "active" }];
+    const run = async (h: string | undefined) => {
+      resetFreeTierCache();
+      mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+      mockGetExecutor.mockReturnValue(vi.fn());
+      vi.mocked(isX402Configured).mockReturnValue(false);
+      mocks.outerSelectQueue.push(freeRows);
+      return anonymousCall(h, body);
+    };
+    const none = await run(undefined);
+    const placeholder = await run(header);
+    expect(none.status).toBe(401);
+    expect(placeholder).toEqual(none);
+  });
+
+  it("still refuses a malformed non-placeholder key", async () => {
+    const res = await anonymousCall("Bearer not-a-key", { capability_slug: "iban-validate", inputs: { iban: "x" } });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe("Invalid API key format.");
   });
 });
 
