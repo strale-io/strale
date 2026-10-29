@@ -12,14 +12,18 @@ tracks:
     next_action: Done. PRs 774, 811 and 813 shipped the watches; on 2026-10-29
       scripts/production-watch/demonstrate-alerts.mjs ran each one's real alerting
       code against a forced mismatch up to delivery (deploy SHA, stale job,
-      strale-mcp 0 cap trust, x402 broad and one-buyer drops) and all four fired;
-      live reads showed production on main's commit, 25 of 25 jobs fresh. Bounded
-      retry is covered by scripts/production-watch/watch.test.mjs. Follow-up
-      outside the exit criteria, waiting on Petter setting BUS_GITHUB_TOKEN and
-      BUS_REPO in Railway (ask 6491949026), with bus delivery a no-op until
-      then (proven in the receipt), is to confirm the first real warning lands
-      on channel strale-planning. Railway auto-redeploy token remains Petter's
-      decision.
+      strale-mcp 0 cap trust, x402 broad and one-buyer drops), all four fired
+      on the mismatch and stayed silent on healthy controls; live reads showed
+      production on main's commit, 25 of 25 jobs fresh. In production the job
+      watch opened issue 803 (meta-daily stale) at 00:28 and closed it on
+      recovery at 10:48 on 2026-10-29, and the Published MCP contract run
+      40900016312 passed at 16:17 the same day (Stockholm time). Bounded retry
+      is verified by scripts/production-watch/watch.test.mjs only; no real
+      retry has been needed yet. Follow-up outside the exit criteria, waiting
+      on Petter setting BUS_GITHUB_TOKEN and BUS_REPO in Railway (ask
+      6491949026), with bus delivery a no-op until then (proven in the
+      receipt), is to confirm the first real warning lands on channel
+      strale-planning. Railway auto-redeploy token remains Petter's decision.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Merge SHA is checked against production and mismatch alerts are
@@ -27,8 +31,9 @@ tracks:
       - Job freshness, published MCP contract and bounded workflow retry are
         verified.
     evidence:
-      - archive/receipts/2026-10-29-check-h1-alerts.json
+      - archive/receipts/2026-10-29-check-h1-alert-demonstration.json
       - scripts/production-watch/demonstrate-alerts.mjs
+      - scripts/production-watch/watch.test.mjs
       - apps/api/src/jobs/x402-alert-delivery.e2e.test.ts
   - id: T2
     title: "H2: Build and boot the real image"
