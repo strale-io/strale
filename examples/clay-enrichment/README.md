@@ -8,7 +8,7 @@ it was checked.
 | Column recipe | Strale tool | Price per row | Your table needs |
 |---|---|---|---|
 | Company registry status | `company-status-check` | €0.08 | a country code and the company's registry number |
-| EU VAT check | `vat-validate` | €0.02 | a VAT number with its country prefix |
+| VAT check | `vat-validate` | €0.02 | a VAT number with its country prefix |
 
 Prices are the tools' list prices on the day this template was published; each
 recipe also sends a price cap (`max_price_cents`), so a price change can never
@@ -54,17 +54,17 @@ The exact configuration of both columns is in [`recipes.json`](recipes.json).
    ```
 
 6. Under the run settings, set it to run only when **Country code** and
-   **Company number** are not empty, so empty rows are not sent. If you
-   run a large table, keep the column's rate limit at 10 requests a second
-   or lower: that is the limit per Strale key.
+   **Company number** are not empty, so empty rows are not sent. Set the column's rate limit to 1 request a second or lower. Strale
+   allows 60 calls a minute from one IP address before it checks the key,
+   and Clay may send many users' rows from the same addresses.
 7. Run it on one row first. When the response appears, add these fields as
    columns:
 
    | New column | Response field | What it holds |
    |---|---|---|
    | Registry status | `result.output.status` | `active`, `inactive`, `dissolved`, `in_liquidation`, `in_insolvency`, `struck_off` or `unknown` |
-   | Registry status (as published) | `result.output.registry_status_raw` | the registry's own wording |
-   | Registered name | `result.output.company_name` | the name on the register |
+   | Registry status (as published) | `result.output.registry_status_raw` | the registry's own wording; blank if the registry gives none |
+   | Registered name | `result.output.company_name` | the name on the register; blank if the registry gives none |
    | Registry | `result.output.registry.name` | which official register answered |
    | Insolvency checked | `result.output.insolvency.checked` | `true` when an official insolvency source was read for this company |
    | Insolvency notices found | `result.output.insolvency.notices_found` | the number of notices; **blank when Insolvency checked is false** |
@@ -79,7 +79,7 @@ found. Some countries have no connected insolvency source.
 wound up, which includes dormant companies; it does not show that the company
 trades. Countries covered: the error for an unsupported country lists them.
 
-## Column 2: EU VAT check
+## Column 2: VAT check
 
 Same steps, with this body and the **VAT number** column:
 
@@ -103,9 +103,10 @@ Run it only when **VAT number** is not empty, and add:
 | Strale checked at | `result.provenance.fetched_at` | when it was checked |
 | Strale transaction | `result.transaction_id` | the record of this call |
 
-Some EU countries do not publish the name or address through the EU VAT
-service, so those cells can hold a placeholder such as `---`. UK VAT numbers
-are not covered by this tool.
+Some countries do not publish the name or address through their VAT
+service, so those cells can be blank. A repeated check can be answered from
+a recent cached result; *Strale checked at* then shows when it was fetched.
+UK VAT numbers return an error for now.
 
 ## When a row fails
 
@@ -115,11 +116,12 @@ Strale answers with a JSON error that Clay shows in the cell:
 |---|---|---|
 | `unauthorized` | the key is missing or wrong | check the `Authorization` header |
 | `insufficient_balance` | the wallet is empty | top up at strale.dev |
-| `invalid_input` | the number is in the wrong format | the message says which format the country expects |
+| `execution_failed` | the tool could not answer this row, for example a number in the wrong format, an unsupported country or a registry that is down; you are not charged | `details.error` says why; retry later if `details.retryable` is true |
+| `invalid_input` | the request itself is malformed, for example a missing input | compare the body with the recipe |
 | `budget_exceeded` | the tool now costs more than the recipe's price cap | check the new price, then raise `max_price_cents` if you accept it |
-| `rate_limited` | more than 10 calls a second on one key | lower the column's rate limit in Clay's run settings |
+| `rate_limited` | more than 60 calls a minute from one IP address, or 10 a second on one key | lower the column's rate limit in Clay's run settings |
 
-Every error also carries a `details.fix` line saying what to change.
+Errors also carry a `details.fix` or `details.next_step` line saying what to do.
 
 ## What the template sends
 

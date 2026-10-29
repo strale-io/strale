@@ -98,7 +98,7 @@ threads:
     sent_by:
     follow_up_by:
     status: draft
-    note: D3 follow-up rule, which replaces the usual two follow-ups. Set follow_up_by to 45 days after sending; if no answer by then, send one follow-up, then close the row as dropped. Before sending, re-run Coinbase's validator on /x402/v2/vat-validate (POST https://api.cdp.coinbase.com/platform/v2/x402/validate) and send only if it still returns valid true.
+    note: D3 follow-up rule, which replaces the usual two follow-ups. Set follow_up_by to 45 days after sending; if no answer by then, send one follow-up, then close the row as dropped. Before sending, re-run Coinbase's validator on /x402/v2/vat-validate (POST https://api.cdp.coinbase.com/platform/v2/x402/validate) and send only if it still returns valid true. Earlier contact checked, docs/company/coinbase-bazaar-email.md, a draft to Coinbase about indexing withdrawn unsent on 2026-08-15 because its premise was wrong; this row asks about curation, a different question.
     body: |
       Hello CDP team,
 
@@ -112,8 +112,8 @@ threads:
       - Our 402 responses carry serviceName, tags, iconUrl, an input schema and an example
         input in extensions.bazaar. Your validation endpoint returns valid: true
         for, for example, https://api.strale.io/x402/v2/vat-validate.
-      - The core of the library is company-registry and VAT lookups;
-        each answer names its source and when it was fetched.
+      - Our flagship category is official-source company and VAT data; each answer
+        names its source and when it was fetched.
 
       Two questions:
       1. Is there a process for requesting a curation review, and is this the right place

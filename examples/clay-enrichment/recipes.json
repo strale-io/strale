@@ -5,7 +5,7 @@
   "recipes": [
     {
       "id": "vat-check",
-      "title": "EU VAT check",
+      "title": "VAT check",
       "capability_slug": "vat-validate",
       "request": {
         "method": "POST",

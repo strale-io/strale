@@ -188,7 +188,7 @@ tracks:
       - T2
     owner: session
     next_action: "Template and doc built in examples/clay-enrichment (registry
-      status and EU VAT columns, src=clay-template on the URL and X-Strale-Client
+      status and VAT columns, src=clay-template on the URL and X-Strale-Client
       clay-template/1.0.0), checked in CI by npm run clay:test. Start date
       2026-10-29. Baseline zero, since the tag and header first exist with this
       template; exclude test traffic, namely transaction 136f11cb (a free anonymous

@@ -10,7 +10,7 @@ enrichment column.
 | [`kyb-agent-langchain/`](./kyb-agent-langchain) | Python | `langchain-strale`'s `StraleToolkit` — 250+ capabilities as LangChain tools in one call | Strale API key + Anthropic API key |
 | [`compliance-check-claude-sdk/`](./compliance-check-claude-sdk) | TypeScript | `@anthropic-ai/claude-agent-sdk` custom tools wrapping the `straleio` SDK, printing the audit trail | Strale API key + Anthropic API key |
 | [`x402-autonomous-buyer/`](./x402-autonomous-buyer) | TypeScript | Zero-signup pay-per-call access via [x402](https://x402.org) — USDC on Base mainnet | Wallet private key only (no Strale account) |
-| [`clay-enrichment/`](./clay-enrichment) | Config only | Two Clay HTTP API enrichment columns: official registry status and EU VAT check per row | Strale API key |
+| [`clay-enrichment/`](./clay-enrichment) | Config only | Two Clay HTTP API enrichment columns: official registry status and VAT check per row | Strale API key |
 | [`mcp-quickstart/`](./mcp-quickstart) | Config only | `strale-mcp` (npm, stdio) and the hosted `https://api.strale.io/mcp` endpoint for Claude Desktop, Claude Code, Cursor, etc. | Strale API key (free-tier tools work without one) |
 
 Each example has its own `README.md` with prerequisites, install, run, and

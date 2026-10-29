@@ -56,11 +56,11 @@ test("every mapped column is a documented output field", () => {
         const rest = col.path.slice("result.output.".length);
         const top = rest.split(".")[0];
         assert.ok(top in m.output_field_reliability, `${r.id}/${name}: ${top} undocumented`);
+        assert.notEqual(readPath(m.output_schema.example, rest), undefined, `${r.id}/${name}: ${rest} not in example`);
         if (col.conditional) {
           assert.ok(col.conditional.length > 20, `${r.id}/${name}: conditional column needs its note`);
         } else {
           assert.equal(m.output_field_reliability[top], "guaranteed", `${r.id}/${name}: ${top} not guaranteed`);
-          assert.notEqual(readPath(m.output_schema.example, rest), undefined, `${r.id}/${name}: ${rest} not in example`);
         }
       } else {
         assert.notEqual(readPath(envelope, col.path), undefined, `${r.id}/${name}: ${col.path} not in the served envelope`);
