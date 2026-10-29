@@ -235,6 +235,11 @@ Failures outside the caller's control include `details.retryable` and a
 `retryable: false` means unchanged retries will not resolve the error.
 Keep the `transaction_id` for support. Follow idempotency and payment rules
 before retrying: a new payment authorization can create a new paid call.
+An x402 payment is bound to the capability or solution it was first presented
+to. Presenting the same payment for different work returns HTTP 409
+`payment_already_used`; sign a fresh authorization for that tool. A settlement
+that fails or cannot be confirmed after the tool ran returns HTTP 402
+`payment_failed`; check your wallet before signing a fresh authorization.
 
 The TypeScript SDK keeps `StraleError.message` unchanged and retains
 `StraleError.details`; `fix`, `retryable` and `nextStep` expose the corresponding

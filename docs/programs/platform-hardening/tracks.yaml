@@ -68,10 +68,12 @@ tracks:
     owner: session
     next_action: Shipped in PR 779 (sync reserve, execute outside the transaction, capture,
       timeout_seconds) and PR 794 (/v1/do x402 claim, replay and recording
-      parity). Two open hardening items from review, a replayed payment hash
-      used on a different capability of the same price returns the first
-      capability's output (gateway and /v1/do), and a thrown facilitator call on
-      /v1/do still returns the legacy 500 envelope.
+      parity). The two review items close on branch fix/x402-replay-capability-binding,
+      a replayed payment for different work is refused with 409
+      payment_already_used on both rails, and a thrown settlement on /v1/do
+      returns 402 payment_failed. Mark done after merge and the production
+      check in that PR. Out of scope and still open, a thrown settlement on the
+      /x402 gateway returns a plain-text 500.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Reservation and capture regression tests discriminate the repaired money
