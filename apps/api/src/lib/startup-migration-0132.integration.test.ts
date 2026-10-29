@@ -113,7 +113,8 @@ describeMaybe("block 0132 drops the residual SQS schema", () => {
   it("the heartbeat writes both keys and keeps the first one fixed", async () => {
     await setBeats(null, null);
     await recordSqsFieldsRemovedAndServing(db);
-    await db.execute(sql`UPDATE startup_migration_ledger SET applied_at = now() - interval '1 hour' WHERE block = ${SQS_RETIREMENT_MARKER}`);
+    await db.execute(sql`UPDATE startup_migration_ledger SET applied_at = now() - interval '1 hour'
+      WHERE block IN (${SQS_RETIREMENT_MARKER}, ${SQS_RETIREMENT_LAST_BEAT})`);
     await recordSqsFieldsRemovedAndServing(db);
     const rows = (await db.execute(sql`
       SELECT block, applied_at < now() - interval '30 minutes' AS old
