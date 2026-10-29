@@ -15,8 +15,9 @@ guesses at it.
   and the inputs its schema asks for.
 - Read `provenance` in the result before relying on it, and pass it on
   when the result is shown to a person.
-- Paid tools need an API key. Search, the free tools and the read-only
-  tools work without one. Call `strale_getting_started` to see which.
+- Paid tools and `strale_balance` need an API key. Search, the free tools
+  and the info tools (`strale_ping`, `strale_getting_started`,
+  `strale_methodology`, `strale_trust_profile`) work without one.
 - Call `strale_balance` before a run of paid calls.
 
 Do not:

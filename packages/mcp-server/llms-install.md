@@ -20,8 +20,10 @@ Add this entry to the MCP settings file (in Cline: MCP Servers, then
 }
 ```
 
-No API key is needed to start. Search, the free tools and the read-only
-tools work without one.
+No API key is needed to start. Search, the free tools and the info tools
+(`strale_ping`, `strale_getting_started`, `strale_methodology`,
+`strale_trust_profile`) work without one; paid tools and `strale_balance`
+need a key.
 
 ## 2. Check it works
 

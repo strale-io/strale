@@ -31,8 +31,10 @@ Every submission references only these. Each was checked with a live request.
 
 The placeholder finding shapes two submissions: an unexpanded `${VAR}` header
 turns an anonymous caller into a refused one. The Cursor plugin therefore
-ships without a header, and the Docker entry marks the key optional so the
-gateway can omit it. If the server treated a `Bearer ${...}` or `Bearer <...>`
+ships without a header. The Docker entry marks the key optional: Docker's
+gateway (`docker/mcp-gateway` `pkg/mcp/remote.go`) expands an unset
+optional secret to an empty string and sends `Authorization: Bearer `,
+which the server treats as anonymous (checked above). If the server treated a `Bearer ${...}` or `Bearer <...>`
 value as no key, both could carry the header by default; that is an auth-path
 change for a separate batch, not this one.
 
@@ -77,8 +79,8 @@ against `main`.
 - **the account opening the PR must have starred the repository**;
 - agent PRs may add `🤖🤖🤖` to the end of the title for a fast track.
 
-**Diff** (category *Aggregators*, between `Store API` and `Superpowers`,
-README line 236 at commit cloned 2026-10-29):
+**Diff** (category *Aggregators*, directly after the `Store API` entry and before
+`Superpowers`):
 
 ```diff
  - [Store API](https://store-api.com/mcp-guide) `https://store-api.com/mcp`
@@ -162,7 +164,7 @@ PR's head branch):
 2. Replace `servers/strale/server.yaml` and `servers/strale/readme.md`, add
    `servers/strale/tools.json`, commit "Strale: update entry to current
    server", push.
-3. Optionally test with `task catalog -- strale` and
+3. Test (recommended) with `task catalog -- strale` and
    `docker mcp catalog import $PWD/catalogs/strale/catalog.yaml` in Docker
    Desktop: enable it without a key, call `strale_search`; then with a key.
 4. Comment once on the PR:
@@ -299,8 +301,10 @@ financial services and extra verification to crypto-related tools.
 1. Imports resolve: `npx -y strale-mcp@0.2.9` runs and answers; the remote
    config in `llms-install.md` answers. **Pass.**
 2. Approved package: `strale-mcp`, added to the approved list in
-   `docs/governance/protocols/DISTRIBUTION_PR_PREFLIGHT.md` today on the
-   strength of that smoke test. **Pass.**
+   `docs/governance/protocols/DISTRIBUTION_PR_PREFLIGHT.md` by this same
+   change, on the strength of that smoke test. It claims no framework
+   integration (like `straleio`). The PR reviewer should confirm that list
+   change. **Pass, conditional on that.**
 3. Description matches: as above. **Pass.**
 4. Neighbours: the form has no free-text neighbours to match; the text
    follows the README's own example ("briefly explain"). **Pass.**

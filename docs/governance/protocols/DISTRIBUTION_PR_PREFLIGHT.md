@@ -34,7 +34,7 @@ Checkbox:
 - `@strale/sdk` (npm) — generic TypeScript SDK
 
 **Deprecated / yanked** (do NOT reference in new PRs):
-- `strale-semantic-kernel` (npm) — deprecated 2026-10-29: built on `semantic-kernel` on npm, an unofficial community port (`afshinm/semantic-kernel-js`), not Microsoft's
+- `strale-semantic-kernel` (npm) — deprecation decided 2026-10-29; npm flag pending (see `docs/release/directory-submissions/package-housekeeping.md`): built on `semantic-kernel` on npm, an unofficial community port (`afshinm/semantic-kernel-js`), not Microsoft's
 - `pydantic-ai-strale` — yanked 2026-04-22
 - `google-adk-strale` — yanked 2026-04-22
 - `openai-agents-strale` — yanked 2026-04-22

@@ -9,7 +9,7 @@ sanctions and PEP screening, validation and web page reading.
 - **MCP server** (`mcp.json`): Strale's hosted server at
   `https://api.strale.io/mcp`. Nothing to install.
 - **Rule** (`rules/strale-tools.mdc`): tells the agent when to search for a
-  Strale tool and how to read its result. Set to "Agent Decides" by default.
+  Strale tool and how to read its result. Not always applied; the agent applies it when the task fits (Cursor shows it as "Apply Intelligently").
 
 ## Tools
 
@@ -27,7 +27,7 @@ sanctions and PEP screening, validation and web page reading.
 
 ## Using paid tools
 
-Search and the free tools work without a key. For paid tools, get an API key
+Search, the free tools and the info tools work without a key. For paid tools and `strale_balance`, get an API key
 at [strale.dev/signup](https://strale.dev/signup?src=cursor&utm_source=cursor&utm_medium=listing&utm_campaign=distribution-t12)
 and add it as a header in your Cursor MCP settings:
 
