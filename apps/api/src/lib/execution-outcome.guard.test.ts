@@ -39,6 +39,7 @@ const API_SRC = join(import.meta.dirname, "..");
 
 const RAIL_FILES = [
   "lib/do/dispatch.ts",
+  "lib/do/batch.ts",
   "routes/solution-execute.ts",
   "routes/x402-gateway-v2.ts",
 ];
