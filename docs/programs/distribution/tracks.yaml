@@ -92,10 +92,19 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Prepare titles, annotations, no-auth search/free tools and OAuth
-      for paid tools. Once eligible, Petter accepts directory terms for
-      Moonlighter AB and the paid Claude plan at submission time; submit and
-      measure §8 D4 thresholds.
+    next_action: "Connector built (branch feat/claude-connector-directory)
+      at https://api.strale.io/mcp/connector with titled and annotated tools,
+      no-auth search and free tools, no crypto tools or x402 hand-off, and an
+      OAuth 2.1 server mapping sign-in to a capped additional API key.
+      Requirements read 2026-10-29 are in
+      docs/research/2026-10-29-claude-connector-directory-requirements.md and
+      the portal text in docs/claude-connector-listing.md. Waiting on Petter
+      (one ask on needs-founder) to test it as a custom connector, fund a
+      reviewer account, accept the directory terms on a paid plan and
+      submit. After listing, measure §8 D4 from discovery_hits
+      /mcp/connector rows (listed within 45 days; at least 20 Claude tool
+      calls a week by day 90; kill if refused or under 5 a week 30 days
+      after listing)."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Eligible submission records Petter's terms and paid-plan acts.

@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 46 (44 topics with a current answer, 1 historical).
+Total files: 47 (45 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -24,6 +24,7 @@ Total files: 46 (44 topics with a current answer, 1 historical).
 | bg-registry-build-path | [2026-05-07-bg-registry-build-path.md](2026-05-07-bg-registry-build-path.md) | What is the build path for ingesting Bulgaria's BRRA commercial register open data? | 2026-05-07 | 0 |
 | brand-foundation-discovery | [2026-09-05-brand-foundation-discovery.md](2026-09-05-brand-foundation-discovery.md) | What product evidence, existing design work, and reference practices should inform Strale's brand and website program? | 2026-09-05 | 0 |
 | bundesapi-civic-tech-audit | [2026-05-06-bundesapi-civic-tech-audit.md](2026-05-06-bundesapi-civic-tech-audit.md) | Is the bundesAPI civic-tech stack a credible fallback data source for DE Counterparty Assurance if OpenRegister's audit-retention question can't be resolved? | 2026-05-06 | 0 |
+| claude-connector-directory-requirements | [2026-10-29-claude-connector-directory-requirements.md](2026-10-29-claude-connector-directory-requirements.md) | What does Anthropic's Claude connector directory require of a remote MCP server today, and where does Strale's connector stand against each requirement? | 2026-10-29 | 0 |
 | codebase-architecture-review | [2026-10-27-codebase-architecture-review.md](2026-10-27-codebase-architecture-review.md) | How sound are Strale's codebase and architecture (robustness, maintainability, error detection, autonomy, text truthfulness, quality), and which changes give the highest return? | 2026-10-27 | 0 |
 | cy-registry-build-path | [2026-05-07-cy-registry-build-path.md](2026-05-07-cy-registry-build-path.md) | What is the build path for ingesting Cyprus's DRCOR company registry open data? | 2026-05-07 | 0 |
 | delegate-competitive-analysis | [2026-10-23-delegate-competitive-analysis.md](2026-10-23-delegate-competitive-analysis.md) | What does Delegate (dlgt.io) offer, build and say that Strale should add, copy or deliberately avoid, across capabilities, product and go-to-market? | 2026-10-23 | 0 |
