@@ -121,6 +121,7 @@ import { runMigration0129_transactionCost } from "../startup-migrations/blocks/0
 import { runMigration0130_syncWalletHolds } from "../startup-migrations/blocks/0130-sync-wallet-holds.js";
 import { runMigration0131_startupMigrationApplied } from "../startup-migrations/blocks/0131-startup-migration-applied.js";
 import { runMigration0132_dropSqsResidualSchema } from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
+import { runMigration0133_oauthConnector } from "../startup-migrations/blocks/0133-oauth-connector.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -203,6 +204,7 @@ export * from "../startup-migrations/blocks/0129-transaction-cost.js";
 export * from "../startup-migrations/blocks/0130-sync-wallet-holds.js";
 export * from "../startup-migrations/blocks/0131-startup-migration-applied.js";
 export * from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
+export * from "../startup-migrations/blocks/0133-oauth-connector.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -285,6 +287,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0130_syncWalletHolds,
   runMigration0131_startupMigrationApplied,
   runMigration0132_dropSqsResidualSchema,
+  runMigration0133_oauthConnector,
 ];
 
 /**

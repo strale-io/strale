@@ -21,6 +21,7 @@ import { authRoute, agentSignupHandler } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
 import { demandSignalsRoute } from "./routes/demand-signals.js";
 import { mcpRoute } from "./routes/mcp.js";
+import { oauthRoute, oauthWellKnownRoute } from "./routes/oauth.js";
 import { agentCardRoute, a2aRoute } from "./routes/a2a.js";
 import { adminRoute } from "./routes/admin.js";
 import { solutionsRoute } from "./routes/solutions.js";
@@ -237,7 +238,11 @@ app.use("*", async (c, next) => {
   c.header("X-XSS-Protection", "0"); // modern browsers use CSP instead
   c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  c.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  // A route that sets its own policy keeps it (the OAuth consent page needs
+  // inline styles); every other response gets the locked-down default.
+  if (!c.res.headers.has("Content-Security-Policy")) {
+    c.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  }
 });
 
 // CORS — split policy: public read-only endpoints allow all origins,
@@ -349,6 +354,7 @@ app.use("/v1/*", bodyLimit({ maxSize: API_BODY_LIMIT_BYTES }));   // 1 MB for AP
 app.use("/a2a", bodyLimit({ maxSize: A2A_BODY_LIMIT_BYTES }));      // 256 KB for A2A
 app.use("/mcp", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));      // 512 KB for MCP
 app.use("/mcp/*", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));    // narrow MCP entry points (D7)
+app.use("/oauth/*", bodyLimit({ maxSize: 16 * 1024 }));             // Claude connector OAuth (D4)
 
 // The x402 rail had NO body cap at all. Every other entry point above has had
 // one for months; this one was simply never added, so `/x402/:slug` buffered
@@ -679,6 +685,9 @@ export { warmCatalog } from "./lib/suggest.js";
 
 // MCP Streamable HTTP transport (remote MCP access)
 app.route("/mcp", mcpRoute);
+// OAuth for the Claude connector at /mcp/connector (distribution D4).
+app.route("/oauth", oauthRoute);
+app.route("/.well-known", oauthWellKnownRoute);
 
 // A2A protocol — Agent Card discovery + JSON-RPC task endpoint
 app.route("/.well-known/agent-card.json", agentCardRoute);

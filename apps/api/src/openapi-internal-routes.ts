@@ -121,6 +121,18 @@ const groups: Array<{ reason: string; routes: string[] }> = [
   { reason: "MCP protocol transport; its tool and JSON-RPC contract is described by MCP, not REST OpenAPI.", routes: [
     "ALL /mcp",
     "ALL /mcp/:entry",
+    "OPTIONS /mcp/connector",
+    "ALL /mcp/connector",
+  ] },
+  { reason: "OAuth 2.1 authorization server for the Claude connector; its contract is RFC 6749, 7591, 7009, 8414 and 9728, advertised in its own discovery documents.", routes: [
+    "ALL /oauth/*",
+    "GET /oauth/authorize",
+    "POST /oauth/authorize",
+    "POST /oauth/token",
+    "POST /oauth/register",
+    "POST /oauth/revoke",
+    "GET /.well-known/oauth-authorization-server",
+    "GET /.well-known/oauth-protected-resource/mcp/connector",
   ] },
 ];
 export const internalRoutes = groups.flatMap(({ reason, routes }) => routes.map(route => ({ route, reason })));

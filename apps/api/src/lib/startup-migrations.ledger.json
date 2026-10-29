@@ -1023,6 +1023,14 @@
         "capabilities.trend"
       ],
       "sha256": "971a8dd1ccc5f7bab0b79ebf3c23cdfdd06cd429722d994a4bd10d188415019a"
+    },
+    {
+      "id": "M076",
+      "function": "runMigration0133_oauthConnector",
+      "title": "OAuth for the Claude connector (distribution D4)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "504fa3fa960fd0e66c8dbcce88cb8372c96427b0091f43c806f2fc49a9409f1c"
     }
   ],
   "known_overlaps": [

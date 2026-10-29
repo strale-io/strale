@@ -148,7 +148,7 @@ function isPlausibleIp(value: string): boolean {
  * @param maxRequests - max requests per window
  * @param windowMs - window duration in ms
  */
-export function rateLimitByIp(maxRequests: number, windowMs: number) {
+export function rateLimitByIp(maxRequests: number, windowMs: number, scope?: string) {
   return async (c: Context, next: Next) => {
     // Extract IP from proxy headers, validating format to prevent
     // header spoofing from creating arbitrary rate-limit buckets.
@@ -172,7 +172,8 @@ export function rateLimitByIp(maxRequests: number, windowMs: number) {
     // "unknown" bucket across all unidentified users.
     if (ip === "unknown") return next();
 
-    const key = `ip:${ip}`;
+    // A scope gives a route its own bucket instead of sharing the IP's.
+    const key = scope ? `${scope}:ip:${ip}` : `ip:${ip}`;
     const result = checkRate(key, maxRequests, windowMs);
     setRateLimitHeaders(c, result);
 

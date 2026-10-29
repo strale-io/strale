@@ -107,7 +107,30 @@ export interface StraleClientOptions {
   src?: string;
   version?: string;
   onFunnelEvent?: (event: McpFunnelEvent) => void;
+  /**
+   * Claude connector mode (distribution D4, /mcp/connector). Paid tools ask
+   * the user to connect their Strale account (OAuth) instead of offering the
+   * x402 hand-off, crypto tools are left out (the directory does not
+   * generally allow cryptocurrency software), and results carry no
+   * instructions to call further tools.
+   */
+  connector?: boolean;
 }
+
+// Crypto tools the connector leaves out: every web3 tool plus the crypto
+// tools filed under other categories.
+const CONNECTOR_EXCLUDED_SLUGS = new Set([
+  "bitcoin-address-validate", "dogecoin-address-validate", "eth-address-validate",
+  "solana-address-validate", "tron-address-validate", "xrp-address-validate", "crypto-price",
+]);
+
+/** True when the connector must not offer this tool or bundle. */
+export function isConnectorExcluded(slug: string, category?: string | null): boolean {
+  return CONNECTOR_EXCLUDED_SLUGS.has(slug) || (category ?? "").toLowerCase() === "web3";
+}
+
+const CONNECT_ACCOUNT_FIX =
+  "Connect your Strale account to this connector (Claude shows a Connect button), or add an API key from https://strale.dev/signup.";
 
 /** Origin for URLs the caller is told to use. */
 function publicOrigin(opts: StraleClientOptions): string {
@@ -304,7 +327,28 @@ export async function executeCapability(
   const cap = capabilities?.find((c) => c.slug === slug);
   const isFreeTier = cap?.is_free_tier ?? FREE_TIER_SLUGS.includes(slug);
 
+  if (opts.connector && isConnectorExcluded(slug, cap?.category)) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          error: `'${slug}' is not available in this connector.`,
+          details: { fix: "Call strale_search to find an available tool." },
+        }),
+      }],
+    };
+  }
+
   if (!opts.apiKey) {
+    if (!isFreeTier && opts.connector) {
+      emitFunnelEvent(opts, { type: "auth_rejected", tool, slug });
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ error: "Paid tools need a connected Strale account.", details: { fix: CONNECT_ACCOUNT_FIX } }),
+        }],
+      };
+    }
     if (!isFreeTier) {
       emitFunnelEvent(opts, { type: "auth_rejected", tool, slug });
       return {
@@ -378,7 +422,9 @@ export async function executeCapability(
           type: "text",
           text: JSON.stringify({
             error: typeof (data as any).message === "string" ? (data as any).message : "Free-tier rate limit reached.",
-            fix: typeof details?.fix === "string" && details.fix.includes("https://strale.dev/signup")
+            fix: opts.connector
+              ? `The free allowance is shared by everyone calling from the same network address. ${CONNECT_ACCOUNT_FIX} Free tools then run without the shared allowance.`
+              : typeof details?.fix === "string" && details.fix.includes("https://strale.dev/signup")
               ? details.fix
               : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for paid access and send an API key.`,
             ...(details ? { details } : {}),
@@ -443,7 +489,7 @@ export async function executeCapability(
     `Call strale_trust_profile with slug "${slug}" to see how this source is tested and evidenced.`,
     "Call strale_search to find related capabilities.",
   ];
-  if (nextSteps.length > 0) meta.next_steps = nextSteps;
+  if (nextSteps.length > 0 && !opts.connector) meta.next_steps = nextSteps;
 
   return {
     content: [
@@ -556,6 +602,14 @@ export function registerStraleTools(
   trustData?: Map<string, TrustBatchEntry>,
   solutionTrustData?: Map<string, SolutionTrustEntry>,
 ): void {
+  // strale_execute looks categories up in the full list, so an excluded slug
+  // is refused by category even though search no longer shows it.
+  const allCapabilities = capabilities;
+  if (opts.connector) {
+    capabilities = capabilities.filter((c) => !isConnectorExcluded(c.slug, c.category));
+    solutions = solutions.filter((s) => !isConnectorExcluded(s.slug, s.category));
+  }
+
   // Meta-tool: strale_ping (no auth, zero I/O)
   server.registerTool(
     "strale_ping",
@@ -575,7 +629,7 @@ export function registerStraleTools(
               status: "ok",
               server: "strale-mcp",
               version: opts.version ?? "unknown",
-              tools_registered: 9, // UPDATE if tools are added/removed
+              tools_registered: opts.connector ? 8 : 9, // UPDATE if tools are added/removed
               capabilities_available: capabilities.length,
               solutions_available: solutions.length,
               timestamp: new Date().toISOString(),
@@ -593,7 +647,9 @@ export function registerStraleTools(
       title: "Get started with Strale",
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
-        "Explains how to start using Strale and what is available without credentials. Call this on first connection. Returns the current free-tier capability list with example inputs, the pay-per-call (x402) route that needs no signup, and how to reach the full registry. No API key required.",
+        opts.connector
+          ? "Explains how to start using Strale and what is available without connecting an account. Use it when the user asks what Strale offers or how to begin. Returns the current free-tier tool list with example inputs and how paid tools are unlocked. No account needed."
+          : "Explains how to start using Strale and what is available without credentials. Call this on first connection. Returns the current free-tier capability list with example inputs, the pay-per-call (x402) route that needs no signup, and how to reach the full registry. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -618,10 +674,16 @@ export function registerStraleTools(
         if (data?.capability_counts?.free_tier_slugs?.length) {
           freeSlugs = data.capability_counts.free_tier_slugs;
         }
+        if (opts.connector) {
+          // The live catalog count includes tools the connector leaves out.
+          capabilityCount = capabilities.length || null;
+          solutionCount = solutions.length || null;
+        }
       } catch {
         // Fall through to the shipped constants — a first-contact response
         // that works with slightly stale counts beats one that errors.
       }
+      if (opts.connector) freeSlugs = freeSlugs.filter((slug) => !isConnectorExcluded(slug));
 
       const EXAMPLES: Record<string, Record<string, unknown>> = {
         "email-validate": { email: "test@example.com" },
@@ -632,6 +694,28 @@ export function registerStraleTools(
         "bitcoin-address-validate": { address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
         "eth-address-validate": { address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" },
       };
+
+      if (opts.connector) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              welcome:
+                "Strale is a library of pay-per-call tools: company registry lookups, VAT and IBAN checks, sanctions and PEP screening, web page reading and more" +
+                (capabilityCount ? `. ${capabilityCount} tools` : "") +
+                (solutionCount ? ` and ${solutionCount} bundles` : "") +
+                " are available here.",
+              free_capabilities: freeSlugs.map((slug) => ({
+                slug,
+                ...(EXAMPLES[slug] ? { example_input: EXAMPLES[slug] } : {}),
+              })),
+              free_tools: "The tools above run without a connected account, within a monthly free allowance (GET /v1/platform/facts, static.free_tier_monthly_limit).",
+              paid_tools: `Paid tools are priced per call in EUR and debit your Strale wallet. ${CONNECT_ACCOUNT_FIX}`,
+              find_tools: "strale_search finds tools by keyword and lists each one's inputs and price.",
+            }, null, 2),
+          }],
+        };
+      }
 
       return {
         content: [
@@ -670,10 +754,10 @@ export function registerStraleTools(
   server.registerTool(
     "strale_execute",
     {
-      title: "Execute a paid tool",
+      title: "Run a Strale tool",
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
       description:
-        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
+        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Inputs follow the capability's own schema, which strale_search lists; the API is documented at https://strale.dev/docs. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -698,7 +782,7 @@ export function registerStraleTools(
         slug,
         inputs as Record<string, unknown>,
         { ...opts, maxPriceCents: max_price_cents ?? opts.maxPriceCents },
-        capabilities,
+        allCapabilities,
       );
     },
   );
@@ -761,7 +845,10 @@ export function registerStraleTools(
             };
 
             // Map typeahead results to the strale_search response format
-            const results = data.results.map((r) => {
+            const visible = opts.connector
+              ? data.results.filter((r) => !isConnectorExcluded(r.slug, r.category))
+              : data.results;
+            const results = visible.map((r) => {
               const base: Record<string, unknown> = {
                 type: r.type,
                 slug: r.slug,
@@ -808,10 +895,10 @@ export function registerStraleTools(
                     {
                       query,
                       category: null,
-                      total_matches: data.total,
+                      total_matches: opts.connector ? visible.length : data.total,
                       offset: skip,
                       showing: page.length,
-                      has_more: data.total > skip + page.length,
+                      has_more: (opts.connector ? visible.length : data.total) > skip + page.length,
                       results: page,
                       tip: "Use strale_execute to run any capability. Use strale_trust_profile for current test and availability signals.",
                     },
@@ -945,7 +1032,9 @@ export function registerStraleTools(
           content: [
             {
               type: "text" as const,
-              text: "API key required. For stdio: set STRALE_API_KEY env var. For HTTP: pass Authorization: Bearer sk_live_... header.",
+              text: opts.connector
+                ? `Reading the balance needs a connected Strale account. ${CONNECT_ACCOUNT_FIX}`
+                : "API key required. For stdio: set STRALE_API_KEY env var. For HTTP: pass Authorization: Bearer sk_live_... header.",
             },
           ],
         };
@@ -1011,7 +1100,10 @@ API-key calls expose transaction records through strale_transaction. Audit acces
 Live catalogue facts: https://api.strale.io/v1/platform/facts
 Public methodology: https://strale.dev/trust/methodology`;
 
-      return { content: [{ type: "text" as const, text: methodologyText }] };
+      const text = opts.connector
+        ? methodologyText.replace(" Eligible tools can also be paid through x402 without a Strale account.", "")
+        : methodologyText;
+      return { content: [{ type: "text" as const, text }] };
     },
   );
 
@@ -1197,7 +1289,10 @@ Public methodology: https://strale.dev/trust/methodology`;
     },
   );
 
-  // Web3 Assurance — on-chain counterparty assurance (sister product to Payee Assurance)
+  // Web3 Assurance — on-chain counterparty assurance (sister product to Payee Assurance).
+  // Not in the Claude connector: the directory does not generally allow
+  // cryptocurrency software.
+  if (opts.connector) return;
   server.registerTool(
     "strale_web3_assurance",
     {
