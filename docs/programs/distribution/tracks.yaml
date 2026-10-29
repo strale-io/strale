@@ -246,12 +246,13 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Review and deploy the prepared monthly allowance; verify the
-      platform facts value and free-call headers, then update the sibling frontend.
-      Record rollout date and review free callers plus signup and paid conversions
-      weekly with commercial-brief. Compare against the August base of two callers
-      in 90 days; revert if no rise after 45 days. See the handoff for exact checks.
-    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    next_action: Live since 2026-10-28 (300 calls a month per IP, verified in
+      production 2026-10-29). Each week run commercial-brief with the read-only
+      role and record free callers, signups and paid conversions against the
+      August base of two callers in 90 days. On 2026-12-12 (rollout plus 45 days,
+      Swedish date) revert allowance and copy together if callers have not risen.
+      Merge the strale-frontend copy PR. See the handoff.
+    resume_file: handoff/_general/from-code/2026-10-29-d10-rollout.md
     exit:
       - Monthly allowance and texts match the adopted pricing scope.
       - Free callers and conversions are reported against D10 thresholds.
