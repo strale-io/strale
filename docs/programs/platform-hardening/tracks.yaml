@@ -10,9 +10,14 @@ tracks:
     depends_on: []
     owner: session
     next_action: Production watch shipped in PR 774 (deploy SHA check, job freshness
-      endpoint, strale-mcp contract probe, one scheduled re-run). Remaining for
-      exit, demonstrate a mismatch alert and record the verification. Railway
-      auto-redeploy token remains Petter's decision.
+      endpoint, strale-mcp contract probe, one scheduled re-run). On 2026-10-29
+      PR 811 made the x402 volume watch tell one buyer pausing (warning) from a
+      broad drop (critical), and PR 813 added agent-bus delivery for warnings
+      and criticals, live and dormant until Petter sets BUS_GITHUB_TOKEN and
+      BUS_REPO in Railway. Remaining for exit, demonstrate a mismatch alert and
+      record the verification; once the bus vars are set, confirm a real
+      warning lands on channel strale-planning. Railway auto-redeploy token
+      remains Petter's decision.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Merge SHA is checked against production and mismatch alerts are
