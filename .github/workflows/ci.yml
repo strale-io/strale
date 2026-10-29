@@ -574,6 +574,9 @@ jobs:
       # the future) the same way the other cheap-extras registers are.
       - run: npm run distribution:check
       - run: npm run distribution:test
+      # Clay HTTP template (distribution D9): recipes match the tools'
+      # documented inputs and outputs, and the sample table maps.
+      - run: npm run clay:test
       # Repo-native digest priority readers (M3 batch 2, T6). Pure-function
       # tests only here (parser, 14-day split, handoff window, comparison,
       # workflow reachability) -- the shadow comparison itself runs daily
