@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 48 (46 topics with a current answer, 1 historical).
+Total files: 49 (47 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -44,6 +44,7 @@ Total files: 48 (46 topics with a current answer, 1 historical).
 | lu-registry-build-path | [2026-05-07-lu-registry-build-path.md](2026-05-07-lu-registry-build-path.md) | What is the build path for Luxembourg's LBR company registry, given no free API and a paid enterprise-only tier? | 2026-05-07 | 0 |
 | mt-registry-build-path | [2026-05-06-mt-registry-build-path.md](2026-05-06-mt-registry-build-path.md) | What is the build path for Malta's company registry now that the Malta Business Registry has launched paid API packages? | 2026-05-06 | 0 |
 | nl-registry-build-path-verify | [2026-05-07-nl-registry-build-path-verify.md](2026-05-07-nl-registry-build-path-verify.md) | Does the chosen NL registry data path (Company.info) still hold up under a fresh technical-viability probe, compared against the KVK direct API? | 2026-05-07 | 0 |
+| open-places-data-licences | [2026-10-29-open-places-data-licences.md](2026-10-29-open-places-data-licences.md) | May Strale resell per-call place and local-business search results from Overture Maps Places and Foursquare Open Source Places, and which serving route needs no new paid vendor or account? | 2026-10-29 | 0 |
 | openapi-com-production-eval | [2026-05-06-openapi-com-phase-b-production.md](2026-05-06-openapi-com-phase-b-production.md) | Which countries does Openapi.com's production API cover, at what field depth and latency, among Strale's gap and identity-only jurisdictions? | 2026-05-06 | 0 |
 | openapi-com-sandbox-eval | [2026-05-06-openapi-com-sandbox-test.md](2026-05-06-openapi-com-sandbox-test.md) | Does Openapi.com's sandbox API return usable identity and financial data across Strale's target countries, and at what success rate and latency? | 2026-05-06 | 0 |
 | payee-assurance-build-vs-buy | [2026-04-28-payee-assurance-build-vs-buy.md](2026-04-28-payee-assurance-build-vs-buy.md) | Which Payee Assurance legs should Strale buy from a vendor PAYG versus build or ingest directly? | 2026-04-28 | 0 |

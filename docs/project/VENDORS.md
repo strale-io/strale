@@ -52,6 +52,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | esortcode | eSortCode | active | 2026-09-10 | unknown | unknown |
 | etherscan | Etherscan | held | 2026-09-11 | unknown | prohibited (verified 2026-09-10) |
 | eurostat | Eurostat | evaluating | 2026-10-26 | unknown | conditional (verified 2026-10-26) |
+| foursquare-os-places | Foursquare Open Source Places | held | 2026-10-29 | unknown | unknown |
 | france-travail | France Travail | candidate | 2026-09-11 | unknown | unknown |
 | gemi | GEMI | active | 2026-09-10 | unknown | unknown |
 | github | GitHub | active | 2026-09-10 | unknown | conditional (verified 2026-09-10) |
@@ -82,6 +83,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | openregister | OpenRegister | active | 2026-09-10 | unknown | unknown |
 | opensanctions | OpenSanctions | retired | 2026-09-10 | unknown | unknown |
 | opensanctions-self-host | OpenSanctions self-host | held | 2026-09-11 | DEC-20260429-A | unknown |
+| overture-maps | Overture Maps Foundation (places theme) | active | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | persona | Persona | rejected | 2026-09-11 | unknown | unknown |
 | prh | PRH | active | 2026-09-10 | unknown | unknown |
 | publicnode | PublicNode Ethereum RPC | retired | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |

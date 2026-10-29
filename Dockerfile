@@ -21,6 +21,14 @@ COPY packages/mcp-server/package.json packages/mcp-server/
 # Install all dependencies
 RUN npm ci
 
+# places-search's DuckDB worker reads Overture's GeoParquet through the httpfs
+# extension. Installing it here puts it under /root/.duckdb in the image, so a
+# new container does not have to download it from extensions.duckdb.org on its
+# first search. If the download fails the build carries on: the worker's own
+# INSTALL httpfs fetches it at runtime instead.
+RUN node -e "import('@duckdb/node-api').then(async ({ DuckDBInstance }) => { const db = await DuckDBInstance.create(':memory:'); await (await db.connect()).run('INSTALL httpfs'); console.log('duckdb httpfs installed'); })" \
+ || echo "duckdb httpfs pre-install failed; the worker installs it at runtime"
+
 # Copy source code
 COPY tsconfig.json ./
 COPY apps/api/ apps/api/

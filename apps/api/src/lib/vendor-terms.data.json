@@ -313,5 +313,26 @@
     ],
     "decision_ref": "docs/security/2026-09-10-vendor-terms-audit-batch-2.md",
     "basis": "published_terms"
+  },
+  {
+    "vendor": "Overture Maps Foundation (places theme)",
+    "hosts": [
+      "overturemaps-us-west-2.s3.us-west-2.amazonaws.com"
+    ],
+    "capabilities": [
+      "places-search"
+    ],
+    "resale": "permitted",
+    "terms_url": "https://docs.overturemaps.org/attribution/",
+    "accessed": "2026-10-29",
+    "how_read": "Read docs.overturemaps.org/attribution/ and docs.overturemaps.org/guides/places/ and the CDLA-Permissive-2.0 text at cdla.dev/permissive-2-0/ through the web reader, and checked the per-row sources[].license values in release 2026-10-21.0 with DuckDB. Data is read anonymously from the public AWS Open Data bucket; no account or terms click-through exists.",
+    "findings": [
+      "Places guide: 'Places is published under the CDLA Permissive 2.0 and Apache 2.0 licenses, depending on the source.' and 'It contains no OpenStreetMap data.' So no ODbL share-alike applies to places rows.",
+      "Attribution page, places: Meta, Microsoft, PinMeTo, Krick, RenderSEO, DAC, BrightQuery, Birdeye, Uberall, OpenTravel Alliance: 'Data from [provider]. Available under CDLA Permissive 2.0.' Foursquare: 'Copyright 2024 Foursquare Labs, Inc. All rights reserved. Available under Apache 2.0.' (with NOTICE.txt). AllThePlaces: CC0 1.0.",
+      "CDLA-Permissive-2.0 §1.1 permits use, modification and sharing; §2.1 conditions sharing on making 'the text of this agreement' available with the shared Data; §3.1 puts no restriction on Results; no share-alike. Apache-2.0 §4 requires a copy of the licence and the NOTICE with redistribution.",
+      "places-search returns, per row, every source dataset behind it with its licence (sources[] is per property, and most rows merge two or three datasets), Overture's attribution line per returned source, the licence-text URLs and, for Apache-2.0, the NOTICE link (Overture's attribution page); a row with any source under another licence is withheld. Emails and social handles in the data are not returned."
+    ],
+    "decision_ref": "DEC-20261023-A (preferred lane: licensed open data); portfolio plan 2.5 under DEC-20261024-B; docs/research/2026-10-29-open-places-data-licences.md",
+    "basis": "published_terms"
   }
 ]
