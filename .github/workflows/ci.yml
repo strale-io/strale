@@ -301,6 +301,13 @@ jobs:
           docker logs strale-boot-smoke > boot-container.log 2>&1
           grep -E 'Health gate passed: [0-9]+ executors registered' boot-container.log
           if grep -q 'Fatal startup error' boot-container.log; then exit 1; fi
+      # document-ocr runs tesseract and poppler from the image; prove the
+      # compiled engine reads a real scan with the image's binaries and packs.
+      - name: OCR engine runs in the image
+        run: |
+          set -euo pipefail
+          docker exec -i strale-boot-smoke node --input-type=module - < scripts/ci/ocr-probe.mjs | tee ocr-probe.json
+          echo "ocr_probe: $(cat ocr-probe.json)" >> "$GITHUB_STEP_SUMMARY"
       - name: Logs and cleanup
         if: always()
         run: |
