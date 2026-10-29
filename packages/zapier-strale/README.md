@@ -1,7 +1,7 @@
 # Strale for Zapier
 
-Strale is a tool library for company lookups, EU VAT validation, name screening
-and invoice issuer checks.
+Strale is a tool library for company lookups, EU VAT, IBAN and email checks,
+and name screening. Pay per call with an API key.
 
 Pay per call with your Strale API key. The app is built locally and has not
 been published.
@@ -11,17 +11,29 @@ been published.
 Replaying a Zap can repeat completed checks and charges. Review your Strale
 transactions before rerunning; screening uses two separately billed checks.
 
-Use a Strale checking step when a supplier or customer is added, or when
-an invoice arrives. Results provide source evidence for a person to review.
+Use a Strale checking step when a supplier, customer or contact is added, or
+when an invoice arrives. Results name their source for a person to review.
 Potential name matches do not establish identity or determine whether to pay.
 
-| Action | Inputs | Mapped tools | Availability |
-|---|---|---|---|
-| Look Up a Company | Country, registration number or company name | `uk-company-data`, `swedish-company-data`, `norwegian-company-data`, `finnish-company-data` | Visible; name lookup in GB, NO and FI; SE requires a number |
-| Check Company Status | Country, registration number | `company-status-check` | Hidden pending public availability |
-| Check an EU VAT Number | EU VAT number including country prefix | `vat-validate` | Visible |
-| Screen a Name | Person’s name, optional country context and birth date | `sanctions-check` then `pep-check` | Visible |
-| Check an Invoice Issuer | Tax ID, optional country, registry ID and invoice name | `invoice-counterparty-check` | Hidden pending public availability |
+| Action | Inputs | Mapped tool(s) |
+|---|---|---|
+| Look Up a Company | Country, registration number or company name | `uk-company-data`, `swedish-company-data`, `norwegian-company-data`, `finnish-company-data` (one fixed tool per country; name lookup in GB, NO and FI, SE requires a number) |
+| Check an EU VAT Number | EU VAT number including country prefix | `vat-validate` |
+| Check an IBAN | IBAN | `iban-validate` |
+| Check an Email Address | Email address | `email-validate` |
+| Screen a Name | Person’s name, optional country context and birth date | `sanctions-check` then `pep-check` |
+
+All five actions are visible. Company lookup, VAT, IBAN and email are the
+general business checks; name screening is one action of five, and no
+template or listing text targets compliance or finance teams (distribution
+strategy §9 item 8, pending Petter). `iban-validate` and `email-validate`
+are free-tier tools today, so an API-key call to them does not debit the
+wallet; that can change and is not stated in listing text.
+
+Check Company Status (`company-status-check`) and Check an Invoice Issuer
+(`invoice-counterparty-check`) were hidden actions in 0.1.0. Neither tool is
+public (both return 404 from `GET /v1/capabilities/<slug>`), so 0.2.0 removes
+them; their mappings are in git history (PR #778) for when the tools go live.
 
 The action descriptions in the Zap editor are the listing action copy. They
 are defined with the fixed inputs, output fields and samples in `lib/jobs.js`.
@@ -31,19 +43,21 @@ completed Strale result. It never accepts an arbitrary tool slug from users.
 The app name is **Strale**, category **Business Intelligence**. The opening
 paragraph is its short listing description; the paragraph beginning “Use a
 Strale checking step” is its long description. Copy is narrowed from the integration listing draft to
-match the actual schemas; invoice output has no generated summary or verdict,
-and name screening has no numerical match score.
+match the actual schemas; name screening has no numerical match score.
 
 Name lookups in GB, NO and FI return the best fuzzy match; check the returned
 `registration_number` before relying on the result. Company lookup returns
-name, status and address where supplied. Status
-checks include whether insolvency was checked and the notice count. VAT
-returns validity, country and available company details. Screening returns
-separate match counts, matches, lists, source and source times for both
-checks. Invoice issuer returns each check’s status, available tax and registry
-fields, name comparison, findings and completed/unavailable/errored check
-lists. Missing evidence stays empty, rather than becoming a negative result.
-Arrays and structured list evidence are JSON strings with named output fields.
+name, status and address where supplied. VAT returns validity, country and
+available company details. IBAN returns validity, country, bank and branch
+code where the format defines them, and the reason when invalid; it checks
+structure and checksum only, not whether the account is open. Email returns
+validity, format, domain, mail-server, disposable, role and free-provider
+flags and a suggested correction; it does not confirm the mailbox exists.
+Screening returns separate match counts, matches, lists, source and source
+times for both checks. Missing evidence stays empty, rather than becoming a
+negative result (an email that fails the format check leaves the DNS fields
+empty). Arrays and structured list evidence are JSON strings with named
+output fields.
 
 ## Connect and test locally
 
@@ -88,24 +102,29 @@ API keys have no automatic refresh endpoint.
 **Check every new supplier before first payment**
 
 New supplier row in a sheet → Look Up a Company using country and registry
-number → Check an EU VAT Number if supplied → write the returned evidence
-back to the row → notify the owner to review missing records or mismatches
-before deciding on the first payment. When public, Check Company Status can
-also supply registry status and available insolvency evidence.
-Screen a Name screens people only; use it for a supplier's individual person,
-not for screening the supplier company.
+number → Check an EU VAT Number if supplied → Check an IBAN on the bank
+details → write the returned evidence back to the row → notify the owner to
+review missing records or mismatches before deciding on the first payment.
 
 **VAT check on every inbound invoice**
 
 New invoice from an inbox or invoice parser → Check an EU VAT Number using
 the parsed issuer VAT number → write validity, available name/address and
-source to the invoice row → route invalid numbers or missing evidence for
-human review.
+source to the invoice row → Check an IBAN on the payment details → route
+invalid numbers or missing evidence for human review.
+
+**Clean up new contacts**
+
+New form entry or CRM contact → Check an Email Address → write validity,
+disposable and suggested-correction fields back → route invalid or
+disposable addresses for review.
 
 ## Publication handoff
 
 No Zapier account, registration, push or public submission was made. Follow
-[the handoff](../../handoff/_general/from-code/2026-10-27-zapier-integration.md)
-for public GET results, remaining release checks and publishing instructions.
+[the 0.2.0 handoff](../../handoff/_general/from-code/2026-10-29-zapier-general-business-actions.md)
+for the push, live-test, submission and measurement steps, and
+[the 0.1.0 handoff](../../handoff/_general/from-code/2026-10-27-zapier-integration.md)
+for the original release checks.
 See [Zapier CLI docs](https://docs.zapier.com/integrations/build-cli/overview)
 and [publishing requirements](https://docs.zapier.com/integrations/publish/integration-publishing-requirements).

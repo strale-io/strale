@@ -58,12 +58,22 @@ describe("Zapier native app", () => {
       []
     );
   });
-  it("has exactly the fixed jobs and hides only unavailable tools", () => {
+  it("has exactly five visible fixed jobs with general business tools first", () => {
     assert.deepEqual(Object.keys(App.creates), Object.keys(jobs));
+    assert.deepEqual(Object.keys(jobs), [
+      "lookup_company",
+      "check_eu_vat",
+      "check_iban",
+      "check_email",
+      "screen_name",
+    ]);
     assert.deepEqual(
       Object.keys(App.creates).filter((k) => App.creates[k].display.hidden),
-      ["check_company_status", "check_invoice_issuer"]
+      []
     );
+    // Every tool an action can call is fixed and has a schema snapshot.
+    for (const job of Object.values(jobs))
+      for (const tool of job.tools) assert.ok(schemas[tool], tool);
   });
   it("keeps listing and action text within the claims register", () => {
     const claims = YAML.parse(
@@ -144,18 +154,6 @@ describe("Zapier native app", () => {
       );
     });
   }
-  it("maps company status, preserving source time and insolvency availability", async () => {
-    mock("company-status-check", { country: "GB", identifier: "EXAMPLE" });
-    const o = await run("check_company_status", {
-      country: "UK",
-      registration_number: "EXAMPLE",
-    });
-    assert.equal(o.status, "active");
-    assert.equal(o.insolvency_checked, true);
-    assert.equal(o.insolvency_notices_found, 0);
-    assert.equal(o.registry_name, "Example registry");
-    assert.equal(o.as_of, fixtures["company-status-check"].result.output.as_of);
-  });
   it("maps VAT false and empty company fields without inventing values", async () => {
     mock("vat-validate", { vat_number: "EXAMPLE" });
     assert.deepEqual(
@@ -189,22 +187,69 @@ describe("Zapier native app", () => {
     );
     assert.equal(o.pep_source, "dilisense");
   });
-  it("maps invoice input and partial evidence without turning unavailable into false", async () => {
-    mock("invoice-counterparty-check", {
-      tax_id: "EXAMPLE",
-      country: "SE",
-      company_id: "EXAMPLE",
-      company_name: "Example Company",
-    });
+  it("maps a valid IBAN with its bank code and source", async () => {
+    mock("iban-validate", { iban: "SE00EXAMPLE" });
     assert.deepEqual(
-      await run("check_invoice_issuer", {
-        tax_id: "EXAMPLE",
-        country: "SE",
-        company_id: "EXAMPLE",
-        company_name: "Example Company",
-      }),
-      jobs.check_invoice_issuer.sample
+      await run("check_iban", { iban: " SE00EXAMPLE " }),
+      jobs.check_iban.sample
     );
+  });
+  it("returns the reason for an invalid IBAN and leaves empty codes empty", async () => {
+    mock(
+      "iban-validate",
+      { iban: "XX00" },
+      {
+        result: {
+          ...fixtures["iban-validate"].result,
+          output: {
+            valid: false,
+            country_code: "",
+            check_digits: "",
+            bban: "",
+            bank_code: "",
+            branch_code: null,
+            expected_length: null,
+            error: "Invalid IBAN format.",
+          },
+        },
+      }
+    );
+    const o = await run("check_iban", { iban: "XX00" });
+    assert.equal(o.valid, false);
+    assert.equal(o.country_code, null);
+    assert.equal(o.bank_code, null);
+    assert.equal(o.reason, "Invalid IBAN format.");
+  });
+  it("maps a full email check", async () => {
+    mock("email-validate", { email: "person@example.com" });
+    assert.deepEqual(
+      await run("check_email", { email: "person@example.com" }),
+      jobs.check_email.sample
+    );
+  });
+  it("leaves DNS checks empty, not false, when the format check fails", async () => {
+    mock(
+      "email-validate",
+      { email: "not-an-email" },
+      {
+        result: {
+          ...fixtures["email-validate"].result,
+          output: {
+            valid: false,
+            email: "not-an-email",
+            format_valid: false,
+            reason: "Invalid email format.",
+          },
+          provenance: { source: "algorithmic", fetched_at: "2026-10-27T12:00:00.000Z" },
+        },
+      }
+    );
+    const o = await run("check_email", { email: "not-an-email" });
+    assert.equal(o.valid, false);
+    assert.equal(o.format_valid, false);
+    assert.equal(o.has_mx_records, null);
+    assert.equal(o.is_disposable, null);
+    assert.equal(o.reason, "Invalid email format.");
   });
   it("authenticates with the non-billable balance GET and attribution", async () => {
     scope()
@@ -474,11 +519,11 @@ describe("Zapier native app", () => {
         company_name: "Example Company",
       },
     ],
-    ["check_company_status", { country: "GB", registration_number: " " }],
     ["check_eu_vat", { vat_number: " " }],
     ["screen_name", { name: "X" }],
     ["screen_name", { name: "Example Person", birth_date: "2026-02-30" }],
-    ["check_invoice_issuer", { tax_id: " " }],
+    ["check_iban", { iban: " " }],
+    ["check_email", { email: "x" }],
   ]) {
     it(`validates before paid calls: ${key} ${JSON.stringify(
       inputs
