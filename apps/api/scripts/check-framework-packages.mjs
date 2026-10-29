@@ -91,6 +91,13 @@ const FRAMEWORK_RULES = [
     label: "openai-agents (top-level 'from openai_agents... import' or 'from agents... import')",
   },
   {
+    // Vercel AI SDK (distribution D6): tool() from "ai" with an input schema
+    // and an execute function, checked on the entry module below.
+    dirMatch: /^ai-sdk-strale$/,
+    imports: [/^import\s*\{[^}]*\btool\b[^}]*\}\s*from\s*["']ai["']/m],
+    label: "Vercel AI SDK (top-level import { tool } from 'ai', tool({ inputSchema, execute }))",
+  },
+  {
     dirMatch: /^semantic-kernel-strale$/,
     imports: [/^import[\s\S]{0,200}from\s+["']semantic-kernel["']/m],
     label: "semantic-kernel (top-level TS import from 'semantic-kernel')",
@@ -215,6 +222,12 @@ for (const pkg of requireInputs(packages.filter((pkg) => FRAMEWORK_RULES.some((r
       && manifest.dependencies === undefined
       // DEC-20260422-A step 4b: a test that drives n8n's own primitives.
       && /require\(['"]n8n-workflow['"]\)/.test(read("test/node.test.js"));
+  }
+  if (matched && pkg === "ai-sdk-strale") {
+    const entryPath = join(pkgDir, "src", "index.ts");
+    const entry = existsSync(entryPath) ? readFileSync(entryPath, "utf8") : "";
+    matched = rule.imports.some((pattern) => pattern.test(entry))
+      && /\btool\(\{/.test(entry) && /inputSchema:/.test(entry) && /execute:/.test(entry);
   }
   if (matched) {
     console.log(`ok    ${pkg}  (import found in ${matchedFile.replace(/\\/g, "/")})`);
