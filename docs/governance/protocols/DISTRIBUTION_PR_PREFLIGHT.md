@@ -29,7 +29,7 @@ Checkbox:
 - `crewai-strale` — subclasses CrewAI `BaseTool`
 - `composio-strale` — uses `@composio.tools.custom_tool` decorator
 - `semantic-kernel-strale` (npm) — uses `semantic-kernel`'s `kernelFunction`
-- `n8n-nodes-strale` (separate repo) — uses n8n's `INodeType` / `n8n-workflow`
+- `n8n-nodes-strale` (npm; source in `packages/n8n-nodes-strale` from 1.0.0, earlier releases from the `strale-io/n8n-nodes-strale` repo) — implements n8n's `INodeType` / `ICredentialType` from `n8n-workflow`
 - `straleio` — generic Python SDK; does not claim any framework integration
 - `@strale/sdk` (npm) — generic TypeScript SDK
 

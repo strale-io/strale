@@ -1,6 +1,6 @@
 # Publishing the npm packages
 
-Strale publishes six npm packages out of this monorepo:
+Strale publishes seven npm packages out of this monorepo:
 
 | package | workspace | notes |
 |---|---|---|
@@ -9,6 +9,7 @@ Strale publishes six npm packages out of this monorepo:
 | `straleio-langchain` | `packages/langchain` | builds against `straleio` |
 | `strale-semantic-kernel` | `packages/semantic-kernel-strale` | |
 | `strale-capabilities` | `packages/strale-capabilities` | generated, no build step |
+| `n8n-nodes-strale` | `packages/n8n-nodes-strale` | n8n community node from 1.0.0; 0.1.x came from `strale-io/n8n-nodes-strale` with a token |
 | `strale-ai-sdk` | `packages/ai-sdk-strale` | Vercel AI SDK tools (D6); first publish needs Petter, see below |
 
 Publishing runs through [`.github/workflows/release-npm.yml`](../../.github/workflows/release-npm.yml)
@@ -198,6 +199,22 @@ because it does not look like a crash.
 Record the observed values, not "looks fine". For `strale-mcp` the contract is
 the startup line: capability count, solution count, capability trust count,
 solution trust count -- all four non-zero and consistent with the catalog.
+
+`n8n-nodes-strale` has no startup line; it is a library n8n loads. Its contract,
+checked against the published tarball (`npm pack n8n-nodes-strale@<version>`,
+unpacked outside the repo):
+
+- `npx -y @n8n/scan-community-package@<pinned> n8n-nodes-strale@<version>`
+  reports that the package passed all security checks (provenance, the attested
+  source and the compiled tarball).
+- The unpacked `dist/nodes/Strale/Strale.node.js` loads with `n8n-workflow`
+  installed beside it, and `new Strale().description` lists the three
+  operations.
+- The credential test request, `GET https://api.strale.io/v1/wallet/balance`
+  without a key, answers 401 (the route exists and wants the key), and the three
+  tools' `GET /v1/capabilities/<slug>` answer 200.
+- After the first real call through the node, the transaction's
+  `client_meta.client_header` reads `n8n-nodes-strale/<version>`.
 
 ### Why this is a required step
 
