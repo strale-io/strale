@@ -1034,11 +1034,19 @@
     },
     {
       "id": "M077",
-      "function": "runMigration0134_asyncJobFiles",
+      "function": "runMigration0134_renameCapabilityHealthToSourceHealth",
+      "title": "rename capability_health to source_health (H7)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "6734503e0f406464301a1cf82525abd99bd9e83c5f7167bcce4715343fa62338"
+    },
+    {
+      "id": "M078",
+      "function": "runMigration0135_asyncJobFiles",
       "title": "async jobs with file output (portfolio plan 2.11)",
       "added": "2026-10-29",
       "columns_written": [],
-      "sha256": "a4fa80b2044bb53c6c1341d19660b58a5f49847d23995cd7f952932a3f887b60"
+      "sha256": "4feda09a79b6f811795e9ce230374c1256f376d59203dfe7ec52504dd3c5dad0"
     }
   ],
   "known_overlaps": [

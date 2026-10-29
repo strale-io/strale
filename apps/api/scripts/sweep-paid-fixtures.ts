@@ -25,7 +25,7 @@ import { getNestedValue as getPath } from "../src/lib/nested-value.js";
  * trademark, and product-reviews-extract returned status=completed with every
  * review field null while still billing the caller.
  *
- * Nothing here writes test_results or capability_health — direct getExecutor
+ * Nothing here writes test_results or source_health — direct getExecutor
  * calls bypass the test runner entirely.
  */
 import { config } from "dotenv";

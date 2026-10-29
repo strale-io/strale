@@ -233,8 +233,8 @@ export function isListingStateEvent(
  * The evidence query, shared with scripts/preview-promotions.ts so the preview
  * cannot drift from what the job will actually decide.
  *
- * Two joins are worth naming. `capability_health` is safe to join directly:
- * `capability_health_capability_slug_unique` guarantees one row per slug, so
+ * Two joins are worth naming. `source_health` is safe to join directly:
+ * `source_health_capability_slug_unique` guarantees one row per slug, so
  * it cannot fan the aggregate out or split a capability across grouped rows
  * (verified against prod 2026-08-16 — max 1 row/slug over 298 rows).
  * `test_suites` joins on the result's own suite id, one-to-one by primary key.
@@ -286,7 +286,7 @@ export const PROMOTION_EVIDENCE_SQL = `
          COUNT(tr.id) FILTER (WHERE ts.test_type = 'piggyback')::int                  AS piggyback_total,
          COUNT(tr.id) FILTER (WHERE ts.test_type = 'piggyback' AND tr.passed)::int    AS piggyback_passed
   FROM capabilities c
-  LEFT JOIN capability_health h ON h.capability_slug = c.slug
+  LEFT JOIN source_health h ON h.capability_slug = c.slug
   -- The most recent event that changed whether this capability was listed.
   -- Distinguishes "never listed" (dark launch) from "taken down".
   LEFT JOIN LATERAL (
@@ -408,7 +408,7 @@ export async function runCapabilityPromotionOnce(): Promise<{
                   isNull(capabilities.deactivationReason),
                   dsql`${capabilities.maintenanceClass} IS NOT DISTINCT FROM ${d.maintenanceClass}`,
                   dsql`NOT EXISTS (
-                    SELECT 1 FROM capability_health h
+                    SELECT 1 FROM source_health h
                     WHERE h.capability_slug = ${d.slug} AND h.state <> 'closed'
                   )`,
                   // Listing-event identity (Codex blocker #3): re-derive "the

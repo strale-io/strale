@@ -437,7 +437,7 @@ async function seed() {
              c.is_active,
              COALESCE((SELECT bool_or(ts.scheduled_testing_eligible)
                        FROM test_suites ts WHERE ts.capability_slug = c.slug), false) AS ever_scheduled,
-             COALESCE((SELECT h.state FROM capability_health h
+             COALESCE((SELECT h.state FROM source_health h
                        WHERE h.capability_slug = c.slug), 'closed') AS breaker
       FROM capabilities c
       WHERE c.slug IN (${sql.join(stepSlugs.map((x) => sql`${x}`), sql`, `)})

@@ -2,7 +2,7 @@ import { captureX402RecordingFailure } from "../lib/x402-recording.js";
 import { assertNoFilesOffAsyncPath } from "../lib/jobs/files.js";
 import { settleX402Execution } from "../lib/x402-settle.js";
 import { validateDispatchInput } from "../lib/input-validation.js";
-import { claimX402Payment, beginX402Execution, releaseX402Claim, findCachedX402Response } from "../lib/x402-payment-claims.js";
+import { claimX402Payment, beginX402Execution, releaseX402Claim, findCachedX402Response, x402PaymentBoundElsewhere } from "../lib/x402-payment-claims.js";
 import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * x402 Scalable Gateway — DB-driven capability exposure via USDC payments.
@@ -749,6 +749,20 @@ export function schemaBadRequest(
 // row is `completed`, return its output as the cached response. If found
 // and `failed`, return its error.
 
+//
+// A verified payment is bound to the capability or solution it was claimed
+// for. Two capabilities at the same price verify the same signed authorization,
+// so a replay presented for different work is refused, never served.
+function paymentBoundElsewhereBody(kind: "capability" | "solution", slug: string) {
+  return {
+    error_code: "payment_already_used",
+    error: `This payment was already used for a different capability or solution. It was not applied to this ${kind}.`,
+    details: { retryable: false, fix: `Sign a fresh x402 payment authorization for '${slug}'; a payment is valid only for the capability or solution it was first presented to.` },
+    [kind]: slug,
+    _meta: { replayed: true },
+  };
+}
+
 
 interface RecordX402Args {
   claimId?: string | null;
@@ -1298,13 +1312,16 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     const schemaFailure = validateDispatchInput(sol.slug, "x402", sol.inputSchema, schemaInputs);
     if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
     paymentHash = hashPaymentHeader(paymentHeader);
-    let cached: { status: string; output: unknown; latencyMs: number | null; settlementId: string | null } | null = await findCachedX402Response(paymentHash);
+    let cached = await findCachedX402Response(paymentHash);
     if (!cached) {
       claimId = await claimX402Payment(paymentHash, null, sol.slug);
-      if (!claimId) cached = await findCachedX402Response(paymentHash) ?? { status: "executing", output: null, latencyMs: null, settlementId: null };
+      if (!claimId) cached = await findCachedX402Response(paymentHash);
     }
-    if (cached) {
-      if (cached.status === "completed") {
+    if (cached && x402PaymentBoundElsewhere(cached, { capabilityId: null, solutionSlug: sol.slug })) {
+      return c.json(paymentBoundElsewhereBody("solution", sol.slug), 409);
+    }
+    if (!claimId) {
+      if (cached?.status === "completed") {
         return c.json({
           solution: sol.slug,
           steps: (cached.output as { steps?: unknown })?.steps ?? cached.output,
@@ -1671,13 +1688,16 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     const schemaFailure = validateDispatchInput(cap.slug, "x402", cap.inputSchema, schemaInputs);
     if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
     paymentHash = hashPaymentHeader(paymentHeader);
-    let cached: { status: string; output: unknown; latencyMs: number | null; settlementId: string | null } | null = await findCachedX402Response(paymentHash);
+    let cached = await findCachedX402Response(paymentHash);
     if (!cached) {
       claimId = await claimX402Payment(paymentHash, cap.id, null);
-      if (!claimId) cached = await findCachedX402Response(paymentHash) ?? { status: "executing", output: null, latencyMs: null, settlementId: null };
+      if (!claimId) cached = await findCachedX402Response(paymentHash);
     }
-    if (cached) {
-      if (cached.status === "completed") {
+    if (cached && x402PaymentBoundElsewhere(cached, { capabilityId: cap.id, solutionSlug: null })) {
+      return c.json(paymentBoundElsewhereBody("capability", cap.slug), 409);
+    }
+    if (!claimId) {
+      if (cached?.status === "completed") {
         return c.json({
           ...((cached.output as Record<string, unknown>) ?? {}),
           _meta: {

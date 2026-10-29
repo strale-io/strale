@@ -14,6 +14,7 @@ import {
   index,
   primaryKey,
   bigint,
+  pgView,
   customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -1028,9 +1029,10 @@ export const capabilityLimitations = pgTable(
   ],
 );
 
-// ─── capability_health (circuit breaker) ────────────────────────────────────
-// Tracks health state per capability for circuit breaker pattern
-export const capabilityHealth = pgTable("capability_health", {
+// ─── source_health (circuit breaker) ────────────────────────────────────
+// Tracks health state per capability for circuit breaker pattern. Named
+// capability_health until block 0134 renamed it (H7, platform-hardening T7).
+export const sourceHealth = pgTable("source_health", {
   id: uuid("id").defaultRandom().primaryKey(),
   capabilitySlug: varchar("capability_slug", { length: 255 })
     .notNull()
@@ -1050,6 +1052,14 @@ export const capabilityHealth = pgTable("capability_health", {
     .notNull()
     .defaultNow(),
 });
+
+// Compatibility view under the table's old name. In production block 0134
+// creates it in the same statement as the rename, so a build deployed before
+// the rename keeps reading and writing through it while the new one boots.
+// Declared here for fresh databases (drizzle-kit push, then every block in
+// order): block 0118 still updates capability_health by name. No code reads
+// it; a later block drops it once production shows no reads of the old name.
+export const capabilityHealthCompat = pgView("capability_health").as((qb) => qb.select().from(sourceHealth));
 
 // ─── health_monitor_events (Platform Health Monitor audit trail) ─────────────
 export const healthMonitorEvents = pgTable("health_monitor_events", {
@@ -1128,7 +1138,7 @@ export const capabilityBudgetCounters = pgTable(
 
 // ─── Vendor Control Tower ──────────────────────────────────────────────────
 // Account-level billing/allowance state. This is deliberately separate from
-// capability_health: one vendor balance can govern several capabilities, and
+// source_health: one vendor balance can govern several capabilities, and
 // a healthy network endpoint can still refuse every authenticated request
 // because its account has no credits left.
 export const vendorAccounts = pgTable("vendor_accounts", {
@@ -1630,7 +1640,7 @@ export const executionManifestSnapshots = pgTable("execution_manifest_snapshots"
 // ─── Async jobs: file output and completion callbacks (portfolio 2.11) ──────
 //
 // An async /v1/do execution is a `transactions` row (DEC-22); these two tables
-// hang off it. Created by startup-migration block 0134.
+// hang off it. Created by startup-migration block 0135.
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType() {

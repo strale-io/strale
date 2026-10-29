@@ -40,6 +40,12 @@ const routes = {
     output: "business_id",
   },
 };
+// Countries whose bank and branch codes iban-validate parses by the national
+// format. Elsewhere it falls back to the first four BBAN characters, which is
+// wrong for e.g. BE and PL, so those codes are left empty here.
+const ibanBankCodeCountries = new Set([
+  "DE", "GB", "FR", "SE", "NO", "DK", "FI", "NL", "ES", "IT", "AT", "CH",
+]);
 const time = "2026-10-27T12:00:00.000Z";
 const companySample = {
   company_name: "Example Company",
@@ -129,58 +135,6 @@ const jobs = {
       };
     },
   },
-  check_company_status: {
-    title: "Check Company Status",
-    description:
-      "Check a company’s registry status and available insolvency notices.",
-    hidden: true,
-    tools: ["company-status-check"],
-    inputFields: [country, { ...registration, required: true }],
-    outputFields: [
-      field("company_name", "Company name"),
-      field("status", "Status"),
-      field("registry_status_raw", "Original status"),
-      field("identifier", "Registry identifier"),
-      country,
-      field("registry_name", "Registry"),
-      field("insolvency_checked", "Insolvency checked", "boolean"),
-      field("insolvency_notices_found", "Insolvency notices", "integer"),
-      field("as_of", "As of", "datetime"),
-      ...common,
-    ],
-    sample: {
-      company_name: "Example Company",
-      status: "active",
-      registry_status_raw: "active",
-      identifier: "EXAMPLE",
-      country: "GB",
-      registry_name: "Example registry",
-      insolvency_checked: true,
-      insolvency_notices_found: 0,
-      as_of: time,
-      source: "Example registry",
-      fetched_at: time,
-    },
-    async run(i, execute) {
-      const r = await execute("company-status-check", {
-        country: countryCode(i.country),
-        identifier: requiredText(i.registration_number, "Registration number"),
-      });
-      const o = r.output;
-      return {
-        company_name: o.company_name,
-        status: o.status,
-        registry_status_raw: o.registry_status_raw,
-        identifier: o.identifier,
-        country: o.country,
-        registry_name: o.registry?.name ?? null,
-        insolvency_checked: o.insolvency?.checked ?? null,
-        insolvency_notices_found: o.insolvency?.notices_found ?? null,
-        as_of: o.as_of,
-        ...evidence(r),
-      };
-    },
-  },
   check_eu_vat: {
     title: "Check an EU VAT Number",
     description:
@@ -223,6 +177,104 @@ const jobs = {
         company_name: o.company_name ?? null,
         company_address: o.company_address ?? null,
         country_code: o.country_code,
+        ...evidence(r),
+      };
+    },
+  },
+  check_iban: {
+    title: "Check an IBAN",
+    description:
+      "Check an IBAN’s format, length and checksum, and return its country and, for supported countries, its bank code. Does not confirm the account is open.",
+    hidden: false,
+    tools: ["iban-validate"],
+    inputFields: [field("iban", "IBAN", "string", true)],
+    outputFields: [
+      field("valid", "Valid", "boolean"),
+      field("country_code", "Country"),
+      field("bank_code", "Bank code"),
+      field("branch_code", "Branch code"),
+      field("reason", "Reason when not valid"),
+      ...common,
+    ],
+    sample: {
+      valid: true,
+      country_code: "SE",
+      bank_code: "500",
+      branch_code: null,
+      reason: null,
+      source: "iban-validate:algorithmic",
+      fetched_at: time,
+    },
+    async run(i, execute) {
+      const r = await execute("iban-validate", {
+        iban: requiredText(i.iban, "IBAN"),
+      });
+      const o = r.output;
+      // No codes from an IBAN that failed validation or from a country
+      // without a parsed national format.
+      const codes = o.valid && ibanBankCodeCountries.has(o.country_code);
+      return {
+        valid: o.valid,
+        country_code: o.country_code || null,
+        bank_code: (codes && o.bank_code) || null,
+        branch_code: (codes && o.branch_code) || null,
+        reason: o.error ?? null,
+        ...evidence(r),
+      };
+    },
+  },
+  check_email: {
+    title: "Check an Email Address",
+    description:
+      "Check an email address’s format, mail-server records and disposable domain. Does not confirm the mailbox exists.",
+    hidden: false,
+    tools: ["email-validate"],
+    inputFields: [field("email", "Email address", "string", true)],
+    outputFields: [
+      field("valid", "Valid", "boolean"),
+      field("email", "Email address"),
+      field("format_valid", "Format valid", "boolean"),
+      field("domain", "Domain"),
+      field("has_mx_records", "Has mail-server records", "boolean"),
+      field("is_disposable", "Disposable domain", "boolean"),
+      field("is_role_address", "Role address", "boolean"),
+      field("is_free_provider", "Free email provider", "boolean"),
+      field("did_you_mean", "Suggested correction"),
+      field("reason", "Reason when not valid"),
+      ...common,
+    ],
+    sample: {
+      valid: true,
+      email: "person@example.com",
+      format_valid: true,
+      domain: "example.com",
+      has_mx_records: true,
+      is_disposable: false,
+      is_role_address: false,
+      is_free_provider: false,
+      did_you_mean: null,
+      reason: null,
+      source: "algorithmic+dns",
+      fetched_at: time,
+    },
+    async run(i, execute) {
+      const r = await execute("email-validate", {
+        email: requiredText(i.email, "Email address"),
+      });
+      const o = r.output;
+      // A format failure returns early without the DNS fields; keep them empty
+      // rather than reporting false for checks that did not run.
+      return {
+        valid: o.valid,
+        email: o.email,
+        format_valid: o.format_valid,
+        domain: o.domain ?? null,
+        has_mx_records: o.has_mx_records ?? null,
+        is_disposable: o.is_disposable ?? null,
+        is_role_address: o.is_role_address ?? null,
+        is_free_provider: o.is_free_provider ?? null,
+        did_you_mean: o.did_you_mean ?? null,
+        reason: o.reason ?? null,
         ...evidence(r),
       };
     },
@@ -305,83 +357,6 @@ const jobs = {
         pep_source: p.source,
         sanctions_queried_at: s.queried_at,
         pep_screened_at: p.screened_at,
-      };
-    },
-  },
-  check_invoice_issuer: {
-    title: "Check an Invoice Issuer",
-    description:
-      "Check an invoice issuer’s tax ID, registry status and potential name matches. Returns evidence for review.",
-    hidden: true,
-    tools: ["invoice-counterparty-check"],
-    inputFields: [
-      field("tax_id", "Tax ID including country prefix", "string", true),
-      field("country", "Country (ISO code)"),
-      field("company_id", "Registry identifier"),
-      field("company_name", "Name on invoice"),
-    ],
-    outputFields: [
-      field("tax_status", "Tax check status"),
-      field("tax_valid", "Tax ID valid", "boolean"),
-      field("tax_verification", "Tax verification method"),
-      field("registered_name", "Registered name"),
-      field("registry_check_status", "Registry check status"),
-      field("company_status", "Company status"),
-      field("sanctions_status", "Screening status"),
-      field("potential_match_count", "Potential name matches", "integer"),
-      field("name_match", "Invoice name comparison"),
-      field("checks_completed", "Completed checks JSON"),
-      field("checks_not_available", "Unavailable checks JSON"),
-      field("checks_errored", "Errored checks JSON"),
-      field("findings", "Findings JSON"),
-      ...common,
-    ],
-    sample: {
-      tax_status: "completed",
-      tax_valid: false,
-      tax_verification: "vies",
-      registered_name: null,
-      registry_check_status: "not_available",
-      company_status: null,
-      sanctions_status: "completed",
-      potential_match_count: 0,
-      name_match: null,
-      checks_completed: '["tax_id","sanctions"]',
-      checks_not_available: '["registry_status"]',
-      checks_errored: "[]",
-      findings: "[]",
-      source: "Example sources",
-      fetched_at: time,
-    },
-    async run(i, execute) {
-      const inputs = {
-        tax_id: requiredText(i.tax_id, "Tax ID"),
-        ...(i.country ? { country: countryCode(i.country) } : {}),
-        ...(i.company_id
-          ? { company_id: requiredText(i.company_id, "Registry identifier") }
-          : {}),
-        ...(i.company_name
-          ? { company_name: requiredText(i.company_name, "Company name") }
-          : {}),
-      };
-      const r = await execute("invoice-counterparty-check", inputs);
-      const o = r.output;
-      return {
-        tax_status: o.tax_id.status,
-        tax_valid: o.tax_id.valid ?? null,
-        tax_verification: o.tax_id.verification ?? null,
-        registered_name:
-          o.registry_status.registered_name ?? o.tax_id.registered_name ?? null,
-        registry_check_status: o.registry_status.status,
-        company_status: o.registry_status.company_status ?? null,
-        sanctions_status: o.sanctions.status,
-        potential_match_count: o.sanctions.potential_match_count ?? null,
-        name_match: o.name_match?.match ?? null,
-        checks_completed: JSON.stringify(o.checks_completed),
-        checks_not_available: JSON.stringify(o.checks_not_available),
-        checks_errored: JSON.stringify(o.checks_errored),
-        findings: JSON.stringify(o.findings),
-        ...evidence(r),
       };
     },
   },

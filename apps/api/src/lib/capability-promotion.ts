@@ -94,7 +94,7 @@
  *    defeats the self-correcting claim for exactly the capabilities most
  *    likely to be promoted in error. The job is dry-run by default.
  * 5. **A NULL breaker row is not affirmative health.** True, but 14 of the
- *    active capabilities have no `capability_health` row at all and 10 of the
+ *    active capabilities have no `source_health` row at all and 10 of the
  *    17 current candidates are among them — rows are created lazily on first
  *    incident, so requiring one would permanently exclude every capability
  *    that has never failed. NULL stays permitted; the pass-rate, recency and
@@ -124,7 +124,7 @@ export interface PromotionStats {
   deactivationReason: string | null;
   /** A capability with no x402 method cannot be served on the paid rail. */
   hasX402Method: boolean;
-  /** capability_health.state; null when the capability has no breaker row yet. */
+  /** source_health.state; null when the capability has no breaker row yet. */
   breakerState: string | null;
   /**
    * True when the most recent listing-state event was a takedown (floor

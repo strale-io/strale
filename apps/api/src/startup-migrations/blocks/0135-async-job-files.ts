@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
 
-// ─── Block 0134: async jobs with file output (portfolio plan 2.11) ──────────
+// ─── Block 0135: async jobs with file output (portfolio plan 2.11) ──────────
 //
 // Two new, empty tables hanging off `transactions`; no existing table is
 // altered, so nothing here takes a lock a request could be waiting on.
@@ -13,7 +13,7 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
 //
 // DEC-20260504-B: both tables start empty, so the retention purge's first run
 // has no backlog; the purge is bounded per tick regardless (jobs/async-jobs.ts).
-export async function runMigration0134_asyncJobFiles(tx: MigrationExecutor): Promise<BlockResult> {
+export async function runMigration0135_asyncJobFiles(tx: MigrationExecutor): Promise<BlockResult> {
   const startedAt = Date.now();
   await tx.execute(sql`
     CREATE TABLE IF NOT EXISTS job_files (
@@ -46,5 +46,5 @@ export async function runMigration0134_asyncJobFiles(tx: MigrationExecutor): Pro
     )
   `);
   await tx.execute(sql`CREATE INDEX IF NOT EXISTS job_callbacks_due_idx ON job_callbacks(state, next_attempt_at)`);
-  return { block: "0134_asyncJobFiles", outcome: "ensured job_files, job_callbacks", duration_ms: Date.now() - startedAt };
+  return { block: "0135_asyncJobFiles", outcome: "ensured job_files, job_callbacks", duration_ms: Date.now() - startedAt };
 }

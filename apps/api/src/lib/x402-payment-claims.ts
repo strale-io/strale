@@ -108,7 +108,7 @@ export async function releaseStaleX402Claims(tx: WalletTx, limit: number): Promi
 
 export async function findCachedX402Response(
   paymentHash: string,
-): Promise<Pick<typeof transactions.$inferSelect, "id" | "status" | "output" | "latencyMs" | "priceCents" | "provenance" | "auditTrail"> & { settlementId: string | null } | null> {
+): Promise<Pick<typeof transactions.$inferSelect, "id" | "status" | "output" | "latencyMs" | "priceCents" | "provenance" | "auditTrail" | "capabilityId" | "solutionSlug"> & { settlementId: string | null } | null> {
   const db = getDb();
   const rows = await db
     .select({
@@ -120,9 +120,23 @@ export async function findCachedX402Response(
       output: transactions.output,
       latencyMs: transactions.latencyMs,
       settlementId: transactions.x402SettlementId,
+      capabilityId: transactions.capabilityId,
+      solutionSlug: transactions.solutionSlug,
     })
     .from(transactions)
     .where(eq(transactions.x402PaymentHash, paymentHash))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * A payment is bound to the work it was first claimed for. Two capabilities at
+ * the same price verify the same signed authorization, so a replay must match
+ * the stored row's capability and solution before its output is served.
+ */
+export function x402PaymentBoundElsewhere(
+  row: { capabilityId?: string | null; solutionSlug?: string | null },
+  work: { capabilityId: string | null; solutionSlug: string | null },
+): boolean {
+  return (row.capabilityId ?? null) !== work.capabilityId || (row.solutionSlug ?? null) !== work.solutionSlug;
 }

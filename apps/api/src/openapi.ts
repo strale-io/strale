@@ -10,7 +10,7 @@ import { additionalPublicPaths } from "./openapi-public-paths.js";
 const errorSchema = {
   type: "object" as const,
   properties: {
-    error_code: { type: "string" as const, enum: ["insufficient_balance", "no_matching_capability", "capability_unavailable", "execution_failed", "timeout_exceeded", "invalid_request", "rate_limited", "spend_cap_exceeded", "key_hourly_cap_exceeded", "key_total_cap_exceeded", "primary_key_required", "active_key_limit_exceeded", "unauthorized", "not_found", "capability_degraded", "below_quality_threshold", "freshness_check_failed", "latency_threshold_exceeded", "budget_exceeded", "locked", "token_expired", "legacy_token_sunset", "transaction_finalization_failed", "idempotency_key_reused", "request_in_progress", "migration_failed"] },
+    error_code: { type: "string" as const, enum: ["insufficient_balance", "no_matching_capability", "capability_unavailable", "execution_failed", "timeout_exceeded", "invalid_request", "rate_limited", "spend_cap_exceeded", "key_hourly_cap_exceeded", "key_total_cap_exceeded", "primary_key_required", "active_key_limit_exceeded", "unauthorized", "not_found", "capability_degraded", "below_quality_threshold", "freshness_check_failed", "latency_threshold_exceeded", "budget_exceeded", "locked", "token_expired", "legacy_token_sunset", "transaction_finalization_failed", "idempotency_key_reused", "request_in_progress", "payment_failed", "payment_already_used", "migration_failed"] },
     message: { type: "string" as const },
     details: {
       type: "object" as const,

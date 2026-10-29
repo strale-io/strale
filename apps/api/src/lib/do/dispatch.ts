@@ -30,7 +30,7 @@ import * as reservations from "../wallet-reservations.js";
 import * as jobCallbacks from "../jobs/callbacks.js";
 import { assertNoFilesOffAsyncPath, insertJobFiles, manifestOf, prepareFiles } from "../jobs/files.js";
 import * as walletService from "../wallet-service.js";
-import { claimX402Payment, findCachedX402Response, beginX402Execution, releaseX402Claim } from "../x402-payment-claims.js";
+import { claimX402Payment, findCachedX402Response, beginX402Execution, releaseX402Claim, x402PaymentBoundElsewhere } from "../x402-payment-claims.js";
 import { captureX402RecordingFailure } from "../x402-recording.js";
 import { eurCentsToUsd, extractPayerAddress } from "../x402-gateway.js";
 import { settleX402Execution } from "../x402-settle.js";
@@ -302,6 +302,13 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
       claimId = await claimX402Payment(paymentHash, capability.id, null, "v1_do");
       if (!claimId) cached = await findCachedX402Response(paymentHash);
     }
+    if (cached && x402PaymentBoundElsewhere(cached, { capabilityId: capability.id, solutionSlug: null })) {
+      return c.json({
+        ...apiError("payment_already_used",
+          `This payment was already used for a different capability or solution. It was not applied to '${capability.slug}'.`),
+        meta: { replayed: true },
+      }, 409);
+    }
     if (cached?.status === "completed") {
       return c.json({
         result: {
@@ -382,12 +389,47 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
       // an unknown result keeps both the claim and intent for reconciliation.
       let x402SettlementId: string | null = null;
       if (x402Verified) {
+        // A thrown settlement is a payment outcome, not an execution failure:
+        // the capability already succeeded. If the claim may still have moved
+        // money (releaseClaim was cleared before the facilitator call) it is
+        // unknown and left for reconciliation; otherwise nothing was charged
+        // and the same authorization can be retried.
+        let paymentCallThrew = false;
         const settled = await settleX402Execution({
           verified: x402Verified,
           paymentHash: c.get("x402_payment_hash"),
           intent: { slug: capability.slug, solutionSlug: null, priceCents: capability.priceCents },
           policy: { claimId, setReleaseClaim: (release) => { releaseClaim = release; } },
+        }).catch((settleErr: unknown) => {
+          logError("x402-settlement-threw", settleErr, { slug: capability.slug });
+          paymentCallThrew = true;
+          return { valid: false, settlementUnknown: !releaseClaim, error: "Settlement outcome could not be confirmed", settlementId: undefined };
         });
+        if (paymentCallThrew && !settled.settlementUnknown) {
+          // Stored and served text match, so the receipt reflects what the caller saw.
+          const notStarted = "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.";
+          await db
+            .update(transactions)
+            .set({
+              status: "failed",
+              ...(claimId ? { x402PaymentHash: null, complianceHashState: "pending" } : {}),
+              error: notStarted, latencyMs, completedAt: new Date(),
+              auditTrail: buildFailureAudit({
+                transactionId: txnRecord.id, startTime, capability, executionInput,
+                errorMessage: notStarted, executionMode: "sync", requestContext: c.get("requestContext"),
+              }),
+              provenance: buildFailureProvenance(
+                capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+              ),
+            })
+            .where(eq(transactions.id, txnRecord.id));
+          await settleReceiptFor(txnRecord.id);
+          return c.json({
+            error_code: "payment_failed",
+            message: notStarted,
+            details: { retryable: true, next_step: "Retry the same request with the same payment authorization; no payment was taken." },
+          }, 503);
+        }
         if (!settled.valid) {
           if (!settled.settlementUnknown) {
             await db
@@ -404,9 +446,7 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
           }
           return c.json(
             {
-              error_code: "payment_failed",
-              message: "x402 settlement failed after successful execution.",
-              details: { retryable: false, fix: "Check payment status in your wallet before signing a fresh x402 payment authorization." },
+              ...apiError("payment_failed", "x402 settlement failed after successful execution."),
               detail: settled.error,
             },
             402,
