@@ -32,7 +32,7 @@ const EXEMPT: Record<string, string> = {
     "recordX402Transaction finalizes these rows and settles their receipts. " +
     "Pre-execution rejections delete the claim; crash-abandoned attempts keep " +
     "receipt_rail and pending receipt state for the existing receipt sweeper.",
-  "lib/startup-migrations.ts":
+  "startup-migrations/blocks/0109-receipt-epoch.ts":
     "block 0109's behavioural self-check. It inserts an ordinary row inside a " +
     "plpgsql subtransaction and unwinds it, to prove that the receipt defaults " +
     "and the reason-required CHECK actually permit a write - the defect that " +

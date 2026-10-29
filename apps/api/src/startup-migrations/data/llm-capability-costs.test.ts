@@ -32,13 +32,13 @@ import {
   BLOCK_0064_SLUGS,
   CONDITIONAL_LLM_CAPABILITIES,
 } from "./llm-capability-costs.js";
-import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
+import { getDeactivatedCapabilities } from "../../capabilities/auto-register.js";
 
 /** Resolve the capabilities source directory from the running test file. */
 function capabilitiesDir(): string {
   // __dirname equivalent for ESM via import.meta.dirname.
   // apps/api/src/lib/ + ../capabilities/ → apps/api/src/capabilities/
-  return resolve(import.meta.dirname, "..", "capabilities");
+  return resolve(import.meta.dirname, "..", "..", "capabilities");
 }
 
 /**
@@ -91,7 +91,7 @@ describe("llm-capability-costs — Phase 3 CI gate", () => {
         .map(
           (slug) =>
             `  - "${slug}" imports @anthropic-ai/sdk but is not registered. ` +
-            `Add to ALWAYS_LLM_CAPABILITY_COSTS in apps/api/src/lib/llm-capability-costs.ts ` +
+            `Add to ALWAYS_LLM_CAPABILITY_COSTS in apps/api/src/startup-migrations/data/llm-capability-costs.ts ` +
             `(with cost in cents, typically 1 for Haiku), OR to CONDITIONAL_LLM_CAPABILITIES ` +
             `(with a comment naming the bypass), OR to DEACTIVATED in auto-register.ts.`,
         )

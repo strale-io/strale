@@ -5,15 +5,14 @@ updated: 2026-10-28
 tracks:
   - id: T1
     title: "H1: Watch production"
-    status: active
+    status: queued
     gate: none
     depends_on: []
     owner: session
-    next_action: Implement the post-merge deploy SHA check, external dead-man check
-      with an admin-authenticated job-freshness endpoint, scheduled strale-mcp
-      contract probe and one automatic re-run of a red scheduled workflow (§10
-      items 1, 3, 18). Railway auto-redeploy token remains Petter's decision; do
-      not require it for observation.
+    next_action: Production watch shipped in PR 774 (deploy SHA check, job freshness
+      endpoint, strale-mcp contract probe, one scheduled re-run). Remaining for
+      exit, demonstrate a mismatch alert and record the verification. Railway
+      auto-redeploy token remains Petter's decision.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Merge SHA is checked against production and mismatch alerts are
@@ -23,18 +22,20 @@ tracks:
     evidence: []
   - id: T2
     title: "H2: Build and boot the real image"
-    status: queued
+    status: done
     gate: none
     depends_on: []
     owner: session
-    next_action: Make a fresh DB bootable (transactions_integrity_hash_idx); CI
-      builds and boots the real image and every gate fails on an empty input set
-      (§10 items 2, 12).
+    next_action: Done. PR 773 made a fresh DB bootable and added the integration-db and
+      image-boot-smoke CI jobs, which pass on main (PR 802 head). Empty gate
+      inputs fail via scripts/empty-inputs.test.mjs.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Fresh disposable DB and real image boot succeed in CI.
       - Empty input sets make every gate fail.
-    evidence: []
+    evidence:
+      - handoff/_general/from-code/2026-10-27-ci-boot-smoke.md
+      - .github/workflows/ci.yml
   - id: T3
     title: "H3: Manifest text and guaranteed fields"
     status: queued
@@ -42,10 +43,11 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: After H2, apply manifest text on deploy, make the widened drift
-      sweep fail on differences, check guaranteed fields on real traffic and
-      consolidate fetch/claim guards (§10 items 6, 7, 13). Compliance and
-      methodology publication stays founder-gated.
+    next_action: Shipped in PR 776 (manifest text applied after deploy, drift sweep fails
+      on difference, guaranteed fields measured on real calls). Remaining for
+      exit, a production check that deploy text and drift agree and that
+      guaranteed-field measurements are recorded. Compliance and methodology
+      publication stays founder-gated.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Deploy text and drift checks agree with manifests.
@@ -59,14 +61,12 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: H4 round 2 built locally on feat/money-path; orchestrator must
-      review and commit the uncommitted diff, run the disposable-Postgres lane
-      and image boot, then deploy and execute the read-only verification queries
-      in handoff/_general/from-code/2026-10-28-money-path.md (Round 2 supersedes
-      the earlier stale-claim limitation). No production checks or writes were
-      performed. Follow up the separate anonymous /v1/do x402 path, which still
-      has no pre-execution claim and retains its replay/ambiguous-settlement
-      gap. Keep T4 open until verified.
+    next_action: Shipped in PR 779 (sync reserve, execute outside the transaction, capture,
+      timeout_seconds) and PR 794 (/v1/do x402 claim, replay and recording
+      parity). Two open hardening items from review, a replayed payment hash
+      used on a different capability of the same price returns the first
+      capability's output (gateway and /v1/do), and a thrown facilitator call on
+      /v1/do still returns the legacy 500 envelope.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Reservation and capture regression tests discriminate the repaired money
@@ -79,8 +79,9 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: Record per-call cost and introduce a shared Anthropic client with
-      bounded timeout, explicit retries and usage (§10 item 5).
+    next_action: Shipped in PR 777 (per-call cost recording, shared Anthropic client,
+      margin per tool). Remaining for exit, a production query showing per-call
+      costs recorded on real calls.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Per-call costs and shared client usage are recorded and verified.
@@ -91,14 +92,12 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: H6 built locally on feat/fetch-hardening; orchestrator reviews
-      and ships the uncommitted diff. Deploy with INPUT_VALIDATION_MODE unset
-      (report default), collect seven consecutive days of clean mismatch reports
-      with representative wallet and x402 traffic, reconcile schema drift, then
-      separately enable enforce and verify 400 invalid_input before payment
-      side effects. Railway root/config path and live settings need confirmation
-      with Petter and cold-boot measurement before adopting config as code; see
-      handoff/_general/from-code/2026-10-28-fetch-hardening.md. Keep T6 open.
+    next_action: Shipped in PR 786 with INPUT_VALIDATION_MODE in report mode. Collect seven
+      consecutive days of clean mismatch reports with representative wallet and
+      x402 traffic, reconcile schema drift, then enable enforce and verify 400
+      invalid_input before payment side effects. Railway config as code still
+      needs Railway settings confirmed; see handoff/_general/from-
+      code/2026-10-28-fetch-hardening.md.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Validation and fetch protections have discriminating checks.
@@ -107,25 +106,20 @@ tracks:
     evidence: []
   - id: T7
     title: "H7: Structural clean-up"
-    status: queued
+    status: active
     gate: none
-    depends_on:
-      - T4
+    depends_on: []
     owner: session
-    next_action: H7a (PR 787), the boot-lock retry fix (PR 790), H7b (PR 793,
-      one x402 settle path and the do.ts split), H4b (PR 794) and H7c batch 1
-      (PR 799, offline contract test for the 79 computed/reference executors)
-      are merged and verified live. H7c batch 2 adds the upstream replay
-      contract test (apps/api/src/capabilities/upstream-replay-contract.test.ts)
-      with 12 recorded free upstreams, a per-slug perturbation proof, the
-      recorder apps/api/scripts/record-upstream.ts and a weekly live re-check in
-      weekly-drift.yml. The next H7c batch tightens the known_answer contracts
-      the perturbation proof rejected (listed in
-      apps/api/src/capabilities/__fixtures__/upstream/README.md) and records
-      them. After that come the migrations file split with the ledger
-      unchanged, the separate ledgered SQS column drop, and the
-      applied-block-hash skip. See
-      handoff/_general/from-code/2026-10-28-orchestrator-checkpoint.md.
+    next_action: T4 is no longer a prerequisite, its core shipped in PRs 779 and 794 and its two open follow-ups do not touch this work. H7a (PR 787), the boot-lock retry (PR 790), H7b (PR 793) and H7c batches 1
+      and 2 (PRs 799, 802) are merged. H7d PR 1 splits startup-migrations.ts
+      into one file per block under apps/api/src/startup-migrations/blocks with
+      every ledger hash unchanged and moves the frozen data payloads to
+      apps/api/src/startup-migrations/data. Next, H7d PR 2 records each applied
+      block's ledger hash and skips recorded blocks on later boots, then PR 3
+      drops the residual SQS columns and sqs_daily_snapshot through a new
+      ledgered block. The H7c known_answer tightening listed in
+      apps/api/src/capabilities/__fixtures__/upstream/README.md is still open.
+      See handoff/_general/from-code/2026-10-29-h7d-migrations.md.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.

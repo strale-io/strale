@@ -16,9 +16,11 @@ receipts, not a status assertion.
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), then H1's `next_action` and
+Read [tracks.yaml](tracks.yaml), then H7's (T7) `next_action` and
 `resume_file`: [the report](../../research/2026-10-27-codebase-architecture-review.md)
-§10, with the referenced analysis sections. H1 is active. The Railway
+§10, with the referenced analysis sections. H7 is active; H2 is done, and H1
+and H3 to H6 have shipped with the verification steps their `next_action`
+names still open. The Railway
 auto-redeploy token is not approved; implement observation without it. H8 stays
 founder-gated, and log redaction in H6 is its technical prerequisite.
 

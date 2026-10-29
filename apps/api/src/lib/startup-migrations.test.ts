@@ -109,13 +109,13 @@ import {
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
-import { BLOCK_0064_SLUGS } from "./llm-capability-costs.js";
+import { BLOCK_0064_SLUGS } from "../startup-migrations/data/llm-capability-costs.js";
 import {
   CATALOGUE_COPY_0123_CAPABILITIES,
   CATALOGUE_COPY_0123_SOLUTIONS,
-} from "./catalogue-copy-0123.js";
+} from "../startup-migrations/data/catalogue-copy-0123.js";
 
-import { PUBLIC_DESCRIPTIONS_0124, UNLISTED_DESCRIPTIONS_0124 } from "./public-descriptions-0124.js";
+import { PUBLIC_DESCRIPTIONS_0124, UNLISTED_DESCRIPTIONS_0124 } from "../startup-migrations/data/public-descriptions-0124.js";
 
 const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124].map((r) => [r.slug, r.description]));
 const dialect = new PgDialect();
@@ -722,19 +722,19 @@ describe("startup-migrations — phase-b1-free-unlimited-slugs list", () => {
     // count was 180 on 2026-05-12. A future audit refresh might add or
     // remove a few caps; the test stays green within reason but flags
     // a wholesale loss (e.g., empty list or 300+ caps surprise).
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     expect(PHASE_B1_FREE_UNLIMITED_SLUGS.length).toBeGreaterThan(150);
     expect(PHASE_B1_FREE_UNLIMITED_SLUGS.length).toBeLessThan(220);
   });
 
   it("list is alphabetically sorted (audit-trail discipline)", async () => {
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const sorted = [...PHASE_B1_FREE_UNLIMITED_SLUGS].sort();
     expect(PHASE_B1_FREE_UNLIMITED_SLUGS).toEqual(sorted);
   });
 
   it("list has no duplicates", async () => {
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const unique = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     expect(unique.size).toBe(PHASE_B1_FREE_UNLIMITED_SLUGS.length);
   });
@@ -847,7 +847,7 @@ describe("startup-migrations — phase-b2 slug lists (audit-trail invariants)", 
 
   it("B.2 slug lists do not overlap with B.1 free_unlimited", async () => {
     const { PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const b1Set = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     for (const cap of PHASE_B2_FREE_QUOTA_HIGH_CONF) {
       expect(b1Set.has(cap.slug), `${cap.slug} appears in BOTH B.1 and B.2 free_quota`).toBe(false);
@@ -906,26 +906,26 @@ describe("startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)
     // LLM-backed fleet means this number is naturally ~80; a future
     // audit refresh might add or remove a few. Bounds match the chat-
     // approved 50-100 range from Phase B.3 prompt.
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
     expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeGreaterThan(50);
     expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeLessThan(100);
   });
 
   it("list is alphabetically sorted (audit-trail discipline)", async () => {
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
     const sorted = [...PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS].sort();
     expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS).toEqual(sorted);
   });
 
   it("list has no duplicates", async () => {
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
     const unique = new Set(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS);
     expect(unique.size).toBe(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length);
   });
 
   it("does not overlap with B.1 free_unlimited or B.2 free_quota/free_unlimited", async () => {
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const { PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
 
     const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
@@ -1030,8 +1030,8 @@ describe("startup-migrations — phase-b4 low-conf free_quota cap list (invarian
 
   it("does not overlap with B.1 / B.2 / B.3 slug lists", async () => {
     const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS, PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
 
     const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
@@ -1224,8 +1224,8 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
     const { PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS, PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS,
             PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF,
             PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
 
     const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
@@ -1612,7 +1612,7 @@ describe("startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invaria
       PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS,
       PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS,
     } = await import("./startup-migrations.js");
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
 
     const others = new Set<string>([
       ...PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug),
@@ -2298,9 +2298,8 @@ describe("startup-migrations — block identity is unique, not just the function
   const BLOCK_ID_RE = /const BLOCK = "([^"]+)"/g;
 
   it("no two blocks share a ledger id", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const { readMigrationsSourceText } = await import("./migration-artifact-audit.js");
+    const src = readMigrationsSourceText();
     const ids = [...src.matchAll(BLOCK_ID_RE)].map((m) => m[1]);
     expect(ids.length).toBeGreaterThanOrEqual(2);
     expect(new Set(ids).size, `duplicate ledger ids: ${ids.join(", ")}`).toBe(ids.length);
@@ -2310,9 +2309,8 @@ describe("startup-migrations — block identity is unique, not just the function
     // The label is what the deploy log and the admin endpoint report. Distinct
     // ledger ids with duplicate labels would make the log ambiguous about which
     // migration ran, which is the same failure one layer out.
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const { readMigrationsSourceText } = await import("./migration-artifact-audit.js");
+    const src = readMigrationsSourceText();
     // Resolved, not just literal. Four return sites write `block: BLOCK,` where
     // BLOCK is a const -- and one of those four is
     // runMigration0100_relistUrlToMarkdown, the exact block the collision was
@@ -2475,11 +2473,9 @@ describe("startup-migrations — block 0101 runs its one-shot work exactly once"
     // future boot would skip the purge gate with the unprotected era intact.
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
-    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
-    const block = src.slice(
-      src.indexOf("export async function runMigration0101_capabilityInvocations"),
-      src.indexOf("export const BLOCKS"),
-    );
+    const src = readFileSync(
+      resolve(import.meta.dirname, "../startup-migrations/blocks/0101-capability-invocations.ts"), "utf8");
+    const block = src.slice(src.indexOf("export async function runMigration0101_capabilityInvocations"));
     const verify = block.indexOf("if (triggerCount !== 1)");
     const ledger = block.indexOf("INSERT INTO startup_migration_ledger");
     expect(verify).toBeGreaterThan(-1);

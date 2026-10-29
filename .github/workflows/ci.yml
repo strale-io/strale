@@ -686,7 +686,7 @@ jobs:
       - run: npm run receipts:check
       - run: npm run receipts:test
       # Schema-migration ledger (T15, apps/api/src/lib/startup-migrations.ledger.json):
-      # every runMigrationNNNN_* block in startup-migrations.ts is ledgered
+      # every runMigrationNNNN_* block in src/startup-migrations/blocks/ is ledgered
       # with a content hash (append-only — an edited block needs a new
       # block, not a silent rewrite) and columns_written, so two blocks
       # writing the same table.column fail the build unless allowlisted in

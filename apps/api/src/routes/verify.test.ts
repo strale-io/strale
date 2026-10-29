@@ -14,6 +14,7 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readMigrationsSourceText } from "../lib/migration-artifact-audit.js";
 
 // A root transaction we always resolve "by id" first. Its previous_hash
 // points to a chain of rows we generate dynamically to simulate different
@@ -366,12 +367,12 @@ describe("isErasureReason — the tally and the prose must agree", () => {
       "src/routes/transactions.ts",
       "src/lib/data-retention.ts",
       "src/lib/account-closure.ts",
+    ]
+      .map((f) => readFileSync(resolve(process.cwd(), f), "utf8"))
       // A migration writes one too, and the first version of this scan did not
       // look here — so the literal it rewrites away was invisible to the guard
       // meant to catch exactly that.
-      "src/lib/startup-migrations.ts",
-    ]
-      .map((f) => readFileSync(resolve(process.cwd(), f), "utf8"))
+      .concat(readMigrationsSourceText())
       .join("\n");
 
     const written = new Set(

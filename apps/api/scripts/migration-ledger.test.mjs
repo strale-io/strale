@@ -5,7 +5,7 @@
 // standing rule (no checker ships until it has failed on a planted case).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -21,6 +21,8 @@ import {
   parseBlockRanges,
   SOURCE_PATH,
   LEDGER_PATH,
+  BLOCKS_DIR,
+  MIGRATION_DATA_RELOCATIONS,
 } from "./migration-ledger-lib.mjs";
 
 function withFixture(sourceText, ledger, fn) {
@@ -382,4 +384,105 @@ test("a declared data file that does not exist fails MIGRATION_DATA_MISSING", ()
 
 test("--update accepts an uncommitted appended block beyond HEAD's source length", () => {
   assert.equal(addedDateForLine(repoRootFrom(import.meta.url), SOURCE_PATH, 999999), null);
+});
+
+// ---------------------------------------------------------------------------
+// Per-block files (H7): blocks live under BLOCKS_DIR, the runner in SOURCE_PATH
+// ---------------------------------------------------------------------------
+
+const fixtureFile = (fn) => `${/runMigration(\d+)_/.exec(fn)[1]}-${fn.replace(/^runMigration\d+_/, "").toLowerCase()}.ts`;
+
+/** The two-block fixture split the way the real file was: each block in its own file, the runner registering both. */
+function writeSplitFixture(root) {
+  const lines = TWO_BLOCK_SOURCE.split("\n");
+  const ranges = parseBlockRanges(lines);
+  mkdirSync(join(root, BLOCKS_DIR), { recursive: true });
+  for (const r of ranges) {
+    writeFileSync(join(root, BLOCKS_DIR, fixtureFile(r.functionName)),
+      `import type { MigrationExecutor } from "../types.js";\n\n${lines.slice(r.startLine, r.endLine + 1).join("\n")}\n`, "utf8");
+  }
+  writeFileSync(join(root, SOURCE_PATH),
+    `export const BLOCKS: ReadonlyArray<(tx: unknown) => Promise<unknown>> = [\n${ranges.map((r) => `  ${r.functionName},`).join("\n")}\n];\n`, "utf8");
+}
+
+test("a block moved byte for byte into its own file under BLOCKS_DIR keeps its ledger hash", () => {
+  withFixture(TWO_BLOCK_SOURCE, computeLedgerFor(TWO_BLOCK_SOURCE), (root) => {
+    writeSplitFixture(root);
+    assert.deepEqual(codes(root), []);
+    // An edit inside a block file is still an edit.
+    const file = join(root, BLOCKS_DIR, fixtureFile("runMigration0002_widgetName"));
+    writeFileSync(file, readFileSync(file, "utf8").replace("'default'", "'other'"), "utf8");
+    assert.deepEqual(codes(root), ["BLOCK_HASH_MISMATCH"]);
+  });
+});
+
+test("a block registered in BLOCKS that the scan never reads fails REGISTERED_BLOCK_NOT_SCANNED", () => {
+  withFixture(TWO_BLOCK_SOURCE, computeLedgerFor(TWO_BLOCK_SOURCE), (root) => {
+    writeSplitFixture(root);
+    // Moved outside BLOCKS_DIR: the runner still imports and runs it.
+    rmSync(join(root, BLOCKS_DIR, fixtureFile("runMigration0002_widgetName")));
+    const found = codes(root);
+    assert.ok(found.includes("REGISTERED_BLOCK_NOT_SCANNED"), found.join(", "));
+  });
+});
+
+test("the same block function in two files fails DUPLICATE_BLOCK_FUNCTION", () => {
+  withFixture(TWO_BLOCK_SOURCE, computeLedgerFor(TWO_BLOCK_SOURCE), (root) => {
+    writeSplitFixture(root);
+    const file = join(root, BLOCKS_DIR, fixtureFile("runMigration0001_widgetFlag"));
+    writeFileSync(join(root, BLOCKS_DIR, "0009-copy.ts"), readFileSync(file, "utf8"), "utf8");
+    assert.deepEqual(codes(root), ["DUPLICATE_BLOCK_FUNCTION"]);
+  });
+});
+
+test("a relocated data file is read from its new path and hashes as it did at its ledgered path", () => {
+  const [oldPath, newPath] = Object.entries(MIGRATION_DATA_RELOCATIONS)[0];
+  const block = `export async function runMigration0004_moved(tx) {\n  // migration-data: ${oldPath}\n}`;
+  const data = "export const ROWS = [];\n";
+  const root = mkdtempSync(join(tmpdir(), "strale-ledger-reloc-"));
+  try {
+    mkdirSync(dirname(join(root, newPath)), { recursive: true });
+    writeFileSync(join(root, newPath), data, "utf8");
+    const result = hashBlockWithData(root, block);
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.sha256, hashBlockSource(`${block}\n// migration-data ${oldPath}\n${data}`));
+    // Content changed at the new path is still an edit.
+    writeFileSync(join(root, newPath), "export const ROWS = [1];\n", "utf8");
+    assert.notEqual(hashBlockWithData(root, block).sha256, result.sha256);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a BLOCKS entry that is not a scanned block name (an alias) fails REGISTERED_BLOCK_NOT_SCANNED", () => {
+  withFixture(TWO_BLOCK_SOURCE, computeLedgerFor(TWO_BLOCK_SOURCE), (root) => {
+    writeSplitFixture(root);
+    const runner = join(root, SOURCE_PATH);
+    writeFileSync(runner, readFileSync(runner, "utf8").replace("  runMigration0002_widgetName,", "  m2,"), "utf8");
+    assert.deepEqual(codes(root), ["REGISTERED_BLOCK_NOT_SCANNED"]);
+  });
+});
+
+test("a runner whose BLOCKS array cannot be read fails BLOCKS_REGISTRY_UNREADABLE, never passes silently", () => {
+  withFixture(TWO_BLOCK_SOURCE, computeLedgerFor(TWO_BLOCK_SOURCE), (root) => {
+    writeSplitFixture(root);
+    writeFileSync(join(root, SOURCE_PATH), "export const BLOCKS = [runMigration0001_widgetFlag, runMigration0002_widgetName] as const;\n", "utf8");
+    assert.deepEqual(codes(root), ["BLOCKS_REGISTRY_UNREADABLE"]);
+  });
+});
+
+test("a block file in a subfolder or with an off-pattern name fails BLOCKS_DIR_UNEXPECTED_ENTRY", () => {
+  withFixture(TWO_BLOCK_SOURCE, computeLedgerFor(TWO_BLOCK_SOURCE), (root) => {
+    writeSplitFixture(root);
+    mkdirSync(join(root, BLOCKS_DIR, "sub"));
+    writeFileSync(join(root, BLOCKS_DIR, "helper.ts"), "export const X = 1;\n", "utf8");
+    assert.deepEqual(codes(root), ["BLOCKS_DIR_UNEXPECTED_ENTRY", "BLOCKS_DIR_UNEXPECTED_ENTRY"]);
+  });
+});
+
+test("the real relocated data files are the ones their blocks import", () => {
+  const root = repoRootFrom(import.meta.url);
+  const found = checkLedger(root).findings.filter((f) => f.code === "RELOCATED_DATA_NOT_IMPORTED");
+  assert.deepEqual(found, []);
+  assert.ok(Object.keys(MIGRATION_DATA_RELOCATIONS).length >= 2);
 });

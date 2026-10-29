@@ -95,8 +95,9 @@ given.
       rejects empty or sub-2-character input before calling. Piggyback suites
       are never scheduled.
 - [ ] **Migrations are append-only** ("Evidence receipts and the migration
-      ledger"). A change to `apps/api/src/lib/startup-migrations.ts` adds a
-      new block and a ledger entry, and never edits an old block.
+      ledger"). A migration change adds a new block file under
+      `apps/api/src/startup-migrations/blocks/`, registers it in `BLOCKS`
+      (`apps/api/src/lib/startup-migrations.ts`) and adds a ledger entry, and never edits an old block.
       `npm run migrations:check` passes.
 - [ ] **Data access** (DEC-20261023-A, which replaces the scraping doctrine).
       A new upstream fetch belongs to an allowed lane: no logins, no getting
@@ -140,7 +141,7 @@ given.
 | **Wallet and settlement** | `apps/api/src/lib/wallet-service.ts`, `wallet-reservations.ts`, `stripe.ts`, `stripe-settlement.ts`, `routes/wallet.ts`, the debit path in `routes/do.ts` | Lock, then execute, then deduct on success only (DEC-14). Row lock on debits (DEC-8). Idempotency keys honoured (DEC-9). Spend cap and rate limit on every paid path (DEC-21). No double credit on a Stripe retry. The integration suites (`*.integration.test.ts`) cover the change. |
 | **x402** | `apps/api/src/lib/x402-*.ts`, `routes/x402-gateway-v2.ts` | Settlement order (verify, execute, settle) is unchanged or tested. Payment amount matches the catalogue price. Input is validated before anything paid runs. Eligibility and visibility follow DEC-20260812-A: invisible and non-x402 until the first green week. |
 | **Auth and API keys** | `lib/auth.ts`, `lib/admin-auth.ts`, `routes/auth.ts`, `lib/key-recovery.ts`, `lib/audit-token.ts` | Keys stay hashed and are looked up by prefix (DEC-20). Every new route has the right middleware. No key, token or `process.env` value in a log. Timing-safe comparisons. |
-| **Migrations on live data** | `lib/startup-migrations.ts` and its ledger, `src/db/schema.ts`, `lib/data-retention.ts` | Ledger entry and no edited blocks. A boot-time rewrite is idempotent. Bulk work is bounded per tick (DEC-20260504-B). Remember that `scheduled_testing_eligible` is rewritten from `external_cost_cents` on every boot. |
+| **Migrations on live data** | `lib/startup-migrations.ts`, `startup-migrations/blocks/` and the ledger, `src/db/schema.ts`, `lib/data-retention.ts` | Ledger entry and no edited blocks. A boot-time rewrite is idempotent. Bulk work is bounded per tick (DEC-20260504-B). Remember that `scheduled_testing_eligible` is rewritten from `external_cost_cents` on every boot. |
 | **Screening outputs** | `capabilities/sanctions-check.ts`, `pep-check.ts`, `adverse-media-check.ts`, `risk-narrative-generate.ts`, UBO lookups, `routes/dispute.ts`, `routes/audit.ts` | DEC-20260428-B engineering bar: source list per response, match explainability, confidence buckets, the dispute path, GDPR Art. 22 classification in the manifest. An AI synthesis cites a source for every flag, uses "screening checks found" framing and never asserts a fact that is not in its input. A vendor change uses the `vendor-switch` skill. |
 | **Public claims** | `README.md`, `packages/*/README.md`, manifest `description`, `lib/platform-facts.ts`, methodology and trust routes, `docs/company/claims.yaml` | Every claim is `allowed` in `claims.yaml` and `npm run claims:check` passes. A stronger claim needs Petter (DEC-20260822-A; narrowing an inaccurate one does not). Voice follows `docs/company/VOICE.md`. Consider whether the frontend `llms.txt` needs the same change. |
 | **Published packages** | `packages/**`, `server.json`, `smithery.yaml`, `glama.json`, `context7.json`, `.github/workflows/release-npm.yml` | DEC-20260422-A in full. The release follows `docs/release/npm-publishing.md`, including the post-publish smoke test against production and the per-package contract it lists. |

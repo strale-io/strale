@@ -29,8 +29,9 @@ every `evidence:` / `production_evidence:` path cited from a decision
 record, a program track, or a remediation package resolves, and warns on a
 post-2026-09-02 handoff stating a test count with no receipt link. Write one
 with `npm run receipt -- --kind <kind> --topic <topic> --from <file|->`.
-Migration blocks in `apps/api/src/lib/startup-migrations.ts` are
-append-only and ledgered: `apps/api/src/lib/startup-migrations.ledger.json`
+Migration blocks, one file each under `apps/api/src/startup-migrations/blocks/`
+and run in the order `BLOCKS` in `apps/api/src/lib/startup-migrations.ts`
+gives, are append-only and ledgered: `apps/api/src/lib/startup-migrations.ledger.json`
 carries a content hash and `columns_written` per block, and `npm run
 migrations:check` fails on an edited block (the fix is a new block, never
 an in-place edit), an unledgered block, or two blocks writing the same

@@ -42,11 +42,12 @@ import { auditMigrationArtifacts, artifactLabel, type MigrationArtifact } from "
  */
 export async function validateSchema(): Promise<void> {
   const db = getDb();
-  const { missing } = await auditMigrationArtifacts(db);
+  const { artifacts, missing } = await auditMigrationArtifacts(db);
 
   if (missing.length === 0) {
     log.info(
-      { label: "startup-schema-ok" },
+      // The count shows the deployed build read its migration blocks.
+      { label: "startup-schema-ok", artifacts_checked: artifacts.length },
       "Schema validation passed — all migration-derived artifacts present",
     );
     return;

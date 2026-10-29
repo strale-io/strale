@@ -26,6 +26,10 @@ const rel = (p: string) => relative(SRC, p).replace(/\\/g, "/");
 const EXEMPT: Record<string, string> = {
   "lib/vendor-terms.ts": "the list itself",
   "lib/dependency-manifest.ts": "reachability probes only; no data is served (fallback pools are checked separately below)",
+  // Hidden from this scan while the blocks shared one file: a `/*` inside a
+  // string there opened a 54 KB "comment" that codeOnly() stripped.
+  "startup-migrations/blocks/0082-reclassify-throttled-free-unlimited.ts":
+    "cites ip-api.com's docs as the source_url of a recorded rate limit; no request is made",
 };
 
 /** Shared clients that may name a prohibited host only behind a licence gate. */
