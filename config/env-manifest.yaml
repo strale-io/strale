@@ -206,15 +206,24 @@
   set_in:
     - railway
   cost_note: Assumed Supabase free tier — not independently verified this session.
-- name: BETTER_STACK_SOURCE_TOKEN
-  purpose: Better Stack (Logtail) source token for structured log shipping. When unset, pino writes JSON to stdout, which Railway captures anyway.
+- name: BETTERSTACK_INGEST_HOST
+  purpose: Better Stack ingesting host for the EU-region Telemetry source (DEC-20261029-A), without scheme. Ships logs only together with BETTERSTACK_SOURCE_TOKEN; must be a *.betterstackdata.com or *.betterstack.com host. Unset means a no-op announced once at boot.
   provider: Better Stack
   holder: petter
-  cost_class: subscription
+  cost_class: free
   required_in: []
   set_in:
-    - none
-  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
+    - railway
+  cost_note: "Free tier first (3 GB a month, 3-day retention). Dormant until Petter creates the source and sets both vars in Railway."
+- name: BETTERSTACK_SOURCE_TOKEN
+  purpose: Better Stack Telemetry source token for shipping redacted pino logs over HTTP (lib/log-sink.ts, DEC-20261029-A). Production key. Unset means a no-op; pino still writes JSON to stdout, which Railway captures.
+  provider: Better Stack
+  holder: petter
+  cost_class: free
+  required_in: []
+  set_in:
+    - railway
+  cost_note: "Free tier first (3 GB a month, 3-day retention). Dormant until Petter creates the source and sets both vars in Railway."
 - name: BOLAGSVERKET_CLIENT_ID
   purpose: Bolagsverket (Swedish Companies Registration Office) OAuth client ID for swedish-company-data.
   provider: Bolagsverket

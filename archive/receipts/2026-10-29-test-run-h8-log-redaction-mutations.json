@@ -1,0 +1,80 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/scripts/mutation-test.mjs",
+    "commit": "960d74686c0c82b2609aadca4116dd199b6f4a17"
+  },
+  "at": "2026-10-29T11:18:44.421Z",
+  "inputs": {
+    "candidate_commit": "960d7468",
+    "base_commit": "f1eab8a3"
+  },
+  "summary": {
+    "mutation_checks": 9,
+    "caught": 9,
+    "ok": true
+  },
+  "topic": "h8-log-redaction-mutations",
+  "raw": {
+    "summary": {
+      "mutation_checks": 9,
+      "caught": 9,
+      "ok": true
+    },
+    "inputs": {
+      "candidate_commit": "960d7468",
+      "base_commit": "f1eab8a3",
+      "tests": [
+        "apps/api/src/lib/log-redaction.test.ts",
+        "apps/api/src/lib/log-sink.test.ts"
+      ]
+    },
+    "raw": [
+      {
+        "mutation": "value scrubbing removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "input key removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "message scrubbing removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "test-runner gate removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "buffer bound removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "string truncation removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "Error-only message scrub removed",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "query-secret pattern disabled",
+        "exit_code": 0,
+        "green_red_green": true
+      },
+      {
+        "mutation": "batch size cap removed",
+        "exit_code": 0,
+        "green_red_green": true
+      }
+    ]
+  }
+}

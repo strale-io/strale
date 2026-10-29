@@ -54,3 +54,54 @@ it("Round 2 serializes a URL as its string", () => {
   pino(logOptions, { write: chunk => { output += chunk; } }).info({ url: new URL("https://example.test/path") });
   expect(JSON.parse(output).url).toBe("https://example.test/path");
 });
+
+// Built at runtime so the source holds no string a secret scanner reads as a live key.
+const fakeKey = (kind: string, tail: string) => [kind, tail].join("_");
+
+it("H8 redacts customer inputs, API keys, auth headers, payment payloads and emails before a line leaves the process", () => {
+  let output = "";
+  const logger = pino(logOptions, { write: chunk => { output += chunk; } });
+  logger.error({
+    label: "h8-shapes",
+    input: { company_name: "private-input-a" }, inputs: { org: "private-input-b" }, body: "private-input-c",
+    capability_input: { iban: "private-input-d" }, request_body: "private-input-e",
+    headers: { cookie: "private-cookie", "x-api-key": "private-header-key", "proxy-authorization": "private-proxy" },
+    payment_payload: { signature: "private-pay" }, paymentPayload: "private-pay-2", payload: "private-pay-3",
+    secret: "private-secret", client_secret: "private-client-secret",
+    note: `caller ${fakeKey("sk", "live_0123456789abcdef")} wrote to someone@example.com with Bearer abc.def-ghi`,
+    jwt: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl",
+    err: new Error(`upstream rejected ${fakeKey("whsec", "test_0123456789")} for ops@strale.io`),
+    slug: "visible-slug",
+  }, `charged person.name@example.org using ${fakeKey("sk", "test_00000000aaaaaaaa")}`);
+  for (const leaked of ["private-", "sk_live_", "sk_test_", "whsec_", "@example.", "@strale.io", "abc.def-ghi", "eyJhbGci"]) {
+    expect(output).not.toContain(leaked);
+  }
+  const row = JSON.parse(output);
+  expect(row.slug).toBe("visible-slug"); expect(row.label).toBe("h8-shapes");
+  expect(row.msg).toBe("charged [Redacted email] using [Redacted key]");
+  expect(row.note).toBe("caller [Redacted key] wrote to [Redacted email] with Bearer [Redacted]");
+  expect(row.err.message).toBe("upstream rejected [Redacted key] for [Redacted email]");
+});
+
+it("H8 review: scrubbing a long unbroken caller string stays fast and bounded", () => {
+  let output = "";
+  const logger = pino(logOptions, { write: chunk => { output += chunk; } });
+  const started = performance.now();
+  logger.warn({ err: "a".repeat(100_000), jwt: `eyJ${"b".repeat(100_000)}` }, "x".repeat(100_000));
+  expect(performance.now() - started).toBeLessThan(250);
+  expect(output.length).toBeLessThan(60_000);
+  expect(JSON.parse(output).err).toContain("…[truncated 83616 chars]");
+});
+
+it("H8 review: an Error logged alone gets a scrubbed message", () => {
+  let output = "";
+  pino(logOptions, { write: chunk => { output += chunk; } }).error(new Error(`bad key ${fakeKey("sk", "live_abcdef12")} for a@b.com`));
+  expect(JSON.parse(output).msg).toBe("bad key [Redacted key] for [Redacted email]");
+  expect(output).not.toContain("sk_live_"); expect(output).not.toContain("a@b.com");
+});
+
+it("H8 review: secrets in query strings are scrubbed", () => {
+  let output = "";
+  pino(logOptions, { write: chunk => { output += chunk; } }).info({ url: "https://h.test/x?api_key=SECRET1&q=ok&email=foo%40bar.com&token=SECRET2" });
+  expect(JSON.parse(output).url).toBe("https://h.test/x?api_key=[Redacted]&q=ok&email=[Redacted]&token=[Redacted]");
+});
