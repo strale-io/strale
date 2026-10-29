@@ -101,13 +101,17 @@ export function createBetterStackSink(opts: SinkOptions): LogSink {
   let lastReportAt = -Infinity;
   let inFlight: Promise<void> | null = null;
 
+  /** stderr, at most once per pause window, so a sink problem never floods it. */
+  function reportLimited(entry: Record<string, unknown>): void {
+    if (now() - lastReportAt < pauseAfterFailureMs) return;
+    lastReportAt = now();
+    report(JSON.stringify(entry));
+  }
+
   function fail(count: number, why: string): void {
     dropped += count;
     pausedUntil = now() + pauseAfterFailureMs;
-    if (now() - lastReportAt >= pauseAfterFailureMs) {
-      lastReportAt = now();
-      report(JSON.stringify({ label: "log-sink.batch-dropped", why, lines: count, dropped_total: dropped }));
-    }
+    reportLimited({ label: "log-sink.batch-dropped", why, lines: count, dropped_total: dropped });
   }
 
   async function send(batch: string[]): Promise<void> {
@@ -121,7 +125,8 @@ export function createBetterStackSink(opts: SinkOptions): LogSink {
         body: events.join("\n"),
         signal: AbortSignal.timeout(timeoutMs),
       });
-      await res.body?.cancel().catch(() => {});
+      await res.body?.cancel().catch((err: unknown) =>
+        reportLimited({ label: "log-sink.body-cancel-failed", why: err instanceof Error ? err.name : "error" }));
       if (res.status >= 200 && res.status < 300) sent += events.length;
       else fail(events.length, `http ${res.status}`);
     } catch (err) {
