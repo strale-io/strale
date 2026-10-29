@@ -107,6 +107,13 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: sitemaps.0
+        operator: contains
+        reliability: guaranteed
+        value: 'strale.dev'
+      - field: user_agents.0
+        operator: not_null
+        reliability: guaranteed
   health_check_input:
     url: https://strale.dev
 output_field_reliability:

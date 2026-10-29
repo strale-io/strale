@@ -122,6 +122,10 @@ test_fixtures:
       - field: checked_at
         operator: not_null
         reliability: guaranteed
+      - field: reason
+        operator: equals
+        reliability: guaranteed
+        value: 'ok'
   health_check_input:
     url: https://example.com
 output_field_reliability:

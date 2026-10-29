@@ -1,0 +1,71 @@
+{
+  "slug": "api-health-check",
+  "recorded_at": "2026-10-29T16:13:36.142Z",
+  "input": {
+    "url": "https://api.strale.io/health"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.strale.io/robots.txt"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "cache-control": "public, max-age=86400",
+          "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+          "content-type": "text/plain; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:13:36 GMT",
+          "link": "</.well-known/agent-card.json>; rel=\"agent-card\"",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "server": "railway-hikari",
+          "strale-version": "2026-02-26",
+          "strict-transport-security": "max-age=63072000; includeSubDomains",
+          "vary": "accept-encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY",
+          "x-hikari-trace": "atl1.mwdw",
+          "x-railway-edge": "atl1",
+          "x-railway-request-id": "TQPLT7SjSDuy-qDWBhdwDg",
+          "x-request-id": "054629fd-4cd7-4b2e-8650-7685679c558b",
+          "x-xss-protection": "0"
+        },
+        "body": "User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: Amazonbot\nAllow: /\n\nUser-agent: FacebookBot\nAllow: /\n\nUser-agent: Applebot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: Bytespider\nAllow: /\n\nUser-agent: CCBot\nAllow: /\n\nSitemap: https://api.strale.io/sitemap.xml\n",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.strale.io/health"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+          "content-type": "application/json",
+          "date": "Thu, 29 Oct 2026 16:13:36 GMT",
+          "link": "</.well-known/agent-card.json>; rel=\"agent-card\"",
+          "permissions-policy": "camera=(), microphone=(), geolocation=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "server": "railway-hikari",
+          "strale-version": "2026-02-26",
+          "strict-transport-security": "max-age=63072000; includeSubDomains",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY",
+          "x-hikari-trace": "atl1.mwdw",
+          "x-railway-edge": "atl1",
+          "x-railway-request-id": "V2xFGfBHRvG9txtNozsQ6Q",
+          "x-request-id": "c848ddbb-b43c-4b9e-aa48-d3d55089980d",
+          "x-xss-protection": "0"
+        },
+        "body": "{\"status\":\"ok\",\"commit\":\"75445e950a70\"}",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

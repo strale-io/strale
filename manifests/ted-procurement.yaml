@@ -28,7 +28,7 @@ output_schema:
   example:
     query:
       country: SE
-      keyword: artificial intelligence
+      keyword: software
       cpv_code: null
     tenders: []
     result_count: 0
@@ -51,7 +51,7 @@ test_fixtures:
   known_answer:
     input:
       country: SE
-      keyword: artificial intelligence
+      keyword: software
     expected_fields:
       - field: query
         operator: not_null
@@ -78,6 +78,18 @@ test_fixtures:
         operator: gt
         reliability: guaranteed
         value: -1
+      - field: result_count
+        operator: gt
+        reliability: guaranteed
+        value: 0
+      - field: tenders.0.country
+        operator: equals
+        reliability: guaranteed
+        value: 'SWE'
+      - field: tenders.0.link
+        operator: contains
+        reliability: guaranteed
+        value: 'ted.europa.eu'
   health_check_input:
     country: US
     keyword: test

@@ -1,0 +1,52 @@
+{
+  "slug": "page-exists",
+  "recorded_at": "2026-10-29T16:05:06.134Z",
+  "input": {
+    "url": "https://example.com"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://example.com/robots.txt"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "age": "0",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236b7adcb59d46-ATL",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:06 GMT",
+          "server": "cloudflare"
+        },
+        "body": "<!doctype html><html lang=en><head><meta charset=utf-8><link rel=icon href=data:,><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>Example Domain</title><style>html{color-scheme:light dark;background:light-dark(#eee,#222)}body{font:16px/1.6 system-ui,sans-serif;max-width:26em;margin:auto;padding:25vh 2em 2em;text-align:center}</style></head><body><p>This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.</p><script src=/s.js></script></body></html>\n",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://example.com"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "age": "4",
+          "allow": "GET, HEAD",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236b7b1d8a9d46-ATL",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:06 GMT",
+          "last-modified": "Thu, 29 Oct 2026 13:15:03 GMT",
+          "server": "cloudflare"
+        },
+        "body": "<!doctype html><html lang=en><head><meta charset=utf-8><link rel=icon href=data:,><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>Example Domain</title><style>html{color-scheme:light dark;background:light-dark(#eee,#222)}body{font:16px/1.6 system-ui,sans-serif;max-width:26em;margin:auto;padding:25vh 2em 2em;text-align:center}</style></head><body><p>This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.</p><script src=/s.js></script></body></html>\n",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

@@ -100,6 +100,14 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: earthquakes.0.magnitude
+        operator: gte
+        reliability: guaranteed
+        value: 5
+      - field: earthquakes.0.magnitude
+        operator: lt
+        reliability: guaranteed
+        value: 10
   health_check_input:
     min_magnitude: 5
     limit: 1

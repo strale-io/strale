@@ -187,6 +187,14 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: object
+      - field: total_results
+        operator: lt
+        reliability: guaranteed
+        value: 100000
+      - field: establishments.0.business_name
+        operator: contains
+        reliability: guaranteed
+        value: 'google'
   health_check_input:
     name: Google
 output_field_reliability:

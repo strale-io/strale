@@ -77,6 +77,14 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: string
+      - field: size_bytes
+        operator: gt
+        reliability: guaranteed
+        value: 400
+      - field: size_bytes
+        operator: lt
+        reliability: guaranteed
+        value: 5000
   health_check_input:
     url: https://example.com
 output_field_reliability:

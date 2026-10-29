@@ -99,6 +99,13 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: object
+      - field: og.image_url
+        operator: not_null
+        reliability: guaranteed
+      - field: og.title
+        operator: contains
+        reliability: guaranteed
+        value: 'strale'
   health_check_input:
     url: https://strale.dev
 output_field_reliability:
