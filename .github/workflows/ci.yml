@@ -42,6 +42,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # GitHub merge queue. A queued PR is tested as the exact merge commit it
+  # will become, so the queue needs every required check to run on this
+  # event, or it waits forever. classify treats it like a push to main (not a
+  # pull_request event), so the full gate runs: no docs-only fast path in the
+  # queue.
+  merge_group:
 
 jobs:
   # ─── Change classification ──────────────────────────────────────────────
@@ -64,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # main always runs everything — never soften the gate on trunk.
+          # main and the merge queue always run everything — never soften the gate on trunk.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "Not a pull_request event (${{ github.event_name }}); docs_only=false, briefs_changed=true"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
