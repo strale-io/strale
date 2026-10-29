@@ -143,12 +143,13 @@ tracks:
     owner: petter
     blocker: The sink is decided (DEC-20261029-A) and the code ships dormant. What remains
       is Petter's Better Stack sign-up, the EU source, the two Railway vars and the alert.
-    next_action: DEC-20261029-A chose Better Stack in the EU region on the free
-      tier. The redaction test and the dormant HTTP shipper land in the H8 PR. Next,
-      Petter signs up, creates the EU source, sets BETTERSTACK_SOURCE_TOKEN and
-      BETTERSTACK_INGEST_HOST in Railway and creates the error-rate alert (bus asks
-      on needs-founder). Then verify that platform facts report log_sink_shipping
-      true and that lines arrive, and close T8.
+    next_action: Shipped dormant in PR 823 under DEC-20261029-A, live 2026-10-29 at
+      12:43 Swedish time, where platform facts showed log_sink_shipping false and
+      static.log_sink present. Next, Petter signs up, creates the EU source, sets
+      BETTERSTACK_SOURCE_TOKEN and BETTERSTACK_INGEST_HOST in Railway and creates
+      the error-rate alert (PR 823 comment, docs/operations/betterstack-log-sink.md).
+      Then verify log_sink_shipping true, the log-sink.enabled boot line with
+      eu_region true and redacted lines in Live tail, and close T8.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Founder approval and redaction prerequisite are recorded before enabling
