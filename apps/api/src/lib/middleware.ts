@@ -2,6 +2,7 @@ import type { Context, Next } from "hono";
 import { createHash } from "node:crypto";
 import { authenticateApiKey } from "./api-keys.js";
 import { apiError } from "./errors.js";
+import { consumeIpRate } from "./rate-limit.js";
 import type { AppEnv } from "../types.js";
 
 export async function authMiddleware(
@@ -80,6 +81,46 @@ export async function optionalAuthMiddleware(
   const reqLog = c.get("log");
   if (reqLog) c.set("log", reqLog.child({ user_id: user.id }));
   await next();
+}
+
+/**
+ * optionalAuthMiddleware with a per-IP limit that only a valid API key skips.
+ *
+ * Integration platforms (Clay, Zapier, n8n) send many customers' keyed calls
+ * from a few shared IPs, so an IP limit applied before auth throttled them all
+ * together long before any one key reached its own DEC-21 limit. A request
+ * that authenticates is limited per key downstream (rateLimitByKey, plus the
+ * spend cap in the handler) and never touches the IP bucket.
+ *
+ * Everything else is counted per IP: no key (free tier, x402), and an invalid
+ * key (S-5). An invalid key is counted only after the lookup fails, so it
+ * costs the same key lookup as on any authenticated route, and once the IP's
+ * bucket is full it is answered 429 rather than 401.
+ */
+export function optionalAuthIpLimitedUnlessKeyed(maxPerIp: number, windowMs: number) {
+  return async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
+    const authHeader = c.req.header("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const apiKey = authHeader.slice(7);
+      const wellFormed = apiKey.startsWith("sk_live_");
+      const identity = wellFormed ? await authenticateApiKey(apiKey) : null;
+      if (identity?.user) {
+        c.set("user", identity.user);
+        c.set("apiKeyId", identity.apiKeyId);
+        // F-0-014: re-child the request logger with user_id once auth resolves.
+        const reqLog = c.get("log");
+        if (reqLog) c.set("log", reqLog.child({ user_id: identity.user.id }));
+        return next();
+      }
+      const limited = consumeIpRate(c, maxPerIp, windowMs);
+      if (limited) return limited;
+      return c.json(apiError("unauthorized", wellFormed ? "Invalid API key." : "Invalid API key format."), 401);
+    }
+
+    const limited = consumeIpRate(c, maxPerIp, windowMs);
+    if (limited) return limited;
+    return next();
+  };
 }
 
 // ─── Shared IP helpers ────────────────────────────────────────────────────────
