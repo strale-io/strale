@@ -27,6 +27,16 @@ describe("planBlock", () => {
     expect(planBlock(row.function, row, row.sha256, "once", true)).toEqual({ action: "run" });
   });
 
+  it("a recorded retired block is skipped, even under force", () => {
+    expect(planBlock(row.function, row, row.sha256, "retired", false)).toEqual({ action: "skip", ledgerId: "M999" });
+    expect(planBlock(row.function, row, row.sha256, "retired", true)).toEqual({ action: "skip", ledgerId: "M999" });
+  });
+
+  it("a retired block still runs on a database where it never ran", () => {
+    expect(planBlock(row.function, row, undefined, "retired", true)).toEqual({ action: "run" });
+    expect(planBlock(row.function, undefined, undefined, "retired", false)).toEqual({ action: "run" });
+  });
+
   it("an unledgered block runs and is never skipped", () => {
     expect(planBlock(row.function, undefined, undefined, "once", false)).toEqual({ action: "run" });
   });
@@ -47,7 +57,7 @@ describe("BLOCK_RUN_POLICY", () => {
   it("declares a policy and a reason for every registered block, and nothing else", () => {
     expect(Object.keys(BLOCK_RUN_POLICY).sort()).toEqual([...names].sort());
     for (const [name, { policy, reason }] of Object.entries(BLOCK_RUN_POLICY)) {
-      expect(["once", "every_boot"], name).toContain(policy);
+      expect(["once", "every_boot", "retired"], name).toContain(policy);
       expect(reason.length, name).toBeGreaterThan(10);
     }
   });
