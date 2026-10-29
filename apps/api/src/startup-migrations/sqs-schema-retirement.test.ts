@@ -45,9 +45,24 @@ describe("startSqsRetirementHeartbeat", () => {
     expect(beat).toHaveBeenCalledTimes(1);
   });
 
+  it("stop() waits for a beat already running, so a withdrawal after it cannot be overwritten", async () => {
+    let finish!: () => void;
+    const events: string[] = [];
+    const beat = vi.fn(() => new Promise<boolean>((resolve) => { finish = () => { events.push("beat-done"); resolve(true); }; }));
+    const hb = start(beat);
+    await vi.advanceTimersByTimeAsync(FIRST_BEAT_DELAY_MS);
+    expect(beat).toHaveBeenCalledTimes(1);
+    const stopped = hb.stop().then(() => { events.push("stopped"); });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(events).toEqual([]);
+    finish();
+    await stopped;
+    expect(events).toEqual(["beat-done", "stopped"]);
+  });
+
   it("stop() ends the heartbeat, including before the first beat", async () => {
     const beat = vi.fn(async () => true);
-    start(beat).stop();
+    await start(beat).stop();
     await vi.advanceTimersByTimeAsync(FIRST_BEAT_DELAY_MS + BEAT_INTERVAL_MS * 3);
     expect(beat).not.toHaveBeenCalled();
   });
@@ -70,13 +85,12 @@ describe("startSqsRetirementHeartbeat", () => {
 });
 
 describe("index.ts shutdown wiring", () => {
-  it("withdraws the beat before the DB pool closes (cleanups run last-registered first)", async () => {
+  it("withdraws the beat first on shutdown: registered after every other cleanup (they run last-registered first)", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const src = readFileSync(resolve(import.meta.dirname, "../index.ts"), "utf8");
-    const pool = src.indexOf('onShutdown("db-pool"');
-    const beat = src.indexOf('onShutdown("sqs-retirement-beat"');
-    expect(pool).toBeGreaterThan(0);
-    expect(beat).toBeGreaterThan(pool);
+    const registrations = [...src.matchAll(/onShutdown\(\s*"([^"]+)"/g)].map((m) => m[1]);
+    expect(registrations).toEqual(expect.arrayContaining(["db-pool", "http-server"]));
+    expect(registrations.at(-1)).toBe("sqs-retirement-beat");
   });
 });

@@ -329,7 +329,7 @@ async function main() {
 
   const port = parseInt(process.env.PORT || "3000", 10);
 
-  let sqsHeartbeat: { stop: () => void } | undefined;
+  let sqsHeartbeat: { stop: () => Promise<void> } | undefined;
   const server = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Strale API running on http://localhost:${info.port}`);
 
@@ -354,7 +354,7 @@ async function main() {
           err: err instanceof Error ? err.message : String(err) }, "sqs-retirement-beat-failed"),
         shuttingDown: isShuttingDown,
       });
-    });
+    }).catch((err: unknown) => console.warn("[sqs-retirement] heartbeat not started:", err));
 
     // Pre-warm suggest catalog after env + server are ready
     warmCatalog().catch((err: Error) =>
@@ -371,15 +371,6 @@ async function main() {
   const { closeDbPool } = await import("./db/index.js");
 
   onShutdown("db-pool", () => closeDbPool());
-  // Registered after "db-pool", so it runs before the pool closes (LIFO):
-  // a stopped build must not leave a fresh beat that lets block 0132 drop
-  // columns under whatever serves next.
-  onShutdown("sqs-retirement-beat", async () => {
-    sqsHeartbeat?.stop();
-    const { clearSqsRetirementBeat } = await import("./startup-migrations/sqs-schema-retirement.js");
-    const { getDb } = await import("./db/index.js");
-    await clearSqsRetirementBeat(getDb());
-  });
   onShutdown(
     "http-server",
     () =>
@@ -387,6 +378,17 @@ async function main() {
         server.close((err) => (err ? rejectClose(err) : resolveClose()));
       }),
   );
+
+  // Registered last, so it runs first (LIFO): before the request drain and
+  // the forced-exit timer can cut shutdown short, and long before the pool
+  // closes. A stopped build must not leave a fresh beat that lets block 0132
+  // drop columns under whatever serves next.
+  onShutdown("sqs-retirement-beat", async () => {
+    await sqsHeartbeat?.stop();
+    const { clearSqsRetirementBeat } = await import("./startup-migrations/sqs-schema-retirement.js");
+    const { getDb } = await import("./db/index.js");
+    await clearSqsRetirementBeat(getDb());
+  });
 
   installShutdownHandlers();
 }

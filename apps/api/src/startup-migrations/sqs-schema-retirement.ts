@@ -67,7 +67,8 @@ export async function clearSqsRetirementBeat(db: MigrationExecutor): Promise<voi
 
 /**
  * Starts the heartbeat after listen: the first beat after FIRST_BEAT_DELAY_MS,
- * then every BEAT_INTERVAL_MS, until stop() or until a beat reports that
+ * then every BEAT_INTERVAL_MS, until stop() (which waits for a beat already
+ * running) or until a beat reports that
  * nothing is left to drop. No beat runs once shuttingDown() is true. Timers
  * are unref'd, so they never hold the process open, and a failed beat is
  * reported, never thrown.
@@ -77,18 +78,22 @@ export function startSqsRetirementHeartbeat(opts: {
   onError: (err: unknown) => void;
   shuttingDown: () => boolean;
   timers?: Pick<typeof globalThis, "setTimeout" | "setInterval" | "clearTimeout" | "clearInterval">;
-}): { stop: () => void } {
+}): { stop: () => Promise<void> } {
   const timers = opts.timers ?? globalThis;
   let stopped = false;
   let every: ReturnType<typeof setInterval> | undefined;
-  const stop = () => {
+  let inFlight: Promise<void> = Promise.resolve();
+  const halt = () => {
     stopped = true;
     timers.clearTimeout(first);
     if (every !== undefined) timers.clearInterval(every);
   };
+  // Resolves once no beat is running, so a withdrawal that follows cannot be
+  // overwritten by a beat that started just before shutdown.
+  const stop = async () => { halt(); await inFlight; };
   const safeBeat = () => {
     if (stopped || opts.shuttingDown()) return;
-    opts.beat().then((stillNeeded) => { if (!stillNeeded) stop(); }, opts.onError);
+    inFlight = opts.beat().then((stillNeeded) => { if (!stillNeeded) halt(); }, opts.onError);
   };
   const first = timers.setTimeout(() => {
     if (stopped) return;
