@@ -18,8 +18,8 @@ receipts, not a status assertion.
 
 Read [tracks.yaml](tracks.yaml), then H7's (T7) `next_action` and
 `resume_file`: [the report](../../research/2026-10-27-codebase-architecture-review.md)
-§10, with the referenced analysis sections. H7 is active; H2 is done, and H1
-and H3 to H6 have shipped with the verification steps their `next_action`
+§10, with the referenced analysis sections. H7 is active; H1 and H2 are done, and H3
+to H6 have shipped with the verification steps their `next_action`
 names still open. The Railway
 auto-redeploy token is not approved; implement observation without it. H8's sink
 is decided (DEC-20261029-A: Better Stack, EU region, free tier) and its code ships

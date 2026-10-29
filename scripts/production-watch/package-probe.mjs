@@ -65,10 +65,11 @@ export async function probe(options) {
   }
 }
 
-export async function packageContract(github, context) {
+/** `options` is for the alert demonstration (demonstrate-alerts.mjs); the workflow passes none. */
+export async function packageContract(github, context, options) {
   let result;
   let error;
-  try { result = await probe(); } catch (e) { error = e; }
+  try { result = await probe(options); } catch (e) { error = e; }
   await report(github, context.repo, { label: 'package-contract', id: 'strale-mcp@latest', ok: !error, run: context.runId,
     body: error ? `Published MCP contract failed: ${error.message}` : `Published MCP contract passed: ${JSON.stringify(result)}` });
   if (error) throw error;
