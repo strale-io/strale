@@ -121,7 +121,7 @@ test_fixtures:
     ico: "00177041"
 limitations:
   - title: Official registry data access
-    text: "Data comes from the official registry's public API under its open-data terms (https://mf.gov.cz/cs/ministerstvo/informacni-systemy/ares); results carry the registry as their source."
+    text: "Data comes from the Czech Ministry of Finance's ARES public API, reused under the ARES operating conditions and Czech open-data law (https://ares.gov.cz/stranky/open-data). Results name ARES as their source. ARES data is informative only and is not an official document."
     category: coverage
     severity: info
   - title: Registry status interpretation
