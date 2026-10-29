@@ -59,13 +59,18 @@ export function placeholderBearerCount(): number {
 /**
  * The bearer token from an Authorization header value, or null when the header
  * is absent, not a Bearer, or a placeholder: all three are "no key" to the
- * caller. Placeholders are counted and logged by route, never with the value.
+ * caller. Placeholders are counted, and sampled to the log by route, never
+ * with the value.
  */
 export function readBearer(header: string | null | undefined, route: string): string | null {
   if (!header || !header.startsWith("Bearer ")) return null;
   const token = header.slice(7);
   if (!isPlaceholderBearer(token)) return token;
   placeholderCount++;
-  log.info({ label: "auth-placeholder-bearer", route, count: placeholderCount }, "auth-placeholder-bearer");
+  // First one, then every 100th: a client looping a placeholder must not cost
+  // one log line per request (the /v1/do IP limit answers after this read).
+  if (placeholderCount === 1 || placeholderCount % 100 === 0) {
+    log.info({ label: "auth-placeholder-bearer", route, count: placeholderCount }, "auth-placeholder-bearer");
+  }
   return null;
 }

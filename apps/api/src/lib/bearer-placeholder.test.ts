@@ -74,14 +74,17 @@ describe("readBearer", () => {
     expect(readBearer(header, "/v1/do")).toBe(expected);
   });
 
-  it("counts and logs placeholders by route without the header value", () => {
+  it("counts every placeholder and logs a sample by route, without the header value", () => {
     vi.mocked(log.info).mockClear();
     const before = placeholderBearerCount();
-    readBearer("Bearer ${STRALE_API_KEY}", "/mcp");
     readBearer("Bearer sk_live_real", "/mcp");
     readBearer(undefined, "/mcp");
-    expect(placeholderBearerCount()).toBe(before + 1);
-    expect(vi.mocked(log.info)).toHaveBeenCalledTimes(1);
+    expect(placeholderBearerCount()).toBe(before);
+    for (let i = 0; i < 100; i++) readBearer("Bearer ${STRALE_API_KEY}", "/mcp");
+    expect(placeholderBearerCount()).toBe(before + 100);
+    // The first ever, then every 100th: 100 consecutive reads cross exactly
+    // one multiple of 100, plus the first if this test made it.
+    expect(vi.mocked(log.info)).toHaveBeenCalledTimes(before === 0 ? 2 : 1);
     const logged = JSON.stringify(vi.mocked(log.info).mock.calls);
     expect(logged).toContain("/mcp");
     expect(logged).not.toContain("STRALE_API_KEY");
