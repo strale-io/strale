@@ -209,7 +209,7 @@ def test_network_failure_becomes_error_tool_message():
     )
     assert isinstance(msg, ToolMessage)
     assert msg.status == "error"
-    assert "may still have completed" in msg.content
+    assert "Do not retry a paid tool" in msg.content
 
 
 @responses.activate
@@ -255,3 +255,51 @@ def test_max_price_cap_is_bounded():
         StraleToolkit(max_price_cents=0)
     with pytest.raises(ValueError):
         StraleToolkit(max_price_cents=2001)
+
+
+X402_CHALLENGE = {"x402Version": 1, "accepts": [{"scheme": "exact", "network": "base"}], "error": "Payment required"}
+
+
+def capability_tool(input_schema, api_key=None):
+    responses.get(
+        f"{BASE}/v1/capabilities",
+        json={"capabilities": [{"slug": "uk-company-data", "description": "UK company", "category": "company-data", "price_cents": 10, "input_schema": input_schema}]},
+    )
+    return StraleToolkit(api_key=api_key, base_url=BASE).get_tools()[0]
+
+
+@responses.activate
+def test_keyless_x402_challenge_is_an_error_on_both_paths(monkeypatch):
+    # The x402 challenge body has no error_code; the 402 status must decide.
+    monkeypatch.delenv("STRALE_API_KEY", raising=False)
+    responses.post(f"{BASE}/v1/do", status=402, json=X402_CHALLENGE)
+    tool = capability_tool({"type": "object", "properties": {"company_number": {"type": "string"}}, "required": ["company_number"]})
+    msg = tool.invoke({"name": tool.name, "args": {"company_number": "00000006"}, "id": "c1", "type": "tool_call"})
+    assert msg.status == "error"
+    err = json.loads(msg.content)
+    assert err["ok"] is False and err["status"] == 402 and err["message"] == "Payment required"
+    assert "/x402/uk-company-data" in err["how_to_pay"]
+
+    execute = StraleToolkit(base_url=BASE).get_meta_tools()[1]
+    out = json.loads(execute.invoke({"slug": "uk-company-data", "inputs": {"company_number": "00000006"}}))
+    assert out["ok"] is False and out["error_code"] == "payment_required" and "how_to_pay" in out
+
+
+@responses.activate
+def test_omitted_optional_fields_are_not_sent_as_null():
+    responses.post(f"{BASE}/v1/do", json={"result": {"status": "completed", "output": {}}})
+    tool = capability_tool(
+        {"type": "object", "properties": {"company_number": {"type": "string"}, "include_officers": {"type": "boolean"}}, "required": ["company_number"]},
+        api_key="sk_test_fixture",
+    )
+    tool.invoke({"company_number": "00000006"})
+    assert json.loads(responses.calls[-1].request.body)["inputs"] == {"company_number": "00000006"}
+
+
+@responses.activate
+def test_per_capability_timeout_warns_against_retry():
+    responses.post(f"{BASE}/v1/do", body=requests.Timeout("read timed out"))
+    tool = capability_tool({"type": "object", "properties": {"company_number": {"type": "string"}}}, api_key="sk_test_fixture")
+    msg = tool.invoke({"name": tool.name, "args": {"company_number": "00000006"}, "id": "c1", "type": "tool_call"})
+    assert msg.status == "error"
+    assert "Do not retry a paid tool" in msg.content

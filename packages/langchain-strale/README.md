@@ -26,7 +26,7 @@ agent = create_agent(
 result = agent.invoke({"messages": [{"role": "user", "content": "Is SE556703748501 a valid VAT number?"}]})
 ```
 
-`create_agent` comes from the `langchain` package (1.x); any model with tool calling works. The tools are ordinary LangChain tools, so `model.bind_tools(toolkit.get_meta_tools())` works too.
+`create_agent` comes from the `langchain` package (1.x). `"openai:gpt-4o"` needs `langchain-openai` installed; any chat model with tool calling works, with its own provider package. The tools are ordinary LangChain tools, so `model.bind_tools(toolkit.get_meta_tools())` works too.
 
 `strale_execute` returns JSON with `ok`, `output`, `price_cents`, `provenance` and `transaction_id`. With an API key, each call is charged to your wallet and capped by `max_price_cents` (default 200, i.e. €2.00; set it on the toolkit, from 1 to 2000).
 
@@ -45,7 +45,7 @@ Solutions (for example `kyb-essentials-se`) show up in `strale_search` results w
 
 ## Without an API key
 
-Search works without a key, and some tools are free without one (for example `iban-validate`, `email-validate`, `dns-lookup`). The current free list is `free_tier_slugs` at https://api.strale.io/v1/platform/facts. A paid tool called without a key returns `ok: false` with instructions.
+Search works without a key, and some tools are free without one (for example `iban-validate`, `email-validate`, `dns-lookup`). The current free list is `free_tier_slugs` at https://api.strale.io/v1/platform/facts. A paid tool called without a key returns `ok: false` with instructions on how to pay (from a per-capability tool, as a tool error).
 
 Get a key at [strale.dev](https://strale.dev/signup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 

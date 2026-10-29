@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Literal, Optional, Type
 from urllib.parse import quote
 
@@ -128,24 +129,47 @@ class StraleTool(BaseTool):
             inputs = kwargs.get("inputs") or {}
         else:
             task = None
-            inputs = kwargs
+            # An optional field the model left out arrives as None; sending it
+            # as null fails the capability's JSON Schema validation.
+            inputs = {k: v for k, v in kwargs.items() if v is not None}
 
+        payload: dict[str, Any] = {
+            "capability_slug": self.capability_slug,
+            "max_price_cents": self.price_cents,
+        }
+        if task:
+            payload["task"] = task
+        if inputs:
+            payload["inputs"] = inputs
         try:
-            result = self.client.execute(
-                capability_slug=self.capability_slug,
-                task=task,
-                inputs=inputs,
-                max_price_cents=self.price_cents,
-            )
-            if "error_code" in result:
-                raise ToolException(
-                    f"[{result['error_code']}] {result.get('message', 'Unknown error')}"
+            status, body = self.client.request("POST", "/v1/do", json_body=payload, auth=True)
+        except requests.RequestException as e:
+            raise ToolException(_no_answer(self.capability_slug, e))
+        # A 402 x402 challenge carries no error_code, so the status decides.
+        if status >= 400 or "error_code" in body:
+            raise ToolException(
+                json.dumps(
+                    _failure(status, body, has_key=bool(self.client.api_key), slug=self.capability_slug, kind="capability"),
+                    default=str,
                 )
-            return json.dumps(result, default=str)
-        except ToolException:
-            raise
-        except Exception as e:
-            raise ToolException(f"Failed to execute {self.capability_slug}: {e}")
+            )
+        # Unwrap nested { result, meta } response shape
+        if isinstance(body.get("result"), dict):
+            flat = {**body["result"], "meta": body.get("meta", {})}
+            if "free_tier" in body:
+                flat["free_tier"] = body["free_tier"]
+            body = flat
+        return json.dumps(body, default=str)
+
+
+def _no_answer(slug: str, err: Exception) -> str:
+    # After a timeout the call may already have run and been charged, so this
+    # must not read as a refusal the model would simply retry.
+    return (
+        f"{slug} did not return: {err}. The call may still have run and been charged. "
+        "Do not retry a paid tool automatically; tell the user, who can check "
+        "GET /v1/transactions with their API key."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -202,47 +226,52 @@ def _search(client: StraleClient, query: str, limit: int) -> dict[str, Any]:
     if status >= 400:
         return _failure(status, body, has_key=bool(client.api_key))
     hits = body.get("results") if isinstance(body.get("results"), list) else []
-    results = []
     # The typeahead carries no input schema; the detail endpoints do. A failed
-    # detail fetch is reported on the hit, never dropped silently.
-    for hit in hits[:limit]:
-        kind = hit.get("type", "capability")
-        slug = str(hit.get("slug", ""))
-        path = f"/v1/{'solutions' if kind == 'solution' else 'capabilities'}/{quote(slug, safe='')}"
-        input_schema = None
-        price = hit.get("price_cents")
-        free_tier = hit.get("is_free_tier") is True
-        detail_error = None
-        try:
-            d_status, detail = client.request("GET", path)
-            if d_status < 400:
-                input_schema = detail.get("input_schema")
-                if isinstance(detail.get("price_cents"), int):
-                    price = detail["price_cents"]
-                free_tier = free_tier or detail.get("is_free_tier") is True
-            else:
-                detail_error = f"detail lookup returned HTTP {d_status}"
-        except requests.RequestException as e:
-            detail_error = f"detail lookup failed: {e}"
-        result: dict[str, Any] = {
-            "type": kind,
-            "slug": slug,
-            "name": hit.get("name"),
-            "description": hit.get("description"),
-            "category": hit.get("category"),
-            "geography": hit.get("geography") or "global",
-            "price_cents": price,
-            "input_schema": input_schema,
-        }
-        if free_tier:
-            result["is_free_tier"] = True
-        if hit.get("step_count"):
-            result["step_count"] = hit["step_count"]
-        if detail_error:
-            result["input_schema_error"] = detail_error
-        results.append(result)
+    # detail fetch is reported on the hit, never dropped silently. Lookups run
+    # in parallel so a slow API costs one timeout, not one per hit.
+    hits = hits[:limit]
+    with ThreadPoolExecutor(max_workers=max(len(hits), 1)) as pool:
+        results = list(pool.map(lambda hit: _describe_hit(client, hit), hits))
     total = body.get("total") if isinstance(body.get("total"), int) else len(results)
     return {"ok": True, "query": query, "total": total, "results": results}
+
+
+def _describe_hit(client: StraleClient, hit: dict[str, Any]) -> dict[str, Any]:
+    kind = hit.get("type", "capability")
+    slug = str(hit.get("slug", ""))
+    path = f"/v1/{'solutions' if kind == 'solution' else 'capabilities'}/{quote(slug, safe='')}"
+    input_schema = None
+    price = hit.get("price_cents")
+    free_tier = hit.get("is_free_tier") is True
+    detail_error = None
+    try:
+        d_status, detail = client.request("GET", path)
+        if d_status < 400:
+            input_schema = detail.get("input_schema")
+            if isinstance(detail.get("price_cents"), int):
+                price = detail["price_cents"]
+            free_tier = free_tier or detail.get("is_free_tier") is True
+        else:
+            detail_error = f"detail lookup returned HTTP {d_status}"
+    except requests.RequestException as e:
+        detail_error = f"detail lookup failed: {e}"
+    result: dict[str, Any] = {
+        "type": kind,
+        "slug": slug,
+        "name": hit.get("name"),
+        "description": hit.get("description"),
+        "category": hit.get("category"),
+        "geography": hit.get("geography") or "global",
+        "price_cents": price,
+        "input_schema": input_schema,
+    }
+    if free_tier:
+        result["is_free_tier"] = True
+    if hit.get("step_count"):
+        result["step_count"] = hit["step_count"]
+    if detail_error:
+        result["input_schema_error"] = detail_error
+    return result
 
 
 def _execute(
@@ -329,12 +358,7 @@ class StraleExecuteTool(BaseTool):
         try:
             return json.dumps(_execute(self.client, slug, type, inputs, self.max_price_cents), default=str)
         except requests.RequestException as e:
-            # After a timeout the call may already have run and been charged,
-            # so this must not read as a refusal the model would simply retry.
-            raise ToolException(
-                f"strale_execute {slug} did not return: {e}. The call may still have completed; "
-                "check the transaction list before retrying a paid tool."
-            )
+            raise ToolException(_no_answer(f"strale_execute {slug}", e))
 
 
 class StraleBalanceTool(BaseTool):
