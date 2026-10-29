@@ -26,7 +26,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const SOURCE_PATH = "apps/api/src/lib/startup-migrations.ts";
@@ -349,12 +349,34 @@ export function loadLedger(root) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-/** The function names listed in SOURCE_PATH's `BLOCKS` array, in run order; [] when the file has none. */
+/**
+ * The identifiers listed in SOURCE_PATH's `BLOCKS` array, in run order, or
+ * null when the file has no `BLOCKS` array this parser can read.
+ */
 export function registeredBlocks(root) {
   const text = readSourceLines(root).join("\n");
   const m = /^export const BLOCKS\b.*=\s*\[$([\s\S]*?)^\];/m.exec(text);
-  if (!m) return [];
-  return [...m[1].replace(/\/\/[^\n]*/g, "").matchAll(/\b(runMigration\d+_\w+)\b/g)].map((x) => x[1]);
+  if (!m) return null;
+  return [...m[1].replace(/\/\/[^\n]*/g, "").matchAll(/[A-Za-z_$][\w$]*/g)].map((x) => x[0]);
+}
+
+const BLOCK_FILE_RE = /^\d{4}-[a-z0-9-]+\.ts$/;
+
+/** Entries of BLOCKS_DIR that are not a `NNNN-name.ts` block file (subfolders included), so the scan would not read them. */
+export function unexpectedBlockDirEntries(root) {
+  const dir = resolve(root, BLOCKS_DIR);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => !e.isFile() || !BLOCK_FILE_RE.test(e.name))
+    .map((e) => `${BLOCKS_DIR}/${e.name}${e.isFile() ? "" : "/"}`);
+}
+
+/** Relative import specifiers in a source file, resolved to repo-relative `.ts` paths. */
+function resolvedImports(root, file) {
+  const text = readFileSync(resolve(root, file), "utf8");
+  const base = dirname(resolve(root, file));
+  return [...text.matchAll(/from\s+"(\.{1,2}\/[^"]+)"/g)]
+    .map((m) => relative(root, resolve(base, m[1])).split(sep).join("/").replace(/\.js$/, ".ts"));
 }
 
 /** Computes the current blocks straight from source (no ledger involved). */
@@ -406,7 +428,25 @@ export function checkLedger(root) {
   }
   // A block the runner registers but the checker never read would run
   // unledgered: everything in BLOCKS must be a block the scan found.
-  for (const fn of registeredBlocks(root)) {
+  const registered = registeredBlocks(root);
+  if (registered === null && current.some((b) => b.file !== SOURCE_PATH)) {
+    findings.push({ code: "BLOCKS_REGISTRY_UNREADABLE", block: SOURCE_PATH,
+      detail: `${SOURCE_PATH} has no \`export const BLOCKS ... = [\` array this checker can read, so it cannot prove every registered block is ledgered` });
+  }
+  for (const entry of unexpectedBlockDirEntries(root)) {
+    findings.push({ code: "BLOCKS_DIR_UNEXPECTED_ENTRY", block: entry,
+      detail: `${entry} is not a NNNN-name.ts file directly in ${BLOCKS_DIR}; the ledger scan and schema validation would not read it` });
+  }
+  for (const b of current) {
+    for (const data of b.dataFiles ?? []) {
+      const target = MIGRATION_DATA_RELOCATIONS[data];
+      if (target && !resolvedImports(root, b.file).includes(target)) {
+        findings.push({ code: "RELOCATED_DATA_NOT_IMPORTED", block: b.functionName,
+          detail: `${b.functionName} declares ${data}, relocated to ${target}, but ${b.file} does not import ${target}; the hashed data would not be the data that runs` });
+      }
+    }
+  }
+  for (const fn of registered ?? []) {
     if (!currentByFn.has(fn)) {
       findings.push({
         code: "REGISTERED_BLOCK_NOT_SCANNED",

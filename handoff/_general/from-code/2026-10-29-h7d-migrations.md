@@ -29,11 +29,27 @@ Intent: H7d (platform-hardening T7), the startup-migration work after H7a to H7c
   vendor-terms scanner skip 54 KB of the monolith. Block 0082's ip-api.com
   documentation URL (no request) is now seen and exempted with its reason.
 
-Local evidence: fresh Postgres 16, drizzle push + all blocks — 73 block
-outcomes identical to `main` apart from block 0109's own timestamp, and
-`pg_dump --schema-only` identical; integration lane 37 files / 359 tests pass;
-compiled `dist/` boot against a fresh DB passes `scripts/ci/boot-probe.mjs`
-(327 executors). No Docker daemon in this sandbox; CI runs the real image.
+Local evidence on Postgres 16 (block outcomes and schema identical to `main`,
+integration lane, compiled `dist/` boot probe):
+[receipt](../../../archive/receipts/2026-10-29-test-run-h7d-migrations-split.json).
+No Docker daemon in this sandbox; CI runs the real image.
+
+Independent review (fresh read-only Claude context): PASS WITH NITS. Fixed in
+the PR: an unreadable `BLOCKS` array, an aliased entry, a subfolder or
+off-pattern file in `blocks/`, and a relocated data file its block does not
+import are each now a checker finding. Left as is: `scripts/vendors-lib.mjs`
+reads only block 0111 for the `vendor_accounts` seed (the only seeding block).
+
+## Follow-ups found on the way (pre-existing, not fixed here)
+
+- Block 0087 may be un-deleting rows: block 0103's trigger keeps the old
+  `deletion_reason` on an already-redacted row, so a later hard purge or user
+  delete leaves `content_retention_purge` with `deleted_at` set, which 0087
+  clears on the next boot. Needs a production read and a new block.
+- Block 0089 re-deactivates `us-court-search` every boot if an operator
+  reactivates it, contrary to its header comment.
+- Block 0030's skip check looks only at `integrity_hash`; a partial run would
+  skip forever.
 
 ## PR 2 and PR 3
 
