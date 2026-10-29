@@ -120,7 +120,7 @@ limitations:
     category: coverage
     severity: info
   - title: Licence and attribution duties pass to you
-    text: Each result carries its source and licence (CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0). If you republish results, include the licence texts linked in 'licenses' and the 'attribution' lines. Rows under any other licence are withheld and counted in withheld_unknown_license.
+    text: "Each result lists every dataset behind it with its licence (CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0). If you republish results, include the licence texts and NOTICE links in licenses and the attribution lines. A row with any source under another licence is withheld and counted in withheld_unknown_license."
     category: legal
     severity: info
   - title: Simple text matching

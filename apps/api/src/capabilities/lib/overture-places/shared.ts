@@ -32,9 +32,8 @@ export interface PlacesRow {
   operating_status: string | null;
   phones: string[];
   websites: string[];
-  source: string | null;
-  license: string | null;
-  source_record_id: string | null;
+  /** Every dataset the row's properties came from, with its licence. */
+  sources: { dataset: string; license: string | null }[];
 }
 
 export interface PlacesResult {

@@ -20,6 +20,11 @@ export const LICENSE_TEXT_URLS: Readonly<Record<string, string>> = {
 
 export const OVERTURE_ATTRIBUTION_URL = "https://docs.overturemaps.org/attribution/";
 
+/** Apache-2.0 §4(d): the NOTICE travels with Foursquare rows; Overture publishes it from its attribution page. */
+export const LICENSE_NOTICE_URLS: Readonly<Record<string, string>> = {
+  "Apache-2.0": OVERTURE_ATTRIBUTION_URL,
+};
+
 /** Dataset ids that Overture's attribution page spells differently. */
 const PROVIDER_NAMES: Readonly<Record<string, string>> = { meta: "Meta", microsoft: "Microsoft" };
 

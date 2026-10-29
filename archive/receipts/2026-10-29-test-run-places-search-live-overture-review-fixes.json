@@ -1,0 +1,305 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "2ea92b342ddbd32e86f16edea2b75ad2c664d0e8"
+  },
+  "at": "2026-10-29T17:56:18.815Z",
+  "inputs": {
+    "slug": "places-search",
+    "release": "2026-10-21.0",
+    "cases": 7
+  },
+  "summary": {
+    "cases": 7,
+    "passed": 7,
+    "withheld_unknown_license": 0,
+    "cold_start_ms": 16328,
+    "warm_ms_min": 103,
+    "retired_worker_restart_ms": 4876
+  },
+  "topic": "places-search-live-overture-review-fixes",
+  "raw": {
+    "ok": true,
+    "release": "2026-10-21.0",
+    "executor": "places-search via getExecutor, real worker, live Overture bucket, after review fixes",
+    "cases": [
+      {
+        "input": {
+          "latitude": 59.3326,
+          "longitude": 18.0649,
+          "radius_m": 1000,
+          "query": "cafe",
+          "limit": 10
+        },
+        "ms": 16328,
+        "result_count": 10,
+        "withheld_unknown_license": 0,
+        "licenses": [
+          {
+            "id": "Apache-2.0",
+            "text_url": "https://www.apache.org/licenses/LICENSE-2.0",
+            "notice_url": "https://docs.overturemaps.org/attribution/"
+          },
+          {
+            "id": "CDLA-Permissive-2.0",
+            "text_url": "https://cdla.dev/permissive-2-0/"
+          }
+        ],
+        "attribution_lines": 4,
+        "first": {
+          "name": "Teaterbaren Glada Ankan",
+          "category": "cafe",
+          "distance_m": 47,
+          "sources": [
+            {
+              "dataset": "meta",
+              "license": "CDLA-Permissive-2.0"
+            },
+            {
+              "dataset": "Overture",
+              "license": "CDLA-Permissive-2.0"
+            }
+          ],
+          "licenses": [
+            "CDLA-Permissive-2.0"
+          ]
+        }
+      },
+      {
+        "input": {
+          "latitude": 59.3326,
+          "longitude": 18.0649,
+          "radius_m": 500,
+          "limit": 5
+        },
+        "ms": 103,
+        "result_count": 5,
+        "withheld_unknown_license": 0,
+        "licenses": [
+          {
+            "id": "Apache-2.0",
+            "text_url": "https://www.apache.org/licenses/LICENSE-2.0",
+            "notice_url": "https://docs.overturemaps.org/attribution/"
+          },
+          {
+            "id": "CC0-1.0",
+            "text_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+          },
+          {
+            "id": "CDLA-Permissive-2.0",
+            "text_url": "https://cdla.dev/permissive-2-0/"
+          }
+        ],
+        "attribution_lines": 4,
+        "first": {
+          "name": "DOZ Apotek Stockholm St Eriksplan",
+          "category": "pharmacy_and_drug_store",
+          "distance_m": 0,
+          "sources": [
+            {
+              "dataset": "AllThePlaces",
+              "license": "CC0-1.0"
+            },
+            {
+              "dataset": "Overture",
+              "license": "CDLA-Permissive-2.0"
+            }
+          ],
+          "licenses": [
+            "CC0-1.0",
+            "CDLA-Permissive-2.0"
+          ]
+        }
+      },
+      {
+        "input": {
+          "latitude": 40.7484,
+          "longitude": -73.9857,
+          "radius_m": 800,
+          "category": "pizza_restaurant",
+          "limit": 10
+        },
+        "ms": 7773,
+        "result_count": 10,
+        "withheld_unknown_license": 0,
+        "licenses": [
+          {
+            "id": "Apache-2.0",
+            "text_url": "https://www.apache.org/licenses/LICENSE-2.0",
+            "notice_url": "https://docs.overturemaps.org/attribution/"
+          },
+          {
+            "id": "CDLA-Permissive-2.0",
+            "text_url": "https://cdla.dev/permissive-2-0/"
+          }
+        ],
+        "attribution_lines": 5,
+        "first": {
+          "name": "Slice",
+          "category": "restaurant",
+          "distance_m": 102,
+          "sources": [
+            {
+              "dataset": "meta",
+              "license": "CDLA-Permissive-2.0"
+            },
+            {
+              "dataset": "Overture-signals",
+              "license": "CDLA-Permissive-2.0"
+            },
+            {
+              "dataset": "Overture",
+              "license": "CDLA-Permissive-2.0"
+            }
+          ],
+          "licenses": [
+            "CDLA-Permissive-2.0"
+          ]
+        }
+      },
+      {
+        "input": {
+          "latitude": 51.5072,
+          "longitude": -0.1276,
+          "radius_m": 1500,
+          "query": "pharmacy",
+          "limit": 5
+        },
+        "ms": 5288,
+        "result_count": 5,
+        "withheld_unknown_license": 0,
+        "licenses": [
+          {
+            "id": "Apache-2.0",
+            "text_url": "https://www.apache.org/licenses/LICENSE-2.0",
+            "notice_url": "https://docs.overturemaps.org/attribution/"
+          },
+          {
+            "id": "CDLA-Permissive-2.0",
+            "text_url": "https://cdla.dev/permissive-2-0/"
+          }
+        ],
+        "attribution_lines": 4,
+        "first": {
+          "name": "UK Pharmacy",
+          "category": "outpatient_care_facility",
+          "distance_m": 49,
+          "sources": [
+            {
+              "dataset": "Foursquare",
+              "license": "Apache-2.0"
+            },
+            {
+              "dataset": "Overture",
+              "license": "CDLA-Permissive-2.0"
+            }
+          ],
+          "licenses": [
+            "Apache-2.0",
+            "CDLA-Permissive-2.0"
+          ]
+        }
+      },
+      {
+        "input": {
+          "latitude": 0,
+          "longitude": -30,
+          "radius_m": 1000,
+          "limit": 5
+        },
+        "ms": 326,
+        "result_count": 0,
+        "withheld_unknown_license": 0,
+        "licenses": [],
+        "attribution_lines": 0,
+        "first": null
+      },
+      {
+        "input": {
+          "latitude": 35.68,
+          "longitude": 139.76,
+          "radius_m": 800,
+          "query": "ramen",
+          "limit": 5
+        },
+        "ms": 5316,
+        "result_count": 5,
+        "withheld_unknown_license": 0,
+        "licenses": [
+          {
+            "id": "Apache-2.0",
+            "text_url": "https://www.apache.org/licenses/LICENSE-2.0",
+            "notice_url": "https://docs.overturemaps.org/attribution/"
+          },
+          {
+            "id": "CDLA-Permissive-2.0",
+            "text_url": "https://cdla.dev/permissive-2-0/"
+          }
+        ],
+        "attribution_lines": 3,
+        "first": {
+          "name": "鶏soba座銀 KITTE丸の内店",
+          "category": "restaurant",
+          "distance_m": 434,
+          "sources": [
+            {
+              "dataset": "Foursquare",
+              "license": "Apache-2.0"
+            },
+            {
+              "dataset": "Overture",
+              "license": "CDLA-Permissive-2.0"
+            }
+          ],
+          "licenses": [
+            "Apache-2.0",
+            "CDLA-Permissive-2.0"
+          ]
+        }
+      },
+      {
+        "input": {
+          "latitude": 59.3326,
+          "longitude": 18.0649,
+          "radius_m": 1000,
+          "query": "cafe",
+          "limit": 10
+        },
+        "ms": 4876,
+        "result_count": 10,
+        "withheld_unknown_license": 0,
+        "licenses": [
+          {
+            "id": "Apache-2.0",
+            "text_url": "https://www.apache.org/licenses/LICENSE-2.0",
+            "notice_url": "https://docs.overturemaps.org/attribution/"
+          },
+          {
+            "id": "CDLA-Permissive-2.0",
+            "text_url": "https://cdla.dev/permissive-2-0/"
+          }
+        ],
+        "attribution_lines": 4,
+        "first": {
+          "name": "Teaterbaren Glada Ankan",
+          "category": "cafe",
+          "distance_m": 47,
+          "sources": [
+            {
+              "dataset": "meta",
+              "license": "CDLA-Permissive-2.0"
+            },
+            {
+              "dataset": "Overture",
+              "license": "CDLA-Permissive-2.0"
+            }
+          ],
+          "licenses": [
+            "CDLA-Permissive-2.0"
+          ]
+        }
+      }
+    ]
+  }
+}

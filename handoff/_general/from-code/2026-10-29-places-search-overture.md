@@ -14,7 +14,7 @@ Intent: portfolio plan item 2.5. Add places and local-business search from open 
   - DuckDB runs in a forked worker (`apps/api/src/capabilities/lib/overture-places/`). It answers one query at a time, stops after 2 minutes idle and retires itself above 450 MB.
   - A row-group bbox index, cached per release in the temp directory, prunes the files a query reads.
   - Measured, not on Railway: the first query in a region takes 3–7 s, warm queries 0.1–1.5 s, and an empty area 4 ms. Worker resident memory was 210–375 MB. Receipt: `archive/receipts/2026-10-29-test-run-places-search-live-overture.json`.
-- New dependency: `@duckdb/node-api@1.5.6-r.1`. Its Linux x64 binding is 71 MB. The `httpfs` extension (21 MB) downloads from extensions.duckdb.org on the worker's first start in each container.
+- New dependency: `@duckdb/node-api@1.5.6-r.1`. Its Linux x64 binding is 71 MB. The `httpfs` extension (21 MB) is installed in the Docker build, with a runtime install as the fallback.
 
 ## Next
 

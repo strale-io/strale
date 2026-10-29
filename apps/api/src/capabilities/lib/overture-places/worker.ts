@@ -75,6 +75,8 @@ async function ensureIndex({ release, files: urls }: PlacesRelease): Promise<{ r
     // no cached index yet
   }
   const c = await connection();
+  // search() turns the footer cache on; indexing a new release must not fill it.
+  await c.run("SET parquet_metadata_cache=false;");
   const list = urls.map((u) => `'${u}'`).join(",");
   const reader = await c.runAndReadAll(
     `SELECT file_name, row_group_id, path_in_schema, stats_min, stats_max
@@ -122,8 +124,9 @@ async function search(r: PlacesRelease, q: PlacesQuery): Promise<PlacesResult> {
       SELECT id, names.primary AS name, basic_category, taxonomy.primary AS taxonomy_primary,
              addresses[1] AS address, (bbox.ymin + bbox.ymax) / 2 AS lat, (bbox.xmin + bbox.xmax) / 2 AS lon,
              confidence, operating_status, phones, websites, brand.names.primary AS brand,
-             sources[1].dataset AS source_dataset, sources[1].license AS source_license,
-             sources[1].record_id AS source_record_id
+             -- sources is per property: a merged place can take its phone from one
+             -- dataset and its name from another, under different licences.
+             list_distinct(list_transform(sources, lambda s: struct_pack(dataset := s.dataset, license := s.license))) AS row_sources
         FROM read_parquet([${list}])
        WHERE bbox.xmin BETWEEN $w AND $e AND bbox.ymin BETWEEN $s AND $n
          AND names.primary IS NOT NULL
@@ -172,9 +175,9 @@ async function search(r: PlacesRelease, q: PlacesQuery): Promise<PlacesResult> {
         operating_status: (r.operating_status as string | null) ?? null,
         phones: (r.phones as string[] | null) ?? [],
         websites: (r.websites as string[] | null) ?? [],
-        source: (r.source_dataset as string | null) ?? null,
-        license: (r.source_license as string | null) ?? null,
-        source_record_id: (r.source_record_id as string | null) ?? null,
+        sources: ((r.row_sources as { dataset: string | null; license: string | null }[] | null) ?? [])
+          .map((x) => ({ dataset: x.dataset ?? "unknown", license: x.license ?? null }))
+          .sort((a, b) => (a.dataset + (a.license ?? "")).localeCompare(b.dataset + (b.license ?? ""))),
       };
     }),
   };

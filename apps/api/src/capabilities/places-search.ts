@@ -1,5 +1,6 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import {
+  LICENSE_NOTICE_URLS,
   LICENSE_TEXT_URLS,
   OVERTURE_ATTRIBUTION_URL,
   attributionLine,
@@ -77,13 +78,21 @@ registerCapability("places-search", async (input: CapabilityInput) => {
 
   const result = await queryPlaces({ latitude, longitude, radius_m, query, category, limit });
 
-  // Every row must carry a licence this capability knows how to honour.
-  const rows = result.rows.filter((r) => isReturnableLicense(r.license));
+  // A row is returned only if every source behind it carries a licence this
+  // capability knows how to honour.
+  const rows = result.rows.filter((r) => r.sources.length > 0 && r.sources.every((x) => isReturnableLicense(x.license)));
   const withheld = result.rows.length - rows.length;
 
-  const sources = new Map<string, string>();
-  for (const r of rows) sources.set(`${r.source ?? "unknown"}|${r.license}`, attributionLine(r.source ?? "unknown", r.license as string));
-  const licenses = [...new Set(rows.map((r) => r.license as string))].sort();
+  const attribution = new Map<string, string>();
+  for (const r of rows) {
+    for (const x of r.sources) attribution.set(`${x.dataset}|${x.license}`, attributionLine(x.dataset, x.license as string));
+  }
+  const licenseIds = [...new Set(rows.flatMap((r) => r.sources.map((x) => x.license as string)))].sort();
+  const licenses = licenseIds.map((id) => ({
+    id,
+    text_url: LICENSE_TEXT_URLS[id],
+    ...(LICENSE_NOTICE_URLS[id] ? { notice_url: LICENSE_NOTICE_URLS[id] } : {}),
+  }));
 
   return {
     output: {
@@ -101,24 +110,24 @@ registerCapability("places-search", async (input: CapabilityInput) => {
         phones: r.phones,
         websites: r.websites,
         overture_id: r.id,
-        source: r.source,
-        license: r.license,
+        sources: r.sources,
+        licenses: [...new Set(r.sources.map((x) => x.license as string))].sort(),
       })),
       result_count: rows.length,
       withheld_unknown_license: withheld,
       search: { latitude, longitude, radius_m, query, category, limit },
       overture_release: result.release,
-      attribution: [...sources.values()],
-      licenses: licenses.map((id) => ({ id, text_url: LICENSE_TEXT_URLS[id] })),
+      attribution: [...attribution.values()],
+      licenses,
     },
     provenance: {
       source: "overture-maps-places",
       fetched_at: new Date().toISOString(),
       dataset_release: result.release,
       source_url: `s3://overturemaps-us-west-2/release/${result.release}/theme=places/type=place/`,
-      attribution: [...sources.values()],
+      attribution: [...attribution.values()],
       attribution_url: OVERTURE_ATTRIBUTION_URL,
-      licenses: licenses.map((id) => ({ id, text_url: LICENSE_TEXT_URLS[id] })),
+      licenses,
     },
   };
 });
