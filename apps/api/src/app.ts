@@ -16,6 +16,7 @@ import type { AppEnv } from "./types.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
+import { jobsRoute } from "./routes/jobs.js";
 import { transactionsRoute } from "./routes/transactions.js";
 import { authRoute, agentSignupHandler } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
@@ -516,6 +517,7 @@ app.route("/v1", doRoute);
 app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
+app.route("/v1", jobsRoute);
 app.route("/v1/auth", authRoute);
 app.route("/v1/api-keys", apiKeysRoute);
 // F-0-002: DB-backed 1/day limit (survives Railway restarts; in-memory

@@ -14,6 +14,7 @@ import {
   index,
   primaryKey,
   bigint,
+  customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -1625,3 +1626,64 @@ export const executionManifestSnapshots = pgTable("execution_manifest_snapshots"
   snapshot: jsonb("snapshot").notNull(),
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ─── Async jobs: file output and completion callbacks (portfolio 2.11) ──────
+//
+// An async /v1/do execution is a `transactions` row (DEC-22); these two tables
+// hang off it. Created by startup-migration block 0134.
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+/**
+ * A file an async execution produced. Bytes live in Postgres (Strale has no
+ * object store; sizes are capped in lib/jobs/files.ts) and are served only via
+ * a signed, expiring URL. Customer content: deleted with its transaction's
+ * content redaction, at the latest PII_RETENTION_DAYS after creation.
+ */
+export const jobFiles = pgTable(
+  "job_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    transactionId: uuid("transaction_id").notNull().references(() => transactions.id),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("job_files_transaction_id_idx").on(table.transactionId),
+    // The retention purge's age predicate.
+    index("job_files_created_at_idx").on(table.createdAt),
+  ],
+);
+
+/**
+ * One completion callback per async execution that asked for one. Delivery is
+ * signed, retried with backoff and bounded (lib/jobs/callbacks.ts).
+ */
+export const jobCallbacks = pgTable(
+  "job_callbacks",
+  {
+    transactionId: uuid("transaction_id").primaryKey().references(() => transactions.id),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    url: text("url").notNull(),
+    /** pending (delivered once the job is terminal) | delivered | failed */
+    state: varchar("state", { length: 16 }).notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    lastStatusCode: integer("last_status_code"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("job_callbacks_due_idx").on(table.state, table.nextAttemptAt),
+  ],
+);

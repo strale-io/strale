@@ -124,7 +124,7 @@
     - .env
     - .env.test
 - name: API_BASE_URL
-  purpose: Base URL scripts/smoke-test.ts targets, defaulting to localhost:3000 for a local run.
+  purpose: Public API origin. scripts/smoke-test.ts targets it (default localhost:3000); interrupt-sender links and async-job file URLs use it (default https://api.strale.io).
   provider: internal
   holder: railway
   cost_class: none

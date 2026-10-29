@@ -1031,6 +1031,14 @@
       "added": "2026-10-29",
       "columns_written": [],
       "sha256": "d4dbc4bf8ca92240b636c1237c2933ba4b51a45aa4298020b49e9a324299fe20"
+    },
+    {
+      "id": "M077",
+      "function": "runMigration0134_asyncJobFiles",
+      "title": "async jobs with file output (portfolio plan 2.11)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "a4fa80b2044bb53c6c1341d19660b58a5f49847d23995cd7f952932a3f887b60"
     }
   ],
   "known_overlaps": [

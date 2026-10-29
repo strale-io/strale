@@ -11,6 +11,9 @@ export interface CapabilityInput {
   [key: string]: unknown;
 }
 
+export type { CapabilityFile } from "../lib/jobs/files.js";
+import type { CapabilityFile } from "../lib/jobs/files.js";
+
 export interface CapabilityResult {
   output: Record<string, unknown>;
   provenance: {
@@ -18,6 +21,11 @@ export interface CapabilityResult {
     fetched_at: string;
     [key: string]: unknown;
   };
+  /**
+   * Files the execution produced (portfolio 2.11). Stored and served by
+   * signed URL on the async path only; see lib/jobs/files.ts for the caps.
+   */
+  files?: CapabilityFile[];
 }
 
 export type CapabilityExecutor = (

@@ -287,6 +287,11 @@ async function main() {
   // "awaiting reconciliation" meant awaiting a human who had to notice first.
   startSettlementReconciler();
 
+  // Portfolio 2.11: async-job callback retries and the bounded file-output
+  // retention purge (DEC-20260504-B), on a 60s tick.
+  const { startAsyncJobs } = await import("./jobs/async-jobs.js");
+  startAsyncJobs();
+
   // Monthly REINDEX CONCURRENTLY on `transactions` — prevents B-tree
   // bloat drift that caused the 2026-04-16 outage. Uses the dedicated-
   // connection advisory-lock pattern because REINDEX CONCURRENTLY can't

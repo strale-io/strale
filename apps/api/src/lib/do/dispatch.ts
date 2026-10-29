@@ -27,6 +27,8 @@ import { sanitizeFailureReason, redactAuditTrail } from "../sanitize.js";
 import { trackBackgroundTask } from "../shutdown.js";
 import { type FreshnessInfo } from "../trust-grade.js";
 import * as reservations from "../wallet-reservations.js";
+import * as jobCallbacks from "../jobs/callbacks.js";
+import { insertJobFiles, manifestOf, prepareFiles } from "../jobs/files.js";
 import * as walletService from "../wallet-service.js";
 import { claimX402Payment, findCachedX402Response, beginX402Execution, releaseX402Claim } from "../x402-payment-claims.js";
 import { captureX402RecordingFailure } from "../x402-recording.js";
@@ -1247,9 +1249,11 @@ type ExecuteAsyncOptions = {
   idempotencyFingerprint: string;
   outputSchema: Record<string, unknown>;
   freshness: FreshnessInfo | null;
+  /** Validated by the route (checkCallbackUrl); signed POST on completion. */
+  callbackUrl?: string | null;
 };
 
-export async function executeAsync({ c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness }: ExecuteAsyncOptions) {
+export async function executeAsync({ c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness, callbackUrl = null }: ExecuteAsyncOptions) {
   // Short DB tx: lock wallet → check balance → debit → create record → commit
   type SetupResult =
     | { ok: false; errorCode: "key_policy"; keyError: ApiError }
@@ -1357,6 +1361,13 @@ export async function executeAsync({ c, db, user, capability, executor, executio
     });
     const newBalance = reservation.balanceAfter;
 
+    // Portfolio 2.11: the callback is recorded with the job, so it is
+    // delivered whichever path makes the job terminal — including the
+    // reservation reconciler after a crash.
+    if (callbackUrl) {
+      await jobCallbacks.enqueueCallback(tx, { transactionId: txnRecord.id, userId: user.id, url: callbackUrl });
+    }
+
     return {
       ok: true as const,
       transactionId: txnRecord.id,
@@ -1425,6 +1436,8 @@ export async function executeAsync({ c, db, user, capability, executor, executio
       startTime,
       outputSchema,
       reservationId: setupResult.reservationId,
+      ownerUserId: user.id,
+      hasCallback: callbackUrl !== null,
     }),
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
@@ -1450,8 +1463,18 @@ export async function executeAsync({ c, db, user, capability, executor, executio
         capability_used: capability.slug,
         price_cents: capability.priceCents,
         wallet_balance_cents: balanceAfter,
+        poll_url: `/v1/transactions/${transactionId}`,
       },
       meta: {
+        ...(callbackUrl
+          ? {
+              callback: {
+                registered: true,
+                signature_header: "Strale-Signature",
+                secret_url: "/v1/jobs/webhook-secret",
+              },
+            }
+          : {}),
         // The audit body is not yet available (background execution still
         // running) — but the URL that will serve the eventual audit IS
         // available now. The /v1/audit/:id endpoint will return 202 +
@@ -1483,9 +1506,13 @@ type ExecuteInBackgroundOptions = {
   outputSchema: Record<string, unknown>;
   /** WP3: the open reservation this execution must capture or release. */
   reservationId: string;
+  /** Owner of any files the execution produces (portfolio 2.11). */
+  ownerUserId: string;
+  /** A completion callback was enqueued with the job; try it as soon as it settles. */
+  hasCallback: boolean;
 };
 
-async function executeInBackground({ db, actor, executor, executionInput, transactionId, walletId, capability, startTime, outputSchema, reservationId }: ExecuteInBackgroundOptions) {
+async function executeInBackground({ db, actor, executor, executionInput, transactionId, walletId, capability, startTime, outputSchema, reservationId, ownerUserId, hasCallback }: ExecuteInBackgroundOptions) {
   try {
     // WP3: record that work actually began. Advisory only — the reconciler
     // releases 'reserved' and 'executing' alike — but it is the difference
@@ -1509,6 +1536,12 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
       EXEC_HARD_TIMEOUT_MS,
     );
     assertBillableOutput(capability.slug, capResult.output);
+    // Portfolio 2.11: a file result over the caps throws here, before any
+    // money settles, so the catch below releases the reservation.
+    const files = prepareFiles(capResult.files);
+    const provenance = files.length > 0
+      ? { ...capResult.provenance, output_files: manifestOf(files) }
+      : capResult.provenance;
     const latencyMs = Date.now() - startTime;
 
     // Success: update transaction record with full audit trail
@@ -1523,7 +1556,7 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
       executionInput,
       output: capResult.output,
       outputSchema,
-      provenance: capResult.provenance,
+      provenance,
       requestContext: undefined, // background execution — no request context available
     });
 
@@ -1537,7 +1570,7 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
         .set({
           status: "completed",
           output: capResult.output,
-          provenance: capResult.provenance,
+          provenance,
           auditTrail: audit,
           latencyMs,
           completedAt: new Date(),
@@ -1564,6 +1597,10 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
         // status, latency and hash state are not the customer's data.
         .where(eq(transactions.id, transactionId));
 
+      // Same transaction as the status write and the capture: a file insert
+      // that fails rolls both back, and the catch below releases instead.
+      await insertJobFiles(tx, files, { transactionId, userId: ownerUserId });
+
       // False means the reconciler already released it — the execution
       // outran its deadline. The customer has been refunded; leave it that
       // way rather than re-charging them for a result they waited too long
@@ -1582,6 +1619,7 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
     });
 
     await settleReceiptFor(transactionId);
+    if (hasCallback) await jobCallbacks.deliverNow(db, transactionId);
 
     // Record success for circuit breaker + quality + piggyback
     fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
@@ -1679,6 +1717,7 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
     });
 
     await settleReceiptFor(transactionId);
+    if (hasCallback) await jobCallbacks.deliverNow(db, transactionId);
 
     // CCO P0 #6: row was 'deferred' until the UPDATE above flipped it
     // to 'pending'. Retry worker picks it up on its next tick.

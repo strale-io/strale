@@ -1,6 +1,7 @@
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { createHash } from "node:crypto";
+import { checkCallbackUrl } from "../lib/jobs/callbacks.js";
 import { assertGuardedAllow, BudgetExhaustedError, CapabilityInvocationRefusedError, CapabilityNotClassifiedError } from "../capabilities/guarded-executor.js";
 import { getExecutor } from "../capabilities/index.js";
 import { getDb } from "../db/index.js";
@@ -206,6 +207,20 @@ doRoute.post(
     typeof body.max_latency_ms === "number" && body.max_latency_ms > 0
       ? Math.round(body.max_latency_ms)
       : undefined;
+
+  // Portfolio 2.11: an optional completion callback for async executions.
+  // Validated up front (https, public host) so a bad URL is a 400 before any
+  // money moves; used only when the capability runs on the async path.
+  let callbackUrl: string | null = null;
+  if (body.callback_url !== undefined && body.callback_url !== null) {
+    const problem = await checkCallbackUrl(body.callback_url);
+    if (problem) {
+      return c.json(apiError("invalid_request", problem, {
+        fix: "Send 'callback_url' as a public https URL, or omit it and poll GET /v1/transactions/{id}.",
+      }), 400);
+    }
+    callbackUrl = body.callback_url as string;
+  }
 
   if (!task && !capabilitySlug) {
     return c.json(
@@ -813,7 +828,7 @@ doRoute.post(
   // Paid execution: sync or async (DEC-22)
   const isAsync = shouldExecuteAsync(capability.avgLatencyMs);
   if (isAsync) {
-    return executeAsync({ c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness });
+    return executeAsync({ c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness, callbackUrl });
   } else {
     return executeSync({ c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness, timeoutMs: timeoutSeconds * 1000 });
   }
