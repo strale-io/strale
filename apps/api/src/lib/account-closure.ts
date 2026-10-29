@@ -47,6 +47,7 @@ import {
 } from "./customer-content.js";
 import { anonymiseTrialGrantOnClosure } from "./trial-eligibility.js";
 import { purgeRecoveryTokensOnClosure } from "./key-recovery.js";
+import { revokeOAuthOnClosure } from "./oauth.js";
 
 export type ClosureDisposition = "anonymized" | "deleted" | "retained";
 
@@ -89,6 +90,17 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
     columns: ["id", "user_id", "created_at", "revoked_at"],
     disposition: "retained",
     reason: "Revoked key IDs and account linkage explain historical wallet debits. Labels, prefixes and hashes are cleared; keys cannot authenticate.",
+  },
+  {
+    table: "oauth_authorization_codes",
+    columns: ["user_id", "source_api_key_id", "code_hash"],
+    disposition: "deleted",
+  },
+  {
+    table: "oauth_grants",
+    columns: ["id", "user_id", "api_key_id", "client_id", "created_at", "revoked_at"],
+    disposition: "retained",
+    reason: "Which app was connected (for example Claude) and the key it spent through explain historical wallet debits. Every connection and its tokens are revoked at closure and cannot authenticate.",
   },
   {
     table: "users",
@@ -366,6 +378,7 @@ export async function applyClosurePlan(
 
   await anonymiseTrialGrantOnClosure(tx, { userId: params.userId });
   await purgeRecoveryTokensOnClosure(tx, { userId: params.userId });
+  await revokeOAuthOnClosure(tx, params.userId);
 
   // `client_meta` is the one identifier-bearing field on `transactions` that
   // is NOT inside the hashed payload (`lib/integrity-hash.ts` hashes input,

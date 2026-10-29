@@ -26,6 +26,7 @@ import {
   fetchSolutionTrust,
   registerStraleTools,
   readPackageVersion,
+  isConnectorExcluded,
   type Capability,
   type Solution,
   type TrustBatchEntry,
@@ -33,6 +34,15 @@ import {
   type McpFunnelEvent,
 } from "strale-mcp/tools";
 import { findEntryPoint, registerEntryPointTools, type EntryPoint } from "strale-mcp/entry-points";
+import {
+  CONNECTOR_PATH,
+  CONNECTOR_RESOURCE,
+  OAUTH_SCOPE,
+  PROTECTED_RESOURCE_METADATA_URL,
+  authenticateOAuthAccessToken,
+  isOAuthAccessToken,
+} from "../lib/oauth.js";
+import { authenticateApiKey } from "../lib/api-keys.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -219,8 +229,92 @@ export function funnelEventEndpoint(event: McpFunnelEvent, prefix = "/mcp"): str
  * can compare each entry point's funnel with the broad server's, and the
  * existing `LIKE '/mcp:%'` queries keep counting only the broad server.
  */
-export function funnelPrefix(entry?: EntryPoint): string {
+export function funnelPrefix(entry?: EntryPoint, connector = false): string {
+  if (connector) return CONNECTOR_PATH;
   return entry ? `/mcp/${entry.id}` : "/mcp";
+}
+
+// ─── Claude connector (distribution D4): lazy authentication ────────────────
+//
+// /mcp/connector is the URL submitted to Claude's connector directory. It
+// serves the broad tool set in connector mode (strale-mcp/tools): no x402
+// hand-off, no crypto tools. Anyone can connect, list tools, search and run
+// free tools. A call that needs the user's account (strale_balance, or
+// strale_execute on a paid tool or bundle) without a token is refused with
+// HTTP 401 and a WWW-Authenticate challenge BEFORE the MCP SDK runs: Claude
+// starts sign-in only on a transport-level 401, never on a 200 tool error.
+// After sign-in Claude retries the same call with the access token, which
+// /v1/do accepts as the grant's additional key (lib/middleware.ts).
+
+interface PeekedCall {
+  method?: unknown;
+  params?: { name?: unknown; arguments?: { slug?: unknown } };
+}
+
+/**
+ * The first tools/call in a JSON-RPC body (or batch) that needs a signed-in
+ * user, or null. A slug the catalog does not know is not protected: the tool
+ * answers it with its own not-found error. Pure, for unit tests.
+ */
+export function connectorProtectedCall(
+  body: unknown,
+  capabilities: Pick<Capability, "slug" | "category" | "is_free_tier">[],
+  solutions: Pick<Solution, "slug" | "category">[],
+): string | null {
+  const messages = Array.isArray(body) ? body : [body];
+  for (const raw of messages) {
+    const msg = raw as PeekedCall | null;
+    if (!msg || typeof msg !== "object" || msg.method !== "tools/call") continue;
+    const name = msg.params?.name;
+    if (name === "strale_balance") return name;
+    if (name !== "strale_execute") continue;
+    const slug = msg.params?.arguments?.slug;
+    if (typeof slug !== "string") continue;
+    const cap = capabilities.find((c) => c.slug === slug);
+    if (cap) {
+      if (!cap.is_free_tier && !isConnectorExcluded(cap.slug, cap.category)) return name;
+      continue;
+    }
+    const sol = solutions.find((s) => s.slug === slug);
+    if (sol && !isConnectorExcluded(sol.slug, sol.category)) return name;
+  }
+  return null;
+}
+
+export function connectorChallenge(error?: "invalid_token"): Response {
+  const parts = [
+    ...(error ? [`error="${error}"`, `error_description="The access token is invalid or expired"`] : []),
+    `resource_metadata="${PROTECTED_RESOURCE_METADATA_URL}"`,
+    `scope="${OAUTH_SCOPE}"`,
+  ];
+  return new Response(
+    JSON.stringify({
+      error: error ?? "unauthorized",
+      error_description: error ? "The access token is invalid or expired." : "This tool needs a connected Strale account.",
+    }),
+    { status: 401, headers: { "Content-Type": "application/json", "WWW-Authenticate": `Bearer ${parts.join(", ")}` } },
+  );
+}
+
+/** A 401 to send instead of running the request, or null to run it. */
+async function connectorAuthGate(req: Request, bearer: string, clientIp: string): Promise<Response | null> {
+  if (bearer) {
+    // An API key works here as on /mcp; a dead one gets the challenge, so
+    // Claude offers to reconnect instead of showing a tool error.
+    if (bearer.startsWith("sk_live_")) return (await authenticateApiKey(bearer)) ? null : connectorChallenge("invalid_token");
+    if (!isOAuthAccessToken(bearer)) return connectorChallenge("invalid_token");
+    const identity = await authenticateOAuthAccessToken(bearer);
+    if (!identity || identity.resource !== CONNECTOR_RESOURCE) return connectorChallenge("invalid_token");
+    return null;
+  }
+  const body = await req.clone().json().catch(() => null);
+  const { capabilities, solutions } = await getCatalog();
+  const tool = connectorProtectedCall(body, capabilities, solutions);
+  if (!tool) return null;
+  recordDiscoveryHit(`${CONNECTOR_PATH}:reject:auth_challenge:${sanitizeFunnelToken(tool)}`,
+    { header: (n: string) => req.headers.get(n) ?? undefined },
+    { ip: clientIp ?? undefined, src: new URL(req.url).searchParams.get("src") ?? undefined });
+  return connectorChallenge();
 }
 
 // ─── Create a stateless MCP handler ─────────────────────────────────────────
@@ -230,6 +324,7 @@ async function handleStatelessRequest(
   apiKey: string,
   clientIp: string,
   entry?: EntryPoint,
+  connector = false,
 ): Promise<Response> {
   const server = new McpServer(
     { name: entry?.serverName ?? "strale", version: readPackageVersion() },
@@ -253,8 +348,9 @@ async function handleStatelessRequest(
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
     version: readPackageVersion(),
     src: venueSrc,
+    connector,
     onFunnelEvent: (event: McpFunnelEvent) => {
-      recordDiscoveryHit(funnelEventEndpoint(event, funnelPrefix(entry)), headerReader, { ip: clientIp ?? undefined, src: venueSrc });
+      recordDiscoveryHit(funnelEventEndpoint(event, funnelPrefix(entry, connector)), headerReader, { ip: clientIp ?? undefined, src: venueSrc });
     },
   };
 
@@ -322,7 +418,7 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
     "Authorization, Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version",
-  "Access-Control-Expose-Headers": "Mcp-Session-Id",
+  "Access-Control-Expose-Headers": "Mcp-Session-Id, WWW-Authenticate",
 };
 
 function addCorsHeaders(response: Response): Response {
@@ -341,8 +437,14 @@ function addCorsHeaders(response: Response): Response {
 
 export const mcpRoute = new Hono();
 
-// IP rate limiting for MCP endpoint — 60 requests/minute per IP
-mcpRoute.use("*", rateLimitByIp(60, 60_000));
+// IP rate limiting for MCP endpoint — 60 requests/minute per IP. Claude
+// reaches the connector from one small IP range (160.79.104.0/21) for every
+// Claude user, so it gets its own, wider bucket; /v1/do keeps its per-key
+// limits behind it.
+const broadMcpLimit = rateLimitByIp(60, 60_000);
+const connectorMcpLimit = rateLimitByIp(600, 60_000, "mcp-connector");
+mcpRoute.use("*", (c, next) =>
+  c.req.path.endsWith(CONNECTOR_PATH) ? connectorMcpLimit(c, next) : broadMcpLimit(c, next));
 
 // CORS preflight
 mcpRoute.options("/", (c) => {
@@ -352,6 +454,11 @@ mcpRoute.options("/", (c) => {
 // All MCP methods on the root path (the broad server) and on /<entry> (the
 // narrow D7 entry points in strale-mcp/entry-points).
 mcpRoute.all("/", (c) => handleMcp(c.req.raw));
+
+// The Claude connector. Registered before /:entry so it never resolves as a
+// narrow entry point.
+mcpRoute.options("/connector", () => new Response(null, { status: 204, headers: CORS_HEADERS }));
+mcpRoute.all("/connector", (c) => handleMcp(c.req.raw, undefined, true));
 
 mcpRoute.options("/:entry", (c) => {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -374,9 +481,9 @@ mcpRoute.all("/:entry", (c) => {
   return handleMcp(c.req.raw, entry);
 });
 
-async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
+async function handleMcp(req: Request, entry?: EntryPoint, connector = false): Promise<Response> {
   const method = req.method;
-  const path = entry ? `/mcp/${entry.id}` : "/mcp";
+  const path = funnelPrefix(entry, connector);
 
   if (method === "POST") {
     const apiKey = extractApiKey(req);
@@ -389,7 +496,7 @@ async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
     // handleStatelessRequest instead).
     try {
       const peek = (await req.clone().json().catch(() => null)) as McpPeekBody | null;
-      const classified = classifyMcpRequest(peek, funnelPrefix(entry));
+      const classified = classifyMcpRequest(peek, funnelPrefix(entry, connector));
       if (classified) {
         recordDiscoveryHit(classified.endpoint, {
           header: (n: string) =>
@@ -401,7 +508,11 @@ async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
     } catch {
       // best-effort only
     }
-    const response = await handleStatelessRequest(req, apiKey, clientIp, entry);
+    if (connector) {
+      const challenge = await connectorAuthGate(req, apiKey, clientIp);
+      if (challenge) return addCorsHeaders(challenge);
+    }
+    const response = await handleStatelessRequest(req, apiKey, clientIp, entry, connector);
     return addCorsHeaders(response);
   }
 
