@@ -130,9 +130,13 @@ async function runTool(opts: ResolvedOptions, slug: string, kind: Kind, inputs: 
     try {
       res = await request(opts, path, { method: "POST", body: inputs, via: opts.x402Fetch, signal });
     } catch (err) {
-      if (signal?.aborted) throw err;
-      // Paying fetches throw on their own refusals (amount above the wrapper's
-      // limit, failed signature). Hand the reason to the model.
+      // Cancellations, timeouts and network failures are thrown, as on every
+      // other route: after a timeout the payment may already have settled, so
+      // this must not read as a refusal the model would simply retry.
+      const name = (err as { name?: string })?.name;
+      if (signal?.aborted || name === "AbortError" || name === "TimeoutError" || err instanceof TypeError) throw err;
+      // What remains is the paying fetch refusing on its own terms (amount
+      // above the wrapper's limit, failed signature). Hand that to the model.
       return {
         ok: false,
         rail: "x402",

@@ -214,3 +214,12 @@ test("maxPriceCents outside 1..2000 is refused at construction", () => {
   for (const bad of [0, -1, 2001, 1.5]) assert.throws(() => straleTools({ maxPriceCents: bad }), RangeError);
   assert.doesNotThrow(() => straleTools({ maxPriceCents: 2000 }));
 });
+
+test("a timeout or network failure on the x402 route is thrown, not reported as a refusal", async () => {
+  const plain = mockBackend({});
+  for (const err of [new DOMException("timed out", "TimeoutError"), new TypeError("fetch failed")]) {
+    const failing = (async () => { throw err; }) as typeof fetch;
+    const execute = straleExecute({ apiKey: "", fetch: plain.fetchImpl, x402Fetch: failing }).execute!;
+    await assert.rejects(execute({ slug: "uk-company-data", inputs: {} }, ctx), (e) => e === err);
+  }
+});
