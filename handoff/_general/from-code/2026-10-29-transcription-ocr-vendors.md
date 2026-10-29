@@ -17,10 +17,10 @@ Intent: portfolio items 2.3 (audio transcription) and 2.4 (bulk OCR), DEC-202610
     English (LibriSpeech, 20 clips), real-time factor 0.43–0.49, 2.1 GB peak.
     About €0.0011 per audio minute on Railway prices.
   - Tesseract 5.3.4 `swe+eng`: CER 0.07% on scan-like synthetic pages and 0.49% on poor
-    ones, 3.2–3.4 s per page per thread, 67 MB. About €0.03 per 1,000 pages.
+    ones, 3.2–3.4 s per page per thread, 67 MB. About €0.025 per 1,000 pages.
 - Proposed prices: €0.01/min (100 min cap) and €0.002/page (500-page cap).
 - Reserve vendors, with sign-up sheets prepared and not recommended now: Speechmatics
-  (speech) and Mistral OCR.
+  (speech; conditional on a written §4.3/§4.4 confirmation) and Mistral OCR.
 
 ## Next
 

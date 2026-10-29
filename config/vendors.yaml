@@ -2300,7 +2300,7 @@ vendors:
         verified_by: build-agent
         evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
         outcome: conditional
-        note: "Terms §3.1.1 permit Integrated Products; §4.4 bars sale as a standalone product; confirm in writing that a per-call capability is an Integrated Product before use."
+        note: "Terms §3.1.1 permit Integrated Products; §4.4 bars sale as a standalone product and §4.3 bars a similar or competing product; confirm in writing that a per-call capability is an Integrated Product before use."
     authorization:
       status: unknown
   - id: deepgram
@@ -2532,7 +2532,7 @@ vendors:
         verified_by: build-agent
         evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
         outcome: prohibited
-        note: "Terms §4.1 bar transfer for consideration and sublicensing; read as not permitting resale."
+        note: "Conservative reading (low confidence): Terms §4.1 bar transfer for consideration and sublicensing, read as not permitting resale; written confirmation would be needed to reopen."
     authorization:
       status: unknown
   - id: elevenlabs
@@ -2581,7 +2581,7 @@ vendors:
         reason: "Swedish is not supported (no å in its character list) and AWS may use content to improve the service by default."
     reevaluation_triggers:
       - kind: other
-        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        condition: "Textract adds Swedish text detection and its default use of content to improve the service changes."
         source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
     verification:
       terms:
@@ -2596,6 +2596,6 @@ vendors:
         verified_by: build-agent
         evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
         outcome: conditional
-        note: "Customer Agreement §6.4(c) bars resale of the Services; use for End Users inside an application is not barred."
+        note: "Customer Agreement §6.4(c) bars resale of the Services; use by End Users is contemplated (§2.5), not expressly granted."
     authorization:
       status: unknown

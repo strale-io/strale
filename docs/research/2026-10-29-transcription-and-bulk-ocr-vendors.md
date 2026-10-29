@@ -63,7 +63,7 @@ not a decision.
 self-hosted Whisper (large-v3-turbo) for speech and Tesseract 5 for OCR both
 run on Railway CPU at a small fraction of vendor prices, at quality measured
 below. A vendor is a fallback, not a prerequisite. If Petter wants one ready,
-Speechmatics (speech) and Mistral OCR (documents) have the cleanest terms.
+Speechmatics (speech) and Mistral OCR (documents) have the strongest overall position (Speechmatics still needs a written confirmation on §4.3/§4.4).
 
 Confidence: **high** = quoted from the vendor's own page, read today;
 **moderate** = vendor page, summarised or indirect; **low** = secondary
@@ -79,7 +79,7 @@ per call and an audit trail, counts as the customer's own product.
 
 | Vendor | Gate | Clause (verbatim) | Confidence |
 |---|---|---|---|
-| Speechmatics | **Permitted** as an integrated product | §3.1.1: "Integration of the Software with other software and services in order to produce Integrated Products". §4.4: "You shall not … use, license or sell the Software as standalone products outside of the Integrated Products." §4.3: no use "to create, train, or improve … a similar or competing product". | high |
+| Speechmatics | **Conditional**: integration expressly permitted; same competing-product risk as Deepgram | §3.1.1: "Integration of the Software with other software and services in order to produce Integrated Products". §4.4: "You shall not … use, license or sell the Software as standalone products outside of the Integrated Products." §4.3: no use "to create, train, or improve … a similar or competing product". §4.3 is the same class of clause as Deepgram §2.4(9) and Groq §6.3(e), so a written confirmation is needed before use. | high |
 | OpenAI (gpt-4o-mini-transcribe, gpt-transcribe) | **Permitted** | Services Agreement §2.2: "the right to use OpenAI's API to integrate the Services into Customer Applications and to make Customer Applications available to End Users." §3.1: "Customer may not resell or lease access to its Account or any End User Account." | high |
 | Mistral (Voxtral) | **Permitted** | Commercial Terms §2.1: licence "non-sublicensable (except to its End Users)"; §1.4: "'Customer Offering' means Customer's own products and services that it makes available to third parties which involve use of the Mistral AI Products." | high |
 | Deepgram | **Conditional** | §2.4(4): may not "Resell, redistribute, or make available any portion of our Services on a stand-alone basis. For clarity, you may integrate our Services into your own platform … provided that your Application contributes material independent functionality beyond our Services". §2.4(9): no use for "developing competing models, products or services". A transcription endpoint is close to a competing service. | high |
@@ -118,8 +118,8 @@ Transcripts are personal data under Strale's 90-day persistence, and the
 plan marks the PII classification `approval_required`. A self-hosted worker
 sends audio to no third party at all, which is the simplest position for
 that approval. If EU processing is wanted, the worker can be deployed as its
-own Railway service in an EU region (moderate: Railway lists EU regions; not
-tested here).
+own Railway service in an EU region (low: not verified from a Railway page in this research; check the regions
+list before the build).
 
 ## Price per unit, and margin at a band-compliant price
 
@@ -143,7 +143,7 @@ self-hosted ≈ 89%, Speechmatics cheapest tier ≈ 63%, Deepgram ≈ 60%.
 
 | Source | Per 1,000 pages | Free tier | Swedish (å ä ö) | Handwriting |
 |---|---|---|---|---|
-| **Self-hosted Tesseract 5** (measured below) | **≈ €0.03** | n/a | yes, measured | no |
+| **Self-hosted Tesseract 5** (measured below) | **≈ €0.025** | n/a | yes, measured | no |
 | Anthropic Claude Haiku 5.5 | ≈ €0.5 (estimate: ~2,000 input tokens at $0.10/MTok plus ~700 output at $0.50/MTok per page) | existing account | general model | general model |
 | Azure Read | $1.50 → €1.38; $0.60 → €0.55 above 1M | 500 pages/month (2 pages per request) | printed yes | not Nordic |
 | Google Document AI | $1.50 → €1.38; $0.60 above 5M | first 1,000 pages | yes | **Swedish handwriting supported** |
@@ -157,8 +157,8 @@ about €0.003, and the page cap fall to 333, to keep a normal margin.
 
 ## What was measured (self-hosted)
 
-Machine: this cloud container, 4 vCPU (Intel Xeon 2.1 GHz), CPU only, the
-same class Railway sells. Railway prices: "$20 / vCPU / month ($0.000463 /
+Machine: this cloud container, 4 vCPU (Intel Xeon 2.1 GHz), CPU only;
+Railway's CPU model is not published, so production speed may differ. Railway prices: "$20 / vCPU / month ($0.000463 /
 vCPU / minute)" and "$10 / GB / month ($0.000231 / GB / minute)" (Hobby and
 Pro alike). Scripts are not committed; method below.
 
@@ -177,8 +177,8 @@ scoring word error rate (jiwer).
 | large-v3-turbo | Swedish | **9.8%** | 0.43 |
 
 large-v3-turbo peaks at 2.1 GB resident memory. At a real-time factor of
-0.49 on 4 vCPU, one audio minute costs 1.94 vCPU-minutes plus 2.1 GB for
-0.49 minutes: about $0.0012, **≈ €0.0011 per audio minute**. An hour of
+0.49 on 4 vCPU, one audio minute costs 1.96 vCPU-minutes plus 2.1 GB for
+0.49 minutes: about $0.00114, **≈ €0.0011 per audio minute**. An hour of
 audio takes about 29 minutes, acceptable on the async path. Loading the
 model per job (seconds) avoids paying about €19 a month to keep 2.1 GB
 resident when idle.
@@ -207,7 +207,7 @@ and ö are exercised. Ten pages per condition; character and word error rate
 | Scan-like: ±1.5° skew, blur, noise, JPEG q55 | 0.07% | 0.5% | 3.42 |
 | Poor scan: stronger blur and noise, JPEG q35, downscaled to 150 dpi | 0.49% | 2.7% | 3.20 |
 
-Tesseract peaks at 67 MB. At 3.4 vCPU-seconds a page: **≈ €0.024 per 1,000
+Tesseract peaks at 67 MB. At 3.4 vCPU-seconds a page: **≈ €0.025 per 1,000
 pages** in compute. A 500-page document takes about 7 minutes on 4 threads.
 Licence: Apache-2.0.
 
@@ -223,16 +223,17 @@ docTR and PaddleOCR were not measured.
 **2.3 Audio transcription: self-hosted faster-whisper large-v3-turbo on its
 own Railway worker. No vendor account.** Swedish word error rate 9.8% and
 English 4.9% on read speech; ≈ €0.0011 per minute against a €0.01 price.
-The vendor to keep in reserve is **Speechmatics**: the clearest integration
-clause, a self-serve EU endpoint, no training by default, Swedish, free
+The vendor to keep in reserve is **Speechmatics**: an express integration
+clause (conditional on a written confirmation, like Deepgram's), a self-serve EU endpoint, no training by default, Swedish, free
 diarization, $100 credit with no card. Sign up only if real-audio quality
 fails or diarization becomes a requirement.
 
 **2.4 Bulk OCR: self-hosted Tesseract 5 (`swe+eng`) on the same worker. No
-vendor account.** ≈ 0.5% character error on scan-like pages; ≈ €0.03 per
-1,000 pages against €2 per 1,000 charged. Claude (existing account, terms
+vendor account.** ≈ 0.07% character error on scan-like pages and 0.49% on poor scans;
+≈ €0.025 per 1,000 pages against €2 per 1,000 charged. Claude (existing account, terms
 permit) is the escalation path for pages Tesseract reads badly, at about
-€0.5 per 1,000 pages, at the cost of possible invented text and US or
+€0.5 per 1,000 pages (only if pages are sent in chunks under 100,000 tokens;
+above that Haiku 5.5 costs 5×), at the cost of possible invented text and US or
 global processing. The vendor to keep in reserve is **Mistral OCR**: the
 only OCR vendor whose terms name third-party customer offerings outright,
 and EU hosting by default; its price leaves a thin margin at €0.002/page. If
