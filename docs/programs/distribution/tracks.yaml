@@ -132,18 +132,18 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Three narrow entry points built on the shared backend (company-check,
-      eu-vat-check, web-reader at api.strale.io/mcp/<id>; calls forward with
-      src=mcp-<id>; funnel rows labelled /mcp/<id>; attribution-rollup section
-      4b compares them with the broad server). After deploy, publish each to the
-      official MCP registry with publish-mcp-entry-points.yml (one entry per run,
-      main only, entries cannot be deleted), record each entry's name, version
-      and smoke-test values here, and set the measurement start date. Smithery
-      listings need Petter's Smithery login (needs-founder ask). Baseline on
-      2026-10-28 is Smithery strale/agent-tools useCount 989 and zero narrow
-      uses; production per-tool volumes were not readable from the session.
-      Review at day 45 and retire all three if none beats the broad server's
-      weekly tools/call count.
+    next_action: Three narrow MCP servers live since PR 804 (commit 810a9753,
+      2026-10-29) at api.strale.io/mcp/company-check (28 tools), eu-vat-check
+      (7) and web-reader (5), verified in production. Calls forward with
+      src=mcp-<id>; attribution-rollup section 4b compares executions with the
+      broad server. Waiting on Petter for two acts, asked on PR 806
+      (bus returned 403). First, run publish-mcp-entry-points.yml from main
+      once per entry, since the session gets 403 on dispatch. Second, add the
+      three URL servers on Smithery. After each publish, record name, version
+      1.0.0 and the registry entry here and set that entry's 45-day review
+      date. Baseline 2026-10-28 is Smithery strale/agent-tools useCount 989
+      and zero narrow uses. Retire all three at day 45 if none beats the broad
+      server's weekly executions.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Per-entry-point usage and payers are compared; unsuccessful servers are
