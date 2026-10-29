@@ -433,7 +433,7 @@ export const openApiSpec = {
                     example: [{ vat_number: "SE556703748501" }, { vat_number: "DE811569869" }],
                   },
                   max_total_price_cents: { type: "integer" as const, minimum: 1, maximum: 10000, description: "The most the whole batch may cost, in EUR cents." },
-                  timeout_seconds: { type: "number" as const, minimum: 5, maximum: 60, default: 30, description: "Time budget per item." },
+                  timeout_seconds: { type: "number" as const, exclusiveMinimum: 0, default: 30, description: "Time budget per item in seconds; values are clamped to 5–60." },
                   dry_run: { type: "boolean" as const, description: "Validate and quote without reserving or running anything." },
                 },
               },
@@ -442,7 +442,7 @@ export const openApiSpec = {
         },
         responses: {
           "200": {
-            description: "The batch ran. Check `status` and each item's `status`; only completed items were charged.",
+            description: "The batch ran. Check `status` and each item's `status`; only completed items were charged. With `dry_run: true`, the body is instead `{dry_run, would_execute, item_count, unit_price_cents, quoted_total_cents, wallet_balance_cents, wallet_sufficient}` and nothing is reserved.",
             headers: {
               "X-Credits-Remaining": { description: "Wallet balance in EUR cents after the batch", schema: { type: "integer" as const } },
               "X-Cost-Cents": { description: "What the batch was charged in EUR cents", schema: { type: "integer" as const } },
@@ -500,7 +500,7 @@ export const openApiSpec = {
           "404": errorResponse("no_matching_capability", "No servable capability with this slug."),
           "409": errorResponse("idempotency_key_reused", "The Idempotency-Key was used for other work, or the original batch is still running (request_in_progress)."),
           "429": errorResponse("rate_limited", "Item rate limit, hourly spend cap or key spend limit would be exceeded."),
-          "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable."),
+          "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable, or the wallet was busy and nothing was reserved (timeout_exceeded)."),
         },
       },
     },

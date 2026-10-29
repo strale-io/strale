@@ -17,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { useTestDatabase } from "../test-support/integration-db.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import {
+  apiKeys,
   batchOrders,
   capabilities,
   transactions,
@@ -89,6 +90,7 @@ describeMaybe("POST /v1/do/batch — reserve once, capture per succeeded item", 
       await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
       await db.delete(transactions).where(eq(transactions.userId, userId));
       await db.delete(walletTransactions).where(eq(walletTransactions.walletId, walletId));
+      await db.delete(apiKeys).where(eq(apiKeys.userId, userId));
       await db.delete(wallets).where(eq(wallets.id, walletId));
       await db.delete(users).where(eq(users.id, userId));
     }
@@ -309,6 +311,103 @@ describeMaybe("POST /v1/do/batch — reserve once, capture per succeeded item", 
     const res = await batch(apiKey, { inputs: [{ probe: "a" }], max_total_price_cents: 25 }, key);
     expect(res.status).toBe(409);
     expect((await res.json()).error_code).toBe("idempotency_key_reused");
+  }, 60_000);
+
+  it("counts the whole quote against an additional key's total limit, and debits under that key", async () => {
+    const { walletId, userId } = await seed(1000);
+    const keyId = randomUUID();
+    const secret = `sk_live_${randomUUID().replace(/-/g, "")}${randomUUID().replace(/-/g, "")}`;
+    await db.insert(apiKeys).values({
+      id: keyId, userId, apiKeyHash: hashApiKey(secret), keyPrefix: getKeyPrefix(secret), label: "Agent", maxSpendTotalCents: 50,
+    });
+    // 3 × 25 = 75 > 50: refused whole, even though two items alone would fit.
+    const refused = await batch(secret, { inputs: [{ probe: "a" }, { probe: "b" }, { probe: "c" }], max_total_price_cents: 75 });
+    expect(refused.status).toBe(429);
+    expect((await refused.json()).error_code).toBe("key_total_cap_exceeded");
+    expect(await db.select().from(walletReservations).where(eq(walletReservations.userId, userId))).toHaveLength(0);
+
+    const ok = await batch(secret, { inputs: [{ probe: "a" }, { probe: "b" }], max_total_price_cents: 50 });
+    expect(ok.status).toBe(200);
+    const ledger = await ledgerOf(walletId);
+    expect(ledger).toHaveLength(2);
+    expect(ledger.every((l) => l.apiKeyId === keyId)).toBe(true);
+    // The key is now at its limit: a single call is refused too.
+    const single = await app.request("http://localhost/v1/do", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ capability_slug: slug, inputs: { probe: "x" }, max_price_cents: PRICE }),
+    });
+    expect(single.status).toBe(429);
+  }, 60_000);
+
+  it("releases items the time budget never reached, with no transaction row, and replays them as not_run", async () => {
+    const { walletId, userId } = await seed(1000);
+    const { reserveBatch, runBatch, loadBatchResults } = await import("../lib/do/batch.js");
+    const { getExecutor } = await import("../capabilities/index.js");
+    const { getDb } = await import("../db/index.js");
+    const [cap] = await db.select().from(capabilities).where(eq(capabilities.id, capabilityId));
+    const reserved = await reserveBatch({
+      db: getDb(), user: { id: userId }, apiKeyId: null, capability: cap as any,
+      itemCount: 2, maxTotalPriceCents: 50, idempotencyKey: null, fingerprint: "e".repeat(64),
+    });
+    if (reserved.kind !== "reserved") throw new Error(reserved.kind);
+    const fakeContext = { get: () => null } as any;
+    const results = await runBatch({
+      c: fakeContext, db: getDb(), user: { id: userId }, capability: cap as any, executor: getExecutor(slug)!,
+      outputSchema: {}, itemTimeoutMs: 30_000, inputs: [{ probe: "a" }, { probe: "b" }],
+      reservationIds: reserved.reservationIds, batchId: reserved.batchId, timeBudgetMs: 0,
+    });
+    expect(results.map((r) => r.status)).toEqual(["not_run", "not_run"]);
+    expect(await db.select().from(transactions).where(eq(transactions.userId, userId))).toHaveLength(0);
+    const holds = await db.select().from(walletReservations).where(eq(walletReservations.userId, userId));
+    expect(holds.every((h) => h.state === "released" && h.transactionId === null)).toBe(true);
+    expect(await balanceOf(walletId)).toBe(1000);
+
+    const [order] = await db.select().from(batchOrders).where(eq(batchOrders.id, reserved.batchId));
+    const replayed = await loadBatchResults(getDb(), order!);
+    expect(replayed!.map((r) => [r.status, r.price_cents])).toEqual([["not_run", 0], ["not_run", 0]]);
+  }, 60_000);
+
+  it("answers a retry 409 request_in_progress while the first batch's holds are open", async () => {
+    slowGate = new Promise((resolve) => { releaseSlow = resolve; });
+    const { walletId, apiKey } = await seed(1000);
+    const key = randomUUID();
+    const body = { inputs: [{ probe: "slow" }], max_total_price_cents: 25 };
+    const first = batch(apiKey, body, key);
+    for (let i = 0; i < 100; i++) {
+      const rows = await db.select().from(transactions).where(eq(transactions.capabilityId, capabilityId));
+      if (rows.some((r) => r.status === "executing")) break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    const retry = await batch(apiKey, body, key);
+    expect(retry.status).toBe(409);
+    expect((await retry.json()).error_code).toBe("request_in_progress");
+    releaseSlow();
+    expect((await first).status).toBe(200);
+    expect(await balanceOf(walletId)).toBe(975);
+  }, 60_000);
+
+  it("lets only one of two concurrent batches reserve when the wallet funds one", async () => {
+    const { walletId, apiKey } = await seed(75);
+    const body = { inputs: [{ probe: "a" }, { probe: "b" }, { probe: "c" }], max_total_price_cents: 75 };
+    const [r1, r2] = await Promise.all([batch(apiKey, body), batch(apiKey, body)]);
+    expect([r1.status, r2.status].sort()).toEqual([200, 402]);
+    expect(await balanceOf(walletId)).toBe(0);
+    expect((await ledgerOf(walletId)).filter((l) => l.type === "purchase")).toHaveLength(3);
+  }, 60_000);
+
+  it("refuses a single call that reuses a key already spent on a batch", async () => {
+    const { walletId, apiKey } = await seed(1000);
+    const key = randomUUID();
+    expect((await batch(apiKey, { inputs: [{ probe: "a" }], max_total_price_cents: 25 }, key)).status).toBe(200);
+    const single = await app.request("http://localhost/v1/do", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "Idempotency-Key": key },
+      body: JSON.stringify({ capability_slug: slug, inputs: { probe: "x" }, max_price_cents: PRICE }),
+    });
+    expect(single.status).toBe(409);
+    expect((await single.json()).error_code).toBe("idempotency_key_reused");
+    expect(await balanceOf(walletId)).toBe(975);
   }, 60_000);
 
   it("leaves holds the reconciler can release when a crash strands them", async () => {

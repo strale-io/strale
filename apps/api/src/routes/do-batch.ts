@@ -133,11 +133,7 @@ doBatchRoute.post("/do/batch", authMiddleware, async (c) => {
     return c.json(apiError("invalid_request", "Idempotency-Key must be 255 characters or fewer.", { fix: "Shorten the Idempotency-Key header to 255 characters or fewer." }), 400);
   }
 
-  // ── 2. Rate limit: items, not requests ─────────────────────────────────
-  const limited = consumeKeyUnits(c, inputs.length, BATCH_ITEMS_PER_MINUTE, 60_000, "batch-items");
-  if (limited) return limited;
-
-  // ── 3. Replay before any other work ────────────────────────────────────
+  // ── 2. Replay before any other work ────────────────────────────────────
   // Validated as objects first so the fingerprint is over what was sent.
   const objectInputs = inputs as Record<string, unknown>[];
   const fingerprint = computeBatchFingerprint(slug, objectInputs);
@@ -213,7 +209,12 @@ doBatchRoute.post("/do/batch", authMiddleware, async (c) => {
     });
   }
 
-  // ── 7. Reserve the whole quote, once ───────────────────────────────────
+  // ── 7. Rate limit: items, not requests — counted only for a batch that is
+  //       about to reserve, so replays, refusals and dry runs cost nothing ──
+  const limited = consumeKeyUnits(c, objectInputs.length, BATCH_ITEMS_PER_MINUTE, 60_000, "batch-items");
+  if (limited) return limited;
+
+  // ── 8. Reserve the whole quote, once ───────────────────────────────────
   let reserved;
   try {
     reserved = await reserveBatch({
@@ -252,7 +253,7 @@ doBatchRoute.post("/do/batch", authMiddleware, async (c) => {
         { spent_cents: reserved.spent, requested_cents: reserved.required, limit_cents: reserved.limit }), 429);
   }
 
-  // ── 8. Run, settle per item, answer in input order ─────────────────────
+  // ── 9. Run, settle per item, answer in input order ─────────────────────
   const results = await runBatch({
     c, db, user, capability, executor,
     outputSchema: (capability.outputSchema ?? {}) as Record<string, unknown>,

@@ -34,7 +34,7 @@ import { keyCapError } from "../api-keys.js";
 import { setCostDeadline, noteUnknownCost, withCallCost } from "../call-cost.js";
 import { sortKeysDeep } from "../canonical/jcs.js";
 import { refusalDetails } from "../capability-refusal.js";
-import { recordFailure, recordSuccess } from "../circuit-breaker.js";
+import { checkCircuitBreaker, recordFailure, recordSuccess } from "../circuit-breaker.js";
 import { EUR_USD_RATE } from "../currency.js";
 import { apiError, type ApiError } from "../errors.js";
 import { assertBillableOutput, shouldCountAgainstCapability } from "../execution-outcome.js";
@@ -77,9 +77,10 @@ export const BATCH_TIME_BUDGET_MS = 90_000;
 /** An item is not started with less than this left in the batch budget. */
 export const BATCH_MIN_ITEM_START_MS = 5_000;
 /**
- * Items per key per minute. A batch counts its items, not itself, against this
- * bucket, all or nothing. 300/min is half the sustained rate /v1/do allows one
- * key (10 requests/second), so a batch is never a way round that limit.
+ * Items per key per minute, in a bucket of its own: a batch counts its items,
+ * not itself, all or nothing, and only when it is about to reserve (a replay,
+ * an invalid batch or a dry run costs nothing). This adds to /v1/do's own
+ * 10 requests/second per key; it does not share that bucket.
  */
 export const BATCH_ITEMS_PER_MINUTE = 300;
 
@@ -264,11 +265,12 @@ export interface BatchItemResult {
 }
 
 const NOT_RUN_MESSAGE = "Not started: the batch time budget ran out first. You were not charged; resend this input.";
+const BREAKER_MESSAGE = "Not started: the tool was suspended after repeated failures while the batch ran. You were not charged; resend this input later.";
 
-function notRun(index: number): BatchItemResult {
+function notRun(index: number, message = NOT_RUN_MESSAGE): BatchItemResult {
   return {
     index, status: "not_run", transaction_id: null, price_cents: 0, latency_ms: null, output: null, provenance: null,
-    error: { error_code: "timeout_exceeded", message: NOT_RUN_MESSAGE, retryable: true },
+    error: { error_code: message === BREAKER_MESSAGE ? "capability_unavailable" : "timeout_exceeded", message, retryable: true },
   };
 }
 
@@ -312,6 +314,13 @@ async function runItem(ctx: RunContext, index: number, input: Record<string, unk
     await releaseUnstarted(db, reservationId, "batch time budget exhausted before the item started");
     return notRun(index);
   }
+  // Rechecked per item: a vendor that starts failing mid-batch trips the
+  // breaker, and the items still waiting must not keep calling it.
+  const circuit = await checkCircuitBreaker(capability.slug);
+  if (!circuit.allowed) {
+    await releaseUnstarted(db, reservationId, "circuit breaker open before the item started");
+    return notRun(index, BREAKER_MESSAGE);
+  }
 
   const startTime = Date.now();
   const transactionId = randomUUID();
@@ -341,6 +350,7 @@ async function runItem(ctx: RunContext, index: number, input: Record<string, unk
   if (!linked) return notRun(index);
 
   const itemBudgetMs = Math.min(ctx.itemTimeoutMs, ctx.batchDeadline - Date.now());
+  let completed: { latencyMs: number; output: unknown; provenance: unknown };
   try {
     const deadline = setCostDeadline(itemBudgetMs);
     const capResult = await executeWithHardTimeout(
@@ -378,20 +388,7 @@ async function runItem(ctx: RunContext, index: number, input: Record<string, unk
       const captured = await reservations.capture(tx, { reservationId });
       if (!captured) throw new reservations.ReservationNotOpenError(reservationId, "capture");
     });
-
-    await settleItemReceipt(transactionId);
-    fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
-    recordQuality({ transactionId, responseTimeMs: latencyMs, output: capResult.output, outputSchema: ctx.outputSchema });
-    if (capResult.output) {
-      fireAndForget(
-        () => recordPiggybackResult(capability.slug, capResult.output, ctx.outputSchema, latencyMs),
-        { label: "piggyback-record", context: { slug: capability.slug } },
-      );
-    }
-    return {
-      index, status: "completed", transaction_id: transactionId, price_cents: capability.priceCents,
-      latency_ms: latencyMs, output: capResult.output, provenance: capResult.provenance,
-    };
+    completed = { latencyMs, output: capResult.output, provenance: capResult.provenance };
   } catch (err) {
     const latencyMs = Date.now() - startTime;
     const errorMessage = err instanceof Error ? err.message : String(err);
@@ -427,6 +424,22 @@ async function runItem(ctx: RunContext, index: number, input: Record<string, unk
       },
     };
   }
+
+  // Charged and committed. Everything below is bookkeeping and runs outside
+  // the try, so a fault here can never report a charged item as free.
+  await settleItemReceipt(transactionId);
+  fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
+  recordQuality({ transactionId, responseTimeMs: completed.latencyMs, output: completed.output, outputSchema: ctx.outputSchema });
+  if (completed.output) {
+    fireAndForget(
+      () => recordPiggybackResult(capability.slug, completed.output, ctx.outputSchema, completed.latencyMs),
+      { label: "piggyback-record", context: { slug: capability.slug } },
+    );
+  }
+  return {
+    index, status: "completed", transaction_id: transactionId, price_cents: capability.priceCents,
+    latency_ms: completed.latencyMs, output: completed.output, provenance: completed.provenance,
+  };
 }
 
 /**
@@ -439,8 +452,10 @@ export async function runBatch(params: Omit<RunContext, "batchDeadline"> & {
   inputs: Record<string, unknown>[];
   reservationIds: string[];
   batchId: string;
+  /** Test seam; the route always uses BATCH_TIME_BUDGET_MS. */
+  timeBudgetMs?: number;
 }): Promise<BatchItemResult[]> {
-  const ctx: RunContext = { ...params, batchDeadline: Date.now() + BATCH_TIME_BUDGET_MS };
+  const ctx: RunContext = { ...params, batchDeadline: Date.now() + (params.timeBudgetMs ?? BATCH_TIME_BUDGET_MS) };
   const results: BatchItemResult[] = new Array(params.inputs.length);
   let next = 0;
   const worker = async () => {
@@ -506,14 +521,25 @@ export async function loadBatchResults(db: ReturnType<typeof getDb>, order: Batc
   }).from(transactions).where(and(inArray(transactions.id, txIds), isNull(transactions.deletedAt)));
   const txById = new Map(rows.map((r) => [r.id, r]));
 
+  // Decided from the hold, which is what moved (or did not move) money. A
+  // captured hold was charged even if its transaction row has since been
+  // deleted; only a released hold that never got a row was never run.
   return ids.map((reservationId, index): BatchItemResult => {
     const hold = byId.get(reservationId);
     const row = hold?.transactionId ? txById.get(hold.transactionId) : undefined;
-    if (!hold || !row) return notRun(index);
-    if (hold.state === "captured") {
+    if (hold?.state === "captured") {
       return {
-        index, status: "completed", transaction_id: row.id, price_cents: order.unitPriceCents,
-        latency_ms: row.latencyMs, output: row.output, provenance: row.provenance,
+        index, status: "completed", transaction_id: hold.transactionId, price_cents: order.unitPriceCents,
+        latency_ms: row?.latencyMs ?? null, output: row?.output ?? null, provenance: row?.provenance ?? null,
+      };
+    }
+    if (!hold?.transactionId) {
+      return notRun(index, hold?.terminalReason === "circuit breaker open before the item started" ? BREAKER_MESSAGE : NOT_RUN_MESSAGE);
+    }
+    if (!row) {
+      return {
+        index, status: "failed", transaction_id: hold.transactionId, price_cents: 0, latency_ms: null, output: null, provenance: null,
+        error: { error_code: "execution_failed", message: "The item did not complete. You were not charged for it.", retryable: true },
       };
     }
     const timedOut = hold.terminalReason === "batch item timeout";
