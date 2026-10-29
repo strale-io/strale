@@ -44,10 +44,11 @@ export interface ResolvedClient {
 }
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
-let fetcher: Fetcher = (url, init) => fetch(url, init);
+const defaultFetcher: Fetcher = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(CIMD_TIMEOUT_MS) });
+let fetcher: Fetcher = defaultFetcher;
 /** Test seam for the CIMD fetch. */
 export function setCimdFetcherForTests(next: Fetcher | null): void {
-  fetcher = next ?? ((url, init) => fetch(url, init));
+  fetcher = next ?? defaultFetcher;
   cimdCache.clear();
 }
 
