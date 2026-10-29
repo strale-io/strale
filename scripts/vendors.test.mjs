@@ -26,7 +26,7 @@ import {
   SCHEMA_PATH,
   REGISTER_PATH,
   PLATFORM_FACTS_PATH,
-  STARTUP_MIGRATIONS_PATH,
+  VENDOR_ACCOUNTS_SEED_PATH,
   VENDOR_VIEW_PATH,
   vendorCategoryView,
 } from "./vendors-lib.mjs";
@@ -190,7 +190,7 @@ function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}, deac
     "apps/api/src/lib/dependency-manifest.ts": dependencyManifestText(depManifestOpts),
     "apps/api/src/capabilities/auto-register.ts": autoRegisterText(deactivated),
     [PLATFORM_FACTS_PATH]: platformFactsText(staleNames, staticFactsVendors),
-    [STARTUP_MIGRATIONS_PATH]: startupMigrationsText(seededProviders),
+    [VENDOR_ACCOUNTS_SEED_PATH]: startupMigrationsText(seededProviders),
     "apps/api/coverage-matrix/acme-cap__us__company-registry.yaml": "capability_slug: acme-cap\ncountry: US\nprovider: Acme\nstatus: Live\n",
     "apps/api/coverage-matrix/other-row__us__other.yaml": "capability_slug: other-cap\ncountry: US\nprovider: Other\nstatus: Live\n",
     "config/env-manifest.yaml": stringify([
@@ -719,7 +719,7 @@ test("a retired provider is never reported by DEPENDENCY_SYNC_SKIPPED even when 
 
 test("VENDOR_ACCOUNTS_SEED_UNREADABLE: startup-migrations.ts with no INSERT INTO vendor_accounts statement fails, never reports zero seeded providers", (t) => {
   const files = baseFiles();
-  files[STARTUP_MIGRATIONS_PATH] = 'import { sql } from "drizzle-orm";\nexport async function runStartupMigrations(tx) {\n  await tx.execute(sql`SELECT 1`);\n}\n';
+  files[VENDOR_ACCOUNTS_SEED_PATH] = 'import { sql } from "drizzle-orm";\nexport async function runStartupMigrations(tx) {\n  await tx.execute(sql`SELECT 1`);\n}\n';
   const dir = makeDir(files);
   t.after(() => cleanup(dir));
   assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("VENDOR_ACCOUNTS_SEED_UNREADABLE"));
@@ -727,7 +727,7 @@ test("VENDOR_ACCOUNTS_SEED_UNREADABLE: startup-migrations.ts with no INSERT INTO
 
 test("VENDOR_ACCOUNTS_SEED_UNREADABLE: an INSERT INTO vendor_accounts statement whose first tuple value is not a plain string literal", (t) => {
   const files = baseFiles();
-  files[STARTUP_MIGRATIONS_PATH] =
+  files[VENDOR_ACCOUNTS_SEED_PATH] =
     'import { sql } from "drizzle-orm";\n' +
     "export async function runStartupMigrations(tx) {\n" +
     "  await tx.execute(sql`\n" +

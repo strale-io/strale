@@ -2,6 +2,12 @@
 // (apps/api/src/lib/startup-migrations.ledger.json). Spec:
 // archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md
 //
+// Layout (H7, 2026-10-28): each block lives in its own file under
+// BLOCKS_DIR; SOURCE_PATH keeps the run order (BLOCKS) and the runner. The
+// split moved every block's text byte for byte, so each ledger hash is
+// unchanged. The checker reads SOURCE_PATH and every file in BLOCKS_DIR, and
+// the delimiter rule below applies inside each file.
+//
 // Block delimiter (read from the file, not assumed): every migration block
 // is its own top-level `export async function runMigrationNNNN_name(...)`
 // declaration — 54 of them, in file order, mixed with 34 leading comment
@@ -19,12 +25,24 @@
 // every one of the 54 computed blocks ends on a bare `}` line.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const SOURCE_PATH = "apps/api/src/lib/startup-migrations.ts";
 export const LEDGER_PATH = "apps/api/src/lib/startup-migrations.ledger.json";
+export const BLOCKS_DIR = "apps/api/src/startup-migrations/blocks";
+
+/**
+ * Declared data files moved after their block was ledgered. The block text,
+ * and so its hash, keeps the path it was ledgered with; the content is read
+ * from the new path. Only a move: the content must be unchanged, or the hash
+ * differs. Append-only, like the ledger.
+ */
+export const MIGRATION_DATA_RELOCATIONS = Object.freeze({
+  "apps/api/src/lib/catalogue-copy-0123.ts": "apps/api/src/startup-migrations/data/catalogue-copy-0123.ts",
+  "apps/api/src/lib/public-descriptions-0124.ts": "apps/api/src/startup-migrations/data/public-descriptions-0124.ts",
+});
 
 const BLOCK_DECL_RE = /^export async function (runMigration\d+_\w+|runStartupMigrations)\(/;
 // Any other top-level declaration — a boundary marker only; never itself
@@ -54,8 +72,17 @@ function isSkippableForBoundary(line) {
   return t === "" || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*");
 }
 
-export function readSourceLines(root) {
-  return normalizeNewlines(readFileSync(resolve(root, SOURCE_PATH), "utf8")).split("\n");
+export function readSourceLines(root, path = SOURCE_PATH) {
+  return normalizeNewlines(readFileSync(resolve(root, path), "utf8")).split("\n");
+}
+
+/** SOURCE_PATH, then every `.ts` file in BLOCKS_DIR (tests excluded), sorted by name. */
+export function sourceFiles(root) {
+  const dir = resolve(root, BLOCKS_DIR);
+  const blockFiles = existsSync(dir)
+    ? readdirSync(dir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).sort().map((f) => `${BLOCKS_DIR}/${f}`)
+    : [];
+  return [SOURCE_PATH, ...blockFiles];
 }
 
 /**
@@ -143,7 +170,7 @@ export function hashBlockWithData(root, sourceText) {
   let text = normalizeNewlines(sourceText);
   const missing = [];
   for (const file of files) {
-    const abs = resolve(root, file);
+    const abs = resolve(root, MIGRATION_DATA_RELOCATIONS[file] ?? file);
     if (!existsSync(abs)) {
       missing.push(file);
       text += `\n// migration-data ${file}\n<missing>`;
@@ -322,9 +349,21 @@ export function loadLedger(root) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+/** The function names listed in SOURCE_PATH's `BLOCKS` array, in run order; [] when the file has none. */
+export function registeredBlocks(root) {
+  const text = readSourceLines(root).join("\n");
+  const m = /^export const BLOCKS\b.*=\s*\[$([\s\S]*?)^\];/m.exec(text);
+  if (!m) return [];
+  return [...m[1].replace(/\/\/[^\n]*/g, "").matchAll(/\b(runMigration\d+_\w+)\b/g)].map((x) => x[1]);
+}
+
 /** Computes the current blocks straight from source (no ledger involved). */
 export function computeCurrentBlocks(root) {
-  const lines = readSourceLines(root);
+  return sourceFiles(root).flatMap((file) => computeFileBlocks(root, file));
+}
+
+function computeFileBlocks(root, file) {
+  const lines = readSourceLines(root, file);
   const ranges = parseBlockRanges(lines);
   return ranges.map((range) => {
     const sourceText = blockSourceText(lines, range);
@@ -337,6 +376,7 @@ export function computeCurrentBlocks(root) {
       sha256,
       dataFiles, // declared `// migration-data:` files; covered by sha256
       missingDataFiles: missing,
+      file,
       startLine: range.startLine, // 0-based; for git-blame date lookup only, never serialized into the ledger
     };
   });
@@ -361,6 +401,20 @@ export function checkLedger(root) {
     findings.push({ code: "EMPTY_INPUT", detail: "Migration source and ledger must each contain at least one block" });
   }
   const currentByFn = new Map(current.map((b) => [b.functionName, b]));
+  for (const fn of new Set(current.map((b) => b.functionName).filter((fn, i, all) => all.indexOf(fn) !== i))) {
+    findings.push({ code: "DUPLICATE_BLOCK_FUNCTION", block: fn, detail: `${fn} is declared in more than one file` });
+  }
+  // A block the runner registers but the checker never read would run
+  // unledgered: everything in BLOCKS must be a block the scan found.
+  for (const fn of registeredBlocks(root)) {
+    if (!currentByFn.has(fn)) {
+      findings.push({
+        code: "REGISTERED_BLOCK_NOT_SCANNED",
+        block: fn,
+        detail: `${fn} is registered in BLOCKS (${SOURCE_PATH}) but is not declared in ${SOURCE_PATH} or a file in ${BLOCKS_DIR}, so it is not ledgered`,
+      });
+    }
+  }
   const ledgerByFn = new Map((ledger.blocks ?? []).map((b) => [b.function, b]));
 
   for (const row of ledger.blocks ?? []) {
@@ -369,7 +423,7 @@ export function checkLedger(root) {
       findings.push({
         code: "LEDGER_BLOCK_GONE",
         block: row.id,
-        detail: `${row.function} is ledgered as ${row.id} but no longer exists in ${SOURCE_PATH}`,
+        detail: `${row.function} is ledgered as ${row.id} but no longer exists in ${SOURCE_PATH} or ${BLOCKS_DIR}`,
       });
       continue;
     }

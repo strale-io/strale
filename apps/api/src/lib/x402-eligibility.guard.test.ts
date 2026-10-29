@@ -75,7 +75,10 @@ const REVIEWED_NOT_DECIDING = new Set([
   // whether a capability may be served — and 'draft' is deliberately the least
   // permissive destination, so it cannot widen serving eligibility.
   "jobs/onboarding-retry.ts",
-  "lib/startup-migrations.ts",
+  // Startup-migration blocks that WRITE a one-time lifecycle transition:
+  // 0111 suspends german-company-data, 0112 promotes eight free APIs.
+  "startup-migrations/blocks/0111-vendor-control-tower.ts",
+  "startup-migrations/blocks/0112-promote-free-api-eight.ts",
   // Writes and reverses vendor-owned suspensions. It never gates a request;
   // the shared serving predicates observe the resulting capability state.
   "lib/vendor-control-tower.ts",

@@ -46,7 +46,7 @@ const EXEMPT: Record<string, string> = {
   "lib/account-closure.ts":
     "names transactions.audit_trail as a retention-rule key and enumerates its " +
     "keys in SQL to report what erasure cleared. Nothing is served.",
-  "lib/startup-migrations.ts":
+  "startup-migrations/blocks/0103-redacted-content-stays-redacted.ts":
     "a trigger body that NULLs audit_trail on redaction. A write, not a read.",
   "lib/integrity-hash.ts":
     "BUILDS the chain payload. The stored audit body is hashed material, not " +

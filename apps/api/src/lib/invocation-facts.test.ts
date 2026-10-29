@@ -23,6 +23,7 @@ import {
   INVOCATION_FACT_DELETE_GUARD_DAYS,
 } from "./invocation-facts.js";
 import { INVOCATION_FACT_RETENTION_DAYS } from "./data-retention.js";
+import { readMigrationsSourceText } from "./migration-artifact-audit.js";
 
 const SRC = join(import.meta.dirname, "..");
 
@@ -538,7 +539,7 @@ describe("retention and the database guard must not contradict each other", () =
     // constant the retention rule is checked against. They are checked against
     // each other here, because the failure mode of them drifting is a purge
     // that throws nightly and a test that keeps passing.
-    const migration = readFileSync(join(SRC, "lib/startup-migrations.ts"), "utf8");
+    const migration = readMigrationsSourceText();
     expect(migration).toContain(
       `INTERVAL '${INVOCATION_FACT_DELETE_GUARD_DAYS} days'`,
     );
