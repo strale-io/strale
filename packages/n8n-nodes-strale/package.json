@@ -1,0 +1,58 @@
+{
+  "name": "n8n-nodes-strale",
+  "version": "1.0.0",
+  "description": "Strale for n8n: look up companies in official registries, check EU VAT numbers and screen names, paid per call with your Strale API key.",
+  "license": "MIT",
+  "homepage": "https://github.com/strale-io/strale/tree/main/packages/n8n-nodes-strale#readme",
+  "keywords": [
+    "n8n-community-node-package",
+    "strale",
+    "company-lookup",
+    "vat"
+  ],
+  "author": {
+    "name": "Strale",
+    "email": "hello@strale.io",
+    "url": "https://strale.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/n8n-nodes-strale"
+  },
+  "bugs": {
+    "url": "https://github.com/strale-io/strale/issues"
+  },
+  "scripts": {
+    "build": "n8n-node build",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test \"test/**/*.test.js\"",
+    "scan": "npx -y @n8n/scan-community-package@0.41.1 n8n-nodes-strale",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "files": [
+    "dist",
+    "!dist/tsconfig.tsbuildinfo"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/StraleApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Strale/Strale.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "0.54.5",
+    "eslint": "9.32.0",
+    "n8n-workflow": "2.16.0",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

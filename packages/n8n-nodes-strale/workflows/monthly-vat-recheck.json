@@ -1,0 +1,79 @@
+{
+	"name": "Strale: Monthly VAT Number Re-check",
+	"nodes": [
+		{
+			"parameters": {
+				"rule": { "interval": [{ "field": "months", "triggerAtDayOfMonth": 1, "triggerAtHour": 7 }] }
+			},
+			"id": "8b0c3c1e-0000-4000-8000-000000000011",
+			"name": "First of the Month",
+			"type": "n8n-nodes-base.scheduleTrigger",
+			"typeVersion": 1.2,
+			"position": [0, 0]
+		},
+		{
+			"parameters": {
+				"documentId": { "__rl": true, "mode": "url", "value": "" },
+				"sheetName": { "__rl": true, "mode": "name", "value": "Suppliers" },
+				"options": {}
+			},
+			"id": "8b0c3c1e-0000-4000-8000-000000000012",
+			"name": "Read Supplier List",
+			"type": "n8n-nodes-base.googleSheets",
+			"typeVersion": 4.5,
+			"position": [240, 0],
+			"notes": "Point this at a sheet with a 'vat_number' column."
+		},
+		{
+			"parameters": {
+				"resource": "vatNumber",
+				"operation": "check",
+				"vatNumber": "={{ $json.vat_number }}"
+			},
+			"id": "8b0c3c1e-0000-4000-8000-000000000013",
+			"name": "Strale",
+			"type": "n8n-nodes-strale.strale",
+			"typeVersion": 1,
+			"position": [480, 0],
+			"credentials": { "straleApi": { "id": "", "name": "Strale account" } },
+			"onError": "continueRegularOutput"
+		},
+		{
+			"parameters": {
+				"conditions": {
+					"options": { "caseSensitive": true, "typeValidation": "loose" },
+					"conditions": [
+						{
+							"leftValue": "={{ $json.valid }}",
+							"rightValue": true,
+							"operator": { "type": "boolean", "operation": "notEquals" }
+						}
+					],
+					"combinator": "and"
+				},
+				"options": {}
+			},
+			"id": "8b0c3c1e-0000-4000-8000-000000000014",
+			"name": "Not Valid",
+			"type": "n8n-nodes-base.if",
+			"typeVersion": 2,
+			"position": [720, 0]
+		},
+		{
+			"parameters": {},
+			"id": "8b0c3c1e-0000-4000-8000-000000000015",
+			"name": "Review These Suppliers",
+			"type": "n8n-nodes-base.noOp",
+			"typeVersion": 1,
+			"position": [960, -80],
+			"notes": "Replace with an email, Slack or sheet update step."
+		}
+	],
+	"connections": {
+		"First of the Month": { "main": [[{ "node": "Read Supplier List", "type": "main", "index": 0 }]] },
+		"Read Supplier List": { "main": [[{ "node": "Strale", "type": "main", "index": 0 }]] },
+		"Strale": { "main": [[{ "node": "Not Valid", "type": "main", "index": 0 }]] },
+		"Not Valid": { "main": [[{ "node": "Review These Suppliers", "type": "main", "index": 0 }], []] }
+	},
+	"settings": {}
+}
