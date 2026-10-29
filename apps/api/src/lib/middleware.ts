@@ -2,6 +2,7 @@ import type { Context, Next } from "hono";
 import { createHash } from "node:crypto";
 import { authenticateApiKey } from "./api-keys.js";
 import { authenticateOAuthAccessToken, isOAuthAccessToken } from "./oauth.js";
+import { readBearer } from "./bearer-placeholder.js";
 import { apiError } from "./errors.js";
 import { consumeIpRate } from "./rate-limit.js";
 import type { AppEnv, User } from "../types.js";
@@ -20,8 +21,8 @@ export async function authMiddleware(
   c: Context<AppEnv>,
   next: Next,
 ): Promise<Response | void> {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const apiKey = readBearer(c.req.header("Authorization"), c.req.path);
+  if (!apiKey) {
     return c.json(
       apiError(
         "unauthorized",
@@ -31,7 +32,6 @@ export async function authMiddleware(
     );
   }
 
-  const apiKey = authHeader.slice(7); // Strip "Bearer "
   if (!apiKey.startsWith("sk_live_") && !isOAuthAccessToken(apiKey)) {
     return c.json(apiError("unauthorized", "Invalid API key format."), 401);
   }
@@ -68,13 +68,12 @@ export async function optionalAuthMiddleware(
   c: Context<AppEnv>,
   next: Next,
 ): Promise<Response | void> {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    // No auth header — proceed without user
+  const apiKey = readBearer(c.req.header("Authorization"), c.req.path);
+  if (!apiKey) {
+    // No key (or an unexpanded placeholder) — proceed without user
     return next();
   }
 
-  const apiKey = authHeader.slice(7);
   if (!apiKey.startsWith("sk_live_") && !isOAuthAccessToken(apiKey)) {
     return c.json(apiError("unauthorized", "Invalid API key format."), 401);
   }
@@ -103,16 +102,16 @@ export async function optionalAuthMiddleware(
  * that authenticates is limited per key downstream (rateLimitByKey, plus the
  * spend cap in the handler) and never touches the IP bucket.
  *
- * Everything else is counted per IP: no key (free tier, x402), and an invalid
+ * Everything else is counted per IP: no key or a placeholder one (free tier,
+ * x402; lib/bearer-placeholder.ts), and an invalid
  * key (S-5). An invalid key is counted only after the lookup fails, so it
  * costs the same key lookup as on any authenticated route, and once the IP's
  * bucket is full it is answered 429 rather than 401.
  */
 export function optionalAuthIpLimitedUnlessKeyed(maxPerIp: number, windowMs: number) {
   return async (c: Context<AppEnv>, next: Next): Promise<Response | void> => {
-    const authHeader = c.req.header("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const apiKey = authHeader.slice(7);
+    const apiKey = readBearer(c.req.header("Authorization"), c.req.path);
+    if (apiKey !== null) {
       const wellFormed = apiKey.startsWith("sk_live_") || isOAuthAccessToken(apiKey);
       const identity = wellFormed ? await authenticateBearer(apiKey) : null;
       if (identity?.user) {
