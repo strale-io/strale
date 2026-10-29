@@ -1,0 +1,60 @@
+{
+  "name": "strale-ai-sdk",
+  "version": "0.1.0",
+  "description": "Vercel AI SDK tools for Strale: search a library of pay-per-call tools for AI agents, then run one by slug",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "ai": "^7.0.0",
+    "zod": "^3.25.76 || ^4.1.8"
+  },
+  "devDependencies": {
+    "ai": "^7.0.0",
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0"
+  },
+  "keywords": [
+    "ai-sdk",
+    "vercel-ai-sdk",
+    "ai",
+    "tools",
+    "agent",
+    "strale",
+    "x402"
+  ],
+  "license": "MIT",
+  "author": "Strale <hello@strale.io> (https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d6)",
+  "homepage": "https://github.com/strale-io/strale/tree/main/packages/ai-sdk-strale#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/ai-sdk-strale"
+  },
+  "bugs": {
+    "url": "https://github.com/strale-io/strale/issues"
+  },
+  "engines": {
+    "node": ">=20.3.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

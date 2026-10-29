@@ -393,6 +393,9 @@ jobs:
         run: node apps/api/scripts/check-framework-packages.mjs
       - if: needs.classify.outputs.docs_only == 'false'
         run: npm test --workspace=packages/zapier-strale
+      # D6: the AI SDK package's offline tool-loop test (mock model, mocked API).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm test --workspace=packages/ai-sdk-strale
       - if: needs.classify.outputs.docs_only == 'false'
         run: node --test apps/api/scripts/check-framework-packages.test.mjs
       # DEC-20260822-A: the CEO morning brief must stay a business synthesis.

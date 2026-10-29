@@ -115,10 +115,15 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Build tool() package with an offline mock-model test; run
-      distribution preflight, publish under DEC-20261027-B, run the production
-      contract smoke test and report afterwards, then submit the Tools Registry
-      PR. Measure acceptance and client-header calls against §8 D6 thresholds.
+    next_action: "Package strale-ai-sdk 0.1.0 built in packages/ai-sdk-strale
+      (PR for branch feat/d6-ai-sdk-package) with tool() search and execute,
+      API key or x402 fetch, header strale-ai-sdk/0.1.0, offline mock-model
+      test in CI. Next, Petter publishes the first version (a new package has
+      no trusted publisher yet, see docs/release/npm-publishing.md) and adds
+      the trusted publisher. Then run the smoke test on the published
+      version, open the vercel/ai Tools Registry PR and set day 30 and day 60
+      review dates. Baseline 2026-10-29 is zero calls with this header, since
+      the package is not yet on npm."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Package and registry outcome plus distinct callers are measured against
