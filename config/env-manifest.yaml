@@ -261,6 +261,24 @@
     - railway
     - .env
   cost_note: Self-hosted chromium image on Railway (DEC-7), not the hosted browserless.io product; per project_vendor_cost_facts the free-hosted-plan fallback now also fits if ever needed.
+- name: BUS_GITHUB_TOKEN
+  purpose: Fine-grained GitHub token with Issues read/write on the agent-bus repository only. With BUS_REPO it makes sendAlert also post warnings and criticals to bus channel strale-planning (lib/alert-bus.ts). Unset means email only.
+  provider: GitHub
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Intended home is Railway, set by Petter. Not set as of 2026-10-29: adding this production credential is the founder's call, and the code is dormant until then."
+- name: BUS_REPO
+  purpose: owner/name of the private agent-bus repository that bus alert delivery posts to. Kept out of this public repository on purpose; pairs with BUS_GITHUB_TOKEN.
+  provider: GitHub
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Intended home is Railway, set by Petter alongside BUS_GITHUB_TOKEN. Not set as of 2026-10-29."
 - name: CAPABILITY_PROMOTION_ENFORCE
   purpose: "Feature flag: set to 'true' to make quarantine/promotion decisions in jobs/capability-promotion.ts take effect rather than log-only."
   provider: internal
