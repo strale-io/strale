@@ -124,6 +124,7 @@ import { runMigration0132_dropSqsResidualSchema } from "../startup-migrations/bl
 import { runMigration0133_oauthConnector } from "../startup-migrations/blocks/0133-oauth-connector.js";
 import { runMigration0134_renameCapabilityHealthToSourceHealth } from "../startup-migrations/blocks/0134-rename-capability-health-to-source-health.js";
 import { runMigration0135_batchOrders } from "../startup-migrations/blocks/0135-batch-orders.js";
+import { runMigration0136_asyncJobFiles } from "../startup-migrations/blocks/0136-async-job-files.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -209,6 +210,7 @@ export * from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
 export * from "../startup-migrations/blocks/0133-oauth-connector.js";
 export * from "../startup-migrations/blocks/0134-rename-capability-health-to-source-health.js";
 export * from "../startup-migrations/blocks/0135-batch-orders.js";
+export * from "../startup-migrations/blocks/0136-async-job-files.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -294,6 +296,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0133_oauthConnector,
   runMigration0134_renameCapabilityHealthToSourceHealth,
   runMigration0135_batchOrders,
+  runMigration0136_asyncJobFiles,
 ];
 
 /**
