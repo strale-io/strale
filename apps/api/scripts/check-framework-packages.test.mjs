@@ -37,3 +37,24 @@ test("Zapier integrity rejects an import-only hollow app", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("AI SDK integrity rejects an import-only hollow package", () => {
+  mkdirSync("audit-output", { recursive: true });
+  const root = mkdtempSync(resolve("audit-output/framework-gate-"));
+  try {
+    const src = join(root, "packages/ai-sdk-strale/src");
+    mkdirSync(src, { recursive: true });
+    const run = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: "utf8" });
+    writeFileSync(join(src, "index.ts"), 'import { tool } from "ai";\nexport const x = 1;\n');
+    const hollow = run();
+    assert.equal(hollow.status, 1);
+    assert.match(hollow.stderr, /ai-sdk-strale/);
+    writeFileSync(
+      join(src, "index.ts"),
+      'import { tool } from "ai";\nexport const t = tool({ description: "d", inputSchema: s, execute: async () => 1 });\n',
+    );
+    assert.equal(run().status, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
