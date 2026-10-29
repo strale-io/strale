@@ -341,6 +341,7 @@
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/research/2026-10-27-codebase-architecture-review.md",
         "docs/research/2026-10-27-distribution-strategy.md",
+        "docs/research/2026-10-29-open-places-data-licences.md",
         "docs/research/2026-10-29-registercheck-coverage-comparison.md",
         "scripts/handoff/regenerate-indexes.test.mjs",
         "scripts/m2-closure-register-lib.mjs",

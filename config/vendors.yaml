@@ -2196,3 +2196,82 @@ vendors:
         status: unknown
     authorization:
       status: unknown
+  - id: overture-maps
+    name: Overture Maps Foundation (places theme)
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.5 (places search from open places data, approved under DEC-20261024-B): licences read before any code; research in docs/research/2026-10-29-open-places-data-licences.md."
+      - state: active
+        date: 2026-10-29
+        decision: unknown
+        reason: "Resale permitted: the places theme contains no OpenStreetMap data and each row is CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0, none share-alike. Read anonymously from the public AWS Open Data bucket (no account). Serves places-search."
+    reevaluation_triggers:
+      - kind: licensing
+        condition: A release adds a places source under a licence other than CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0 (places-search withholds such rows and counts them), or the places theme starts carrying OpenStreetMap-derived data.
+        source: docs/research/2026-10-29-open-places-data-licences.md
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Ship the licence text (CDLA-Permissive-2.0 §2.1) or licence and NOTICE (Apache-2.0) with shared rows, plus Overture's per-provider attribution lines; places-search returns both on every answer.
+      pricing:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: permitted
+        note: Free; public bucket on the AWS Open Data programme, anonymous reads, no account.
+      licensing:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Per-row licence (CDLA-Permissive-2.0, Apache-2.0, CC0-1.0); no share-alike; licence texts and attribution travel with the data.
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Commercial redistribution permitted with the licence texts and attribution lines attached.
+    authorization:
+      status: unknown
+  - id: foursquare-os-places
+    name: Foursquare Open Source Places
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.5, evaluated beside Overture; research in docs/research/2026-10-29-open-places-data-licences.md."
+      - state: held
+        date: 2026-10-29
+        decision: unknown
+        reason: "Apache-2.0 permits commercial resale, but direct access goes through the Places Portal, which needs an account and access token, and sessions do not create accounts (DEC-20261027-C). Not needed: Overture's places theme already carries Foursquare rows under Apache-2.0, and places-search returns them with Foursquare's attribution line. No direct calls."
+    reevaluation_triggers:
+      - kind: other
+        condition: Foursquare rows leave the Overture places theme, or a need arises for Foursquare-only fields; then Petter decides on a Places Portal account.
+        source: docs/research/2026-10-29-open-places-data-licences.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-open-places-data-licences.md
+        outcome: permitted
+        note: Apache-2.0; keep the licence and NOTICE with redistributed data.
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown

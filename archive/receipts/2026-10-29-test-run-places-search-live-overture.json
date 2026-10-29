@@ -1,0 +1,265 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "3790d32707e27671424960519473b62792dace01"
+  },
+  "at": "2026-10-29T17:47:37.372Z",
+  "inputs": {
+    "slug": "places-search",
+    "release": "2026-10-21.0",
+    "cases": 9
+  },
+  "summary": {
+    "cases": 9,
+    "passed": 9,
+    "cold_region_ms_min": 3047,
+    "cold_region_ms_max": 6724,
+    "warm_ms_max": 149,
+    "empty_area_ms": 4,
+    "withheld_unknown_license": 0
+  },
+  "topic": "places-search-live-overture",
+  "raw": {
+    "ok": true,
+    "executor": "places-search (getExecutor, real worker process, live Overture bucket)",
+    "release": "2026-10-21.0",
+    "cases": [
+      {
+        "input": {
+          "latitude": 59.3326,
+          "longitude": 18.0649,
+          "radius_m": 1000,
+          "query": "cafe",
+          "limit": 10
+        },
+        "ms": 5851,
+        "n": 10,
+        "withheld": 0,
+        "licenses": [
+          "Apache-2.0",
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "Teaterbaren Glada Ankan",
+          "cafe",
+          47,
+          "meta",
+          "CDLA-Permissive-2.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": 59.3326,
+          "longitude": 18.0649,
+          "radius_m": 500,
+          "limit": 5
+        },
+        "ms": 147,
+        "n": 5,
+        "withheld": 0,
+        "licenses": [
+          "Apache-2.0",
+          "CC0-1.0",
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "DOZ Apotek Stockholm St Eriksplan",
+          "pharmacy_and_drug_store",
+          0,
+          "AllThePlaces",
+          "CC0-1.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": 40.7484,
+          "longitude": -73.9857,
+          "radius_m": 800,
+          "category": "pizza_restaurant",
+          "limit": 5
+        },
+        "ms": 6724,
+        "n": 5,
+        "withheld": 0,
+        "licenses": [
+          "Apache-2.0",
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "Slice",
+          "restaurant",
+          102,
+          "meta",
+          "CDLA-Permissive-2.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": 51.5072,
+          "longitude": -0.1276,
+          "radius_m": 1500,
+          "query": "pharmacy",
+          "limit": 5
+        },
+        "ms": 6404,
+        "n": 5,
+        "withheld": 0,
+        "licenses": [
+          "Apache-2.0",
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "UK Pharmacy",
+          "outpatient_care_facility",
+          49,
+          "Foursquare",
+          "Apache-2.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": 0,
+          "longitude": -30,
+          "radius_m": 1000,
+          "limit": 5
+        },
+        "ms": 4,
+        "n": 0,
+        "withheld": 0,
+        "licenses": [],
+        "first": null
+      },
+      {
+        "input": {
+          "latitude": 35.68,
+          "longitude": 139.76,
+          "radius_m": 800,
+          "query": "ramen",
+          "limit": 5
+        },
+        "ms": 4260,
+        "n": 5,
+        "withheld": 0,
+        "licenses": [
+          "Apache-2.0",
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "鶏soba座銀 KITTE丸の内店",
+          "restaurant",
+          434,
+          "Foursquare",
+          "Apache-2.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": -23.55,
+          "longitude": -46.63,
+          "radius_m": 800,
+          "query": "farmacia",
+          "limit": 5
+        },
+        "ms": 4010,
+        "n": 1,
+        "withheld": 0,
+        "licenses": [
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "Farmacia e Laboratorio As Plantas Curam",
+          "pharmacy_and_drug_store",
+          444,
+          "meta",
+          "CDLA-Permissive-2.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": 48.8566,
+          "longitude": 2.3522,
+          "radius_m": 800,
+          "category": "bakery",
+          "limit": 5
+        },
+        "ms": 3047,
+        "n": 5,
+        "withheld": 0,
+        "licenses": [
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "Ben's Cookies",
+          "casual_eatery",
+          104,
+          "meta",
+          "CDLA-Permissive-2.0"
+        ]
+      },
+      {
+        "input": {
+          "latitude": 59.3326,
+          "longitude": 18.0649,
+          "radius_m": 1000,
+          "query": "cafe",
+          "limit": 10
+        },
+        "ms": 149,
+        "n": 10,
+        "withheld": 0,
+        "licenses": [
+          "Apache-2.0",
+          "CDLA-Permissive-2.0"
+        ],
+        "first": [
+          "Teaterbaren Glada Ankan",
+          "cafe",
+          47,
+          "meta",
+          "CDLA-Permissive-2.0"
+        ]
+      }
+    ],
+    "provenance_sample": {
+      "source": "overture-maps-places",
+      "fetched_at": "2026-10-29T17:41:25.217Z",
+      "dataset_release": "2026-10-21.0",
+      "source_url": "s3://overturemaps-us-west-2/release/2026-10-21.0/theme=places/type=place/",
+      "attribution": [
+        "Data from AllThePlaces. Available under CC0 1.0.",
+        "Data from Microsoft. Available under CDLA Permissive 2.0.",
+        "Copyright 2024 Foursquare Labs, Inc. All rights reserved. Available under Apache 2.0. Foursquare data was transformed to the Overture schema."
+      ],
+      "attribution_url": "https://docs.overturemaps.org/attribution/",
+      "licenses": [
+        {
+          "id": "Apache-2.0",
+          "text_url": "https://www.apache.org/licenses/LICENSE-2.0"
+        },
+        {
+          "id": "CC0-1.0",
+          "text_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+        },
+        {
+          "id": "CDLA-Permissive-2.0",
+          "text_url": "https://cdla.dev/permissive-2-0/"
+        }
+      ]
+    },
+    "memory_measurements_mb": {
+      "in_process_glob_all_files_rss_after_5_queries": 520,
+      "in_process_baseline_rss": 77,
+      "worker_cache_off_rss_range": [
+        231,
+        280
+      ],
+      "worker_cache_on_queried_files_rss_range": [
+        212,
+        376
+      ],
+      "worker_rss_cap": 450
+    },
+    "notes": "Run from a Claude Code cloud container, not Railway. Node 22 for these cases; the compiled dist worker was also run under Node 20.20.0 (Docker base) and from an empty HOME (cold start 13.2 s including the 21 MB httpfs extension download)."
+  }
+}

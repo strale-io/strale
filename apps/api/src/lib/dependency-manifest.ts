@@ -550,6 +550,23 @@ export const PROVIDERS: DependencyProvider[] = [
   //    basket: what the largest x402 buyer purchases elsewhere). All keyless;
   //    probes are the cheapest documented call on each host.
   {
+    name: "overture-maps",
+    displayName: "Overture Maps Foundation (places theme)",
+    description: "Monthly open places GeoParquet release on the AWS Open Data bucket, read anonymously.",
+    baseUrl: "https://overturemaps-us-west-2.s3.us-west-2.amazonaws.com",
+    authType: "none",
+    // The release listing places-search itself reads first: free, keyless,
+    // a few hundred bytes (Principle A).
+    healthProbe: {
+      path: "/?list-type=2&prefix=release/&delimiter=/",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 6000,
+    },
+    capabilities: ["places-search"],
+    tier: "free",
+  },
+  {
     name: "openalex",
     displayName: "OpenAlex",
     description: "Open catalogue of scholarly works, authors and venues (OurResearch).",

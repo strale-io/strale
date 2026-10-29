@@ -1,0 +1,133 @@
+slug: places-search
+name: "Places Search"
+description: "Find businesses and places near a point from Overture Maps open places data, with category, address, coordinates and licence per result."
+category: data-extraction
+price_cents: 5
+cost_class: free_unlimited
+quota_window: none
+is_free_tier: false
+external_cost_cents: 0
+input_schema:
+  type: object
+  required:
+    - latitude
+    - longitude
+  properties:
+    latitude:
+      type: number
+      description: Centre latitude in decimal degrees (-90 to 90). Geocode an address or city first with address-geocode.
+    longitude:
+      type: number
+      description: Centre longitude in decimal degrees (-180 to 180).
+    radius_m:
+      type: number
+      description: Search radius in metres, 10 to 5000. Default 1000.
+    query:
+      type: string
+      description: Optional free text matched against place names and categories, such as "pharmacy" or "Espresso House".
+    category:
+      type: string
+      description: Optional Overture category id, such as "pharmacy", "coffee_shop" or "restaurant"; matches the basic category, the primary taxonomy entry or any level of its hierarchy.
+    limit:
+      type: integer
+      description: Maximum results, 1 to 50. Default 20.
+output_schema:
+  type: object
+  properties:
+    places:
+      type: array
+      description: Matching places, nearest first.
+    result_count:
+      type: integer
+    withheld_unknown_license:
+      type: integer
+    search:
+      type: object
+    overture_release:
+      type: string
+    attribution:
+      type: array
+    licenses:
+      type: array
+data_source: Overture Maps Foundation places theme (GeoParquet release on AWS Open Data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+# Business listings: names, addresses, phone numbers and websites as the
+# sources published them. A sole trader's listing can identify a person.
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - phone
+geography: global
+avg_latency_ms: 4000
+data_access:
+  lane: preferred
+  acquisition_method: licensed_bulk
+  upstream_vendor: overture-maps
+test_fixtures:
+  known_answer:
+    input:
+      latitude: 59.3326
+      longitude: 18.0649
+      radius_m: 1000
+      query: cafe
+      limit: 10
+    expected_fields:
+      - field: places
+        operator: not_null
+        reliability: guaranteed
+      - field: result_count
+        operator: not_null
+        reliability: guaranteed
+      - field: overture_release
+        operator: not_null
+        reliability: guaranteed
+      - field: attribution
+        operator: not_null
+        reliability: guaranteed
+      - field: licenses
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    latitude: 59.3326
+    longitude: 18.0649
+    radius_m: 500
+    limit: 5
+output_field_reliability:
+  places: guaranteed
+  result_count: guaranteed
+  withheld_unknown_license: guaranteed
+  search: guaranteed
+  overture_release: guaranteed
+  attribution: guaranteed
+  licenses: guaranteed
+limitations:
+  - title: Coordinates required
+    text: Searches around a latitude and longitude. To search near an address or a city, geocode it first (for example with address-geocode) and pass the coordinates.
+    category: scope
+    severity: info
+    workaround: Chain address-geocode, then places-search.
+  - title: Monthly open-data snapshot
+    text: Results come from the latest monthly Overture Maps release (named in overture_release), not live listings. New, moved or closed businesses can be missing or out of date; operating_status reflects the sources, not a check.
+    category: freshness
+    severity: warning
+  - title: Coverage follows the open sources
+    text: Overture places merges Meta, Microsoft, Foursquare and other providers. Coverage and categorisation are strongest in North America and Western Europe and thinner elsewhere; no ratings, reviews, opening hours or photos are returned.
+    category: coverage
+    severity: info
+  - title: Licence and attribution duties pass to you
+    text: Each result carries its source and licence (CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0). If you republish results, include the licence texts linked in 'licenses' and the 'attribution' lines. Rows under any other licence are withheld and counted in withheld_unknown_license.
+    category: legal
+    severity: info
+  - title: Simple text matching
+    text: "The query field is a case-insensitive substring match on the place name and category id, not a ranked semantic search. Results are ordered by distance only."
+    category: accuracy
+    severity: info
+  - title: First call in a region is slower
+    text: The first search in a region reads that part of the dataset from Overture's public bucket (measured 3–7 s); repeat searches nearby take about 0.1–1.5 s.
+    category: performance
+    severity: info
