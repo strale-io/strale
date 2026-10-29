@@ -104,7 +104,7 @@ def test_search_then_execute_through_fake_model():
         messages=iter(
             [
                 call("strale_search", {"query": "validate iban"}, "c1"),
-                call("strale_execute", {"slug": "iban-validate", "inputs": {"iban": "SE4550000000058398257466"}}, "c2"),
+                call("strale_execute", {"slug": "iban-validate", "inputs": {"iban": "DE89370400440532013000"}}, "c2"),
                 AIMessage(content="The IBAN is valid."),
             ]
         )
@@ -117,7 +117,7 @@ def test_search_then_execute_through_fake_model():
     assert set(schemas["strale_execute"]["required"]) == {"slug", "inputs"}
     assert schemas["strale_execute"]["properties"]["type"]["enum"] == ["capability", "solution"]
 
-    messages = run_agent(model, tools, "Is SE4550000000058398257466 a valid IBAN?")
+    messages = run_agent(model, tools, "Is DE89370400440532013000 a valid IBAN?")
 
     tool_messages = [m for m in messages if isinstance(m, ToolMessage)]
     assert [m.tool_call_id for m in tool_messages] == ["c1", "c2"]
@@ -151,7 +151,7 @@ def test_search_then_execute_through_fake_model():
     do_body = json.loads(responses.calls[-1].request.body)
     assert do_body == {
         "capability_slug": "iban-validate",
-        "inputs": {"iban": "SE4550000000058398257466"},
+        "inputs": {"iban": "DE89370400440532013000"},
         "max_price_cents": 50,
     }
 

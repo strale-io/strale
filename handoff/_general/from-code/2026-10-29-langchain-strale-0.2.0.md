@@ -31,7 +31,7 @@ import json; from langchain_strale import StraleToolkit
 from importlib.metadata import version; print('version', version('langchain-strale'))
 s, e, b = StraleToolkit().get_meta_tools()
 print(json.loads(s.invoke({'query': 'validate iban'}))['results'][0]['slug'])
-print(json.loads(e.invoke({'slug': 'iban-validate', 'inputs': {'iban': 'SE4550000000058398257466'}}))['ok'])"
+print(json.loads(e.invoke({'slug': 'iban-validate', 'inputs': {'iban': 'DE89370400440532013000'}}))['ok'])"
 ```
 
 Expected: `version 0.2.0`, `iban-validate`, `True`. Record the observed values in the program track's evidence.
