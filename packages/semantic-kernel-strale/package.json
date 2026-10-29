@@ -1,7 +1,7 @@
 {
   "name": "strale-semantic-kernel",
   "version": "0.1.5",
-  "description": "Semantic Kernel plugin for Strale \u2014 pay-per-call tools as kernel functions",
+  "description": "Deprecated: use strale-mcp. Plugin for the unofficial community JavaScript port of Semantic Kernel, exposing Strale tools as kernel functions",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

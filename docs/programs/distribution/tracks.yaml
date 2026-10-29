@@ -268,15 +268,15 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: langchain-strale 0.2.0 (langchain-core 1.x, strale_search and
-      strale_execute meta-tools, offline CI job) is built on branch
-      feat/langchain-strale-core-1x; once merged, publish it to PyPI under the
-      §9 item 7 grant with the steps in handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md
-      and run its smoke test. Then deprecate strale-semantic-kernel, freeze
-      crewai-strale/composio-strale, fix distribution-registry rows, and submit
-      Docker MCP registry, Cline, awesome-remote-mcp-servers and Cursor plugin
-      PRs under distribution preflight and approved publish conditions. Petter
-      deletes the three merged branches in GitHub UI (§9 item 9).
+    next_action: langchain-strale 0.2.0 merged in PR 830; publish it to PyPI
+      under the §9 item 7 grant with the steps in handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md
+      and run its smoke test. Housekeeping prepared 2026-10-29 (strale-semantic-kernel
+      deprecation notice, crewai and composio frozen, register rows updated); an
+      npm owner runs the npm deprecate command in docs/release/directory-submissions/package-housekeeping.md.
+      The four directory submissions (awesome-remote-mcp-servers, Docker PR 2202
+      update, Cursor plugin, Cline) are ready in docs/release/directory-submissions/README.md
+      for whoever holds the GitHub and Cursor accounts; record each outcome in
+      the register. Petter deletes the three merged branches in GitHub UI (§9 item 9).
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Housekeeping package and registry corrections and PR outcomes are
