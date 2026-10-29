@@ -1420,7 +1420,7 @@ exports[`H7b do settlement characterization > intent settlement write failure ca
 
 exports[`H7b do settlement characterization > intent write failure prevents any settlement 1`] = `
 {
-  "body": "{"error_code":"payment_failed","message":"x402 settlement failed after successful execution.","details":{"retryable":false,"fix":"Check payment status in your wallet before signing a fresh x402 payment authorization."},"detail":"Settlement could not start; no payment was taken"}",
+  "body": "{"error_code":"payment_failed","message":"Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.","details":{"retryable":true,"next_step":"Retry the same request with the same payment authorization; no payment was taken."}}",
   "events": [
     "verify",
     "claim",
@@ -1436,6 +1436,53 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
   "orphans": [],
   "rows": [
     {
+      "auditTrail": {
+        "ai_description": "Purely algorithmic — no AI/LLM involved in processing",
+        "capability": "test-capability",
+        "compliance": {
+          "access_endpoint": "GET /v1/transactions/tx-1",
+          "ai_involvement": "Purely algorithmic — no AI/LLM involved in processing",
+          "data_retention_days": 1095,
+          "deletion_endpoint": "DELETE /v1/transactions/tx-1",
+          "human_oversight": "autonomous",
+          "human_oversight_description": "Automated execution failed before output was produced. No customer-facing data generated.",
+          "personal_data_categories": [],
+          "personal_data_processed": false,
+          "regulations_addressed": {
+            "gdpr": {
+              "article_15": "Transaction data accessible via GET /v1/transactions/tx-1",
+              "article_17": "Transaction data deletable via DELETE /v1/transactions/tx-1",
+              "article_30": "Complete processing record with data sources, classifications, and jurisdiction (failure mode)",
+            },
+            "notes": "No personal data classified for this capability.",
+          },
+          "shareable_url": "https://example.test/audit",
+          "shareable_url_expires_at": "2026-10-29T00:00:00.000Z",
+        },
+        "data_classification": "unknown",
+        "data_jurisdiction": "unknown",
+        "data_source": "Test",
+        "error_message": "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.",
+        "execution_mode": "sync",
+        "failed_at": "2026-10-28T12:00:00.000Z",
+        "input_hash": "sha256:93268aced3bf3c807a4c872a65a2dfd877d14af1b2baaf94951f8ead505502ae",
+        "latency_ms": 0,
+        "processing_location": "unknown",
+        "request_context": {
+          "acceptLanguage": null,
+          "fingerprintHash": null,
+          "ipHash": null,
+          "mcpClient": null,
+          "origin": null,
+          "referer": null,
+          "userAgent": null,
+        },
+        "schema_validated": false,
+        "started_at": "2026-10-28T12:00:00.000Z",
+        "status": "failed",
+        "transaction_id": "tx-1",
+        "transparency_marker": "algorithmic",
+      },
       "capabilityId": "22222222-2222-2222-2222-222222222222",
       "clientIpHash": null,
       "clientMeta": null,
@@ -1443,7 +1490,7 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
       "complianceHashState": "pending",
       "createdAt": 1793188800000,
       "dataJurisdiction": "",
-      "error": "Payment settlement failed: Settlement could not start; no payment was taken",
+      "error": "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.",
       "id": "tx-1",
       "input": {
         "value": "test",
@@ -1452,6 +1499,13 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
       "latencyMs": 0,
       "paymentMethod": "x402",
       "priceCents": 0,
+      "provenance": {
+        "error_category": "execution_error",
+        "failed": true,
+        "fetched_at": "2026-10-28T12:00:00.000Z",
+        "processing_jurisdictions": [],
+        "source": "unknown",
+      },
       "receiptDeployCommit": "unknown-local-build",
       "receiptRail": "v1_do",
       "solutionSlug": null,
@@ -1465,7 +1519,7 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
       "x402PaymentHash": null,
     },
   ],
-  "status": 402,
+  "status": 503,
 }
 `;
 

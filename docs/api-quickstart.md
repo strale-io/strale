@@ -239,7 +239,9 @@ An x402 payment is bound to the capability or solution it was first presented
 to. Presenting the same payment for different work returns HTTP 409
 `payment_already_used`; sign a fresh authorization for that tool. A settlement
 that fails or cannot be confirmed after the tool ran returns HTTP 402
-`payment_failed`; check your wallet before signing a fresh authorization.
+`payment_failed`; check your wallet before signing a fresh authorization. If
+settlement could not start, the response is HTTP 503 `payment_failed` with
+`retryable: true`: no payment was taken and the same request can be retried.
 
 The TypeScript SDK keeps `StraleError.message` unchanged and retains
 `StraleError.details`; `fix`, `retryable` and `nextStep` expose the corresponding

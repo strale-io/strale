@@ -100,7 +100,7 @@ export function recoveryDetails(
     case "request_in_progress":
       advice = { retryable: true, retry_after_seconds: 2, fix: "The original request is still running; retry with the same Idempotency-Key after 2 seconds." }; break;
     case "payment_failed":
-      advice = { retryable: false, fix: "Check the payment status in your wallet before signing a fresh x402 payment authorization; do not resend this payment." }; break;
+      advice = { retryable: false, fix: "Check payment status in your wallet before signing a fresh x402 payment authorization." }; break;
     case "payment_already_used":
       advice = { retryable: false, fix: "Sign a fresh x402 payment authorization for this capability; a payment is valid only for the capability or solution it was first presented to." }; break;
     case "idempotency_key_reused":

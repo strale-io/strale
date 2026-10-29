@@ -34,8 +34,11 @@ vi.mock("../db/index.js", async () => {
   const db = {
     transaction: async (fn: any) => fn(db),
     delete: () => ({ where: async (q: any) => { state.rows = state.rows.filter(r => !match(r, q)); } }),
-    select: () => ({ from: (table: unknown) => ({ where: (q: any) => {
-      const rows = table === x402SettlementIntents ? state.intents.filter(r => match(r, q)) : table === transactions ? state.rows.filter(r => match(r, q)).map(r => ({ ...r, settlementId: r.x402SettlementId })) : table === solutions ? [{
+    // A projected select returns only the requested keys, so a column dropped
+    // from a select (e.g. the payment binding) is visible to these tests.
+    select: (projection?: Record<string, unknown>) => ({ from: (table: unknown) => ({ where: (q: any) => {
+      const project = (r: any) => projection ? Object.fromEntries(Object.keys(projection).map(k => [k, r[k]])) : r;
+      const rows = table === x402SettlementIntents ? state.intents.filter(r => match(r, q)) : table === transactions ? state.rows.filter(r => match(r, q)).map(r => project({ ...r, settlementId: r.x402SettlementId })) : table === solutions ? [{
         id: "44444444-4444-4444-4444-444444444444", slug: "test-solution", name: "Test solution", description: "Test solution",
         priceCents: 5, isActive: true, x402Enabled: true,
         inputSchema: state.schema ?? { type: "object", properties: { value: { type: "string" } }, required: ["value"] },
@@ -186,7 +189,7 @@ describe.each(routes)("H7b %s settlement characterization", route => {
   it("intent write failure prevents any settlement", async () => {
     state.failIntent = true;
     const response = await request(route);
-    expect(response.status).toBe(route === "do" ? 402 : 500);
+    expect(response.status).toBe(route === "do" ? 503 : 500);
     expect(state.settle).not.toHaveBeenCalled();
     expect(await observed(response)).toMatchSnapshot();
   });
@@ -407,8 +410,8 @@ describe("H4b /v1/do x402 parity regressions", () => {
     finish(output);
     const response = await pending;
     expect(released).toBe(1);
-    expect(response.status).toBe(402);
-    expect(await response.json()).toMatchObject({ error_code: "payment_failed", detail: "Settlement could not start; no payment was taken" });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error_code: "payment_failed", message: "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.", details: { retryable: true } });
     expect(state.settle).not.toHaveBeenCalled();
   });
 });
@@ -424,7 +427,7 @@ describe("H4 x402 payment binding", () => {
     x402SettlementId: "settled-other",
   });
   it.each(routes)("%s refuses a completed payment claimed for a different capability", async route => {
-    priorFor(route === "solution" ? { capabilityId: other, solutionSlug: null } : { capabilityId: other, solutionSlug: null });
+    priorFor({ capabilityId: other, solutionSlug: null });
     const response = await request(route);
     expect(response.status).toBe(409);
     const text = await response.text();
@@ -461,6 +464,7 @@ describe("H4 x402 payment binding", () => {
 // H4 (T4): a thrown settlement on /v1/do is a payment outcome with the /v1/do
 // error shape, not "the capability failed to execute" with free-tier upsell.
 describe("H4 /v1/do thrown settlement envelope", () => {
+  const other = () => "33333333-3333-3333-3333-333333333333";
   it("returns payment_failed with a fix and counts nothing against the capability", async () => {
     state.settle.mockRejectedValue(new Error("transport threw at 10.0.0.1"));
     const response = await request("do");
@@ -477,12 +481,20 @@ describe("H4 /v1/do thrown settlement envelope", () => {
     expect(recordQuality).not.toHaveBeenCalledWith(expect.objectContaining({ error: expect.anything() }));
     expect(state.rows[0]).toMatchObject({ status: "executing", x402PaymentHash: "same-payment-hash" });
   });
-  it("a thrown intent write takes no payment and releases the hash", async () => {
+  it("a thrown intent write takes no payment, says so retryably, and stores what it serves", async () => {
     state.failIntent = true;
     const response = await request("do");
-    expect(response.status).toBe(402);
-    expect(await response.json()).toMatchObject({ error_code: "payment_failed", detail: "Settlement could not start; no payment was taken" });
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toEqual({ error_code: "payment_failed", message: "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.",
+      details: { retryable: true, next_step: expect.stringMatching(/no payment was taken/) } });
     expect(state.settle).not.toHaveBeenCalled();
-    expect(state.rows[0]).toMatchObject({ status: "failed", x402PaymentHash: null });
+    expect(state.rows[0]).toMatchObject({ status: "failed", x402PaymentHash: null, error: body.message,
+      auditTrail: expect.objectContaining({ error_message: body.message }), provenance: expect.objectContaining({ failed: true }) });
+  });
+  it("findCachedX402Response returns the binding columns the replay check compares", async () => {
+    state.rows.push({ id: "prior", status: "completed", x402PaymentHash: "same-payment-hash", capabilityId: other(), solutionSlug: null });
+    const { findCachedX402Response } = await import("../lib/x402-payment-claims.js");
+    expect(await findCachedX402Response("same-payment-hash")).toMatchObject({ capabilityId: other(), solutionSlug: null });
   });
 });
