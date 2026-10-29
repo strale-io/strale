@@ -263,8 +263,11 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: After D1, refresh langchain-strale for langchain-core 1.x with
-      meta-tools and offline CI test; deprecate strale-semantic-kernel, freeze
+    next_action: langchain-strale 0.2.0 (langchain-core 1.x, strale_search and
+      strale_execute meta-tools, offline CI job) is built on branch
+      feat/langchain-strale-core-1x; once merged, publish it to PyPI under the
+      §9 item 7 grant with the steps in handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md
+      and run its smoke test. Then deprecate strale-semantic-kernel, freeze
       crewai-strale/composio-strale, fix distribution-registry rows, and submit
       Docker MCP registry, Cline, awesome-remote-mcp-servers and Cursor plugin
       PRs under distribution preflight and approved publish conditions. Petter

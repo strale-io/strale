@@ -89,6 +89,34 @@ jobs:
 
           node scripts/production-watch/classify.mjs "$MERGE_BASE" "$HEAD_SHA" "$GITHUB_OUTPUT" pull_request
 
+  # ─── langchain-strale offline suite (distribution T12) ──────────────────
+  #
+  # Drives the Python LangChain package's tools through langchain-core's own
+  # primitives (a fake chat model with bind_tools, ToolCall -> ToolMessage)
+  # with HTTP mocked, so it needs no key and no network. Runs on the
+  # langchain-core floor the package declares and on the latest 1.x, so a
+  # new langchain-core release that breaks the package shows up here.
+  langchain-strale:
+    needs: classify
+    if: needs.classify.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.10'
+            langchain_core: 'langchain-core==1.0.0'
+          - python: '3.13'
+            langchain_core: 'langchain-core>=1,<2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "${{ matrix.langchain_core }}" -e "packages/langchain-strale[test]"
+      - run: python -m pytest packages/langchain-strale/tests -q -rs
+
   # ─── Ephemeral-Postgres integration lane (WP1) ──────────────────────────
   #
   # DB-critical behaviour — wallet locking, idempotency uniqueness, Stripe

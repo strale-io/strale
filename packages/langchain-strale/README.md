@@ -1,6 +1,6 @@
 # langchain-strale
 
-[Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as LangChain tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your LangChain agents with a single import.
+[Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) tools as LangChain tools: company registry lookups, VAT and IBAN checks, sanctions and PEP screening, web page reading, and more, each paid per call. Built on `langchain-core` 1.x (`BaseTool`, `BaseToolkit`).
 
 ## Install
 
@@ -8,110 +8,56 @@
 pip install langchain-strale
 ```
 
-## Quick start
+## Quick start: two meta-tools
+
+The model gets `strale_search` (find a tool and its input schema) and `strale_execute` (run it by slug), the same pattern as the Strale MCP server. This keeps the prompt small however large the catalogue grows.
 
 ```python
+from langchain.agents import create_agent
 from langchain_strale import StraleToolkit
 
-toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # available capabilities + search & balance tools
+toolkit = StraleToolkit(api_key="sk_live_...")  # or set STRALE_API_KEY
+agent = create_agent(
+    "openai:gpt-4o",
+    toolkit.get_meta_tools(),  # strale_search, strale_execute, strale_balance
+    system_prompt="Use strale_search to find a Strale tool, then strale_execute to run it.",
+)
+
+result = agent.invoke({"messages": [{"role": "user", "content": "Is SE556703748501 a valid VAT number?"}]})
 ```
 
-## Filter by category
+`create_agent` comes from the `langchain` package (1.x); any model with tool calling works. The tools are ordinary LangChain tools, so `model.bind_tools(toolkit.get_meta_tools())` works too.
+
+`strale_execute` returns JSON with `ok`, `output`, `price_cents`, `provenance` and `transaction_id`. With an API key, each call is charged to your wallet and capped by `max_price_cents` (default 200, i.e. €2.00; set it on the toolkit, from 1 to 2000).
+
+## One tool per capability
 
 ```python
+tools = toolkit.get_tools()  # one tool per capability, plus the meta-tools
 tools = toolkit.get_tools(categories=["finance", "compliance"])
 ```
 
-## Use with an agent
+Each capability becomes a `BaseTool` named by its slug (e.g. `vat-validate`), with the price in its description and an `args_schema` generated from the capability's input schema. This loads the whole catalogue into the prompt; prefer the meta-tools for large toolsets.
 
-```python
-from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain_core.prompts import ChatPromptTemplate
+## Bundled solutions
 
-llm = ChatOpenAI(model="gpt-4o")
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful business assistant with access to Strale tools."),
-    ("human", "{input}"),
-    ("placeholder", "{agent_scratchpad}"),
-])
+Solutions (for example `kyb-essentials-se`) show up in `strale_search` results with `"type": "solution"`; the model passes that type to `strale_execute`.
 
-toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()
+## Without an API key
 
-agent = create_openai_tools_agent(llm, tools, prompt)
-executor = AgentExecutor(agent=agent, tools=tools)
+Search works without a key, and some tools are free without one (for example `iban-validate`, `email-validate`, `dns-lookup`). The current free list is `free_tier_slugs` at https://api.strale.io/v1/platform/facts. A paid tool called without a key returns `ok: false` with instructions.
 
-result = executor.invoke({"input": "Validate VAT number SE556703748501"})
-```
-
-## What's included
-
-Each Strale capability becomes a LangChain `BaseTool` with:
-
-- **name** — capability slug (e.g. `vat-validate`, `swedish-company-data`)
-- **description** — what it does + price in EUR
-- **args_schema** — Pydantic model generated from the capability's input schema
-- **_run()** — calls the Strale API
-
-Plus two meta-tools:
-
-- **strale_search** — discover capabilities by keyword
-- **strale_balance** — check your wallet balance
-
-## Solutions (KYB & Invoice Verify)
-
-```python
-# Execute a bundled KYB solution (available countries available)
-result = toolkit.get_tools()[0]  # or find by name
-# Solutions are also available via strale_search:
-# strale_search(query="kyb essentials sweden") → kyb-essentials-se
-```
-
-## Get an API key
-
-Sign up at [strale.dev](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
-
----
-
-## Try for Free
-
-available capabilities work without an API key or signup:
-
-- `email-validate` — verify email deliverability
-- `dns-lookup` — DNS record lookup
-- `json-repair` — fix malformed JSON
-- `url-to-markdown` — convert any URL to markdown
-- `iban-validate` — validate international bank account numbers
-
-For all available capabilities, [sign up](https://strale.dev/signup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
-
-## Using Strale in agent system prompts
-
-Add this to your LangChain agent's system prompt for automatic capability routing:
-
-```
-When you need to verify a business, validate an IBAN or VAT number, screen
-against sanctions/PEP lists, extract data from a URL or document, or check
-compliance — use your Strale tools. Call strale_search to find the right
-capability, then call it by name. Returns structured JSON with execution metadata.
-Coverage and free-tier eligibility are listed in platform facts. Free tier: email-validate, dns-lookup,
-json-repair, url-to-markdown, iban-validate (no API key needed).
-```
+Get a key at [strale.dev](https://strale.dev/signup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## x402 pay-per-use access
 
-Eligible Strale tools are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
+Eligible Strale tools are also sold per request over [x402](https://x402.org) with USDC on Base, no signup needed. This package uses API keys; for x402, call the HTTP endpoints directly.
 
 - Catalog: https://api.strale.io/x402/catalog?src=pypi-readme
-- Protocol: USDC on Base (eip155:8453)
 - Discovery: https://api.strale.io/.well-known/x402.json
 
 ## Resources
 
-- 📖 [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
-- 💰 [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔍 [Quality methodology](https://strale.dev/methodology?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔒 [Security](https://strale.dev/security?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Changelog](https://github.com/strale-io/strale/blob/main/packages/langchain-strale/CHANGELOG.md)

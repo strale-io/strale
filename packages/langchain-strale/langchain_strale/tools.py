@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional, Type
+from typing import Any, Literal, Optional, Type
+from urllib.parse import quote
 
+import requests
 from langchain_core.tools import BaseTool, ToolException
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from .client import StraleClient
-
-DEFAULT_BASE_URL = "https://api.strale.io"
+from .client import DEFAULT_MAX_PRICE_CENTS, MAX_PRICE_CAP_CENTS, StraleClient
 
 
 # ---------------------------------------------------------------------------
@@ -29,12 +29,23 @@ class StraleGenericInput(BaseModel):
 class StraleSearchInput(BaseModel):
     """Input for the strale_search meta-tool."""
 
-    query: str = Field(description="Keyword or phrase to search for")
-    category: Optional[str] = Field(
-        default=None, description="Filter by category slug"
+    query: str = Field(
+        min_length=2,
+        description="What the agent needs, in a few words, e.g. 'UK company lookup' or 'validate EU VAT number'",
     )
-    offset: Optional[int] = Field(
-        default=0, description="Number of results to skip (for pagination). Default: 0"
+    limit: int = Field(default=5, ge=1, le=10, description="Maximum results. Default 5.")
+
+
+class StraleExecuteInput(BaseModel):
+    """Input for the strale_execute meta-tool."""
+
+    slug: str = Field(min_length=2, description="Slug from strale_search, e.g. 'uk-company-data'")
+    type: Literal["capability", "solution"] = Field(
+        default="capability",
+        description="'solution' for a bundled solution. Default 'capability'.",
+    )
+    inputs: dict[str, Any] = Field(
+        description="Input fields matching the input_schema returned by strale_search"
     )
 
 
@@ -138,50 +149,192 @@ class StraleTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# Meta-tools
+# Meta-tools: search the catalogue, then run any tool by slug
 # ---------------------------------------------------------------------------
+#
+# The same two-tool pattern as the Strale MCP server and ai-sdk-strale: the
+# model sees two small tools instead of hundreds of per-capability schemas.
+
+_SEARCH_DESCRIPTION = (
+    "Search Strale's library of pay-per-call tools for AI agents: company registry lookups, VAT and IBAN checks, "
+    "sanctions and PEP screening, web page reading, finance and developer utilities. Returns matching tools and "
+    "bundled solutions with slug, description, price in EUR cents and the input schema to pass to strale_execute. "
+    "No API key needed to search."
+)
+
+_EXECUTE_DESCRIPTION = (
+    "Run one Strale tool or solution by slug and return its output. Call strale_search first to get the slug and "
+    "the input fields. Paid tools are charged per call; some tools are free without a key. Check `ok` in the result."
+)
+
+
+def _failure(
+    status: int,
+    body: dict[str, Any],
+    *,
+    has_key: bool,
+    slug: str | None = None,
+    kind: str | None = None,
+) -> dict[str, Any]:
+    details = body.get("details") if isinstance(body.get("details"), dict) else None
+    out: dict[str, Any] = {
+        "ok": False,
+        "status": status,
+        "error_code": body.get("error_code") or ("payment_required" if status == 402 else "error"),
+        "message": body.get("message") or body.get("error") or f"HTTP {status}",
+    }
+    if details and details.get("fix"):
+        out["fix"] = details["fix"]
+    # Only an unauthenticated caller needs telling how to pay; a key holder's
+    # 402 is a budget or balance answer, already explained by the server.
+    if status in (401, 402) and not has_key:
+        out["how_to_pay"] = (
+            "Create the toolkit with an api_key (or set STRALE_API_KEY). Free tools need no key. "
+            "Paid tools are also sold per call over x402 (USDC on Base)"
+            + (f" at /x402/{'solutions/' if kind == 'solution' else ''}{slug}" if slug else "")
+            + "."
+        )
+    return out
+
+
+def _search(client: StraleClient, query: str, limit: int) -> dict[str, Any]:
+    status, body = client.request("GET", "/v1/suggest/typeahead", params={"q": query, "limit": limit})
+    if status >= 400:
+        return _failure(status, body, has_key=bool(client.api_key))
+    hits = body.get("results") if isinstance(body.get("results"), list) else []
+    results = []
+    # The typeahead carries no input schema; the detail endpoints do. A failed
+    # detail fetch is reported on the hit, never dropped silently.
+    for hit in hits[:limit]:
+        kind = hit.get("type", "capability")
+        slug = str(hit.get("slug", ""))
+        path = f"/v1/{'solutions' if kind == 'solution' else 'capabilities'}/{quote(slug, safe='')}"
+        input_schema = None
+        price = hit.get("price_cents")
+        free_tier = hit.get("is_free_tier") is True
+        detail_error = None
+        try:
+            d_status, detail = client.request("GET", path)
+            if d_status < 400:
+                input_schema = detail.get("input_schema")
+                if isinstance(detail.get("price_cents"), int):
+                    price = detail["price_cents"]
+                free_tier = free_tier or detail.get("is_free_tier") is True
+            else:
+                detail_error = f"detail lookup returned HTTP {d_status}"
+        except requests.RequestException as e:
+            detail_error = f"detail lookup failed: {e}"
+        result: dict[str, Any] = {
+            "type": kind,
+            "slug": slug,
+            "name": hit.get("name"),
+            "description": hit.get("description"),
+            "category": hit.get("category"),
+            "geography": hit.get("geography") or "global",
+            "price_cents": price,
+            "input_schema": input_schema,
+        }
+        if free_tier:
+            result["is_free_tier"] = True
+        if hit.get("step_count"):
+            result["step_count"] = hit["step_count"]
+        if detail_error:
+            result["input_schema_error"] = detail_error
+        results.append(result)
+    total = body.get("total") if isinstance(body.get("total"), int) else len(results)
+    return {"ok": True, "query": query, "total": total, "results": results}
+
+
+def _execute(
+    client: StraleClient, slug: str, kind: str, inputs: dict[str, Any], max_price_cents: int
+) -> dict[str, Any]:
+    if kind == "solution":
+        path = f"/v1/solutions/{quote(slug, safe='')}/execute"
+        payload: dict[str, Any] = {"inputs": inputs, "max_price_cents": max_price_cents}
+    else:
+        path = "/v1/do"
+        payload = {"capability_slug": slug, "inputs": inputs, "max_price_cents": max_price_cents}
+    status, body = client.request("POST", path, json_body=payload, auth=True)
+    rail = "api_key" if client.api_key else "free"
+    r = body["result"] if isinstance(body.get("result"), dict) else body
+    if status == 202:
+        return {
+            "ok": True,
+            "rail": rail,
+            "slug": slug,
+            "status": "executing",
+            "transaction_id": r.get("transaction_id"),
+            "note": "Runs asynchronously. Fetch the result from GET /v1/transactions/{transaction_id} with the same API key.",
+        }
+    if status >= 400:
+        return _failure(status, body, has_key=bool(client.api_key), slug=slug, kind=kind)
+    # A solution answers 200 even when every step failed or a precondition
+    # stopped it; neither is a success the model should build on.
+    failed = r.get("status") == "failed" or bool(r.get("gated"))
+    out: dict[str, Any] = {
+        "ok": not failed,
+        "rail": rail,
+        "slug": slug,
+        "output": r.get("output") if r.get("output") is not None else r.get("steps"),
+        "price_cents": r.get("price_cents"),
+        "latency_ms": r.get("latency_ms"),
+        "provenance": r.get("provenance"),
+        "transaction_id": r.get("transaction_id"),
+    }
+    for key in ("status", "errors", "gated", "details"):
+        if r.get(key):
+            out[key] = r[key]
+    if isinstance(r.get("wallet_balance_cents"), int):
+        out["wallet_balance_cents"] = r["wallet_balance_cents"]
+    return out
+
 
 class StraleSearchTool(BaseTool):
-    """Search Strale's capability catalog."""
+    """Search the Strale catalogue (tools and bundled solutions) with input schemas."""
 
     name: str = "strale_search"
-    description: str = (
-        "Search the Strale capability catalog to discover available tools. "
-        "Returns matching capabilities with names, descriptions, and prices."
-    )
+    description: str = _SEARCH_DESCRIPTION
     args_schema: Type[BaseModel] = StraleSearchInput
+    handle_tool_error: bool = True
 
-    capabilities: list[Any] = Field(default_factory=list, exclude=True)
+    client: Any = Field(default=None, exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def _run(self, query: str, category: str | None = None, offset: int = 0) -> str:
-        q = query.lower()
-        matches = []
-        for cap in self.capabilities:
-            if category and cap.get("category") != category:
-                continue
-            text = f"{cap['slug']} {cap['name']} {cap['description']} {cap.get('category', '')}".lower()
-            if q in text:
-                matches.append(
-                    {
-                        "slug": cap["slug"],
-                        "name": cap["name"],
-                        "description": cap["description"],
-                        "category": cap.get("category"),
-                        "price_cents": cap["price_cents"],
-                    }
-                )
-        page = matches[offset : offset + 20]
-        return json.dumps(
-            {
-                "total_matches": len(matches),
-                "offset": offset,
-                "has_more": offset + len(page) < len(matches),
-                "results": page,
-            },
-            default=str,
-        )
+    def _run(self, query: str, limit: int = 5) -> str:
+        try:
+            return json.dumps(_search(self.client, query, limit), default=str)
+        except requests.RequestException as e:
+            raise ToolException(f"strale_search failed: {e}")
+
+
+class StraleExecuteTool(BaseTool):
+    """Run any Strale tool or solution by slug.
+
+    With an API key the wallet is debited, capped by ``max_price_cents`` per
+    call. Without one, only the free tools run.
+    """
+
+    name: str = "strale_execute"
+    description: str = _EXECUTE_DESCRIPTION
+    args_schema: Type[BaseModel] = StraleExecuteInput
+    handle_tool_error: bool = True
+
+    client: Any = Field(default=None, exclude=True)
+    max_price_cents: int = Field(default=DEFAULT_MAX_PRICE_CENTS, ge=1, le=MAX_PRICE_CAP_CENTS)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def _run(self, slug: str, inputs: dict[str, Any], type: str = "capability") -> str:
+        try:
+            return json.dumps(_execute(self.client, slug, type, inputs, self.max_price_cents), default=str)
+        except requests.RequestException as e:
+            # After a timeout the call may already have run and been charged,
+            # so this must not read as a refusal the model would simply retry.
+            raise ToolException(
+                f"strale_execute {slug} did not return: {e}. The call may still have completed; "
+                "check the transaction list before retrying a paid tool."
+            )
 
 
 class StraleBalanceTool(BaseTool):
