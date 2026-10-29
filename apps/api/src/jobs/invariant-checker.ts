@@ -15,7 +15,7 @@ import { noteJobFailure } from "../lib/job-run-context.js";
 
 import { sql, eq, and, or, inArray, asc, isNull, isNotNull, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, solutionSteps, testResults, testSuites, capabilityHealth, healthMonitorEvents } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps, testResults, testSuites, sourceHealth, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { sendAlert } from "../lib/alerting.js";
 import { alertOnce } from "../lib/alert-once.js";
@@ -903,18 +903,18 @@ async function checkFreeTierCircuitBreakers(): Promise<{ alerts: number; checked
   const degraded = await db
     .select({
       slug: capabilities.slug,
-      state: capabilityHealth.state,
-      consecutiveFailures: capabilityHealth.consecutiveFailures,
-      openedAt: capabilityHealth.openedAt,
-      nextRetryAt: capabilityHealth.nextRetryAt,
+      state: sourceHealth.state,
+      consecutiveFailures: sourceHealth.consecutiveFailures,
+      openedAt: sourceHealth.openedAt,
+      nextRetryAt: sourceHealth.nextRetryAt,
     })
     .from(capabilities)
-    .innerJoin(capabilityHealth, eq(capabilityHealth.capabilitySlug, capabilities.slug))
+    .innerJoin(sourceHealth, eq(sourceHealth.capabilitySlug, capabilities.slug))
     .where(
       and(
         eq(capabilities.isActive, true),
         eq(capabilities.isFreeTier, true),
-        or(eq(capabilityHealth.state, "open"), eq(capabilityHealth.state, "half_open")),
+        or(eq(sourceHealth.state, "open"), eq(sourceHealth.state, "half_open")),
       ),
     );
 
@@ -1185,7 +1185,7 @@ async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; c
 }
 
 // ─── CHECK 13: Lying breaker (Tier 2 — ALERT ONLY) ──────────────────────────
-// A capability_health row in state='closed' with last_success_at set but
+// A source_health row in state='closed' with last_success_at set but
 // total_successes=0 is structurally incoherent: the only writer that produces
 // that combination is `recordTestEvidence` (sets lastSuccessAt without
 // incrementing totalSuccesses). If recordSuccess had ever fired for the slug,
@@ -1205,7 +1205,7 @@ async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; c
 // either choice has trade-offs that warrant a human eye.
 
 /**
- * Pure predicate: does this capability_health row shape match the
+ * Pure predicate: does this source_health row shape match the
  * lying-breaker pattern? Exported for unit testing.
  */
 export function isLyingBreakerRow(row: {
@@ -1225,7 +1225,7 @@ export function isLyingBreakerRow(row: {
  */
 export const LYING_BREAKER_REMEDIATION =
   "Null only the false value, through a ledgered startup-migration block (never by hand): " +
-  "UPDATE capability_health SET last_success_at = NULL WHERE capability_slug = '<slug>' " +
+  "UPDATE source_health SET last_success_at = NULL WHERE capability_slug = '<slug>' " +
   "AND state = 'closed' AND total_successes = 0 AND last_success_at within one second of the false timestamp. " +
   "Leave every failure field as it is: the row's failures are real, and adding one would record " +
   "a failure that never happened. First confirm no customer-path success exists for the slug at " +
@@ -1236,20 +1236,20 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
 
   const lying = await db
     .select({
-      slug: capabilityHealth.capabilitySlug,
-      state: capabilityHealth.state,
-      lastSuccessAt: capabilityHealth.lastSuccessAt,
-      totalSuccesses: capabilityHealth.totalSuccesses,
-      totalFailures: capabilityHealth.totalFailures,
-      lastFailureAt: capabilityHealth.lastFailureAt,
-      updatedAt: capabilityHealth.updatedAt,
+      slug: sourceHealth.capabilitySlug,
+      state: sourceHealth.state,
+      lastSuccessAt: sourceHealth.lastSuccessAt,
+      totalSuccesses: sourceHealth.totalSuccesses,
+      totalFailures: sourceHealth.totalFailures,
+      lastFailureAt: sourceHealth.lastFailureAt,
+      updatedAt: sourceHealth.updatedAt,
     })
-    .from(capabilityHealth)
+    .from(sourceHealth)
     .where(
       and(
-        eq(capabilityHealth.state, "closed"),
-        isNotNull(capabilityHealth.lastSuccessAt),
-        eq(capabilityHealth.totalSuccesses, 0),
+        eq(sourceHealth.state, "closed"),
+        isNotNull(sourceHealth.lastSuccessAt),
+        eq(sourceHealth.totalSuccesses, 0),
       ),
     );
 
@@ -1259,7 +1259,7 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
 
   logWarn(
     "invariant-check-13-lying-breaker",
-    "capability_health rows have lying-breaker shape (closed + last_success_at set + total_successes=0)",
+    "source_health rows have lying-breaker shape (closed + last_success_at set + total_successes=0)",
     {
       count: lying.length,
       slugs,
@@ -1270,7 +1270,7 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
   await logHealthEvent({
     eventType: "invariant_alert",
     tier: 2,
-    actionTaken: `${lying.length} capability_health row(s) have lying-breaker shape (closed + last_success_at set + total_successes=0): ${slugs.join(", ")}`,
+    actionTaken: `${lying.length} source_health row(s) have lying-breaker shape (closed + last_success_at set + total_successes=0): ${slugs.join(", ")}`,
     details: {
       check: "lying_breaker",
       slugs,

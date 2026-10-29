@@ -98,4 +98,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0131_startupMigrationApplied: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS" },
   runMigration0132_dropSqsResidualSchema: { policy: "every_boot", reason: "returns deferred until a build without the SQS fields has served; then drops once" },
   runMigration0133_oauthConnector: { policy: "every_boot", reason: "creates a UNIQUE and a CHECK constraint, which schema validation does not check; when in doubt, every_boot" },
+  runMigration0134_renameCapabilityHealthToSourceHealth: { policy: "once", reason: "renames only while capability_health is a table; afterwards that name is a view, so a re-run skips" },
 };

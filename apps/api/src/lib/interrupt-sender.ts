@@ -462,7 +462,7 @@ async function buildInfrastructureDown(
       ...(nextRetry ? [{ label: "Next retry", value: nextRetry }] : []),
       ...(envVar ? [{ label: envVar, value: { badge: envVarConfigured ? statusBadge("healthy", "Configured") : statusBadge("warning", "Not set") } }] : []),
     ]) +
-    sourceAttribution("Source: dependency health probe, capability_health table") +
+    sourceAttribution("Source: dependency health probe, source_health table") +
 
     // 6. Affected capabilities table (top 10)
     (capDetails.length > 0
@@ -613,7 +613,7 @@ async function buildSuspensionWarning(
         { label: "Failure type", value: { badge: categoryBadge(failCategory) } },
       ] : []),
     ]) +
-    sourceAttribution("Source: capabilities table, capability_health") +
+    sourceAttribution("Source: capabilities table, source_health") +
 
     // Category-specific guidance
     (isNonTransient ? categoryGuidanceHtml(failCategory) : "") +

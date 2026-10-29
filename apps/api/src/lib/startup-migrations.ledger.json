@@ -1031,6 +1031,14 @@
       "added": "2026-10-29",
       "columns_written": [],
       "sha256": "d4dbc4bf8ca92240b636c1237c2933ba4b51a45aa4298020b49e9a324299fe20"
+    },
+    {
+      "id": "M077",
+      "function": "runMigration0134_renameCapabilityHealthToSourceHealth",
+      "title": "rename capability_health to source_health (H7)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "6734503e0f406464301a1cf82525abd99bd9e83c5f7167bcce4715343fa62338"
     }
   ],
   "known_overlaps": [
