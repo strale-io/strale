@@ -56,9 +56,8 @@ describe("document-ocr input validation", () => {
 });
 
 describe("OCR engine parsing", () => {
-  it("reads the page count and refuses an encrypted PDF", () => {
+  it("reads the page count, and refuses output without one", () => {
     expect(engine.parsePdfInfo("Title: x\nPages:           18\nEncrypted:       no\n")).toBe(18);
-    expect(() => engine.parsePdfInfo("Pages: 2\nEncrypted:       yes (print:yes copy:no)\n")).toThrow(/encrypt/);
     expect(() => engine.parsePdfInfo("garbage")).toThrow(/page count/);
   });
 
@@ -69,15 +68,38 @@ describe("OCR engine parsing", () => {
     expect(engine.parseTsv(head)).toEqual({ mean_confidence: null, word_count: 0 });
   });
 
-  it("bounds the queue: at most two documents wait behind the running one", async () => {
+  it("accepts an owner-password PDF; only a PDF that fails to open is refused", () => {
+    expect(engine.parsePdfInfo("Pages:          2\nEncrypted:      yes (print:yes copy:no change:no addNotes:no)\n")).toBe(2);
+  });
+
+  it("bounds the queue: one document waits behind the running one", async () => {
+    const far = () => Date.now() + 120_000;
     let release!: () => void;
-    const running = engine.enqueue(() => new Promise<void>((r) => { release = r; }));
+    const running = engine.enqueue(far(), () => new Promise<void>((r) => { release = r; }));
     await new Promise((r) => setTimeout(r, 0));
-    const waiting = [engine.enqueue(async () => "b"), engine.enqueue(async () => "c")];
-    await expect(engine.enqueue(async () => "d")).rejects.toThrow(/capacity is busy/);
+    const waiting = engine.enqueue(far(), async () => "b");
+    await expect(engine.enqueue(far(), async () => "c")).rejects.toThrow(/capacity is busy/);
     release();
     await running;
-    await expect(Promise.all(waiting)).resolves.toEqual(["b", "c"]);
+    await expect(waiting).resolves.toBe("b");
+  });
+
+  it("refuses at the front of the queue a document whose deadline is too close to start", async () => {
+    const work = vi.fn(async () => "never");
+    await expect(engine.enqueue(Date.now() + engine.PAGE_START_RESERVE_MS - 1_000, work)).rejects.toThrow(/waited too long/);
+    expect(work).not.toHaveBeenCalled();
+  });
+
+  it("splits a searchable PDF into parts that fit, and stops at the first page that does not", () => {
+    const MB = 1024 * 1024;
+    const limits = { max_file_bytes: 10 * MB, max_total_bytes: 25 * MB, max_parts: 9 };
+    const pages = (sizes: number[]) => sizes.map((b, i) => ({ page_number: i + 1, bytes: b * MB }));
+    expect(engine.planPdfParts(pages([1, 1, 1]), limits)).toEqual({ parts: [[1, 2, 3]], omittedFrom: null });
+    // 4 MB pages: two per 10 MB file, and the 25 MB job total stops page 7.
+    expect(engine.planPdfParts(pages([4, 4, 4, 4, 4, 4, 4]), limits)).toEqual({ parts: [[1, 2], [3, 4], [5, 6]], omittedFrom: 7 });
+    // A single page over the file limit ends the PDF before it.
+    expect(engine.planPdfParts(pages([1, 11, 1]), limits)).toEqual({ parts: [[1]], omittedFrom: 2 });
+    expect(engine.planPdfParts(pages([6, 6, 6]), { ...limits, max_parts: 2 })).toEqual({ parts: [[1], [2]], omittedFrom: 3 });
   });
 });
 
@@ -108,6 +130,36 @@ describe.skipIf(!hasBinaries())("document-ocr on a real scan", () => {
     expect(o.complete).toBe(false);
     expect(r.files).toBeUndefined();
     await expect(exec({ base64: fixtureB64(), first_page: 3 })).rejects.toThrow(/'first_page' must be at most 2/);
+  }, 60_000);
+
+  it("ends the result at a page the deadline cut off, so the caller can continue from it", async () => {
+    const r = await engine.ocrDocument(
+      { kind: "pdf", data: readFileSync(FIXTURE) },
+      { languages: ["swe"], first_page: 1, max_pages: 2, deadline: Date.now() + 5_600, searchable_pdf: null, start_reserve_ms: 0 },
+    );
+    expect(r.stopped_by_time_budget).toBe(true);
+    expect(r.pages.length).toBeLessThan(2);
+  }, 60_000);
+
+  it("reads an image set window, marks an undecodable page failed and keeps the rest", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "ocr-test-"));
+    try {
+      execFileSync("pdftoppm", ["-f", "2", "-l", "2", "-singlefile", "-r", "150", "-png", FIXTURE, join(dir, "p")]);
+      const png = readFileSync(join(dir, "p.png"));
+      const bodies: Record<string, Buffer> = { "https://img.example/2.png": Buffer.from("not an image"), "https://img.example/3.png": png };
+      safeFetch.mockImplementation(async (url: string) => new Response(bodies[url] ?? png, { status: 200, headers: { "content-type": "image/png" } }));
+      const urls = [1, 2, 3, 4].map((n) => `https://img.example/${n}.png`);
+      const r = await exec({ image_urls: urls, first_page: 2, max_pages: 2, output_file: "none" });
+      const o = r.output as Record<string, any>;
+      expect(safeFetch.mock.calls.map((c) => c[0]).sort()).toEqual(["https://img.example/2.png", "https://img.example/3.png"]);
+      expect(o.pages.map((p: { page_number: number; status: string }) => [p.page_number, p.status])).toEqual([[2, "failed"], [3, "ok"]]);
+      expect(o.pages[0].error).toMatch(/could not be decoded|could not be read/);
+      expect(o.next_first_page).toBe(4);
+      expect(o.pages_failed).toBe(1);
+    } finally {
+      safeFetch.mockReset();
+      rmSync(dir, { recursive: true, force: true });
+    }
   }, 60_000);
 
   it("reads an image and refuses bytes that are neither PDF nor image", async () => {

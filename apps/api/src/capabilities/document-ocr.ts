@@ -14,7 +14,7 @@
  * 1,000 pages (research file above), so the margin holds at any window size.
  */
 import { inputRefusal } from "../lib/capability-refusal.js";
-import { MAX_FILE_BYTES } from "../lib/jobs/files.js";
+import { MAX_FILE_BYTES, MAX_FILES_PER_JOB, MAX_TOTAL_FILE_BYTES } from "../lib/jobs/files.js";
 import {
   MAX_DECODED_DOCUMENT_BYTES,
   MAX_DECODED_IMAGE_BYTES,
@@ -27,10 +27,11 @@ import { assertNotBlockStatus } from "../lib/site-access.js";
 import {
   MAX_LANGUAGES,
   SUPPORTED_LANGUAGES,
+  PAGE_START_RESERVE_MS,
   imagePageCount,
-  normaliseImage,
   ocrDocument,
   tesseractVersion,
+  type ImagePage,
   type OcrLanguage,
   type OcrSource,
 } from "./lib/ocr/engine.js";
@@ -43,6 +44,18 @@ export const DEFAULT_LANGUAGES: OcrLanguage[] = ["eng", "swe"];
 /** Pages under this mean word confidence are listed in low_confidence_pages. */
 export const LOW_CONFIDENCE_BELOW = 70;
 const FETCH_TIMEOUT_MS = 30_000;
+/** Image-set pages fetched at once. */
+const FETCH_CONCURRENCY = 4;
+/**
+ * One deadline per call, well inside the async path's 300 s hard timeout
+ * (dispatch.ts EXEC_HARD_TIMEOUT_MS) so the pages read are returned rather
+ * than lost to it. Kept per input object, so the platform's one transient
+ * retry (lib/retry.ts) shares it instead of starting a second budget.
+ */
+export const CALL_BUDGET_MS = 240_000;
+const deadlines = new WeakMap<object, number>();
+/** Room kept in the 25 MB job-file total for the text file. */
+const TEXT_FILE_RESERVE_BYTES = 2 * 1024 * 1024;
 const OUTPUT_FILES = ["text", "pdf", "both", "none"] as const;
 type OutputFile = (typeof OUTPUT_FILES)[number];
 
@@ -90,14 +103,16 @@ export function isPdf(data: Buffer): boolean {
   return data.subarray(0, 1024).includes("%PDF-");
 }
 
-async function fetchBytes(url: string, field: string, maxBytes: number): Promise<Buffer> {
-  const resp = await safeFetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { Accept: "application/pdf,image/*;q=0.9,*/*;q=0.5" } });
+async function fetchBytes(url: string, field: string, maxBytes: number, deadline: number): Promise<Buffer> {
+  const ms = Math.min(FETCH_TIMEOUT_MS, deadline - PAGE_START_RESERVE_MS - Date.now());
+  if (ms <= 0) throw new Error("Fetching the document took too long to leave time for OCR; nothing was charged.");
+  const resp = await safeFetch(url, { signal: AbortSignal.timeout(ms), headers: { Accept: "application/pdf,image/*;q=0.9,*/*;q=0.5" } });
   assertNotBlockStatus(url, resp.status);
   if (!resp.ok) throw new Error(`Could not fetch the document: HTTP ${resp.status} from '${field}'.`);
   return readBodyWithLimit(resp, maxBytes, field);
 }
 
-interface Window { first_page: number; max_pages: number }
+interface Window { first_page: number; max_pages: number; deadline: number }
 
 async function loadSource(input: CapabilityInput, win: Window): Promise<{ source: OcrSource; origin: string }> {
   const url = typeof input.url === "string" && input.url.trim() ? input.url.trim() : null;
@@ -123,22 +138,28 @@ async function loadSource(input: CapabilityInput, win: Window): Promise<{ source
       throw inputRefusal(`'first_page' must be at most ${imageUrls.length}, the number of images.`, "first_page", "Send 'first_page' as a page number within the image list, or omit it.");
     }
     const slice = (imageUrls as string[]).slice(win.first_page - 1, win.first_page - 1 + win.max_pages);
-    const images: Buffer[] = [];
+    // Fetched a few at a time; decoding waits for the OCR queue (engine.ts).
+    const pages: ImagePage[] = new Array(slice.length);
     let total = 0;
-    for (const u of slice) {
-      const raw = await fetchBytes(u.trim(), "image_urls", MAX_DECODED_IMAGE_BYTES);
-      total += raw.length;
-      if (total > MAX_DECODED_DOCUMENT_BYTES) {
-        throw new ResourceLimitError(
-          `'image_urls' must be ${(MAX_DECODED_DOCUMENT_BYTES / 1024 / 1024).toFixed(1)}MB or less in total per call; lower 'max_pages' to read fewer images at a time.`,
-        );
+    let next = 0;
+    const fetchOne = async () => {
+      while (next < slice.length) {
+        const i = next++;
+        const raw = await fetchBytes(slice[i].trim(), "image_urls", MAX_DECODED_IMAGE_BYTES, win.deadline);
+        total += raw.length;
+        if (total > MAX_DECODED_DOCUMENT_BYTES) {
+          throw new ResourceLimitError(
+            `'image_urls' must be ${(MAX_DECODED_DOCUMENT_BYTES / 1024 / 1024).toFixed(1)}MB or less in total per call; lower 'max_pages' to read fewer images at a time.`,
+          );
+        }
+        if (isPdf(raw)) {
+          throw inputRefusal("'image_urls' must point to images; send a PDF with 'url' instead.", "image_urls", "Send 'image_urls' as image URLs, and a PDF as 'url'.");
+        }
+        pages[i] = { data: raw, frame: 0 };
       }
-      if (isPdf(raw)) {
-        throw inputRefusal("'image_urls' must point to images; send a PDF with 'url' instead.", "image_urls", "Send 'image_urls' as image URLs, and a PDF as 'url'.");
-      }
-      images.push(await normaliseImage(raw, 0));
-    }
-    return { source: { kind: "images", images, total_pages: imageUrls.length }, origin: "image_urls" };
+    };
+    await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, slice.length) }, fetchOne));
+    return { source: { kind: "images", pages, total_pages: imageUrls.length }, origin: "image_urls" };
   }
 
   let data: Buffer;
@@ -147,7 +168,7 @@ async function loadSource(input: CapabilityInput, win: Window): Promise<{ source
     if (!httpUrl(url)) {
       throw inputRefusal("'url' must be an absolute http or https URL.", "url", "Send 'url' as a full http or https URL to the PDF or image.");
     }
-    data = await fetchBytes(url, "url", MAX_DECODED_DOCUMENT_BYTES);
+    data = await fetchBytes(url, "url", MAX_DECODED_DOCUMENT_BYTES, win.deadline);
     origin = `url:${new URL(url).hostname}`;
   } else {
     data = Buffer.from(checkedBase64(base64!, MAX_DECODED_DOCUMENT_BYTES), "base64");
@@ -165,9 +186,9 @@ async function loadSource(input: CapabilityInput, win: Window): Promise<{ source
     throw inputRefusal(`'first_page' must be at most ${frames}, the image's page count.`, "first_page", "Send 'first_page' as a page number within the image, or omit it.");
   }
   const last = Math.min(frames, win.first_page + win.max_pages - 1);
-  const images: Buffer[] = [];
-  for (let p = win.first_page; p <= last; p++) images.push(await normaliseImage(data, p - 1));
-  return { source: { kind: "images", images, total_pages: frames }, origin };
+  const pages: ImagePage[] = [];
+  for (let p = win.first_page; p <= last; p++) pages.push({ data, frame: p - 1 });
+  return { source: { kind: "images", pages, total_pages: frames }, origin };
 }
 
 registerCapability("document-ocr", async (input: CapabilityInput) => {
@@ -182,18 +203,42 @@ registerCapability("document-ocr", async (input: CapabilityInput) => {
   const languages = parseLanguages(input.languages ?? input.language);
   const outputFile = parseOutputFile(input.output_file);
 
-  const { source, origin } = await loadSource(input, { first_page, max_pages });
+  let deadline = deadlines.get(input);
+  if (deadline === undefined) {
+    deadline = Date.now() + CALL_BUDGET_MS;
+    deadlines.set(input, deadline);
+  }
+  const wantText = outputFile === "text" || outputFile === "both";
+  const wantPdf = outputFile === "pdf" || outputFile === "both";
+
+  const { source, origin } = await loadSource(input, { first_page, max_pages, deadline });
   const result = await ocrDocument(source, {
     languages,
     first_page,
     max_pages,
-    searchable_pdf: outputFile === "pdf" || outputFile === "both",
+    deadline,
+    searchable_pdf: wantPdf
+      ? {
+          max_file_bytes: MAX_FILE_BYTES,
+          max_total_bytes: MAX_TOTAL_FILE_BYTES - (wantText ? TEXT_FILE_RESERVE_BYTES : 0),
+          max_parts: MAX_FILES_PER_JOB - (wantText ? 1 : 0),
+        }
+      : null,
   });
 
   const pages = result.pages;
   const ok = pages.filter((p) => p.status === "ok");
   if (ok.length === 0) {
-    throw new Error(`No page could be read (${pages[0]?.error ?? "no page was processed"}); nothing was charged.`);
+    throw new Error(
+      pages.length === 0
+        ? "OCR ran out of time before the first page was read; nothing was charged. Retry, or lower 'max_pages'."
+        : `No page could be read (${pages[0].error}); nothing was charged.`,
+    );
+  }
+  if (outputFile === "pdf" && result.pdf_parts.length === 0) {
+    throw new Error(
+      "The searchable PDF could not be made within the 10 MB file limit or the time limit; nothing was charged. Lower 'max_pages', or set 'output_file' to text.",
+    );
   }
   const last_page = pages[pages.length - 1].page_number;
   const next_first_page = last_page < result.total_pages ? last_page + 1 : null;
@@ -203,18 +248,23 @@ registerCapability("document-ocr", async (input: CapabilityInput) => {
   const files: CapabilityFile[] = [];
   let searchable_pdf_omitted_reason: string | null = null;
   const stem = `ocr-pages-${first_page}-${last_page}`;
-  if (outputFile === "text" || outputFile === "both") {
+  if (wantText) {
     const body = pages.map((p) => `=== Page ${p.page_number} ===\n${p.status === "ok" ? p.text : `[not read: ${p.error}]`}\n`).join("\n");
     files.push({ name: `${stem}.txt`, content_type: "text/plain", data: Buffer.from(body, "utf8") });
   }
-  if (outputFile === "pdf" || outputFile === "both") {
-    if (result.searchable_pdf && result.searchable_pdf.length <= MAX_FILE_BYTES) {
-      files.push({ name: `${stem}.pdf`, content_type: "application/pdf", data: result.searchable_pdf });
-    } else {
-      searchable_pdf_omitted_reason = result.searchable_pdf
-        ? `The searchable PDF would be ${(result.searchable_pdf.length / 1024 / 1024).toFixed(1)} MB, over the ${MAX_FILE_BYTES / 1024 / 1024} MB file limit; lower 'max_pages'.`
-        : "No page was read, so no PDF was made.";
+  if (wantPdf) {
+    for (const part of result.pdf_parts) {
+      files.push({ name: `ocr-pages-${part.first_page}-${part.last_page}.pdf`, content_type: "application/pdf", data: part.data });
     }
+    const failed = pages.filter((p) => p.status === "failed").map((p) => p.page_number);
+    const notes: string[] = [];
+    if (result.pdf_omitted_from_page !== null) {
+      notes.push(
+        `Pages from ${result.pdf_omitted_from_page} on are not in the searchable PDF: it would exceed the file limits (${MAX_FILE_BYTES / 1024 / 1024} MB a file, ${MAX_TOTAL_FILE_BYTES / 1024 / 1024} MB a job) or the time limit. Their text is in pages; read them again with first_page ${result.pdf_omitted_from_page} and a lower max_pages for the PDF.`,
+      );
+    }
+    if (failed.length > 0) notes.push(`Pages ${failed.join(", ")} could not be read and are not in the PDF.`);
+    searchable_pdf_omitted_reason = notes.length > 0 ? notes.join(" ") : null;
   }
 
   const engine = await tesseractVersion();

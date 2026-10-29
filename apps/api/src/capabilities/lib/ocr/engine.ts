@@ -9,19 +9,28 @@
  * account, nothing leaves Strale.
  *
  * Every bound lives here:
- *  - one document at a time per process, at most MAX_QUEUED_JOBS waiting, and
- *    a job that waited MAX_QUEUE_WAIT_MS is refused (it is uncharged);
+ *  - one document at a time per process and one waiting; a document that
+ *    reaches the front with too little of its deadline left is refused
+ *    (uncharged) rather than started;
+ *  - one deadline per call (the caller sets it, see document-ocr.ts): no page
+ *    starts once less than PAGE_START_RESERVE_MS remains, every child's
+ *    wall-clock kill is capped at the time left, and a page cut off by the
+ *    deadline ends the result there, so what is returned is always a
+ *    contiguous run of pages the caller can continue from;
  *  - PAGE_WORKERS pages in flight per document, each child single-threaded
  *    (OMP_THREAD_LIMIT=1), at nice 10 so API requests keep the CPU first;
- *  - every child under prlimit: address space CHILD_MAX_AS_BYTES and
- *    CHILD_MAX_CPU_SECONDS of CPU, plus a wall-clock kill;
+ *  - every child under prlimit (address space CHILD_MAX_AS_BYTES, CPU
+ *    CHILD_MAX_CPU_SECONDS), with a fixed minimal environment, and — when the
+ *    API runs as root, as in the production image — as the unprivileged
+ *    CHILD_USER, so a parser bug in poppler cannot read the API's memory,
+ *    environment or files;
  *  - pages render to at most RENDER_LONG_SIDE_PX on the long side (300 dpi on
- *    A4), so a PDF declaring a huge page cannot buy a huge bitmap;
- *  - no new page starts after JOB_BUDGET_MS; the pages done so far are
- *    returned and the caller continues from `next_first_page`.
+ *    A4), and caller images are decoded by sharp under IMAGE_MAX_INPUT_PIXELS,
+ *    inside the queue, one page at a time.
  */
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { chown, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
@@ -32,10 +41,11 @@ export type OcrLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const MAX_LANGUAGES = 3;
 
 export const PAGE_WORKERS = 2;
-export const MAX_QUEUED_JOBS = 2;
-export const MAX_QUEUE_WAIT_MS = 60_000;
-/** Kept well under the async path's 300 s hard timeout (dispatch.ts). */
-export const JOB_BUDGET_MS = 180_000;
+export const MAX_QUEUED_JOBS = 1;
+/** A document is not started, nor a page, with less than this left. */
+export const PAGE_START_RESERVE_MS = 25_000;
+/** Kept back from the deadline for the merge and the capture. */
+const DEADLINE_MARGIN_MS = 5_000;
 export const RENDER_LONG_SIDE_PX = 3508;
 /** Images larger than this on the long side are scaled down before OCR. */
 export const IMAGE_MAX_LONG_SIDE_PX = 5000;
@@ -43,6 +53,10 @@ export const IMAGE_MAX_LONG_SIDE_PX = 5000;
 export const IMAGE_MAX_INPUT_PIXELS = 60_000_000;
 export const CHILD_MAX_AS_BYTES = 1536 * 1024 * 1024;
 export const CHILD_MAX_CPU_SECONDS = 90;
+/** Created by the Dockerfile; children run as this user when the API is root. */
+export const CHILD_USER = "strale-ocr";
+/** JPEG quality for page images embedded in a searchable PDF, when JPEG is the smaller. */
+const PDF_JPEG_QUALITY = 60;
 const PDFINFO_TIMEOUT_MS = 15_000;
 const RENDER_TIMEOUT_MS = 45_000;
 const OCR_TIMEOUT_MS = 75_000;
@@ -58,29 +72,47 @@ export interface OcrPage {
   error?: string;
 }
 
+export interface PdfPart {
+  first_page: number;
+  last_page: number;
+  data: Buffer;
+}
+
 export interface OcrResult {
   pages: OcrPage[];
   /** Pages in the source document (PDF page count, or images supplied). */
   total_pages: number;
-  /** One searchable PDF for the pages read, when it was asked for. */
-  searchable_pdf: Buffer | null;
-  /** True when JOB_BUDGET_MS stopped the run before every requested page started. */
+  /** The searchable PDF in one or more parts, in page order; empty when not asked for. */
+  pdf_parts: PdfPart[];
+  /** First read page left out of the PDF parts (size or time limits), or null. */
+  pdf_omitted_from_page: number | null;
+  /** True when the deadline stopped the run before every requested page was read. */
   stopped_by_time_budget: boolean;
 }
 
+/** One caller image page: the raw bytes and which frame of them (multi-page TIFF). */
+export interface ImagePage { data: Buffer; frame: number }
+
 export type OcrSource =
   | { kind: "pdf"; data: Buffer }
-  /** Already within the page window; `first_page_number` numbers them. */
-  | { kind: "images"; images: Buffer[]; total_pages: number };
+  /** Already within the page window; numbered from `first_page`. */
+  | { kind: "images"; pages: ImagePage[]; total_pages: number };
+
+export interface PdfLimits { max_file_bytes: number; max_total_bytes: number; max_parts: number }
 
 export interface OcrOptions {
   languages: OcrLanguage[];
   first_page: number;
   max_pages: number;
-  searchable_pdf: boolean;
+  /** Epoch ms after which nothing new starts and running children are cut off. */
+  deadline: number;
+  /** Set to produce a searchable PDF, split to fit these limits. */
+  searchable_pdf: PdfLimits | null;
+  /** Tests only: overrides PAGE_START_RESERVE_MS. */
+  start_reserve_ms?: number;
 }
 
-/** A failure caused by the document itself (encrypted, not a PDF, undecodable). */
+/** A failure caused by the document itself (not a PDF, unreadable, undecodable). */
 export class OcrInputError extends Error {
   readonly isCapabilityRefusal = true;
   constructor(message: string) {
@@ -95,20 +127,39 @@ interface RunResult { stdout: string; stderr: string }
 
 const CHILD_ENV = { PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", OMP_THREAD_LIMIT: "1", LANG: "C.UTF-8" };
 
+let childIdentityCache: { uid: number; gid: number } | null | undefined;
+
+/** The uid/gid children run as: CHILD_USER when this process is root and the user exists. */
+export function childIdentity(): { uid: number; gid: number } | null {
+  if (childIdentityCache !== undefined) return childIdentityCache;
+  childIdentityCache = null;
+  if (process.getuid?.() === 0) {
+    try {
+      const line = readFileSync("/etc/passwd", "utf8").split("\n").find((l) => l.startsWith(`${CHILD_USER}:`));
+      const [, , uid, gid] = line?.split(":") ?? [];
+      if (uid && gid && Number(uid) > 0) childIdentityCache = { uid: Number(uid), gid: Number(gid) };
+    } catch {
+      // No passwd file: run as the current user.
+    }
+  }
+  return childIdentityCache;
+}
+
 /** Run a binary under prlimit and nice with a wall-clock kill. Exported for the boot probe. */
 export function runBounded(bin: string, args: string[], timeoutMs: number): Promise<RunResult> {
   return new Promise((resolve, reject) => {
+    const identity = childIdentity();
+    // prlimit and nice exec into the next program, so the kill reaches the binary itself.
     const child = spawn(
       "prlimit",
       [`--as=${CHILD_MAX_AS_BYTES}`, `--cpu=${CHILD_MAX_CPU_SECONDS}`, "--", "nice", "-n", "10", bin, ...args],
-      // A fixed, minimal environment: the children never see the API's secrets.
-      { env: CHILD_ENV, stdio: ["ignore", "pipe", "pipe"] },
+      { env: CHILD_ENV, stdio: ["ignore", "pipe", "pipe"], ...(identity ?? {}) },
     );
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (c: Buffer) => { if (stdout.length < 1_000_000) stdout += c.toString("utf8"); });
     child.stderr.on("data", (c: Buffer) => { if (stderr.length < 8_000) stderr += c.toString("utf8"); });
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    const timer = setTimeout(() => child.kill("SIGKILL"), Math.max(1, timeoutMs));
     child.on("error", (err) => { clearTimeout(timer); reject(err); });
     child.on("close", (code, signal) => {
       clearTimeout(timer);
@@ -136,11 +187,12 @@ export async function installedLanguages(): Promise<string[]> {
 
 // ── parsing ─────────────────────────────────────────────────────────────────
 
-/** Page count from `pdfinfo` output; refuses encrypted documents. */
+/**
+ * Page count from `pdfinfo` output. An owner-password PDF ("Encrypted: yes
+ * (print:yes …)") opens and renders and is accepted; one that needs a password
+ * to open already failed pdfinfo.
+ */
 export function parsePdfInfo(stdout: string): number {
-  if (/^Encrypted:\s+yes/m.test(stdout)) {
-    throw new OcrInputError("'url' or 'base64' must be a PDF without a password or encryption; this one is encrypted.");
-  }
   const m = stdout.match(/^Pages:\s+(\d+)/m);
   if (!m) throw new OcrInputError("'url' or 'base64' must be a readable PDF; its page count could not be read.");
   return Number(m[1]);
@@ -162,6 +214,36 @@ export function parseTsv(tsv: string): { mean_confidence: number | null; word_co
   return { mean_confidence: n > 0 ? Math.round((sum / n) * 10) / 10 : null, word_count: n };
 }
 
+/**
+ * Split page PDFs into contiguous parts that fit the file limits. Stops at the
+ * first page that no longer fits, so the parts always cover a prefix.
+ * Sizes are the single-page PDFs; merging adds a little, hence the margin.
+ */
+export function planPdfParts(pages: { page_number: number; bytes: number }[], limits: PdfLimits): { parts: number[][]; omittedFrom: number | null } {
+  const perFile = Math.floor(limits.max_file_bytes * 0.97);
+  const parts: number[][] = [];
+  let current: number[] = [];
+  let currentBytes = 0;
+  let total = 0;
+  for (const p of pages) {
+    if (p.bytes > perFile || total + p.bytes > limits.max_total_bytes) return { parts: close(), omittedFrom: p.page_number };
+    if (currentBytes + p.bytes > perFile) {
+      if (parts.length + 1 >= limits.max_parts) return { parts: close(), omittedFrom: p.page_number };
+      parts.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(p.page_number);
+    currentBytes += p.bytes;
+    total += p.bytes;
+  }
+  return { parts: close(), omittedFrom: null };
+
+  function close(): number[][] {
+    return current.length > 0 ? [...parts, current] : parts;
+  }
+}
+
 // ── the queue ───────────────────────────────────────────────────────────────
 
 let chain: Promise<unknown> = Promise.resolve();
@@ -169,21 +251,20 @@ let queued = 0;
 
 /**
  * Capacity, not caller input: a full queue counts against health like any
- * other overload, so sustained demand above capacity shows up and can trip
- * the breaker rather than queueing work nobody waits for.
+ * other overload, so sustained demand above capacity shows up rather than
+ * queueing work nobody waits for.
  */
-function queueRefusal(reason: string): Error {
+function busy(reason: string): Error {
   return new Error(`OCR capacity is busy: ${reason}; nothing was charged, retry in a minute.`);
 }
 
 /** Run documents one after another. Exported for tests. */
-export function enqueue<T>(work: () => Promise<T>): Promise<T> {
-  if (queued >= MAX_QUEUED_JOBS) return Promise.reject(queueRefusal("too many documents are queued"));
+export function enqueue<T>(deadline: number, work: () => Promise<T>, reserveMs = PAGE_START_RESERVE_MS): Promise<T> {
+  if (queued >= MAX_QUEUED_JOBS) return Promise.reject(busy("another document is already waiting"));
   queued++;
-  const enqueuedAt = Date.now();
   const run = chain.then(async () => {
     queued--;
-    if (Date.now() - enqueuedAt > MAX_QUEUE_WAIT_MS) throw queueRefusal("the document waited too long in the queue");
+    if (deadline - Date.now() < reserveMs) throw busy("the document waited too long in the queue");
     return work();
   });
   chain = run.catch(() => undefined);
@@ -197,21 +278,15 @@ export function enqueue<T>(work: () => Promise<T>): Promise<T> {
  * never parses caller bytes directly: sharp decodes them under a pixel cap.
  */
 export async function normaliseImage(data: Buffer, page = 0): Promise<Buffer> {
-  try {
-    return await sharp(data, { limitInputPixels: IMAGE_MAX_INPUT_PIXELS, page })
-      .rotate()
-      .resize({ width: IMAGE_MAX_LONG_SIDE_PX, height: IMAGE_MAX_LONG_SIDE_PX, fit: "inside", withoutEnlargement: true })
-      .grayscale()
-      .png()
-      .toBuffer();
-  } catch (err) {
-    throw new OcrInputError(
-      `'url' or 'base64' must be a PDF or a PNG, JPEG, WebP or TIFF image of at most ${IMAGE_MAX_INPUT_PIXELS / 1_000_000} megapixels (${(err as Error).message.slice(0, 120)}).`,
-    );
-  }
+  return sharp(data, { limitInputPixels: IMAGE_MAX_INPUT_PIXELS, page })
+    .rotate()
+    .resize({ width: IMAGE_MAX_LONG_SIDE_PX, height: IMAGE_MAX_LONG_SIDE_PX, fit: "inside", withoutEnlargement: true })
+    .grayscale()
+    .png()
+    .toBuffer();
 }
 
-/** Number of pages (frames) in an image; a multi-page TIFF has several. */
+/** Number of pages (frames) in an image; a multi-page TIFF has several. Reads the header only. */
 export async function imagePageCount(data: Buffer): Promise<number> {
   try {
     const meta = await sharp(data, { limitInputPixels: IMAGE_MAX_INPUT_PIXELS }).metadata();
@@ -223,33 +298,47 @@ export async function imagePageCount(data: Buffer): Promise<number> {
   }
 }
 
-async function ocrPage(png: string, outBase: string, pageNumber: number, opts: OcrOptions): Promise<OcrPage> {
-  const configs = opts.searchable_pdf ? ["txt", "tsv", "pdf"] : ["txt", "tsv"];
-  await runBounded("tesseract", [png, outBase, "-l", opts.languages.join("+"), "--psm", "3", ...configs], OCR_TIMEOUT_MS);
-  const text = (await readFile(`${outBase}.txt`, "utf8")).replace(/\f/g, "").trimEnd();
-  const stats = parseTsv(await readFile(`${outBase}.tsv`, "utf8"));
-  return { page_number: pageNumber, status: "ok", text, ...stats };
+/**
+ * For a searchable PDF Tesseract embeds its input image as is, so give it the
+ * smaller of a grayscale PNG (bitonal scans) and a JPEG (photographic scans).
+ */
+async function smallestPageImage(png: string, base: string): Promise<string> {
+  const img = sharp(await readFile(png)).grayscale();
+  const [asPng, asJpeg] = await Promise.all([img.clone().png().toBuffer(), img.clone().jpeg({ quality: PDF_JPEG_QUALITY }).toBuffer()]);
+  const path = asJpeg.length < asPng.length ? `${base}.jpg` : png;
+  await writeFile(path, asJpeg.length < asPng.length ? asJpeg : asPng);
+  return path;
 }
 
 function failedPage(pageNumber: number, err: unknown): OcrPage {
   const msg = err instanceof Error ? err.message : String(err);
-  const reason = /killed|SIGKILL|SIGXCPU/.test(msg) ? "the page took too long or too much memory to read" : "the page could not be read";
+  const reason = /killed|SIGKILL|SIGXCPU/.test(msg)
+    ? "the page took too long or too much memory to read"
+    : /limitInputPixels|pixel limit/i.test(msg)
+      ? `the image is over ${IMAGE_MAX_INPUT_PIXELS / 1_000_000} megapixels`
+      : /unsupported image format|Input buffer/i.test(msg)
+        ? "the image could not be decoded (PNG, JPEG, WebP or TIFF expected)"
+        : "the page could not be read";
   return { page_number: pageNumber, status: "failed", text: "", mean_confidence: null, word_count: 0, error: reason };
 }
 
-/**
- * OCR a document. Pages run PAGE_WORKERS at a time; the result lists pages in
- * order and stops at the first page that never started (time budget), so the
- * returned pages are always a contiguous run from `first_page`.
- */
+/** Time a child may take: its own limit, capped at what is left of the deadline. */
+function within(deadline: number, ownMs: number): number {
+  return Math.min(ownMs, deadline - DEADLINE_MARGIN_MS - Date.now());
+}
+
+/** OCR a document: queued, then pages PAGE_WORKERS at a time, in page order. */
 export function ocrDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResult> {
-  return enqueue(() => runDocument(source, opts));
+  return enqueue(opts.deadline, () => runDocument(source, opts), opts.start_reserve_ms);
 }
 
 async function runDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResult> {
-  const started = Date.now();
+  const { deadline } = opts;
   const dir = await mkdtemp(join(tmpdir(), "strale-ocr-"));
   try {
+    const identity = childIdentity();
+    if (identity) await chown(dir, identity.uid, identity.gid);
+
     let total: number;
     let pageNumbers: number[];
     let preparePage: (pageNumber: number, png: string) => Promise<void>;
@@ -259,9 +348,9 @@ async function runDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResu
       await writeFile(pdf, source.data);
       let info: RunResult;
       try {
-        info = await runBounded("pdfinfo", [pdf], PDFINFO_TIMEOUT_MS);
+        info = await runBounded("pdfinfo", [pdf], within(deadline, PDFINFO_TIMEOUT_MS));
       } catch {
-        throw new OcrInputError("'url' or 'base64' must be a readable PDF; this one could not be opened.");
+        throw new OcrInputError("'url' or 'base64' must be a readable PDF that opens without a password; this one could not be opened.");
       }
       total = parsePdfInfo(info.stdout);
       if (opts.first_page > total) {
@@ -270,18 +359,18 @@ async function runDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResu
       const last = Math.min(total, opts.first_page + opts.max_pages - 1);
       pageNumbers = range(opts.first_page, last);
       preparePage = async (n, png) => {
-        const base = png.slice(0, -".png".length);
         await runBounded(
           "pdftoppm",
-          ["-f", String(n), "-l", String(n), "-singlefile", "-scale-to", String(RENDER_LONG_SIDE_PX), "-gray", "-png", pdf, base],
-          RENDER_TIMEOUT_MS,
+          ["-f", String(n), "-l", String(n), "-singlefile", "-scale-to", String(RENDER_LONG_SIDE_PX), "-gray", "-png", pdf, png.slice(0, -".png".length)],
+          within(deadline, RENDER_TIMEOUT_MS),
         );
       };
     } else {
       total = source.total_pages;
-      pageNumbers = source.images.map((_, i) => opts.first_page + i);
+      pageNumbers = source.pages.map((_, i) => opts.first_page + i);
       preparePage = async (n, png) => {
-        await writeFile(png, source.images[n - opts.first_page]);
+        const page = source.pages[n - opts.first_page];
+        await writeFile(png, await normaliseImage(page.data, page.frame));
       };
     }
 
@@ -289,17 +378,27 @@ async function runDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResu
     let nextIndex = 0;
     let stoppedByBudget = false;
     const worker = async () => {
-      while (nextIndex < pageNumbers.length) {
-        if (Date.now() - started > JOB_BUDGET_MS) {
+      while (nextIndex < pageNumbers.length && !stoppedByBudget) {
+        if (deadline - Date.now() < (opts.start_reserve_ms ?? PAGE_START_RESERVE_MS)) {
           stoppedByBudget = true;
           return;
         }
         const n = pageNumbers[nextIndex++];
-        const png = join(dir, `page-${n}.png`);
+        const base = join(dir, `page-${n}`);
         try {
-          await preparePage(n, png);
-          results.set(n, await ocrPage(png, join(dir, `page-${n}`), n, opts));
+          await preparePage(n, `${base}.png`);
+          const input = opts.searchable_pdf ? await smallestPageImage(`${base}.png`, base) : `${base}.png`;
+          const configs = opts.searchable_pdf ? ["txt", "tsv", "pdf"] : ["txt", "tsv"];
+          await runBounded("tesseract", [input, base, "-l", opts.languages.join("+"), "--psm", "3", ...configs], within(deadline, OCR_TIMEOUT_MS));
+          const text = (await readFile(`${base}.txt`, "utf8")).replace(/\f/g, "").trimEnd();
+          results.set(n, { page_number: n, status: "ok", text, ...parseTsv(await readFile(`${base}.tsv`, "utf8")) });
         } catch (err) {
+          // Cut off by the deadline, not a bad page: leave it unread so the
+          // result ends before it and the caller continues from here.
+          if (Date.now() >= deadline - DEADLINE_MARGIN_MS - 1_000) {
+            stoppedByBudget = true;
+            return;
+          }
           results.set(n, failedPage(n, err));
         }
       }
@@ -313,23 +412,40 @@ async function runDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResu
       pages.push(p);
     }
 
-    let searchablePdf: Buffer | null = null;
-    const okPages = pages.filter((p) => p.status === "ok");
-    if (opts.searchable_pdf && okPages.length > 0) {
-      const parts = okPages.map((p) => join(dir, `page-${p.page_number}.pdf`));
-      if (parts.length === 1) {
-        searchablePdf = await readFile(parts[0]);
-      } else {
-        const merged = join(dir, "searchable.pdf");
-        await runBounded("pdfunite", [...parts, merged], MERGE_TIMEOUT_MS);
-        searchablePdf = await readFile(merged);
-      }
-    }
+    const { parts, omittedFrom } = opts.searchable_pdf
+      ? await buildPdfParts(dir, pages.filter((p) => p.status === "ok").map((p) => p.page_number), opts.searchable_pdf, deadline)
+      : { parts: [], omittedFrom: null };
 
-    return { pages, total_pages: total, searchable_pdf: searchablePdf, stopped_by_time_budget: stoppedByBudget };
+    return { pages, total_pages: total, pdf_parts: parts, pdf_omitted_from_page: omittedFrom, stopped_by_time_budget: stoppedByBudget };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+async function buildPdfParts(dir: string, okPages: number[], limits: PdfLimits, deadline: number): Promise<{ parts: PdfPart[]; omittedFrom: number | null }> {
+  const sized = await Promise.all(okPages.map(async (n) => ({ page_number: n, bytes: (await stat(join(dir, `page-${n}.pdf`))).size })));
+  const plan = planPdfParts(sized, limits);
+  const parts: PdfPart[] = [];
+  for (const group of plan.parts) {
+    const files = group.map((n) => join(dir, `page-${n}.pdf`));
+    let data: Buffer;
+    if (files.length === 1) {
+      data = await readFile(files[0]);
+    } else {
+      const timeout = within(deadline, MERGE_TIMEOUT_MS);
+      if (timeout < 1_000) return { parts, omittedFrom: group[0] };
+      const merged = join(dir, `part-${parts.length + 1}.pdf`);
+      try {
+        await runBounded("pdfunite", [...files, merged], timeout);
+      } catch {
+        return { parts, omittedFrom: group[0] };
+      }
+      data = await readFile(merged);
+    }
+    if (data.length > limits.max_file_bytes) return { parts, omittedFrom: group[0] };
+    parts.push({ first_page: group[0], last_page: group[group.length - 1], data });
+  }
+  return { parts, omittedFrom: plan.omittedFrom };
 }
 
 function range(from: number, to: number): number[] {

@@ -41,7 +41,7 @@ input_schema:
     output_file:
       type: string
       enum: [text, pdf, both, none]
-      description: "Files returned with the job: text (default, one .txt with every page), pdf (a searchable PDF, image plus invisible text layer), both, or none."
+      description: "Files returned with the job: text (default, one .txt with every page), pdf (a searchable PDF, image plus invisible text layer, split into parts of up to 10 MB), both, or none."
   anyOf:
     - required: [url]
     - required: [base64]
@@ -89,6 +89,7 @@ output_schema:
       description: Names of the files attached to the job; download them from the signed URLs in the poll response.
     searchable_pdf_omitted_reason:
       type: string
+      description: Set when pages are missing from the searchable PDF (file or time limits, or pages that could not be read), naming the first page left out.
 data_source: Tesseract OCR 5 (self-hosted, Apache-2.0)
 data_source_type: computed
 transparency_tag: algorithmic
@@ -182,11 +183,11 @@ limitations:
     severity: info
     workaround: For a single photo or screenshot, image-to-text (€0.05) is cheaper.
   - title: Asynchronous, with a time limit
-    text: The call returns a job to poll. A job stops starting new pages after three minutes and returns what it read, with stopped_early_reason time_budget and next_first_page set; calls also queue behind other documents and are refused, uncharged, when the queue is full.
+    text: The call returns a job to poll. A job stops starting new pages about three and a half minutes after the call and returns what it read, with stopped_early_reason time_budget and next_first_page set. One document is read at a time; a call is refused, uncharged, when another document is already waiting or it waited too long to start.
     category: performance
     severity: info
   - title: Size limits
-    text: A PDF or image by URL may be up to 8 MB, a base64 upload is bounded by the 1 MB request body, and an image set may total 8 MB per call. Password-protected or encrypted PDFs are refused. A searchable PDF over 10 MB is not returned (lower max_pages); the text file always is.
+    text: A PDF or image by URL may be up to 8 MB, a base64 upload is bounded by the 1 MB request body, and an image set may total 8 MB per call. PDFs that need a password to open are refused. The searchable PDF comes in parts of at most 10 MB and 25 MB per job; pages beyond that are left out of the PDF and named in searchable_pdf_omitted_reason, and a call asking only for a PDF that gets none fails uncharged.
     category: coverage
     severity: info
   - title: No layout or structure
