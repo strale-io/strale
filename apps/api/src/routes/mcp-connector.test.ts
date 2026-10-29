@@ -145,7 +145,7 @@ describe("lazy authentication on /mcp/connector", () => {
   it("the broad /mcp keeps its x402 hand-off and never answers 401", async () => {
     const res = await post("/mcp", call("strale_execute", { slug: "vat-validate", inputs: {} }));
     expect(res.status).toBe(200);
-    expect((await rpcResult(res)).content[0].text).toContain("/x402/vat-validate");
+    expect((await rpcResult(res)).content[0].text).toContain("/x402/v2/vat-validate");
   });
 });
 
