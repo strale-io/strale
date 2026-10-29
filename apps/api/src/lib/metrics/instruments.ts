@@ -47,7 +47,7 @@ export const INSTRUMENTS: Record<string, InstrumentSpec> = {
     describes: "an agent opening an MCP session",
     enabledAt: new Date("2026-08-13T10:00:00Z"),
     shippedBy: "attribution instrumentation",
-    source: { table: "discovery_hits", column: "created_at", predicate: "endpoint = '/mcp:initialize'" },
+    source: { table: "discovery_hits", column: "created_at", predicate: "endpoint = '/mcp:initialize' OR endpoint LIKE '/mcp/%:initialize'" },
   },
   mcp_tools: {
     id: "mcp_tools",
@@ -55,7 +55,7 @@ export const INSTRUMENTS: Record<string, InstrumentSpec> = {
     // PR #245 (d216d63), merged 2026-08-15 ~11:13 CEST = 09:13 UTC.
     enabledAt: new Date("2026-08-15T09:13:00Z"),
     shippedBy: "d216d63 feat(attribution): instrument the MCP funnel",
-    source: { table: "discovery_hits", column: "created_at", predicate: "endpoint LIKE '/mcp:tools%'" },
+    source: { table: "discovery_hits", column: "created_at", predicate: "endpoint LIKE '/mcp:tools%' OR endpoint LIKE '/mcp/%:tools%'" },
   },
   x402_payer_identity: {
     id: "x402_payer_identity",

@@ -135,10 +135,15 @@ export async function mcpFunnel(w: Window): Promise<Measurement<FunnelStep[]>> {
            COUNT(*) FILTER (WHERE ${isCustomerCandidate("dh")})::int AS events,
            COUNT(DISTINCT dh.ip_hash) FILTER (WHERE ${isCustomerCandidate("dh")})::int AS visit_days
     FROM discovery_hits dh
-    WHERE dh.created_at >= ${from.toISOString()} AND dh.created_at <= ${bounds(w).to} AND dh.endpoint LIKE '/mcp:%'
+    WHERE dh.created_at >= ${from.toISOString()} AND dh.created_at <= ${bounds(w).to}
+      AND (dh.endpoint LIKE '/mcp:%' OR dh.endpoint LIKE '/mcp/%:%')
     GROUP BY 1`);
+  // Narrow entry points (D7) label their rows /mcp/<id>:<step>; they are the
+  // same funnel, so they count here. Without this, agents moving from the
+  // broad server to a narrow one would read as MCP demand falling.
+  const step = (endpoint: string) => endpoint.replace(/^\/mcp\/[^:]+:/, "/mcp:");
   const pick = (prefix: string, label: string): FunnelStep => {
-    const m = r.filter((x) => x.endpoint.startsWith(prefix));
+    const m = r.filter((x) => step(x.endpoint).startsWith(prefix));
     return {
       id: prefix, label,
       events: m.reduce((a, x) => a + Number(x.events), 0),
@@ -163,7 +168,7 @@ export async function monitorVisitDays(w: Window): Promise<Measurement<number>> 
   const from = guard.ok ? w.from : (guard.enabledAt ?? w.from);
   const r = await rows<{ n: string }>(sql`
     SELECT COUNT(DISTINCT dh.ip_hash)::int AS n FROM discovery_hits dh
-    WHERE dh.endpoint = '/mcp:initialize' AND dh.created_at >= ${from.toISOString()}
+    WHERE (dh.endpoint = '/mcp:initialize' OR dh.endpoint LIKE '/mcp/%:initialize') AND dh.created_at >= ${from.toISOString()}
       AND dh.created_at <= ${bounds(w).to} AND ${isAutomatedTooling("dh")}`);
   return {
     status: "observed", value: Number(r[0]?.n ?? 0),

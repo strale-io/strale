@@ -32,6 +32,7 @@ import {
   type SolutionTrustEntry,
   type McpFunnelEvent,
 } from "strale-mcp/tools";
+import { findEntryPoint, registerEntryPointTools, type EntryPoint } from "strale-mcp/entry-points";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,10 @@ const PORT = process.env.PORT ?? "3000";
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
   `http://localhost:${PORT}`;
+// URLs handed to callers (x402 hand-off, poll and top-up links) must be
+// reachable from outside the container, unlike STRALE_BASE_URL's localhost
+// default above.
+const PUBLIC_BASE_URL = process.env.STRALE_BASE_URL ?? "https://api.strale.io";
 const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",
   10,
@@ -179,6 +184,7 @@ interface McpPeekBody {
  */
 export function classifyMcpRequest(
   peek: McpPeekBody | null,
+  prefix = "/mcp",
 ): { endpoint: string; uaOverride?: string } | null {
   if (!peek?.method) return null;
 
@@ -188,23 +194,33 @@ export function classifyMcpRequest(
     // often generic (undici, node-fetch) or absent entirely.
     const ci = peek.params?.clientInfo;
     const uaOverride = ci?.name ? `${ci.name}/${ci.version ?? "?"}` : undefined;
-    return { endpoint: "/mcp:initialize", uaOverride };
+    return { endpoint: `${prefix}:initialize`, uaOverride };
   }
 
   if (peek.method === "tools/list") {
-    return { endpoint: "/mcp:tools/list" };
+    return { endpoint: `${prefix}:tools/list` };
   }
 
   if (peek.method === "tools/call") {
-    return { endpoint: `/mcp:tools/call:${sanitizeFunnelToken(peek.params?.name)}` };
+    return { endpoint: `${prefix}:tools/call:${sanitizeFunnelToken(peek.params?.name)}` };
   }
 
   return null;
 }
 
 /** Endpoint label for an auth-or-payment rejection surfaced during tool execution. */
-export function funnelEventEndpoint(event: McpFunnelEvent): string {
-  return `/mcp:reject:${event.type}:${sanitizeFunnelToken(event.tool)}`;
+export function funnelEventEndpoint(event: McpFunnelEvent, prefix = "/mcp"): string {
+  return `${prefix}:reject:${event.type}:${sanitizeFunnelToken(event.tool)}`;
+}
+
+/**
+ * discovery_hits endpoint prefix for a request. The broad server keeps
+ * `/mcp`; a narrow entry point (D7) gets `/mcp/<id>`, so the weekly rollup
+ * can compare each entry point's funnel with the broad server's, and the
+ * existing `LIKE '/mcp:%'` queries keep counting only the broad server.
+ */
+export function funnelPrefix(entry?: EntryPoint): string {
+  return entry ? `/mcp/${entry.id}` : "/mcp";
 }
 
 // ─── Create a stateless MCP handler ─────────────────────────────────────────
@@ -213,9 +229,10 @@ async function handleStatelessRequest(
   req: Request,
   apiKey: string,
   clientIp: string,
+  entry?: EntryPoint,
 ): Promise<Response> {
   const server = new McpServer(
-    { name: "strale", version: readPackageVersion() },
+    { name: entry?.serverName ?? "strale", version: readPackageVersion() },
     { capabilities: { tools: {} } },
   );
 
@@ -227,17 +244,28 @@ async function handleStatelessRequest(
   // forward through).
   const headerReader: HeaderReader = { header: (n: string) => req.headers.get(n) ?? undefined };
 
-  registerStraleTools(server, capabilities, solutions, {
+  const venueSrc = new URL(req.url).searchParams.get("src") ?? undefined;
+  const clientOpts = {
     baseUrl: STRALE_BASE_URL,
+    publicBaseUrl: PUBLIC_BASE_URL,
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
     version: readPackageVersion(),
-    src: new URL(req.url).searchParams.get("src") ?? undefined,
-    onFunnelEvent: (event) => {
-      recordDiscoveryHit(funnelEventEndpoint(event), headerReader, { ip: clientIp ?? undefined, src: new URL(req.url).searchParams.get("src") ?? undefined });
+    src: venueSrc,
+    onFunnelEvent: (event: McpFunnelEvent) => {
+      recordDiscoveryHit(funnelEventEndpoint(event, funnelPrefix(entry)), headerReader, { ip: clientIp ?? undefined, src: venueSrc });
     },
-  }, trustData, solutionTrustData);
+  };
+
+  if (entry) {
+    // Forwarded calls carry the entry point's own tag (mcp-<id>) as src, so
+    // transactions and x402 payers are attributable per entry point; the
+    // venue the client came from stays on this request's discovery rows.
+    registerEntryPointTools(server, entry, capabilities, clientOpts);
+  } else {
+    registerStraleTools(server, capabilities, solutions, clientOpts, trustData, solutionTrustData);
+  }
 
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless — no session tracking
@@ -321,10 +349,34 @@ mcpRoute.options("/", (c) => {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 });
 
-// All MCP methods on the root path
-mcpRoute.all("/", async (c) => {
-  const req = c.req.raw;
+// All MCP methods on the root path (the broad server) and on /<entry> (the
+// narrow D7 entry points in strale-mcp/entry-points).
+mcpRoute.all("/", (c) => handleMcp(c.req.raw));
+
+mcpRoute.options("/:entry", (c) => {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+});
+
+mcpRoute.all("/:entry", (c) => {
+  const entry = findEntryPoint(c.req.param("entry"));
+  if (!entry) {
+    return addCorsHeaders(
+      new Response(
+        JSON.stringify({
+          error_code: "not_found",
+          message: "Unknown MCP entry point.",
+          details: { fix: "Connect to /mcp for the full library." },
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+  return handleMcp(c.req.raw, entry);
+});
+
+async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
   const method = req.method;
+  const path = entry ? `/mcp/${entry.id}` : "/mcp";
 
   if (method === "POST") {
     const apiKey = extractApiKey(req);
@@ -337,7 +389,7 @@ mcpRoute.all("/", async (c) => {
     // handleStatelessRequest instead).
     try {
       const peek = (await req.clone().json().catch(() => null)) as McpPeekBody | null;
-      const classified = classifyMcpRequest(peek);
+      const classified = classifyMcpRequest(peek, funnelPrefix(entry));
       if (classified) {
         recordDiscoveryHit(classified.endpoint, {
           header: (n: string) =>
@@ -349,7 +401,7 @@ mcpRoute.all("/", async (c) => {
     } catch {
       // best-effort only
     }
-    const response = await handleStatelessRequest(req, apiKey, clientIp);
+    const response = await handleStatelessRequest(req, apiKey, clientIp, entry);
     return addCorsHeaders(response);
   }
 
@@ -360,10 +412,10 @@ mcpRoute.all("/", async (c) => {
       new Response(
         JSON.stringify({
           jsonrpc: "2.0",
-          error: { data: { details: {"fix":"Send each MCP request as a new POST to /mcp."} },
+          error: { data: { details: { fix: `Send each MCP request as a new POST to ${path}.` } },
             code: -32000,
             message:
-              "This MCP endpoint is stateless. Send each request as a new POST to /mcp.",
+              `This MCP endpoint is stateless. Send each request as a new POST to ${path}.`,
           },
         }),
         {
@@ -375,9 +427,9 @@ mcpRoute.all("/", async (c) => {
   }
 
   return addCorsHeaders(
-    new Response(JSON.stringify({ details: { fix: "Send each MCP request as a new POST to /mcp." } }), {
+    new Response(JSON.stringify({ details: { fix: `Send each MCP request as a new POST to ${path}.` } }), {
       status: 405,
       headers: { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json" },
     }),
   );
-});
+}
