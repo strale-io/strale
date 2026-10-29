@@ -38,7 +38,17 @@ The choice therefore rests on three things:
 - **Baseline on 2026-10-28:**
   - Smithery `strale/agent-tools` useCount: 989.
   - Narrow uses: 0.
-- **Rule:** at day 45, run the rollup with `--days 7`. If no entry point's weekly tools/call count beats the broad row, retire all three. Retiring means removing them from `ENTRY_POINTS`; registry entries cannot be deleted, so their remote endpoints then return 404.
+- **Rule:** at day 45, run the rollup with `--days 7` and read the "executions" column. It counts every narrow tool call, but only `strale_execute` on the broad server, because search, ping and balance calls are not uses of a tool. If no entry point beats the broad row, retire all three:
+  - Remove them from `ENTRY_POINTS`.
+  - Mark each registry version deprecated with `mcp-publisher status`, because registry entries cannot be deleted.
+
+## Fixed in review
+
+- **MCP x402 hand-off links pointed at localhost.** Production check, 2026-10-29: every MCP hand-off link was `http://localhost:3000/x402/...`, which no remote agent can reach. This affected the broad server too. Links shown to callers now use `STRALE_BASE_URL`, falling back to `https://api.strale.io`. API calls still go to localhost.
+- **CEO-brief MCP funnel and monitor visit-days** now count `/mcp/<id>:…` rows. Without that, agents moving to a narrow server would have read as MCP demand falling.
+- **Two tests were tightened:**
+  - the exclusion test now fails on a real exposure;
+  - the hand-off test asserts the public host.
 
 ## Open
 

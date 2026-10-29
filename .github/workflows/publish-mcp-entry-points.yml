@@ -6,6 +6,8 @@ name: Publish (MCP registry, narrow entry points)
 # be deleted, so this runs only by hand, one entry per run, only from main, and
 # only after the entry's live endpoint answers tools/list with at least one
 # tool. A name and version the registry already has is a no-op.
+# Any change to a server.json after its first publish needs a new "version",
+# or this workflow reports nothing to publish and the registry copy stays old.
 #
 # Authentication is GitHub OIDC, as in publish-mcp-registry.yml: the registry
 # accepts it for the io.github.strale-io/* namespace. No token is stored.
