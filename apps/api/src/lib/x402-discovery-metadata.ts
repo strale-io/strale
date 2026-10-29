@@ -68,7 +68,7 @@ export function exampleFailure(schema: Record<string, unknown> | undefined, valu
  * ambiguous digit strings and free text resembling personal data are withheld.
  * Never consult known_answer: it can intentionally contain invalid input.
  */
-export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "name" | "processes_personal_data" | "category">, value: unknown): string | undefined {
+export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "name" | "processes_personal_data" | "category">, value: unknown, kind: "input" | "output" = "input"): string | undefined {
   if (["compliance", "screening"].includes(manifest.category ?? "")) return "compliance or screening category";
   if (manifest.processes_personal_data) return "processes_personal_data";
   if (/(screen|\bpep\b|sanction|adverse.media|person|officer|director|beneficial.ownership|email.finder)/i.test(`${manifest.slug} ${manifest.name}`)) return "person lookup or screening tool";
@@ -107,7 +107,14 @@ export function inputPrivacyFailure(manifest: Pick<DiscoveryManifest, "slug" | "
     if (/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b/.test(text)) return "possible date of birth";
     if (/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+\d{4}\b|\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b/i.test(text)) return "possible date of birth";
     // Name-shaped free text, including nested text/prompt fields, is ambiguous.
-    if (/\b[\p{L}][\p{L}’'-]+\s+[\p{L}][\p{L}’'-]+\b/u.test(text.replace(/[^\s@]+@[^\s@]+/g, ""))) return "possible personal name";
+    // Inputs only. Any two words match, so on outputs this withheld the example
+    // of nearly every text tool ("Moved Permanently", a summary sentence) while
+    // finding no personal name (checked 2026-10-29 across the 66 live tools it
+    // alone withheld). An output reaching this line already passed the tool
+    // gates above (no personal data, no screening, no person lookup) and every
+    // field, email, phone, IBAN, IP, address and date check, and the same
+    // example is public at GET /v1/capabilities/:slug.
+    if (kind === "input" && /\b[\p{L}][\p{L}’'-]+\s+[\p{L}][\p{L}’'-]+\b/u.test(text.replace(/[^\s@]+@[^\s@]+/g, ""))) return "possible personal name";
     return undefined;
   };
   return walk(value);
@@ -135,16 +142,16 @@ export function discoveryTags(slug: string, category?: string): string[] {
 }
 
 /** Whole examples only: measure UTF-8 JSON bytes before validation/publication. */
-export function publicExampleFailure(manifest: DiscoveryManifest, schema: Record<string, unknown> | undefined, value: unknown): string | undefined {
+export function publicExampleFailure(manifest: DiscoveryManifest, schema: Record<string, unknown> | undefined, value: unknown, kind: "input" | "output" = "input"): string | undefined {
   if (value !== undefined && Buffer.byteLength(JSON.stringify(value), "utf8") > 1024) return "example exceeds 1024 bytes";
-  return inputPrivacyFailure(manifest, value) ?? exampleFailure(schema, value);
+  return inputPrivacyFailure(manifest, value, kind) ?? exampleFailure(schema, value);
 }
 
 export function metadataFromManifest(manifest: DiscoveryManifest): DiscoveryMetadata {
   const input = manifest.test_fixtures?.health_check_input;
   const output = manifest.output_schema?.example;
   const inputOmission = publicExampleFailure(manifest, manifest.input_schema, input);
-  const outputOmission = publicExampleFailure(manifest, manifest.output_schema, output);
+  const outputOmission = publicExampleFailure(manifest, manifest.output_schema, output, "output");
   return {
     name: manifest.name, description: manifest.description,
     tags: discoveryTags(manifest.slug, manifest.category),

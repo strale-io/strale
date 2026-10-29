@@ -313,7 +313,7 @@ export async function executeCapability(
             type: "text",
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
-              details: { fix: `Pay per call at ${publicOrigin(opts)}/x402/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
+              details: { fix: `Pay per call at ${publicOrigin(opts)}/x402/v2/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
               // Ordering is deliberate. This message is read by an autonomous
               // agent, and the only path it used to offer was a web signup
               // form — something an agent cannot complete. In the seven days
@@ -323,7 +323,7 @@ export async function executeCapability(
               // The machine-actionable option goes first.
               pay_per_call: {
                 how: "No signup. POST to the x402 endpoint below, settle the 402 challenge it returns in USDC on Base, and replay the request — the payment is the authentication.",
-                endpoint: attributedUrl(publicOrigin(opts), `/x402/${slug}`, opts.src),
+                endpoint: attributedUrl(publicOrigin(opts), `/x402/v2/${slug}`, opts.src),
                 catalog: attributedUrl(publicOrigin(opts), "/x402/catalog", opts.src),
                 discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
@@ -651,7 +651,7 @@ export function registerStraleTools(
                 "Call strale_execute with any free capability above — no API key, no payment (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit).",
               // The route an agent can actually take on its own.
               pay_per_call_no_signup: {
-                how: "POST to /x402/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
+                how: "POST to /x402/v2/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
                 catalog: attributedUrl(publicOrigin(opts), "/x402/catalog", opts.src),
                 discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },

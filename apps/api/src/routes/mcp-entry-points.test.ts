@@ -93,7 +93,7 @@ describe("narrow MCP entry points", () => {
   it("a paid tool without a key records an entry-labelled rejection and hands off to x402 tagged mcp-<id>", async () => {
     const res = await call("/mcp/company-check?src=mcp-registry", "uk-company-data", { company_number: "00000006" });
     const body = JSON.parse((await rpcResult(res)).content[0].text);
-    expect(new URL(body.pay_per_call.endpoint).pathname).toBe("/x402/uk-company-data");
+    expect(new URL(body.pay_per_call.endpoint).pathname).toBe("/x402/v2/uk-company-data");
     // Remote agents must get a reachable host, not the API's internal localhost.
     expect(new URL(body.pay_per_call.endpoint).origin).toBe("https://api.strale.io");
     expect(new URL(body.pay_per_call.endpoint).searchParams.get("src")).toBe("mcp-company-check");

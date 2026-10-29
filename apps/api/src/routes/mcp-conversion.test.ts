@@ -41,7 +41,7 @@ describe("an agent refused for lack of credentials is told what it can actually 
     const pay = body.pay_per_call as Record<string, string> | undefined;
 
     expect(pay, "a refusal must offer the no-signup route").toBeDefined();
-    expect(pay!.endpoint).toBe("https://api.example.test/x402/swedish-company-data");
+    expect(pay!.endpoint).toBe("https://api.example.test/x402/v2/swedish-company-data");
     expect(pay!.catalog).toContain("/x402/catalog");
     expect(pay!.discovery).toContain("/.well-known/x402.json");
   });
