@@ -11,6 +11,7 @@ Strale publishes seven npm packages out of this monorepo:
 | `strale-capabilities` | `packages/strale-capabilities` | generated, no build step |
 | `n8n-nodes-strale` | `packages/n8n-nodes-strale` | n8n community node from 1.0.0; 0.1.x came from `strale-io/n8n-nodes-strale` with a token |
 | `strale-ai-sdk` | `packages/ai-sdk-strale` | Vercel AI SDK tools (D6); first publish needs Petter, see below |
+| `strale-cli` | `packages/cli` | agent-safe CLI, binary `strale`; first publish needs Petter, see below |
 
 Publishing runs through [`.github/workflows/release-npm.yml`](../../.github/workflows/release-npm.yml)
 using **npm trusted publishing (OIDC)**. There is no `NPM_TOKEN` secret and no

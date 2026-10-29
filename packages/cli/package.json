@@ -1,0 +1,45 @@
+{
+  "name": "strale-cli",
+  "version": "0.1.0",
+  "description": "Agent-safe command-line client for Strale: JSON on stdout, errors as JSON on stderr, a mandatory price cap, and no prompts.",
+  "type": "module",
+  "bin": {
+    "strale": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/version.mjs && tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "strale",
+    "cli",
+    "ai",
+    "agent",
+    "tools",
+    "json"
+  ],
+  "author": "Strale <hello@strale.io> (https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)",
+  "homepage": "https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/strale-io/strale/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
