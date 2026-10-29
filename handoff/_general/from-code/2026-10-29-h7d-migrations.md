@@ -83,7 +83,7 @@ Railway boot log was not read (no Railway access in that session).
 - Not what the brief literally asked: a second boot does not run nothing; the
   45 every-boot blocks still run, because skipping them would change what
   production does.
-- Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-applied-block-skip.json).
+- Evidence: [round 1](../../../archive/receipts/2026-10-29-test-run-h7d-applied-block-skip.json), [after review](../../../archive/receipts/2026-10-29-test-run-h7d-applied-block-skip-review.json).
 - Recovery if a skipped block's column or table is dropped by hand: schema
   validation fails boot, and its alert now says to set
   `STARTUP_MIGRATIONS_FORCE=1` in Railway, redeploy, then remove it (the
