@@ -36,6 +36,12 @@ export type ErrorCode =
   // in the key's reuse, and the caller can fix it by issuing a new one.
   | "idempotency_key_reused"
   | "request_in_progress"
+  // x402 on /v1/do: the payment was verified but settlement was declined,
+  // could not be confirmed, or the payment was already spent on this work.
+  | "payment_failed"
+  // x402: a verified payment is bound to the capability or solution it was
+  // first presented to; presenting it for different work is refused.
+  | "payment_already_used"
   // Internal admin surface only — POST /v1/internal/tests/admin/
   // apply-migrations returns this when runStartupMigrations() throws
   // (e.g. block 0062 post-condition violation). Not exposed on the
@@ -93,6 +99,10 @@ export function recoveryDetails(
     }
     case "request_in_progress":
       advice = { retryable: true, retry_after_seconds: 2, fix: "The original request is still running; retry with the same Idempotency-Key after 2 seconds." }; break;
+    case "payment_failed":
+      advice = { retryable: false, fix: "Check the payment status in your wallet before signing a fresh x402 payment authorization; do not resend this payment." }; break;
+    case "payment_already_used":
+      advice = { retryable: false, fix: "Sign a fresh x402 payment authorization for this capability; a payment is valid only for the capability or solution it was first presented to." }; break;
     case "idempotency_key_reused":
       advice = { fix: "Send a new Idempotency-Key for different inputs or a different capability." }; break;
     case "budget_exceeded":

@@ -186,7 +186,7 @@ describe.each(routes)("H7b %s settlement characterization", route => {
   it("intent write failure prevents any settlement", async () => {
     state.failIntent = true;
     const response = await request(route);
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(route === "do" ? 402 : 500);
     expect(state.settle).not.toHaveBeenCalled();
     expect(await observed(response)).toMatchSnapshot();
   });
@@ -229,7 +229,7 @@ describe.each(routes)("H7b %s settlement characterization", route => {
   it("a thrown facilitator call preserves the claim and intent policy", async () => {
     state.settle.mockRejectedValue(new Error("transport threw"));
     const response = await request(route);
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(route === "do" ? 402 : 500);
     expect(state.intents[0].state).toBe("settling");
     expect(await observed(response)).toMatchSnapshot();
   });
@@ -281,7 +281,7 @@ describe("H4b /v1/do x402 parity regressions", () => {
   });
   it("redacts legacy stored audit error text on completed replay", async () => {
     state.rows.push({ id: "prior", status: "completed", x402PaymentHash: "same-payment-hash",
-      priceCents: 5, output: output.output, provenance: output.provenance, latencyMs: 7,
+      capabilityId: "22222222-2222-2222-2222-222222222222", solutionSlug: null, priceCents: 5, output: output.output, provenance: output.provenance, latencyMs: 7,
       auditTrail: { execution: { error: "getaddrinfo ENOTFOUND internal.example.test" } },
     });
     const response = await request("do");
@@ -311,7 +311,7 @@ describe("H4b /v1/do x402 parity regressions", () => {
     expect(state.settle).toHaveBeenCalledTimes(1);
   });
   it("refuses a stored failed hash without executing or settling", async () => {
-    state.rows.push({ id: "prior", status: "failed", x402PaymentHash: "same-payment-hash" });
+    state.rows.push({ id: "prior", status: "failed", x402PaymentHash: "same-payment-hash", capabilityId: "22222222-2222-2222-2222-222222222222", solutionSlug: null });
     expect((await request("do")).status).toBe(502);
     expect(state.executor).not.toHaveBeenCalled();
     expect(state.settle).not.toHaveBeenCalled();
@@ -349,7 +349,7 @@ describe("H4b /v1/do x402 parity regressions", () => {
   });
   it("retains a thrown facilitator call's claim and never counts it against health", async () => {
     state.settle.mockRejectedValue(new Error("transport threw"));
-    expect((await request("do")).status).toBe(500);
+    expect((await request("do")).status).toBe(402);
     expect(state.rows[0]).toMatchObject({ status: "executing", x402PaymentHash: "same-payment-hash" });
     expect(state.intents[0].state).toBe("settling");
     expect((await request("do")).status).toBe(502);
@@ -407,7 +407,82 @@ describe("H4b /v1/do x402 parity regressions", () => {
     finish(output);
     const response = await pending;
     expect(released).toBe(1);
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(402);
+    expect(await response.json()).toMatchObject({ error_code: "payment_failed", detail: "Settlement could not start; no payment was taken" });
     expect(state.settle).not.toHaveBeenCalled();
+  });
+});
+
+// H4 (T4): a verified payment is bound to the work it was first claimed for.
+// Two tools at the same price verify the same signed authorization, so a replay
+// presented for different work must be refused, never served the first output.
+describe("H4 x402 payment binding", () => {
+  const other = "33333333-3333-3333-3333-333333333333";
+  const priorFor = (binding: { capabilityId: string | null; solutionSlug: string | null }, status = "completed") => state.rows.push({
+    id: "prior", status, x402PaymentHash: "same-payment-hash", ...binding, priceCents: 5,
+    output: { secret: "other tool's output", steps: { other: "other tool's output" } }, provenance: { source: "other" }, latencyMs: 7, auditTrail: {},
+    x402SettlementId: "settled-other",
+  });
+  it.each(routes)("%s refuses a completed payment claimed for a different capability", async route => {
+    priorFor(route === "solution" ? { capabilityId: other, solutionSlug: null } : { capabilityId: other, solutionSlug: null });
+    const response = await request(route);
+    expect(response.status).toBe(409);
+    const text = await response.text();
+    expect(text).not.toContain("other tool's output");
+    expect(JSON.parse(text)).toMatchObject({ error_code: "payment_already_used", details: { retryable: false, fix: expect.stringMatching(/fresh x402 payment/) } });
+    expect(state.executor).not.toHaveBeenCalled();
+    expect(state.solution).not.toHaveBeenCalled();
+    expect(state.settle).not.toHaveBeenCalled();
+    expect(state.rows).toHaveLength(1);
+  });
+  it.each(routes)("%s refuses a payment claimed for a solution", async route => {
+    priorFor({ capabilityId: null, solutionSlug: route === "solution" ? "other-solution" : "test-solution" });
+    const response = await request(route);
+    expect(response.status).toBe(409);
+    expect(await response.text()).not.toContain("other tool's output");
+    expect(state.settle).not.toHaveBeenCalled();
+  });
+  it.each(routes)("%s refuses an in-flight payment claimed for different work", async route => {
+    priorFor({ capabilityId: other, solutionSlug: null }, "executing");
+    const response = await request(route);
+    expect(response.status).toBe(409);
+    expect(state.settle).not.toHaveBeenCalled();
+  });
+  it("still serves a same-capability replay across rails", async () => {
+    expect((await request("capability")).status).toBe(200);
+    const replay = await request("do");
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toMatchObject({ result: { output: output.output }, meta: { replayed: true } });
+    expect(state.executor).toHaveBeenCalledTimes(1);
+    expect(state.settle).toHaveBeenCalledTimes(1);
+  });
+});
+
+// H4 (T4): a thrown settlement on /v1/do is a payment outcome with the /v1/do
+// error shape, not "the capability failed to execute" with free-tier upsell.
+describe("H4 /v1/do thrown settlement envelope", () => {
+  it("returns payment_failed with a fix and counts nothing against the capability", async () => {
+    state.settle.mockRejectedValue(new Error("transport threw at 10.0.0.1"));
+    const response = await request("do");
+    expect(response.status).toBe(402);
+    const body = await response.json();
+    expect(body).toMatchObject({ error_code: "payment_failed", details: { retryable: false, fix: expect.stringMatching(/wallet/) }, detail: "Settlement outcome could not be confirmed" });
+    expect(body).not.toHaveProperty("free_tier");
+    expect(body).not.toHaveProperty("upgrade");
+    expect(JSON.stringify(body)).not.toContain("10.0.0.1");
+    expect(state.logError.mock.calls.map(([name]) => name)).toContain("x402-settlement-threw");
+    const { recordFailure } = await import("../lib/circuit-breaker.js");
+    const { recordQuality } = await import("../lib/quality-capture.js");
+    expect(recordFailure).not.toHaveBeenCalled();
+    expect(recordQuality).not.toHaveBeenCalledWith(expect.objectContaining({ error: expect.anything() }));
+    expect(state.rows[0]).toMatchObject({ status: "executing", x402PaymentHash: "same-payment-hash" });
+  });
+  it("a thrown intent write takes no payment and releases the hash", async () => {
+    state.failIntent = true;
+    const response = await request("do");
+    expect(response.status).toBe(402);
+    expect(await response.json()).toMatchObject({ error_code: "payment_failed", detail: "Settlement could not start; no payment was taken" });
+    expect(state.settle).not.toHaveBeenCalled();
+    expect(state.rows[0]).toMatchObject({ status: "failed", x402PaymentHash: null });
   });
 });

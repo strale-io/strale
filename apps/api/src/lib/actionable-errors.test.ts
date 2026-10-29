@@ -5,7 +5,7 @@ import { apiError, recoveryDetails, type ErrorCode } from "./errors.js";
 import * as refusals from "./capability-refusal.js";
 
 const routeFiles = ["do", "solution-execute", "solutions", "auth", "wallet", "api-keys", "suggest", "capabilities", "audit", "dispute", "transactions", "verify", "x402-gateway-v2", "internal-onboarding", "internal-health-monitor"];
-const callerCodes = new Set(["invalid_request", "unauthorized", "primary_key_required", "active_key_limit_exceeded", "key_hourly_cap_exceeded", "key_total_cap_exceeded", "insufficient_balance", "budget_exceeded", "no_matching_capability", "not_found", "spend_cap_exceeded", "rate_limited", "idempotency_key_reused", "request_in_progress", "latency_threshold_exceeded", "freshness_check_failed", "token_expired", "legacy_token_sunset", "payment_failed"]);
+const callerCodes = new Set(["invalid_request", "unauthorized", "primary_key_required", "active_key_limit_exceeded", "key_hourly_cap_exceeded", "key_total_cap_exceeded", "insufficient_balance", "budget_exceeded", "no_matching_capability", "not_found", "spend_cap_exceeded", "rate_limited", "idempotency_key_reused", "request_in_progress", "latency_threshold_exceeded", "freshness_check_failed", "token_expired", "legacy_token_sunset", "payment_failed", "payment_already_used"]);
 afterEach(() => vi.useRealTimers());
 
 // Evaluate the actual error-producing expressions, with deterministic request /
