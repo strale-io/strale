@@ -2332,9 +2332,10 @@ describe("startup-migrations — block identity is unique, not just the function
     // had already run -- the ledger collision, arriving through the query
     // instead of through the id. Production's ledger holds 0100 today, so this
     // is not hypothetical.
-    // Exact on the block's own id, or on block 0132's named retirement marker
-    // (an exact key, written by the build that removed the SQS fields).
-    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{(?:BLOCK|SQS_RETIREMENT_MARKER)\}/g)];
+    // Exact on the block's own id, or on one of block 0132's two named
+    // retirement keys (exact keys, written by the build that removed the SQS
+    // fields).
+    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{(?:BLOCK|SQS_RETIREMENT_MARKER|SQS_RETIREMENT_LAST_BEAT)\}/g)];
     const anyLedgerRead = [...src.matchAll(/FROM startup_migration_ledger WHERE /g)];
     expect(lookups.length).toBe(anyLedgerRead.length);
     expect(lookups.length).toBeGreaterThanOrEqual(2);

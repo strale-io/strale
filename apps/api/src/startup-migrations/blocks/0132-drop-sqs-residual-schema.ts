@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
-import { SQS_RETIREMENT_DROP_DELAY, SQS_RETIREMENT_MARKER } from "../sqs-schema-retirement.js";
+import {
+  SQS_RETIREMENT_BEAT_FRESHNESS, SQS_RETIREMENT_DROP_DELAY, SQS_RETIREMENT_LAST_BEAT, SQS_RETIREMENT_MARKER,
+} from "../sqs-schema-retirement.js";
 
 // ─── Block 0132: drop the residual SQS schema (H7d) ──────────────────────────
 //
@@ -18,9 +20,10 @@ import { SQS_RETIREMENT_DROP_DELAY, SQS_RETIREMENT_MARKER } from "../sqs-schema-
 //
 // Expand/contract: code deployed before this block selects whole capability
 // rows, naming these columns, and keeps serving while a new deployment boots.
-// So the drop waits until a build without the fields has recorded that it is
-// serving (sqs-schema-retirement.ts) at least SQS_RETIREMENT_DROP_DELAY ago;
-// until then the block returns "deferred" and the next boot tries again.
+// So the drop waits until a build without the fields has been the live one
+// for at least SQS_RETIREMENT_DROP_DELAY and still was recently (its
+// heartbeat, sqs-schema-retirement.ts); until then the block returns
+// "deferred" and the next boot tries again.
 export async function runMigration0132_dropSqsResidualSchema(tx: MigrationExecutor): Promise<BlockResult> {
   // migration-data: apps/api/src/startup-migrations/sqs-schema-retirement.ts
   const startedAt = Date.now();
@@ -41,14 +44,18 @@ export async function runMigration0132_dropSqsResidualSchema(tx: MigrationExecut
     return { block: "0132_dropSqsResidualSchema", outcome: "skipped (already dropped)", rows_affected: 0, duration_ms: Date.now() - startedAt };
   }
 
-  const marker = (await tx.execute(sql`
+  const first = (await tx.execute(sql`
     SELECT (applied_at <= now() - ${SQS_RETIREMENT_DROP_DELAY}::interval) AS ready
     FROM startup_migration_ledger WHERE block = ${SQS_RETIREMENT_MARKER}
   `)) as unknown as Array<{ ready: boolean }>;
-  if (!marker[0]?.ready) {
+  const last = (await tx.execute(sql`
+    SELECT (applied_at >= now() - ${SQS_RETIREMENT_BEAT_FRESHNESS}::interval) AS fresh
+    FROM startup_migration_ledger WHERE block = ${SQS_RETIREMENT_LAST_BEAT}
+  `)) as unknown as Array<{ fresh: boolean }>;
+  if (!first[0]?.ready || !last[0]?.fresh) {
     return {
       block: "0132_dropSqsResidualSchema",
-      outcome: `deferred (waits until a build without the SQS fields has served for ${SQS_RETIREMENT_DROP_DELAY})`,
+      outcome: `deferred (waits until a build without the SQS fields has been live for ${SQS_RETIREMENT_DROP_DELAY} and beat within ${SQS_RETIREMENT_BEAT_FRESHNESS})`,
       rows_affected: 0,
       duration_ms: Date.now() - startedAt,
     };
