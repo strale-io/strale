@@ -6,9 +6,26 @@ FROM node:20-slim
 # Without it the nightly ingest would fail at job start and the EE
 # tier-2 cache would never refresh. `apt-get clean` keeps the slim image
 # slim.
+#
+# `tesseract-ocr` with its language packs and `poppler-utils` (pdfinfo,
+# pdftoppm, pdfunite) serve `document-ocr`
+# (apps/api/src/capabilities/lib/ocr/engine.ts), which runs them as child
+# processes. The language list must match SUPPORTED_LANGUAGES there;
+# image-boot-smoke runs scripts/ci/ocr-probe.mjs against this image and fails
+# if a binary or pack is missing, or if the children run as root. `prlimit`
+# and `nice` (util-linux, coreutils) are already in the base image.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends unzip ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+      poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-swe \
+      tesseract-ocr-dan tesseract-ocr-nor tesseract-ocr-fin tesseract-ocr-deu \
+      tesseract-ocr-fra tesseract-ocr-spa tesseract-ocr-ita tesseract-ocr-nld \
+ && rm -rf /var/lib/apt/lists/* \
+ && tesseract --version && tesseract --list-langs && pdftoppm -v
+
+# document-ocr runs poppler and tesseract as this unprivileged user (engine.ts
+# CHILD_USER), so a parser bug reached through a caller's PDF cannot read the
+# API process's environment, memory or files, which stay root-owned.
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin strale-ocr
 
 WORKDIR /app
 

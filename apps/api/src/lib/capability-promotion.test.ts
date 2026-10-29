@@ -28,6 +28,7 @@ function cap(partial: Partial<PromotionStats>): PromotionStats {
     marketplaceEligible: true,
     deactivationReason: null,
     hasX402Method: true,
+    runsAsync: false,
     breakerState: "closed",
     wasDelisted: false,
     delistingReason: null,
@@ -54,7 +55,7 @@ function row(partial: Partial<PromotionEvidenceRow>): PromotionEvidenceRow {
   return {
     slug: "s", lifecycle_state: "validating", visible: false, x402_enabled: false,
     is_free_tier: false, maintenance_class: "free-stable-api", marketplace_eligible: true,
-    deactivation_reason: null, has_x402_method: true, breaker_state: "closed",
+    deactivation_reason: null, has_x402_method: true, avg_latency_ms: null, breaker_state: "closed",
     last_listing_event: null, last_listing_event_id: null, last_listing_event_mode: null,
     floor_quarantine_count: 0, total_tests: 100, passed_tests: 100, distinct_test_days: 7,
     ka_total: 20, ka_passed: 20, latest_ka_passed: true, recent_total: 14, recent_passed: 14,
@@ -276,6 +277,11 @@ describe("evaluatePromotion — safety interlocks", () => {
     expect(only([cap({ isFreeTier: true })]).enableX402).toBe(false);
     expect(only([cap({ hasX402Method: false })]).enableX402).toBe(false);
     expect(only([cap({ hasX402Method: false })]).action).toBe("promote");
+    // An async job capability returns files the synchronous x402 rails cannot
+    // deliver; opening x402 would sell work that always fails unpaid.
+    expect(only([cap({ runsAsync: true })]).enableX402).toBe(false);
+    expect(only([cap({ runsAsync: true })]).action).toBe("promote");
+    expect(only([cap({ runsAsync: true })]).reason).toContain("async job, x402 stays closed");
   });
 });
 
@@ -470,6 +476,7 @@ describe("toPromotionStats", () => {
       marketplaceEligible: true,
       deactivationReason: null,
       hasX402Method: true,
+      runsAsync: false,
       breakerState: "closed",
       wasDelisted: false,
       delistingReason: null,

@@ -33,6 +33,7 @@ const NOT_OFFLINE = new Map<string, string>([
   ["business-day-check", "fetches the public-holiday calendar; the expected answer depends on it"],
   ["c2pa-inspect", "fetches the asset at the input URL"],
   ["company-industry-classify", "classifies with an LLM call"],
+  ["document-ocr", "fetches the document at the input URL; the engine is judged in document-ocr.test.ts and scripts/ci/ocr-probe.mjs"],
   ["email-reputation-score", "resolves MX records over DNS"],
 ]);
 

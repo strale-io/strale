@@ -124,6 +124,12 @@ export interface PromotionStats {
   deactivationReason: string | null;
   /** A capability with no x402 method cannot be served on the paid rail. */
   hasX402Method: boolean;
+  /**
+   * Runs on the async job path (avg_latency_ms over the threshold). The x402
+   * rails execute synchronously and cannot deliver job files, so such a
+   * capability would do all its work and then fail unpaid: it stays off x402.
+   */
+  runsAsync: boolean;
   /** source_health.state; null when the capability has no breaker row yet. */
   breakerState: string | null;
   /**
@@ -390,7 +396,7 @@ export function evaluatePromotion(
     // rail on it would be incoherent. Everything else that has a method and is
     // marketplace-eligible goes onto x402 with the promotion: DEC-20260812-A
     // dark-launches "invisible + non-x402", and one green week ends both.
-    const enableX402 = r.hasX402Method && !r.isFreeTier;
+    const enableX402 = r.hasX402Method && !r.isFreeTier && !r.runsAsync;
     // "Promotion grace" fix (2026-08-16): a floor takedown that reaches here
     // cleared every gate above, including piggyback (real customer traffic)
     // when there was any — so this is an auto-reversal of the quarantine, not
@@ -406,7 +412,7 @@ export function evaluatePromotion(
       enableX402,
       passRate: r.passRate,
       totalTests: r.totalTests,
-      reason: `${pct(r.passRate)} over ${r.totalTests} results across ${r.distinctTestDays} days, known_answer ${pct(kaRate)} (${r.knownAnswerPassed}/${r.knownAnswerTotal}), last 24h ${pct(recentRate)}, breaker ${r.breakerState ?? "no row"} — green week met${enableX402 ? "; x402 opened" : r.isFreeTier ? "; free tier, x402 stays closed" : "; no x402 method, catalog only"}${recoveryNote}`,
+      reason: `${pct(r.passRate)} over ${r.totalTests} results across ${r.distinctTestDays} days, known_answer ${pct(kaRate)} (${r.knownAnswerPassed}/${r.knownAnswerTotal}), last 24h ${pct(recentRate)}, breaker ${r.breakerState ?? "no row"} — green week met${enableX402 ? "; x402 opened" : r.isFreeTier ? "; free tier, x402 stays closed" : r.runsAsync ? "; async job, x402 stays closed" : "; no x402 method, catalog only"}${recoveryNote}`,
       lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
       lastListingEventId: r.lastListingEventId,
     });
