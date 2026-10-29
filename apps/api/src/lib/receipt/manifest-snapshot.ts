@@ -270,16 +270,6 @@ export const CAPABILITY_COLUMN_DISPOSITION: Record<string, "declaration" | strin
   fallback_coverage: "trust-display data, as above",
   fallback_verification_level: "trust-display data, as above",
 
-  // Residue of the SQS engine deleted under DEC-20260503-B (2026-05-05). PR2
-  // drops the columns; nothing reads them now.
-  qp_score: "dead SQS column",
-  rp_score: "dead SQS column",
-  matrix_sqs: "dead SQS column",
-  matrix_sqs_raw: "dead SQS column",
-  trend: "dead SQS column",
-  guidance_usable: "dead SQS column",
-  guidance_strategy: "dead SQS column",
-  guidance_confidence: "dead SQS column",
 };
 
 /**

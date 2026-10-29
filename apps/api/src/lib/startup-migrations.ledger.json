@@ -1006,6 +1006,23 @@
       "added": "2026-10-29",
       "columns_written": [],
       "sha256": "45aa9f8f74f3381f15d8d5c93c3ebd1a5e4864ef1b12a62239793a43531c72f8"
+    },
+    {
+      "id": "M075",
+      "function": "runMigration0132_dropSqsResidualSchema",
+      "title": "drop the residual SQS schema (H7d)",
+      "added": "2026-10-29",
+      "columns_written": [
+        "capabilities.guidance_confidence",
+        "capabilities.guidance_strategy",
+        "capabilities.guidance_usable",
+        "capabilities.matrix_sqs",
+        "capabilities.matrix_sqs_raw",
+        "capabilities.qp_score",
+        "capabilities.rp_score",
+        "capabilities.trend"
+      ],
+      "sha256": "971a8dd1ccc5f7bab0b79ebf3c23cdfdd06cd429722d994a4bd10d188415019a"
     }
   ],
   "known_overlaps": [

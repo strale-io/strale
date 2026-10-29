@@ -1,0 +1,42 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d62bd12816f75c7ba01d89ca5fd0bab853563c64"
+  },
+  "at": "2026-10-29T02:47:05.158Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r7.json"
+  },
+  "summary": {
+    "integration_tests": 375,
+    "failed": 0,
+    "withdrawal_runs_first": true
+  },
+  "topic": "h7d-drop-sqs-shutdown-order",
+  "raw": {
+    "ok": true,
+    "round": 4,
+    "postgres": "16.15",
+    "integration_lane": {
+      "test_files_passed": 39,
+      "tests_passed": 375,
+      "failed": 0
+    },
+    "api_suite": {
+      "files_passed": 382,
+      "tests_passed": 7748,
+      "failed": 0
+    },
+    "dist_shutdown_order": [
+      "sqs-retirement-beat",
+      "http-server",
+      "db-pool"
+    ],
+    "beat_rows_after_sigterm": 1,
+    "mutations_caught": [
+      "stop does not await the in-flight beat"
+    ],
+    "check_lane": "pass"
+  }
+}

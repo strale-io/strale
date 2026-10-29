@@ -237,23 +237,12 @@ export const capabilities = pgTable("capabilities", {
   fallbackVerificationLevel: text("fallback_verification_level"),
   // 'tested' | 'manual' | 'untested' | null
   errorCodesJson: jsonb("error_codes_json"),
-  // Computed SQS scores (written after each test run)
-  qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
-  rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
-  matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }),
-  // Trust metadata (written after each test run + staleness refresh job)
-  matrixSqsRaw: decimal("matrix_sqs_raw", { precision: 5, scale: 1 }),
-  trend: varchar("trend", { length: 20 }).default("stable"),
-  // 'improving' | 'declining' | 'stable' | 'stale'
+  // Trust metadata (written after each test run + staleness refresh job).
+  // The SQS score columns were dropped by startup-migration block 0132.
   freshnessLevel: varchar("freshness_level", { length: 20 }).default("fresh"),
   // 'fresh' | 'aging' | 'stale' | 'expired' | 'unverified'
   lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
   freshnessDecayedAt: timestamp("freshness_decayed_at", { withTimezone: true }),
-  // Execution guidance cache (written after each test run)
-  guidanceUsable: boolean("guidance_usable"),
-  guidanceStrategy: text("guidance_strategy"),
-  // 'direct' | 'retry_with_backoff' | 'queue_for_later' | 'unavailable'
-  guidanceConfidence: decimal("guidance_confidence", { precision: 5, scale: 1 }),
   // Pipeline Phase I: Lifecycle management
   lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("draft"),
   // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended' | 'deactivated'
@@ -1028,38 +1017,6 @@ export const healthMonitorEvents = pgTable("health_monitor_events", {
     .notNull()
     .defaultNow(),
 });
-
-// ─── sqs_daily_snapshot ──────────────────────────────────────────────────────
-// Daily snapshots of SQS scores for historical trend analysis
-export const sqsDailySnapshot = pgTable(
-  "sqs_daily_snapshot",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    capabilitySlug: text("capability_slug").notNull(),
-    snapshotDate: date("snapshot_date").notNull(),
-    matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }).notNull(),
-    qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
-    rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
-    qpGrade: varchar("qp_grade", { length: 2 }),
-    rpGrade: varchar("rp_grade", { length: 2 }),
-    trend: varchar("trend", { length: 20 }),
-    healthState: varchar("health_state", { length: 20 }),
-    runsAnalyzed: integer("runs_analyzed"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("sqs_daily_snapshot_slug_date_unique").on(
-      table.capabilitySlug,
-      table.snapshotDate,
-    ),
-    index("sqs_daily_snapshot_slug_date_desc_idx").on(
-      table.capabilitySlug,
-      table.snapshotDate,
-    ),
-  ],
-);
 
 // ─── rate_limit_counters (F-0-002) ──────────────────────────────────────────
 // DB-backed, restart-safe counters for abuse-class endpoints (signup,

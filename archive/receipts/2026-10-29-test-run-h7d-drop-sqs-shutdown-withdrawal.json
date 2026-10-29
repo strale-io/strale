@@ -1,0 +1,45 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "787b5a240a450eb1746b58bb4cef23872c5b9441"
+  },
+  "at": "2026-10-29T02:26:57.598Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r6.json"
+  },
+  "summary": {
+    "integration_tests": 375,
+    "failed": 0,
+    "beat_withdrawn_on_sigterm": true
+  },
+  "topic": "h7d-drop-sqs-shutdown-withdrawal",
+  "raw": {
+    "ok": true,
+    "round": 3,
+    "postgres": "16.15",
+    "integration_lane": {
+      "test_files_passed": 39,
+      "tests_passed": 375,
+      "failed": 0
+    },
+    "api_suite": {
+      "files_passed": 382,
+      "tests_passed": 7747,
+      "failed": 0
+    },
+    "dist_shutdown_check": {
+      "beat_rows_before_sigterm": 2,
+      "beat_rows_after_sigterm": 1,
+      "remaining": "0132_sqs_fields_removed_and_serving",
+      "process_exited": true
+    },
+    "mutations_caught": [
+      "freshness 7 minutes",
+      "shutdown gate removed",
+      "self-stop removed",
+      "withdrawal removed",
+      "nothing-left check removed"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "27104552bd3245f84359ba737f8dcc76fd0e23df"
+  },
+  "at": "2026-10-29T02:07:51.558Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r5.json"
+  },
+  "summary": {
+    "integration_tests": 371,
+    "failed": 0,
+    "beat_rows_after_listen_30s": 0,
+    "beat_rows_after_5min": 2
+  },
+  "topic": "h7d-drop-sqs-heartbeat",
+  "raw": {
+    "ok": true,
+    "round": 2,
+    "postgres": "16.15",
+    "integration_lane": {
+      "test_files_passed": 39,
+      "tests_passed": 371,
+      "failed": 0
+    },
+    "api_suite": {
+      "files_passed": 382,
+      "tests_passed": 7743,
+      "failed": 0
+    },
+    "dist_heartbeat_check": {
+      "marker_rows_at_30s_after_listen": 0,
+      "marker_rows_at_311s": 2,
+      "block_0132_outcome": "deferred"
+    },
+    "hash_mismatch_guard_observed": "a local DB that recorded 0132 under its pre-review hash refused to boot",
+    "mutations_caught": [
+      "freshness check removed",
+      "first beat delay 0",
+      "latest beat not refreshed",
+      "first-beat age check removed"
+    ]
+  }
+}

@@ -91,6 +91,60 @@ Railway boot log was not read (no Railway access in that session).
 - A failure to record a block is logged, not fatal; that block runs again on
   the next boot.
 
-## PR 3
+## PR 2 in production
 
-Not started; see T7 `next_action`.
+PR 807 merged as `ee447a08`; `/health` served `ee447a08d3c3` at 02:22 Swedish
+time, `/health/deep` ok, `/v1/do` free call completed. Schema validation
+passing proves `startup_migration_applied` exists; its row count (74) and the
+next deploy's `skipped_count: 29` were not read (no DB or Railway log access).
+
+## PR 3: residual SQS schema
+
+- Proof nothing reads them: no code path references the drizzle fields or the
+  table (the hits are comments, the field-authority and receipt-snapshot
+  inventories, a dead stub, and archived scripts), and the public catalogue,
+  solutions, x402 catalogue, discovery and trust responses carry none of the
+  field names (the three `trend` hits are capability output schemas). The
+  sibling frontend repo is outside this session's access.
+- Hazard found and handled: code deployed before PR 3 selects whole capability
+  rows (`matching.ts`, `capability-onboarding.ts`, `manifest-text-sync.ts`
+  and others), so drizzle names these columns, and that instance serves while
+  the next one boots. Dropping in the same deploy would fail its catalogue and
+  `/v1/do` queries for the overlap. Listening is not proof of serving either
+  (independent review, FAIL round 1): Railway cuts over only after
+  `/health/deep` passes. So a heartbeat starts five minutes after listen,
+  past the healthcheck window, and repeats every two minutes
+  (`0132_sqs_fields_removed_and_serving` first beat,
+  `0132_sqs_fields_removed_last_beat` latest, in `startup_migration_ledger`).
+  Block 0132 drops only when the first beat is at least ten minutes old and
+  the latest is under three (beats every minute). A graceful shutdown deletes
+  the latest beat before the pool closes (review round 2: a rollback followed
+  by a quick redeploy), so a stopped build never vouches for the present; an
+  ungracefully killed one stops vouching within three minutes. The heartbeat
+  stops once nothing is left to drop. The drop lands on the first boot after that, normally the next
+  deploy.
+- Measured into the boot log before dropping: column count, capabilities row
+  count, snapshot rows and bytes. Production numbers were not readable from
+  this session; they appear in the 0132 outcome line of that boot.
+- After the drop, rolling back to a deploy from before PR 3 would 500 on
+  capability reads, and the old schema validator would not stop it. Roll
+  forward; if old code must run, it needs the drizzle field removal from PR 3
+  (a revert of the drop alone is not possible, the data is gone).
+- Residual risk accepted (review round 3): a rollback where the stopped
+  post-PR build dies without its shutdown cleanup, followed within three
+  minutes by a post-PR boot that reaches block 0132. A normal build takes
+  longer than that.
+- `capability_health` to `source_health`: not done, 22 files reference it, not
+  trivial.
+
+## PR 3 evidence
+
+Local Postgres 16, compiled `dist/` boots on a database that still has the SQS
+columns and a 500-row `sqs_daily_snapshot`: boot 1 deferred and wrote the
+marker after listen, boot 2 deferred, boot 3 (marker backdated 11 minutes)
+dropped 8 columns from 356 capabilities rows and the table (500 rows,
+98304 bytes) with schema validation green, boot 4 skipped. Receipt below.
+Receipt: [h7d-drop-sqs-residual-schema](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-residual-schema.json).
+Round 2 (heartbeat): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-heartbeat.json).
+Round 3 (shutdown withdrawal): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-withdrawal.json).
+Round 4 (shutdown order: withdrawal first, after any beat in flight): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-order.json).

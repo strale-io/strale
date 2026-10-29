@@ -329,6 +329,7 @@ async function main() {
 
   const port = parseInt(process.env.PORT || "3000", 10);
 
+  let sqsHeartbeat: { stop: () => Promise<void> } | undefined;
   const server = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Strale API running on http://localhost:${info.port}`);
 
@@ -336,6 +337,27 @@ async function main() {
     void import("./lib/manifest-text-sync.js").then(({ applyManifestText }) => applyManifestText()).catch(async () => {
       const { log } = await import("./lib/log.js");
       log.warn({ label: "manifest-text-sync-summary", updated: 0, unchanged: 0, report_only: 0, failed: 1 }, "manifest-text-sync-summary");
+    });
+
+    // Block 0132 drops the residual SQS columns only while this build, which
+    // no longer selects them, is provably the live one: beats start minutes
+    // after listen, past Railway's healthcheck window, and a graceful
+    // shutdown withdraws the latest beat (see "sqs-retirement-beat" below).
+    // Non-fatal.
+    void import("./startup-migrations/sqs-schema-retirement.js").then(async (retirement) => {
+      const { getDb } = await import("./db/index.js");
+      const { log } = await import("./lib/log.js");
+      const { isShuttingDown } = await import("./lib/shutdown.js");
+      sqsHeartbeat = retirement.startSqsRetirementHeartbeat({
+        beat: () => retirement.recordSqsFieldsRemovedAndServing(getDb()),
+        onError: (err) => log.warn({ label: "sqs-retirement-beat-failed",
+          err: err instanceof Error ? err.message : String(err) }, "sqs-retirement-beat-failed"),
+        shuttingDown: isShuttingDown,
+      });
+    }).catch(async (err: unknown) => {
+      const { log } = await import("./lib/log.js");
+      log.warn({ label: "sqs-retirement-beat-not-started", err: err instanceof Error ? err.message : String(err) },
+        "sqs-retirement-beat-not-started");
     });
 
     // Pre-warm suggest catalog after env + server are ready
@@ -360,6 +382,17 @@ async function main() {
         server.close((err) => (err ? rejectClose(err) : resolveClose()));
       }),
   );
+
+  // Registered last, so it runs first (LIFO): before the request drain and
+  // the forced-exit timer can cut shutdown short, and long before the pool
+  // closes. A stopped build must not leave a fresh beat that lets block 0132
+  // drop columns under whatever serves next.
+  onShutdown("sqs-retirement-beat", async () => {
+    await sqsHeartbeat?.stop();
+    const { clearSqsRetirementBeat } = await import("./startup-migrations/sqs-schema-retirement.js");
+    const { getDb } = await import("./db/index.js");
+    await clearSqsRetirementBeat(getDb());
+  });
 
   installShutdownHandlers();
 }

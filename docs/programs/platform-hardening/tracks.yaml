@@ -110,17 +110,20 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: H7a (PR 787), the boot-lock retry (PR 790), H7b (PR 793) and H7c batches 1
-      and 2 (PRs 799, 802) are merged. H7d PR 1 (PR 805, live 2026-10-29) split
-      startup-migrations.ts into one file per block with every ledger hash
-      unchanged. H7d PR 2 (PR 807) records each block's ledger hash in
-      startup_migration_applied (block 0131) and skips the 29 blocks whose run
-      policy in apps/api/src/startup-migrations/run-policy.ts is once; the other
-      45 still run every boot. After PR 2 is live, query production for 74
-      recorded rows. Then H7d PR 3 drops the residual SQS columns and
-      sqs_daily_snapshot through a new ledgered block. The H7c known_answer
-      tightening in apps/api/src/capabilities/__fixtures__/upstream/README.md is
-      still open. See handoff/_general/from-code/2026-10-29-h7d-migrations.md.
+    next_action: H7a (PR 787), the boot-lock retry (PR 790), H7b (PR 793), H7c batches 1
+      and 2 (PRs 799, 802) and H7d PRs 1 and 2 (PRs 805, 807, live 2026-10-29)
+      are merged. H7d PR 3 adds block 0132, which drops the residual SQS columns
+      and sqs_daily_snapshot only after a build without those drizzle fields has
+      recorded after listen that it serves (marker
+      0132_sqs_fields_removed_and_serving in startup_migration_ledger) and that
+      marker is ten minutes old, so the drop lands on the deploy after PR 3.
+      After that deploy, read the boot log for the 0132 outcome with the rows
+      and bytes dropped, and do not roll back past PR 3 once it has dropped.
+      Still open in T7, the H7c known_answer tightening in
+      apps/api/src/capabilities/__fixtures__/upstream/README.md, a production
+      read of startup_migration_applied (expect 75 rows) and the
+      capability_health to source_health rename. See handoff/_general/from-
+      code/2026-10-29-h7d-migrations.md.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.
