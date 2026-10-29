@@ -16,10 +16,18 @@ Intent: H7e PR B (platform-hardening T7), the H7c known_answer tightening that `
   (`EL` maps to Greece). Unit test plus the replay, whose recorded request
   carries `SWE`.
 - The recorder redacts `cve-lookup` advisory details and `ted-procurement`
-  notice descriptions (free text that named a natural person).
+  notice descriptions (free text that named a natural person), and drops
+  `cve-details` references on twitter.com, x.com and github.com.
+- page-exists and base64-encode-url moved from example.com (577 bytes, just
+  above the thin-content threshold) to strale.dev.
+- Independent review (fresh read-only Claude context): PASS WITH NITS; fixed the
+  ted-procurement output_schema example (a public field, synced at boot) that
+  had been changed by accident, two order- or margin-fragile checks, the
+  example.com inputs, the cve-details references and api-health-check's
+  health_check_input.
 - Live: `record-upstream.ts --check` 32/32 without drift.
 
-Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7c-known-answer-tightening.json).
+Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7c-known-answer-tightening.json), [after review](../../../archive/receipts/2026-10-29-test-run-h7c-known-answer-tightening-review.json).
 
 ## Not done here
 

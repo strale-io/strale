@@ -30,10 +30,11 @@ What it changes in a body is listed in that file's `redactions`:
 e-mail addresses become `redacted@example.invalid` (a display name in front of
 one becomes `Fixture person`), Set-Cookie values become `redacted`,
 `pypi-package-info` has its published README replaced, because the README
-names its author and the executor does not read it, and `cve-lookup` and
+names its author and the executor does not read it, `cve-lookup` and
 `ted-procurement` have their advisory and notice free text replaced, because
 it can name a reporter or a buyer's contact person and no contract check reads
-it.
+it, and `cve-details` drops references hosted on twitter.com, x.com or
+github.com, which name individual researchers.
 
 **Freshness.** CI never calls the network, so it cannot see an upstream
 change. The weekly drift workflow runs `--check`, which calls each recorded
@@ -76,7 +77,7 @@ years, not just on the recorded day. Two more (`no-bankruptcy-check`,
 `postal-code-lookup`) already failed under the hollowed body and only needed
 recording. `record-upstream.ts --check` passed live for all 32 on 2026-10-29.
 
-Four known_answer inputs proved nothing and were replaced:
+Four known_answer inputs proved nothing and were replaced, and two were moved off a page too thin to hold a check:
 
 | Slug | Old input | Why | New input |
 |---|---|---|---|
@@ -84,6 +85,7 @@ Four known_answer inputs proved nothing and were replaced:
 | eori-validate | DE123456789012345 | not a valid EORI, so `valid: false` matched an empty answer | SE5560125790 (AB Volvo) |
 | api-health-check | the Railway host's `/v1/health` | answered 404 | `https://api.strale.io/health` |
 | ted-procurement | "artificial intelligence" in SE | no Swedish notice matches, and the executor sent `SE` where TED needs `SWE` (fixed in the executor) | "software" in SE |
+| page-exists, base64-encode-url | https://example.com | 577 bytes, 65 above page-exists' thin-content threshold, and the page asks not to be used for testing | https://strale.dev |
 
 The manifests changed here are the authoring source; the production
 known_answer suites change only when `scripts/sync-known-answer-fixtures.ts`

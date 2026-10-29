@@ -1,6 +1,6 @@
 {
   "slug": "api-health-check",
-  "recorded_at": "2026-10-29T16:13:36.142Z",
+  "recorded_at": "2026-10-29T16:30:36.863Z",
   "input": {
     "url": "https://api.strale.io/health"
   },
@@ -18,7 +18,7 @@
           "cache-control": "public, max-age=86400",
           "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
           "content-type": "text/plain; charset=utf-8",
-          "date": "Thu, 29 Oct 2026 16:13:36 GMT",
+          "date": "Thu, 29 Oct 2026 16:30:37 GMT",
           "link": "</.well-known/agent-card.json>; rel=\"agent-card\"",
           "permissions-policy": "camera=(), microphone=(), geolocation=()",
           "referrer-policy": "strict-origin-when-cross-origin",
@@ -28,10 +28,10 @@
           "vary": "accept-encoding",
           "x-content-type-options": "nosniff",
           "x-frame-options": "DENY",
-          "x-hikari-trace": "atl1.mwdw",
+          "x-hikari-trace": "atl1.1v22",
           "x-railway-edge": "atl1",
-          "x-railway-request-id": "TQPLT7SjSDuy-qDWBhdwDg",
-          "x-request-id": "054629fd-4cd7-4b2e-8650-7685679c558b",
+          "x-railway-request-id": "clLAr5iyQUeMfSC8BhdwDg",
+          "x-request-id": "420e3a0a-78a9-48fb-a96d-951a0b6b8a5b",
           "x-xss-protection": "0"
         },
         "body": "User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: Amazonbot\nAllow: /\n\nUser-agent: FacebookBot\nAllow: /\n\nUser-agent: Applebot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: Bytespider\nAllow: /\n\nUser-agent: CCBot\nAllow: /\n\nSitemap: https://api.strale.io/sitemap.xml\n",
@@ -48,7 +48,7 @@
         "headers": {
           "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
           "content-type": "application/json",
-          "date": "Thu, 29 Oct 2026 16:13:36 GMT",
+          "date": "Thu, 29 Oct 2026 16:30:37 GMT",
           "link": "</.well-known/agent-card.json>; rel=\"agent-card\"",
           "permissions-policy": "camera=(), microphone=(), geolocation=()",
           "referrer-policy": "strict-origin-when-cross-origin",
@@ -57,13 +57,13 @@
           "strict-transport-security": "max-age=63072000; includeSubDomains",
           "x-content-type-options": "nosniff",
           "x-frame-options": "DENY",
-          "x-hikari-trace": "atl1.mwdw",
+          "x-hikari-trace": "atl1.1v22",
           "x-railway-edge": "atl1",
-          "x-railway-request-id": "V2xFGfBHRvG9txtNozsQ6Q",
-          "x-request-id": "c848ddbb-b43c-4b9e-aa48-d3d55089980d",
+          "x-railway-request-id": "TMs_o_LEQsOikncyqmzx2A",
+          "x-request-id": "61f5aa0a-5aa2-4067-a927-5e78238b9c6b",
           "x-xss-protection": "0"
         },
-        "body": "{\"status\":\"ok\",\"commit\":\"75445e950a70\"}",
+        "body": "{\"status\":\"ok\",\"commit\":\"92ebacd3bc60\"}",
         "body_encoding": "utf8"
       }
     }

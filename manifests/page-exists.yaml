@@ -100,7 +100,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://example.com
+      url: https://strale.dev
     expected_fields:
       - field: url
         operator: not_null

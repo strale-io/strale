@@ -28,7 +28,7 @@ output_schema:
   example:
     query:
       country: SE
-      keyword: software
+      keyword: artificial intelligence
       cpv_code: null
     tenders: []
     result_count: 0
@@ -82,10 +82,6 @@ test_fixtures:
         operator: gt
         reliability: guaranteed
         value: 0
-      - field: tenders.0.country
-        operator: equals
-        reliability: guaranteed
-        value: 'SWE'
       - field: tenders.0.link
         operator: contains
         reliability: guaranteed

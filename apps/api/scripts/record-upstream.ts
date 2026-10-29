@@ -78,6 +78,18 @@ const REDUCERS: Record<string, { what: string; reduce: (body: string) => string 
       return JSON.stringify(data);
     },
   },
+  "cve-details": {
+    what: "references hosted on twitter.com, x.com or github.com dropped (they name individual researchers)",
+    reduce: (body) => {
+      const data = JSON.parse(body) as { vulnerabilities?: Array<{ cve?: { references?: Array<{ url?: string }> } }> };
+      for (const v of data.vulnerabilities ?? []) {
+        if (v.cve?.references) {
+          v.cve.references = v.cve.references.filter((r) => !/^https?:\/\/(?:www\.)?(?:twitter\.com|x\.com|github\.com)\//i.test(r.url ?? ""));
+        }
+      }
+      return JSON.stringify(data);
+    },
+  },
   "ted-procurement": {
     what: "every notice's description-proc text replaced with a placeholder (free text that can name a buyer's contact person)",
     reduce: (body) => {

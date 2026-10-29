@@ -90,7 +90,7 @@ test_fixtures:
         reliability: guaranteed
         value: 'ok'
   health_check_input:
-    url: https://strale-production.up.railway.app/v1/health
+    url: https://api.strale.io/health
 output_field_reliability:
   is_healthy: guaranteed
   status_code: guaranteed
