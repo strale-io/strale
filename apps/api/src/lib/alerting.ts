@@ -16,7 +16,7 @@
 
 import { Resend } from "resend";
 import { log, logError, logWarn } from "./log.js";
-import { deliverToBus } from "./alert-bus.js";
+import { deliverToBusInBackground } from "./alert-bus.js";
 
 let _resend: Resend | null = null;
 
@@ -191,11 +191,11 @@ export async function sendAlert(opts: {
   }
 
   // Second channel (incident 2026-10-28: a CRITICAL sat unseen in the inbox
-  // for 14 hours). Fire-and-forget: deliverToBus never throws and is not
+  // for 14 hours). Fire-and-forget: the delivery never throws and is not
   // awaited, so a slow or failing GitHub cannot delay or fail the email.
   // It sits after both gates above, so tests never reach it, and INFO is
   // email-only even when ALERT_INFO_EMAIL restores it.
-  if (severity !== "info") void deliverToBus({ subject, body, severity });
+  if (severity !== "info") deliverToBusInBackground({ subject, body, severity });
 
   const resend = getResend();
   if (!resend) {

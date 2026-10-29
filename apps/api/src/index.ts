@@ -430,18 +430,22 @@ main().catch(async (err) => {
               `Deployments -> previous working deploy -> Redeploy. ` +
               `3) If nothing was deployed recently, keep this email — the error diagnostics below ` +
               `is what a debugging session needs.`;
+      const { settleBusDeliveries } = await import("./lib/alert-bus.js");
+      const emailed = sendAlert({
+        subject: "API failed to start",
+        severity: "critical",
+        body:
+          `Strale API startup aborted with a fatal error. Railway restarts it per the ` +
+          `service restart policy (default: up to 10 times), then the service stays ` +
+          `CRASHED until redeployed.\n\n` +
+          `${guidance}\n\n` +
+          `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
+          `Error: ${formatStartupError(err)}`,
+      });
+      // The process exits next, so wait for the bus post too (bounded by its
+      // own 5s timeout, and by this race).
       await Promise.race([
-        sendAlert({
-          subject: "API failed to start",
-          severity: "critical",
-          body:
-            `Strale API startup aborted with a fatal error. Railway restarts it per the ` +
-            `service restart policy (default: up to 10 times), then the service stays ` +
-            `CRASHED until redeployed.\n\n` +
-            `${guidance}\n\n` +
-            `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
-            `Error: ${formatStartupError(err)}`,
-        }),
+        Promise.all([emailed, settleBusDeliveries()]),
         new Promise<void>((r) => setTimeout(r, 10_000)),
       ]);
     } catch {

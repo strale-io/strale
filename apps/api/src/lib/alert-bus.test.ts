@@ -114,6 +114,28 @@ describe("deliverToBus", () => {
   });
 });
 
+describe("settleBusDeliveries", () => {
+  it("waits for a background delivery, so the fatal-startup page is not cut off by process.exit", async () => {
+    Object.assign(process.env, FAKE_ENV, { ALERT_ALLOW_IN_TEST: "true" });
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const f = fakeGithub();
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      await gate;
+      return f(url, init);
+    }));
+    const { bus } = await freshModules();
+    bus.deliverToBusInBackground({ subject: "API failed to start", body: "b", severity: "critical" });
+    let settled = false;
+    const done = bus.settleBusDeliveries().then(() => (settled = true));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+    release();
+    await done;
+    expect(f.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true);
+  });
+});
+
 describe("sendAlert with bus delivery", () => {
   it("does not reach the bus from a test run that has not opted in (STARVE-SET-1 gate)", async () => {
     Object.assign(process.env, FAKE_ENV);

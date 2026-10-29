@@ -20,6 +20,14 @@
  * It is a side channel and must never cost the email path anything:
  * `deliverToBus` never throws, the caller does not await it, and every request
  * shares one short timeout. Failures are logged and dropped.
+ *
+ * The one caller that must wait is the fatal-startup page in index.ts, which
+ * exits the process right after sending: it awaits `settleBusDeliveries()`
+ * inside its own bounded race, or the post would die with the process.
+ *
+ * Not done here, on purpose: creating the channel issue. `bus.mjs` creates a
+ * missing channel; an alert sender should not, so a missing channel is a
+ * logged warning and nothing more.
  */
 
 import { log, logWarn } from "./log.js";
@@ -28,6 +36,9 @@ import { suppressionReason } from "./alerting.js";
 export const BUS_CHANNEL = "strale-planning";
 export const BUS_SENDER = "strale-alerts";
 const TIMEOUT_MS = 5_000;
+// Re-resolve the channel issue at least this often: GitHub still accepts
+// comments on a closed issue, but bus readers only list open channels.
+const ISSUE_CACHE_MS = 60 * 60 * 1000;
 const GITHUB_API = "https://api.github.com";
 const REPO_NAME = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -46,7 +57,7 @@ export function logBusAlertingStatus(env: NodeJS.ProcessEnv = process.env): void
   if (busConfig(env)) {
     log.info({ label: "alert-bus.enabled", channel: BUS_CHANNEL }, "alert-bus: warnings and criticals also post to the agent bus");
   } else if (env.BUS_GITHUB_TOKEN || env.BUS_REPO) {
-    logWarn("alert-bus.misconfigured", "alert-bus: BUS_GITHUB_TOKEN and BUS_REPO (owner/name) must both be set; bus delivery is off");
+    logWarn("alert-bus.misconfigured", "alert-bus: needs both BUS_GITHUB_TOKEN and BUS_REPO, with BUS_REPO in owner/name form; bus delivery is off");
   } else {
     log.info({ label: "alert-bus.disabled" }, "alert-bus: BUS_GITHUB_TOKEN/BUS_REPO unset; alerts go to email only");
   }
@@ -58,9 +69,8 @@ export function formatBusMessage(opts: { subject: string; body: string; severity
 }
 
 // The channel's issue number, once found. Channels are long-lived issues, so
-// one lookup per process is enough; a failed post clears it in case the issue
-// was closed and reopened under a new number.
-let cachedIssue: { repo: string; number: number } | null = null;
+// the lookup is cached for ISSUE_CACHE_MS; a failed post clears it early.
+let cachedIssue: { repo: string; number: number; at: number } | null = null;
 
 /** Test hook: forget the cached channel issue. */
 export function resetBusCache(): void {
@@ -77,7 +87,7 @@ function headers(token: string): Record<string, string> {
 }
 
 async function findChannelIssue(cfg: BusConfig, fetchImpl: typeof fetch, signal: AbortSignal): Promise<number | null> {
-  if (cachedIssue?.repo === cfg.repo) return cachedIssue.number;
+  if (cachedIssue?.repo === cfg.repo && Date.now() - cachedIssue.at < ISSUE_CACHE_MS) return cachedIssue.number;
   const title = `channel: ${BUS_CHANNEL}`;
   for (let page = 1; page <= 5; page++) {
     const res = await fetchImpl(
@@ -88,7 +98,7 @@ async function findChannelIssue(cfg: BusConfig, fetchImpl: typeof fetch, signal:
     const batch = (await res.json()) as Array<{ number: number; title: string; pull_request?: unknown }>;
     const hit = batch.find((i) => !i.pull_request && i.title === title);
     if (hit) {
-      cachedIssue = { repo: cfg.repo, number: hit.number };
+      cachedIssue = { repo: cfg.repo, number: hit.number, at: Date.now() };
       return hit.number;
     }
     if (batch.length < 100) return null;
@@ -105,13 +115,13 @@ export async function deliverToBus(
   deps: { fetch?: typeof fetch; env?: NodeJS.ProcessEnv } = {},
 ): Promise<boolean> {
   const env = deps.env ?? process.env;
-  // The same gate as email, checked here too so a direct caller cannot skip it.
-  if (suppressionReason(env)) return false;
-  const cfg = busConfig(env);
-  if (!cfg) return false;
-  const fetchImpl = deps.fetch ?? fetch;
-  const signal = AbortSignal.timeout(TIMEOUT_MS);
   try {
+    // The same gate as email, checked here too so a direct caller cannot skip it.
+    if (suppressionReason(env)) return false;
+    const cfg = busConfig(env);
+    if (!cfg) return false;
+    const fetchImpl = deps.fetch ?? fetch;
+    const signal = AbortSignal.timeout(TIMEOUT_MS);
     const issue = await findChannelIssue(cfg, fetchImpl, signal);
     if (issue === null) {
       logWarn("alert-bus.no-channel", `alert-bus: no open issue for channel ${BUS_CHANNEL}; not posted`, { severity: opts.severity });
@@ -135,4 +145,18 @@ export async function deliverToBus(
     logWarn("alert-bus.send-failed", `alert-bus: ${(err as Error).message}`, { severity: opts.severity, subject: opts.subject });
     return false;
   }
+}
+
+const inFlight = new Set<Promise<boolean>>();
+
+/** Start a delivery without waiting for it; settleBusDeliveries() can await it later. */
+export function deliverToBusInBackground(opts: { subject: string; body: string; severity: "warning" | "critical" }): void {
+  const p = deliverToBus(opts);
+  inFlight.add(p);
+  void p.finally(() => inFlight.delete(p));
+}
+
+/** Resolves once every delivery started so far has finished (each is bounded by TIMEOUT_MS). */
+export async function settleBusDeliveries(): Promise<void> {
+  await Promise.allSettled([...inFlight]);
 }
