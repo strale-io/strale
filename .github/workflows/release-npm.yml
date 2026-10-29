@@ -26,6 +26,8 @@ on:
           - packages/langchain
           - packages/semantic-kernel-strale
           - packages/strale-capabilities
+          - packages/n8n-nodes-strale
+          - packages/ai-sdk-strale
       dry_run:
         description: Build and pack only — do not publish
         type: boolean

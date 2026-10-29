@@ -22,6 +22,8 @@
 # and archive/ writeups that quote the same worked example.
 manifests/iban-validate.yaml|DE89370400440532013000
 manifests/iban-to-bank.yaml|DE89370400440532013000
+docs/claude-connector.md|DE89370400440532013000
+docs/claude-connector-listing.md|DE89370400440532013000
 apps/api/scripts/seed-kyb-solutions.ts|DE89370400440532013000
 archive/growth-ops/tweets-v2.md|DE89370400440532013000
 archive/sessions/strale-usage-and-conversion-audit-2026-04-08.md|DE89370400440532013000

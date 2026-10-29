@@ -884,3 +884,19 @@ surfaces:
     status_date: 2026-10-27
     evidence: packages/zapier-strale/README.md
     notes: Built and tested offline; not registered, pushed to Zapier or published. Company status and invoice issuer actions are hidden pending public availability.
+
+  - id: pkg-n8n-nodes-strale
+    surface: Strale n8n community node (D8)
+    kind: package
+    target: npm n8n-nodes-strale; n8n Creator Portal
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/n8n-nodes-strale/README.md
+    notes: >-
+      1.0.0 merged in PR 817 (2026-10-29) with three fixed operations (company
+      lookup, EU VAT check, name screening), offline tests on n8n-workflow
+      primitives, n8n-node lint and a local scanner pass. Not yet published:
+      npm still serves 0.1.4 (2026-04-05), which calls retired routes and
+      fails the current n8n scanner with 7 errors. Publish needs the npm
+      trusted publisher for release-npm.yml and the npm-release approval;
+      Creator Portal submission needs Petter's account.

@@ -37,3 +37,76 @@ test("Zapier integrity rejects an import-only hollow app", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("n8n integrity rejects a hollow, unregistered or dependency-carrying node package", () => {
+  mkdirSync("audit-output", { recursive: true });
+  const root = mkdtempSync(resolve("audit-output/framework-gate-"));
+  const run = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: "utf8" });
+  try {
+    const pkg = join(root, "packages/n8n-nodes-strale");
+    mkdirSync(join(pkg, "nodes/Strale"), { recursive: true });
+    mkdirSync(join(pkg, "credentials"), { recursive: true });
+    const manifest = {
+      name: "n8n-nodes-strale",
+      n8n: {
+        nodes: ["dist/nodes/Strale/Strale.node.js"],
+        credentials: ["dist/credentials/StraleApi.credentials.js"],
+      },
+    };
+    const node =
+      "import type { IExecuteFunctions, INodeType, INodeTypeDescription } from 'n8n-workflow';\n" +
+      "export class Strale implements INodeType {\n  description: INodeTypeDescription = {\n    properties: [],\n  };\n" +
+      "  async execute(this: IExecuteFunctions) { return [[]]; }\n}\n";
+    const cred =
+      "import type { ICredentialType } from 'n8n-workflow';\nexport class StraleApi implements ICredentialType {}\n";
+    mkdirSync(join(pkg, "test"), { recursive: true });
+    const write = (m, n, c, t = "const { NodeHelpers } = require('n8n-workflow');\n") => {
+      writeFileSync(join(pkg, "test/node.test.js"), t);
+      writeFileSync(join(pkg, "package.json"), JSON.stringify(m));
+      writeFileSync(join(pkg, "nodes/Strale/Strale.node.ts"), n);
+      writeFileSync(join(pkg, "credentials/StraleApi.credentials.ts"), c);
+    };
+    write(manifest, node, cred);
+    assert.equal(run().status, 0, "a real node and credential pass");
+    // Import only, no node class or execute.
+    write(manifest, "import { NodeOperationError } from 'n8n-workflow';\nexport const x = NodeOperationError;\n", cred);
+    const hollow = run();
+    assert.equal(hollow.status, 1);
+    assert.match(hollow.stderr, /n8n-nodes-strale/);
+    // A runtime dependency disqualifies a verified n8n package.
+    write({ ...manifest, dependencies: { axios: "1.0.0" } }, node, cred);
+    assert.equal(run().status, 1);
+    // The node must be registered in package.json's n8n block.
+    write({ ...manifest, n8n: { nodes: [], credentials: manifest.n8n.credentials } }, node, cred);
+    assert.equal(run().status, 1);
+    // No test exercising n8n-workflow.
+    write(manifest, node, cred, "// no tests\n");
+    assert.equal(run().status, 1);
+    // Missing credential class.
+    write(manifest, node, "export const nothing = 1;\n");
+    assert.equal(run().status, 1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("AI SDK integrity rejects an import-only hollow package", () => {
+  mkdirSync("audit-output", { recursive: true });
+  const root = mkdtempSync(resolve("audit-output/framework-gate-"));
+  try {
+    const src = join(root, "packages/ai-sdk-strale/src");
+    mkdirSync(src, { recursive: true });
+    const run = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: "utf8" });
+    writeFileSync(join(src, "index.ts"), 'import { tool } from "ai";\nexport const x = 1;\n');
+    const hollow = run();
+    assert.equal(hollow.status, 1);
+    assert.match(hollow.stderr, /ai-sdk-strale/);
+    writeFileSync(
+      join(src, "index.ts"),
+      'import { tool } from "ai";\nexport const t = tool({ description: "d", inputSchema: s, execute: async () => 1 });\n',
+    );
+    assert.equal(run().status, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

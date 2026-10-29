@@ -63,6 +63,8 @@ say "official business register".
 
 ## 2. n8n verified community node (experiment D8)
 
+*Superseded for D8 on 2026-10-29 by [05-n8n-creator-portal-submission.md](05-n8n-creator-portal-submission.md): three operations ship (two of the five tools are not public), and the monthly template re-checks VAT numbers.*
+
 **Package:** `n8n-nodes-strale` (major version bump; the 0.1.x node calls a
 removed route and is replaced, not patched)
 **Display name:** Strale

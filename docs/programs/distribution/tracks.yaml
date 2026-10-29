@@ -1,7 +1,7 @@
 schema_version: 1
 program: distribution
 program_status: active
-updated: 2026-10-27
+updated: 2026-10-29
 tracks:
   - id: T1
     title: "D0: Close attribution gaps"
@@ -57,12 +57,15 @@ tracks:
     evidence: []
   - id: T4
     title: "D3: Coinbase featured tier"
-    status: queued
+    status: founder_gated
     gate: none
     depends_on:
       - T1
       - T2
     owner: session
+    blocker: The CDP support address or form for OUTBOX row cdp-bazaar-curation is
+      Petter's answer to needs-founder ask 6493139521 (2026-10-29); CDP publishes
+      no support email and D3 rules out Discord.
     next_action: "D2 metadata checked live on 2026-10-29. The v2 challenges carry
       serviceName, tags, iconUrl and extensions.bazaar, and Coinbase's validator
       accepts /x402/v2/vat-validate; it rejects the legacy /x402/<slug> paths, which
@@ -89,10 +92,21 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Prepare titles, annotations, no-auth search/free tools and OAuth
-      for paid tools. Once eligible, Petter accepts directory terms for
-      Moonlighter AB and the paid Claude plan at submission time; submit and
-      measure §8 D4 thresholds.
+    next_action: "Connector live since PR 816 (commit a1aa2016, verified in
+      production 2026-10-29 at 11:40 Swedish time) at
+      https://api.strale.io/mcp/connector. Eight titled and annotated tools,
+      OAuth discovery served, 401 challenge on paid calls, consent page
+      working with Claude Code's real client document, no crypto tools. The
+      requirements read 2026-10-29 are in
+      docs/research/2026-10-29-claude-connector-directory-requirements.md and
+      the portal text in docs/claude-connector-listing.md. Waiting on Petter
+      (one ask on needs-founder) to test it as a custom connector, fund a
+      reviewer account, accept the directory terms on a paid plan and
+      submit. After listing, measure §8 D4 from discovery_hits
+      /mcp/connector rows (listed within 45 days; at least 20 Claude tool
+      calls a week by day 90; kill if refused or under 5 a week 30 days
+      after listing). Follow-ups in the research file (OAuth table pruning,
+      last_used_at for OAuth use)."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Eligible submission records Petter's terms and paid-plan acts.
@@ -125,10 +139,15 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Build tool() package with an offline mock-model test; run
-      distribution preflight, publish under DEC-20261027-B, run the production
-      contract smoke test and report afterwards, then submit the Tools Registry
-      PR. Measure acceptance and client-header calls against §8 D6 thresholds.
+    next_action: "Package strale-ai-sdk 0.1.0 built in packages/ai-sdk-strale
+      (PR for branch feat/d6-ai-sdk-package) with tool() search and execute,
+      API key or x402 fetch, header strale-ai-sdk/0.1.0, offline mock-model
+      test in CI. Next, Petter publishes the first version (a new package has
+      no trusted publisher yet, see docs/release/npm-publishing.md) and adds
+      the trusted publisher. Then run the smoke test on the published
+      version, open the vercel/ai Tools Registry PR and set day 30 and day 60
+      review dates. Baseline 2026-10-29 is zero calls with this header, since
+      the package is not yet on npm."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Package and registry outcome plus distinct callers are measured against
@@ -167,11 +186,23 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: After D5 build, rebuild n8n to verified standard, test and publish
-      major release/Creator Portal submission under DEC-20260422-A and
-      DEC-20261027-B. List as general business tools; hold monthly sanctions
-      re-screening and finance/compliance targeting until Petter clears the gate
-      or discovery runs.
+    next_action: n8n-nodes-strale 1.0.0 merged in PR 817 (commit 58e0e92d,
+      2026-10-29) at packages/n8n-nodes-strale with three fixed operations
+      ported from the Zapier jobs, X-Strale-Client n8n-nodes-strale/1.0.0, n8n
+      lint rules and a local scanner pass. Publish waits on Petter for three
+      acts, asked in a PR 817 comment because the bus returned 403. First, add the npm trusted publisher for
+      n8n-nodes-strale (strale-io/strale, release-npm.yml, environment
+      npm-release). Second, approve the npm-release run for tag
+      n8n-nodes-strale@1.0.0. Third, submit on the n8n Creator Portal with the
+      contents in docs/company/drafts/distribution/05-n8n-creator-portal-submission.md.
+      After publish, run the npm-publishing.md n8n contract and record it here,
+      then deprecate 0.1.x and archive strale-io/n8n-nodes-strale. Baseline
+      2026-10-29 is npm 8 downloads a week, 12 a month, 882 lifetime, 0.1.4
+      failing the current n8n scanner with 7 errors, and no calls attributable
+      to the node because 0.1.x sends no client header. Day-90 check against
+      D8 thresholds counts installs and accounts calling in 3 separate months.
+      Monthly sanctions re-screening and finance or compliance targeting stay
+      held.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Verified or unverified outcome, installs and monthly callers are
@@ -181,12 +212,15 @@ tracks:
     evidence: []
   - id: T10
     title: "D9: Clay HTTP template"
-    status: queued
+    status: founder_gated
     gate: none
     depends_on:
       - T1
       - T2
     owner: session
+    blocker: Running the template inside Clay needs a free Clay account, Petter's
+      go or no-go on needs-founder ask 6493140047 (2026-10-29). The template and
+      doc merged in PR 814.
     next_action: "Template and doc built in examples/clay-enrichment (registry
       status and VAT columns, src=clay-template on the URL and X-Strale-Client
       clay-template/1.0.0), checked in CI by npm run clay:test. Start date
