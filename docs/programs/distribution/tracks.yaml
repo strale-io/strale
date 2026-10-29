@@ -63,9 +63,19 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Only after D2 metadata is live, send the CDP support email and log
-      it in OUTBOX with inbox follow-up duty. Measure featured placement and
-      bazaar payers; after 45 days without an answer, follow up once then drop.
+    next_action: "D2 metadata checked live on 2026-10-29. The v2 challenges carry
+      serviceName, tags, iconUrl and extensions.bazaar, and Coinbase's validator
+      accepts /x402/v2/vat-validate; it rejects the legacy /x402/<slug> paths, which
+      serve x402 v1. The CDP email is drafted as OUTBOX row cdp-bazaar-curation
+      (status draft). The inbox routine sends it, never this lane. The x402 docs
+      publish no CDP support email and route help to Discord, which D3 rules out,
+      so the address is asked of Petter on needs-founder. Measured from the send
+      date are featured placement (baseline not featured as far as can be seen, no
+      curated list is public) and Bazaar payers (baseline 2026-10-29 from Coinbase
+      search for strale, four v2 resources with 1 to 3 distinct payers each over 30
+      days; weekly bazaar first-touch payers from attribution-rollup). Success is
+      featured within 45 days of sending. With no answer at 45 days, one follow-up,
+      then drop and record the kill."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Featured-tier outcome and payer attribution are reported against D3
@@ -189,10 +199,18 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Build template and documentation and measure §8 D9 results. Do not
-      apply to Clay partner programme, Stripe Directory or router supply in the
-      first 60 days; revisit with D5 and D9 results. No OEM/partner agreements
-      for 90 days; agreements remain Petter's.
+    next_action: "Template and doc built in examples/clay-enrichment (registry
+      status and VAT columns, src=clay-template on the URL and X-Strale-Client
+      clay-template/1.0.0), checked in CI by npm run clay:test. Start date
+      2026-10-29. Baseline zero, since the tag and header first exist with this
+      template; exclude test traffic, namely transaction 136f11cb (a free anonymous
+      probe on 2026-10-29) and any run-sample.mjs run. Remaining work is a run
+      inside Clay itself, which needs a Clay account (asked on needs-founder), a
+      link from the website tool pages, and a weekly read of src clay-template in
+      attribution-rollup. Success is 3 or more accounts calling in two separate
+      weeks by 2027-01-27; kill if none by 2026-12-13. No Clay partner, Stripe
+      Directory or router-supply application before 2026-12-26, and no OEM or
+      partner agreement before 2027-01-25; agreements remain Petter's."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Template repeat use is reported against D9 success/kill thresholds.
