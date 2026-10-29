@@ -109,6 +109,48 @@ surfaces:
       at smithery.ai/servers/strale/agent-tools, confirming the duplicate
       is still live today; smithery.ai/server/strale-mcp still 404s.
 
+  - id: mcp-entry-company-check
+    surface: Narrow MCP server, Strale Company Check (D7)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io (io.github.strale-io/company-check) and smithery.ai
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/mcp-server/entry-points/company-check/server.json
+    notes: >-
+      Live at https://api.strale.io/mcp/company-check since commit 810a9753 (PR 804),
+      verified 2026-10-29 (initialize serverInfo strale-company-check, tools/list,
+      free-tool call). Not yet in the official registry or on Smithery: the
+      session cannot dispatch publish-mcp-entry-points.yml (HTTP 403) and
+      Smithery needs Petter's sign-in. Becomes listed when either entry exists.
+
+  - id: mcp-entry-eu-vat-check
+    surface: Narrow MCP server, Strale EU VAT Check (D7)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io (io.github.strale-io/eu-vat-check) and smithery.ai
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/mcp-server/entry-points/eu-vat-check/server.json
+    notes: >-
+      Live at https://api.strale.io/mcp/eu-vat-check since commit 810a9753 (PR 804),
+      verified 2026-10-29 (initialize serverInfo strale-eu-vat-check, tools/list,
+      free-tool call). Not yet in the official registry or on Smithery: the
+      session cannot dispatch publish-mcp-entry-points.yml (HTTP 403) and
+      Smithery needs Petter's sign-in. Becomes listed when either entry exists.
+
+  - id: mcp-entry-web-reader
+    surface: Narrow MCP server, Strale Web Page Reader (D7)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io (io.github.strale-io/web-reader) and smithery.ai
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/mcp-server/entry-points/web-reader/server.json
+    notes: >-
+      Live at https://api.strale.io/mcp/web-reader since commit 810a9753 (PR 804),
+      verified 2026-10-29 (initialize serverInfo strale-web-reader, tools/list,
+      free-tool call). Not yet in the official registry or on Smithery: the
+      session cannot dispatch publish-mcp-entry-points.yml (HTTP 403) and
+      Smithery needs Petter's sign-in. Becomes listed when either entry exists.
+
   - id: docker-mcp-registry-pr
     surface: Docker MCP registry submission
     kind: registry-listing

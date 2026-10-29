@@ -50,9 +50,21 @@ The choice therefore rests on three things:
   - the exclusion test now fails on a real exposure;
   - the hand-off test asserts the public host.
 
-## Open
+## Production verification (DEC-20260504-C), 2026-10-29 01:19 Swedish time
 
-- Smithery listings need Petter's Smithery sign-in (DEC-20261027-C). The ask is on `needs-founder`.
-- Record each registry entry's URL, version and smoke values in T8 after publish.
+- `/health` reports commit `810a9753b4b8`.
+- `initialize` reports `serverInfo` `strale-company-check`, `strale-eu-vat-check` and `strale-web-reader` respectively.
+- `tools/list` returns 28, 7 and 5 tools. The broad `/mcp` server still returns 9.
+- `POST /mcp/nope` returns 404.
+- The payment hand-off from `vat-validate` with no key is `https://api.strale.io/x402/vat-validate?src=mcp-eu-vat-check`.
+- Live free-tool calls succeed: `url-to-markdown` returned Markdown, and `iban-validate` returned `valid: true` with `price_cents: 0`.
+- All probes were tagged `src=ci-preflight`, which the rollup excludes.
+
+## Open (Petter)
+
+- **Registry publish.** The session cannot dispatch `publish-mcp-entry-points.yml`: the GitHub integration returns 403, and the `gh` route was refused by the permission classifier. Petter runs it from `main` once per entry. Registry entries cannot be deleted.
+- **Smithery.** Petter adds three URL servers on smithery.ai/new, one per entry, at `https://api.strale.io/mcp/<id>?src=smithery`.
+- **Where the ask is.** The `needs-founder` bus returned 403, so the ask is a comment on the follow-up PR.
+- **After publish.** Record name, version 1.0.0 and the entry date in T8. Day 45 after each entry's first listing is its review date.
 
 Evidence: [test receipt](../../../archive/receipts/2026-10-29-test-run-d7-narrow-mcp-entry-points.json).
