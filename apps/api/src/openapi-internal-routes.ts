@@ -7,6 +7,7 @@ const groups: Array<{ reason: string; routes: string[] }> = [
   { reason: "Discovery, website redirect or protocol transport; described by its own protocol rather than the REST OpenAPI contract.", routes: [
     "GET /openapi.json",
     "OPTIONS /mcp",
+    "OPTIONS /mcp/:entry",
     "GET /.well-known/agent.json",
     "GET /agent.json",
     "POST /a2a",
@@ -119,6 +120,7 @@ const groups: Array<{ reason: string; routes: string[] }> = [
   ] },
   { reason: "MCP protocol transport; its tool and JSON-RPC contract is described by MCP, not REST OpenAPI.", routes: [
     "ALL /mcp",
+    "ALL /mcp/:entry",
   ] },
 ];
 export const internalRoutes = groups.flatMap(({ reason, routes }) => routes.map(route => ({ route, reason })));

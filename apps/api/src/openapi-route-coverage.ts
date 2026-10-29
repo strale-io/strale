@@ -37,7 +37,7 @@ export const middlewareRegistrations: Record<string, number> = {
   "/v1/api-keys/*": 3,
   "/v1/admin/*": 1,
   "/v1/verify/*": 1,
-  "/mcp/*": 1,
+  "/mcp/*": 2,
   "/a2a/*": 1
 };
 

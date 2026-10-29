@@ -97,9 +97,21 @@ export interface StraleClientOptions {
   apiKey: string;
   maxPriceCents: number;
   clientIp?: string;
+  /**
+   * Origin for URLs handed to the caller (x402 hand-off, poll and top-up
+   * links). Defaults to baseUrl. The HTTP transport calls the API on
+   * localhost, so it must set this: before 2026-10-29 every hand-off it sent
+   * named http://localhost:3000, which no remote agent can reach.
+   */
+  publicBaseUrl?: string;
   src?: string;
   version?: string;
   onFunnelEvent?: (event: McpFunnelEvent) => void;
+}
+
+/** Origin for URLs the caller is told to use. */
+function publicOrigin(opts: StraleClientOptions): string {
+  return opts.publicBaseUrl ?? opts.baseUrl;
 }
 
 /** Call onFunnelEvent without letting a throwing hook break tool execution. */
@@ -275,26 +287,33 @@ const FREE_TIER_SLUGS = [
 
 // ─── Capability execution ───────────────────────────────────────────────────
 
+/**
+ * `context` lets a caller other than strale_execute (the narrow entry points
+ * in entry-points.ts) label its funnel events with its own tool name and
+ * replace next-step hints that name tools it does not register.
+ */
 export async function executeCapability(
   slug: string,
   inputs: Record<string, unknown>,
   opts: StraleClientOptions,
   capabilities?: Capability[],
+  context?: { tool?: string; nextSteps?: string[] },
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  const tool = context?.tool ?? "strale_execute";
   // Determine if this is a free-tier capability
   const cap = capabilities?.find((c) => c.slug === slug);
   const isFreeTier = cap?.is_free_tier ?? FREE_TIER_SLUGS.includes(slug);
 
   if (!opts.apiKey) {
     if (!isFreeTier) {
-      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug });
+      emitFunnelEvent(opts, { type: "auth_rejected", tool, slug });
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
-              details: { fix: `Pay per call at ${opts.baseUrl}/x402/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
+              details: { fix: `Pay per call at ${publicOrigin(opts)}/x402/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
               // Ordering is deliberate. This message is read by an autonomous
               // agent, and the only path it used to offer was a web signup
               // form — something an agent cannot complete. In the seven days
@@ -304,9 +323,9 @@ export async function executeCapability(
               // The machine-actionable option goes first.
               pay_per_call: {
                 how: "No signup. POST to the x402 endpoint below, settle the 402 challenge it returns in USDC on Base, and replay the request — the payment is the authentication.",
-                endpoint: attributedUrl(opts.baseUrl, `/x402/${slug}`, opts.src),
-                catalog: attributedUrl(opts.baseUrl, "/x402/catalog", opts.src),
-                discovery: attributedUrl(opts.baseUrl, "/.well-known/x402.json", opts.src),
+                endpoint: attributedUrl(publicOrigin(opts), `/x402/${slug}`, opts.src),
+                catalog: attributedUrl(publicOrigin(opts), "/x402/catalog", opts.src),
+                discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
               api_key: {
                 how: "If a human can complete a web form, https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
@@ -340,7 +359,7 @@ export async function executeCapability(
             status: "executing",
             message: `Capability '${slug}' is running asynchronously.`,
             transaction_id: txId,
-            poll_url: `${opts.baseUrl}/v1/transactions/${txId}`,
+            poll_url: `${publicOrigin(opts)}/v1/transactions/${txId}`,
             note: "Poll the transaction endpoint until status is 'completed' or 'failed'.",
           }),
         },
@@ -348,7 +367,7 @@ export async function executeCapability(
     };
   }
 
-  if (status === 429) emitFunnelEvent(opts, { type: "rate_limited", tool: "strale_execute", slug });
+  if (status === 429) emitFunnelEvent(opts, { type: "rate_limited", tool, slug });
 
   if (status === 429 && !opts.apiKey && (data as any).error_code === "rate_limited") {
     const details = (data as any).details;
@@ -380,15 +399,15 @@ export async function executeCapability(
     // not every 4xx (a bad slug or malformed input is a usage error, not a
     // rejection the funnel report cares about).
     if (isInsufficientBalance) {
-      emitFunnelEvent(opts, { type: "payment_rejected", tool: "strale_execute", slug, detail: errorCode });
+      emitFunnelEvent(opts, { type: "payment_rejected", tool, slug, detail: errorCode });
     } else if (status === 401 || errorCode === "unauthorized" || errorCode === "invalid_api_key") {
-      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug, detail: errorCode });
+      emitFunnelEvent(opts, { type: "auth_rejected", tool, slug, detail: errorCode });
     }
 
     let errorText = `Error (${errorCode}): ${message}`;
     if (typeof details?.fix === "string" && details.fix.trim()) errorText += `\nFix: ${details.fix}`;
     if (isInsufficientBalance) {
-      errorText += `\n\nTop up your wallet at: ${opts.baseUrl}/v1/wallet/topup`;
+      errorText += `\n\nTop up your wallet at: ${publicOrigin(opts)}/v1/wallet/topup`;
     }
     if (errorCode === "capability_unavailable" && details?.next_retry_at) {
       errorText += `\nCapability will be available again at: ${details.next_retry_at}`;
@@ -419,11 +438,12 @@ export async function executeCapability(
   if (r.transaction_id) meta.transaction_id = r.transaction_id;
 
   // Next-steps guidance on every successful execution
-  meta.next_steps = [
+  const nextSteps = context?.nextSteps ?? [
     `Transaction ID recorded. Call strale_transaction with id "${r.transaction_id ?? ""}" to retrieve the full audit record.`,
     `Call strale_trust_profile with slug "${slug}" to see how this source is tested and evidenced.`,
     "Call strale_search to find related capabilities.",
   ];
+  if (nextSteps.length > 0) meta.next_steps = nextSteps;
 
   return {
     content: [
@@ -632,8 +652,8 @@ export function registerStraleTools(
               // The route an agent can actually take on its own.
               pay_per_call_no_signup: {
                 how: "POST to /x402/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
-                catalog: attributedUrl(opts.baseUrl, "/x402/catalog", opts.src),
-                discovery: attributedUrl(opts.baseUrl, "/.well-known/x402.json", opts.src),
+                catalog: attributedUrl(publicOrigin(opts), "/x402/catalog", opts.src),
+                discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
               api_key_alternative:
                 "If a human can complete a web form: https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",

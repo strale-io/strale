@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.strale-io/web-reader",
+  "title": "Strale Web Page Reader",
+  "description": "Read a public web page as Markdown or text, with its links, metadata or requested fields.",
+  "repository": {
+    "url": "https://github.com/strale-io/strale",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.strale.io/mcp/web-reader?src=mcp-registry"
+    }
+  ]
+}

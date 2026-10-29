@@ -113,6 +113,21 @@ Run the MCP server locally on your machine:
 }
 ```
 
+#### Option C: A narrow server for one job (remote only)
+
+The same backend also serves three focused servers. Each exposes one tool per
+capability for its job instead of the search-and-execute meta-tools, and
+takes the same `Authorization: Bearer` key:
+
+| Server | URL | Tools |
+|---|---|---|
+| Company Check | `https://api.strale.io/mcp/company-check` | official business-register lookups by country, LEI, VAT and name screening |
+| EU VAT Check | `https://api.strale.io/mcp/eu-vat-check` | VAT number checks, VAT rates, EORI and IBAN checks |
+| Web Page Reader | `https://api.strale.io/mcp/web-reader` | a public page as Markdown or text, its links, metadata or requested fields |
+
+The tool list comes from the live catalogue, so a capability that is switched
+off is not offered.
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |
