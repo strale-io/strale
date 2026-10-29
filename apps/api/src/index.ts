@@ -35,6 +35,8 @@ async function main() {
   // operations noticing.
   const { assertAlertingConfigured } = await import("./lib/alerting.js");
   assertAlertingConfigured();
+  const { logBusAlertingStatus } = await import("./lib/alert-bus.js");
+  logBusAlertingStatus();
 
   // Execution receipts (Phase 5): the process must be able to name the commit
   // it is serving BEFORE it serves anything.
