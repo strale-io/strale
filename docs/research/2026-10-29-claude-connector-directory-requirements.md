@@ -127,3 +127,8 @@ need the primary key. Revoking the key ends the grant.
 - Payers whose first touch is `claude-dir`: reported weekly.
 - **Kill:** refused, or **under 5 calls a week 30 days after listing**. Then
   stop and record the kill.
+
+## Evidence
+
+Tests and the seven mutation checks on the OAuth and 401 paths:
+`archive/receipts/2026-10-29-test-run-claude-connector-oauth.json`.
