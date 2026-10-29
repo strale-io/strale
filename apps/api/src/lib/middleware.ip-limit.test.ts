@@ -106,6 +106,14 @@ describe("POST /v1/do rate limits", () => {
     expect(vi.mocked(authenticateApiKey).mock.calls.every(([key]) => key.startsWith("sk_live_"))).toBe(true);
   });
 
+  it.each([["Basic dXNlcjpwYXNz"], ["Bearer "], ["bearer sk_live_lowercase_scheme"]])("counts Authorization %j against the IP bucket", async (header) => {
+    const app = makeApp();
+    const ip = freshIp();
+    const send = () => app.request("/v1/do", { method: "POST", headers: { "x-forwarded-for": ip, Authorization: header } });
+    for (let i = 0; i < 60; i++) expect((await send()).status).not.toBe(429);
+    expect((await send()).status).toBe(429);
+  });
+
   it("still serves a valid key from an IP whose anonymous bucket is full", async () => {
     const app = makeApp();
     const ip = freshIp();

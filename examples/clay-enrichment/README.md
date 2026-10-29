@@ -119,7 +119,7 @@ Strale answers with a JSON error that Clay shows in the cell:
 | `execution_failed` | the tool could not answer this row, for example a number in the wrong format, an unsupported country or a registry that is down; you are not charged | `details.error` says why; retry later if `details.retryable` is true |
 | `invalid_input` | the request itself is malformed, for example a missing input | compare the body with the recipe |
 | `budget_exceeded` | the tool now costs more than the recipe's price cap | check the new price, then raise `max_price_cents` if you accept it |
-| `rate_limited` | more than 10 calls a second on one key | lower the column's rate limit in Clay's run settings |
+| `rate_limited` | more than 10 calls a second on one key (or, without a valid key, 60 a minute from one IP address) | lower the column's rate limit in Clay's run settings |
 
 Errors also carry a `details.fix` or `details.next_step` line saying what to do.
 

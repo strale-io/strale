@@ -1,0 +1,33 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c48e68db32f55b2f7566c1173250236695c420eb"
+  },
+  "at": "2026-10-29T10:05:54.458Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r3.json"
+  },
+  "summary": {
+    "ok": true,
+    "change": "POST /v1/do: valid API key limited per key (10/s) and skips the 60/min IP bucket; no key and invalid key stay IP-limited",
+    "focused": "apps/api/src/lib/middleware.ip-limit.test.ts 10 passed",
+    "full_api": "385 files passed, 40 skipped; 7771 tests passed, 383 skipped (before the 3 header-case tests were added)",
+    "typecheck": "passed",
+    "independent_review": "fresh read-only agent, PASS-WITH-NITS; header-case tests and Clay README row added; account-scope limit left as follow-up"
+  },
+  "topic": "do-rate-limit-per-key",
+  "raw": {
+    "ok": true,
+    "change": "POST /v1/do: valid API key limited per key (10/s) and skips the 60/min IP bucket; no key and invalid key stay IP-limited",
+    "focused": "apps/api/src/lib/middleware.ip-limit.test.ts 10 passed",
+    "full_api": "385 files passed, 40 skipped; 7771 tests passed, 383 skipped (before the 3 header-case tests were added)",
+    "typecheck": "passed",
+    "mutations_caught": [
+      "valid key consumes the IP bucket again",
+      "invalid key skips the IP bucket",
+      "do.ts mounts rateLimitByIp + optionalAuthMiddleware again"
+    ],
+    "independent_review": "fresh read-only agent, PASS-WITH-NITS; header-case tests and Clay README row added; account-scope limit left as follow-up"
+  }
+}
