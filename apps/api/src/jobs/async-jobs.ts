@@ -2,9 +2,10 @@
  * Async-job housekeeping (portfolio plan 2.11): callback retries and the
  * file-output retention purge, on one 60s tick.
  *
- * Callbacks: claims due callbacks whose job is terminal and sends them. The
- * claim is a conditional UPDATE with SKIP LOCKED (lib/jobs/callbacks.ts), so
- * replicas cannot double-send; the per-tick cap bounds outbound requests.
+ * Callbacks: claims due callbacks whose job is terminal, one at a time, and
+ * sends each. The claim is a conditional UPDATE with SKIP LOCKED and a lease
+ * (lib/jobs/callbacks.ts), so replicas cannot double-send; the per-tick cap
+ * bounds outbound requests, and ticks never overlap within a process.
  *
  * Retention (DEC-20260504-B): file bytes are customer content. A file goes
  * when its transaction's content is redacted or the transaction is deleted, or
@@ -88,10 +89,11 @@ export async function purgeSettledCallbacks(): Promise<{ deleted: number; hitCap
     WHERE transaction_id IN (
       SELECT c.transaction_id FROM job_callbacks c
       JOIN transactions t ON t.id = c.transaction_id
-      WHERE c.state IN ('delivered', 'failed')
-        AND (t.redacted_at IS NOT NULL
-             OR t.deleted_at IS NOT NULL
-             OR (c.created_at < now() - make_interval(days => ${PII_RETENTION_DAYS}) AND t.legal_hold = false))
+      WHERE (c.state IN ('delivered', 'failed')
+             AND (t.redacted_at IS NOT NULL OR t.deleted_at IS NOT NULL))
+         -- Past the window the URL goes whatever its state, so a callback
+         -- whose job never settled cannot keep it forever.
+         OR (c.created_at < now() - make_interval(days => ${PII_RETENTION_DAYS}) AND t.legal_hold = false)
       LIMIT ${FILE_PURGE_BATCH}
     )
   `);
@@ -110,8 +112,12 @@ export async function runAsyncJobsTickOnce(fetchImpl?: CallbackFetch): Promise<A
   };
 
   try {
-    const due = await claimDueCallbacks(db, CALLBACKS_PER_TICK);
-    for (const row of due) {
+    // One claim per send. Claiming a batch up front would let the 60s lease
+    // run out on rows still queued behind slow receivers, and another tick or
+    // replica would send them a second time.
+    for (let i = 0; i < CALLBACKS_PER_TICK; i++) {
+      const [row] = await claimDueCallbacks(db, 1);
+      if (!row) break;
       summary.callbacksAttempted += 1;
       const outcome = await sendClaimed(db, row, fetchImpl);
       if (outcome.state === "delivered") summary.callbacksDelivered += 1;
@@ -151,11 +157,23 @@ export async function runAsyncJobsTickOnce(fetchImpl?: CallbackFetch): Promise<A
   return summary;
 }
 
+/** A tick can outlast the interval (slow receivers); never run two at once. */
+let tickRunning = false;
+async function guardedTick(): Promise<void> {
+  if (tickRunning) return;
+  tickRunning = true;
+  try {
+    await runAsyncJobsTickOnce();
+  } catch (err) {
+    logError("async-jobs-tick-unhandled", err);
+  } finally {
+    tickRunning = false;
+  }
+}
+
 export function startAsyncJobs(): void {
   setTimeout(() => {
-    void runAsyncJobsTickOnce().catch((err) => logError("async-jobs-tick-unhandled", err));
-    setInterval(() => {
-      void runAsyncJobsTickOnce().catch((err) => logError("async-jobs-tick-unhandled", err));
-    }, TICK_INTERVAL_MS).unref();
+    void guardedTick();
+    setInterval(() => void guardedTick(), TICK_INTERVAL_MS).unref();
   }, STARTUP_DELAY_MS).unref();
 }

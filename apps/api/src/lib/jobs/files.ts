@@ -108,6 +108,20 @@ export function prepareFiles(files: unknown): PreparedFile[] {
   });
 }
 
+/**
+ * Only the async path stores files. On every other path (sync, free tier,
+ * x402) a file result would be charged for and then discarded, so it is an
+ * execution failure instead: the caller is not charged and the error names
+ * the cause.
+ */
+export function assertNoFilesOffAsyncPath(slug: string, files: unknown): void {
+  if (Array.isArray(files) && files.length > 0) {
+    throw new FileOutputError(
+      `'${slug}' returned files, which are only delivered on the async path. Nothing was charged.`,
+    );
+  }
+}
+
 export function manifestOf(files: PreparedFile[]): OutputFileManifestEntry[] {
   return files.map(({ data: _data, ...entry }) => entry);
 }
@@ -186,6 +200,21 @@ type ReadDb = {
   select: (...args: any[]) => any;
 };
 
+/**
+ * The one rule for "may this file still be handed out": its transaction's
+ * content is neither redacted nor deleted, and it is inside the content
+ * window (legal hold keeps it, as it keeps content), even if the daily sweep
+ * has not reached the transaction yet. The poll and the download share it so
+ * the poll never mints a link the download would refuse.
+ */
+function servable() {
+  return and(
+    isNull(transactions.redactedAt),
+    isNull(transactions.deletedAt),
+    sql`(${jobFiles.createdAt} > now() - make_interval(days => ${PII_RETENTION_DAYS}) OR ${transactions.legalHold})`,
+  );
+}
+
 /** Files of one transaction, with freshly minted URLs. For the poll response. */
 export async function listFilesWithUrls(db: ReadDb, transactionId: string, apiOrigin: string) {
   const rows: Array<{ id: string; name: string; contentType: string; sizeBytes: number; sha256: string }> = await db
@@ -197,7 +226,8 @@ export async function listFilesWithUrls(db: ReadDb, transactionId: string, apiOr
       sha256: jobFiles.sha256,
     })
     .from(jobFiles)
-    .where(eq(jobFiles.transactionId, transactionId))
+    .innerJoin(transactions, eq(transactions.id, jobFiles.transactionId))
+    .where(and(eq(jobFiles.transactionId, transactionId), servable()))
     .orderBy(jobFiles.createdAt, jobFiles.name);
   return rows.map((r) => {
     const signed = signFileUrl(r.id);
@@ -230,11 +260,7 @@ export async function readServableFile(db: ReadDb, fileId: string) {
     .innerJoin(transactions, eq(transactions.id, jobFiles.transactionId))
     .where(and(
       eq(jobFiles.id, fileId),
-      isNull(transactions.redactedAt),
-      isNull(transactions.deletedAt),
-      // Past the content window a file is gone even if the daily sweep has not
-      // reached its transaction yet; legal hold keeps it, as it keeps content.
-      sql`(${jobFiles.createdAt} > now() - make_interval(days => ${PII_RETENTION_DAYS}) OR ${transactions.legalHold})`,
+      servable(),
     ))
     .limit(1);
   return (row as { name: string; contentType: string; sha256: string; data: Buffer } | undefined) ?? null;

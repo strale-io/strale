@@ -28,6 +28,7 @@ import { sql } from "drizzle-orm";
 import { jobCallbacks } from "../../db/schema.js";
 import { deriveSubkey } from "../audit-token.js";
 import { safeFetch } from "../safe-fetch.js";
+import { findProhibitedTarget } from "../tos-blocklist.js";
 import { UrlValidationError, validateUrl } from "../url-validator.js";
 import { logWarn } from "../log.js";
 
@@ -53,6 +54,9 @@ export async function checkCallbackUrl(url: unknown): Promise<string | null> {
   }
   if (parsed.protocol !== "https:") return "'callback_url' must use https.";
   if (parsed.username || parsed.password) return "'callback_url' must not carry credentials.";
+  // The same ToS blocklist safeFetch applies on every attempt; refusing here
+  // is a 400 instead of six doomed attempts.
+  if (findProhibitedTarget(url)) return "'callback_url' targets a host Strale does not send requests to.";
   try {
     await validateUrl(url);
   } catch (err) {
@@ -96,6 +100,19 @@ export async function enqueueCallback(
     state: "pending",
     nextAttemptAt: new Date(0),
   });
+}
+
+/**
+ * Make a settled callback deliverable again. Used when a job's final state
+ * changed after the callback went out (a late success after the reconciler
+ * failed it), so the caller hears the state the poll now shows.
+ */
+export async function rearmCallback(db: { execute: (q: ReturnType<typeof sql>) => Promise<unknown> }, transactionId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE job_callbacks
+    SET state = 'pending', attempts = 0, next_attempt_at = now(), delivered_at = NULL
+    WHERE transaction_id = ${transactionId}
+  `);
 }
 
 // ─── Delivery ───────────────────────────────────────────────────────────────

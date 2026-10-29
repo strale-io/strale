@@ -250,6 +250,21 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
       "Which catalogue entries were viewed, with a truncated IP hash and no account link. Same shape as suggest_log above; pruned at 90 days.",
   },
   {
+    table: "job_files",
+    columns: ["rows", "user_id"],
+    disposition: "deleted",
+    respectsLegalHold: true,
+    reason:
+      "Files an asynchronous job produced for you (for example a transcript). Deleted by this request, " +
+      "except files of a transaction under a legal hold, which are kept with it.",
+  },
+  {
+    table: "job_callbacks",
+    columns: ["rows", "user_id"],
+    disposition: "deleted",
+    reason: "The callback URLs you gave for asynchronous jobs, and their delivery status. Deleted by this request.",
+  },
+  {
     table: "wallet_reservations",
     columns: ["user_id"],
     disposition: "retained",
@@ -409,6 +424,19 @@ export async function applyClosurePlan(
     .update(disputeRequests)
     .set({ userId: null, contactEmail: null })
     .where(eq(disputeRequests.userId, params.userId));
+
+  // Async-job output (portfolio 2.11). File bytes are customer content and go
+  // now, inside this transaction, except on a transaction under legal hold,
+  // which keeps its content like the redaction below. Callbacks hold only a
+  // URL the customer chose and are deleted outright.
+  await tx.execute(sql`
+    DELETE FROM job_files f
+     USING transactions t
+     WHERE t.id = f.transaction_id
+       AND f.user_id = ${params.userId}::uuid
+       AND t.legal_hold = false
+  `);
+  await tx.execute(sql`DELETE FROM job_callbacks WHERE user_id = ${params.userId}::uuid`);
 
   // Erasure that erases.
   //

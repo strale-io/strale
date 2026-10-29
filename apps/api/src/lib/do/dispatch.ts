@@ -28,7 +28,7 @@ import { trackBackgroundTask } from "../shutdown.js";
 import { type FreshnessInfo } from "../trust-grade.js";
 import * as reservations from "../wallet-reservations.js";
 import * as jobCallbacks from "../jobs/callbacks.js";
-import { insertJobFiles, manifestOf, prepareFiles } from "../jobs/files.js";
+import { assertNoFilesOffAsyncPath, insertJobFiles, manifestOf, prepareFiles } from "../jobs/files.js";
 import * as walletService from "../wallet-service.js";
 import { claimX402Payment, findCachedX402Response, beginX402Execution, releaseX402Claim } from "../x402-payment-claims.js";
 import { captureX402RecordingFailure } from "../x402-recording.js";
@@ -361,6 +361,7 @@ export async function executeFreeTier({ c, db, capability, executor, executionIn
         return executor(input);
       }, executionInput, capability, { kind: "anonymous", servedFree }, undefined, () => executionStarted);
       assertBillableOutput(capability.slug, capResult.output);
+      assertNoFilesOffAsyncPath(capability.slug, capResult.files);
       const latencyMs = Date.now() - startTime;
 
       const audit = buildFullAudit({
@@ -621,6 +622,7 @@ export async function executeFreeTierAuthenticated({ c, db, user, capability, ex
   try {
     const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "account", userId: user.id });
     assertBillableOutput(capability.slug, capResult.output);
+    assertNoFilesOffAsyncPath(capability.slug, capResult.files);
     const latencyMs = Date.now() - startTime;
 
     const audit = buildFullAudit({
@@ -944,6 +946,7 @@ export async function executeSync({ c, db, user, capability, executor, execution
         });
         if (Date.now() >= deadline) throw new ExecutionTimeoutError(timeoutMs);
         assertBillableOutput(capability.slug, capResult.output);
+        assertNoFilesOffAsyncPath(capability.slug, capResult.files);
         const latencyMs = Date.now() - startTime;
 
         // Publish the final audit and completed status atomically during capture.
@@ -1615,6 +1618,10 @@ async function executeInBackground({ db, actor, executor, executionInput, transa
           "reservation was already terminal at capture time",
           { transaction_id: transactionId, reservation_id: reservationId },
         );
+        // The reconciler marked this job failed and may already have called
+        // back "job.failed"; the row now reads completed. Re-arm the callback
+        // so the caller hears the final state the poll shows.
+        if (hasCallback) await jobCallbacks.rearmCallback(tx, transactionId);
       }
     });
 

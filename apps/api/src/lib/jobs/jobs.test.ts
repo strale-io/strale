@@ -13,6 +13,7 @@ vi.mock("../url-validator.js", async (importOriginal) => {
 
 import {
   FileOutputError,
+  assertNoFilesOffAsyncPath,
   MAX_FILE_BYTES,
   MAX_FILES_PER_JOB,
   MAX_TOTAL_FILE_BYTES,
@@ -63,6 +64,14 @@ describe("prepareFiles", () => {
   });
 });
 
+describe("assertNoFilesOffAsyncPath", () => {
+  it("refuses a file result off the async path and allows none", () => {
+    expect(() => assertNoFilesOffAsyncPath("x", [{ name: "a" }])).toThrow(FileOutputError);
+    expect(() => assertNoFilesOffAsyncPath("x", undefined)).not.toThrow();
+    expect(() => assertNoFilesOffAsyncPath("x", [])).not.toThrow();
+  });
+});
+
 describe("signed file URLs", () => {
   const id = "11111111-2222-3333-4444-555555555555";
 
@@ -104,6 +113,7 @@ describe("callbacks", () => {
     expect(await checkCallbackUrl("https://user:pw@hooks.example.com/x")).toMatch(/credentials/);
     expect(await checkCallbackUrl("https://169.254.169.254/latest")).toMatch(/not allowed/);
     expect(await checkCallbackUrl("not a url")).toMatch(/valid URL/);
+    expect(await checkCallbackUrl("https://www.linkedin.com/hook")).toMatch(/does not send requests/);
     expect(await checkCallbackUrl(42)).toMatch(/string/);
     expect(await checkCallbackUrl(`https://a.example/${"x".repeat(2100)}`)).toMatch(/at most/);
   });

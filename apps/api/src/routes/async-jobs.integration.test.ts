@@ -77,6 +77,7 @@ describeMaybe("async jobs with file output", () => {
   let app: Awaited<typeof import("../app.js")>["app"];
   let fileSlug: string;
   let tooBigSlug: string;
+  let syncFileSlug: string;
   const seeded: { userId: string; walletId: string }[] = [];
   const seededCaps: string[] = [];
 
@@ -87,6 +88,12 @@ describeMaybe("async jobs with file output", () => {
     const { MAX_FILE_BYTES } = await import("../lib/jobs/files.js");
     fileSlug = `async-file-${randomUUID().slice(0, 8)}`;
     tooBigSlug = `async-toobig-${randomUUID().slice(0, 8)}`;
+    syncFileSlug = `sync-file-${randomUUID().slice(0, 8)}`;
+    registerCapability(syncFileSlug, async () => ({
+      output: { segments: 1 },
+      provenance: { source: "async-jobs-test", fetched_at: new Date().toISOString() },
+      files: [{ name: "t.vtt", content_type: "text/vtt", data: FILE_BYTES }],
+    }));
     registerCapability(fileSlug, async (input: any) => ({
       output: { segments: 1, language: input?.language ?? "en" },
       provenance: { source: "async-jobs-test", fetched_at: new Date().toISOString() },
@@ -121,7 +128,7 @@ describeMaybe("async jobs with file output", () => {
     seededCaps.length = 0;
   });
 
-  async function seedCapability(slug: string) {
+  async function seedCapability(slug: string, avgLatencyMs = 20_000) {
     const id = randomUUID();
     seededCaps.push(id);
     await db.insert(capabilities).values({
@@ -135,7 +142,7 @@ describeMaybe("async jobs with file output", () => {
       priceCents: PRICE_CENTS,
       isActive: true,
       isFreeTier: false,
-      avgLatencyMs: 20_000, // above ASYNC_THRESHOLD_MS: the async path
+      avgLatencyMs, // default above ASYNC_THRESHOLD_MS: the async path
       lifecycleState: "active",
       visible: true,
     });
@@ -317,6 +324,16 @@ describeMaybe("async jobs with file output", () => {
     expect(JSON.parse(recorder.calls[0]!.body)).toMatchObject({ event: "job.failed", status: "failed" });
   }, 60_000);
 
+  it("a file result on the sync path fails uncharged rather than being dropped", async () => {
+    await seedCapability(syncFileSlug, 50);
+    const { apiKey, walletId } = await seedUser();
+    const res = await callDo(apiKey, { capability_slug: syncFileSlug, inputs: {}, max_price_cents: 100 });
+    expect(res.status).not.toBe(200);
+    expect(res.status).not.toBe(202);
+    expect(await balanceOf(walletId)).toBe(START_BALANCE);
+    expect(await db.select().from(jobFiles).where(eq(jobFiles.userId, seeded.at(-1)!.userId))).toHaveLength(0);
+  }, 60_000);
+
   it("retries a refused callback on the tick, with backoff, until delivered", async () => {
     await seedCapability(fileSlug);
     const { apiKey } = await seedUser();
@@ -416,6 +433,29 @@ describeMaybe("async jobs with file output", () => {
     const second = await runAsyncJobsTickOnce();
     expect(second.filesDeleted).toBe(1);
     expect(await db.select().from(jobFiles).where(eq(jobFiles.transactionId, txId))).toHaveLength(0);
+  }, 60_000);
+
+  it("account closure deletes the account's files and callbacks in the same request", async () => {
+    await seedCapability(fileSlug);
+    const { apiKey, userId } = await seedUser();
+    const res = await callDo(apiKey, {
+      capability_slug: fileSlug, inputs: {}, max_price_cents: 100,
+      callback_url: "https://hooks.customer.example/strale",
+    });
+    const txId: string = ((await res.json()) as any).result.transaction_id;
+    await waitForTerminal(txId);
+    expect(await db.select().from(jobFiles).where(eq(jobFiles.userId, userId))).toHaveLength(1);
+
+    const closed = await app.request("http://localhost/v1/auth/me", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "async-jobs test" }),
+    });
+    expect(closed.status).toBe(200);
+    const summary: any = await closed.json();
+    expect(JSON.stringify(summary)).toContain("job_files");
+    expect(await db.select().from(jobFiles).where(eq(jobFiles.userId, userId))).toHaveLength(0);
+    expect(await db.select().from(jobCallbacks).where(eq(jobCallbacks.userId, userId))).toHaveLength(0);
   }, 60_000);
 
   it("keeps an old file under legal hold", async () => {
