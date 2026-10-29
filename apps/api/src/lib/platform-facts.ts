@@ -38,6 +38,7 @@ import { TRANSACTION_RETENTION_DAYS, PII_RETENTION_DAYS } from "./data-retention
 import { getStraleJurisdiction, getProcessingLocation } from "./processing-location.js";
 import { getFreeTierSlugs } from "./free-tier.js";
 import { logWarn } from "./log.js";
+import { resolveSinkConfig } from "./log-sink.js";
 
 // ─── Static facts (compile-time constants) ──────────────────────────────────
 
@@ -70,6 +71,18 @@ export const STATIC_FACTS = {
     us_ein: "Liberty Data",
     ubo_supplement_global: "GLEIF L2",
     fr_litigation: "BODACC",
+  } as const,
+
+  /**
+   * Sub-processor disclosure for the log sink (DEC-20261029-A). `shipping` on
+   * the computed facts says whether this deploy actually sends logs.
+   */
+  log_sink: {
+    vendor: "Better Stack",
+    data_region: "EU",
+    content: "Application logs. API keys, auth headers, customer inputs, payment payloads and email addresses are redacted before a line leaves the server.",
+    retention_days: 3,
+    retention_basis: "Better Stack free tier",
   } as const,
 
   /**
@@ -220,6 +233,8 @@ export interface PlatformFacts {
   /** Computed from Railway region; honest about US-East deploy. */
   processing_region: string;
   processing_jurisdiction: string;
+  /** Whether this deploy ships logs to the sink in `static.log_sink` (both env vars set). */
+  log_sink_shipping: boolean;
   static: typeof STATIC_FACTS;
   /** Wall-clock at compute time; lets clients reason about staleness. */
   as_of: string;
@@ -310,6 +325,7 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
     },
     processing_region: getProcessingLocation(),
     processing_jurisdiction: getStraleJurisdiction(),
+    log_sink_shipping: resolveSinkConfig().state === "enabled",
     static: STATIC_FACTS,
     as_of: new Date().toISOString(),
   };

@@ -21,8 +21,9 @@ Read [tracks.yaml](tracks.yaml), then H7's (T7) `next_action` and
 §10, with the referenced analysis sections. H7 is active; H2 is done, and H1
 and H3 to H6 have shipped with the verification steps their `next_action`
 names still open. The Railway
-auto-redeploy token is not approved; implement observation without it. H8 stays
-founder-gated, and log redaction in H6 is its technical prerequisite.
+auto-redeploy token is not approved; implement observation without it. H8's sink
+is decided (DEC-20261029-A: Better Stack, EU region, free tier) and its code ships
+dormant; it waits only on Petter's account setup, then on verification.
 
 The shared schema requires `T<number>` identifiers. The table maps those IDs to
 the adopted plan labels; titles retain the labels for orientation.
