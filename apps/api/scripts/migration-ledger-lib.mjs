@@ -327,6 +327,12 @@ export function extractColumnsWritten(blockSourceText) {
 
 /** The calendar date (%cs) of the oldest commit that touched `lineNumber` (1-based) of `path`. */
 export function addedDateForLine(root, path, lineNumber) {
+  // A new block file is not in HEAD yet; --update then dates it today.
+  try {
+    execFileSync("git", ["cat-file", "-e", `HEAD:${path}`], { cwd: root, stdio: "ignore" });
+  } catch {
+    return null;
+  }
   const committed = execFileSync("git", ["show", `HEAD:${path}`], { cwd: root, encoding: "utf8" });
   if (lineNumber > committed.split("\n").length) return null;
   const out = execFileSync(

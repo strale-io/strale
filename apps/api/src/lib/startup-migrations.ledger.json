@@ -998,6 +998,14 @@
         "wallet_reservations.mode"
       ],
       "sha256": "2a46645c5660808c8f152a30fd54ba229316f08d05f7b2c6882183119becfdfb"
+    },
+    {
+      "id": "M074",
+      "function": "runMigration0131_startupMigrationApplied",
+      "title": "the ledger hash each block last ran with (H7d)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "45aa9f8f74f3381f15d8d5c93c3ebd1a5e4864ef1b12a62239793a43531c72f8"
     }
   ],
   "known_overlaps": [

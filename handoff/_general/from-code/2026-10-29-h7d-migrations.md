@@ -51,6 +51,46 @@ reads only block 0111 for the `vendor_accounts` seed (the only seeding block).
 - Block 0030's skip check looks only at `integrity_hash`; a partial run would
   skip forever.
 
-## PR 2 and PR 3
+## PR 1 in production
 
-Not started at the time of this note; see T7 `next_action`.
+PR 805 merged as `7ee63047`; `/health` served `7ee630471e5c` at 01:39 Swedish
+time on 2026-10-29, `/health/deep` ok, a free `/v1/do` call completed. The
+Railway boot log was not read (no Railway access in that session).
+
+## PR 2: applied-block-hash skip
+
+- Block 0131 creates `startup_migration_applied` (function_name, ledger_id,
+  sha256, first/last_applied_at). It is separate from the older
+  `startup_migration_ledger`, which blocks use for their own one-shot guards.
+- `apps/api/src/startup-migrations/applied.ts` decides per block; the runner
+  records every ledgered block after it runs. Before 0131 has created the
+  table nothing is skipped, so the first boot after deploy runs all 74 blocks
+  as today and records them (the 73 earlier ones are recorded right after
+  0131 runs).
+- `run-policy.ts` classifies every block: 28 `once`, 45 `every_boot`, plus
+  0131 `once`. The classification was done by three read-only agents against
+  a fixed rubric (every normal return means done; no live inputs; not a
+  reconciler; re-run is a no-op; unsure means every_boot); 0103 and 0106 were
+  moved to every_boot because they re-create redaction and immutability
+  triggers. After review, every block that creates something schema
+  validation cannot see (a unique index, CHECK, view or trigger: 0067, 0070,
+  0079, 0080, 0085, 0096, 0102, 0110, 0126) is every_boot too, so a dropped
+  money-path unique index is still restored on the next boot. A test requires
+  a policy for every registered block.
+- A recorded hash that differs from the ledger hash is a `StartupFatalError`
+  (boot fails), never a skip. The admin apply-migrations endpoint passes
+  `force: true` and runs every block.
+- Not what the brief literally asked: a second boot does not run nothing; the
+  45 every-boot blocks still run, because skipping them would change what
+  production does.
+- Evidence: [round 1](../../../archive/receipts/2026-10-29-test-run-h7d-applied-block-skip.json), [after review](../../../archive/receipts/2026-10-29-test-run-h7d-applied-block-skip-review.json).
+- Recovery if a skipped block's column or table is dropped by hand: schema
+  validation fails boot, and its alert now says to set
+  `STARTUP_MIGRATIONS_FORCE=1` in Railway, redeploy, then remove it (the
+  admin endpoint needs a running API). Tested on real Postgres.
+- A failure to record a block is logged, not fatal; that block runs again on
+  the next boot.
+
+## PR 3
+
+Not started; see T7 `next_action`.

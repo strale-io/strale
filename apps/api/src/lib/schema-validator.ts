@@ -75,6 +75,7 @@ export async function validateSchema(): Promise<void> {
     `Schema validation failed — DB is missing migration artifacts: ${missingList}`,
     `The database is missing schema (columns/tables/indexes) the deployed code expects (${missingList}). ` +
       `This is a deploy/code problem, not an outage that heals itself — restarting won't fix it. ` +
-      `Roll back: Railway dashboard -> Deployments -> previous working deploy -> Redeploy.`,
+      `Roll back: Railway dashboard -> Deployments -> previous working deploy -> Redeploy. ` +
+      `If the previous deploy fails the same way, set STARTUP_MIGRATIONS_FORCE=1 in Railway and redeploy, then remove it.`,
   );
 }

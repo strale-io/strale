@@ -32,7 +32,9 @@
  * Adding a new block: write a `runMigrationXXXX_<name>` function in its
  * own file under `src/startup-migrations/blocks/` that uses
  * `IF NOT EXISTS` / `WHERE` for idempotency, register it in `BLOCKS`
- * below, ledger it (`npm run migrations:check -- --update`), ship a
+ * below, declare its run policy in `src/startup-migrations/run-policy.ts`
+ * ("every_boot" unless it provably qualifies as "once"), ledger it
+ * (`npm run migrations:check -- --update`), ship a
  * regression test that asserts both shape (the SQL
  * has the idempotency markers) and behaviour (a second invocation
  * with the same input is a no-op).
@@ -117,6 +119,9 @@ import { runMigration0127_integrityHashIndex } from "../startup-migrations/block
 import { runMigration0128_manifestTextHash } from "../startup-migrations/blocks/0128-manifest-text-hash.js";
 import { runMigration0129_transactionCost } from "../startup-migrations/blocks/0129-transaction-cost.js";
 import { runMigration0130_syncWalletHolds } from "../startup-migrations/blocks/0130-sync-wallet-holds.js";
+import { runMigration0131_startupMigrationApplied } from "../startup-migrations/blocks/0131-startup-migration-applied.js";
+import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
+import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
 // Every block lives in its own file under src/startup-migrations/blocks/;
 // this module keeps the run order (BLOCKS) and the runner. Re-exported so
@@ -195,6 +200,7 @@ export * from "../startup-migrations/blocks/0127-integrity-hash-index.js";
 export * from "../startup-migrations/blocks/0128-manifest-text-hash.js";
 export * from "../startup-migrations/blocks/0129-transaction-cost.js";
 export * from "../startup-migrations/blocks/0130-sync-wallet-holds.js";
+export * from "../startup-migrations/blocks/0131-startup-migration-applied.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -275,6 +281,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0128_manifestTextHash,
   runMigration0129_transactionCost,
   runMigration0130_syncWalletHolds,
+  runMigration0131_startupMigrationApplied,
 ];
 
 /**
@@ -282,6 +289,10 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
  * failure — the caller in index.ts has the catch that exits the
  * process with a fatal log. Don't catch internally; missing schema
  * is not something the API can run with.
+ *
+ * A block whose run policy is "once" is skipped once its ledger hash is
+ * recorded as applied (see startup-migrations/applied.ts); `force` runs
+ * every block regardless, which the admin endpoint uses.
  *
  * Returns the per-block summary so callers (the admin endpoint) can
  * surface it as an HTTP response. The startup wiring in index.ts
@@ -293,7 +304,9 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
 const STARTUP_MIGRATIONS_LOCK_KEY = "91621622369349";
 const STARTUP_MIGRATIONS_LOCK_WAIT_MS = 60_000;
 
-export async function runStartupMigrations(): Promise<BlockResult[]> {
+export async function runStartupMigrations(
+  options: { force?: boolean } = {},
+): Promise<BlockResult[]> {
   const startedAt = Date.now();
   const db = getDb();
   const results: BlockResult[] = [];
@@ -345,9 +358,44 @@ export async function runStartupMigrations(): Promise<BlockResult[]> {
     drizzle(blockClient);
     // Kept well inside Railway's 20 s healthcheck window, which also covers boot work.
     const lockBudget = { remainingMs: 10_000 };
+    // null until block 0131 has created the table: nothing is skipped, and
+    // blocks that ran before it are recorded as soon as it exists.
+    // STARTUP_MIGRATIONS_FORCE=1 is the recovery path when boot itself fails
+    // (the admin endpoint needs a running API).
+    const force = options.force === true || process.env.STARTUP_MIGRATIONS_FORCE === "1";
+    if (force) log.warn({ label: "startup-migrations-force" }, "startup-migrations-force: every block runs");
+    let applied = await readApplied(db);
+    const unrecorded: LedgerRow[] = [];
+    let skipped = 0;
     for (const block of BLOCKS) {
+      const ledgerRow = LEDGER_BY_FUNCTION.get(block.name);
+      const plan = planBlock(block.name, ledgerRow, applied?.get(block.name),
+        BLOCK_RUN_POLICY[block.name]?.policy, force);
+      if (plan.action === "skip") {
+        skipped++;
+        const result = { block: block.name, outcome: `skipped (applied; ledger ${plan.ledgerId} hash recorded)`, duration_ms: 0 };
+        results.push(result);
+        log.info({ label: "startup-migration-block", block: result.block, outcome: result.outcome,
+          rows_affected: null, duration_ms: 0 }, `startup-migration-block ${result.block}`);
+        continue;
+      }
       const result = await runStartupMigrationBlock(block, pool, blockClient, lockBudget);
       results.push(result);
+      if (ledgerRow) unrecorded.push(ledgerRow);
+      else log.warn({ label: "startup-migration-unledgered", block: block.name }, "startup-migration-unledgered");
+      if (applied === null && block === runMigration0131_startupMigrationApplied) applied = await readApplied(db);
+      if (applied) {
+        for (const row of unrecorded.splice(0)) {
+          // Not fatal: an unrecorded block only runs again on the next boot.
+          try {
+            await recordApplied(db, row);
+            applied.set(row.function, row.sha256);
+          } catch (err) {
+            log.error({ label: "startup-migration-record-failed", block: row.function,
+              err: err instanceof Error ? err.message : String(err) }, "startup-migration-record-failed");
+          }
+        }
+      }
       log.info(
         {
           label: "startup-migration-block",
@@ -364,6 +412,7 @@ export async function runStartupMigrations(): Promise<BlockResult[]> {
       {
         label: "startup-migrations-complete",
         block_count: results.length,
+        skipped_count: skipped,
         total_duration_ms: Date.now() - startedAt,
         blocks: results.map((r) => ({
           block: r.block,

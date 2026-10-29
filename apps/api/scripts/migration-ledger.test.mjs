@@ -486,3 +486,7 @@ test("the real relocated data files are the ones their blocks import", () => {
   assert.deepEqual(found, []);
   assert.ok(Object.keys(MIGRATION_DATA_RELOCATIONS).length >= 2);
 });
+
+test("--update dates a new block file that is not in HEAD yet as today (null), instead of failing", () => {
+  assert.equal(addedDateForLine(repoRootFrom(import.meta.url), `${BLOCKS_DIR}/9999-not-committed.ts`, 1), null);
+});
