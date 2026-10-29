@@ -1,0 +1,114 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "186e4b12eeead335e6163c14d74dae6d7eeb0fed"
+  },
+  "at": "2026-10-29T09:30:24.736Z",
+  "inputs": {
+    "source": "/tmp/claude-0/d8receipt.json"
+  },
+  "summary": {
+    "commit": "186e4b12",
+    "independent_review": "fresh read-only Claude agent, GO WITH NITS conditional; should-fix 1-4 fixed in this branch"
+  },
+  "topic": "d8-n8n-node",
+  "raw": {
+    "commit": "186e4b12",
+    "n8n_node_tests": {
+      "node22": {
+        "passed": 26,
+        "failed": 0
+      },
+      "node20": {
+        "passed": 26,
+        "failed": 0
+      }
+    },
+    "n8n_lint": {
+      "rules": "@n8n/eslint-plugin-community-nodes 0.38.1 + eslint-plugin-n8n-nodes-base 2.0.0 (n8n-node lint config)",
+      "errors": 0
+    },
+    "n8n_scanner_local": {
+      "tool": "@n8n/scan-community-package 0.41.1 analyzePackage",
+      "source_leg": "passed",
+      "tarball_leg": "passed"
+    },
+    "published_0_1_4_scanner": {
+      "result": "failed",
+      "errors": 7
+    },
+    "framework_integrity": {
+      "check": "ok n8n-nodes-strale",
+      "planted_failure_tests": {
+        "passed": 2,
+        "failed": 0
+      }
+    },
+    "zapier_tests": {
+      "passing": 42
+    },
+    "api_vitest_on_first_commit": {
+      "files_passed": 382,
+      "tests_passed": 7748,
+      "failed": 0
+    },
+    "mutation_tests": [
+      {
+        "mutation": "drop X-Strale-Client header",
+        "result": "caught"
+      },
+      {
+        "mutation": "drop src=n8n",
+        "result": "caught"
+      },
+      {
+        "mutation": "pep before sanctions",
+        "result": "caught"
+      },
+      {
+        "mutation": "poll resubmits POST",
+        "result": "caught"
+      },
+      {
+        "mutation": "poll error loses advice",
+        "result": "caught"
+      },
+      {
+        "mutation": "drop pairedItem",
+        "result": "caught"
+      },
+      {
+        "mutation": "integrity rule ignores runtime dependencies",
+        "result": "caught"
+      },
+      {
+        "mutation": "polled result drops transaction_id",
+        "result": "caught"
+      },
+      {
+        "mutation": "POST budget guard at zero",
+        "result": "caught after test fix"
+      },
+      {
+        "mutation": "submitted IDs not recorded",
+        "result": "caught"
+      },
+      {
+        "mutation": "continue-on-fail drops transaction_ids",
+        "result": "caught"
+      },
+      {
+        "mutation": "integrity rule ignores missing n8n-workflow test",
+        "result": "caught"
+      }
+    ],
+    "baseline_2026_10_29": {
+      "npm_downloads_last_week": 8,
+      "npm_downloads_last_month": 12,
+      "npm_downloads_lifetime": 882,
+      "attributable_calls": "none (0.1.x sends no X-Strale-Client)"
+    },
+    "independent_review": "fresh read-only Claude agent, GO WITH NITS conditional; should-fix 1-4 fixed in this branch"
+  }
+}

@@ -393,6 +393,12 @@ jobs:
         run: node apps/api/scripts/check-framework-packages.mjs
       - if: needs.classify.outputs.docs_only == 'false'
         run: npm test --workspace=packages/zapier-strale
+      # D8: the n8n node is built, linted with n8n's own rules and driven
+      # through n8n-workflow's primitives offline (no paid calls).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm run lint --workspace=packages/n8n-nodes-strale
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm test --workspace=packages/n8n-nodes-strale
       # D6: the AI SDK package's offline tool-loop test (mock model, mocked API).
       - if: needs.classify.outputs.docs_only == 'false'
         run: npm test --workspace=packages/ai-sdk-strale

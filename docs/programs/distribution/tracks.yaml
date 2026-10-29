@@ -184,11 +184,23 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: After D5 build, rebuild n8n to verified standard, test and publish
-      major release/Creator Portal submission under DEC-20260422-A and
-      DEC-20261027-B. List as general business tools; hold monthly sanctions
-      re-screening and finance/compliance targeting until Petter clears the gate
-      or discovery runs.
+    next_action: n8n-nodes-strale 1.0.0 rebuilt in packages/n8n-nodes-strale on
+      branch feat/n8n-nodes-strale-verified (three fixed operations ported from
+      the Zapier jobs, X-Strale-Client n8n-nodes-strale/1.0.0, n8n-node lint
+      and a local scanner pass). Publish waits on Petter for three acts, asked
+      on needs-founder. First, add the npm trusted publisher for
+      n8n-nodes-strale (strale-io/strale, release-npm.yml, environment
+      npm-release). Second, approve the npm-release run for tag
+      n8n-nodes-strale@1.0.0. Third, submit on the n8n Creator Portal with the
+      contents in docs/company/drafts/distribution/05-n8n-creator-portal-submission.md.
+      After publish, run the npm-publishing.md n8n contract and record it here,
+      then deprecate 0.1.x and archive strale-io/n8n-nodes-strale. Baseline
+      2026-10-29 is npm 8 downloads a week, 12 a month, 882 lifetime, 0.1.4
+      failing the current n8n scanner with 7 errors, and no calls attributable
+      to the node because 0.1.x sends no client header. Day-90 check against
+      D8 thresholds counts installs and accounts calling in 3 separate months.
+      Monthly sanctions re-screening and finance or compliance targeting stay
+      held.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Verified or unverified outcome, installs and monthly callers are
