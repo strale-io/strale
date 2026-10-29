@@ -52,7 +52,7 @@ const FRAMEWORK_RULES = [
   {
     dirMatch: /^n8n-nodes-strale$/,
     imports: [/^import\s[\s\S]{0,300}?from\s+['"]n8n-workflow['"]/m],
-    label: "n8n-workflow with an INodeType node (execute) and an ICredentialType credential",
+    label: "n8n-workflow with an INodeType node (execute), an ICredentialType credential and a test on n8n-workflow",
   },
   {
     dirMatch: /^langchain-strale$/,
@@ -212,7 +212,9 @@ for (const pkg of requireInputs(packages.filter((pkg) => FRAMEWORK_RULES.some((r
       && /export class \w+ implements ICredentialType\b/.test(credSrc)
       && manifest.n8n?.nodes?.includes("dist/nodes/Strale/Strale.node.js")
       && manifest.n8n?.credentials?.includes("dist/credentials/StraleApi.credentials.js")
-      && manifest.dependencies === undefined;
+      && manifest.dependencies === undefined
+      // DEC-20260422-A step 4b: a test that drives n8n's own primitives.
+      && /require\(['"]n8n-workflow['"]\)/.test(read("test/node.test.js"));
   }
   if (matched) {
     console.log(`ok    ${pkg}  (import found in ${matchedFile.replace(/\\/g, "/")})`);

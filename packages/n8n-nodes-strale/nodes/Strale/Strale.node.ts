@@ -5,11 +5,11 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 import { checkVatNumber, companyRoutes, JobInputError, lookUpCompany, screenName } from './jobs';
 import type { Execute } from './jobs';
-import { ITEM_DEADLINE_MS, runTool } from './transport';
+import { billingAdvice, ITEM_DEADLINE_MS, runTool, withAdvice } from './transport';
 
 const rerunNotice =
 	'Each run is billed to your Strale wallet. Retrying or rerunning a workflow repeats completed checks and their charges.';
@@ -21,7 +21,7 @@ export class Strale implements INodeType {
 		icon: { light: 'file:strale.svg', dark: 'file:strale.dark.svg' },
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
 		description: 'Look up companies, check EU VAT numbers and screen names with Strale',
 		defaults: {
 			name: 'Strale',
@@ -211,12 +211,13 @@ export class Strale implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		for (let i = 0; i < items.length; i++) {
+			const submitted: string[] = [];
 			try {
 				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
 				const deadline = Date.now() + ITEM_DEADLINE_MS;
 				const execute: Execute = async (slug, inputs) =>
-					await runTool(this, i, deadline, slug, inputs as IDataObject);
+					await runTool(this, i, deadline, submitted, slug, inputs as IDataObject);
 
 				let json: IDataObject;
 				if (resource === 'company' && operation === 'lookUp') {
@@ -263,13 +264,23 @@ export class Strale implements INodeType {
 
 				returnData.push({ json, pairedItem: { item: i } });
 			} catch (error) {
+				// runTool's errors already name the checks submitted for this item;
+				// any other failure after a billed check is given the same advice.
 				const wrapped =
 					error instanceof JobInputError
 						? new NodeOperationError(this.getNode(), error.message, { itemIndex: i })
-						: error;
+						: submitted.length &&
+							  !(error instanceof NodeApiError) &&
+							  !(error instanceof NodeOperationError)
+							? withAdvice(this, error, i, billingAdvice(submitted))
+							: error;
 				if (this.continueOnFail()) {
 					returnData.push({
-						json: { error: (wrapped as Error).message },
+						json: {
+							error: (wrapped as Error).message,
+							description: (wrapped as { description?: string | null }).description ?? null,
+							transaction_ids: submitted,
+						},
 						pairedItem: { item: i },
 					});
 					continue;

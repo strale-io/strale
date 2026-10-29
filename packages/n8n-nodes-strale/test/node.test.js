@@ -191,6 +191,12 @@ test('Swedish lookups join the structured address and refuse a name before any c
 	assert.equal(named.calls.length, 0);
 });
 
+test('a blank registration number is refused as a registration number, before any call', async () => {
+	const ctx = context([{ resource: 'company', operation: 'lookUp', country: 'GB', registrationNumber: '   ' }], bySlug);
+	await assert.rejects(node.execute.call(ctx), /Registration number must contain/);
+	assert.equal(ctx.calls.length, 0);
+});
+
 test('check a VAT number', async () => {
 	const ctx = context([{ resource: 'vatNumber', operation: 'check', vatNumber: 'SE556703748501' }], bySlug);
 	const [[item]] = await node.execute.call(ctx);
@@ -292,11 +298,37 @@ test('a non-retryable cap surfaces the API fix text', async () => {
 	});
 });
 
-test('a pending check is polled by transaction ID and never resubmitted', async () => {
-	const pending = { result: { transaction_id: 'tx-1', status: 'executing' } };
-	const done = fixtures['vat-validate'].result;
-	const ctx = context([{ resource: 'vatNumber', operation: 'check', vatNumber: 'SE556703748501' }], (options, n) =>
-		options.method === 'POST' ? { statusCode: 202, body: pending } : { statusCode: 200, body: n < 3 ? pending.result : done },
+// GET /v1/transactions/:id answers with the flat transaction record, keyed `id`
+// (apps/api/src/routes/transactions.ts), not the /v1/do envelope.
+const transactionRecord = (id, status, extra = {}) => ({
+	id,
+	type: 'capability',
+	status,
+	capability_slug: 'vat-validate',
+	output: status === 'completed' ? fixtures['vat-validate'].result.output : null,
+	provenance: status === 'completed' ? fixtures['vat-validate'].result.provenance : null,
+	...extra,
+});
+const vatItem = [{ resource: 'vatNumber', operation: 'check', vatNumber: 'SE556703748501' }];
+const accepted = (id) => ({ statusCode: 202, body: { result: { transaction_id: id, status: 'executing' } } });
+
+// Moves the clock forward by `step` ms on every Date.now() call.
+async function withFastClock(step, fn) {
+	const realNow = Date.now;
+	let t = realNow();
+	Date.now = () => (t += step);
+	try {
+		return await fn();
+	} finally {
+		Date.now = realNow;
+	}
+}
+
+test('a pending check is polled by transaction ID, never resubmitted, and keeps its ID', async () => {
+	const ctx = context(vatItem, (options, n) =>
+		options.method === 'POST'
+			? accepted('tx-1')
+			: { statusCode: 200, body: transactionRecord('tx-1', n < 3 ? 'executing' : 'completed') },
 	);
 	const [[item]] = await node.execute.call(ctx);
 	assert.deepEqual(
@@ -308,13 +340,90 @@ test('a pending check is polled by transaction ID and never resubmitted', async 
 		],
 	);
 	assert.equal(item.json.valid, false);
+	assert.equal(item.json.source, 'VIES');
+	assert.equal(item.json.transaction_id, 'tx-1');
+});
+
+test('a polled check that failed reports its fix and transaction', async () => {
+	const ctx = context(vatItem, (options) =>
+		options.method === 'POST'
+			? accepted('tx-4')
+			: {
+					statusCode: 200,
+					body: transactionRecord('tx-4', 'failed', { details: { fix: 'Check the VAT number format.' } }),
+				},
+	);
+	await assert.rejects(node.execute.call(ctx), (error) => {
+		assert.ok(error instanceof NodeApiError);
+		assert.match(error.message, /tx-4 has not completed/);
+		assert.match(error.description, /Check the VAT number format\..*tx-4/);
+		return true;
+	});
+});
+
+test('a check still running at the item deadline stops with its transaction, without resubmitting', async () => {
+	const ctx = context(vatItem, (options) =>
+		options.method === 'POST' ? accepted('tx-3') : { statusCode: 200, body: transactionRecord('tx-3', 'executing') },
+	);
+	await withFastClock(20_000, () =>
+		assert.rejects(node.execute.call(ctx), (error) => {
+			assert.ok(error instanceof NodeApiError);
+			assert.match(error.message, /tx-3 has not completed/);
+			assert.match(error.description, /tx-3/);
+			return true;
+		}),
+	);
+	assert.equal(ctx.calls.filter((c) => c.options.method === 'POST').length, 1);
+});
+
+test('the second screening check is not started without its full time budget', async () => {
+	const ctx = context([{ resource: 'person', operation: 'screenName', name: 'Example Person' }], (options) =>
+		options.method === 'POST' ? ok(options.body.capability_slug) : { statusCode: 404, body: {} },
+	);
+	// Each clock read advances 35 s: the first POST starts with 90 s left, the
+	// second would have under its 30 s budget.
+	await withFastClock(35_000, () =>
+		assert.rejects(node.execute.call(ctx), (error) => {
+			assert.ok(error instanceof NodeApiError);
+			assert.match(error.message, /time limit/);
+			assert.match(error.description, /synthetic-transaction/);
+			return true;
+		}),
+	);
+	assert.deepEqual(
+		ctx.calls.map((c) => c.options.body.capability_slug),
+		['sanctions-check'],
+	);
+});
+
+test('a lost connection on the billed POST says the check may have been billed', async () => {
+	const ctx = context(vatItem, () => {
+		throw Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+	});
+	await assert.rejects(node.execute.call(ctx), (error) => {
+		assert.ok(error instanceof NodeApiError);
+		assert.match(error.description, /vat-validate check may have run and been billed/);
+		return true;
+	});
+});
+
+test('a PEP failure after a billed sanctions check names the sanctions transaction', async () => {
+	const ctx = context([{ resource: 'person', operation: 'screenName', name: 'Example Person' }], (options) =>
+		options.body.capability_slug === 'sanctions-check'
+			? ok('sanctions-check')
+			: { statusCode: 400, body: { error_code: 'invalid_input', message: 'The name was refused.' } },
+	);
+	await assert.rejects(node.execute.call(ctx), (error) => {
+		assert.ok(error instanceof NodeApiError);
+		assert.equal(error.message, 'The name was refused.');
+		assert.match(error.description, /synthetic-transaction/);
+		return true;
+	});
 });
 
 test('a failed poll names the transaction to review', async () => {
-	const ctx = context([{ resource: 'vatNumber', operation: 'check', vatNumber: 'SE556703748501' }], (options) =>
-		options.method === 'POST'
-			? { statusCode: 202, body: { result: { transaction_id: 'tx-2', status: 'executing' } } }
-			: { statusCode: 503, body: { message: 'Temporarily unavailable.' } },
+	const ctx = context(vatItem, (options) =>
+		options.method === 'POST' ? accepted('tx-2') : { statusCode: 503, body: { message: 'Temporarily unavailable.' } },
 	);
 	await assert.rejects(node.execute.call(ctx), (error) => {
 		assert.ok(error instanceof NodeApiError);
@@ -323,6 +432,19 @@ test('a failed poll names the transaction to review', async () => {
 		return true;
 	});
 	assert.equal(ctx.calls.filter((c) => c.options.method === 'POST').length, 1);
+});
+
+test('continue on fail keeps the advice and the submitted transaction IDs', async () => {
+	const ctx = context(
+		vatItem,
+		(options) =>
+			options.method === 'POST' ? accepted('tx-5') : { statusCode: 503, body: { message: 'Temporarily unavailable.' } },
+		{ continueOnFail: true },
+	);
+	const [[item]] = await node.execute.call(ctx);
+	assert.equal(item.json.error, 'Temporarily unavailable.');
+	assert.deepEqual(item.json.transaction_ids, ['tx-5']);
+	assert.match(item.json.description, /tx-5/);
 });
 
 test('continue on fail returns the error for one item and processes the next', async () => {

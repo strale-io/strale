@@ -24,12 +24,12 @@
     "url": "https://github.com/strale-io/strale/issues"
   },
   "scripts": {
-    "build": "n8n-node build",
-    "lint": "n8n-node lint",
-    "lint:fix": "n8n-node lint --fix",
+    "build": "tsc && node scripts/copy-static.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test \"test/**/*.test.js\"",
-    "scan": "npx -y @n8n/scan-community-package@0.41.1 n8n-nodes-strale",
+    "test": "npm run build && node --test test/node.test.js test/zapier-parity.test.js",
+    "scan": "npx -y @n8n/scan-community-package@0.41.1 n8n-nodes-strale@1.0.0",
     "prepublishOnly": "npm run lint && npm run build"
   },
   "files": [
@@ -47,10 +47,13 @@
     ]
   },
   "devDependencies": {
-    "@n8n/node-cli": "0.54.5",
-    "eslint": "9.32.0",
-    "n8n-workflow": "2.16.0",
-    "typescript": "5.9.2"
+    "@eslint/js": "9.29.0",
+    "@n8n/eslint-plugin-community-nodes": "0.38.1",
+    "eslint": "9.29.0",
+    "eslint-plugin-n8n-nodes-base": "2.0.0",
+    "n8n-workflow": "2.11.1",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.70.0"
   },
   "peerDependencies": {
     "n8n-workflow": "*"

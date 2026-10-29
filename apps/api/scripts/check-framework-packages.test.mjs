@@ -59,7 +59,9 @@ test("n8n integrity rejects a hollow, unregistered or dependency-carrying node p
       "  async execute(this: IExecuteFunctions) { return [[]]; }\n}\n";
     const cred =
       "import type { ICredentialType } from 'n8n-workflow';\nexport class StraleApi implements ICredentialType {}\n";
-    const write = (m, n, c) => {
+    mkdirSync(join(pkg, "test"), { recursive: true });
+    const write = (m, n, c, t = "const { NodeHelpers } = require('n8n-workflow');\n") => {
+      writeFileSync(join(pkg, "test/node.test.js"), t);
       writeFileSync(join(pkg, "package.json"), JSON.stringify(m));
       writeFileSync(join(pkg, "nodes/Strale/Strale.node.ts"), n);
       writeFileSync(join(pkg, "credentials/StraleApi.credentials.ts"), c);
@@ -76,6 +78,9 @@ test("n8n integrity rejects a hollow, unregistered or dependency-carrying node p
     assert.equal(run().status, 1);
     // The node must be registered in package.json's n8n block.
     write({ ...manifest, n8n: { nodes: [], credentials: manifest.n8n.credentials } }, node, cred);
+    assert.equal(run().status, 1);
+    // No test exercising n8n-workflow.
+    write(manifest, node, cred, "// no tests\n");
     assert.equal(run().status, 1);
     // Missing credential class.
     write(manifest, node, "export const nothing = 1;\n");

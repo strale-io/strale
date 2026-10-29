@@ -58,13 +58,16 @@ key you use.
   establish identity; a person reviews it. The optional country is returned as
   context and does not narrow the matches.
 - **Missing data.** Fields the source did not supply are returned empty
-  (`null`) rather than as a negative result.
+  (`null` or an empty string) rather than as a negative result.
 - **Slow checks.** A check still running after 20 seconds is followed by its
-  transaction ID for up to 60 seconds per item, without resubmitting it. If it
-  is still running then, the item fails with the transaction ID to review.
+  transaction ID, without resubmitting it, for up to 90 seconds per item. A
+  check is only started with at least 30 seconds of that left. If a check is
+  still running at the limit, the item fails with the transaction IDs to
+  review.
 - **Errors.** Invalid input fails before any call is made. Errors from Strale
   show its message and, where it gives one, the fix. With **Continue On Fail**
-  on, a failed item returns an `error` field and the rest of the items run.
+  on, a failed item returns `error`, `description` and the `transaction_ids`
+  already submitted for it, and the rest of the items run.
 - **AI agents.** The node can be used as a tool by n8n's AI Agent.
 
 Requests go to `https://api.strale.io` with your key as a bearer token, the
@@ -81,8 +84,10 @@ Import these from the `workflows` folder:
 
 - [`monthly-vat-recheck.json`](workflows/monthly-vat-recheck.json): on the
   first of each month, read a supplier sheet with a `vat_number` column, check
-  each number and pass the ones that are not valid to a review step. Each row
-  is one paid check a month.
+  each number and pass the ones VIES reports as not valid to a review step.
+  Rows whose check could not run (an `error` field) or got no answer from VIES
+  (`valid` empty) take the other branch, to be re-checked rather than treated as
+  invalid. Each row is one paid check a month.
 
 In the first two, replace the manual trigger with the step that brings in the
 supplier or customer, for example a form submission, a new spreadsheet row or
@@ -90,8 +95,10 @@ a new CRM record.
 
 ## Compatibility
 
-Built and tested against `n8n-workflow` 2.16 with `@n8n/node-cli` 0.54. Uses
-n8n nodes API version 1.
+Built and tested against `n8n-workflow` 2.11 and linted with n8n's community
+node rules (`@n8n/eslint-plugin-community-nodes` 0.38, the version n8n's
+package scanner uses). Uses n8n nodes API version 1; needs an n8n release
+whose `n8n-workflow` exports `NodeConnectionTypes`.
 
 ## Development
 

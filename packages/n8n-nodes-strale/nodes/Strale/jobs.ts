@@ -1,7 +1,8 @@
 // The fixed jobs this node offers. They mirror the Zapier app's job module
 // (packages/zapier-strale/lib/jobs.js in the Strale repository): the same
 // tools, the same inputs sent to them and the same output fields. A parity
-// test holds the two together. A verified n8n package may not have runtime
+// test holds the two together on complete responses; where a source omits a
+// field, this port returns null and Zapier's may return undefined. A verified n8n package may not have runtime
 // dependencies, so the definitions are ported here rather than imported.
 //
 // There is no arbitrary-tool operation. Each job names its tools.
@@ -71,17 +72,16 @@ export async function lookUpCompany(input: LookUpCompanyInput, execute: Execute)
 	const code = countryCode(input.country);
 	const route = companyRoutes[code];
 	if (!route) throw new JobInputError('Choose GB, SE, NO or FI.');
-	const number = input.registrationNumber?.trim();
-	const name = input.companyName?.trim();
-	if (number && name) {
+	const byNumber = input.registrationNumber !== undefined;
+	if (byNumber && input.companyName !== undefined) {
 		throw new JobInputError('Supply a registration number or a company name, not both.');
 	}
-	if (!number && !route.names) {
+	if (!byNumber && !route.names) {
 		throw new JobInputError('Swedish lookup requires a registration number.');
 	}
-	const inputs = number
-		? { [route.input]: requiredText(number, 'Registration number') }
-		: { company_name: requiredText(name, 'Company name') };
+	const inputs = byNumber
+		? { [route.input]: requiredText(input.registrationNumber, 'Registration number') }
+		: { company_name: requiredText(input.companyName, 'Company name') };
 	const result = await execute(route.slug, inputs);
 	const output = result.output;
 	const address = output.registered_address as
