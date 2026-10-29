@@ -125,3 +125,38 @@ threads:
       Petter
       Strale (Moonlighter AB, Sweden)
       petter@strale.io
+  - id: registercheck-terms-provenance
+    to: info@registercheck.de (Openlaw GmbH, Munich; address from the registercheck.de imprint as indexed by search on 2026-10-29, the page itself rate-limited the session; confirm on the imprint before sending; from petter@strale.io)
+    subject: "registercheck.de API: licence for resale, data provenance and pricing"
+    asked: Whether per-call results may be resold inside another API product with attribution; how the register copy is obtained and whether that can be documented; caching and retention limits; SLA and support; pricing currency, credit cost, volume terms and pay-per-call without commitment
+    unblocks: Vendor evaluation of registercheck (config/vendors.yaml id registercheck) and the coverage comparison in docs/research/2026-10-29-registercheck-coverage-comparison.md
+    sent:
+    sent_by:
+    follow_up_by:
+    status: draft
+    note: Openlaw sells to AI agents too, so it is also a potential competitor; the body says no more about Strale than the opening line. No account exists and none is to be created before a written answer to questions 1 and 2.
+    body: |
+      Hello,
+
+      I run Strale, a library of tools that AI agents call and pay for per call. We are
+      looking at registercheck.de as a source of German commercial-register data and have
+      a few questions before we create an account. Your terms page was not readable for us,
+      so please point me to the current terms if they answer any of these.
+
+      1. Licence: may we resell per-call results from your API inside our own API product,
+         with registercheck.de and the commercial register named as the source? If yes,
+         under which terms or plan?
+      2. Provenance: how is your copy of the register obtained, for example through an
+         official licence or bulk channel, per-document purchases, or automated retrieval
+         from handelsregister.de? Can you document this in writing?
+      3. Storage: are there limits on caching or retaining results on our side? We remove
+         stored response content (inputs and outputs) after 90 days.
+      4. Service: do you offer an SLA or uptime commitment, and what support channel and
+         response times apply?
+      5. Pricing: what currency are prices in, what does one credit cost on each plan, are
+         there volume terms, and can we pay per call without a monthly commitment?
+
+      Thank you,
+      Petter
+      Strale (Moonlighter AB, Sweden)
+      petter@strale.io

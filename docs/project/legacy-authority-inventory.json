@@ -241,7 +241,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "2a1b288048e38773dfee748e335d65169cbe3cf29847791d46a841f565c0b6ee",
+      "sha256": "d5016153ec3bd8b260c5cb787941a48533c59603bf8283da0e58415e9fcdd54d",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -265,6 +265,7 @@
         "apps/api/src/lib/vendor-terms.test.ts",
         "apps/api/src/startup-migrations/blocks/0085-actor-identity.ts",
         "config/env-manifest.yaml",
+        "config/vendors.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
         "design/brand-kit/README.md",
@@ -290,6 +291,7 @@
         "docs/research/2026-10-27-distribution-strategy-sweeps/directories.md",
         "docs/research/2026-10-27-distribution-strategy-sweeps/integrations.md",
         "docs/research/2026-10-27-distribution-strategy.md",
+        "docs/research/2026-10-29-registercheck-coverage-comparison.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
@@ -336,6 +338,7 @@
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/research/2026-10-27-codebase-architecture-review.md",
         "docs/research/2026-10-27-distribution-strategy.md",
+        "docs/research/2026-10-29-registercheck-coverage-comparison.md",
         "scripts/handoff/regenerate-indexes.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
