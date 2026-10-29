@@ -117,8 +117,11 @@ next deploy's `skipped_count: 29` were not read (no DB or Railway log access).
   (`0132_sqs_fields_removed_and_serving` first beat,
   `0132_sqs_fields_removed_last_beat` latest, in `startup_migration_ledger`).
   Block 0132 drops only when the first beat is at least ten minutes old and
-  the latest is under seven, so a failed deploy or a rollback to old code
-  defers it. The drop lands on the first boot after that, normally the next
+  the latest is under three (beats every minute). A graceful shutdown deletes
+  the latest beat before the pool closes (review round 2: a rollback followed
+  by a quick redeploy), so a stopped build never vouches for the present; an
+  ungracefully killed one stops vouching within three minutes. The heartbeat
+  stops once nothing is left to drop. The drop lands on the first boot after that, normally the next
   deploy.
 - Measured into the boot log before dropping: column count, capabilities row
   count, snapshot rows and bytes. Production numbers were not readable from
@@ -137,3 +140,4 @@ dropped 8 columns from 356 capabilities rows and the table (500 rows,
 98304 bytes) with schema validation green, boot 4 skipped. Receipt below.
 Receipt: [h7d-drop-sqs-residual-schema](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-residual-schema.json).
 Round 2 (heartbeat): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-heartbeat.json).
+Round 3 (shutdown withdrawal): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-withdrawal.json).
