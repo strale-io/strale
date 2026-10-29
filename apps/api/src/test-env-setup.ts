@@ -43,4 +43,6 @@ process.env.FRONTEND_URL ??= "https://strale.dev";
 // switch on production-only behaviour underneath every test.
 delete process.env.RESEND_API_KEY;
 delete process.env.BETTER_STACK_SOURCE_TOKEN;
+delete process.env.BUS_GITHUB_TOKEN;
+delete process.env.BUS_REPO;
 process.env.NODE_ENV = "test";
