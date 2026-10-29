@@ -100,6 +100,8 @@ describe("OCR engine parsing", () => {
     // A single page over the file limit ends the PDF before it.
     expect(engine.planPdfParts(pages([1, 11, 1]), limits)).toEqual({ parts: [[1]], omittedFrom: 2 });
     expect(engine.planPdfParts(pages([6, 6, 6]), { ...limits, max_parts: 2 })).toEqual({ parts: [[1], [2]], omittedFrom: 3 });
+    // The job total keeps the same margin as a file: merging adds a little.
+    expect(engine.planPdfParts(pages([5, 5, 5, 5, 5]), limits)).toEqual({ parts: [[1], [2], [3], [4]], omittedFrom: 5 });
   });
 });
 
@@ -139,6 +141,8 @@ describe.skipIf(!hasBinaries())("document-ocr on a real scan", () => {
     );
     expect(r.stopped_by_time_budget).toBe(true);
     expect(r.pages.length).toBeLessThan(2);
+    // A page the deadline cut off is left unread, never reported as a bad page.
+    expect(r.pages.every((p) => p.status === "ok")).toBe(true);
   }, 60_000);
 
   it("reads an image set window, marks an undecodable page failed and keeps the rest", async () => {

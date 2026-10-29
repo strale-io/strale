@@ -56,7 +56,7 @@ export const CHILD_MAX_CPU_SECONDS = 90;
 /** Created by the Dockerfile; children run as this user when the API is root. */
 export const CHILD_USER = "strale-ocr";
 /** JPEG quality for page images embedded in a searchable PDF, when JPEG is the smaller. */
-const PDF_JPEG_QUALITY = 60;
+const PDF_JPEG_QUALITY = 75;
 const PDFINFO_TIMEOUT_MS = 15_000;
 const RENDER_TIMEOUT_MS = 45_000;
 const OCR_TIMEOUT_MS = 75_000;
@@ -221,12 +221,13 @@ export function parseTsv(tsv: string): { mean_confidence: number | null; word_co
  */
 export function planPdfParts(pages: { page_number: number; bytes: number }[], limits: PdfLimits): { parts: number[][]; omittedFrom: number | null } {
   const perFile = Math.floor(limits.max_file_bytes * 0.97);
+  const perJob = Math.floor(limits.max_total_bytes * 0.97);
   const parts: number[][] = [];
   let current: number[] = [];
   let currentBytes = 0;
   let total = 0;
   for (const p of pages) {
-    if (p.bytes > perFile || total + p.bytes > limits.max_total_bytes) return { parts: close(), omittedFrom: p.page_number };
+    if (p.bytes > perFile || total + p.bytes > perJob) return { parts: close(), omittedFrom: p.page_number };
     if (currentBytes + p.bytes > perFile) {
       if (parts.length + 1 >= limits.max_parts) return { parts: close(), omittedFrom: p.page_number };
       parts.push(current);
@@ -350,6 +351,9 @@ async function runDocument(source: OcrSource, opts: OcrOptions): Promise<OcrResu
       try {
         info = await runBounded("pdfinfo", [pdf], within(deadline, PDFINFO_TIMEOUT_MS));
       } catch {
+        if (Date.now() >= deadline - DEADLINE_MARGIN_MS - 1_000) {
+          throw new Error("OCR ran out of time before the document could be opened; nothing was charged.");
+        }
         throw new OcrInputError("'url' or 'base64' must be a readable PDF that opens without a password; this one could not be opened.");
       }
       total = parsePdfInfo(info.stdout);
@@ -426,6 +430,7 @@ async function buildPdfParts(dir: string, okPages: number[], limits: PdfLimits, 
   const sized = await Promise.all(okPages.map(async (n) => ({ page_number: n, bytes: (await stat(join(dir, `page-${n}.pdf`))).size })));
   const plan = planPdfParts(sized, limits);
   const parts: PdfPart[] = [];
+  let totalBytes = 0;
   for (const group of plan.parts) {
     const files = group.map((n) => join(dir, `page-${n}.pdf`));
     let data: Buffer;
@@ -442,7 +447,9 @@ async function buildPdfParts(dir: string, okPages: number[], limits: PdfLimits, 
       }
       data = await readFile(merged);
     }
-    if (data.length > limits.max_file_bytes) return { parts, omittedFrom: group[0] };
+    // Merging adds a little to the planned sizes: re-check the real bytes.
+    if (data.length > limits.max_file_bytes || totalBytes + data.length > limits.max_total_bytes) return { parts, omittedFrom: group[0] };
+    totalBytes += data.length;
     parts.push({ first_page: group[0], last_page: group[group.length - 1], data });
   }
   return { parts, omittedFrom: plan.omittedFrom };
