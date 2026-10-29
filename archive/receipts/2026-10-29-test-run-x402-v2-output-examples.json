@@ -1,0 +1,47 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a3a2756f5ff203e171bd139c9d33334a37bce3c7"
+  },
+  "at": "2026-10-29T09:49:09.346Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r2.json"
+  },
+  "summary": {
+    "ok": true,
+    "payment_projection_sha256": "fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6",
+    "payment_comparison": "identical before and after across 1424 keyed v2 manifest x method x kind challenges (accepts and paymentRequirements excluding discovery outputSchema)",
+    "v1_legacy": "redirect-trace, summarize, translate: v1 accepts, paymentRequirements, paymentRequirement and X-PAYMENT header payload deep-equal with and without the output example",
+    "full_api": "384 files passed, 40 skipped; 7770 tests passed, 383 skipped",
+    "mcp_server": "4 passed",
+    "checks": "mcp build, API typecheck, context, claims, distribution, docs, env, models, clay passed"
+  },
+  "topic": "x402-v2-output-examples",
+  "raw": {
+    "ok": true,
+    "payment_projection_sha256": "fa21739acdb10953b7536b8c7944649046b6c230f3b4edd271cba7da7fc7a3c6",
+    "payment_comparison": "identical before and after across 1424 keyed v2 manifest x method x kind challenges (accepts and paymentRequirements excluding discovery outputSchema)",
+    "v1_legacy": "redirect-trace, summarize, translate: v1 accepts, paymentRequirements, paymentRequirement and X-PAYMENT header payload deep-equal with and without the output example",
+    "output_examples_all_manifests_capability_GET": {
+      "before": 18,
+      "after": 64
+    },
+    "output_examples_all_manifests_capability_POST": {
+      "before": 9,
+      "after": 26
+    },
+    "output_examples_live_enabled_275": {
+      "before": 13,
+      "after": 60
+    },
+    "full_api": "384 files passed, 40 skipped; 7770 tests passed, 383 skipped",
+    "mcp_server": "4 passed",
+    "checks": "mcp build, API typecheck, context, claims, distribution, docs, env, models, clay passed",
+    "mutations_caught": [
+      "name heuristic applied to outputs again",
+      "a2a card x402_endpoint back to legacy path",
+      "output example leaked into v1 paymentRequirement"
+    ]
+  }
+}

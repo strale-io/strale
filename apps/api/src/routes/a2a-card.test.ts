@@ -95,9 +95,9 @@ describe("the card itself, built against a stubbed catalogue", () => {
     const card = await buildStubbed();
     const paid = card.skills.find((s) => s.id === "google-search")!;
     expect(paid.description).toContain("€0.05 per call");
-    expect(paid.description).toContain("/x402/google-search");
+    expect(paid.description).toContain("/x402/v2/google-search");
     expect(paid.price_cents).toBe(5);
-    expect(paid.x402_endpoint).toContain("/x402/google-search");
+    expect(paid.x402_endpoint).toContain("/x402/v2/google-search");
   });
 
   it("never advertises a payment endpoint the gateway would 404", async () => {

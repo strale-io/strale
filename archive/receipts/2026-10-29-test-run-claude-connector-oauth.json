@@ -1,0 +1,54 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "378b3710ca3556a94da0ebebe235b7c8de5e3478"
+  },
+  "at": "2026-10-29T09:14:58.853Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/e24c55cb-63af-5cfd-a224-fcbbef449d9e/scratchpad/receipt-d4.json"
+  },
+  "summary": {
+    "mutations_caught": 7,
+    "mutations_survived": 0,
+    "oauth_integration_tests": 17,
+    "failed": 0
+  },
+  "topic": "claude-connector-oauth",
+  "raw": {
+    "ok": true,
+    "commit_under_test": "378b3710",
+    "postgres": "16 (local, loopback strale_test)",
+    "tests": {
+      "oauth.integration.test.ts": {
+        "passed": 17,
+        "failed": 0
+      },
+      "oauth.test.ts + mcp-connector.test.ts": {
+        "passed": 24,
+        "failed": 0
+      },
+      "account-lifecycle + api-keys integration (regression)": {
+        "passed": 50,
+        "failed": 0
+      },
+      "packages/mcp-server node tests": {
+        "passed": 4,
+        "failed": 0
+      }
+    },
+    "mutations": {
+      "tool": "apps/api/scripts/mutation-test.mjs (green → red → green)",
+      "caught": [
+        "pkce-verifier-check",
+        "refresh-reuse-revokes-grant",
+        "redirect-uri-validation",
+        "connector-401-gate",
+        "cimd-host-allowlist",
+        "code-replay-revokes-grant",
+        "resource-binding"
+      ],
+      "survived": []
+    }
+  }
+}

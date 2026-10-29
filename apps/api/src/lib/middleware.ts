@@ -1,9 +1,20 @@
 import type { Context, Next } from "hono";
 import { createHash } from "node:crypto";
 import { authenticateApiKey } from "./api-keys.js";
+import { authenticateOAuthAccessToken, isOAuthAccessToken } from "./oauth.js";
 import { apiError } from "./errors.js";
 import { consumeIpRate } from "./rate-limit.js";
-import type { AppEnv } from "../types.js";
+import type { AppEnv, User } from "../types.js";
+
+/**
+ * An API key, or an access token from the Claude connector's OAuth flow
+ * (lib/oauth.ts). A token acts as the additional key its grant holds, so
+ * requirePrimaryKey and that key's spend caps apply to it unchanged.
+ */
+async function authenticateBearer(token: string): Promise<{ user: User; apiKeyId: string | null } | null> {
+  if (isOAuthAccessToken(token)) return authenticateOAuthAccessToken(token);
+  return authenticateApiKey(token);
+}
 
 export async function authMiddleware(
   c: Context<AppEnv>,
@@ -21,11 +32,11 @@ export async function authMiddleware(
   }
 
   const apiKey = authHeader.slice(7); // Strip "Bearer "
-  if (!apiKey.startsWith("sk_live_")) {
+  if (!apiKey.startsWith("sk_live_") && !isOAuthAccessToken(apiKey)) {
     return c.json(apiError("unauthorized", "Invalid API key format."), 401);
   }
 
-  const identity = await authenticateApiKey(apiKey);
+  const identity = await authenticateBearer(apiKey);
   const user = identity?.user;
 
   if (!user) {
@@ -64,11 +75,11 @@ export async function optionalAuthMiddleware(
   }
 
   const apiKey = authHeader.slice(7);
-  if (!apiKey.startsWith("sk_live_")) {
+  if (!apiKey.startsWith("sk_live_") && !isOAuthAccessToken(apiKey)) {
     return c.json(apiError("unauthorized", "Invalid API key format."), 401);
   }
 
-  const identity = await authenticateApiKey(apiKey);
+  const identity = await authenticateBearer(apiKey);
   const user = identity?.user;
 
   if (!user) {
@@ -102,8 +113,8 @@ export function optionalAuthIpLimitedUnlessKeyed(maxPerIp: number, windowMs: num
     const authHeader = c.req.header("Authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const apiKey = authHeader.slice(7);
-      const wellFormed = apiKey.startsWith("sk_live_");
-      const identity = wellFormed ? await authenticateApiKey(apiKey) : null;
+      const wellFormed = apiKey.startsWith("sk_live_") || isOAuthAccessToken(apiKey);
+      const identity = wellFormed ? await authenticateBearer(apiKey) : null;
       if (identity?.user) {
         c.set("user", identity.user);
         c.set("apiKeyId", identity.apiKeyId);

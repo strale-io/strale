@@ -21,12 +21,10 @@ output_schema:
   type: object
   example:
     url: https://strale.dev
-    text: Strale — Ship AI agents faster
-    title: Strale — Ship AI agents faster
+    text: Strale — Trust and Quality Infrastructure for AI Agents
+    title: Strale — Trust and Quality Infrastructure for AI Agents
     language: en
-    meta_description: >-
-      Your agent calls strale.do() and gets company data, compliance checks, financial validation — structured JSON with
-      audit trails. 233+ capabilities, one API key.
+    meta_description: Company data, compliance checks, financial validation. Structured JSON with audit trails on every call.
   properties:
     text:
       type: string

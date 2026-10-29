@@ -59,7 +59,7 @@ POST https://api.strale.io/v1/do?src=llms-txt
 Body: { "capability_slug": "iban-validate", "inputs": { "iban": "DE89370400440532013000" }, "max_price_cents": 10 }
 
 ### x402 (pay-per-request, no API key needed)
-GET https://api.strale.io/x402/iban-validate?iban=DE89370400440532013000&src=llms-txt
+GET https://api.strale.io/x402/v2/iban-validate?iban=DE89370400440532013000&src=llms-txt
 Pay with USDC on Base
 
 ## Free Tier

@@ -1,6 +1,6 @@
 # Publishing the npm packages
 
-Strale publishes five npm packages out of this monorepo:
+Strale publishes seven npm packages out of this monorepo:
 
 | package | workspace | notes |
 |---|---|---|
@@ -9,6 +9,8 @@ Strale publishes five npm packages out of this monorepo:
 | `straleio-langchain` | `packages/langchain` | builds against `straleio` |
 | `strale-semantic-kernel` | `packages/semantic-kernel-strale` | |
 | `strale-capabilities` | `packages/strale-capabilities` | generated, no build step |
+| `n8n-nodes-strale` | `packages/n8n-nodes-strale` | n8n community node from 1.0.0; 0.1.x came from `strale-io/n8n-nodes-strale` with a token |
+| `strale-ai-sdk` | `packages/ai-sdk-strale` | Vercel AI SDK tools (D6); first publish needs Petter, see below |
 
 Publishing runs through [`.github/workflows/release-npm.yml`](../../.github/workflows/release-npm.yml)
 using **npm trusted publishing (OIDC)**. There is no `NPM_TOKEN` secret and no
@@ -41,7 +43,7 @@ and a tag push publishes unattended.
 Trusted publishing has to be enabled per package by the package owner. This
 cannot be done from CI — it needs a logged-in session on npmjs.com.
 
-For **each** of the five packages above:
+For **each** of the packages above:
 
 1. Sign in to <https://www.npmjs.com> as the package owner (`petter_lindstrom`).
 2. Open the package page → **Settings**.
@@ -66,6 +68,24 @@ Run a dry run (below) before cutting a real release to check the packaging.
 > by a real publish. Expect the first release of each package to be the actual test,
 > and if it fails, delete the tag, fix the npm-side config, and re-cut it.
 
+### First publish of a new package
+
+The Trusted Publisher form is on the package's settings page, and npm creates
+that page on the first publish. A package that has never been published (for
+example `strale-ai-sdk` 0.1.0) cannot go through this workflow, so its first
+version is published once by Petter from a logged-in npm session:
+
+1. In a clean checkout of `main`: `npm ci`, then
+   `npm --workspace=packages/<dir> run build`.
+2. `npm publish --workspace=packages/<dir> --access public`. A local publish
+   carries no provenance attestation; later versions published from this
+   workflow do.
+3. On the new package's settings page, add the Trusted Publisher exactly as in
+   step 2 above.
+
+Every later version goes through the tag flow below. The production contract
+smoke test still runs after the first publish.
+
 ### Token hygiene after setup
 
 - Leave the expired `publish-strale` token expired. Do not renew it.
@@ -73,7 +93,7 @@ Run a dry run (below) before cutting a real release to check the packaging.
   is confirmed working — an unused token is only a liability.
 - Do not create a replacement long-lived token. If one is ever genuinely needed
   as a fallback, it should be a **granular access token**, read-write, scoped to
-  exactly these five packages, no organization access, shortest workable expiry.
+  exactly the packages in the table above, no organization access, shortest workable expiry.
 
 ## Why the workflow looks the way it does
 
@@ -179,6 +199,22 @@ because it does not look like a crash.
 Record the observed values, not "looks fine". For `strale-mcp` the contract is
 the startup line: capability count, solution count, capability trust count,
 solution trust count -- all four non-zero and consistent with the catalog.
+
+`n8n-nodes-strale` has no startup line; it is a library n8n loads. Its contract,
+checked against the published tarball (`npm pack n8n-nodes-strale@<version>`,
+unpacked outside the repo):
+
+- `npx -y @n8n/scan-community-package@<pinned> n8n-nodes-strale@<version>`
+  reports that the package passed all security checks (provenance, the attested
+  source and the compiled tarball).
+- The unpacked `dist/nodes/Strale/Strale.node.js` loads with `n8n-workflow`
+  installed beside it, and `new Strale().description` lists the three
+  operations.
+- The credential test request, `GET https://api.strale.io/v1/wallet/balance`
+  without a key, answers 401 (the route exists and wants the key), and the three
+  tools' `GET /v1/capabilities/<slug>` answer 200.
+- After the first real call through the node, the transaction's
+  `client_meta.client_header` reads `n8n-nodes-strale/<version>`.
 
 ### Why this is a required step
 

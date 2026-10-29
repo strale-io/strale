@@ -82,6 +82,54 @@ export const apiKeys = pgTable("api_keys", {
   index("api_keys_user_idx").on(table.userId),
 ]);
 
+// ─── OAuth for the Claude connector (block 0133, distribution D4) ──────────
+// Tokens and codes are stored as SHA-256 hex; the raw values are never kept.
+export const oauthClients = pgTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientName: text("client_name"),
+  redirectUris: jsonb("redirect_uris").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const oauthGrants = pgTable("oauth_grants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  apiKeyId: uuid("api_key_id").notNull().references(() => apiKeys.id),
+  clientId: text("client_id").notNull(),
+  scope: text("scope").notNull(),
+  resource: text("resource").notNull(),
+  /** True when the grant created its API key; revoking the grant then revokes the key. */
+  keyMinted: boolean("key_minted").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("oauth_grants_user_idx").on(table.userId)]);
+
+export const oauthAuthorizationCodes = pgTable("oauth_authorization_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  clientId: text("client_id").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  scope: text("scope").notNull(),
+  resource: text("resource").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  sourceApiKeyId: uuid("source_api_key_id").references(() => apiKeys.id),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  grantId: uuid("grant_id").references(() => oauthGrants.id),
+});
+
+export const oauthTokens = pgTable("oauth_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  grantId: uuid("grant_id").notNull().references(() => oauthGrants.id),
+  kind: text("kind").$type<"access" | "refresh">().notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("oauth_tokens_grant_idx").on(table.grantId)]);
+
 // ─── wallets ────────────────────────────────────────────────────────────────
 export const wallets = pgTable("wallets", {
   id: uuid("id").defaultRandom().primaryKey(),

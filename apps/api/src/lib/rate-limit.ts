@@ -163,13 +163,14 @@ function rateLimitIp(c: Context): string | null {
  * Count one request against the caller's IP bucket. Returns the 429 response
  * when the bucket is full, null when the request may proceed.
  */
-export function consumeIpRate(c: Context, maxRequests: number, windowMs: number): Response | null {
+export function consumeIpRate(c: Context, maxRequests: number, windowMs: number, scope?: string): Response | null {
   const ip = rateLimitIp(c);
   // Skip rate limiting if IP can't be detected — don't share a single
   // "unknown" bucket across all unidentified users.
   if (ip === null) return null;
 
-  const result = checkRate(`ip:${ip}`, maxRequests, windowMs);
+  // A scope gives a route its own bucket instead of sharing the IP's.
+  const result = checkRate(scope ? `${scope}:ip:${ip}` : `ip:${ip}`, maxRequests, windowMs);
   setRateLimitHeaders(c, result);
   if (result.allowed) return null;
   return c.json(
@@ -185,9 +186,9 @@ export function consumeIpRate(c: Context, maxRequests: number, windowMs: number)
  * @param maxRequests - max requests per window
  * @param windowMs - window duration in ms
  */
-export function rateLimitByIp(maxRequests: number, windowMs: number) {
+export function rateLimitByIp(maxRequests: number, windowMs: number, scope?: string) {
   return async (c: Context, next: Next) => {
-    const limited = consumeIpRate(c, maxRequests, windowMs);
+    const limited = consumeIpRate(c, maxRequests, windowMs, scope);
     if (limited) return limited;
     return next();
   };
