@@ -110,16 +110,17 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: T4 is no longer a prerequisite, its core shipped in PRs 779 and 794 and its two open follow-ups do not touch this work. H7a (PR 787), the boot-lock retry (PR 790), H7b (PR 793) and H7c batches 1
-      and 2 (PRs 799, 802) are merged. H7d PR 1 splits startup-migrations.ts
-      into one file per block under apps/api/src/startup-migrations/blocks with
-      every ledger hash unchanged and moves the frozen data payloads to
-      apps/api/src/startup-migrations/data. Next, H7d PR 2 records each applied
-      block's ledger hash and skips recorded blocks on later boots, then PR 3
-      drops the residual SQS columns and sqs_daily_snapshot through a new
-      ledgered block. The H7c known_answer tightening listed in
-      apps/api/src/capabilities/__fixtures__/upstream/README.md is still open.
-      See handoff/_general/from-code/2026-10-29-h7d-migrations.md.
+    next_action: H7a (PR 787), the boot-lock retry (PR 790), H7b (PR 793) and H7c batches 1
+      and 2 (PRs 799, 802) are merged. H7d PR 1 (PR 805, live 2026-10-29) split
+      startup-migrations.ts into one file per block with every ledger hash
+      unchanged. H7d PR 2 records each block's ledger hash in
+      startup_migration_applied (block 0131) and skips the 37 blocks whose run
+      policy in apps/api/src/startup-migrations/run-policy.ts is once; the other
+      36 still run every boot. After PR 2 is live, query production for 74
+      recorded rows. Then H7d PR 3 drops the residual SQS columns and
+      sqs_daily_snapshot through a new ledgered block. The H7c known_answer
+      tightening in apps/api/src/capabilities/__fixtures__/upstream/README.md is
+      still open. See handoff/_general/from-code/2026-10-29-h7d-migrations.md.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.
