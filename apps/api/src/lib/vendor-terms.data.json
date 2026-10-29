@@ -145,14 +145,19 @@
     "capabilities": [
       "cz-company-data"
     ],
-    "resale": "unverified",
-    "terms_url": "https://mf.gov.cz/cs/ministerstvo/informacni-systemy/ares",
-    "accessed": "2026-10-26",
-    "how_read": "Official operating conditions read via web open, including API usage limits and third-party portal attribution.",
+    "resale": "permitted",
+    "terms_url": "https://ares.gov.cz/stranky/open-data",
+    "accessed": "2026-10-29",
+    "how_read": "Rendered https://ares.gov.cz/stranky/open-data, /stranky/vyvojar-info and /stranky/podminky-provozu in a headless browser with an honest user agent (robots.txt disallows only /cms/, which was not fetched), and re-read the operating conditions on mf.gov.cz/cs/ministerstvo/informacni-systemy/ares. The two ARES pages are the ones the Ministry's reply links. The reply itself is the MF ČR reply of 2026-10-29 to petter@strale.io (Jan Sadlik, ICT, MF ČR), relayed from Petter's mailbox; it is not archived in the repository.",
     "findings": [
-      "Public API available to everyone subject to operating conditions: at most 500 requests/minute, no excessive parallel requests, repeated identical/invalid queries or evasion. Informational data only; preserve ARES source attribution. The page declares no reuse licence or resale grant. Regulation (EU) 2023/138 includes company registers among high-value datasets with reuse requirements; this is context pending assessment of applicability, not an established legal basis for this API."
+      "MF ČR reply of 2026-10-29 to petter@strale.io, answering the 2026-10-26 request about per-call commercial reuse with attribution: information published through ARES may be reused under the ARES operating conditions and the Czech law on free access to information (open data). MF gives no individual legal assessment; the user is responsible for compliance.",
+      "Open-data page: MF publishes the company-register basics (name, dates of creation, dissolution and extinction, seat, IČO, purpose, statutory body members with addresses and dates, register designation) as open data under Government Regulation 425/2016 and Act 304/2013 § 7. It quotes Act 106/1999 § 3: open data are 'informace … jejichž způsob ani účel následného využití není omezen' (information whose manner and purpose of further use is not restricted).",
+      "Open-data page, conditions: 'data lze využívat v souladu s podmínkami provozu IS ARES' (data may be used in line with the ARES operating conditions); MF is not the data's author and is not liable for completeness, correctness or damage from further use; 'Ministerstvo financí nepovažuje za vhodné modifikovat data způsobem, který by zkresloval jejich význam, bez uvedení, že tomu tak bylo učiněno' (MF does not consider it appropriate to modify the data in a way that distorts its meaning without saying so).",
+      "Developer page and operating conditions: 'Služby může využívat každý, pokud bude respektovat podmínky provozu' (anyone may use the services if they respect the operating conditions). MF may restrict users who send more than 500 queries a minute, repeat identical or invalid queries, run many parallel automated queries, spread queries over many IP addresses to evade limits, or probe the database with random values. All ARES data is informative only and is not an official document ('nemají charakter úřední listiny').",
+      "No page states a required attribution wording. The mf.gov.cz page disclaims responsibility for other portals that show ARES data 's odkazem na zdroj údajů z ARES' (citing ARES as the source); Strale names ARES and MF ČR as the source on every response, says the data is informative only, and does not alter returned values. Not established: whether every field cz-company-data returns falls inside the published open-data list; the reply covers information published through ARES generally."
     ],
-    "decision_ref": "docs/company/DECISION-QUEUE.md DQ-40"
+    "decision_ref": "docs/company/DECISION-QUEUE.md DQ-40 (Czech part resolved 2026-10-29); DEC-20261023-A",
+    "basis": "published_terms"
   },
   {
     "vendor": "PRH (Finnish Patent and Registration Office)",
