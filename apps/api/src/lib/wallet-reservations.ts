@@ -31,7 +31,7 @@
  * concurrently with a live execution finishing — exactly one of them wins.
  */
 
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 
 import { walletReservations } from "../db/schema.js";
 import * as walletService from "./wallet-service.js";
@@ -121,7 +121,12 @@ export async function reserve(
     wallet: walletService.LockedWallet;
     userId: string;
     amountCents: number;
-    transactionId: string;
+    /**
+     * Null only for a batch item hold, which is taken before its item runs and
+     * linked with `linkTransaction` when the item starts. An item that never
+     * starts is released without ever having a transaction row.
+     */
+    transactionId: string | null;
     description: string;
     ttlMs?: number;
     apiKeyId?: string | null;
@@ -165,6 +170,33 @@ export async function reserve(
     state: "reserved",
     balanceAfter,
   };
+}
+
+/**
+ * Attach a batch item's hold to the transaction row created when the item
+ * starts, and mark it executing.
+ *
+ * Conditional on the hold still being `reserved` and unlinked, so a hold the
+ * reconciler already released cannot be revived and a hold cannot be linked
+ * twice. Returns false when nothing matched; the caller must then not run the
+ * item, because no open hold would pay for it.
+ */
+export async function linkTransaction(
+  tx: WalletTx,
+  params: { reservationId: string; transactionId: string },
+): Promise<boolean> {
+  const rows = await tx
+    .update(walletReservations)
+    .set({ transactionId: params.transactionId, state: "executing", updatedAt: new Date() })
+    .where(
+      and(
+        eq(walletReservations.id, params.reservationId),
+        eq(walletReservations.state, "reserved"),
+        isNull(walletReservations.transactionId),
+      ),
+    )
+    .returning({ id: walletReservations.id });
+  return rows.length > 0;
 }
 
 /**

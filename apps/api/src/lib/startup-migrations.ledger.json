@@ -1042,11 +1042,19 @@
     },
     {
       "id": "M078",
-      "function": "runMigration0135_asyncJobFiles",
+      "function": "runMigration0135_batchOrders",
+      "title": "batch orders (portfolio plan Phase 3 item 5)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "3a543a4e7784c7bb4103a3a8aa2634e60bebc37564b24832eb4ae75de73e47a0"
+    },
+    {
+      "id": "M079",
+      "function": "runMigration0136_asyncJobFiles",
       "title": "async jobs with file output (portfolio plan 2.11)",
       "added": "2026-10-29",
       "columns_written": [],
-      "sha256": "4feda09a79b6f811795e9ce230374c1256f376d59203dfe7ec52504dd3c5dad0"
+      "sha256": "98a23e9bfd1a15165dfd27e6f2511e1f5ef296cd06049669022ed8662efd36c2"
     }
   ],
   "known_overlaps": [

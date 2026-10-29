@@ -7,6 +7,9 @@ import type {
   DoResult,
   DoMeta,
   DryRunResponse,
+  DoBatchRequest,
+  DoBatchResponse,
+  DoBatchDryRunResponse,
   Capability,
   BalanceResponse,
   Transaction,
@@ -35,6 +38,8 @@ const DEFAULT_BASE_URL = "https://api.strale.io";
 const DEFAULT_TIMEOUT = 60_000;
 const DEFAULT_POLL_INTERVAL = 2_000;
 const DEFAULT_MAX_POLL_WAIT = 120_000;
+/** The API gives a batch up to 90s; leave room for the response. */
+const MIN_BATCH_TIMEOUT = 120_000;
 
 export class Strale {
   private readonly clientHeader: string;
@@ -109,6 +114,28 @@ export class Strale {
     }
 
     return doResponse;
+  }
+
+  /**
+   * Run one paid capability over many inputs: one quote, the whole quote held
+   * once, results in input order, and a charge only for items that succeed.
+   * Item failures are reported in `results`, not thrown.
+   */
+  async doBatch(request: DoBatchRequest & { dry_run: true }): Promise<DoBatchDryRunResponse>;
+  async doBatch(request: DoBatchRequest): Promise<DoBatchResponse>;
+  async doBatch(request: DoBatchRequest): Promise<DoBatchResponse | DoBatchDryRunResponse> {
+    const body: Record<string, unknown> = {
+      capability_slug: request.capability_slug,
+      inputs: request.inputs,
+      max_total_price_cents: request.max_total_price_cents,
+    };
+    if (request.timeout_seconds !== undefined) body.timeout_seconds = request.timeout_seconds;
+    if (request.dry_run !== undefined) body.dry_run = request.dry_run;
+    const headers: Record<string, string> = {};
+    if (request.idempotency_key) headers["Idempotency-Key"] = request.idempotency_key;
+    return this.request<DoBatchResponse | DoBatchDryRunResponse>(
+      "POST", "/v1/do/batch", body, headers, Math.max(this.timeout, MIN_BATCH_TIMEOUT),
+    );
   }
 
   // ─── Capabilities ──────────────────────────────────────────────────────────
@@ -251,6 +278,7 @@ export class Strale {
     path: string,
     body?: Record<string, unknown>,
     extraHeaders?: Record<string, string>,
+    timeoutMs: number = this.timeout,
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
@@ -263,7 +291,7 @@ export class Strale {
     const init: RequestInit = {
       method,
       headers,
-      signal: AbortSignal.timeout(this.timeout),
+      signal: AbortSignal.timeout(timeoutMs),
     };
 
     if (body !== undefined) {
@@ -278,7 +306,7 @@ export class Strale {
       if (err instanceof DOMException && err.name === "AbortError") {
         throw new StraleError(
           "timeout_exceeded",
-          `Request timed out after ${this.timeout}ms`,
+          `Request timed out after ${timeoutMs}ms`,
           408,
         );
       }

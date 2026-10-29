@@ -49,7 +49,7 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      eori: DE123456789012345
+      eori: SE5560125790
     expected_fields:
       - field: valid
         operator: not_null
@@ -72,6 +72,13 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: string
+      - field: valid
+        operator: is_true
+        reliability: guaranteed
+      - field: trader_name
+        operator: contains
+        reliability: guaranteed
+        value: 'volvo'
   health_check_input:
     eori: test
 output_field_reliability:

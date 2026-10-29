@@ -187,6 +187,10 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: object
+      - field: total_results
+        operator: lt
+        reliability: guaranteed
+        value: 100000
   health_check_input:
     name: Google
 output_field_reliability:

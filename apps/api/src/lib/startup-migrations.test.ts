@@ -1489,8 +1489,27 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0132_dropSqsResidualSchema",
       "runMigration0133_oauthConnector",
       "runMigration0134_renameCapabilityHealthToSourceHealth",
-      "runMigration0135_asyncJobFiles",
+      "runMigration0135_batchOrders",
+      "runMigration0136_asyncJobFiles",
     ]);
+  });
+});
+
+describe("startup-migrations — block 0135 (batch orders)", () => {
+  it("creates the table and the per-account key index idempotently", async () => {
+    const { runMigration0135_batchOrders } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{}, {}] });
+    const result = await runMigration0135_batchOrders(stub);
+    const [tableSql, indexSql] = stub.renderedSql.map((s) => s.toLowerCase());
+    expect(tableSql).toContain("create table if not exists batch_orders");
+    expect(tableSql).toContain("item_reservation_ids jsonb not null");
+    expect(indexSql).toContain("create unique index if not exists batch_orders_user_idempotency_key_unique");
+    expect(indexSql).toContain("where idempotency_key is not null");
+    expect(result.block).toBe("0135_batchOrders");
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
   });
 });
 
@@ -2376,7 +2395,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(135);
+    expect(Math.max(...numbers)).toBe(136);
   });
 });
 

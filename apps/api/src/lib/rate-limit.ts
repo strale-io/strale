@@ -55,6 +55,7 @@ function checkRate(
   identifier: string,
   maxRequests: number,
   windowMs: number,
+  units = 1,
 ): RateCheckResult {
   const now = Date.now();
   let entry = store.get(identifier);
@@ -67,9 +68,12 @@ function checkRate(
   // Remove timestamps outside the window
   entry.timestamps = entry.timestamps.filter((t) => now - t < windowMs);
 
-  if (entry.timestamps.length >= maxRequests) {
-    // Calculate when the oldest request in the window expires
-    const oldest = entry.timestamps[0];
+  if (entry.timestamps.length + units > maxRequests) {
+    // When enough of the window expires for `units` more. For one unit that
+    // is the oldest entry; a weighted request waits for as many as it needs.
+    // An empty window that still cannot fit is a request larger than the
+    // bucket, which callers bound before asking.
+    const oldest = entry.timestamps[Math.max(0, entry.timestamps.length + units - maxRequests - 1)] ?? now;
     const retryAfterMs = oldest + windowMs - now;
     return {
       allowed: false,
@@ -80,7 +84,7 @@ function checkRate(
     };
   }
 
-  entry.timestamps.push(now);
+  for (let i = 0; i < units; i++) entry.timestamps.push(now);
   const resetAt = Math.ceil((now + windowMs) / 1000);
   return {
     allowed: true,
@@ -133,6 +137,28 @@ export function rateLimitByKey(maxRequests: number, windowMs: number, scope: "ke
 
     return next();
   };
+}
+
+/**
+ * Count `units` against the authenticated key's bucket in one step, for a
+ * request that does the work of several (POST /v1/do/batch counts its items).
+ * All or nothing: a request that does not fit consumes nothing. Returns the
+ * 429 response when it does not fit, null when it may proceed.
+ */
+export function consumeKeyUnits(c: Context, units: number, maxUnits: number, windowMs: number, scope: string): Response | null {
+  const user = c.get("user") as { id: string } | undefined;
+  if (!user) return null;
+  const result = checkRate(`${scope}:key:${c.get("apiKeyId") ?? user.id}`, maxUnits, windowMs, units);
+  setRateLimitHeaders(c, result);
+  if (result.allowed) return null;
+  return c.json(
+    apiError("rate_limited", `Rate limit exceeded: this request needs ${units} of ${maxUnits} units per ${Math.round(windowMs / 1000)}s. Try again in ${result.retryAfterSeconds} seconds.`, {
+      retry_after_seconds: result.retryAfterSeconds,
+      units_requested: units,
+      units_per_window: maxUnits,
+    }),
+    429,
+  );
 }
 
 // Simple validation: an IP must be a plausible IPv4 or IPv6 string.

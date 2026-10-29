@@ -1,5 +1,8 @@
 # crewai-strale
 
+> **Maintenance only (frozen 2026-10-29).** This package keeps working and
+> gets fixes for breakage, but no new features. CrewAI can load MCP servers directly (`MCPServerAdapter` in `crewai-tools`); for new work, connect it to the Strale MCP server at `https://api.strale.io/mcp?src=pypi-readme`.
+
 [Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
 
 ## Install

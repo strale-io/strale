@@ -161,6 +161,14 @@ test_fixtures:
         operator: gt
         reliability: guaranteed
         value: -1
+      - field: holidays.0.date
+        operator: equals
+        reliability: guaranteed
+        value: '2027-01-01'
+      - field: holidays.0.name
+        operator: equals
+        reliability: guaranteed
+        value: 'New Year''s Day'
   health_check_input:
     year: 2025
     country_code: US

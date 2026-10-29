@@ -175,6 +175,14 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: total_urls
+        operator: gt
+        reliability: guaranteed
+        value: 10
+      - field: sample_urls.0.loc
+        operator: contains
+        reliability: guaranteed
+        value: 'strale.dev'
   health_check_input:
     url: https://strale.dev/sitemap.xml
 output_field_reliability:

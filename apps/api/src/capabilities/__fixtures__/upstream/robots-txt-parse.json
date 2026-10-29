@@ -1,0 +1,38 @@
+{
+  "slug": "robots-txt-parse",
+  "recorded_at": "2026-10-29T16:05:07.069Z",
+  "input": {
+    "url": "https://strale.dev/robots.txt"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://strale.dev/robots.txt"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cache-control": "public, max-age=14400, must-revalidate",
+          "cf-cache-status": "REVALIDATED",
+          "cf-ray": "a5236b80c8c8abef-ATL",
+          "content-type": "text/plain; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:07 GMT",
+          "etag": "W/\"c93521b959a6c47f42f50f2f31a8fc47\"",
+          "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=yABUwUbnrv2%2F7a5%2FgtbW57ecX0BGTTqZ3Ec0a3DU5GPugkA24wDnV2FeU8cqzQEpXrvrWJgm7KRwf1ye0f%2Fd3TwyrYcC06sfbA17Kw46cBJELDLYYZ5jZEh7wImr\"}]}",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains",
+          "vary": "accept-encoding",
+          "x-content-type-options": "nosniff"
+        },
+        "body": "# Search engines\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\n# Social\nUser-agent: Twitterbot\nAllow: /\n\nUser-agent: facebookexternalhit\nAllow: /\n\n# AI crawlers welcome\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: Claude-Web\nAllow: /\n\nUser-agent: anthropic-ai\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: Amazonbot\nAllow: /\n\nUser-agent: cohere-ai\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: *\nAllow: /\nAllow: /.well-known/\n\nSitemap: https://strale.dev/sitemap.xml\n",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

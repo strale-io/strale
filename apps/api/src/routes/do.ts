@@ -5,7 +5,7 @@ import { checkCallbackUrl } from "../lib/jobs/callbacks.js";
 import { assertGuardedAllow, BudgetExhaustedError, CapabilityInvocationRefusedError, CapabilityNotClassifiedError } from "../capabilities/guarded-executor.js";
 import { getExecutor } from "../capabilities/index.js";
 import { getDb } from "../db/index.js";
-import { capabilities, failedRequests, transactions, wallets } from "../db/schema.js";
+import { batchOrders, capabilities, failedRequests, transactions, wallets } from "../db/schema.js";
 import { extractClientMeta } from "../lib/attribution.js";
 import { setCostDeadline } from "../lib/call-cost.js";
 import { checkCircuitBreaker } from "../lib/circuit-breaker.js";
@@ -313,6 +313,20 @@ doRoute.post(
       .limit(1);
 
     if (existing) return replaySyncRequest(c, db, existing, idempotencyFingerprint, capabilitySlug, user.id);
+
+    // Keys are account-wide. A key already spent on a batch (POST /v1/do/batch,
+    // whose item rows carry no key) is not a retry of this call; running it
+    // would charge again under a key the caller believes is used.
+    const [batch] = await db
+      .select({ id: batchOrders.id })
+      .from(batchOrders)
+      .where(and(eq(batchOrders.userId, user.id), eq(batchOrders.idempotencyKey, idempotencyKey)))
+      .limit(1);
+    if (batch) {
+      return c.json(apiError("idempotency_key_reused",
+        "This Idempotency-Key was already used for a batch. Use a new key for this call.",
+        { conflicting_batch_id: batch.id }), 409);
+    }
   }
 
   // ── 3. Early auth gate for unauthenticated requests ───────────────────

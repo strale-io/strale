@@ -1,0 +1,68 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "69c317bd24ce1d8f59d5ba18a85d78566913395c"
+  },
+  "at": "2026-10-29T16:21:00.623Z",
+  "inputs": {
+    "source": "/tmp/claude-0/rb.json"
+  },
+  "summary": {
+    "ok": true,
+    "recorded_total": 32,
+    "added": 20,
+    "executor_fix": "ted-procurement sent ISO alpha-2 to TED's alpha-3 buyer-country filter; every country-filtered search returned 0 notices",
+    "live_check": "record-upstream.ts --check 32/32 without drift",
+    "mutation": "weather-lookup manifest reverted to main: its perturbation test fails"
+  },
+  "topic": "h7c-known-answer-tightening",
+  "raw": {
+    "ok": true,
+    "recorded_total": 32,
+    "added": 20,
+    "tightened_manifests": [
+      "api-health-check",
+      "base64-encode-url",
+      "country-economic-indicators",
+      "currency-convert",
+      "cve-details",
+      "cve-lookup",
+      "eori-validate",
+      "food-safety-rating-uk",
+      "forex-history",
+      "og-image-check",
+      "page-exists",
+      "public-holiday-lookup",
+      "robots-txt-parse",
+      "sitemap-parse",
+      "ted-procurement",
+      "usgs-earthquake-search",
+      "weather-lookup",
+      "website-carbon-estimate"
+    ],
+    "recorded_without_manifest_change": [
+      "no-bankruptcy-check",
+      "postal-code-lookup"
+    ],
+    "left_out": {
+      "uptime-check": "status and headers only",
+      "url-health-check": "status and headers only",
+      "fear-greed-index": "throws under both perturbations",
+      "slovenian-company-data": "throws under both perturbations",
+      "stablecoin-flow-check": "throws under both perturbations"
+    },
+    "executor_fix": "ted-procurement sent ISO alpha-2 to TED's alpha-3 buyer-country filter; every country-filtered search returned 0 notices",
+    "replay_contract_test": {
+      "tests_passed": 67,
+      "failed": 0
+    },
+    "live_check": "record-upstream.ts --check 32/32 without drift",
+    "mutation": "weather-lookup manifest reverted to main: its perturbation test fails",
+    "api_suite": {
+      "files_passed": 389,
+      "tests_passed": 7868,
+      "failed": 0
+    }
+  }
+}

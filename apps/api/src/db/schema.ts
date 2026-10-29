@@ -1449,6 +1449,34 @@ export const walletReservations = pgTable(
   ],
 );
 
+// ─── batch_orders ────────────────────────────────────────────────────────────
+// POST /v1/do/batch (block 0135). Written once when the batch's holds are
+// taken and never updated: each item's outcome lives on its hold in
+// wallet_reservations and the transaction that hold links to.
+export const batchOrders = pgTable(
+  "batch_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    apiKeyId: uuid("api_key_id"),
+    capabilityId: uuid("capability_id").notNull().references(() => capabilities.id),
+    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    idempotencyFingerprint: varchar("idempotency_fingerprint", { length: 64 }).notNull(),
+    itemCount: integer("item_count").notNull(),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    quotedTotalCents: integer("quoted_total_cents").notNull(),
+    maxTotalPriceCents: integer("max_total_price_cents").notNull(),
+    /** One hold per item, in input order. */
+    itemReservationIds: jsonb("item_reservation_ids").$type<string[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("batch_orders_user_idempotency_key_unique")
+      .on(table.userId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ],
+);
+
 // ─── capability_invocations ──────────────────────────────────────────────────
 // WP9 — what a capability invocation actually DID, recorded once, as a fact.
 //
@@ -1640,7 +1668,7 @@ export const executionManifestSnapshots = pgTable("execution_manifest_snapshots"
 // ─── Async jobs: file output and completion callbacks (portfolio 2.11) ──────
 //
 // An async /v1/do execution is a `transactions` row (DEC-22); these two tables
-// hang off it. Created by startup-migration block 0135.
+// hang off it. Created by startup-migration block 0136.
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType() {

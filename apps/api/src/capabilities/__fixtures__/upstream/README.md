@@ -28,9 +28,13 @@ any environment variable 16 or more characters long. It never stores request hea
 
 What it changes in a body is listed in that file's `redactions`:
 e-mail addresses become `redacted@example.invalid` (a display name in front of
-one becomes `Fixture person`), Set-Cookie values become `redacted`, and
+one becomes `Fixture person`), Set-Cookie values become `redacted`,
 `pypi-package-info` has its published README replaced, because the README
-names its author and the executor does not read it.
+names its author and the executor does not read it, `cve-lookup` and
+`ted-procurement` have their advisory and notice free text replaced, because
+it can name a reporter or a buyer's contact person and no contract check reads
+it, and `cve-details` drops references hosted on twitter.com, x.com or
+github.com, which name individual researchers.
 
 **Freshness.** CI never calls the network, so it cannot see an upstream
 change. The weekly drift workflow runs `--check`, which calls each recorded
@@ -49,14 +53,11 @@ Sources: GLEIF (CC0), the ECB, CPSC (U.S. government work), Nominatim (data
 Czech Ministry of Finance, Nager.Date and PyPI.
 They are kept here as test inputs only.
 
-Considered and left out, with the reason:
+Considered and left out, with the reason (the slugs that were left out only
+because their contract was too weak are now in the second batch below):
 
 | Slug | Reason |
 |---|---|
-| eori-validate, api-health-check, og-image-check, page-exists, robots-txt-parse, uptime-check, url-health-check, base64-encode-url, website-carbon-estimate | known_answer contract passes with the upstream bodies empty; the test would prove nothing about parsing |
-| cve-lookup, no-bankruptcy-check, postal-code-lookup, public-holiday-lookup, ted-procurement, usgs-earthquake-search, weather-lookup | known_answer contract passes when the upstream answers `{}`; same reason |
-| country-economic-indicators, cve-details, fear-greed-index, forex-history, sitemap-parse, slovenian-company-data, stablecoin-flow-check | the contract fails on a perturbed body only because the executor throws; on hollowed values it passes (stablecoin-flow-check enforces no check at all) |
-| currency-convert, food-safety-rating-uk | the only check a perturbed body fails is a bare `gt -1`; any non-negative number passes |
 | vasp-verify, vasp-non-compliant-check | ESMA answered 403 to every request, and the contract still passed |
 | clinical-trials-search, doi-resolve, fr-bodacc-lookup, slovak-company-data, barcode-lookup | the answer names natural persons (investigators, authors, officers, contributors) |
 | gdpr-website-check, header-security-check, redirect-trace | the input is a third party's home page; recording would commit its HTML |
@@ -64,3 +65,35 @@ Considered and left out, with the reason:
 | vat-validate, company-news, japanese-company-data | the upstream was unavailable at capture time |
 | nl-woz-value, nl-housing-price-index, nl-housing-stats | the live run failed (CBS returned HTTP 406, or no data) |
 | DNS, WHOIS, TLS and TCP executors | they reach the network without fetch, which replay cannot answer |
+
+## Second batch (2026-10-29): known_answer contracts tightened
+
+The first batch left out 25 executors because their known_answer contract
+passed with the upstream content gone. For 18 of them the manifest's
+known_answer now carries checks on values only a parsed answer has (an exact
+CVE, holiday or EORI holder, a plausible range for a rate, temperature or
+population, a link built from a notice number), chosen to hold live for
+years, not just on the recorded day. Two more (`no-bankruptcy-check`,
+`postal-code-lookup`) already failed under the hollowed body and only needed
+recording. `record-upstream.ts --check` passed live for all 32 on 2026-10-29.
+
+Four known_answer inputs proved nothing and were replaced, and two were moved off a page too thin to hold a check:
+
+| Slug | Old input | Why | New input |
+|---|---|---|---|
+| cve-lookup | package `test_value` | a placeholder; OSV answered `{}` | lodash 4.17.20 (five advisories) |
+| eori-validate | DE123456789012345 | not a valid EORI, so `valid: false` matched an empty answer | SE5560125790 (AB Volvo) |
+| api-health-check | the Railway host's `/v1/health` | answered 404 | `https://api.strale.io/health` |
+| ted-procurement | "artificial intelligence" in SE | no Swedish notice matches, and the executor sent `SE` where TED needs `SWE` (fixed in the executor) | "software" in SE |
+| page-exists, base64-encode-url | https://example.com | 577 bytes, 65 above page-exists' thin-content threshold, and the page asks not to be used for testing | https://strale.dev |
+
+The manifests changed here are the authoring source; the production
+known_answer suites change only when `scripts/sync-known-answer-fixtures.ts`
+is run for these slugs.
+
+Still left out after tightening, with the reason:
+
+| Slug | Reason |
+|---|---|
+| uptime-check, url-health-check | the output is the status code and headers; the body is never read, so no body perturbation can fail them |
+| fear-greed-index, slovenian-company-data, stablecoin-flow-check | the hollowed body destroys the lookup key or timestamp, so the executor throws under both perturbations; a throw does not count |

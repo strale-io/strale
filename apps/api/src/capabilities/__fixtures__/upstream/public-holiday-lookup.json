@@ -1,0 +1,43 @@
+{
+  "slug": "public-holiday-lookup",
+  "recorded_at": "2026-10-29T16:05:14.853Z",
+  "input": {
+    "year": 2027,
+    "country_code": "SE"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://date.nager.at/api/v3/PublicHolidays/2027/SE"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "age": "116316",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "api-supported-versions": "3.0",
+          "cache-control": "public,max-age=604800",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236bb19a24c36e-ATL",
+          "content-security-policy": "default-src https: data: 'unsafe-inline' 'unsafe-eval'",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:15 GMT",
+          "last-modified": "Wed, 28 Oct 2026 07:55:54 GMT",
+          "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+          "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=dnyW7nnQuUZKpj7pTmoc6kyzBrYPw6k6whbNtYlIVeQFiDdRKsWM%2BSgIjvzWobWYV%2FqmP6ILLmcD8D6C%2F5hKB3MG7oVNbbu9JSzB0gz540HSbW7jf1D%2BrZleMLVxn58o\"}]}",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Accept-Encoding",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN"
+        },
+        "body": "[{\"date\":\"2027-01-01\",\"localName\":\"Nyårsdagen\",\"name\":\"New Year's Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-01-06\",\"localName\":\"Trettondedag jul\",\"name\":\"Epiphany\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-03-26\",\"localName\":\"Långfredagen\",\"name\":\"Good Friday\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-03-28\",\"localName\":\"Påskdagen\",\"name\":\"Easter Sunday\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-03-29\",\"localName\":\"Annandag påsk\",\"name\":\"Easter Monday\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-05-01\",\"localName\":\"Första maj\",\"name\":\"International Workers' Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-05-06\",\"localName\":\"Kristi himmelsfärdsdag\",\"name\":\"Ascension Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-05-16\",\"localName\":\"Pingstdagen\",\"name\":\"Pentecost\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-06-06\",\"localName\":\"Sveriges nationaldag\",\"name\":\"National Day of Sweden\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-06-25\",\"localName\":\"Midsommarafton\",\"name\":\"Midsummer Eve\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-06-26\",\"localName\":\"Midsommardagen\",\"name\":\"Midsummer Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-11-06\",\"localName\":\"Alla helgons dag\",\"name\":\"All Saints' Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-12-24\",\"localName\":\"Julafton\",\"name\":\"Christmas Eve\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-12-25\",\"localName\":\"Juldagen\",\"name\":\"Christmas Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-12-26\",\"localName\":\"Annandag jul\",\"name\":\"St. Stephen's Day\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]},{\"date\":\"2027-12-31\",\"localName\":\"Nyårsafton\",\"name\":\"New Year's Eve\",\"countryCode\":\"SE\",\"fixed\":false,\"global\":true,\"counties\":null,\"launchYear\":null,\"types\":[\"Public\"]}]",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

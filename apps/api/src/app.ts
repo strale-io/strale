@@ -14,6 +14,7 @@ import { fireAndForget } from "./lib/fire-and-forget.js";
 import { requestContext } from "./middleware/request-context.js";
 import type { AppEnv } from "./types.js";
 import { doRoute } from "./routes/do.js";
+import { doBatchRoute } from "./routes/do-batch.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
 import { jobsRoute } from "./routes/jobs.js";
@@ -514,6 +515,7 @@ app.route("/webhooks", webhookRoute);
 
 // API v1 routes
 app.route("/v1", doRoute);
+app.route("/v1", doBatchRoute);
 app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
