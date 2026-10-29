@@ -893,7 +893,7 @@ surfaces:
     status_date: 2026-10-29
     evidence: packages/n8n-nodes-strale/README.md
     notes: >-
-      1.0.0 rebuilt in the monorepo with three fixed operations (company
+      1.0.0 merged in PR 817 (2026-10-29) with three fixed operations (company
       lookup, EU VAT check, name screening), offline tests on n8n-workflow
       primitives, n8n-node lint and a local scanner pass. Not yet published:
       npm still serves 0.1.4 (2026-04-05), which calls retired routes and
