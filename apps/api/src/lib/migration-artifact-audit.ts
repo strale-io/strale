@@ -194,8 +194,9 @@ export function deriveExpectedArtifacts(sourceText: string): MigrationArtifact[]
  * no block file is found, so a build that left the blocks out cannot pass
  * schema validation with an empty expectation.
  */
-export function readMigrationSourceFiles(): Array<{ path: string; text: string }> {
-  const selfPath = fileURLToPath(import.meta.url);
+export function readMigrationSourceFiles(
+  selfPath: string = fileURLToPath(import.meta.url),
+): Array<{ path: string; text: string }> {
   const ext = selfPath.slice(selfPath.lastIndexOf("."));
   const runnerPath = join(dirname(selfPath), `startup-migrations${ext}`);
   const blocksDir = join(dirname(selfPath), "..", "startup-migrations", "blocks");
