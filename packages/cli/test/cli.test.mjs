@@ -207,7 +207,7 @@ test("async run polls the transaction until completed", async () => {
   });
   assert.equal(await h.run(["run", "slow-thing", "--max-price-cents", "50"]), EXIT.OK);
   assert.deepEqual(h.stdoutJson(), done);
-  assert.equal(h.calls[1].url, "https://api.strale.io/v1/transactions/t9");
+  assert.equal(h.calls[1].url, "https://api.strale.io/v1/transactions/t9?src=cli");
   assert.equal(h.calls.length, 3);
 });
 
@@ -233,9 +233,10 @@ test("async run gives up after --wait and names the transaction", async () => {
     env: { STRALE_API_KEY: "sk_live_x" },
     responses: [jsonResponse(202, { result: { transaction_id: "t9", status: "executing" } }), pending, pending, pending],
   });
-  assert.equal(await h.run(["run", "slow-thing", "--max-price-cents", "50", "--wait", "4"]), EXIT.NETWORK);
+  assert.equal(await h.run(["run", "slow-thing", "--max-price-cents", "50", "--wait", "4"]), EXIT.API_ERROR);
   const e = h.stderrJson();
   assert.equal(e.error_code, "timeout_exceeded");
+  assert.equal(e.retryable, false);
   assert.equal(e.details.transaction_id, "t9");
 });
 
@@ -287,7 +288,7 @@ test("balance needs STRALE_API_KEY and sends it", async () => {
   const h3 = harness({ env: { STRALE_API_KEY: "sk_live_k" }, responses: [jsonResponse(200, { balance_cents: 150, currency: "EUR" })] });
   assert.equal(await h3.run(["balance"]), EXIT.OK);
   assert.deepEqual(h3.stdoutJson(), { balance_cents: 150, currency: "EUR" });
-  assert.equal(h3.calls[0].url, "https://api.strale.io/v1/wallet/balance");
+  assert.equal(h3.calls[0].url, "https://api.strale.io/v1/wallet/balance?src=cli");
   assert.equal(h3.calls[0].init.headers.Authorization, "Bearer sk_live_k");
 });
 
@@ -322,4 +323,40 @@ test("README documents every exit code the CLI defines", async () => {
     assert.ok(readme.includes(`| ${code} | ${meaning} |`), `README row for exit ${code}`);
   }
   assert.deepEqual(Object.values(EXIT).map(String).sort(), Object.keys(HELP.exit_codes).sort());
+});
+
+test("a cap of 0 takes the keyless free-tier path even when a key is set", async () => {
+  const h = harness({ env: { STRALE_API_KEY: "sk_live_k" }, responses: [jsonResponse(200, { result: { status: "completed" } })] });
+  assert.equal(await h.run(["run", "iban-validate", "--max-price-cents", "0"]), EXIT.OK);
+  assert.equal(h.calls[0].init.headers.Authorization, undefined);
+
+  const h2 = harness({ env: { STRALE_API_KEY: "sk_live_k" }, responses: [jsonResponse(200, { result: { status: "completed" } })] });
+  assert.equal(await h2.run(["run", "iban-validate", "--max-price-cents", "1"]), EXIT.OK);
+  assert.equal(h2.calls[0].init.headers.Authorization, "Bearer sk_live_k");
+});
+
+test("top-level guidance in an API error is kept in details", async () => {
+  const apiBody = {
+    error_code: "unauthorized",
+    message: "This capability requires an API key.",
+    free_capabilities: ["iban-validate"],
+    hint: "Try a free tool.",
+    details: { fix: "Send a key." },
+  };
+  const h = harness({ responses: [jsonResponse(401, apiBody)] });
+  assert.equal(await h.run(["run", "paid-thing", "--max-price-cents", "5"]), EXIT.AUTH);
+  const e = h.stderrJson();
+  assert.equal(e.fix, "Send a key.");
+  assert.deepEqual(e.details, { free_capabilities: ["iban-validate"], hint: "Try a free tool." });
+});
+
+test("--help after -- is an argument, and a flag is not taken as a value", async () => {
+  const h = harness({ responses: [jsonResponse(200, { results: [] })] });
+  assert.equal(await h.run(["search", "--", "--help"]), EXIT.OK);
+  assert.match(h.calls[0].url, /q=--help/);
+
+  const h2 = harness();
+  assert.equal(await h2.run(["run", "x", "--input", "--max-price-cents", "5"]), EXIT.USAGE);
+  assert.match(h2.stderrJson().message, /'--input' needs a value/);
+  assert.equal(h2.calls.length, 0);
 });

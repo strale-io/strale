@@ -117,7 +117,7 @@ function parseArgs(argv: string[], allowed: Set<string>): Parsed {
     }
     let value: string | undefined;
     if (eq !== -1) value = arg.slice(eq + 1);
-    else if (i + 1 < argv.length) value = argv[++i];
+    else if (i + 1 < argv.length && !argv[i + 1]!.startsWith("--")) value = argv[++i];
     if (value === undefined) {
       throw usage(`Option '--${name}' needs a value.`, `Pass '--${name} <value>' or '--${name}=<value>'.`);
     }
@@ -244,8 +244,12 @@ async function request<T>(deps: CliDeps, opts: RequestOptions): Promise<T> {
     if (typeof details?.fix === "string") out.fix = details.fix;
     if (typeof details?.retryable === "boolean") out.retryable = details.retryable;
     if (typeof details?.next_step === "string") out.next_step = details.next_step;
+    // Some refusals carry guidance at the top level (free_capabilities, hint,
+    // self_signup); keep it alongside details so the agent sees all of it.
+    const { error_code: _code, message: _message, error: _error, details: _details, ...topLevel } = body;
     const { fix: _fix, retryable: _retryable, next_step: _nextStep, ...rest } = details ?? {};
-    if (Object.keys(rest).length > 0) out.details = rest;
+    const extra = { ...topLevel, ...rest };
+    if (Object.keys(extra).length > 0) out.details = extra;
     throw new CliError(out, exitCodeFor(errorCode, response.status));
   }
 
@@ -316,7 +320,7 @@ async function cmdTools(deps: CliDeps, argv: string[]): Promise<unknown> {
 async function cmdBalance(deps: CliDeps, argv: string[]): Promise<unknown> {
   const p = parseArgs(argv, new Set());
   if (p.positionals.length > 0) throw usage(`'strale balance' takes no arguments; got '${p.positionals.join(" ")}'.`, "Run 'strale balance' on its own.");
-  return request(deps, { method: "GET", path: "/v1/wallet/balance", auth: "required" });
+  return request(deps, { method: "GET", path: "/v1/wallet/balance?src=cli", auth: "required" });
 }
 
 interface DoBody {
@@ -366,7 +370,10 @@ async function cmdRun(deps: CliDeps, argv: string[]): Promise<unknown> {
   const headers: Record<string, string> = {};
   if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
 
-  const first = await request<DoBody>(deps, { method: "POST", path: "/v1/do?src=cli", body, auth: "optional", headers });
+  // The API rejects max_price_cents <= 0 from an authenticated caller, so a
+  // cap of 0 ("free tier only") is sent without the key, on the keyless path.
+  const auth = maxPriceCents === 0 ? "none" : "optional";
+  const first = await request<DoBody>(deps, { method: "POST", path: "/v1/do?src=cli", body, auth, headers });
   const txId = first.result?.transaction_id;
   if (first.result?.status !== "executing" || !txId) return first;
   return poll(deps, txId, waitSeconds);
@@ -381,7 +388,7 @@ async function poll(deps: CliDeps, txId: string, waitSeconds: number): Promise<u
     await sleep(POLL_INTERVAL_MS);
     last = await request<Record<string, unknown>>(deps, {
       method: "GET",
-      path: `/v1/transactions/${encodeURIComponent(txId)}`,
+      path: `/v1/transactions/${encodeURIComponent(txId)}?src=cli`,
       auth: "optional",
     });
     if (last.status === "completed") return last;
@@ -402,12 +409,12 @@ async function poll(deps: CliDeps, txId: string, waitSeconds: number): Promise<u
     {
       error_code: "timeout_exceeded",
       message: `Transaction ${txId} was still '${String(last.status ?? "executing")}' after ${waitSeconds} seconds.`,
-      fix: `It may still finish. Fetch it later with GET ${API_BASE_URL}/v1/transactions/${txId}, or rerun with a larger '--wait'.`,
-      retryable: true,
+      fix: `The call was accepted and may already be charged; do not rerun it blindly. Fetch the result later with GET ${API_BASE_URL}/v1/transactions/${txId}, or pass '--idempotency-key' and a larger '--wait' next time.`,
+      retryable: false,
       source: "cli",
       details: { transaction_id: txId },
     },
-    EXIT.NETWORK,
+    EXIT.API_ERROR,
   );
 }
 
@@ -432,7 +439,7 @@ export const HELP = {
   output: "One JSON document on stdout on success. One JSON error on stderr on failure.",
   exit_codes: {
     "0": "success",
-    "1": "the API returned an error not listed below, or the capability failed",
+    "1": "the API returned an error not listed below, the capability failed, or an async call outlived --wait (it may be charged; fetch it by transaction id)",
     "2": "usage error; nothing was sent",
     "3": "missing or rejected API key",
     "4": "payment: balance, price cap or spend cap",
@@ -448,7 +455,8 @@ export async function main(argv: string[], deps: CliDeps): Promise<number> {
   try {
     let result: unknown;
     const commandHelp = HELP.commands[command as keyof typeof HELP.commands];
-    if (commandHelp && (rest.includes("--help") || rest.includes("-h"))) {
+    const beforeSeparator = rest.includes("--") ? rest.slice(0, rest.indexOf("--")) : rest;
+    if (commandHelp && (beforeSeparator.includes("--help") || beforeSeparator.includes("-h"))) {
       deps.io.stdout(`${JSON.stringify(commandHelp)}\n`);
       return EXIT.OK;
     }

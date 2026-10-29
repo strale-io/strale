@@ -1,6 +1,6 @@
 # Publishing the npm packages
 
-Strale publishes seven npm packages out of this monorepo:
+Strale publishes eight npm packages out of this monorepo:
 
 | package | workspace | notes |
 |---|---|---|

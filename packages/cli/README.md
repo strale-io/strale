@@ -37,7 +37,7 @@ List tools, optionally by category (`--full` adds input and output schemas):
 strale tools --category validation
 ```
 
-Run a free-tier tool. No API key is needed; `0` means "pay nothing":
+Run a free-tier tool. No API key is needed. A cap of `0` means "free tier only": the call is sent without your key even when `STRALE_API_KEY` is set:
 
 ```sh
 strale run iban-validate --input '{"iban":"DE89370400440532013000"}' --max-price-cents 0
@@ -81,7 +81,7 @@ strale run iban-validate --input '{"iban":"DE89370400440532013000"}' --max-price
 
 `--input` must be a JSON object; it defaults to `{}`. `--max-price-cents` is the most you will pay for the call, in euro cents; the API refuses the call if the tool costs more. Options take either `--name value` or `--name=value`.
 
-If a tool runs asynchronously, `strale run` polls the transaction every 2 seconds for up to `--wait` seconds (default 120) and prints the finished transaction. If it is still running when the wait ends, the error names the transaction id so you can fetch it later.
+If a tool runs asynchronously, `strale run` polls the transaction every 2 seconds for up to `--wait` seconds (default 120) and prints the finished transaction. If it is still running when the wait ends, the CLI exits 1 with `timeout_exceeded` and the transaction id. The call may already be charged, so fetch it by id rather than rerunning it; `--idempotency-key` makes a rerun safe.
 
 ## Errors
 
@@ -99,7 +99,7 @@ On failure, stderr gets one line of JSON and stdout gets nothing:
 | `retryable`, `next_step` | Passed through when the API sends them. |
 | `http_status` | The HTTP status, when the API answered. |
 | `source` | `api` if the API returned the error, `cli` if the CLI stopped before or after the request. |
-| `details` | Any other details the API sent (for example `actual_price_cents`, or the x402 `accepts` list). |
+| `details` | Any other details the API sent, including guidance it puts at the top level of its error (for example `actual_price_cents`, `free_capabilities`, `hint`, or the x402 `accepts` list). |
 
 The CLI does not sign x402 payments. Calling a paid tool without `STRALE_API_KEY` returns `payment_required` with the payment options in `details.accepts`.
 
@@ -108,7 +108,7 @@ The CLI does not sign x402 payments. Calling a paid tool without `STRALE_API_KEY
 | Code | Meaning |
 |---|---|
 | 0 | success |
-| 1 | the API returned an error not listed below, or the capability failed |
+| 1 | the API returned an error not listed below, the capability failed, or an async call outlived --wait (it may be charged; fetch it by transaction id) |
 | 2 | usage error; nothing was sent |
 | 3 | missing or rejected API key |
 | 4 | payment: balance, price cap or spend cap |
