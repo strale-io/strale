@@ -1,7 +1,7 @@
 schema_version: 1
 program: distribution
 program_status: active
-updated: 2026-10-27
+updated: 2026-10-29
 tracks:
   - id: T1
     title: "D0: Close attribution gaps"
@@ -57,12 +57,15 @@ tracks:
     evidence: []
   - id: T4
     title: "D3: Coinbase featured tier"
-    status: queued
+    status: founder_gated
     gate: none
     depends_on:
       - T1
       - T2
     owner: session
+    blocker: The CDP support address or form for OUTBOX row cdp-bazaar-curation is
+      Petter's answer to needs-founder ask 6493139521 (2026-10-29); CDP publishes
+      no support email and D3 rules out Discord.
     next_action: "D2 metadata checked live on 2026-10-29. The v2 challenges carry
       serviceName, tags, iconUrl and extensions.bazaar, and Coinbase's validator
       accepts /x402/v2/vat-validate; it rejects the legacy /x402/<slug> paths, which
@@ -186,12 +189,15 @@ tracks:
     evidence: []
   - id: T10
     title: "D9: Clay HTTP template"
-    status: queued
+    status: founder_gated
     gate: none
     depends_on:
       - T1
       - T2
     owner: session
+    blocker: Running the template inside Clay needs a free Clay account, Petter's
+      go or no-go on needs-founder ask 6493140047 (2026-10-29). The template and
+      doc merged in PR 814.
     next_action: "Template and doc built in examples/clay-enrichment (registry
       status and VAT columns, src=clay-template on the URL and X-Strale-Client
       clay-template/1.0.0), checked in CI by npm run clay:test. Start date
