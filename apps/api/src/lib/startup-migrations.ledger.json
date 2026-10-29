@@ -1031,6 +1031,14 @@
       "added": "2026-10-29",
       "columns_written": [],
       "sha256": "d4dbc4bf8ca92240b636c1237c2933ba4b51a45aa4298020b49e9a324299fe20"
+    },
+    {
+      "id": "M077",
+      "function": "runMigration0134_batchOrders",
+      "title": "batch orders (portfolio plan Phase 3 item 5)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "7271e5642d7d02c523e03ee1ddece6f08a043cf9dd0d835502d32de20ee402d9"
     }
   ],
   "known_overlaps": [

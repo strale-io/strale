@@ -73,6 +73,63 @@ export interface DryRunResponse {
   wallet_sufficient: boolean;
 }
 
+// ─── POST /v1/do/batch ─────────────────────────────────────────────────────────
+
+export interface DoBatchRequest {
+  /** The tool to run over every input (batches do not match on a task) */
+  capability_slug: string;
+  /** One object of the tool's parameters per item; 1 to 100 items */
+  inputs: Record<string, unknown>[];
+  /** The most the whole batch may cost, in EUR cents (price × items must fit) */
+  max_total_price_cents: number;
+  /** Time budget per item in seconds (5 to 60) */
+  timeout_seconds?: number;
+  /** If true, validates and quotes without reserving or running anything */
+  dry_run?: boolean;
+  /** One key for the whole batch; a retry returns the recorded results */
+  idempotency_key?: string;
+}
+
+export interface DoBatchItemResult {
+  index: number;
+  status: "completed" | "failed" | "not_run";
+  transaction_id: string | null;
+  /** Charged for this item: the unit price if completed, else 0 */
+  price_cents: number;
+  latency_ms: number | null;
+  output: Record<string, unknown> | null;
+  provenance: Provenance | null;
+  error?: { error_code: string; message: string; retryable: boolean; detail?: string };
+}
+
+export interface DoBatchResponse {
+  batch_id: string;
+  status: "completed" | "partial" | "failed";
+  capability_used: string;
+  item_count: number;
+  succeeded: number;
+  failed: number;
+  not_run: number;
+  unit_price_cents: number;
+  quoted_total_cents: number;
+  charged_cents: number;
+  released_cents: number;
+  wallet_balance_cents: number;
+  /** In input order */
+  results: DoBatchItemResult[];
+  meta: { idempotency_replay?: boolean };
+}
+
+export interface DoBatchDryRunResponse {
+  dry_run: true;
+  would_execute: string;
+  item_count: number;
+  unit_price_cents: number;
+  quoted_total_cents: number;
+  wallet_balance_cents: number;
+  wallet_sufficient: boolean;
+}
+
 export interface Provenance {
   source: string;
   fetched_at: string;

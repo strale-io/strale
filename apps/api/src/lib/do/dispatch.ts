@@ -43,7 +43,7 @@ import { buildUpgradeBlock } from "./upgrade.js";
 // F-0-009 Stage 2: integrity hashing moved to jobs/integrity-hash-retry.ts.
 
 // Usage/cost headers for Beacon transactability
-function setCreditsHeaders(c: { header: (name: string, value: string) => void }, balanceCents: number, costCents?: number) {
+export function setCreditsHeaders(c: { header: (name: string, value: string) => void }, balanceCents: number, costCents?: number) {
   c.header("X-Credits-Remaining", String(balanceCents));
   c.header("X-Credits-Currency", "EUR");
   if (costCents !== undefined) {
@@ -70,7 +70,7 @@ function setCreditsHeaders(c: { header: (name: string, value: string) => void },
  * two rounds each fixed it by pinning one more file with a source-text
  * assertion, which is how it kept coming back one file over.
  */
-type InvocationActor =
+export type InvocationActor =
   | {
       kind: "anonymous";
       /**
@@ -109,7 +109,7 @@ function recordFactWithoutHoldingTheLock(
   );
 }
 
-async function executeWithRetry(
+export async function executeWithRetry(
   executor: (input: Record<string, unknown>) => Promise<any>,
   input: Record<string, unknown>,
   capability: CapabilityInfo,
@@ -151,14 +151,14 @@ async function executeWithRetry(
 // Override per-cap or globally with EXEC_HARD_TIMEOUT_MS env.
 const EXEC_HARD_TIMEOUT_MS = parseInt(process.env.EXEC_HARD_TIMEOUT_MS ?? "300000", 10);
 
-class ExecutionTimeoutError extends Error {
+export class ExecutionTimeoutError extends Error {
   constructor(timeoutMs: number) {
     super(`Capability execution exceeded ${timeoutMs}ms hard timeout`);
     this.name = "ExecutionTimeoutError";
   }
 }
 
-function executeWithHardTimeout<T>(
+export function executeWithHardTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
 ): Promise<T> {

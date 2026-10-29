@@ -1,6 +1,6 @@
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { type Context } from "hono";
-import { transactions, wallets } from "../../db/schema.js";
+import { transactions, walletReservations, wallets } from "../../db/schema.js";
 import { apiError } from "../errors.js";
 import { isReplayable } from "../idempotency-fingerprint.js";
 import { redactAuditTrail } from "../sanitize.js";
@@ -58,7 +58,22 @@ export async function spendCapWouldExceed(
         gte(transactions.createdAt, oneHourAgo),
       ),
     );
-  const spent = Number(row?.total ?? 0);
+  // A batch takes all its item holds up front and creates each item's
+  // transaction row only when the item starts, so its not-yet-started items
+  // have no row above to count. Without this, a second request in that window
+  // would pass the cap against spend the batch has already committed to.
+  const [held] = await tx
+    .select({ total: sql<string>`COALESCE(SUM(amount_cents), 0)::text` })
+    .from(walletReservations)
+    .where(
+      and(
+        eq(walletReservations.userId, userId),
+        eq(walletReservations.mode, "hold"),
+        inArray(walletReservations.state, ["reserved", "executing"]),
+        isNull(walletReservations.transactionId),
+      ),
+    );
+  const spent = Number(row?.total ?? 0) + Number(held?.total ?? 0);
   if (spent + requestedCents > capCents) return { spent };
   return null;
 }

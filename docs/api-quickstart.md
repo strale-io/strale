@@ -244,6 +244,43 @@ A2A and HTTP MCP protocol errors carry guidance at `error.data.details`.
 The executor rollout covers the tools listed in the error inventory;
 remaining executors can adopt explicit field-level fixes in a later batch.
 
+## Batch calls: one tool, many inputs
+
+`POST /v1/do/batch` runs one paid tool over up to 100 inputs in one request,
+with one quote and one Idempotency-Key. API key and wallet only.
+
+```bash
+curl -X POST https://api.strale.io/v1/do/batch \
+  -H "Authorization: Bearer sk_live_..." \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: vat-run-2026-10-29" \
+  -d '{"capability_slug": "vat-validate",
+       "inputs": [{"vat_number": "SE556703748501"}, {"vat_number": "DE811569869"}],
+       "max_total_price_cents": 10}'
+```
+
+- The quote is the tool's `price_cents` times the number of inputs. It must
+  not exceed `max_total_price_cents`, the wallet must cover it, and the hourly
+  spend cap and the key's spend limits count all of it. The whole quote is
+  held before anything runs.
+- Every input is validated first. One invalid input refuses the batch with its
+  index in `details.invalid_items`, and nothing is charged.
+- Items run five at a time. Each completed item is charged its price; a failed
+  item is not. Items not started within the batch's 90-second budget come back
+  as `not_run`, not charged, and can be resent.
+- `results` is in input order, one entry per input, each with `status`,
+  `price_cents` (what that item was charged), `output` and `transaction_id`.
+  `charged_cents` and `released_cents` give the totals.
+- The rate limit counts items: 300 per minute per key.
+- Retrying with the same Idempotency-Key returns the recorded results without
+  charging again; while the first batch is still running, the retry gets 409
+  `request_in_progress`.
+- `dry_run: true` validates and quotes without reserving anything.
+- Free tools and tools that run asynchronously cannot be batched; call them
+  with `POST /v1/do`.
+
+TypeScript: `await strale.doBatch({ capability_slug, inputs, max_total_price_cents })`.
+
 ## Synchronous paid calls: reservations and timeouts
 
 `POST /v1/do` reserves funds before running a synchronous paid capability.
