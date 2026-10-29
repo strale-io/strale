@@ -149,8 +149,8 @@ threads:
       2. Provenance: how is your copy of the register obtained, for example through an
          official licence or bulk channel, per-document purchases, or automated retrieval
          from handelsregister.de? Can you document this in writing?
-      3. Storage: are there limits on caching or retaining results on our side? We delete
-         stored response content after 90 days.
+      3. Storage: are there limits on caching or retaining results on our side? We remove
+         stored response content (inputs and outputs) after 90 days.
       4. Service: do you offer an SLA or uptime commitment, and what support channel and
          response times apply?
       5. Pricing: what currency are prices in, what does one credit cost on each plan, are

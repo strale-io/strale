@@ -14,7 +14,6 @@ sources:
   - docs/research/2026-05-06-bundesapi-civic-tech-audit.md
   - apps/api/src/capabilities/german-company-data.ts
   - config/vendors.yaml
-  - apps/api/src/lib/vendor-terms.data.json
   - docs/company/OUTBOX.yaml
 ---
 
@@ -37,9 +36,9 @@ supplied the starting facts; the ones not confirmed this session are marked.
   Contact: info@registercheck.de.
 - **Product.** REST at `https://api.registercheck.de/v1` (bearer key,
   `rc_live_…`; 53 operations in the OpenAPI 3.1 document) and a remote MCP
-  server at `https://mcp.registercheck.de/mcp` (12 tools, OAuth 2.1). The
-  60 requests a minute limit comes from the orchestrator and was not
-  confirmed this session.
+  server at `https://mcp.registercheck.de/mcp` (12 tools, OAuth 2.1). Rate
+  limit 60 requests a minute per key, and 150,000 a month with a plan or
+  9,000 without (anchorterminal.com).
 - **Age.** `/v1` first released 17 September 2026; paths renamed in place in
   October 2026 (anchorterminal.com). Openlaw acquired registercheck.de from
   Deepsearch GmbH in September 2026 (same source).
@@ -50,7 +49,9 @@ supplied the starting facts; the ones not confirmed this session are marked.
   and 100,000 credits a month and overage at 7.5, 2.25 and 0.75 cents a
   credit; currency not stated (anchorterminal.com). No x402.
 - **Licence.** Proprietary, `LicenseRef-Registercheck-Terms`. The terms were
-  not readable (bot check, per anchorterminal.com; HTTP 429 this session).
+  not readable: anchorterminal.com found the terms, privacy, pricing and
+  imprint pages behind a Vercel Security Checkpoint on 21 October 2026, and
+  registercheck.de answered this session with HTTP 429.
 - **Third-party grade.** D, 52.4/100, "not agent-ready", on anchorterminal.com:
   no status page or SLA, full-permission keys only, the breaking October
   renames.
@@ -63,17 +64,24 @@ than pushed to us by the courts", with fields extracted from filed documents.
 That describes a maintained full copy refreshed by periodic reads. The page
 does not say through which channel.
 
-Under DEC-20261023-A, vendor data is allowed only when the vendor's terms
-permit resale (verified and recorded), the data is not in the never lane, and
-the vendor's method involves no login or account use and no getting around
-blocks. The Handelsregister's own use rules cap automated access (60 requests
+DEC-20261023-A allows "vendor data, whatever the vendor's collection
+method" when five conditions hold: the vendor's terms permit resale, verified
+and recorded; the data is not in the never lane apart from the SERP
+carve-out; the vendor's documented method involves no login or account use;
+the vendor is not a defendant over circumvention for that data; and Strale
+records the vendor and acquisition method for every answer. The Handelsregister's own use rules cap automated access (60 requests
 an hour, per the 2026-05-06 bundesAPI audit) and, per the orchestrator,
 forbid systematic retrieval to build a parallel register. The terms text
-itself is not on record in this repository; that claim is to confirm. If
-registercheck's copy was built by crawling handelsregister.de against those
-rules, buying it would be consuming a circumvention product, and the vendor
-lane would not cover it. If Openlaw holds the copy under an official data
-channel or bought the documents, it may.
+itself is not on record in this repository; that claim is to confirm. A crawl that
+breaks those use rules is not the same as getting around blocks, so the rule
+does not plainly exclude it.
+
+Gate 2 below ("not a parallel-register crawl") is therefore **a deliberate
+choice stricter than the rule**, not rule text. The reasons: the use rules
+cite §§303a,b StGB for excess automated access (bundesAPI audit), and the
+rule itself names a claim reaching Strale as a customer of a non-compliant
+vendor as its residual risk. If Petter prefers to apply only the rule's five
+conditions, gate 2 drops; either way the same bar must apply to OpenRegister.
 
 **The strongest counter-argument to treating this as disqualifying:**
 OpenRegister, which `german-company-data` already uses, is also a private
@@ -164,8 +172,8 @@ against either side.
   plan's credit price once the currency is known. OpenRegister: 10 credits
   for a canonical-id lookup, 11 for a name lookup (executor comment).
 - Spend: 20 companies × 3 calls × about 10 credits is about 600 credits.
-  Even one call per company (about 200 credits) exceeds registercheck's
-  50-credit trial, so the run needs a paid plan, which is a spend decision
+  Even one call per company (about 200 credits) exceeds the 50-credit
+  trial (orchestrator's figure; no public source confirmed it), so the run needs a paid plan, which is a spend decision
   for Petter.
 
 ## What would change the plan
