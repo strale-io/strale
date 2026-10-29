@@ -112,7 +112,23 @@ publishing.
     GROUP BY user_id
     HAVING COUNT(DISTINCT date_trunc('week', created_at)) >= 4
   ) r;
+
+  -- Calling weekly (the day-90 "at least 2" test): accounts with Zapier
+  -- calls in each of the last 4 complete weeks
+  SELECT COUNT(*) AS weekly_accounts FROM (
+    SELECT user_id
+    FROM transactions
+    WHERE client_meta->>'client_header' LIKE 'zapier-strale/%'
+      AND status = 'completed'
+      AND created_at >= date_trunc('week', now()) - interval '4 weeks'
+      AND created_at <  date_trunc('week', now())
+    GROUP BY user_id
+    HAVING COUNT(DISTINCT date_trunc('week', created_at)) = 4
+  ) w;
   ```
+  The first query's "4 weeks" is the D5 repeat-caller definition (same key
+  in at least 4 weeks, at any time); the last one is the stricter weekly
+  test for day 90.
   Exclude Strale's own test accounts with the `externalCustomers` rule in
   `apps/api/src/lib/metrics/commercial.ts`. Counts only; no outreach from
   these rows (charter customer-data boundary).

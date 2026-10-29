@@ -3,8 +3,7 @@
 Strale is a tool library for company lookups, EU VAT, IBAN and email checks,
 and name screening. Pay per call with an API key.
 
-Pay per call with your Strale API key. The app is built locally and has not
-been published.
+The app is built locally and has not been published.
 
 ## Usage
 
@@ -24,9 +23,10 @@ Potential name matches do not establish identity or determine whether to pay.
 | Screen a Name | Person’s name, optional country context and birth date | `sanctions-check` then `pep-check` |
 
 All five actions are visible. Company lookup, VAT, IBAN and email are the
-general business checks; name screening is one action of five, and no
-template or listing text targets compliance or finance teams (distribution
-strategy §9 item 8, pending Petter). `iban-validate` and `email-validate`
+general business checks; name screening is one action of five. Listing
+text names no team; the starter Zaps below are supplier, invoice and contact
+jobs and include no sanctions re-screening template (distribution strategy
+§9 item 8, pending Petter). `iban-validate` and `email-validate`
 are free-tier tools today, so an API-key call to them does not debit the
 wallet; that can change and is not stated in listing text.
 
@@ -48,15 +48,18 @@ match the actual schemas; name screening has no numerical match score.
 Name lookups in GB, NO and FI return the best fuzzy match; check the returned
 `registration_number` before relying on the result. Company lookup returns
 name, status and address where supplied. VAT returns validity, country and
-available company details. IBAN returns validity, country, bank and branch
-code where the format defines them, and the reason when invalid; it checks
-structure and checksum only, not whether the account is open. Email returns
+available company details. IBAN returns validity, country and the reason
+when invalid, plus bank and branch code for valid IBANs from DE, GB, FR, SE,
+NO, DK, FI, NL, ES, IT, AT and CH (the countries whose format the tool
+parses); it checks structure and checksum only, not whether the account is
+open. Email returns
 validity, format, domain, mail-server, disposable, role and free-provider
 flags and a suggested correction; it does not confirm the mailbox exists.
 Screening returns separate match counts, matches, lists, source and source
 times for both checks. Missing evidence stays empty, rather than becoming a
 negative result (an email that fails the format check leaves the DNS fields
-empty). Arrays and structured list evidence are JSON strings with named
+empty). One exception sits in the tool: a failed DNS lookup is reported as
+no mail-server records, so the address reads as not valid. Arrays and structured list evidence are JSON strings with named
 output fields.
 
 ## Connect and test locally

@@ -40,6 +40,12 @@ const routes = {
     output: "business_id",
   },
 };
+// Countries whose bank and branch codes iban-validate parses by the national
+// format. Elsewhere it falls back to the first four BBAN characters, which is
+// wrong for e.g. BE and PL, so those codes are left empty here.
+const ibanBankCodeCountries = new Set([
+  "DE", "GB", "FR", "SE", "NO", "DK", "FI", "NL", "ES", "IT", "AT", "CH",
+]);
 const time = "2026-10-27T12:00:00.000Z";
 const companySample = {
   company_name: "Example Company",
@@ -178,7 +184,7 @@ const jobs = {
   check_iban: {
     title: "Check an IBAN",
     description:
-      "Check an IBAN’s format, length and checksum, and return its country and bank code. Does not confirm the account is open.",
+      "Check an IBAN’s format, length and checksum, and return its country and, for supported countries, its bank code. Does not confirm the account is open.",
     hidden: false,
     tools: ["iban-validate"],
     inputFields: [field("iban", "IBAN", "string", true)],
@@ -204,11 +210,14 @@ const jobs = {
         iban: requiredText(i.iban, "IBAN"),
       });
       const o = r.output;
+      // No codes from an IBAN that failed validation or from a country
+      // without a parsed national format.
+      const codes = o.valid && ibanBankCodeCountries.has(o.country_code);
       return {
         valid: o.valid,
         country_code: o.country_code || null,
-        bank_code: o.bank_code || null,
-        branch_code: o.branch_code || null,
+        bank_code: (codes && o.bank_code) || null,
+        branch_code: (codes && o.branch_code) || null,
         reason: o.error ?? null,
         ...evidence(r),
       };

@@ -220,6 +220,20 @@ describe("Zapier native app", () => {
     assert.equal(o.bank_code, null);
     assert.equal(o.reason, "Invalid IBAN format.");
   });
+  it("leaves bank codes empty for a failed checksum or an unparsed country", async () => {
+    for (const [iban, output] of [
+      ["SE00BAD", { valid: false, country_code: "SE", bank_code: "500", branch_code: null, error: "IBAN check digits are invalid (mod-97 check failed)." }],
+      ["BE00EXAMPLE", { valid: true, country_code: "BE", bank_code: "0000", branch_code: null }],
+    ]) {
+      mock("iban-validate", { iban }, {
+        result: { ...fixtures["iban-validate"].result, output },
+      });
+      const o = await run("check_iban", { iban });
+      assert.equal(o.country_code, output.country_code);
+      assert.equal(o.bank_code, null);
+      assert.equal(o.branch_code, null);
+    }
+  });
   it("maps a full email check", async () => {
     mock("email-validate", { email: "person@example.com" });
     assert.deepEqual(
@@ -525,7 +539,7 @@ describe("Zapier native app", () => {
     ["check_iban", { iban: " " }],
     ["check_email", { email: "x" }],
   ]) {
-    it(`validates before paid calls: ${key} ${JSON.stringify(
+    it(`validates input before any call: ${key} ${JSON.stringify(
       inputs
     )}`, async () => {
       await assert.rejects(run(key, inputs), (e) => e.name === "HaltedError");
