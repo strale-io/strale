@@ -60,8 +60,15 @@ const ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // all (distinct payers at zero included). Served 402 challenges are not
 // recorded anywhere, so "challenges served but nobody pays" is not measurable
 // from here; zero settling payers is treated as broken whatever the cause.
+//
+// The others also need a baseline of their own (MIN_OTHERS_PER_DAY): one small
+// payer settling once a day proves little, and a v1-client die-off that takes
+// out the big buyer while a lone v2 payer carries on would otherwise read as
+// "concentrated" (review finding, 2026-10-29). The warning keeps the rail
+// suspects in its text for the same reason.
 const MAX_EXCLUDED_BUYERS = 2;
 const OTHERS_NEAR_BASELINE_RATIO = 0.7;
+const MIN_OTHERS_PER_DAY = 3;
 
 type PayerRow = { payer: string | null; last24h: number; prior7d: number };
 
@@ -109,7 +116,7 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
     const removed = top.slice(0, k);
     const oLast = last24h - removed.reduce((a, r) => a + r.last24h, 0);
     const oBase = baselinePerDay - removed.reduce((a, r) => a + r.prior7d, 0) / 7;
-    if (oLast >= 1 && oLast >= oBase * OTHERS_NEAR_BASELINE_RATIO) {
+    if (oBase >= MIN_OTHERS_PER_DAY && oLast >= 1 && oLast >= oBase * OTHERS_NEAR_BASELINE_RATIO) {
       excluded = k;
       othersLast24h = oLast;
       othersBaselinePerDay = oBase;
@@ -209,8 +216,10 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
         totals +
         describeBuyers(verdict) +
         `The drop is explained by the top buyer${verdict.excluded === 1 ? "" : "s"} pausing; the rest of the ` +
-        `payers are at or near their own baseline, so the rail is settling. This is a customer signal, not ` +
-        `an outage. It becomes CRITICAL if the other payers fall off too.`,
+        `payers are at or near their own baseline, so the rail is settling and this is most likely a customer ` +
+        `signal. It becomes CRITICAL if the other payers fall off too. If a challenge-version change deployed ` +
+        `just before the drop, check the x402-payment-payload-version log counter anyway: a v1-only buyer ` +
+        `stops paying on a v2 challenge while v2 payers carry on.`,
     });
     return verdict;
   }

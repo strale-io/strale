@@ -64,6 +64,8 @@ async function runScenario(seeds: Seed[]) {
   await getDb()
     .transaction(async (tx) => {
       const db = tx as unknown as Database;
+      // dispute_requests references transactions without a cascade; clear it first (rolled back with the rest).
+      await db.execute(sql`DELETE FROM dispute_requests WHERE transaction_id IN (SELECT id FROM transactions WHERE x402_settlement_id IS NOT NULL)`);
       await db.execute(sql`DELETE FROM transactions WHERE x402_settlement_id IS NOT NULL`);
       await db.execute(sql`DELETE FROM health_monitor_events WHERE event_type = 'alert_sent' AND details->>'alert_key' LIKE 'x402-settlement-volume-drop%'`);
       await seed(db, seeds);
