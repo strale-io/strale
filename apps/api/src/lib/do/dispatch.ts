@@ -1130,7 +1130,7 @@ export async function executeSync({ c, db, user, capability, executor, execution
           wallet_balance_cents: result.balance,
           required_cents: result.required,
           topup_url: "/v1/wallet/topup",
-          x402_fallback: `This capability is also available via x402 pay-per-call (USDC on Base). GET https://api.strale.io/x402/${capability.slug}`,
+          x402_fallback: `This capability is also available via x402 pay-per-call (USDC on Base). GET https://api.strale.io/x402/v2/${capability.slug}`,
         },
       ),
       402,

@@ -123,6 +123,31 @@ describe("round 3 example publication", () => {
     expect(metadata.inputOmission).toBe("placeholder example");
     expect(metadata.outputOmission).toBe("placeholder example");
   });
+  it("publishes two-word prose in an output example but not in an input", () => {
+    // Coinbase's validator flags a v2 challenge without output.example. The
+    // name heuristic matches any two words, so it withheld almost every text
+    // tool's output; it still applies to inputs.
+    const prose = { status: "Moved Permanently", summary: "the page moved to a new address" };
+    const metadata = metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: prose }, test_fixtures: { health_check_input: prose } });
+    expect(metadata.outputExample).toEqual(prose);
+    expect(metadata.inputOmission).toBe("possible personal name");
+  });
+  it.each([
+    [{ reply_to: "jane@acme.io" }, "email address"],
+    [{ support_line: "+46 70 123 45 67" }, "phone or card number"],
+    [{ full_name: "Jane Doe" }, "personal data field"],
+    [{ trademarks: [{ applicant: "Jane Smith" }] }, "personal data field"],
+    [{ commit: { author: "Jane Smith" } }, "personal data field"],
+    [{ repo_owner: "jsmith" }, "personal data field"],
+    [{ text: "12 Example Street" }, "street address"],
+  ])("still withholds output example %j (%s)", (value, reason) => {
+    expect(metadataFromManifest({ ...tool, description: "tool", input_schema: {}, output_schema: { example: value } }).outputOmission).toBe(reason);
+  });
+  it("still withholds every output example of a personal-data or screening tool", () => {
+    const prose = { summary: "the page moved" };
+    expect(metadataFromManifest({ ...tool, processes_personal_data: true, description: "tool", output_schema: { example: prose } }).outputOmission).toBe("processes_personal_data");
+    expect(metadataFromManifest({ ...tool, category: "compliance", description: "tool", output_schema: { example: prose } }).outputOmission).toBe("compliance or screening category");
+  });
   it("does not treat a placeholder substring as a whole word", () => {
     expect(inputPrivacyFailure(tool, { text: "testing" })).toBeUndefined();
   });
