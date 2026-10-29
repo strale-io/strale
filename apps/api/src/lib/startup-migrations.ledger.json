@@ -1050,7 +1050,7 @@
       "title": "Redacted Row Deletion Reason",
       "added": "2026-10-29",
       "columns_written": [],
-      "sha256": "de7578302364d2059731d305715f7acf616a537305bda6873857146515f6a94c"
+      "sha256": "026620714a80d7c58e458fde7bcbcf57ffcb35e12da70d15709cd41d2c0c2eb6"
     },
     {
       "id": "M079",
@@ -1563,7 +1563,7 @@
         "M047",
         "M079"
       ],
-      "note": "Block 0136 (M079, 2026-10-29) undoes what 0087 (M047) did to customer-deleted redacted rows: 0087 cleared deleted_at on rows 0136 re-deletes, which is exactly the fight this check exists for. It is resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0136 has run. Disjoint thereafter by construction, not by predicate."
+      "note": "Block 0087 (M047) renamed pii_retention_purge to content_retention_purge; block 0136 (M079, 2026-10-29) sets user_request on customer-deleted redacted rows that still carry either retention reason, so on those rows the two write opposite values. Resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0136 has run."
     }
   ]
 }

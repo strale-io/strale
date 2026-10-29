@@ -33,7 +33,24 @@ Intent: H7e PR A (platform-hardening T7), fix the pre-existing startup-migration
 - Ledger M077-M079; known_overlaps added for 0030/0134 (ADD COLUMN only) and
   0087/0136 (resolved by retiring 0087).
 
-Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7-migration-block-repairs.json).
+Evidence: [receipt](../../../archive/receipts/2026-10-29-test-run-h7-migration-block-repairs.json),
+[after review](../../../archive/receipts/2026-10-29-test-run-h7-migration-block-repairs-review.json).
+
+Independent review (fresh read-only Claude context): PASS WITH NITS. Fixed:
+a redacted row with a NULL reason is now deliberately allowed to take its
+deletion's reason (it was by accident, `NULL IN (...)`), a ledger note, and
+four test gaps. Kept: 0136 ignores legal hold (the route would have left a
+held row deleted too).
+
+## Known gaps
+
+- A customer-deleted row with no `transaction_quality` row (quality capture is
+  fire-and-forget on `/v1/do`; other rails may not write one) cannot be
+  identified and stays visible. Sizing it needs request logs for
+  `DELETE /v1/transactions/:id`, which this session could not read.
+- Rollback hazard: a build from before this PR runs 0103 every boot and puts
+  the old trigger function back, so the bug returns until a later build runs
+  0135 again. Rows 0136 fixed stay fixed (their reason is `user_request`).
 
 ## Owed in production (no DB or Railway log access in this session)
 

@@ -16,9 +16,11 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  *
  * This replaces the trigger function with one that lets `deletion_reason`
  * change only when the old reason is a content redaction
- * (`content_retention_purge`, or the older `pii_retention_purge`) and the row
- * is deleted after the update: the delete itself, or block 0136 correcting a
- * row deleted under the old function. Every other update pins the reason as
+ * (`content_retention_purge`, or the older `pii_retention_purge`) or absent
+ * (a redacted row from before reasons were written), and the row is deleted
+ * after the update: the delete itself, or block 0136 correcting a row deleted
+ * under the old function. The NULL case is spelled out because
+ * `NULL IN (...)` is NULL, which would skip the pin by accident. Every other update pins the reason as
  * before, so an Art. 17 `account_closure_erasure` is never overwritten by the
  * later 1095-day purge. Content stays cleared and `redacted_at` stays pinned. Block 0087 is retired in
  * run-policy.ts and block 0136 re-deletes the rows it restored.
@@ -31,7 +33,7 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * whose body carries the new rule.
  */
 export const REDACTED_ROW_DELETION_RULE =
-  "OLD.deletion_reason IN ('content_retention_purge', 'pii_retention_purge') AND NEW.deleted_at IS NOT NULL";
+  "(OLD.deletion_reason IS NULL OR OLD.deletion_reason IN ('content_retention_purge', 'pii_retention_purge')) AND NEW.deleted_at IS NOT NULL";
 
 export async function runMigration0135_redactedRowDeletionReason(
   tx: MigrationExecutor,
@@ -51,7 +53,7 @@ export async function runMigration0135_redactedRowDeletionReason(
         NEW.idempotency_key := NULL;
         NEW.client_meta     := NULL;
         NEW.redacted_at     := OLD.redacted_at;
-        IF NOT (OLD.deletion_reason IN ('content_retention_purge', 'pii_retention_purge') AND NEW.deleted_at IS NOT NULL) THEN
+        IF NOT ((OLD.deletion_reason IS NULL OR OLD.deletion_reason IN ('content_retention_purge', 'pii_retention_purge')) AND NEW.deleted_at IS NOT NULL) THEN
           NEW.deletion_reason := OLD.deletion_reason;
         END IF;
       END IF;

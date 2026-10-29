@@ -32,6 +32,7 @@ describeMaybe("startup migrations 0134-0136: a deleted redacted row stays delete
   let client: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle>;
   const created: string[] = [];
+  let undeletedByOld0087: string | undefined;
 
   async function redactedTransaction(): Promise<string> {
     const [{ id }] = (await db.execute(sql`
@@ -113,10 +114,12 @@ describeMaybe("startup migrations 0134-0136: a deleted redacted row stays delete
 
     await runMigration0087_unhideRedactedRows(db);
     expect((await read(id)).deleted_at).toBeNull();
+    undeletedByOld0087 = id;
   });
 
   it("an already-migrated boot skips 0087 and 0103, restores the rule, and deletes the restored row again", async () => {
-    const victim = created[created.length - 1];
+    const victim = undeletedByOld0087;
+    expect(victim, "runs after the reproduction test").toBeDefined();
     const [{ q }] = (await db.execute(sql`
       SELECT deleted_at AS q FROM transaction_quality WHERE transaction_id = ${victim}::uuid
     `)) as unknown as Array<{ q: Date }>;
@@ -155,6 +158,31 @@ describeMaybe("startup migrations 0134-0136: a deleted redacted row stays delete
     await runStartupMigrations({ force: true });
     expect((await read(id)).deleted_at).not.toBeNull();
     expect((await read(id)).deletion_reason).toBe("user_request");
+    // Force re-runs 0103 (old function) before 0135; 0135 must win.
+    expect(await triggerBody()).toContain(REDACTED_ROW_DELETION_RULE);
+  });
+
+  it("the 1095-day purge of a content-redacted row records retention_purge", async () => {
+    const id = await redactedTransaction();
+    await db.execute(sql`
+      UPDATE transactions SET deleted_at = now(), redacted_at = now(), deletion_reason = 'retention_purge' WHERE id = ${id}::uuid
+    `);
+    expect((await read(id)).deletion_reason).toBe("retention_purge");
+  });
+
+  it("a redacted row with no reason recorded gets the reason of its deletion", async () => {
+    const [{ id }] = (await db.execute(sql`
+      INSERT INTO transactions (status, input, price_cents, payment_method, redacted_at)
+      VALUES ('completed', '{}'::jsonb, 5, 'wallet', now())
+      RETURNING id
+    `)) as unknown as Array<{ id: string }>;
+    created.push(id);
+    await db.execute(sql`UPDATE transactions SET deletion_reason = 'not_a_delete' WHERE id = ${id}::uuid`);
+    expect((await read(id)).deletion_reason).toBeNull();
+    await db.execute(sql`
+      UPDATE transactions SET deleted_at = now(), deletion_reason = 'retention_purge' WHERE id = ${id}::uuid
+    `);
+    expect((await read(id)).deletion_reason).toBe("retention_purge");
   });
 
   it("the trigger still pins the reason and clears content on any update that is not the delete", async () => {
@@ -200,11 +228,16 @@ describeMaybe("startup migrations 0134-0136: a deleted redacted row stays delete
     expect(rows[0].deactivation_reason).not.toBe(US_COURT_SEARCH_DEACTIVATION_REASON);
   });
 
-  it("0134 completes a partial 0030 that 0030's own skip check never would", async () => {
+  it("0134 completes a partial 0030, which a recorded or column-checking 0030 never revisits", async () => {
     await db.execute(sql`ALTER TABLE transactions DROP COLUMN previous_hash`);
     await db.execute(sql`DELETE FROM startup_migration_applied WHERE function_name = 'runMigration0134_completeComplianceColumns'`);
     const results = await runStartupMigrations();
     expect(results.find((r) => r.block === "runMigration0030_complianceColumns")?.outcome).toMatch(/^skipped/);
+    // 0030 itself, unrecorded, also skips: its check sees integrity_hash only.
+    const { runMigration0030_complianceColumns } = await import("./startup-migrations.js");
+    await db.execute(sql`ALTER TABLE transactions DROP COLUMN previous_hash`);
+    expect((await runMigration0030_complianceColumns(db)).outcome).toMatch(/^skipped \(columns already exist\)/);
+    await db.execute(sql`ALTER TABLE transactions ADD COLUMN previous_hash varchar(128)`);
     expect(results.find((r) => r.block === "0134_completeComplianceColumns")?.outcome).toMatch(/previous_hash/);
     const cols = (await db.execute(sql`
       SELECT column_name FROM information_schema.columns

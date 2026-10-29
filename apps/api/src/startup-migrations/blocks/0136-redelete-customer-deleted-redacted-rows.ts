@@ -26,10 +26,17 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * Must run after 0135: under 0103's function the reason could not change.
  *
  * DEC-20260504-B: bounded by how many customers deleted a transaction older
- * than 90 days, expected to be small. Self-throttled anyway: 1000 rows per
- * statement, each statement its own commit, until a statement comes back
- * short. Measured first and reported in the outcome. One column pair written,
- * no payload, nothing physically deleted.
+ * than 90 days through the API, expected to be small; production was not
+ * readable when this was written, so the count is measured first and reported
+ * in the outcome. Self-throttled anyway: 1000 rows per statement, each its own
+ * commit, until a statement comes back short. Each statement is driven by the
+ * few `transaction_quality` rows with `deleted_at` set and joins
+ * `transactions` by primary key. One column pair written, no payload, nothing
+ * physically deleted.
+ *
+ * Legal hold is not consulted on purpose: the customer route refuses to
+ * delete a held row, so a held row here had its hold placed after the
+ * customer's delete, and the route would have left it deleted too.
  */
 const BATCH = 1000;
 
