@@ -1,7 +1,7 @@
 schema_version: 1
 program: distribution
 program_status: active
-updated: 2026-10-27
+updated: 2026-10-29
 tracks:
   - id: T1
     title: "D0: Close attribution gaps"
