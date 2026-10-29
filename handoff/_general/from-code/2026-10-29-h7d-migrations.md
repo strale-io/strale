@@ -127,7 +127,13 @@ next deploy's `skipped_count: 29` were not read (no DB or Railway log access).
   count, snapshot rows and bytes. Production numbers were not readable from
   this session; they appear in the 0132 outcome line of that boot.
 - After the drop, rolling back to a deploy from before PR 3 would 500 on
-  capability reads. Roll forward instead.
+  capability reads, and the old schema validator would not stop it. Roll
+  forward; if old code must run, it needs the drizzle field removal from PR 3
+  (a revert of the drop alone is not possible, the data is gone).
+- Residual risk accepted (review round 3): a rollback where the stopped
+  post-PR build dies without its shutdown cleanup, followed within three
+  minutes by a post-PR boot that reaches block 0132. A normal build takes
+  longer than that.
 - `capability_health` to `source_health`: not done, 22 files reference it, not
   trivial.
 
@@ -141,3 +147,4 @@ dropped 8 columns from 356 capabilities rows and the table (500 rows,
 Receipt: [h7d-drop-sqs-residual-schema](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-residual-schema.json).
 Round 2 (heartbeat): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-heartbeat.json).
 Round 3 (shutdown withdrawal): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-withdrawal.json).
+Round 4 (shutdown order: withdrawal first, after any beat in flight): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-order.json).
