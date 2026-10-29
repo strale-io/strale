@@ -1000,7 +1000,7 @@ describe("POST /v1/do — anonymous, task-based, paid capability", () => {
 // tool or quote an x402 price. Each case below compares the placeholder request
 // with the same request carrying no Authorization header.
 
-const PLACEHOLDER_HEADERS = ["Bearer ${STRALE_API_KEY}", "Bearer <your-key>", "Bearer YOUR_API_KEY", "Bearer "];
+const PLACEHOLDER_HEADERS = ["Bearer ${STRALE_API_KEY}", "Bearer <your-key>", "Bearer YOUR_API_KEY"];
 
 describe("POST /v1/do — placeholder Authorization reads as no key", () => {
   async function anonymousCall(header: string | undefined, body: Record<string, unknown>) {

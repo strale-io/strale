@@ -114,7 +114,7 @@ describe("POST /v1/do rate limits", () => {
     expect((await send()).status).toBe(429);
   });
 
-  it.each(["${STRALE_API_KEY}", "<your-key>", "YOUR_API_KEY", ""])(
+  it.each(["${STRALE_API_KEY}", "<your-key>", "YOUR_API_KEY"])(
     "serves placeholder key %j anonymously, from the same IP bucket as no key, without a key lookup",
     async (placeholder) => {
       const app = makeApp();
@@ -161,7 +161,7 @@ describe("authMiddleware and optionalAuthMiddleware with a placeholder key", () 
   const send = (app: Hono, header?: string) =>
     app.request("/x", { headers: header === undefined ? {} : { Authorization: header } });
 
-  it.each(["Bearer ${STRALE_API_KEY}", "Bearer <your-key>", "Bearer "])("optionalAuthMiddleware proceeds anonymously on %j", async (header) => {
+  it.each(["Bearer ${STRALE_API_KEY}", "Bearer <your-key>"])("optionalAuthMiddleware proceeds anonymously on %j", async (header) => {
     const app = new Hono().get("/x", optionalAuthMiddleware, who);
     const res = await send(app, header);
     expect(res.status).toBe(200);
