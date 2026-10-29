@@ -154,4 +154,5 @@ tracks:
       - Founder approval and redaction prerequisite are recorded before enabling
         a sink.
       - Approved sink and error-rate alert are verified.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-10-29-test-run-h8-log-redaction-mutations.json
