@@ -98,5 +98,6 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0131_startupMigrationApplied: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS" },
   runMigration0132_dropSqsResidualSchema: { policy: "every_boot", reason: "returns deferred until a build without the SQS fields has served; then drops once" },
   runMigration0133_oauthConnector: { policy: "every_boot", reason: "creates a UNIQUE and a CHECK constraint, which schema validation does not check; when in doubt, every_boot" },
-  runMigration0134_batchOrders: { policy: "every_boot", reason: "creates a partial UNIQUE index, which schema validation does not check" },
+  runMigration0134_renameCapabilityHealthToSourceHealth: { policy: "every_boot", reason: "creates a view, which schema validation does not check; a re-run costs one catalogue query and skips unless capability_health is a table" },
+  runMigration0135_batchOrders: { policy: "every_boot", reason: "creates a partial UNIQUE index, which schema validation does not check" },
 };

@@ -122,7 +122,8 @@ import { runMigration0130_syncWalletHolds } from "../startup-migrations/blocks/0
 import { runMigration0131_startupMigrationApplied } from "../startup-migrations/blocks/0131-startup-migration-applied.js";
 import { runMigration0132_dropSqsResidualSchema } from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
 import { runMigration0133_oauthConnector } from "../startup-migrations/blocks/0133-oauth-connector.js";
-import { runMigration0134_batchOrders } from "../startup-migrations/blocks/0134-batch-orders.js";
+import { runMigration0134_renameCapabilityHealthToSourceHealth } from "../startup-migrations/blocks/0134-rename-capability-health-to-source-health.js";
+import { runMigration0135_batchOrders } from "../startup-migrations/blocks/0135-batch-orders.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -206,7 +207,8 @@ export * from "../startup-migrations/blocks/0130-sync-wallet-holds.js";
 export * from "../startup-migrations/blocks/0131-startup-migration-applied.js";
 export * from "../startup-migrations/blocks/0132-drop-sqs-residual-schema.js";
 export * from "../startup-migrations/blocks/0133-oauth-connector.js";
-export * from "../startup-migrations/blocks/0134-batch-orders.js";
+export * from "../startup-migrations/blocks/0134-rename-capability-health-to-source-health.js";
+export * from "../startup-migrations/blocks/0135-batch-orders.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -290,7 +292,8 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0131_startupMigrationApplied,
   runMigration0132_dropSqsResidualSchema,
   runMigration0133_oauthConnector,
-  runMigration0134_batchOrders,
+  runMigration0134_renameCapabilityHealthToSourceHealth,
+  runMigration0135_batchOrders,
 ];
 
 /**

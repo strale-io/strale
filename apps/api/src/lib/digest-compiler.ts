@@ -9,7 +9,7 @@ import { eq, and, gte, lt, desc, sql, inArray, notInArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   capabilities,
-  capabilityHealth,
+  sourceHealth,
   healthMonitorEvents,
   failedRequests,
   testResults,
@@ -572,15 +572,15 @@ export async function getCircuitBreakerState(
 
   const [row] = await db
     .select({
-      state: capabilityHealth.state,
-      consecutiveFailures: capabilityHealth.consecutiveFailures,
-      nextRetryAt: capabilityHealth.nextRetryAt,
-      backoffMinutes: capabilityHealth.backoffMinutes,
-      lastFailureAt: capabilityHealth.lastFailureAt,
-      lastSuccessAt: capabilityHealth.lastSuccessAt,
+      state: sourceHealth.state,
+      consecutiveFailures: sourceHealth.consecutiveFailures,
+      nextRetryAt: sourceHealth.nextRetryAt,
+      backoffMinutes: sourceHealth.backoffMinutes,
+      lastFailureAt: sourceHealth.lastFailureAt,
+      lastSuccessAt: sourceHealth.lastSuccessAt,
     })
-    .from(capabilityHealth)
-    .where(eq(capabilityHealth.capabilitySlug, slug))
+    .from(sourceHealth)
+    .where(eq(sourceHealth.capabilitySlug, slug))
     .limit(1);
 
   if (!row) return null;

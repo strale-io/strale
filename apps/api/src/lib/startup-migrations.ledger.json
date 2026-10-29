@@ -1034,11 +1034,19 @@
     },
     {
       "id": "M077",
-      "function": "runMigration0134_batchOrders",
+      "function": "runMigration0134_renameCapabilityHealthToSourceHealth",
+      "title": "rename capability_health to source_health (H7)",
+      "added": "2026-10-29",
+      "columns_written": [],
+      "sha256": "6734503e0f406464301a1cf82525abd99bd9e83c5f7167bcce4715343fa62338"
+    },
+    {
+      "id": "M078",
+      "function": "runMigration0135_batchOrders",
       "title": "batch orders (portfolio plan Phase 3 item 5)",
       "added": "2026-10-29",
       "columns_written": [],
-      "sha256": "7271e5642d7d02c523e03ee1ddece6f08a043cf9dd0d835502d32de20ee402d9"
+      "sha256": "3a543a4e7784c7bb4103a3a8aa2634e60bebc37564b24832eb4ae75de73e47a0"
     }
   ],
   "known_overlaps": [

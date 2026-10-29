@@ -252,7 +252,7 @@ describe("evaluatePromotion — safety interlocks", () => {
   });
 
   it("treats a missing breaker row as permitted", () => {
-    // 14 active capabilities have no capability_health row; rows are created
+    // 14 active capabilities have no source_health row; rows are created
     // lazily on first incident, so requiring one would exclude everything that
     // has never failed. The pass-rate and recency gates carry the weight.
     expect(only([cap({ breakerState: null })]).action).toBe("promote");

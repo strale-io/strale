@@ -13,7 +13,7 @@
 
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilityHealth, capabilities } from "../db/schema.js";
+import { sourceHealth, capabilities } from "../db/schema.js";
 import { runTests } from "./test-runner.js";
 import {
   getCapabilityUpstreams,
@@ -114,9 +114,9 @@ export async function triggerOnFailure(slug: string): Promise<void> {
 
   const db = getDb();
   const [health] = await db
-    .select({ consecutiveFailures: capabilityHealth.consecutiveFailures })
-    .from(capabilityHealth)
-    .where(eq(capabilityHealth.capabilitySlug, slug))
+    .select({ consecutiveFailures: sourceHealth.consecutiveFailures })
+    .from(sourceHealth)
+    .where(eq(sourceHealth.capabilitySlug, slug))
     .limit(1);
 
   // Only trigger on the first failure (consecutiveFailures was 0 → now 1).

@@ -1,15 +1,17 @@
-"""StraleToolkit — one import to get all available Strale capabilities as LangChain tools."""
+"""StraleToolkit — one import to get Strale tools as LangChain tools."""
 
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Optional
 
 from langchain_core.tools import BaseTool, BaseToolkit
+from pydantic import Field
 
-from .client import DEFAULT_BASE_URL, StraleClient
+from .client import DEFAULT_BASE_URL, DEFAULT_MAX_PRICE_CENTS, MAX_PRICE_CAP_CENTS, StraleClient
 from .tools import (
     StraleBalanceTool,
+    StraleExecuteTool,
     StraleSearchTool,
     StraleTool,
     build_args_schema,
@@ -19,18 +21,24 @@ _CACHE_TTL = 300  # 5 minutes
 
 
 class StraleToolkit(BaseToolkit):
-    """Provides all active Strale capabilities as LangChain tools.
+    """Provides Strale capabilities as LangChain tools.
 
     Example::
 
         from langchain_strale import StraleToolkit
 
         toolkit = StraleToolkit(api_key="sk_live_...")
-        tools = toolkit.get_tools()
+        tools = toolkit.get_meta_tools()  # strale_search + strale_execute + strale_balance
+        # or: toolkit.get_tools() for one tool per capability plus the meta-tools
+
+    ``api_key`` defaults to the ``STRALE_API_KEY`` environment variable. Without
+    a key, search and the free tools work.
     """
 
-    api_key: str
+    api_key: Optional[str] = None
     base_url: str = DEFAULT_BASE_URL
+    max_price_cents: int = Field(default=DEFAULT_MAX_PRICE_CENTS, ge=1, le=MAX_PRICE_CAP_CENTS)
+    """Highest price in EUR cents strale_execute may be charged per call. Default 200 (€2.00)."""
 
     _client: StraleClient | None = None
     _capabilities: list[dict[str, Any]] | None = None
@@ -50,10 +58,19 @@ class StraleToolkit(BaseToolkit):
             self._fetched_at = now
         return self._capabilities
 
+    def get_meta_tools(self) -> list[BaseTool]:
+        """Return the search, execute and balance tools without loading the catalogue."""
+        client = self._get_client()
+        return [
+            StraleSearchTool(client=client),
+            StraleExecuteTool(client=client, max_price_cents=self.max_price_cents),
+            StraleBalanceTool(client=client),
+        ]
+
     def get_tools(
         self, categories: list[str] | None = None
     ) -> list[BaseTool]:
-        """Return Strale capabilities as LangChain tools.
+        """Return one tool per Strale capability, plus the meta-tools.
 
         Args:
             categories: Optional list of category slugs to filter by
@@ -75,7 +92,7 @@ class StraleToolkit(BaseToolkit):
             price_eur = cap["price_cents"] / 100
             tool = StraleTool(
                 name=cap["slug"],
-                description=f"{cap['description']} (Price: \u20ac{price_eur:.2f})",
+                description=f"{cap['description']} (Price: €{price_eur:.2f})",
                 args_schema=schema,
                 capability_slug=cap["slug"],
                 price_cents=cap["price_cents"],
@@ -84,9 +101,5 @@ class StraleToolkit(BaseToolkit):
             )
             tools.append(tool)
 
-        # Meta-tools
-        all_caps = self._get_capabilities()
-        tools.append(StraleSearchTool(capabilities=all_caps))
-        tools.append(StraleBalanceTool(client=client))
-
+        tools.extend(self.get_meta_tools())
         return tools

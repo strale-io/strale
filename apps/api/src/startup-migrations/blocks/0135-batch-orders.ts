@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { MigrationExecutor, BlockResult } from "../types.js";
 
-// ─── Block 0134: batch orders (portfolio plan Phase 3 item 5) ───────────────
+// ─── Block 0135: batch orders (portfolio plan Phase 3 item 5) ───────────────
 //
 // One new, empty table; no existing table is altered. A row is the order for
 // POST /v1/do/batch: one capability, many inputs, one quote, one set of
@@ -12,7 +12,7 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
 //
 // The partial unique index makes one Idempotency-Key name one batch per
 // account, so two concurrent submissions of the same key cannot both reserve.
-export async function runMigration0134_batchOrders(tx: MigrationExecutor): Promise<BlockResult> {
+export async function runMigration0135_batchOrders(tx: MigrationExecutor): Promise<BlockResult> {
   const startedAt = Date.now();
   await tx.execute(sql`
     CREATE TABLE IF NOT EXISTS batch_orders (
@@ -34,5 +34,5 @@ export async function runMigration0134_batchOrders(tx: MigrationExecutor): Promi
     CREATE UNIQUE INDEX IF NOT EXISTS batch_orders_user_idempotency_key_unique
       ON batch_orders (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
   `);
-  return { block: "0134_batchOrders", outcome: "ensured batch_orders", duration_ms: Date.now() - startedAt };
+  return { block: "0135_batchOrders", outcome: "ensured batch_orders", duration_ms: Date.now() - startedAt };
 }

@@ -1488,22 +1488,23 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0131_startupMigrationApplied",
       "runMigration0132_dropSqsResidualSchema",
       "runMigration0133_oauthConnector",
-      "runMigration0134_batchOrders",
+      "runMigration0134_renameCapabilityHealthToSourceHealth",
+      "runMigration0135_batchOrders",
     ]);
   });
 });
 
-describe("startup-migrations — block 0134 (batch orders)", () => {
+describe("startup-migrations — block 0135 (batch orders)", () => {
   it("creates the table and the per-account key index idempotently", async () => {
-    const { runMigration0134_batchOrders } = await import("./startup-migrations.js");
+    const { runMigration0135_batchOrders } = await import("./startup-migrations.js");
     const stub = makeStub({ queue: [{}, {}] });
-    const result = await runMigration0134_batchOrders(stub);
+    const result = await runMigration0135_batchOrders(stub);
     const [tableSql, indexSql] = stub.renderedSql.map((s) => s.toLowerCase());
     expect(tableSql).toContain("create table if not exists batch_orders");
     expect(tableSql).toContain("item_reservation_ids jsonb not null");
     expect(indexSql).toContain("create unique index if not exists batch_orders_user_idempotency_key_unique");
     expect(indexSql).toContain("where idempotency_key is not null");
-    expect(result.block).toBe("0134_batchOrders");
+    expect(result.block).toBe("0135_batchOrders");
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
@@ -2393,7 +2394,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(134);
+    expect(Math.max(...numbers)).toBe(135);
   });
 });
 
@@ -3638,5 +3639,43 @@ describe("H4 startup-migrations — block 0130", () => {
     expect(statements).toHaveLength(2);
     expect(ddl).not.toContain("CREATE INDEX");
     expect(ddl).not.toContain("SET lock_timeout");
+  });
+});
+
+describe("startup-migrations — block 0134 (capability_health → source_health)", () => {
+  it("renames and creates the old-name view in one statement, so the old name never resolves to nothing", async () => {
+    const { runMigration0134_renameCapabilityHealthToSourceHealth } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [[{ old_kind: "r", new_present: false }], [{ row_count: 312, bytes: "98304" }], []] });
+    const result = await runMigration0134_renameCapabilityHealthToSourceHealth(stub);
+    expect(result.outcome).toBe("renamed capability_health to source_health (312 rows, 98304 bytes) and left a capability_health view");
+    expect(stub.renderedSql).toHaveLength(3);
+    const ddl = stub.renderedSql[2];
+    expect(ddl).toMatch(/^\s*DO \$rename\$/);
+    const rename = ddl.indexOf("ALTER TABLE capability_health RENAME TO source_health");
+    const view = ddl.indexOf("CREATE VIEW capability_health AS SELECT * FROM source_health");
+    expect(rename).toBeGreaterThan(-1);
+    expect(view).toBeGreaterThan(rename);
+    // Re-checked inside the statement, so a second runner cannot rename twice.
+    expect(ddl).toContain("IF (SELECT relkind FROM pg_class WHERE oid = to_regclass('capability_health')) = 'r' THEN");
+  });
+
+  it("skips once capability_health is the view, and on a fresh database", async () => {
+    const { runMigration0134_renameCapabilityHealthToSourceHealth } = await import("./startup-migrations.js");
+    for (const [kind, outcome] of [
+      ["v", "skipped (capability_health is relkind v; source_health present)"],
+      [null, "skipped (capability_health is absent; source_health present)"],
+    ] as const) {
+      const stub = makeStub({ queue: [[{ old_kind: kind, new_present: true }]] });
+      const result = await runMigration0134_renameCapabilityHealthToSourceHealth(stub);
+      expect(result.outcome).toBe(outcome);
+      expect(stub.renderedSql).toHaveLength(1);
+    }
+  });
+
+  it("refuses to rename when source_health already exists beside the table", async () => {
+    const { runMigration0134_renameCapabilityHealthToSourceHealth } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [[{ old_kind: "r", new_present: true }]] });
+    await expect(runMigration0134_renameCapabilityHealthToSourceHealth(stub)).rejects.toThrow(/both exist/);
+    expect(stub.renderedSql).toHaveLength(1);
   });
 });

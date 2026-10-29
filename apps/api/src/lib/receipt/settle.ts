@@ -230,7 +230,9 @@ export function deriveSourceObservation(
  *
  *  - `do.ts` x402 settlement-failed: stores "Payment settlement failed: ...",
  *    serves `{error_code: "payment_failed"}` - a different CODE, not just a
- *    different message.
+ *    different message. (A settlement that throws before the facilitator call
+ *    is handled separately in `lib/do/dispatch.ts` and stores the message it
+ *    serves.)
  *  - `x402-gateway-v2.ts` solution-unbillable: serves the stored message
  *    WRAPPED in additional prose.
  *  - `solution-execute.ts` no-steps-configured: the response carries no

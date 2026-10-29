@@ -68,10 +68,12 @@ tracks:
     owner: session
     next_action: Shipped in PR 779 (sync reserve, execute outside the transaction, capture,
       timeout_seconds) and PR 794 (/v1/do x402 claim, replay and recording
-      parity). Two open hardening items from review, a replayed payment hash
-      used on a different capability of the same price returns the first
-      capability's output (gateway and /v1/do), and a thrown facilitator call on
-      /v1/do still returns the legacy 500 envelope.
+      parity). The two review items close on branch fix/x402-replay-capability-binding,
+      a replayed payment for different work is refused with 409
+      payment_already_used on both rails, and a thrown settlement on /v1/do
+      returns 402 payment_failed. Mark done after merge and the production
+      check in that PR. Out of scope and still open, a thrown settlement on the
+      /x402 gateway returns a plain-text 500.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Reservation and capture regression tests discriminate the repaired money
@@ -125,7 +127,10 @@ tracks:
       log access. Do not roll back past PR 808 once it has dropped. Remaining T7
       work, the H7c known_answer tightening in
       apps/api/src/capabilities/__fixtures__/upstream/README.md, the
-      capability_health to source_health rename (22 files), and the pre-existing
+      source_health contract step (block 0134 renamed capability_health and left
+      a view under the old name; once production has run the renamed build with
+      no reads of the old name, a new block drops the view, see
+      handoff/_general/from-code/2026-10-29-h7-source-health-rename.md), and the pre-existing
       block issues 0087, 0089 and 0030 listed in handoff/_general/from-
       code/2026-10-29-h7d-migrations.md, each fixed by a new block.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md

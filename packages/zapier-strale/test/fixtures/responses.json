@@ -88,38 +88,6 @@
     },
     "meta": {}
   },
-  "company-status-check": {
-    "result": {
-      "transaction_id": "synthetic-transaction",
-      "status": "completed",
-      "capability_used": "company-status-check",
-      "price_cents": 2,
-      "latency_ms": 10,
-      "wallet_balance_cents": 100,
-      "output": {
-        "company_name": "Example Company",
-        "status": "active",
-        "registry_status_raw": "active",
-        "registry": {
-          "name": "Example registry",
-          "slug": "uk-company-data"
-        },
-        "identifier": "EXAMPLE",
-        "country": "GB",
-        "insolvency": {
-          "checked": true,
-          "notices_found": 0,
-          "notices": []
-        },
-        "as_of": "2026-10-27T12:00:00.000Z"
-      },
-      "provenance": {
-        "source": "Example registry",
-        "fetched_at": "2026-10-27T12:00:00.000Z"
-      }
-    },
-    "meta": {}
-  },
   "vat-validate": {
     "result": {
       "transaction_id": "synthetic-transaction",
@@ -201,40 +169,53 @@
     },
     "meta": {}
   },
-  "invoice-counterparty-check": {
+  "iban-validate": {
     "result": {
       "transaction_id": "synthetic-transaction",
       "status": "completed",
-      "capability_used": "invoice-counterparty-check",
-      "price_cents": 2,
+      "capability_used": "iban-validate",
+      "price_cents": 0,
       "latency_ms": 10,
       "wallet_balance_cents": 100,
       "output": {
-        "tax_id": {
-          "status": "completed",
-          "valid": false,
-          "verification": "vies"
-        },
-        "registry_status": {
-          "status": "not_available"
-        },
-        "sanctions": {
-          "status": "completed",
-          "potential_match_count": 0
-        },
-        "identifiers": {},
-        "checks_completed": [
-          "tax_id",
-          "sanctions"
-        ],
-        "checks_not_available": [
-          "registry_status"
-        ],
-        "checks_errored": [],
-        "findings": []
+        "valid": true,
+        "country_code": "SE",
+        "check_digits": "00",
+        "bban": "EXAMPLE",
+        "bank_code": "500",
+        "branch_code": null,
+        "expected_length": 24
       },
       "provenance": {
-        "source": "Example sources",
+        "source": "iban-validate:algorithmic",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "email-validate": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "email-validate",
+      "price_cents": 0,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "valid": true,
+        "email": "person@example.com",
+        "format_valid": true,
+        "domain": "example.com",
+        "has_mx_records": true,
+        "mx_records": [
+          "mx.example.com"
+        ],
+        "is_disposable": false,
+        "is_role_address": false,
+        "is_free_provider": false
+      },
+      "provenance": {
+        "source": "algorithmic+dns",
         "fetched_at": "2026-10-27T12:00:00.000Z"
       }
     },

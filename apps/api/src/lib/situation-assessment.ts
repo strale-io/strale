@@ -12,7 +12,7 @@
 
 import { sql, eq, desc, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { healthMonitorEvents, testResults, capabilityHealth, capabilities } from "../db/schema.js";
+import { healthMonitorEvents, testResults, sourceHealth, capabilities } from "../db/schema.js";
 import { getAllUpstreamHealth, getCapabilityUpstreams } from "./upstream-health-gate.js";
 import { getBrowserlessCapabilityCount } from "./chromium-health.js";
 import { getProvider } from "./dependency-manifest.js";

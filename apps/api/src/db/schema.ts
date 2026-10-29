@@ -14,6 +14,7 @@ import {
   index,
   primaryKey,
   bigint,
+  pgView,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -1027,9 +1028,10 @@ export const capabilityLimitations = pgTable(
   ],
 );
 
-// ─── capability_health (circuit breaker) ────────────────────────────────────
-// Tracks health state per capability for circuit breaker pattern
-export const capabilityHealth = pgTable("capability_health", {
+// ─── source_health (circuit breaker) ────────────────────────────────────
+// Tracks health state per capability for circuit breaker pattern. Named
+// capability_health until block 0134 renamed it (H7, platform-hardening T7).
+export const sourceHealth = pgTable("source_health", {
   id: uuid("id").defaultRandom().primaryKey(),
   capabilitySlug: varchar("capability_slug", { length: 255 })
     .notNull()
@@ -1049,6 +1051,14 @@ export const capabilityHealth = pgTable("capability_health", {
     .notNull()
     .defaultNow(),
 });
+
+// Compatibility view under the table's old name. In production block 0134
+// creates it in the same statement as the rename, so a build deployed before
+// the rename keeps reading and writing through it while the new one boots.
+// Declared here for fresh databases (drizzle-kit push, then every block in
+// order): block 0118 still updates capability_health by name. No code reads
+// it; a later block drops it once production shows no reads of the old name.
+export const capabilityHealthCompat = pgView("capability_health").as((qb) => qb.select().from(sourceHealth));
 
 // ─── health_monitor_events (Platform Health Monitor audit trail) ─────────────
 export const healthMonitorEvents = pgTable("health_monitor_events", {
@@ -1127,7 +1137,7 @@ export const capabilityBudgetCounters = pgTable(
 
 // ─── Vendor Control Tower ──────────────────────────────────────────────────
 // Account-level billing/allowance state. This is deliberately separate from
-// capability_health: one vendor balance can govern several capabilities, and
+// source_health: one vendor balance can govern several capabilities, and
 // a healthy network endpoint can still refuse every authenticated request
 // because its account has no credits left.
 export const vendorAccounts = pgTable("vendor_accounts", {
@@ -1439,7 +1449,7 @@ export const walletReservations = pgTable(
 );
 
 // ─── batch_orders ────────────────────────────────────────────────────────────
-// POST /v1/do/batch (block 0134). Written once when the batch's holds are
+// POST /v1/do/batch (block 0135). Written once when the batch's holds are
 // taken and never updated: each item's outcome lives on its hold in
 // wallet_reservations and the transaction that hold links to.
 export const batchOrders = pgTable(
