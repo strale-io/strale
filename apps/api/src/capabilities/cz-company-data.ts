@@ -286,7 +286,7 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
       attribution:
         "Zdroj: Administrativní registr ekonomických subjektů (ARES), Ministerstvo financí ČR.",
       source_note:
-        "ARES is the Czech Ministry of Finance's public register of economic subjects. Its data is published as open data and may be reused under the ARES operating conditions (ares.gov.cz/stranky/open-data, ares.gov.cz/stranky/podminky-provozu). ARES data is informative only and is not an official document.",
+        "ARES is the Czech Ministry of Finance's public register of economic subjects. The Ministry states that information published through ARES may be reused under the ARES operating conditions and Czech open-data law (ares.gov.cz/stranky/open-data, ares.gov.cz/stranky/podminky-provozu). ARES data is informative only and is not an official document.",
     },
   };
 });

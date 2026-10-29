@@ -73,8 +73,8 @@ threads:
     status: closed
     reply: 2026-10-29 08:52 CET (inbox), Jan Sadlik, ICT, Czech Ministry of Finance. Information published through ARES may be reused under the ARES operating conditions and the Czech law on free access to information (open data); the Ministry gives no individual legal assessment and the user is responsible for compliance. Linked ares.gov.cz/stranky/vyvojar-info and ares.gov.cz/stranky/open-data. Recorded in vendor-terms.data.json (resale permitted, published terms) and DQ-40.
   - id: czech-ares-reuse-thanks
-    to: Jan Sadlik, Czech Ministry of Finance (reply on the czech-ares-reuse thread, from petter@strale.io)
-    subject: "Re: the czech-ares-reuse thread (reply in the same thread)"
+    to: ares@mfcr.cz (reply in the czech-ares-reuse thread, to Jan Sadlik, ICT, MF ČR; from petter@strale.io)
+    subject: "Re: Reuse licence for ARES register data"
     asked: Nothing; optional thank-you, no reply expected
     unblocks: Nothing; courtesy only
     sent:
