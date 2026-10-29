@@ -212,12 +212,17 @@ const byEntry = await sql`
          ELSE split_part(substr(endpoint, 6), ':', 1) END AS server,
     count(*) FILTER (WHERE endpoint LIKE '%:initialize')::int AS initialize,
     count(*) FILTER (WHERE endpoint LIKE '%:tools/call:%')::int AS tool_calls,
+    -- The kill-rule figure. Every narrow tool executes a capability; on the
+    -- broad server only strale_execute does (search, ping, balance… do not),
+    -- so comparing raw tools/call would favour the broad server.
+    count(*) FILTER (WHERE endpoint LIKE '/mcp/%:tools/call:%'
+                        OR endpoint = '/mcp:tools/call:strale_execute')::int AS executions,
     count(DISTINCT ua) FILTER (WHERE endpoint LIKE '%:tools/call:%')::int AS distinct_ua
   FROM discovery_hits
   WHERE created_at >= ${since}
     AND (endpoint LIKE '/mcp:%' OR endpoint LIKE '/mcp/%:%')
     AND src_tag IS DISTINCT FROM 'ci-preflight'
-  GROUP BY 1 ORDER BY tool_calls DESC`;
+  GROUP BY 1 ORDER BY executions DESC`;
 const paidByEntry = await sql`
   SELECT client_meta->>'src' AS src, count(*)::int AS paid_calls,
          count(DISTINCT coalesce(x402_payer_hash, user_id::text))::int AS payers
@@ -226,16 +231,17 @@ const paidByEntry = await sql`
     AND client_meta->>'src' LIKE 'mcp-%' AND client_meta->>'src' <> 'mcp-registry'
   GROUP BY 1`;
 const paidBySrc = new Map(paidByEntry.map((r) => [String(r.src).replace(/^mcp-/, ""), r]));
-console.log("| server | initialize | tools/call | distinct UA (tools/call) | paid calls | payers |");
-console.log("|---|---|---|---|---|---|");
+console.log("| server | initialize | tools/call | executions (D7 rule) | distinct UA (tools/call) | paid calls | payers |");
+console.log("|---|---|---|---|---|---|---|");
 for (const r of byEntry) {
   // The broad server's calls carry venue tags, not mcp-<id>; its payers are
   // in the first-touch section above.
   const p = r.server === "broad" ? null : paidBySrc.get(r.server);
   const paidCells = r.server === "broad" ? "— | —" : `${p?.paid_calls ?? 0} | ${p?.payers ?? 0}`;
-  console.log(`| ${r.server} | ${r.initialize} | ${r.tool_calls} | ${r.distinct_ua} | ${paidCells} |`);
+  console.log(`| ${r.server} | ${r.initialize} | ${r.tool_calls} | ${r.executions} | ${r.distinct_ua} | ${paidCells} |`);
 }
-if (byEntry.length === 0) console.log("| (no /mcp traffic in window) | | | | | |");
+if (byEntry.length === 0) console.log("| (no /mcp traffic in window) | | | | | | |");
+console.log("\nD7 rule: a narrow server succeeds when its weekly executions beat the broad row's (run with --days 7).");
 
 // ─── 5. x402 distinct payers ─────────────────────────────────────────────
 //

@@ -97,9 +97,21 @@ export interface StraleClientOptions {
   apiKey: string;
   maxPriceCents: number;
   clientIp?: string;
+  /**
+   * Origin for URLs handed to the caller (x402 hand-off, poll and top-up
+   * links). Defaults to baseUrl. The HTTP transport calls the API on
+   * localhost, so it must set this: before 2026-10-29 every hand-off it sent
+   * named http://localhost:3000, which no remote agent can reach.
+   */
+  publicBaseUrl?: string;
   src?: string;
   version?: string;
   onFunnelEvent?: (event: McpFunnelEvent) => void;
+}
+
+/** Origin for URLs the caller is told to use. */
+function publicOrigin(opts: StraleClientOptions): string {
+  return opts.publicBaseUrl ?? opts.baseUrl;
 }
 
 /** Call onFunnelEvent without letting a throwing hook break tool execution. */
@@ -301,7 +313,7 @@ export async function executeCapability(
             type: "text",
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
-              details: { fix: `Pay per call at ${opts.baseUrl}/x402/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
+              details: { fix: `Pay per call at ${publicOrigin(opts)}/x402/${slug} or reconnect with a valid API key in the Authorization: Bearer <api_key> header.` },
               // Ordering is deliberate. This message is read by an autonomous
               // agent, and the only path it used to offer was a web signup
               // form — something an agent cannot complete. In the seven days
@@ -311,9 +323,9 @@ export async function executeCapability(
               // The machine-actionable option goes first.
               pay_per_call: {
                 how: "No signup. POST to the x402 endpoint below, settle the 402 challenge it returns in USDC on Base, and replay the request — the payment is the authentication.",
-                endpoint: attributedUrl(opts.baseUrl, `/x402/${slug}`, opts.src),
-                catalog: attributedUrl(opts.baseUrl, "/x402/catalog", opts.src),
-                discovery: attributedUrl(opts.baseUrl, "/.well-known/x402.json", opts.src),
+                endpoint: attributedUrl(publicOrigin(opts), `/x402/${slug}`, opts.src),
+                catalog: attributedUrl(publicOrigin(opts), "/x402/catalog", opts.src),
+                discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
               api_key: {
                 how: "If a human can complete a web form, https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
@@ -347,7 +359,7 @@ export async function executeCapability(
             status: "executing",
             message: `Capability '${slug}' is running asynchronously.`,
             transaction_id: txId,
-            poll_url: `${opts.baseUrl}/v1/transactions/${txId}`,
+            poll_url: `${publicOrigin(opts)}/v1/transactions/${txId}`,
             note: "Poll the transaction endpoint until status is 'completed' or 'failed'.",
           }),
         },
@@ -395,7 +407,7 @@ export async function executeCapability(
     let errorText = `Error (${errorCode}): ${message}`;
     if (typeof details?.fix === "string" && details.fix.trim()) errorText += `\nFix: ${details.fix}`;
     if (isInsufficientBalance) {
-      errorText += `\n\nTop up your wallet at: ${opts.baseUrl}/v1/wallet/topup`;
+      errorText += `\n\nTop up your wallet at: ${publicOrigin(opts)}/v1/wallet/topup`;
     }
     if (errorCode === "capability_unavailable" && details?.next_retry_at) {
       errorText += `\nCapability will be available again at: ${details.next_retry_at}`;
@@ -640,8 +652,8 @@ export function registerStraleTools(
               // The route an agent can actually take on its own.
               pay_per_call_no_signup: {
                 how: "POST to /x402/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
-                catalog: attributedUrl(opts.baseUrl, "/x402/catalog", opts.src),
-                discovery: attributedUrl(opts.baseUrl, "/.well-known/x402.json", opts.src),
+                catalog: attributedUrl(publicOrigin(opts), "/x402/catalog", opts.src),
+                discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
               api_key_alternative:
                 "If a human can complete a web form: https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",

@@ -94,6 +94,8 @@ describe("narrow MCP entry points", () => {
     const res = await call("/mcp/company-check?src=mcp-registry", "uk-company-data", { company_number: "00000006" });
     const body = JSON.parse((await rpcResult(res)).content[0].text);
     expect(new URL(body.pay_per_call.endpoint).pathname).toBe("/x402/uk-company-data");
+    // Remote agents must get a reachable host, not the API's internal localhost.
+    expect(new URL(body.pay_per_call.endpoint).origin).toBe("https://api.strale.io");
     expect(new URL(body.pay_per_call.endpoint).searchParams.get("src")).toBe("mcp-company-check");
     expect(mocks.record).toHaveBeenCalledWith("/mcp/company-check:tools/call:uk-company-data", expect.anything(), expect.objectContaining({ src: "mcp-registry" }));
     expect(mocks.record).toHaveBeenCalledWith("/mcp/company-check:reject:auth_rejected:uk-company-data", expect.anything(), expect.objectContaining({ src: "mcp-registry" }));
@@ -113,9 +115,12 @@ describe("narrow MCP entry points", () => {
   });
 
   it("does not expose a capability outside the entry point", async () => {
-    const res = await call("/mcp/web-reader", "email-validate", { email: "fixture@example.com" });
-    const text = await res.text();
-    expect(text).toMatch(/not found|isError/i);
+    const fetchMock = vi.fn(async () => Response.json({ result: { output: {} } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await rpcResult(await call("/mcp/web-reader", "email-validate", { email: "fixture@example.com" }));
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/email-validate not found/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns 404 for an unknown entry point and leaves the broad server on /mcp", async () => {

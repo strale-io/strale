@@ -44,6 +44,10 @@ const PORT = process.env.PORT ?? "3000";
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
   `http://localhost:${PORT}`;
+// URLs handed to callers (x402 hand-off, poll and top-up links) must be
+// reachable from outside the container, unlike STRALE_BASE_URL's localhost
+// default above.
+const PUBLIC_BASE_URL = process.env.STRALE_BASE_URL ?? "https://api.strale.io";
 const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",
   10,
@@ -243,6 +247,7 @@ async function handleStatelessRequest(
   const venueSrc = new URL(req.url).searchParams.get("src") ?? undefined;
   const clientOpts = {
     baseUrl: STRALE_BASE_URL,
+    publicBaseUrl: PUBLIC_BASE_URL,
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
@@ -371,6 +376,7 @@ mcpRoute.all("/:entry", (c) => {
 
 async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
   const method = req.method;
+  const path = entry ? `/mcp/${entry.id}` : "/mcp";
 
   if (method === "POST") {
     const apiKey = extractApiKey(req);
@@ -406,10 +412,10 @@ async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
       new Response(
         JSON.stringify({
           jsonrpc: "2.0",
-          error: { data: { details: {"fix":"Send each MCP request as a new POST to /mcp."} },
+          error: { data: { details: { fix: `Send each MCP request as a new POST to ${path}.` } },
             code: -32000,
             message:
-              "This MCP endpoint is stateless. Send each request as a new POST to /mcp.",
+              `This MCP endpoint is stateless. Send each request as a new POST to ${path}.`,
           },
         }),
         {
@@ -421,7 +427,7 @@ async function handleMcp(req: Request, entry?: EntryPoint): Promise<Response> {
   }
 
   return addCorsHeaders(
-    new Response(JSON.stringify({ details: { fix: "Send each MCP request as a new POST to /mcp." } }), {
+    new Response(JSON.stringify({ details: { fix: `Send each MCP request as a new POST to ${path}.` } }), {
       status: 405,
       headers: { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json" },
     }),
