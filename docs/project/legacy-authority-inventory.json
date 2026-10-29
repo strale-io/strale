@@ -241,7 +241,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "85f52d9865c172bbb8219f989aaa8136f8138feef6d3f9a9098e1a0d275215c7",
+      "sha256": "a68a9b4ea75f0249bf717ba39426232c1c492b8a9d4dd99786a9dce1a45d4f76",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",

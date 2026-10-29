@@ -89,3 +89,39 @@ threads:
 
       Kind regards,
       Petter
+  - id: cdp-bazaar-curation
+    to: "CDP support (address open: the x402 docs publish no support email and route help to Discord, checked 2026-10-29; D3 rules out Discord and forum posts. The sender uses CDP's official support contact, or asks Petter)"
+    subject: "Request for x402 Bazaar curation review: Strale (api.strale.io)"
+    asked: Whether Strale's x402 endpoints can be reviewed for the curated (featured) Bazaar tier, the right channel for that, and anything in our metadata or availability that would stop them qualifying
+    unblocks: Distribution track D3 (tracks.yaml T4, DEC-20261027-B §9 item 1)
+    sent:
+    sent_by:
+    follow_up_by:
+    status: draft
+    note: D3 follow-up rule, which replaces the usual two follow-ups. Set follow_up_by to 45 days after sending; if no answer by then, send one follow-up, then close the row as dropped. Before sending, re-run Coinbase's validator on /x402/v2/vat-validate (POST https://api.cdp.coinbase.com/platform/v2/x402/validate) and send only if it still returns valid true. Earlier contact checked, docs/company/coinbase-bazaar-email.md, a draft to Coinbase about indexing withdrawn unsent on 2026-08-15 because its premise was wrong; this row asks about curation, a different question.
+    body: |
+      Hello CDP team,
+
+      I run Strale, a library of tools that AI agents call and pay for per call over x402 on
+      Base mainnet. Your "Get discovered" guide describes a curated tier of the x402 Bazaar.
+      I would like to ask for Strale's endpoints to be reviewed for it.
+
+      - Endpoints: https://api.strale.io/x402/v2/<tool>, with the full list at
+        https://api.strale.io/x402/catalog
+      - Receiving address: 0x66D7C2F952362BFB24FD7F02a9beC9c754ea83bC (Base)
+      - Our 402 responses carry serviceName, tags, iconUrl, an input schema and an example
+        input in extensions.bazaar. Your validation endpoint returns valid: true
+        for, for example, https://api.strale.io/x402/v2/vat-validate.
+      - Our flagship category is official-source company and VAT data; each answer
+        names its source and when it was fetched.
+
+      Two questions:
+      1. Is there a process for requesting a curation review, and is this the right place
+         to ask?
+      2. Is there anything in our metadata or availability that would keep these endpoints
+         from qualifying?
+
+      Thank you,
+      Petter
+      Strale (Moonlighter AB, Sweden)
+      petter@strale.io

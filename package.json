@@ -50,6 +50,7 @@
     "scheduled:outcomes:test": "node --test scripts/scheduled-outcomes.test.mjs",
     "distribution:check": "node scripts/check-distribution.mjs",
     "distribution:test": "node --test scripts/distribution.test.mjs",
+    "clay:test": "node --test examples/clay-enrichment/template.test.mjs",
     "models:check": "node apps/api/scripts/check-model-literals.mjs",
     "models:test": "node --test apps/api/scripts/check-model-literals.test.mjs",
     "claims:check": "node scripts/check-claims.mjs",
