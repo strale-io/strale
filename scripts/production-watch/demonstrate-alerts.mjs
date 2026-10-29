@@ -57,15 +57,25 @@ export function recordingGithub() {
 const alertsOf = (issues) => issues.filter((i) => !i.title.startsWith('[watch-state]') && i.state === 'open')
   .map((i) => ({ title: i.title, labels: i.labels, body: i.body }));
 
-export async function deployMismatch() {
+async function runDeploy(served) {
   const { github, issues } = recordingGithub();
   let clock = 0;
   // The real waitForDeploy and history comparison; only health and the clock are forced.
-  const wait = (args) => waitForDeploy({ ...args, health: async () => ({ commit: OLD.slice(0, 12) }),
+  const wait = (args) => waitForDeploy({ ...args, health: async () => ({ commit: served.slice(0, 12) }),
     now: () => clock, sleep: async (ms) => { clock += ms; } });
   let thrown = null;
   try { await deploy(github, { repo: { owner: 'o', repo: 'r' }, sha: EXPECTED, runId: 1 }, wait); } catch (e) { thrown = e.message; }
-  return { watch: 'deploy-sha', forced: `production serves ${OLD.slice(0, 12)}, push is ${EXPECTED.slice(0, 12)}`, fired: thrown !== null && alertsOf(issues).length === 1, workflow_failed: thrown, alerts: alertsOf(issues) };
+  return { thrown, alerts: alertsOf(issues) };
+}
+
+export async function deployMismatch() {
+  const bad = await runDeploy(OLD);
+  // Positive control: production on a descendant of the push (current main) is live, no alert.
+  const good = await runDeploy(MAIN);
+  const fired = /did not reach production/.test(bad.thrown ?? '') && bad.alerts.length === 1 &&
+    bad.alerts[0].body.includes(`Production commit: ${OLD.slice(0, 12)}`) && good.thrown === null && good.alerts.length === 0;
+  return { watch: 'deploy-sha', forced: `production serves ${OLD.slice(0, 12)}, push is ${EXPECTED.slice(0, 12)}`, fired,
+    workflow_failed: bad.thrown, alerts: bad.alerts, control: { served: MAIN.slice(0, 12), workflow_failed: good.thrown, alerts: good.alerts.length } };
 }
 
 export async function staleJob() {
@@ -82,12 +92,13 @@ export async function staleJob() {
     catch (e) { runs.push({ run: runId, red: true, error: e.message, alerts: alertsOf(issues).length }); }
   }
   return { watch: 'job-freshness', forced: `${staleId} last succeeded ${interval * 4}s ago (interval ${interval}s)`, runs,
-    fired: runs[0].red === false && runs[0].alerts === 0 && runs[1].red === true && alertsOf(issues).length === 1, alerts: alertsOf(issues) };
+    fired: runs[0].red === false && runs[0].alerts === 0 && runs[1].red === true &&
+      alertsOf(issues).length === 1 && alertsOf(issues)[0].title === `[production-watch] ${staleId}`, alerts: alertsOf(issues) };
 }
 
-export async function mcpContractMismatch() {
+async function runMcp(capTrust) {
   const { github, issues } = recordingGithub();
-  const startup = '[strale-mcp] Loaded 10 capabilities, 2 solutions, 0 cap trust, 2 sol trust from https://api.strale.io\n';
+  const startup = `[strale-mcp] Loaded 10 capabilities, 2 solutions, ${capTrust} cap trust, 2 sol trust from https://api.strale.io\n`;
   class Transport { stderr = { on(_e, listener) { listener(startup); } }; async close() {} }
   class ClientClass {
     async connect() {}
@@ -98,7 +109,16 @@ export async function mcpContractMismatch() {
   const read = async (url) => url.endsWith('capabilities') ? { capabilities: Array(10).fill({}) } : { solutions: Array(2).fill({}) };
   let thrown = null;
   try { await packageContract(github, { repo: { owner: 'o', repo: 'r' }, runId: 1 }, { Transport, ClientClass, read }); } catch (e) { thrown = e.message; }
-  return { watch: 'mcp-contract', forced: 'published package reports 0 cap trust against a 10-capability catalogue', fired: thrown !== null && alertsOf(issues).length === 1, workflow_failed: thrown, alerts: alertsOf(issues) };
+  return { thrown, alerts: alertsOf(issues) };
+}
+
+export async function mcpContractMismatch() {
+  const bad = await runMcp(0);
+  const good = await runMcp(10); // positive control: a consistent package opens nothing
+  const fired = /cap trust=0, catalogue capabilities=10/.test(bad.thrown ?? '') && bad.alerts.length === 1 &&
+    good.thrown === null && good.alerts.length === 0;
+  return { watch: 'mcp-contract', forced: 'published package reports 0 cap trust against a 10-capability catalogue', fired,
+    workflow_failed: bad.thrown, alerts: bad.alerts, control: { cap_trust: 10, workflow_failed: good.thrown, alerts: good.alerts.length } };
 }
 
 export function x402AndBus() {

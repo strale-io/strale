@@ -6,6 +6,7 @@ test('deploy SHA mismatch fails the workflow and opens one deploy-not-live issue
   const d = await deployMismatch();
   assert.equal(d.fired, true);
   assert.match(d.alerts[0].body, /Production commit: bbbbbbbbbbbb/);
+  assert.deepEqual(d.control, { served: 'cccccccccccc', workflow_failed: null, alerts: 0 });
 });
 test('a stale job is quiet on the first run and opens one issue on the second', async () => {
   const d = await staleJob();
@@ -16,6 +17,7 @@ test('a published MCP trust mismatch opens one package-contract issue', async ()
   const d = await mcpContractMismatch();
   assert.equal(d.fired, true);
   assert.match(d.alerts[0].body, /cap trust=0/);
+  assert.equal(d.control.alerts, 0);
 });
 test('live reads report what they could not read instead of throwing', async () => {
   const live = await liveReads(async () => { throw new Error('HTTP 503'); });
