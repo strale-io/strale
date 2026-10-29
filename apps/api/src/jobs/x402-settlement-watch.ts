@@ -18,6 +18,9 @@
  * arriving right when a challenge-version change deployed, flip
  * X402_CHALLENGE_VERSION back and redeploy.
  *
+ * Since 2026-10-29 the count is split by payer, so one big buyer pausing is a
+ * warning rather than a CRITICAL page (see "Buyer concentration" below).
+ *
  * Read-only on the DB; no advisory lock needed (duplicate alerts from a
  * multi-replica deploy are annoying, not harmful, and we run 1 replica).
  */
