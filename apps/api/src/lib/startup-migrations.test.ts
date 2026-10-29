@@ -1485,6 +1485,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0128_manifestTextHash",
       "runMigration0129_transactionCost",
       "runMigration0130_syncWalletHolds",
+      "runMigration0131_startupMigrationApplied",
     ]);
   });
 });
@@ -1803,6 +1804,7 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
     //   0062: UPDATE risk-narrative-generate → {count: 0}      [7]
     //   0062: SELECT remaining_zero → 1 → THROWS               [8]
     const queue: unknown[] = [
+      [{ present: false }], // runner: startup_migration_applied not created yet
       [{ cnt: "1" }],
       [{ cnt: "1" }],
       undefined,
@@ -2367,7 +2369,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(130);
+    expect(Math.max(...numbers)).toBe(131);
   });
 });
 

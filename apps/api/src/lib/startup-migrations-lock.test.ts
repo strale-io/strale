@@ -261,7 +261,11 @@ describe("migration lock contention", () => {
       expect(concurrent).toHaveLength(3);
       // Four runner reservations, plus each concurrent block's own session.
       expect(state.poolSessions).toHaveLength(7);
-      expect(state.db.execute).not.toHaveBeenCalled();
+      // Blocks never touch the API pool; the runner uses it only to read and
+      // record startup_migration_applied.
+      for (const [query] of state.db.execute.mock.calls) {
+        expect(new PgDialect().sqlToQuery(query as SQL).sql).toMatch(/startup_migration_applied/);
+      }
       expect(state.poolSessions[0].unsafe).toHaveBeenCalledWith("SELECT $1", ["safe-bind"]);
       const jsonBind = state.poolSessions[0].unsafe.mock.calls.find(([text]) => text.includes("::jsonb"))![1][0];
       // Use the real Drizzle-installed codec, not a double-stringifying stub.

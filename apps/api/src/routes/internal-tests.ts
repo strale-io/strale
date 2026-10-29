@@ -1377,7 +1377,8 @@ internalTestsRoute.post("/admin/apply-migrations", async (c) => {
   const { runStartupMigrations } = await import("../lib/startup-migrations.js");
 
   try {
-    const blocks = await runStartupMigrations();
+    // Emergency re-run: every block, including ones recorded as applied.
+    const blocks = await runStartupMigrations({ force: true });
     return c.json({
       ok: true as const,
       block_count: blocks.length,
