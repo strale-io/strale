@@ -5,7 +5,7 @@ Intent: H7 (platform-hardening T7), rename the circuit-breaker table capability_
 ## What changed (expand step)
 
 - Block 0134 (`runMigration0134_renameCapabilityHealthToSourceHealth`, policy
-  `once`) renames the table, renames its `capability_health_*` constraints and
+  `every_boot`) renames the table, renames its `capability_health_*` constraints and
   indexes to `source_health_*` (the names drizzle derives, so production
   matches a fresh database), and creates `capability_health` as a view
   `SELECT * FROM source_health`. All of that is one `DO` statement, so it is
@@ -28,7 +28,8 @@ Intent: H7 (platform-hardening T7), rename the circuit-breaker table capability_
   `drizzle-kit push` and then run every block in order, and block 0118 still
   runs `UPDATE capability_health` there. Without the view that block fails on
   a fresh database. Keep the declaration after the contract step too: 0118
-  runs before the drop on a fresh database.
+  runs before the drop on a fresh database. In that PR, reword the schema.ts
+  comment: the view then exists only so fresh databases can run 0118.
 
 ## Workload (DEC-20260504-B)
 
@@ -57,14 +58,14 @@ runner's 2 s lock_timeout and retries bound the wait.
 
 ## Contract step (next)
 
-Drop the view in a new block once production shows no reads of the old name:
-
-- the Railway deployment from before 0134 is gone (only the renamed build is
-  live), and
-- if `pg_stat_statements` is installed, `SELECT calls, query FROM
-  pg_stat_statements WHERE query ILIKE '%capability_health%' AND query NOT
-  ILIKE '%pg_stat_statements%'` shows no new calls after the cutover (block
-  0118 returns before its UPDATE in production, it is recorded as applied).
+Drop the view in a new block once production shows no reads of the old name.
+Postgres keeps no read counters for views, so the usable signal is the deploy
+record: the Railway deployment from before 0134 is gone and only the renamed
+build is live. Only if `pg_stat_statements` happens to be installed, also
+check `SELECT calls, query FROM pg_stat_statements WHERE query ILIKE
+'%capability_health%' AND query NOT ILIKE '%pg_stat_statements%'`; do not wait
+for it otherwise. Block 0118 returns before its UPDATE in production (recorded
+as applied), so it is not a reader.
 
 The drop block is `DROP VIEW IF EXISTS capability_health` and must check the
 relkind is `v` first, so it can never drop a table. After it lands, a rollback

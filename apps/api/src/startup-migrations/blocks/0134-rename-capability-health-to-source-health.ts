@@ -28,7 +28,9 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
 // most one row per capability slug (its unique constraint). The block measures
 // it anyway and reports rows and bytes in its outcome. It needs an ACCESS
 // EXCLUSIVE lock for the length of a catalogue update; the runner's
-// lock_timeout and retries bound the wait.
+// lock_timeout and retries bound the wait. While it waits, the old build's
+// circuit-breaker reads (FOR UPDATE on each /v1/do call) queue behind it, for
+// at most that lock_timeout per attempt.
 //
 // Runs only while capability_health is a table. Afterwards the name is the
 // view (or, after the later drop, nothing), and on a fresh database
