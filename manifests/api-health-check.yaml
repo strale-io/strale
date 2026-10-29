@@ -55,7 +55,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale-production.up.railway.app/v1/health
+      url: https://api.strale.io/health
     expected_fields:
       - field: is_healthy
         operator: not_null
@@ -78,8 +78,19 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: number
+      - field: is_healthy
+        operator: is_true
+        reliability: guaranteed
+      - field: status_code
+        operator: equals
+        reliability: guaranteed
+        value: 200
+      - field: response_body.status
+        operator: equals
+        reliability: guaranteed
+        value: 'ok'
   health_check_input:
-    url: https://strale-production.up.railway.app/v1/health
+    url: https://api.strale.io/health
 output_field_reliability:
   is_healthy: guaranteed
   status_code: guaranteed

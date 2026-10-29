@@ -585,6 +585,22 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: number
+      - field: average
+        operator: gt
+        reliability: guaranteed
+        value: 0.7
+      - field: average
+        operator: lt
+        reliability: guaranteed
+        value: 1.3
+      - field: min
+        operator: gt
+        reliability: guaranteed
+        value: 0.5
+      - field: max
+        operator: lt
+        reliability: guaranteed
+        value: 1.5
   health_check_input:
     to: EUR
     from: USD

@@ -1,0 +1,30 @@
+{
+  "slug": "eori-validate",
+  "recorded_at": "2026-10-29T16:13:32.585Z",
+  "input": {
+    "eori": "SE5560125790"
+  },
+  "redactions": [
+    "Set-Cookie values replaced with 'redacted'"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://ec.europa.eu/taxation_customs/dds2/eos/validation/services/validation",
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n  xmlns:ev=\"http://eori.ws.eos.dds.s/\"><soap:Body>\n  <ev:validateEORI><ev:eori>SE5560125790</ev:eori></ev:validateEORI>\n</soap:Body></soap:Envelope>"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "text/xml; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:13:32 GMT",
+          "server": "Europa",
+          "set-cookie": "rps=redacted; path=/; Httponly; Secure"
+        },
+        "body": "<?xml version='1.0' encoding='UTF-8'?><S:Envelope xmlns:S=\"http://schemas.xmlsoap.org/soap/envelope/\"><S:Body><ns0:validateEORIResponse xmlns:ns0=\"http://eori.ws.eos.dds.s/\"><return><requestDate>29/10/2026</requestDate><result><eori>SE5560125790</eori><status>0</status><statusDescr>Valid</statusDescr><name>Aktiebolaget Volvo</name><address>AB Volvo</address><street>.</street><postalCode>40508</postalCode><city>GÖTEBORG</city><country>Sweden</country></result></return></ns0:validateEORIResponse></S:Body></S:Envelope>",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

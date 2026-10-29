@@ -94,6 +94,18 @@ test_fixtures:
       - field: indicator_codes
         operator: not_null
         reliability: guaranteed
+      - field: indicators.population.value
+        operator: gt
+        reliability: guaranteed
+        value: 5000000
+      - field: indicators.population.value
+        operator: lt
+        reliability: guaranteed
+        value: 20000000
+      - field: indicators.unemployment_percent.value
+        operator: lt
+        reliability: guaranteed
+        value: 50
   health_check_input:
     country_code: SE
 output_field_reliability:
