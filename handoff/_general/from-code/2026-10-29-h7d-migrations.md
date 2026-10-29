@@ -113,7 +113,7 @@ next deploy's `skipped_count: 29` were not read (no DB or Railway log access).
   `/v1/do` queries for the overlap. Listening is not proof of serving either
   (independent review, FAIL round 1): Railway cuts over only after
   `/health/deep` passes. So a heartbeat starts five minutes after listen,
-  past the healthcheck window, and repeats every two minutes
+  past the healthcheck window, and repeats every minute
   (`0132_sqs_fields_removed_and_serving` first beat,
   `0132_sqs_fields_removed_last_beat` latest, in `startup_migration_ledger`).
   Block 0132 drops only when the first beat is at least ten minutes old and
@@ -148,3 +148,12 @@ Receipt: [h7d-drop-sqs-residual-schema](../../../archive/receipts/2026-10-29-tes
 Round 2 (heartbeat): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-heartbeat.json).
 Round 3 (shutdown withdrawal): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-withdrawal.json).
 Round 4 (shutdown order: withdrawal first, after any beat in flight): [receipt](../../../archive/receipts/2026-10-29-test-run-h7d-drop-sqs-shutdown-order.json).
+
+## PR 3 in production
+
+PR 808 merged as `0cd57d84`; `/health` served `0cd57d84f506` at 04:01 Swedish
+time, `/health/deep` ok, `/v1/capabilities` 200, a free `/v1/do` call
+completed. On this deploy block 0132 defers by design; the first beat is due
+about 04:06 and the drop runs on the first boot after about 04:16. Not read
+from this session: the boot logs, `startup_migration_applied` (expect 75 rows),
+and the columns' absence after that later boot.
