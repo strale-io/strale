@@ -332,6 +332,7 @@
         "config/vendors.schema.json",
         "config/vendors.yaml",
         "docs/README.md",
+        "docs/design/2026-10-29-x402-batch-payment.md",
         "docs/operations/distribution-registry.md",
         "docs/programs/brand-website/tracks.yaml",
         "docs/programs/cto-readiness/tracks.yaml",
