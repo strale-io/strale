@@ -1,17 +1,13 @@
-import { readFileSync } from "node:fs";
+import { PACKAGE_NAME, PACKAGE_VERSION } from "./version.js";
 
 // Attribution: every request this package makes carries X-Strale-Client
-// "<package>/<version>" (D0, PR #771). Read from package.json so the value
-// cannot fall behind a release the way a hand-maintained literal did in
-// strale-mcp.
-const metadata = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
-  name: string;
-  version: string;
-};
-export const CLIENT_ID = `${metadata.name}/${metadata.version}`;
+// "<package>/<version>" (D0, PR #771).
+export const CLIENT_ID = `${PACKAGE_NAME}/${PACKAGE_VERSION}`;
 
 export const DEFAULT_BASE_URL = "https://api.strale.io";
 export const DEFAULT_MAX_PRICE_CENTS = 200;
+/** Server-side ceiling for max_price_cents on /v1/do. */
+export const MAX_PRICE_CAP_CENTS = 2000;
 const DEFAULT_TIMEOUT_MS = 60_000;
 
 export interface StraleToolsOptions {
@@ -28,7 +24,7 @@ export interface StraleToolsOptions {
   fetch?: typeof fetch;
   /** API origin. Defaults to https://api.strale.io. */
   baseUrl?: string;
-  /** Highest price in EUR cents an API-key call may be charged. Default 200 (€2.00). */
+  /** Highest price in EUR cents an API-key call may be charged: an integer from 1 to 2000. Default 200 (€2.00). */
   maxPriceCents?: number;
   /** Per-request timeout in milliseconds. Default 60000. */
   timeoutMs?: number;
@@ -44,13 +40,19 @@ export interface ResolvedOptions {
 }
 
 export function resolveOptions(opts: StraleToolsOptions = {}): ResolvedOptions {
+  const maxPriceCents = opts.maxPriceCents ?? DEFAULT_MAX_PRICE_CENTS;
+  // The solution route reads a cap of 0 or less as "no cap", so a caller who
+  // meant "free only" would be charged in full. Refuse it here.
+  if (!Number.isInteger(maxPriceCents) || maxPriceCents < 1 || maxPriceCents > MAX_PRICE_CAP_CENTS) {
+    throw new RangeError(`maxPriceCents must be an integer from 1 to ${MAX_PRICE_CAP_CENTS}; got ${maxPriceCents}`);
+  }
   const envKey = typeof process !== "undefined" ? process.env?.STRALE_API_KEY : undefined;
   return {
     apiKey: opts.apiKey ?? (envKey || undefined),
     x402Fetch: opts.x402Fetch,
     fetch: opts.fetch ?? globalThis.fetch,
     baseUrl: (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, ""),
-    maxPriceCents: opts.maxPriceCents ?? DEFAULT_MAX_PRICE_CENTS,
+    maxPriceCents,
     timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   };
 }

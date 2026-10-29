@@ -164,3 +164,53 @@ test("solutions route to the solution endpoint", async () => {
   assert.equal(out.price_cents, 150);
   assert.deepEqual(seen[0]!.body, { inputs: { company_number: "1" }, max_price_cents: 200 });
 });
+
+const ctx = { toolCallId: "t", messages: [] } as never;
+
+test("a free tool not on the x402 rail still runs when x402Fetch is set", async () => {
+  const plain = mockBackend({
+    "POST /v1/do": () => [200, { result: { output: { valid: true }, price_cents: 0 } }],
+  });
+  const paying = mockBackend({});
+  const execute = straleExecute({ apiKey: "", fetch: plain.fetchImpl, x402Fetch: paying.fetchImpl }).execute!;
+  const out = (await execute({ slug: "iban-validate", inputs: { iban: "x" } }, ctx)) as Record<string, unknown>;
+  assert.equal(out.ok, true);
+  assert.equal(out.rail, "free");
+  assert.equal(paying.seen.length, 1, "tried x402 first");
+  assert.equal(plain.seen[0]!.headers.authorization, undefined);
+});
+
+test("a paying fetch that refuses returns a readable error", async () => {
+  const plain = mockBackend({});
+  const refusing = (async () => { throw new Error("Payment amount exceeds maximum allowed"); }) as typeof fetch;
+  const execute = straleExecute({ apiKey: "", fetch: plain.fetchImpl, x402Fetch: refusing }).execute!;
+  const out = (await execute({ slug: "uk-company-data", inputs: {} }, ctx)) as Record<string, unknown>;
+  assert.equal(out.ok, false);
+  assert.equal(out.error_code, "x402_client_error");
+  assert.match(String(out.message), /exceeds maximum/);
+});
+
+test("a solution whose steps all failed is not reported as ok", async () => {
+  const { fetchImpl } = mockBackend({
+    "POST /v1/solutions/kyb-essentials-uk/execute": () => [200, { result: { status: "failed", price_cents: 0, steps: [], errors: ["uk-company-data: upstream down"] } }],
+  });
+  const execute = straleExecute({ apiKey: "sk_test_x", fetch: fetchImpl }).execute!;
+  const out = (await execute({ slug: "kyb-essentials-uk", type: "solution", inputs: {} }, ctx)) as Record<string, unknown>;
+  assert.equal(out.ok, false);
+  assert.deepEqual(out.errors, ["uk-company-data: upstream down"]);
+});
+
+test("a key holder's 402 carries no how-to-pay hint; an anonymous solution hint names the solution route", async () => {
+  const { fetchImpl } = mockBackend({
+    "POST /v1/solutions/kyb-essentials-uk/execute": () => [402, { error_code: "insufficient_balance", message: "Top up" }],
+  });
+  const keyed = (await straleExecute({ apiKey: "sk_test_x", fetch: fetchImpl }).execute!({ slug: "kyb-essentials-uk", type: "solution", inputs: {} }, ctx)) as Record<string, unknown>;
+  assert.equal(keyed.how_to_pay, undefined);
+  const anon = (await straleExecute({ apiKey: "", fetch: fetchImpl }).execute!({ slug: "kyb-essentials-uk", type: "solution", inputs: {} }, ctx)) as Record<string, unknown>;
+  assert.match(String(anon.how_to_pay), /\/x402\/solutions\/kyb-essentials-uk/);
+});
+
+test("maxPriceCents outside 1..2000 is refused at construction", () => {
+  for (const bad of [0, -1, 2001, 1.5]) assert.throws(() => straleTools({ maxPriceCents: bad }), RangeError);
+  assert.doesNotThrow(() => straleTools({ maxPriceCents: 2000 }));
+});

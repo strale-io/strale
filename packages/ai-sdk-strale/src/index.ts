@@ -1,6 +1,6 @@
-import { tool } from "ai";
+import { tool, type Tool } from "ai";
 import { z } from "zod";
-import { request, resolveOptions, type ResolvedOptions, type StraleToolsOptions } from "./client.js";
+import { request, resolveOptions, type HttpResult, type ResolvedOptions, type StraleToolsOptions } from "./client.js";
 
 export { CLIENT_ID, type StraleToolsOptions } from "./client.js";
 
@@ -11,10 +11,24 @@ const SEARCH_DESCRIPTION =
   "No API key needed to search.";
 
 const EXECUTE_DESCRIPTION =
-  "Run one Strale tool or solution by slug and return its output with source provenance. Call strale_search " +
-  "first to get the slug and the input fields. Paid tools are charged per call; some tools are free without a key.";
+  "Run one Strale tool or solution by slug and return its output. Call strale_search first to get the slug and " +
+  "the input fields. Paid tools are charged per call; some tools are free without a key. Check `ok` in the result.";
 
 type Kind = "capability" | "solution";
+
+export interface StraleSearchInput {
+  query: string;
+  limit?: number;
+}
+
+export interface StraleExecuteInput {
+  slug: string;
+  type?: Kind;
+  inputs: Record<string, unknown>;
+}
+
+/** Tool results are plain JSON objects; `ok` says whether the call succeeded. */
+export type StraleToolResult = { ok: boolean } & Record<string, unknown>;
 
 interface TypeaheadResult {
   type: Kind;
@@ -29,7 +43,7 @@ interface TypeaheadResult {
 }
 
 /** Search the catalogue: typeahead ranking, then the input schema of each hit. */
-export function straleSearch(options: StraleToolsOptions = {}) {
+export function straleSearch(options: StraleToolsOptions = {}): Tool<StraleSearchInput, StraleToolResult> {
   const opts = resolveOptions(options);
   return tool({
     description: SEARCH_DESCRIPTION,
@@ -41,13 +55,13 @@ export function straleSearch(options: StraleToolsOptions = {}) {
   });
 }
 
-async function searchCatalogue(opts: ResolvedOptions, query: string, limit: number, signal?: AbortSignal) {
+async function searchCatalogue(opts: ResolvedOptions, query: string, limit: number, signal?: AbortSignal): Promise<StraleToolResult> {
   const { status, body } = await request(
     opts,
     `/v1/suggest/typeahead?q=${encodeURIComponent(query)}&limit=${limit}`,
     { signal },
   );
-  if (status >= 400) return failure(status, body);
+  if (status >= 400) return failure(status, body, { hasKey: !!opts.apiKey });
   const hits = (Array.isArray(body.results) ? body.results : []) as TypeaheadResult[];
   // The typeahead carries no input schema; the detail endpoints do. A failed
   // detail fetch is reported on the hit, never dropped silently.
@@ -68,6 +82,8 @@ async function searchCatalogue(opts: ResolvedOptions, query: string, limit: numb
           detailError = `detail lookup returned HTTP ${detail.status}`;
         }
       } catch (err) {
+        // A cancelled run must stop, not come back as a partial result.
+        if (signal?.aborted) throw err;
         detailError = `detail lookup failed: ${(err as Error).message}`;
       }
       return {
@@ -85,7 +101,7 @@ async function searchCatalogue(opts: ResolvedOptions, query: string, limit: numb
       };
     }),
   );
-  return { ok: true as const, query, total: typeof body.total === "number" ? body.total : results.length, results };
+  return { ok: true, query, total: typeof body.total === "number" ? body.total : results.length, results };
 }
 
 /**
@@ -93,7 +109,7 @@ async function searchCatalogue(opts: ResolvedOptions, query: string, limit: numb
  * maxPriceCents), x402 (the supplied paying fetch settles the 402 challenge),
  * otherwise an anonymous call, which only the free tools accept.
  */
-export function straleExecute(options: StraleToolsOptions = {}) {
+export function straleExecute(options: StraleToolsOptions = {}): Tool<StraleExecuteInput, StraleToolResult> {
   const opts = resolveOptions(options);
   return tool({
     description: EXECUTE_DESCRIPTION,
@@ -106,27 +122,48 @@ export function straleExecute(options: StraleToolsOptions = {}) {
   });
 }
 
-async function runTool(opts: ResolvedOptions, slug: string, kind: Kind, inputs: Record<string, unknown>, signal?: AbortSignal) {
+async function runTool(opts: ResolvedOptions, slug: string, kind: Kind, inputs: Record<string, unknown>, signal?: AbortSignal): Promise<StraleToolResult> {
   const s = encodeURIComponent(slug);
   if (!opts.apiKey && opts.x402Fetch) {
     const path = kind === "solution" ? `/x402/solutions/${s}` : `/x402/${s}`;
-    const { status, body } = await request(opts, path, { method: "POST", body: inputs, via: opts.x402Fetch, signal });
-    if (status >= 400) return failure(status, body, slug);
-    const { _meta, ...output } = body;
-    return { ok: true as const, rail: "x402" as const, slug, output, meta: _meta ?? null };
+    let res: HttpResult;
+    try {
+      res = await request(opts, path, { method: "POST", body: inputs, via: opts.x402Fetch, signal });
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      // Paying fetches throw on their own refusals (amount above the wrapper's
+      // limit, failed signature). Hand the reason to the model.
+      return {
+        ok: false,
+        rail: "x402",
+        slug,
+        error_code: "x402_client_error",
+        message: (err as Error).message,
+        fix: "Raise the paying fetch's spending limit, fund the wallet, or use an API key.",
+      };
+    }
+    // Free tools that are not on the x402 rail answer 404 there but run
+    // anonymously on /v1/do, so try that before reporting a miss.
+    if (res.status === 404 && kind === "capability") return runViaApi(opts, slug, kind, inputs, signal);
+    if (res.status >= 400) return failure(res.status, res.body, { slug, kind, hasKey: false });
+    const { _meta, ...output } = res.body;
+    return { ok: true, rail: "x402", slug, output, meta: _meta ?? null };
   }
+  return runViaApi(opts, slug, kind, inputs, signal);
+}
 
-  const path = kind === "solution" ? `/v1/solutions/${s}/execute` : "/v1/do";
+async function runViaApi(opts: ResolvedOptions, slug: string, kind: Kind, inputs: Record<string, unknown>, signal?: AbortSignal): Promise<StraleToolResult> {
+  const path = kind === "solution" ? `/v1/solutions/${encodeURIComponent(slug)}/execute` : "/v1/do";
   const payload =
     kind === "solution"
       ? { inputs, max_price_cents: opts.maxPriceCents }
       : { capability_slug: slug, inputs, max_price_cents: opts.maxPriceCents };
   const { status, body } = await request(opts, path, { method: "POST", body: payload, auth: true, signal });
-  const rail = opts.apiKey ? ("api_key" as const) : ("free" as const);
+  const rail = opts.apiKey ? "api_key" : "free";
   if (status === 202) {
     const r = (body.result ?? body) as Record<string, unknown>;
     return {
-      ok: true as const,
+      ok: true,
       rail,
       slug,
       status: "executing",
@@ -134,10 +171,13 @@ async function runTool(opts: ResolvedOptions, slug: string, kind: Kind, inputs: 
       note: "Runs asynchronously. Fetch the result from GET /v1/transactions/{transaction_id} with the same API key.",
     };
   }
-  if (status >= 400) return failure(status, body, slug);
+  if (status >= 400) return failure(status, body, { slug, kind, hasKey: !!opts.apiKey });
   const r = (body.result ?? body) as Record<string, unknown>;
+  // A solution answers 200 even when every step failed or a precondition
+  // stopped it; neither is a success the model should build on.
+  const failed = r.status === "failed" || !!r.gated;
   return {
-    ok: true as const,
+    ok: !failed,
     rail,
     slug,
     output: r.output ?? r.steps ?? null,
@@ -148,29 +188,40 @@ async function runTool(opts: ResolvedOptions, slug: string, kind: Kind, inputs: 
     ...(r.status ? { status: r.status } : {}),
     ...(r.errors ? { errors: r.errors } : {}),
     ...(r.gated ? { gated: r.gated } : {}),
+    ...(r.details ? { details: r.details } : {}),
     ...(typeof r.wallet_balance_cents === "number" ? { wallet_balance_cents: r.wallet_balance_cents } : {}),
   };
 }
 
-function failure(status: number, body: Record<string, unknown>, slug?: string) {
+function failure(
+  status: number,
+  body: Record<string, unknown>,
+  ctx: { slug?: string; kind?: Kind; hasKey: boolean },
+): StraleToolResult {
   const details = (body.details ?? null) as Record<string, unknown> | null;
-  const out: Record<string, unknown> = {
+  const out: StraleToolResult = {
     ok: false,
     status,
     error_code: body.error_code ?? (status === 402 ? "payment_required" : "error"),
     message: body.message ?? body.error ?? `HTTP ${status}`,
   };
   if (details?.fix) out.fix = details.fix;
-  if (status === 401 || status === 402) {
+  // Only an unauthenticated caller needs telling how to pay; a key holder's
+  // 402 is a budget or balance answer, already explained by the server.
+  if ((status === 401 || status === 402) && !ctx.hasKey) {
+    const x402Path = ctx.slug ? (ctx.kind === "solution" ? `/x402/solutions/${ctx.slug}` : `/x402/${ctx.slug}`) : undefined;
     out.how_to_pay =
       "Create the tools with an apiKey (or set STRALE_API_KEY), or pass x402Fetch: a fetch that settles x402 " +
-      "challenges in USDC on Base. Free tools need neither." + (slug ? ` x402 endpoint: /x402/${slug}` : "");
+      "challenges in USDC on Base. Free tools need neither." + (x402Path ? ` x402 endpoint: ${x402Path}` : "");
   }
   return out;
 }
 
 /** Both tools, keyed by the names the descriptions refer to. */
-export function straleTools(options: StraleToolsOptions = {}) {
+export function straleTools(options: StraleToolsOptions = {}): {
+  strale_search: Tool<StraleSearchInput, StraleToolResult>;
+  strale_execute: Tool<StraleExecuteInput, StraleToolResult>;
+} {
   return {
     strale_search: straleSearch(options),
     strale_execute: straleExecute(options),
