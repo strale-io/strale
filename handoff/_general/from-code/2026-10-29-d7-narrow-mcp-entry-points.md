@@ -54,3 +54,5 @@ The choice therefore rests on three things:
 
 - Smithery listings need Petter's Smithery sign-in (DEC-20261027-C). The ask is on `needs-founder`.
 - Record each registry entry's URL, version and smoke values in T8 after publish.
+
+Evidence: [test receipt](../../../archive/receipts/2026-10-29-test-run-d7-narrow-mcp-entry-points.json).
