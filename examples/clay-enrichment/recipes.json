@@ -1,0 +1,107 @@
+{
+  "template": "clay-template",
+  "version": "1.0.0",
+  "notes": "One Clay HTTP API enrichment column per recipe. {{Column}} is a Clay column reference: in Clay, type / in the field and pick the column. <STRALE_API_KEY> is pasted once into the header, never stored in a table column. Each output column names the response path Clay adds as a column; those paths are fields the tool's manifest documents (manifests/<slug>.yaml), checked by template.test.mjs.",
+  "recipes": [
+    {
+      "id": "vat-check",
+      "title": "EU VAT check",
+      "capability_slug": "vat-validate",
+      "request": {
+        "method": "POST",
+        "url": "https://api.strale.io/v1/do?src=clay-template",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <STRALE_API_KEY>",
+          "X-Strale-Client": "clay-template/1.0.0"
+        },
+        "body": {
+          "capability_slug": "vat-validate",
+          "max_price_cents": 5,
+          "inputs": {
+            "vat_number": "{{VAT number}}"
+          }
+        }
+      },
+      "output_columns": {
+        "VAT valid": {
+          "path": "result.output.valid"
+        },
+        "VAT registered name": {
+          "path": "result.output.company_name"
+        },
+        "VAT registered address": {
+          "path": "result.output.company_address"
+        },
+        "VAT country": {
+          "path": "result.output.country_code"
+        },
+        "Strale source": {
+          "path": "result.provenance.source"
+        },
+        "Strale checked at": {
+          "path": "result.provenance.fetched_at"
+        },
+        "Strale transaction": {
+          "path": "result.transaction_id"
+        }
+      },
+      "run_only_if_present": [
+        "VAT number"
+      ]
+    },
+    {
+      "id": "registry-status",
+      "title": "Company registry status",
+      "capability_slug": "company-status-check",
+      "request": {
+        "method": "POST",
+        "url": "https://api.strale.io/v1/do?src=clay-template",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer <STRALE_API_KEY>",
+          "X-Strale-Client": "clay-template/1.0.0"
+        },
+        "body": {
+          "capability_slug": "company-status-check",
+          "max_price_cents": 10,
+          "inputs": {
+            "country": "{{Country code}}",
+            "identifier": "{{Company number}}"
+          }
+        }
+      },
+      "output_columns": {
+        "Registry status": {
+          "path": "result.output.status"
+        },
+        "Registry status (as published)": {
+          "path": "result.output.registry_status_raw"
+        },
+        "Registered name": {
+          "path": "result.output.company_name"
+        },
+        "Registry": {
+          "path": "result.output.registry.name"
+        },
+        "Insolvency checked": {
+          "path": "result.output.insolvency.checked"
+        },
+        "Insolvency notices found": {
+          "path": "result.output.insolvency.notices_found",
+          "conditional": "Present only when Insolvency checked is true. Blank means not checked, never none found."
+        },
+        "Registry checked at": {
+          "path": "result.output.as_of"
+        },
+        "Strale transaction": {
+          "path": "result.transaction_id"
+        }
+      },
+      "run_only_if_present": [
+        "Country code",
+        "Company number"
+      ]
+    }
+  ]
+}

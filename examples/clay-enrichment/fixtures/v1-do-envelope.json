@@ -1,0 +1,17 @@
+{
+  "_captured": "2026-10-29T08:47:04Z from POST https://api.strale.io/v1/do (iban-validate, free tier, no key). Output and meta trimmed; the envelope keys are as served.",
+  "result": {
+    "transaction_id": "136f11cb-0fd9-48ae-b5be-835c68a8be0c",
+    "status": "completed",
+    "capability_used": "iban-validate",
+    "price_cents": 0,
+    "latency_ms": 5,
+    "output": {},
+    "provenance": {
+      "source": "iban-validate:algorithmic",
+      "fetched_at": "2026-10-29T08:47:04.795Z",
+      "acquisition_method": "computed",
+      "data_access_lane": "not_applicable"
+    }
+  }
+}
