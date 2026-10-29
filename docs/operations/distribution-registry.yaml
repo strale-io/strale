@@ -896,9 +896,14 @@ surfaces:
     kind: package
     target: Zapier Developer Platform
     status: built
-    status_date: 2026-10-27
+    status_date: 2026-10-29
     evidence: packages/zapier-strale/README.md
-    notes: Built and tested offline; not registered, pushed to Zapier or published. Company status and invoice issuer actions are hidden pending public availability.
+    notes: >-
+      0.2.0 has five visible fixed actions (company lookup, EU VAT, IBAN, email,
+      name screening), tested offline with zapier-platform-core's app tester.
+      The two hidden actions whose tools are not public were removed. Not
+      registered, pushed to Zapier or published; zapier push needs Petter's
+      Zapier account.
 
   - id: pkg-n8n-nodes-strale
     surface: Strale n8n community node (D8)

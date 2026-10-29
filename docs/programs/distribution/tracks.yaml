@@ -121,10 +121,14 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Build and test five typed actions as general business tools; check
-      listing text against claims.yaml and pass DEC-20260422-A before publishing
-      under DEC-20261027-B. Hold compliance targeting per §9 item 8; measure
-      installs and weekly repeat callers.
+    next_action: zapier-strale 0.2.0 has five visible fixed actions (company
+      lookup, EU VAT, IBAN, email, name screening), offline tests and the
+      DEC-20260422-A preflight; the two non-public hidden actions were removed.
+      Waiting on Petter to register and push the app from his Zapier account,
+      run one live Zap per action and submit for review, following
+      handoff/_general/from-code/2026-10-29-zapier-general-business-actions.md.
+      After publishing, report installs and weekly repeat callers with the
+      queries in that handoff against the D5 thresholds.
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Integration publication and contract verification are recorded.
@@ -246,12 +250,13 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Review and deploy the prepared monthly allowance; verify the
-      platform facts value and free-call headers, then update the sibling frontend.
-      Record rollout date and review free callers plus signup and paid conversions
-      weekly with commercial-brief. Compare against the August base of two callers
-      in 90 days; revert if no rise after 45 days. See the handoff for exact checks.
-    resume_file: docs/research/2026-10-27-distribution-strategy.md
+    next_action: Live since 2026-10-28 (300 calls a month per IP, verified in
+      production 2026-10-29). Each week run commercial-brief with the read-only
+      role and record free callers, signups and paid conversions against the
+      August base of two callers in 90 days. On 2026-12-12 (rollout plus 45 days,
+      Swedish date) revert allowance and copy together if callers have not risen.
+      Merge the strale-frontend copy PR. See the handoff.
+    resume_file: handoff/_general/from-code/2026-10-29-d10-rollout.md
     exit:
       - Monthly allowance and texts match the adopted pricing scope.
       - Free callers and conversions are reported against D10 thresholds.
@@ -263,10 +268,11 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: Langchain-strale refresh is with another lane. Housekeeping
-      prepared 2026-10-29 (strale-semantic-kernel deprecation notice, crewai and
-      composio frozen, register rows updated); an npm owner runs the npm
-      deprecate command in docs/release/directory-submissions/package-housekeeping.md.
+    next_action: langchain-strale 0.2.0 merged in PR 830; publish it to PyPI
+      under the §9 item 7 grant with the steps in handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md
+      and run its smoke test. Housekeeping prepared 2026-10-29 (strale-semantic-kernel
+      deprecation notice, crewai and composio frozen, register rows updated); an
+      npm owner runs the npm deprecate command in docs/release/directory-submissions/package-housekeeping.md.
       The four directory submissions (awesome-remote-mcp-servers, Docker PR 2202
       update, Cursor plugin, Cline) are ready in docs/release/directory-submissions/README.md
       for whoever holds the GitHub and Cursor accounts; record each outcome in

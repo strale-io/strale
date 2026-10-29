@@ -997,7 +997,7 @@ exports[`H7b capability settlement characterization > valid result without settl
 
 exports[`H7b do settlement characterization > a thrown facilitator call preserves the claim and intent policy 1`] = `
 {
-  "body": "{"error_code":"execution_failed","message":"The capability failed to execute.","details":{"retryable":true,"next_step":"Retry with exponential backoff; contact support with the transaction_id if the failure continues.","error":"transport threw"},"free_tier":true,"upgrade":{"message":"You're using a free capability. Create an account to access paid tools; trial credits are available where eligible.","signup_url":"https://strale.dev/signup","self_signup":{"url":"https://api.strale.io/v1/signup","method":"POST","body":{"email":"your-agent@yourdomain.com"},"description":"Create an account programmatically with trial credits where eligible."},"paid_examples":[{"slug":"sanctions-check","description":"Screen against global sanctions lists","price":"€0.02"},{"slug":"swedish-company-data","description":"Company data from Bolagsverket","price":"€0.05"},{"slug":"package-security-audit","description":"CVE + license + scorecard audit for npm/PyPI","price":"€0.15"}],"x402_note":"Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog"}}",
+  "body": "{"error_code":"payment_failed","message":"x402 settlement failed after successful execution.","details":{"retryable":false,"fix":"Check payment status in your wallet before signing a fresh x402 payment authorization."},"detail":"Settlement outcome could not be confirmed"}",
   "events": [
     "verify",
     "claim",
@@ -1019,7 +1019,9 @@ exports[`H7b do settlement characterization > a thrown facilitator call preserve
       "state": "settling",
     },
   ],
-  "logs": [],
+  "logs": [
+    "x402-settlement-threw",
+  ],
   "orphans": [],
   "rows": [
     {
@@ -1049,7 +1051,7 @@ exports[`H7b do settlement characterization > a thrown facilitator call preserve
       "x402PaymentHash": "same-payment-hash",
     },
   ],
-  "status": 500,
+  "status": 402,
 }
 `;
 
@@ -1418,7 +1420,7 @@ exports[`H7b do settlement characterization > intent settlement write failure ca
 
 exports[`H7b do settlement characterization > intent write failure prevents any settlement 1`] = `
 {
-  "body": "{"error_code":"execution_failed","message":"The capability failed to execute.","details":{"retryable":true,"next_step":"Retry with exponential backoff; contact support with the transaction_id if the failure continues.","error":"Could not record a durable settlement intent; the payment was not taken. This is a Strale-side failure, not a capability failure."},"free_tier":true,"upgrade":{"message":"You're using a free capability. Create an account to access paid tools; trial credits are available where eligible.","signup_url":"https://strale.dev/signup","self_signup":{"url":"https://api.strale.io/v1/signup","method":"POST","body":{"email":"your-agent@yourdomain.com"},"description":"Create an account programmatically with trial credits where eligible."},"paid_examples":[{"slug":"sanctions-check","description":"Screen against global sanctions lists","price":"€0.02"},{"slug":"swedish-company-data","description":"Company data from Bolagsverket","price":"€0.05"},{"slug":"package-security-audit","description":"CVE + license + scorecard audit for npm/PyPI","price":"€0.15"}],"x402_note":"Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog"}}",
+  "body": "{"error_code":"payment_failed","message":"Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.","details":{"retryable":true,"next_step":"Retry the same request with the same payment authorization; no payment was taken."}}",
   "events": [
     "verify",
     "claim",
@@ -1428,7 +1430,9 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
     "content-type": "application/json",
   },
   "intents": [],
-  "logs": [],
+  "logs": [
+    "x402-settlement-threw",
+  ],
   "orphans": [],
   "rows": [
     {
@@ -1458,7 +1462,7 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
         "data_classification": "unknown",
         "data_jurisdiction": "unknown",
         "data_source": "Test",
-        "error_message": "Could not record a durable settlement intent; the payment was not taken. This is a Strale-side failure, not a capability failure.",
+        "error_message": "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.",
         "execution_mode": "sync",
         "failed_at": "2026-10-28T12:00:00.000Z",
         "input_hash": "sha256:93268aced3bf3c807a4c872a65a2dfd877d14af1b2baaf94951f8ead505502ae",
@@ -1486,7 +1490,7 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
       "complianceHashState": "pending",
       "createdAt": 1793188800000,
       "dataJurisdiction": "",
-      "error": "Could not record a durable settlement intent; the payment was not taken. This is a Strale-side failure, not a capability failure.",
+      "error": "Payment settlement could not start; no payment was taken. This is a Strale-side failure, not a capability failure.",
       "id": "tx-1",
       "input": {
         "value": "test",
@@ -1515,7 +1519,7 @@ exports[`H7b do settlement characterization > intent write failure prevents any 
       "x402PaymentHash": null,
     },
   ],
-  "status": 500,
+  "status": 503,
 }
 `;
 

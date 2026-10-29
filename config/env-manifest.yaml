@@ -1046,7 +1046,7 @@
   set_in:
     - none
 - name: STRALE_API_KEY
-  purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds. Also read by strale-ai-sdk (packages/ai-sdk-strale) as the default key for its tools.
+  purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds. Also read by strale-ai-sdk (packages/ai-sdk-strale) as the default key for its tools, and by strale-cli (packages/cli) as its only credential source.
   provider: internal
   holder: railway
   cost_class: none
