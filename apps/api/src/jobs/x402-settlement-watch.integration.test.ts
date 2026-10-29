@@ -15,7 +15,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { sql } from "drizzle-orm";
 import { useTestDatabase } from "../test-support/integration-db.js";
-import type { Database } from "../db/index.js";
+type Database = import("../db/index.js").Database;
 
 const sent: Array<{ subject: string; body: string; severity: string }> = [];
 vi.mock("../lib/alerting.js", () => ({
