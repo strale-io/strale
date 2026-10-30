@@ -1,7 +1,19 @@
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 registerCapability("openapi-validate", async (input: CapabilityInput) => {
-  const spec = ((input.spec as string) ?? (input.task as string) ?? "").trim();
+  const raw = input.spec ?? input.task ?? "";
+  let spec: string;
+  if (typeof raw === "string") {
+    spec = raw.trim();
+  } else if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+    // A caller that already parsed the spec: validate the object directly.
+    spec = JSON.stringify(raw);
+  } else {
+    throw new CapabilityRefusalError(
+      "'spec' must be an OpenAPI document as a JSON/YAML string or a JSON object.",
+    );
+  }
   if (!spec) throw new Error("'spec' (OpenAPI JSON or YAML string) is required.");
 
   // Try to parse as JSON first

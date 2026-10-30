@@ -118,6 +118,12 @@ import {
 import { PUBLIC_DESCRIPTIONS_0124, UNLISTED_DESCRIPTIONS_0124 } from "../startup-migrations/data/public-descriptions-0124.js";
 
 const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124].map((r) => [r.slug, r.description]));
+// Tools delisted after blocks 0123/0124 froze their copy. Their manifests gain
+// the "Currently unavailable. " prefix that public-descriptions.test.ts
+// requires of every DEACTIVATED slug; the frozen block data does not change.
+const DELISTED_AFTER_0124 = new Set(["price-compare"]);
+const pinnedManifestDescription = (slug: string, description: string) =>
+  DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description;
 const dialect = new PgDialect();
 
 /** Capture SQL chunks issued through the stub. Returns canned values
@@ -1494,6 +1500,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0137_completeComplianceColumns",
       "runMigration0138_redactedRowDeletionReason",
       "runMigration0139_redeleteCustomerDeletedRedactedRows",
+      "runMigration0140_deactivatePriceCompare",
     ]);
   });
 });
@@ -2398,7 +2405,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(139);
+    expect(Math.max(...numbers)).toBe(140);
   });
 });
 
@@ -3427,7 +3434,7 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
         readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8"),
       ) as { name: string; description: string };
       expect(manifest.name, r.slug).toBe(r.name);
-      expect(manifest.description, r.slug).toBe(latestDescriptions.get(r.slug) ?? r.description);
+      expect(manifest.description, r.slug).toBe(pinnedManifestDescription(r.slug, latestDescriptions.get(r.slug) ?? r.description));
     }
     expect(CATALOGUE_COPY_0123_CAPABILITIES.length).toBe(296);
     // password-strength's offered copy says the password is never stored; inputs are kept 90 days.
@@ -3557,7 +3564,7 @@ describe("startup-migrations: block 0124 (public descriptions)", () => {
       expect(seen.has(r.slug), r.slug).toBe(false);
       seen.add(r.slug);
       const manifest = yaml.load(readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8")) as { description: string };
-      expect(manifest.description, r.slug).toBe(r.description);
+      expect(manifest.description, r.slug).toBe(pinnedManifestDescription(r.slug, r.description));
       expect(r.description.length, r.slug).toBeGreaterThanOrEqual(50);
       expect(r.description.length, r.slug).toBeLessThanOrEqual(160);
     }
@@ -3681,5 +3688,61 @@ describe("startup-migrations — block 0134 (capability_health → source_health
     const stub = makeStub({ queue: [[{ old_kind: "r", new_present: true }]] });
     await expect(runMigration0134_renameCapabilityHealthToSourceHealth(stub)).rejects.toThrow(/both exist/);
     expect(stub.renderedSql).toHaveLength(1);
+  });
+});
+
+describe("startup-migrations: block 0140 (deactivate price-compare)", () => {
+  it("delists exactly price-compare from every surface and records the reason", async () => {
+    const { runMigration0140_deactivatePriceCompare, PRICE_COMPARE_DEACTIVATION_REASON } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    const result = await runMigration0140_deactivatePriceCompare(stub);
+
+    expect(stub.renderedSql).toHaveLength(1);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("update capabilities");
+    expect(rendered).toContain("is_active = false");
+    expect(rendered).toContain("visible = false");
+    expect(rendered).toContain("x402_enabled = false");
+    expect(rendered).toContain("where slug = 'price-compare'");
+    expect(rendered).not.toMatch(/slug (in|like|<>|!=)/);
+    expect(PRICE_COMPARE_DEACTIVATION_REASON).toContain("DEC-20261023-A");
+    expect(dialect.sqlToQuery(stub.captured[0]).params).toContain(PRICE_COMPARE_DEACTIVATION_REASON);
+    expect(result.block).toBe("0140_deactivatePriceCompare");
+    expect(result.rows_affected).toBe(1);
+  });
+
+  it("still records the reason after the boot sync has cleared the flags", async () => {
+    // auto-register's DEACTIVATED sync runs before startup migrations and
+    // clears the three flags without writing a reason; a flags-only guard
+    // would match nothing and the once-policy would then retire the block.
+    const { runMigration0140_deactivatePriceCompare, PRICE_COMPARE_DEACTIVATION_REASON } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0140_deactivatePriceCompare(stub);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("or deactivation_reason is distinct from");
+    const params = dialect.sqlToQuery(stub.captured[0]).params;
+    expect(params.filter((p) => p === PRICE_COMPARE_DEACTIVATION_REASON)).toHaveLength(2);
+  });
+
+  it("is idempotent: only a row still listed or missing its reason matches", async () => {
+    const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0140_deactivatePriceCompare(stub);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("and (is_active = true or visible = true or x402_enabled = true or deactivation_reason is distinct from");
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("binds no Date or Buffer parameter (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0140_deactivatePriceCompare(stub);
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(p instanceof Date).toBe(false);
+        expect(Buffer.isBuffer(p)).toBe(false);
+      }
+    }
   });
 });

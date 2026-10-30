@@ -356,6 +356,10 @@ const DEACTIVATED = new Map<string, string>([
     "us-court-search",
     "CourtListener API token rejected (HTTP 403), deactivated per DQ-4 (block 0089); to reactivate, restore COURTLISTENER_API_TOKEN, remove this entry, and set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
   ],
+  [
+    "price-compare",
+    "deactivated 2026-10-30: price-compare reads www.pricerunner.<tld>/search, which redirects to /results, and PriceRunner's robots.txt has Disallow: /results for User-agent: * — since PR #786 (2026-10-28) every call fails the robots.txt check, so the source cannot be read under DEC-20261023-A. Reactivate only on a price source whose terms and robots.txt permit per-call automated reads (an official/affiliate product API); also set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21
