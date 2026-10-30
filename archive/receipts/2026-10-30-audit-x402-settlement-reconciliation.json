@@ -1,0 +1,58 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "74eb53338515fafcfae3780cae5344bf63a3f4eb"
+  },
+  "at": "2026-10-30T08:05:24.097Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/6cfde657-2ea9-481b-89f7-ca6b477cfe1d/scratchpad/receipt-x402.json"
+  },
+  "summary": {
+    "kind": "audit",
+    "topic": "x402-settlement-reconciliation",
+    "at": "2026-10-30T08:10:00Z"
+  },
+  "topic": "x402-settlement-reconciliation",
+  "raw": {
+    "kind": "audit",
+    "topic": "x402-settlement-reconciliation",
+    "produced_by": {
+      "script": "scratchpad/x402-recon.mts (read-only strale_ro queries) + x402scan.com recipient page",
+      "commit": "c813e53e"
+    },
+    "at": "2026-10-30T08:10:00Z",
+    "inputs": {
+      "ask": "agent-bus strale-planning #6491948434 and #6506171504",
+      "payTo": "0x66D7C2F952362BFB24FD7F02a9beC9c754ea83bC",
+      "db_role": "strale_ro (read-only)",
+      "onchain_source": "https://www.x402scan.com/recipient/0x66D7C2F952362BFB24FD7F02a9beC9c754ea83bC",
+      "window": "rolling 24h to 2026-10-30T08:05Z, plus 7-day double-entry and 72-hour hourly series"
+    },
+    "summary": {
+      "verdict": "no_gap",
+      "our_txns_24h": 731,
+      "onchain_txns_24h": 743,
+      "our_distinct_payers_24h": 4,
+      "onchain_distinct_buyers_24h": 4,
+      "onchain_volume_usd_24h": "25.86",
+      "count_skew_explained": "query ran minutes before the explorer snapshot; the explorer total is the later of the two",
+      "orphan_settlements_total": 0,
+      "intents_state_escalated": 0,
+      "recorded_intents_7d": 1976,
+      "recorded_intents_7d_without_transaction": 0,
+      "x402_transactions_7d_without_intent": 0,
+      "onchain_hashes_spot_checked": 10,
+      "onchain_hashes_found_recorded": 10,
+      "onchain_hashes_missing": 0,
+      "negative_control_passed": true,
+      "alert_under_investigation": "CRITICAL x402 settlement volume dropped, 2026-10-28T17:51Z",
+      "alert_disposition": "real dip, since recovered: 102 settlements on 10-28 vs 588 on 10-29 and 731 in the last 24h",
+      "migrations_0130_to_0139_applied": 10,
+      "migrations_0087_0089_0030_0103_skipped_on_latest_boot": true,
+      "latest_boot_observed": "2026-10-30T07:48:34Z",
+      "block_0139_rows_affected": "unavailable: that figure is only in the Railway boot log, which this session cannot read; applied-once state verified in startup_migration_applied instead",
+      "first_matcher_was_wrong": "an initial pass matched the explorer hashes against x402_payment_hash (an internal 32-hex digest) and reported 10 of 10 missing; the on-chain hash is x402_settlement_id"
+    }
+  }
+}

@@ -2,6 +2,11 @@ Intent: checkpoint the Strale master-orchestrator state on 2026-10-28 so a fresh
 
 # Orchestrator checkpoint, 2026-10-28 (evening, Swedish time)
 
+> **SUPERSEDED 2026-10-30.** Resume from
+> `2026-10-30-orchestrator-checkpoint.md` instead. The "Remaining work" and
+> "Next authorised action" below are stale: H7c, D7, D8 and D9 all shipped on
+> 2026-10-29. Kept as the record of where the orchestrator stood on 10-28.
+
 Read this file first, then `docs/programs/platform-hardening/PROGRAM.md` and `docs/programs/distribution/PROGRAM.md` (their **Resume here** sections and `tracks.yaml`).
 
 ## Resume block
