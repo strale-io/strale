@@ -36,10 +36,9 @@ Return JSON:
   "preserved_instructions": ["list of key instructions that were preserved"]
 }`,
     truncationGuidance: "Provide a shorter prompt_text per call.",
-    parseFailureError: (responseText) =>
-      new Error(
-        `Failed to compress prompt. Raw: ${responseText.slice(0, 200)}`,
-      ),
+    // Short, structured message: never echo the model's raw output.
+    parseFailureError: () =>
+      new Error("Failed to compress prompt: the model returned an unreadable result. Please retry."),
   });
   const compressedTokens = Math.ceil((output.compressed_prompt as string).length / 4);
 
