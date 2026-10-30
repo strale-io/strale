@@ -1086,6 +1086,20 @@
         "transactions.deletion_reason"
       ],
       "sha256": "5acd1d17abdcfabd656fae2d296ac3bc1a29c394b68464710d134a2b36253039"
+    },
+    {
+      "id": "M083",
+      "function": "runMigration0140_deactivatePriceCompare",
+      "title": "Deactivate Price Compare",
+      "added": "2026-10-30",
+      "columns_written": [
+        "capabilities.deactivation_reason",
+        "capabilities.is_active",
+        "capabilities.updated_at",
+        "capabilities.visible",
+        "capabilities.x402_enabled"
+      ],
+      "sha256": "12bc089d1454f5c63c70b466750f3a97daab24d1f9124c1dbceb22d9f9c7c413"
     }
   ],
   "known_overlaps": [
@@ -1228,9 +1242,10 @@
         "M044",
         "M055",
         "M064",
-        "M065"
+        "M065",
+        "M083"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 12): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M011, M014, M015, M016, M017, M018, M019, M020, M029, M040, M042, M044. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M064 (0121, 2026-10-23, Phase 0 catalogue repairs) writes this column once (ledgered; never on a later boot) and only for named slugs: the four Danish bundles (delist), kyb-complete-se (relist), the kyb-essentials/kyb-complete/invoice-verify bundles for AT, GR, HR, IE and SG, the capabilities cz-unreliable-vat-payer, no-bankruptcy-check and fr-bodacc-lookup, and five description rows; each UPDATE is guarded on the row still being in its pre-repair state. None of those slugs is touched by the other writers (M040 acts only on rows recorded in vendor_*_suspensions for OpenRegister, i.e. German-registry dependants; M049 only us-court-search; M052 only the four growth bundles; M029 only url-to-markdown; M055 only its eight free APIs), so it cannot fight them. M065 (0122, 2026-10-23, DQ-36) writes this column once (ledgered) and only for slug = 'sanctions-check', guarded on the exact old OFSI wording; no other writer touches that slug."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 12): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M011, M014, M015, M016, M017, M018, M019, M020, M029, M040, M042, M044. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M064 (0121, 2026-10-23, Phase 0 catalogue repairs) writes this column once (ledgered; never on a later boot) and only for named slugs: the four Danish bundles (delist), kyb-complete-se (relist), the kyb-essentials/kyb-complete/invoice-verify bundles for AT, GR, HR, IE and SG, the capabilities cz-unreliable-vat-payer, no-bankruptcy-check and fr-bodacc-lookup, and five description rows; each UPDATE is guarded on the row still being in its pre-repair state. None of those slugs is touched by the other writers (M040 acts only on rows recorded in vendor_*_suspensions for OpenRegister, i.e. German-registry dependants; M049 only us-court-search; M052 only the four growth bundles; M029 only url-to-markdown; M055 only its eight free APIs), so it cannot fight them. M065 (0122, 2026-10-23, DQ-36) writes this column once (ledgered) and only for slug = 'sanctions-check', guarded on the exact old OFSI wording; no other writer touches that slug. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare."
     },
     {
       "column": "capabilities.visible",
@@ -1238,9 +1253,10 @@
         "M029",
         "M040",
         "M049",
-        "M055"
+        "M055",
+        "M083"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M029, M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: it writes the eight PR #518 free-public-API slugs only, disjoint from M029 (url-to-markdown), M049 (us-court-search) and M040 (openregister vendor suspensions; production has 0 suspension and 0 dependency rows for any of the eight). M055 also requires deactivation_reason IS NULL, so it cannot reverse a vendor withdrawal, and it is ledger-guarded to fire exactly once, so it cannot ping-pong across boots."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M029, M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: it writes the eight PR #518 free-public-API slugs only, disjoint from M029 (url-to-markdown), M049 (us-court-search) and M040 (openregister vendor suspensions; production has 0 suspension and 0 dependency rows for any of the eight). M055 also requires deactivation_reason IS NULL, so it cannot reverse a vendor withdrawal, and it is ledger-guarded to fire exactly once, so it cannot ping-pong across boots. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare."
     },
     {
       "column": "capabilities.x402_enabled",
@@ -1249,9 +1265,10 @@
         "M040",
         "M049",
         "M055",
-        "M064"
+        "M064",
+        "M083"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M029, M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: it writes the eight PR #518 free-public-API slugs only, disjoint from M029 (url-to-markdown), M049 (us-court-search) and M040 (openregister vendor suspensions; production has 0 suspension and 0 dependency rows for any of the eight). M055 also requires deactivation_reason IS NULL, so it cannot reverse a vendor withdrawal, and it is ledger-guarded to fire exactly once, so it cannot ping-pong across boots. M064 (0121, 2026-10-23, Phase 0 catalogue repairs) writes this column once (ledgered; never on a later boot) and only for named slugs: the four Danish bundles (delist), kyb-complete-se (relist), the kyb-essentials/kyb-complete/invoice-verify bundles for AT, GR, HR, IE and SG, the capabilities cz-unreliable-vat-payer, no-bankruptcy-check and fr-bodacc-lookup, and five description rows; each UPDATE is guarded on the row still being in its pre-repair state. None of those slugs is touched by the other writers (M040 acts only on rows recorded in vendor_*_suspensions for OpenRegister, i.e. German-registry dependants; M049 only us-court-search; M052 only the four growth bundles; M029 only url-to-markdown; M055 only its eight free APIs), so it cannot fight them."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M029, M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: it writes the eight PR #518 free-public-API slugs only, disjoint from M029 (url-to-markdown), M049 (us-court-search) and M040 (openregister vendor suspensions; production has 0 suspension and 0 dependency rows for any of the eight). M055 also requires deactivation_reason IS NULL, so it cannot reverse a vendor withdrawal, and it is ledger-guarded to fire exactly once, so it cannot ping-pong across boots. M064 (0121, 2026-10-23, Phase 0 catalogue repairs) writes this column once (ledgered; never on a later boot) and only for named slugs: the four Danish bundles (delist), kyb-complete-se (relist), the kyb-essentials/kyb-complete/invoice-verify bundles for AT, GR, HR, IE and SG, the capabilities cz-unreliable-vat-payer, no-bankruptcy-check and fr-bodacc-lookup, and five description rows; each UPDATE is guarded on the row still being in its pre-repair state. None of those slugs is touched by the other writers (M040 acts only on rows recorded in vendor_*_suspensions for OpenRegister, i.e. German-registry dependants; M049 only us-court-search; M052 only the four growth bundles; M029 only url-to-markdown; M055 only its eight free APIs), so it cannot fight them. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare."
     },
     {
       "column": "health_monitor_events.action_taken",
@@ -1399,9 +1416,10 @@
       "column": "capabilities.deactivation_reason",
       "blocks": [
         "M040",
-        "M049"
+        "M049",
+        "M083"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare."
     },
     {
       "column": "solutions.updated_at",
@@ -1588,6 +1606,14 @@
         "M082"
       ],
       "note": "Block 0087 (M047) renamed pii_retention_purge to content_retention_purge; block 0139 (M082, 2026-10-29) sets user_request on customer-deleted redacted rows that still carry either retention reason, so on those rows the two write opposite values. Resolved by retiring 0087 (run policy retired: skipped once recorded, even under force), so 0087 never runs on a database where 0139 has run."
+    },
+    {
+      "column": "capabilities.is_active",
+      "blocks": [
+        "M049",
+        "M083"
+      ],
+      "note": "M049 (0089) deactivates only us-court-search; M083 (0140, 2026-10-30) deactivates only price-compare. Both only ever set is_active = false, each guarded on the row still being active and on a single named slug, so they are disjoint and cannot fight."
     }
   ]
 }

@@ -1494,6 +1494,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0137_completeComplianceColumns",
       "runMigration0138_redactedRowDeletionReason",
       "runMigration0139_redeleteCustomerDeletedRedactedRows",
+      "runMigration0140_deactivatePriceCompare",
     ]);
   });
 });
@@ -2398,7 +2399,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(139);
+    expect(Math.max(...numbers)).toBe(140);
   });
 });
 
@@ -3681,5 +3682,48 @@ describe("startup-migrations — block 0134 (capability_health → source_health
     const stub = makeStub({ queue: [[{ old_kind: "r", new_present: true }]] });
     await expect(runMigration0134_renameCapabilityHealthToSourceHealth(stub)).rejects.toThrow(/both exist/);
     expect(stub.renderedSql).toHaveLength(1);
+  });
+});
+
+describe("startup-migrations: block 0140 (deactivate price-compare)", () => {
+  it("delists exactly price-compare from every surface and records the reason", async () => {
+    const { runMigration0140_deactivatePriceCompare, PRICE_COMPARE_DEACTIVATION_REASON } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    const result = await runMigration0140_deactivatePriceCompare(stub);
+
+    expect(stub.renderedSql).toHaveLength(1);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("update capabilities");
+    expect(rendered).toContain("is_active = false");
+    expect(rendered).toContain("visible = false");
+    expect(rendered).toContain("x402_enabled = false");
+    expect(rendered).toContain("where slug = 'price-compare'");
+    expect(rendered).not.toMatch(/slug (in|like|<>|!=)/);
+    expect(PRICE_COMPARE_DEACTIVATION_REASON).toContain("DEC-20261023-A");
+    expect(dialect.sqlToQuery(stub.captured[0]).params).toContain(PRICE_COMPARE_DEACTIVATION_REASON);
+    expect(result.block).toBe("0140_deactivatePriceCompare");
+    expect(result.rows_affected).toBe(1);
+  });
+
+  it("is idempotent: only a row still listed on some surface matches", async () => {
+    const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0140_deactivatePriceCompare(stub);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("and (is_active = true or visible = true or x402_enabled = true)");
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("binds no Date or Buffer parameter (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0140_deactivatePriceCompare(stub);
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(p instanceof Date).toBe(false);
+        expect(Buffer.isBuffer(p)).toBe(false);
+      }
+    }
   });
 });
