@@ -160,6 +160,48 @@ and 81 tests across the five suites around the touched modules.
 No program register field changed: this is not H3's evidence, and a track's
 status moves only on the branch that lands its own.
 
+## Two things a cloud session cannot do, found by hitting them
+
+Both are container limits, not repository problems. Worth knowing before the
+next cloud session spends time on them.
+
+**1. The shallow clone makes `context:check` report six false findings, and the
+pre-commit gate refuses every commit that touches an inventory target.** This
+container clones 50 commits and no tags, so `AUDITED_MAIN_NOT_ANCESTOR`,
+`RECORD_GIT_KEY_NOT_ANCESTOR`, `CLOSING_REVIEW_COMMIT_NOT_ANCESTOR` and two
+`COMMIT_UNVERIFIABLE` findings fire on `docs/project/m2-closure-register.yaml`
+simply because the commits are absent, and `handoff-check --mode pre-commit`
+treats any finding as a failure. The fix:
+
+    git fetch --unshallow && git fetch origin --tags
+
+`--unshallow` clears five. The sixth —
+`OPERATOR_ACTION_PREPARED_REF_INVALID` for `OA-20260830-ROUTING-LATENCY-438` —
+needs the **tags**: its `prepared_ref` commit `ad67e433` is reachable only from
+a tag, so fetching heads alone leaves it missing. After both, `context:check`
+reports no warnings and `check-project-context.test.mjs` passes 26/26.
+
+CI on `main` was confirmed green (runs 2557–2576, all success) *before*
+concluding anything, because "two context tests fail here" would otherwise have
+read as "CI is red on main". It was neither — it was this clone.
+
+**2. Deleting a remote branch is not permitted through the proxy**, so the
+handoff gate's `merged-branch` finding cannot be cleared from the cloud.
+`origin/claude/orchestrator-session-end-89cc8a` points at exactly
+`df047524` — `origin/main`'s tip, zero divergence, not in
+`scripts/handoff/baseline.json` — so it is safe to remove and the gate's own
+fix applies verbatim:
+
+    git push origin --delete claude/orchestrator-session-end-89cc8a
+
+`git push --delete` fails with `the remote end hung up unexpectedly`, and
+`gh api -X DELETE repos/strale-io/strale/git/refs/heads/…` returns **403 Write
+access to this GitHub API path is not permitted through this proxy**. Cloning,
+pushing a branch and opening a PR all work, so this is deliberate proxy policy
+on ref deletion, not broken access. **The gate therefore ends this session with
+one finding outstanding**, and it is this one — not unpushed work, not a dirty
+tree.
+
 ## What is still open
 
 1. **H3, H5, H6** — unchanged, all production reads. H6 not before **11-04**.
