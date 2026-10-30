@@ -261,3 +261,11 @@ green. `unverified:` that each of the 10 also fails on `origin/main` locally.
 10. Carried: invoice-extract raw upstream error; webhook-test-payload "too
     large"; #845 LOWs (`llm-output-validate` now auto-fixes raw newlines; direct
     helper tests); F8 investigation; EORI degraded-mode contract; M4 idle.
+
+## Post-deploy verification (done)
+
+`GET /health` → `c813e53ee96d` = `origin/main`. Production (`strale_ro`):
+`price-compare` is_active/visible/x402_enabled all false, reason recorded,
+description prefixed; `GET /v1/capabilities/price-compare` 404; absent from
+`/x402/catalog`. Next-session item 1 is closed for #844. The `prompt-compress`
+classification is `unverified:` until a real parse failure occurs.
