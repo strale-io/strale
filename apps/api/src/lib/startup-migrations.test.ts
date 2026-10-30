@@ -1830,7 +1830,9 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
         throw new Error("stop after the clients are built");
       },
     });
-    await runStartupMigrations().catch(() => {});
+    await expect(runStartupMigrations()).rejects.toThrow(
+      /stop after the clients are built/
+    );
     expect(clientOptions.length).toBeGreaterThan(0);
     for (const options of clientOptions) {
       expect(options.onnotice, "every runner client needs onnotice").toBe(
