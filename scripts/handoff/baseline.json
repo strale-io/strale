@@ -1,6 +1,11 @@
 {
   "canonicalWorktree": "C:/Users/pette/Projects/strale",
   "recordedAt": "2026-09-11",
-  "knownWorktrees": [],
+  "knownWorktrees": [
+    {
+      "path": "C:/Users/pette/Projects/strale-wt-design",
+      "reason": "Website session's batch (design/site-polish, draft PR #736, last touched 2026-10-26). Recorded 2026-10-30: it belongs to another session, its branch is pushed, and the 2026-10-30 morning run was cut off mid-flight leaving a second batch worktree (strale-wt-checkin-1030) in play. Removing it is the website session's call, or the founder's. Remove this entry once #736 lands or is abandoned."
+    }
+  ],
   "knownBranches": []
 }
