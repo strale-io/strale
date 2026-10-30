@@ -43,6 +43,7 @@
 import postgres, { type Sql } from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { getDb } from "../db/index.js";
+import { handlePgNotice } from "../db/pg-notice.js";
 import { log } from "./log.js";
 import { runStartupMigrationBlock } from "./startup-migration-block.js";
 import type { BlockResult, MigrationExecutor } from "../startup-migrations/types.js";
@@ -345,6 +346,14 @@ export async function runStartupMigrations(
     max: 1,
     connect_timeout: 5,
     connection: { statement_timeout: 5_000 },
+    // The blocks below are idempotent DDL, so every boot emits a burst of
+    // "already exists, skipping" notices. Without this handler postgres-js
+    // prints each to the console as a raw multi-line object, which is what
+    // crossed Railway's 500-logs/sec-per-replica limit and made it drop real
+    // lines (2026-10-30). These two runner-owned clients are the ones that
+    // emit them — getDb()'s pool barely does, so handling it only there
+    // changed nothing.
+    onnotice: handlePgNotice,
   });
   let connection: Awaited<ReturnType<Sql["reserve"]>> | undefined;
   let acquired = false;
@@ -380,6 +389,7 @@ export async function runStartupMigrations(
     blockClient = postgres(process.env.DATABASE_URL!, {
       max: 1,
       connection: pool.options.connection,
+      onnotice: handlePgNotice,
     });
     // Match getDb()'s transparent JSON/date codecs before executing compiled
     // SQL on reserved sessions (otherwise JSON strings are double-encoded).
