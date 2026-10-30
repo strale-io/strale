@@ -147,8 +147,9 @@ conversion.
   (295 completed, 44 failed for this account). This is also the first real
   traffic through the H4 hold path. Of the 44 failures, most are its own test
   inputs hitting 404s or empty registries (correct refusals); two were our
-  bugs (`openapi-validate` crashing on an object spec, `prompt-compress` not
-  stripping a fenced JSON reply — fixed this run), two were the
+  bugs (`openapi-validate` crashing on an object spec, `prompt-compress` failing
+  on an unreadable model reply, most likely raw newlines, cause unconfirmed — both
+  patched in #845), two were the
   robots.txt-refused tools (DQ-42, `price-compare`). One week in progress
   (day 5): €77.08 across 11 payers, top share 63.1% — no verdict drawn.
   Whether it becomes recurring use is the question; no outreach derives from

@@ -269,3 +269,16 @@ green. `unverified:` that each of the 10 also fails on `origin/main` locally.
 description prefixed; `GET /v1/capabilities/price-compare` 404; absent from
 `/x402/catalog`. Next-session item 1 is closed for #844. The `prompt-compress`
 classification is `unverified:` until a real parse failure occurs.
+
+## Corrections after merge (same session)
+
+Rereading the merged brief found statements its evidence did not support:
+"Tuesday" (10-28 was a Wednesday); the image-resize alarm "corrected" (only the
+manifest changed, the production suite still needs a write, so it moved out of
+"fixed"); both #845 tools "now handle" (the `prompt-compress` cause is
+unconfirmed); "the other four are fine" (only their robots.txt verdict was
+checked); EUIPO access stated as fact (third-party documentation only); the
+account's identity stated as fact (inferred from its email domain). GOALS.md
+also described the `prompt-compress` defect as a fence-stripping bug; the helper
+already stripped fences. All corrected. The CI machine check could not catch any
+of these. Not raised in the brief: Serper's credit expiry on 11-08 (Next session 6).
