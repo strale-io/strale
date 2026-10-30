@@ -13,7 +13,8 @@ threads:
     sent: 2026-10-27
     sent_by: petter (drafted by session)
     follow_up_by: 2026-11-10
-    status: awaiting_reply
+    status: closed
+    reply: 2026-10-29 03:25 CET (inbox), NTA invoice-system office. Yes — the invoice Web-API permission can be added to the existing corporate-number application ID, same email address, via the application-ID change notification (provisional registration at https://www.invoice-kohyo.nta.go.jp/web-api/pre-change; leave the email-change fields empty). The usage document is the text of our 2026-10-27 email pasted into a Word file and uploaded on that form. Next step is a form submission for Moonlighter AB, raised as DQ-43 (2026-10-30 morning run).
   - id: hmrc-production-cns433
     to: softwaredevelopersupport@service.hmrc.gov.uk
     subject: Chase on production credentials, support ref 2026-CNS433

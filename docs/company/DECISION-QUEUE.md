@@ -14,6 +14,31 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-43** · `your_call` · owner Petter · raised 2026-10-30 · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+
+*Settled:* the Japan qualified-invoice-issuer check is portfolio plan item 1.13, approved under DEC-20261024-B. The NTA invoice-system office replied on 2026-10-29 (OUTBOX row `nta-invoice-app-id`): the invoice Web-API permission can be added to the corporate-number application ID we already hold, through the application-ID change notification (`https://www.invoice-kohyo.nta.go.jp/web-api/pre-change`, email-change fields left empty), with our 2026-10-27 email text uploaded as a Word file as the usage document.
+
+*Why it is not mine:* it is a registration filed with a government agency on behalf of Moonlighter AB. Under DEC-20261027-C a session may fill a sign-up form only once Petter has said go for that specific form, and he clicks the final button.
+
+*What I need:* your go for this form. A local session then fills it up to the final button and prepares the Word file; you submit.
+
+**DQ-42** · `your_call` · owner Petter · raised 2026-10-30 — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+
+*What is established (2026-10-30 morning run, production read-only):*
+- Since the 2026-10-28 fetch-hardening deploy, tools that read a public page as their source check its robots.txt (DEC-20261023-A adoption work). `eu-trademark-search` renders `euipo.europa.eu/eSearch/`, and EUIPO's robots.txt has `disallow: /eSearch/` for every agent. The production parser refuses it; a registered account's paid call failed with exactly that on 2026-10-29 13:40Z and was not charged.
+- It earned €5.50 from x402 buyers between 10-16 and 10-22 (11 calls, all completed). It cannot earn anything now, and it is still listed for sale. The harness cannot see this: the tool is paid-prepaid and refuses internal test calls.
+- Second source: EUIPO's robots.txt fetched directly the same morning, and the integration account's QA sweep on 10-29/30 hit the same refusal.
+- EUIPO offers an official Trademark Search API on its developer portal (dev.euipo.europa.eu): free registration, a sandbox, then production approval (third-party documentation; the portal's own terms not yet read).
+
+*Options:*
+1. **Open an EUIPO developer account** (free) and let a session rebuild the tool on the official API — the preferred lane under DEC-20261023-A.
+2. **Delist the tool** until 1 is done, so buyers stop finding a tool that always refuses.
+3. Both: delist now, rebuild on 1.
+
+*I recommend* 3. Delisting changes no revenue (it earns nothing while refused) and stops buyers meeting a dead tool; the official API is the durable fix. Delisting a tool that earned money last week is founder-gated (CHARTER § founder-gated: "deactivating revenue earners"), so I have not done it.
+
+*The consequence:* 3 costs nothing and recovers the ~€2–3/week the tool was earning once the API is in; doing nothing leaves it listed and failing. The sister case `price-compare` (pricerunner redirects to a disallowed `/results` path; no non-harness revenue in 14 days) is delisted by this run as policy-determined, not a revenue earner.
+
 **DQ-41** · `your_call` · owner Petter · raised 2026-10-27 · authorization, not judgement — **four new tools and the rewritten public limitation texts are merged but not live, because the onboarding button has no key yet**
 
 *Settled:* `company-status-check`, `entity-resolve`, `eurostat-data` and `invoice-counterparty-check` (PRs #742, #744, #749, #752) and the 558 rewritten limitation texts (#756) were merged on 2026-10-26 and need onboarding to reach production. The button built for that (#755, #757: Actions → Onboard capability) runs inside the deployed API and was reviewed and merged. Evidence, 2026-10-27 ~07:30Z: none of the four slugs is in the production `capabilities` table; `GET /v1/capabilities/entity-resolve` → 404; `POST /v1/internal/onboarding/run` without credentials → 503 `not_configured` ("Set ONBOARDING_RUN_SECRET … in Railway"); the workflow has never run and the `production-onboarding` GitHub environment does not exist. Six further manifests (bulgarian, cypriot, hungarian, luxembourgish, maltese, romanian company data) are also not in the table; all six were added on 2026-05-16 and are not part of this request.
