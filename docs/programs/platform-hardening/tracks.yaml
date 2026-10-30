@@ -154,6 +154,7 @@ tracks:
       - archive/receipts/2026-10-30-check-h7-production-verification.json
       - archive/receipts/2026-10-30-test-run-h7-capability-health-view-drop.json
       - archive/receipts/2026-10-29-test-run-h7-migration-block-repairs.json
+      - archive/receipts/2026-10-30-check-h7-block-0141-post-deploy.json
       - handoff/_general/from-code/2026-10-30-h7-capability-health-view-drop.md
   - id: T8
     title: "H8: External log sink"

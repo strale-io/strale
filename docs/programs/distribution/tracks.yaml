@@ -1,7 +1,7 @@
 schema_version: 1
 program: distribution
 program_status: active
-updated: 2026-10-29
+updated: 2026-10-30
 tracks:
   - id: T1
     title: "D0: Close attribution gaps"
@@ -27,18 +27,34 @@ tracks:
     depends_on: []
     owner: session
     next_action: "Source texts, MCP annotations and the claims guard merged in
-      PR #771. Remaining: publish the prepared versions (strale-mcp 0.2.9 and
-      the packages listed in handoff 2026-10-27-distribution-hygiene.md) under
-      DEC-20261027-B item 7, then bump server.json and republish the official
-      registry entry; repair Pipedream and Activepieces upstream and rebuild or
-      deprecate n8n-nodes-strale (preflight first); Smithery and 402 Index
-      listing edits."
+      PR #771. The descriptor and registry half is already done, which the
+      previous wording missed: both server.json copies read 0.2.9, npm
+      strale-mcp 0.2.9 is published, and the official MCP registry entry
+      io.github.strale-io/strale 0.2.9 went live on 2026-10-28 and is isLatest.
+      The two broken upstream listings were repaired on 2026-10-30 and wait on
+      their maintainers: PipedreamHQ/pipedream#22383 removes the dead
+      /v1/quality method and the claims it backed, and
+      activepieces/activepieces#17060 removes the Trust Profile action, whose
+      /v1/internal/trust route answers 401 to every caller, plus four stale
+      descriptions. Remaining and blocked on Petter, in
+      handoff/_general/from-code/2026-10-30-d1-distribution-hygiene-upstream.md:
+      three npm packages are prepared and unpublished because the
+      trusted-publisher entry is missing (straleio 0.1.4, straleio-langchain
+      0.1.1) or points at the retired standalone repository (n8n-nodes-strale
+      1.0.0), and only a logged-in npmjs.com session can create it. After that
+      a session pushes the tag and he approves the npm-release environment.
+      Also his: the PyPI trusted publisher for langchain-strale, the first
+      strale-cli publish, the strale-semantic-kernel deprecation, the Smithery
+      duplicate listing strale/agent-tools, and the Smithery and 402 Index
+      listing edits, which are account-side. Post-publish production smoke
+      tests are owed on each package the moment it ships."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - No source text or integration carries a retired claim or calls a removed
         route.
       - Smithery and directory-attributed calls have a baseline for D7.
-    evidence: []
+    evidence:
+      - handoff/_general/from-code/2026-10-30-d1-distribution-hygiene-upstream.md
   - id: T3
     title: "D2: x402 ranking metadata"
     status: queued

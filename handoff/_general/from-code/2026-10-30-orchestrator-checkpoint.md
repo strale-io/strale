@@ -4,6 +4,13 @@ account without chat history.
 
 # Orchestrator checkpoint, 2026-10-30 (morning, Swedish time)
 
+> **SUPERSEDED on 2026-10-30 (evening) by
+> [`2026-10-30-orchestrator-checkpoint-evening.md`](2026-10-30-orchestrator-checkpoint-evening.md).**
+> Resume from that file, not this one: H7 closed and D1 advanced after this was
+> written, so this file's "Remaining work" items 1 and 2 are out of date. Its
+> x402 settlement reconciliation and its "Waiting on Petter" list still hold
+> and are not repeated in the successor.
+
 Read this file first, then `docs/programs/platform-hardening/PROGRAM.md` and
 `docs/programs/distribution/PROGRAM.md` (their **Resume here** sections and
 `tracks.yaml`).
