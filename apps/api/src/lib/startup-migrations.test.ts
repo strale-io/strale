@@ -36,13 +36,26 @@ import { dbErrorMessage } from "./db-error.js";
 // into the per-block function and don't touch getDb, so they're not
 // affected by this mock.
 const mockGetDb = vi.fn();
+// vi.mock is hoisted above module init, so the handler the db mock returns
+// has to be hoisted with it.
+const { noticeHandler } = vi.hoisted(() => ({ noticeHandler: vi.fn() }));
 vi.mock("../db/index.js", () => ({
   getDb: () => ({ ...mockGetDb(), $client: { options: { connection: { statement_timeout: 30_000 } } } }),
   closeDbPool: () => Promise.resolve(),
+  handlePgNotice: noticeHandler,
+}));
+
+// Every options object the runner builds a client with, so a test can prove
+// the notice handler is actually wired. On 2026-10-30 it was added to
+// getDb()'s pool only, which emits almost no notices — the DDL burst comes
+// from these two runner-owned clients, so the boot log did not get quieter.
+const { clientOptions } = vi.hoisted(() => ({
+  clientOptions: [] as Array<Record<string, unknown>>,
 }));
 
 // The runner uses a dedicated lock session; per-block tests stay DB-free.
-vi.mock("postgres", () => ({ default: (_url: string, options: { connection: { statement_timeout: number } }) => ({
+vi.mock("postgres", () => ({ default: (_url: string, options: { connection: { statement_timeout: number } }) => (
+  clientOptions.push(options as unknown as Record<string, unknown>), {
   options: { parsers: {}, serializers: {} },
   reserve: async () => ({
     unsafe: async (text: string) => {
@@ -1802,6 +1815,29 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
   // DEC-20260504-A this regression test must fail against the un-applied
   // fix: if a future engineer wraps the BLOCKS for-loop in a try/catch
   // (turning the orchestrator into catch-and-continue), this test fails.
+
+  it("wires the pg notice handler onto every client it builds", async () => {
+    // The boot blocks are idempotent DDL, so each boot emits a burst of
+    // "already exists, skipping" notices. Unhandled, postgres-js prints each
+    // as a raw multi-line console object, which crossed Railway's
+    // 500-logs/sec-per-replica limit and made it drop real log lines —
+    // including the one error that would have explained an unrelated
+    // production failure. Handling it on getDb()'s pool alone did nothing,
+    // because these runner-owned clients are what emit them.
+    clientOptions.length = 0;
+    mockGetDb.mockReturnValueOnce({
+      async execute() {
+        throw new Error("stop after the clients are built");
+      },
+    });
+    await runStartupMigrations().catch(() => {});
+    expect(clientOptions.length).toBeGreaterThan(0);
+    for (const options of clientOptions) {
+      expect(options.onnotice, "every runner client needs onnotice").toBe(
+        noticeHandler
+      );
+    }
+  });
 
   it("propagates a throw from a block (executor-level failure on first query)", async () => {
     // Stub getDb() to return an executor whose every execute() throws.
