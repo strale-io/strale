@@ -194,13 +194,29 @@ fix applies verbatim:
 
     git push origin --delete claude/orchestrator-session-end-89cc8a
 
-`git push --delete` fails with `the remote end hung up unexpectedly`, and
-`gh api -X DELETE repos/strale-io/strale/git/refs/heads/…` returns **403 Write
-access to this GitHub API path is not permitted through this proxy**. Cloning,
-pushing a branch and opening a PR all work, so this is deliberate proxy policy
-on ref deletion, not broken access. **The gate therefore ends this session with
-one finding outstanding**, and it is this one — not unpushed work, not a dirty
-tree.
+Both routes are refused, and the refusal is **policy, not a flaky transfer** —
+which matters, because the first reading invites a retry loop and the second
+does not:
+
+- `git push --delete` (and the `:refs/heads/…` form) reports
+  `unexpected disconnect while reading sideband packet`. Under
+  `GIT_CURL_VERBOSE=1` that resolves to
+  `POST /strale-io/strale/git-receive-pack` → **HTTP 403 Forbidden**. The
+  disconnect is a symptom of the 403, not a lost tunnel: the agent proxy's
+  `recentRelayFailures` is empty, which `/root/.ccr/README.md` says to check
+  before concluding the remote refused.
+- `gh api -X DELETE repos/strale-io/strale/git/refs/heads/…` → **403 Write
+  access to this GitHub API path is not permitted through this proxy**.
+
+Pushing `main-t3vmzw` went through the *same* `git-receive-pack` endpoint
+minutes earlier, so the policy distinguishes a ref deletion from a creation or
+update rather than blocking git writes. The proxy README's rule for a 403 is to
+report it and not route around it, so no further attempt was made and none
+should be.
+
+**The gate therefore ends this session with one finding outstanding**, and it is
+this one — not unpushed work, not a dirty tree, not an un-run check. A laptop
+session clears it in one command.
 
 ## What is still open
 
