@@ -135,6 +135,25 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-10-30 — a registered account at an agent-integration
+  platform is buying across almost the whole catalogue with its own money.**
+  The account (signed up 2026-09-02, €100 card top-up on 2026-09-24) made 339
+  paid wallet calls between 2026-10-29T12:36Z and 2026-10-30T06:46Z across 283
+  distinct tools, €19.78 captured; its inputs ("QA Fixture Cafe", an
+  `example.com/qa-fixture` URL) are not ours (repo grep: no match), so this
+  reads as the platform's own automated quality check of a Strale toolkit.
+  Second-sourced: wallet holds (314 captured / 49 released across the three
+  wallet payers, zero invariant violations) against `transactions` status
+  (295 completed, 44 failed for this account). This is also the first real
+  traffic through the H4 hold path. Of the 44 failures, most are its own test
+  inputs hitting 404s or empty registries (correct refusals); two were our
+  bugs (`openapi-validate` crashing on an object spec, `prompt-compress` not
+  stripping a fenced JSON reply — fixed this run), two were the
+  robots.txt-refused tools (DQ-42, `price-compare`). One week in progress
+  (day 5): €77.08 across 11 payers, top share 63.1% — no verdict drawn.
+  Whether it becomes recurring use is the question; no outreach derives from
+  this (CHARTER customer-data boundary).
+
 - **Measured 2026-09-11 — revenue fell for the first time in five completed
   weeks, and nine-tenths of the fall is the smaller buyers not coming back.**
   Week of
