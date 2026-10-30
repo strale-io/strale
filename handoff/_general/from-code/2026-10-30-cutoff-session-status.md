@@ -60,13 +60,38 @@ untracked `reports/`. Nothing to recover there.
 
 ## What this session changed
 
-`scripts/handoff/baseline.json`: recorded `strale-wt-design` with a reason.
-The gate refuses a second batch worktree and offers two fixes — remove the
-others, or record one. Both worktrees belong to other sessions and both hold
-pushed, unmerged work, so removing either would have destroyed work this
-session does not own. Recording the parked one (draft PR #736, four days
-cold) leaves the cut-off run's worktree as the single live batch. The entry
-carries a removal condition: drop it once #736 lands or is abandoned.
+Nothing in the repository except this handoff file. No code, no PR merges, no
+worktree removals, no baseline entries.
+
+I first recorded `strale-wt-design` in `scripts/handoff/baseline.json` to clear
+the gate, and reverted it. Petter's standing feedback on this exact gate
+(`feedback_concurrent_sessions_make_batch_gate_unsatisfiable`, recorded
+2026-09-04, recurrence 2026-09-05) rules out both remedies the gate offers when
+the offending worktrees belong to other sessions: removing one destroys work a
+clean tree does not prove is abandoned, and baselining one writes a transient
+path into a register whose documented meaning is *a founder decision, never
+deleted by a session* — a lie that outlives the session. The gate measures a
+clone-wide condition but is a per-session check, so a session owning neither
+worktree cannot converge it.
+
+**This is the third recorded occurrence.** It is now reachable without any
+concurrency at all: one cut-off run is enough, because its worktree outlives it
+and no later session may clear it.
+
+## The red gate, handed over
+
+`npm run handoff:check` fails on this one finding:
+
+```
+[worktree] 2 batch worktrees exist (strale-wt-checkin-1030
+[chore/checkin-2026-10-30], strale-wt-design [design/site-polish]);
+the model allows 1
+```
+
+Both are pushed and unmerged, neither is this session's. It clears when the
+cut-off run is finished and `strale-wt-checkin-1030` is removed by whoever
+finishes it, or when the website session finishes `design/site-polish`
+(draft PR #736).
 
 ## Next session
 
