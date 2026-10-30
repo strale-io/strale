@@ -118,6 +118,12 @@ import {
 import { PUBLIC_DESCRIPTIONS_0124, UNLISTED_DESCRIPTIONS_0124 } from "../startup-migrations/data/public-descriptions-0124.js";
 
 const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124].map((r) => [r.slug, r.description]));
+// Tools delisted after blocks 0123/0124 froze their copy. Their manifests gain
+// the "Currently unavailable. " prefix that public-descriptions.test.ts
+// requires of every DEACTIVATED slug; the frozen block data does not change.
+const DELISTED_AFTER_0124 = new Set(["price-compare"]);
+const pinnedManifestDescription = (slug: string, description: string) =>
+  DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description;
 const dialect = new PgDialect();
 
 /** Capture SQL chunks issued through the stub. Returns canned values
@@ -3428,7 +3434,7 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
         readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8"),
       ) as { name: string; description: string };
       expect(manifest.name, r.slug).toBe(r.name);
-      expect(manifest.description, r.slug).toBe(latestDescriptions.get(r.slug) ?? r.description);
+      expect(manifest.description, r.slug).toBe(pinnedManifestDescription(r.slug, latestDescriptions.get(r.slug) ?? r.description));
     }
     expect(CATALOGUE_COPY_0123_CAPABILITIES.length).toBe(296);
     // password-strength's offered copy says the password is never stored; inputs are kept 90 days.
@@ -3558,7 +3564,7 @@ describe("startup-migrations: block 0124 (public descriptions)", () => {
       expect(seen.has(r.slug), r.slug).toBe(false);
       seen.add(r.slug);
       const manifest = yaml.load(readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8")) as { description: string };
-      expect(manifest.description, r.slug).toBe(r.description);
+      expect(manifest.description, r.slug).toBe(pinnedManifestDescription(r.slug, r.description));
       expect(r.description.length, r.slug).toBeGreaterThanOrEqual(50);
       expect(r.description.length, r.slug).toBeLessThanOrEqual(160);
     }
