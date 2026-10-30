@@ -42,7 +42,8 @@
 
 import postgres, { type Sql } from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { getDb, handlePgNotice } from "../db/index.js";
+import { getDb } from "../db/index.js";
+import { handlePgNotice } from "../db/pg-notice.js";
 import { log } from "./log.js";
 import { runStartupMigrationBlock } from "./startup-migration-block.js";
 import type { BlockResult, MigrationExecutor } from "../startup-migrations/types.js";

@@ -39,10 +39,10 @@ const mockGetDb = vi.fn();
 // vi.mock is hoisted above module init, so the handler the db mock returns
 // has to be hoisted with it.
 const { noticeHandler } = vi.hoisted(() => ({ noticeHandler: vi.fn() }));
+vi.mock("../db/pg-notice.js", () => ({ handlePgNotice: noticeHandler }));
 vi.mock("../db/index.js", () => ({
   getDb: () => ({ ...mockGetDb(), $client: { options: { connection: { statement_timeout: 30_000 } } } }),
   closeDbPool: () => Promise.resolve(),
-  handlePgNotice: noticeHandler,
 }));
 
 // Every options object the runner builds a client with, so a test can prove
