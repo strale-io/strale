@@ -1,6 +1,7 @@
 Intent: report the repository and session state after the 2026-10-30 morning
-operating run was cut off by token exhaustion in another Claude account, and
-leave the checkout clean for the next session.
+operating run was reported cut off by token exhaustion in another Claude
+account. Correction, mid-session: that run is still alive and working — see
+"Liveness, corrected". Nothing of its was touched.
 
 # 2026-10-30 — status sweep after a cut-off morning run
 
@@ -25,30 +26,41 @@ changed"; no code, no PR merges, no worktree removals.
   more. The gate reports it every run. Owner needed, or the diff saved and
   the worktree removed — a founder/M4 call, untouched here.
 
-## Where the morning run stopped
+## Liveness, corrected
 
-It completed its sweep, wrote both artifacts and opened both fix PRs, then
-died. Its handoff
-(`handoff/_general/from-code/2026-10-30-checkin-morning.md`, on
-`chore/checkin-2026-10-30`) is complete through section E but its **"Next
-session" section was never written**, although the body references it twice
-(the `strale-wt-checkin` remnant, and LESSONS.md not being updated). The
-three carried items exist only as inline mentions in sections B2b/B/E.
+**The morning run is still working.** I first read it as hung: the app showed
+`isRunning: true` with `lastActivityAt` advancing 30 s at a time and no commit
+since 07:14Z, and Petter had said the account it ran under was out of tokens.
+Re-measuring its worktree minutes later contradicted that — it had switched
+`strale-wt-checkin-1030` from `chore/checkin-2026-10-30` to
+`fix/delist-price-compare-robots`, written 61 files in 30 minutes, and had an
+uncommitted edit to `apps/api/src/lib/startup-migrations.test.ts`. It is
+working #844. Nothing of its was touched, and the list below is what it had
+not yet reached at 07:16Z, not a list of abandoned work.
 
-Left undone by the cut-off:
+## Where the morning run had got to
+
+Its sweep is complete, both artifacts are written and both fix PRs are open.
+Its handoff (`handoff/_general/from-code/2026-10-30-checkin-morning.md`, on
+`chore/checkin-2026-10-30`) runs through section E, but its **"Next session"
+section is not written** although the body references it twice (the
+`strale-wt-checkin` remnant, and LESSONS.md not being updated).
+
+Not yet reached at 07:16Z:
 
 1. **PR #844** (delist `price-compare`; move the `image-resize` known_answer
    fixture off robots-disallowed `gstatic.com`) and **PR #845**
    (`openapi-validate` object specs; `prompt-compress` fenced-JSON replies).
-   Both reviewed, fast checks green, `integration-db` and `image-boot-smoke`
-   still pending at 07:16Z. Neither merged.
+   Reviewed, fast checks green, `integration-db` and `image-boot-smoke`
+   pending. Neither merged; it is still working #844.
 2. No PR for `chore/checkin-2026-10-30`.
-3. No Journal entry for the run.
-4. The `image-resize` **production** test suite is still on the disallowed
-   fixture — #844 only fixes the manifest. Needs a session with production
-   write access to run `onboard.ts --backfill`.
+3. No Journal entry.
+4. The `image-resize` **production** suite is still on the disallowed
+   fixture — #844 only fixes the manifest. Needs production write access
+   (`onboard.ts --backfill`).
 5. LESSONS.md not updated for the finding that a paid tool's robots-disallow
-   breakage is invisible to the harness (paid tools refuse internal calls).
+   breakage is invisible to the harness, because paid tools refuse internal
+   test calls.
 
 ## Other sessions cut off in the same window
 
