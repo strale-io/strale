@@ -64,7 +64,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      image_url: https://www.gstatic.com/webp/gallery/1.jpg
+      image_url: https://strale.dev/og-image.png
       target_width: 100
     expected_fields:
       - field: width
