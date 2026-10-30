@@ -214,3 +214,50 @@ fail on origin/main, all pass with the fix; 303 related tests pass;
 - `docs/company/DECISION-QUEUE.md` — DQ-42, DQ-43.
 - `docs/company/GOALS.md` — the integration account evidence.
 - LESSONS.md: not updated — see "Next session" 3.
+
+## Review and merge notes
+
+#844 round 1 NO-GO (H1, above); round 2 GO on `6d4090bb`. Two later commits
+were required by CI and not re-reviewed: the `Currently unavailable.` manifest
+prefix (`public-descriptions.test.ts`) and a `DELISTED_AFTER_0124` allowance in
+the frozen 0123/0124 pin tests. #845 GO; its MEDIUM (wording the taxonomy can
+count) applied, its LOWs carried. Both entered the merge queue.
+Local full suite on #844: 10 failures, none naming price-compare (Windows
+paths/local env; the repo's known flaky-local class); CI is the gate and was
+green. `unverified:` that each of the 10 also fails on `origin/main` locally.
+
+## Escalation test (CHARTER)
+
+- **DQ-42** survives: nothing technical is open; opening an account and
+  delisting a revenue earner are both reserved.
+- **DQ-43** survives: a government filing for Moonlighter AB.
+- **DQ-41** unchanged.
+- `price-compare` delisting is **not** escalated: no non-harness revenue in 14
+  days and DEC-20261023-A determines the answer (CHARTER: delisting where policy
+  determines it). `SYSTEM_ACTING`.
+
+## Next session
+
+1. **Post-deploy #844 (DEC-20260504-C):** `SELECT slug, is_active, visible,
+   x402_enabled, deactivation_reason FROM capabilities WHERE
+   slug='price-compare'` → false/false/false and the reason. #845: a parse
+   failure in `prompt-compress` should now classify as internal.
+2. **`image-resize` production suite still points at gstatic:** a write-authorised
+   session runs `onboard.ts --manifest ../../manifests/image-resize.yaml
+   --backfill`; the alarm continues until then.
+3. **LESSONS.md, not yet written:** a guard rollout (#786) disabled paid tools
+   the harness cannot call. Decide the family (F5/F7 candidates) and add a
+   rollout step: enumerate affected paid tools statically before deploy.
+4. **DQ-42:** on Petter's answer, delist and/or build on the EUIPO API (read the
+   portal's terms first; only third-party documentation read so far).
+5. **DQ-43:** on his go, fill the NTA form up to the final button.
+6. **Serper credit expires 11-08:** bring renewal with usage figures.
+7. Outbox drafts unsent; Junk unsearched — both need the M365 connector.
+8. `strale-wt-checkin` remnant directory: unregistered, tracked content only;
+   not removed. Next run confirm it is unused and clean it up, or keep using a
+   dated path.
+9. Margins readable after 11-02's close. Watch whether the integration account
+   returns after its QA sweep (no outreach).
+10. Carried: invoice-extract raw upstream error; webhook-test-payload "too
+    large"; #845 LOWs (`llm-output-validate` now auto-fixes raw newlines; direct
+    helper tests); F8 investigation; EORI degraded-mode contract; M4 idle.
