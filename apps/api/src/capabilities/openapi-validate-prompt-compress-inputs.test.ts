@@ -76,7 +76,7 @@ describe("prompt-compress model output handling", () => {
       content: [{ type: "text", text: "```json\nSECRET-RAW-OUTPUT not json\n```" }],
     });
     const p = exec()({ prompt_text: "Compress this prompt please." });
-    await expect(p).rejects.toThrow(/Failed to compress prompt/);
+    await expect(p).rejects.toThrow(/Failed to extract compressed prompt/);
     await expect(p).rejects.not.toThrow(/SECRET-RAW-OUTPUT/);
   });
 });

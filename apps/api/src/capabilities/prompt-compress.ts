@@ -38,7 +38,7 @@ Return JSON:
     truncationGuidance: "Provide a shorter prompt_text per call.",
     // Short, structured message: never echo the model's raw output.
     parseFailureError: () =>
-      new Error("Failed to compress prompt: the model returned an unreadable result. Please retry."),
+      new Error("Failed to extract compressed prompt: the model returned an unreadable result. Please retry."),
   });
   const compressedTokens = Math.ceil((output.compressed_prompt as string).length / 4);
 
