@@ -1099,7 +1099,7 @@
         "capabilities.visible",
         "capabilities.x402_enabled"
       ],
-      "sha256": "12bc089d1454f5c63c70b466750f3a97daab24d1f9124c1dbceb22d9f9c7c413"
+      "sha256": "6646375fd05f9a768259b14e52e20413ff2cae29fa133a2fbd2ca08d377710b7"
     }
   ],
   "known_overlaps": [
@@ -1613,7 +1613,7 @@
         "M049",
         "M083"
       ],
-      "note": "M049 (0089) deactivates only us-court-search; M083 (0140, 2026-10-30) deactivates only price-compare. Both only ever set is_active = false, each guarded on the row still being active and on a single named slug, so they are disjoint and cannot fight."
+      "note": "M049 (0089) deactivates only us-court-search; M083 (0140, 2026-10-30) deactivates only price-compare. Both only ever set is_active = false, each on a single named slug (0089 guarded on is_active = true; 0140 on any flag still true or its deactivation_reason not yet recorded), so they are disjoint and cannot fight."
     }
   ]
 }

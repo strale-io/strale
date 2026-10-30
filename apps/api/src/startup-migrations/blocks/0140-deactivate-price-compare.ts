@@ -16,15 +16,17 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * must not be listed for sale.
  *
  * The executor is also in the DEACTIVATED map (auto-register.ts), whose boot
- * sync clears the three flags. This block is the same decision executed
- * explicitly, and the only place that records `deactivation_reason`.
+ * sync clears the three flags. That sync runs before startup migrations
+ * (index.ts), so the flags are usually already false when this block runs;
+ * it therefore also matches on `deactivation_reason`, which the sync never
+ * writes. This block is the only place that records the reason.
  *
  * Reactivate only on a price source whose terms and robots.txt permit
  * per-call automated reads (an official or affiliate product API): remove the
  * DEACTIVATED entry, then set the flags back.
  *
- * Idempotent via `WHERE is_active = true OR visible = true OR x402_enabled =
- * true`: a re-run on a delisted row matches nothing. One row; no bulk
+ * Idempotent: it matches only while a flag is still true or the reason is not
+ * yet recorded, so a re-run on a delisted, reasoned row matches nothing. One row; no bulk
  * operation (DEC-20260504-B). No solution has price-compare as a step
  * (verified read-only in production 2026-10-30).
  */
@@ -44,7 +46,8 @@ export async function runMigration0140_deactivatePriceCompare(
            deactivation_reason = ${PRICE_COMPARE_DEACTIVATION_REASON},
            updated_at = now()
      WHERE slug = 'price-compare'
-       AND (is_active = true OR visible = true OR x402_enabled = true)
+       AND (is_active = true OR visible = true OR x402_enabled = true
+            OR deactivation_reason IS DISTINCT FROM ${PRICE_COMPARE_DEACTIVATION_REASON})
   `);
   const affected = (res as { count?: number }).count ?? 0;
 

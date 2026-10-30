@@ -3705,12 +3705,25 @@ describe("startup-migrations: block 0140 (deactivate price-compare)", () => {
     expect(result.rows_affected).toBe(1);
   });
 
-  it("is idempotent: only a row still listed on some surface matches", async () => {
+  it("still records the reason after the boot sync has cleared the flags", async () => {
+    // auto-register's DEACTIVATED sync runs before startup migrations and
+    // clears the three flags without writing a reason; a flags-only guard
+    // would match nothing and the once-policy would then retire the block.
+    const { runMigration0140_deactivatePriceCompare, PRICE_COMPARE_DEACTIVATION_REASON } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0140_deactivatePriceCompare(stub);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("or deactivation_reason is distinct from");
+    const params = dialect.sqlToQuery(stub.captured[0]).params;
+    expect(params.filter((p) => p === PRICE_COMPARE_DEACTIVATION_REASON)).toHaveLength(2);
+  });
+
+  it("is idempotent: only a row still listed or missing its reason matches", async () => {
     const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
     const stub = makeStub({ queue: [{ count: 0 }] });
     const result = await runMigration0140_deactivatePriceCompare(stub);
     const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
-    expect(rendered).toContain("and (is_active = true or visible = true or x402_enabled = true)");
+    expect(rendered).toContain("and (is_active = true or visible = true or x402_enabled = true or deactivation_reason is distinct from");
     expect(result.rows_affected).toBe(0);
     expect(result.outcome).toContain("no change");
   });
