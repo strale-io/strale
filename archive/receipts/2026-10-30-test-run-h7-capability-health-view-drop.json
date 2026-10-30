@@ -1,0 +1,81 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b25466e7bec330f47376b6fb4b66cb7e30d3fb92"
+  },
+  "at": "2026-10-30T18:20:45.262Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale--claude-worktrees-wow-review-cfe380/bd9f1a90-bcce-4570-94ae-a58bd8a18bf5/scratchpad/h7-test-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "postgres": "16 (local container postgres:16, database strale_h7_test, loopback only)",
+    "block_added": "0141_dropCapabilityHealthCompatView (once)",
+    "note": "The full apps/api suite is not run locally (it is flaky on this machine; CI is the gate). CI's integration-db job runs these integration tests against a real Postgres service container."
+  },
+  "topic": "h7-capability-health-view-drop",
+  "raw": {
+    "ok": true,
+    "postgres": "16 (local container postgres:16, database strale_h7_test, loopback only)",
+    "block_added": "0141_dropCapabilityHealthCompatView (once)",
+    "new_integration_tests": [
+      "drops the view and leaves the table and every row untouched",
+      "a second run changes nothing (no change (capability_health is absent))",
+      "refuses to drop a table of the old name, and leaves its rows (asserted at the relation level, not only on the message)",
+      "refuses a materialized view under the old name",
+      "refuses when source_health is absent, so the view is the only breaker surface",
+      "refuses when source_health is itself a view, so the real table cannot be orphaned",
+      "refuses a view under both names, where source_health is not the table",
+      "fails loudly rather than dropping a dependent object with the view (bare DROP VIEW, never CASCADE)",
+      "0134 then 0141 in order leave only source_health, as a fresh database ends up"
+    ],
+    "suites_run": [
+      {
+        "file": "src/lib/capability-health-view-drop.integration.test.ts",
+        "tests": 9,
+        "failed": 0
+      },
+      {
+        "file": "src/lib/source-health-rename.integration.test.ts",
+        "tests": 4,
+        "failed": 0
+      },
+      {
+        "files": "src/lib/startup-migrations.test.ts + src/startup-migrations/** + src/db/**",
+        "test_files": 7,
+        "tests": 267,
+        "failed": 0,
+        "note": "run after merging origin/main b25466e7 (PR #851)"
+      }
+    ],
+    "gates": {
+      "npm run migrations:check": "ok (84 blocks)",
+      "npm run programs:check": "ok (4 registers)",
+      "npm run receipts:check": "ok",
+      "npm run typecheck (repository root, all workspaces)": "ok"
+    },
+    "fail_before_verification": [
+      "the dependent-object case fails if the block ever used DROP VIEW ... CASCADE",
+      "the relkind guard cases fail if the block drops without checking relkind, and the surviving rows prove the table was not touched",
+      "the source_health-is-a-view case fails if the guard only tests presence rather than relkind r — it did, and the reviewer found it",
+      "the registry tests in startup-migrations.test.ts failed on the un-updated expected list and the 140 ceiling until 0141 was added, which is the collision gate working"
+    ],
+    "independent_review": {
+      "reviewer": "fresh read-only Claude context, not the author (founder review policy 2026-09-07)",
+      "verdict": "PASS WITH NITS",
+      "fixed": [
+        "the source_health guard checked presence, not relkind, so a hand-reversed rename could have orphaned the real table — now requires relkind r, with two new tests",
+        "the table-refusal test checked only the error message — now asserts the relation is still a table and still holds its row, plus a materialized-view case",
+        "the rollback hazard said 'older than 0134'; a build older than 0132 is already incompatible because 0132 dropped the SQS columns and sqs_daily_snapshot, which the view does not restore — reworded in the block header and the handoff",
+        "the production claim about once/retired blocks now says it comes from startup_migration_applied.last_applied_at, not from absent log lines",
+        "PROGRAM.md's Resume here still described H7 as active"
+      ],
+      "left_as_is": [
+        "the oldKind guard is partly redundant with Postgres refusing DROP VIEW on a table; kept for a readable operator message",
+        "a future block naming capability_health would pass on a fresh database and fail in production; the schema.ts comment warns against adding a reader"
+      ]
+    },
+    "note": "The full apps/api suite is not run locally (it is flaky on this machine; CI is the gate). CI's integration-db job runs these integration tests against a real Postgres service container."
+  }
+}

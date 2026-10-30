@@ -1100,6 +1100,14 @@
         "capabilities.x402_enabled"
       ],
       "sha256": "6646375fd05f9a768259b14e52e20413ff2cae29fa133a2fbd2ca08d377710b7"
+    },
+    {
+      "id": "M084",
+      "function": "runMigration0141_dropCapabilityHealthCompatView",
+      "title": "drop the capability_health compatibility view (H7)",
+      "added": "2026-10-30",
+      "columns_written": [],
+      "sha256": "757841ef2061862a3a60ed77f307d179ea47876598e0b5d56edbe7b75335fd5e"
     }
   ],
   "known_overlaps": [

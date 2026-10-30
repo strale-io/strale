@@ -129,6 +129,7 @@ import { runMigration0137_completeComplianceColumns } from "../startup-migration
 import { runMigration0138_redactedRowDeletionReason } from "../startup-migrations/blocks/0138-redacted-row-deletion-reason.js";
 import { runMigration0139_redeleteCustomerDeletedRedactedRows } from "../startup-migrations/blocks/0139-redelete-customer-deleted-redacted-rows.js";
 import { runMigration0140_deactivatePriceCompare } from "../startup-migrations/blocks/0140-deactivate-price-compare.js";
+import { runMigration0141_dropCapabilityHealthCompatView } from "../startup-migrations/blocks/0141-drop-capability-health-compat-view.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -219,6 +220,7 @@ export * from "../startup-migrations/blocks/0137-complete-compliance-columns.js"
 export * from "../startup-migrations/blocks/0138-redacted-row-deletion-reason.js";
 export * from "../startup-migrations/blocks/0139-redelete-customer-deleted-redacted-rows.js";
 export * from "../startup-migrations/blocks/0140-deactivate-price-compare.js";
+export * from "../startup-migrations/blocks/0141-drop-capability-health-compat-view.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -310,6 +312,8 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0138_redactedRowDeletionReason,
   runMigration0139_redeleteCustomerDeletedRedactedRows,
   runMigration0140_deactivatePriceCompare,
+  // After 0118, which still updates capability_health by name on a fresh database.
+  runMigration0141_dropCapabilityHealthCompatView,
 ];
 
 /**

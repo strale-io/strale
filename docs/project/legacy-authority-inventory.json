@@ -430,6 +430,7 @@
         "apps/api/src/lib/test-runner.ts",
         "apps/api/src/routes/distribution-attribution.test.ts",
         "apps/api/src/startup-migrations/blocks/0114-release-corrected-dependency-health-fixtures.ts",
+        "apps/api/src/startup-migrations/blocks/0141-drop-capability-health-compat-view.ts",
         "apps/api/test/guard-production-write-access.test.ts",
         "config/env-manifest.schema.json",
         "config/vendors.yaml",

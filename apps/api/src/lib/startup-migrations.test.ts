@@ -1501,6 +1501,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0138_redactedRowDeletionReason",
       "runMigration0139_redeleteCustomerDeletedRedactedRows",
       "runMigration0140_deactivatePriceCompare",
+      "runMigration0141_dropCapabilityHealthCompatView",
     ]);
   });
 });
@@ -2405,7 +2406,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(140);
+    expect(Math.max(...numbers)).toBe(141);
   });
 });
 
