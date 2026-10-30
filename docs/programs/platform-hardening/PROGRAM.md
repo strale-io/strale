@@ -16,11 +16,11 @@ receipts, not a status assertion.
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), then H7's (T7) `next_action` and
+Read [tracks.yaml](tracks.yaml), then the active track's `next_action` and
 `resume_file`: [the report](../../research/2026-10-27-codebase-architecture-review.md)
-§10, with the referenced analysis sections. H7 is active; H1 and H2 are done, and H3
-to H6 have shipped with the verification steps their `next_action`
-names still open. The Railway
+§10, with the referenced analysis sections. H1, H2, H4 and H7 are done; H3 (T3)
+is active and H5 and H6 have shipped with the verification steps their
+`next_action` names still open. The Railway
 auto-redeploy token is not approved; implement observation without it. H8's sink
 is decided (DEC-20261029-A: Better Stack, EU region, free tier) and its code ships
 dormant; it waits only on Petter's account setup, then on verification.

@@ -109,4 +109,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0138_redactedRowDeletionReason: { policy: "every_boot", reason: "replaces the redaction trigger function and recreates the trigger if it was dropped" },
   runMigration0139_redeleteCustomerDeletedRedactedRows: { policy: "once", reason: "repair; throws unless no matching row is left, and the cause is fixed by 0138 and 0087's retirement" },
   runMigration0140_deactivatePriceCompare: { policy: "once", reason: "one guarded UPDATE of a single row; a re-run must not re-delist price-compare after an operator relisted it on a permitted source" },
+  runMigration0141_dropCapabilityHealthCompatView: { policy: "once", reason: "one DROP VIEW; it creates nothing and a re-run on a database where the view is already gone changes nothing" },
 };

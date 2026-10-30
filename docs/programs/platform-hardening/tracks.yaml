@@ -1,7 +1,7 @@
 schema_version: 1
 program: platform-hardening
 program_status: active
-updated: 2026-10-29
+updated: 2026-10-30
 tracks:
   - id: T1
     title: "H1: Watch production"
@@ -53,7 +53,7 @@ tracks:
       - .github/workflows/ci.yml
   - id: T3
     title: "H3: Manifest text and guaranteed fields"
-    status: queued
+    status: active
     gate: none
     depends_on:
       - T2
@@ -124,26 +124,37 @@ tracks:
     evidence: []
   - id: T7
     title: "H7: Structural clean-up"
-    status: active
+    status: done
     gate: none
     depends_on: []
     owner: session
-    next_action: H7a to H7d (PRs 787 to 808) and the source_health rename (PR 832, block
-      0134) are merged. H7e PR A (PR 834, blocks 0137 to 0139, 0087 and 0089 retired)
-      fixes the pre-existing block issues 0087, 0089 and 0030; its state and the
-      production queries still owed are in
-      handoff/_general/from-code/2026-10-29-h7-block-repairs.md. H7e PR B (PR 837,
-      the H7c known_answer tightening) is merged. Still owed, read the 0132 outcome in the boot
-      log and confirm the SQS columns are gone in production, and the source_health
-      contract step (once production has run the renamed build with no reads of the
-      old name, a new block drops the capability_health view, see
-      handoff/_general/from-code/2026-10-29-h7-source-health-rename.md).
+    next_action: Done. H7a to H7d (PRs 787 to 808), the source_health rename (PR 832,
+      block 0134) and H7e (PRs 834 and 837) are merged, and the contract half of
+      the rename — block 0141 drops the capability_health compatibility view —
+      closes the track. Production was verified read-only on 2026-10-30 on commit
+      928513ffc4c5, in receipt
+      archive/receipts/2026-10-30-check-h7-production-verification.json. The SQS
+      residual columns and sqs_daily_snapshot are gone (block 0132), source_health
+      carries 318 rows with its drizzle-derived constraint names and the breaker
+      still records through it (317 closed, 1 open), block 0137's three compliance
+      columns and index are present, block 0139 left 0 target rows and had restored
+      17 customer deletions, and the once and retired blocks (0030, 0087, 0089,
+      0103, 0118, 0137, 0139) still carry their 2026-10-29 last_applied_at in
+      startup_migration_applied while the every_boot blocks moved to the
+      2026-10-30 boots, so H7d's ledger-hash skip holds. Follow-up outside the exit criteria, carried in the
+      orchestrator checkpoint — a rollback to a build between blocks 0132 and 0134
+      now needs the capability_health view recreated by hand, and a build older
+      than 0132 is already incompatible because 0132 dropped the SQS columns.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Migration ledger and boot behavior remain verified after extraction.
       - Settlement seams, shared helpers and expanded executor contracts pass
         their checks.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-10-30-check-h7-production-verification.json
+      - archive/receipts/2026-10-30-test-run-h7-capability-health-view-drop.json
+      - archive/receipts/2026-10-29-test-run-h7-migration-block-repairs.json
+      - handoff/_general/from-code/2026-10-30-h7-capability-health-view-drop.md
   - id: T8
     title: "H8: External log sink"
     status: founder_gated

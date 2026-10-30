@@ -1053,12 +1053,12 @@ export const sourceHealth = pgTable("source_health", {
     .defaultNow(),
 });
 
-// Compatibility view under the table's old name. In production block 0134
-// creates it in the same statement as the rename, so a build deployed before
-// the rename keeps reading and writing through it while the new one boots.
-// Declared here for fresh databases (drizzle-kit push, then every block in
-// order): block 0118 still updates capability_health by name. No code reads
-// it; a later block drops it once production shows no reads of the old name.
+// Compatibility view under the table's old name. Block 0141 has dropped it in
+// production, so this declaration exists only so a fresh database can run
+// block 0118, which still updates capability_health by name: drizzle-kit push
+// creates the view, 0118 updates through it, and 0141 — which runs after 0118
+// — drops it again, leaving the same shape as production. No application code
+// reads it. Do not add a reader: in production the name resolves to nothing.
 export const capabilityHealthCompat = pgView("capability_health").as((qb) => qb.select().from(sourceHealth));
 
 // ─── health_monitor_events (Platform Health Monitor audit trail) ─────────────

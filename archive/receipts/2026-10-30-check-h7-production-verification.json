@@ -1,0 +1,98 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "928513ffc4c5bc5545d1d753bd4662802cd538aa"
+  },
+  "at": "2026-10-30T11:32:16.728Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale--claude-worktrees-wow-review-cfe380/bd9f1a90-bcce-4570-94ae-a58bd8a18bf5/scratchpad/h7-prod-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "method": "read-only queries against the production database (root .env DATABASE_URL, strale_ro) plus GET /health and railway status, 2026-10-30 Swedish time",
+    "production_commit_at_check": "928513ffc4c5"
+  },
+  "topic": "h7-production-verification",
+  "raw": {
+    "ok": true,
+    "method": "read-only queries against the production database (root .env DATABASE_URL, strale_ro) plus GET /health and railway status, 2026-10-30 Swedish time",
+    "production_commit_at_check": "928513ffc4c5",
+    "block_0132_sqs_residual_schema": {
+      "question": "are the SQS residual columns and the snapshot table gone in production?",
+      "capabilities_columns_matching_qp_score_rp_score_matrix_sqs_matrix_sqs_raw_trend_guidance": [],
+      "sqs_daily_snapshot_relation": null,
+      "any_public_column_named_guidance_or_sqs": [],
+      "verdict": "gone"
+    },
+    "block_0134_source_health_rename": {
+      "capability_health_relkind": "v",
+      "source_health_relkind": "r",
+      "source_health_constraints": [
+        "source_health_capability_slug_unique",
+        "source_health_pkey"
+      ],
+      "rows": 318,
+      "bytes": 155648,
+      "states": {
+        "closed": 317,
+        "open": 1
+      },
+      "view_definition_targets": "source_health",
+      "verdict": "renamed, breaker still recording through the table"
+    },
+    "block_0137_compliance_columns": {
+      "transactions_columns_present": [
+        "integrity_hash",
+        "legal_hold",
+        "previous_hash"
+      ],
+      "index_present": "transactions_integrity_hash_idx",
+      "verdict": "all three columns and the index present"
+    },
+    "block_0139_redelete_customer_deleted_redacted_rows": {
+      "target_rows_remaining": 0,
+      "query": "redacted_at IS NOT NULL AND transaction_quality.deleted_at IS NOT NULL AND deletion_reason IN (content_retention_purge, pii_retention_purge)",
+      "rows_now_reasoned_user_request_with_quality_deleted_at": 17,
+      "of_those_with_transactions_deleted_at_equal_to_the_quality_rows_time": 17,
+      "note": "0139 sets deleted_at to the quality row's time, which the live delete route does not, so 17 is the number of customer deletions block 0139 restored. The boot-log rows_affected for 2026-10-29T17:51:25Z is no longer readable (Railway keeps logs per deployment), so this is the effect-level equivalent, which DEC-20260504-C prefers anyway.",
+      "redacted_rows_by_deletion_reason": {
+        "content_retention_purge": 732211,
+        "user_request": 17
+      }
+    },
+    "run_policies_in_force": {
+      "retired_and_once_blocks_not_advanced_by_the_2026-10-30T07:48:34Z_or_10:47:46Z_boots": {
+        "runMigration0030_complianceColumns": "last applied 2026-10-29T17:22:19Z",
+        "runMigration0087_unhideRedactedRows": "last applied 2026-10-29T17:22:20Z",
+        "runMigration0089_deactivateUsCourtSearch": "last applied 2026-10-29T17:22:20Z",
+        "runMigration0103_redactedContentStaysRedacted": "last applied 2026-10-29T17:22:20Z",
+        "runMigration0118_clearDanishFalseBreakerSuccess": "first = last applied 2026-10-29T01:21:42Z",
+        "runMigration0137_completeComplianceColumns": "first = last applied 2026-10-29T17:51:24Z",
+        "runMigration0139_redeleteCustomerDeletedRedactedRows": "first = last applied 2026-10-29T17:51:25Z",
+        "runMigration0140_deactivatePriceCompare": "first = last applied 2026-10-30T07:48:34Z"
+      },
+      "every_boot_blocks_that_did_advance": [
+        "0130",
+        "0132",
+        "0133",
+        "0134",
+        "0135",
+        "0136",
+        "0138"
+      ],
+      "verdict": "the H7d ledger-hash skip is working: once and retired blocks ran their last time on 10-29 and were not re-run by either 10-30 boot"
+    },
+    "us_court_search_after_retiring_0089": {
+      "is_active": false,
+      "x402_enabled": false,
+      "visible": false,
+      "note": "still off, which is the DQ-4 decision 0089 executed; retiring 0089 stops it re-deactivating a row an operator switches back on, it does not switch the row on"
+    },
+    "readiness_for_the_0141_view_drop": {
+      "pg_stat_statements_installed": false,
+      "signal_used": "the deploy record: 0134 first applied 2026-10-29T16:22:53Z and production has served the renamed build since, now on 928513ffc4c5",
+      "only_remaining_writer_by_the_old_name": "block 0118, which returns before its UPDATE on a database where it has already run (production: 2026-10-29T01:21:42Z)"
+    }
+  }
+}
