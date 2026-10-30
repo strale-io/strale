@@ -48,6 +48,20 @@ deletions; and the once/retired blocks (0030, 0087, 0089, 0103, 0118, 0137,
 0139) still carry their 2026-10-29 `last_applied_at` while the `every_boot`
 blocks moved to the 2026-10-30 boots, so H7d's ledger-hash skip holds.
 
+**Verified in production after the deploy** (DEC-20260504-C, at the effect
+level, not from a boot log line). PR #853 merged as `5406dbe5`, `GET /health`
+reports `5406dbe5ba4a`, and:
+
+| check | result |
+|---|---|
+| relations named `capability_health` or `source_health` | only `source_health`, relkind `r` |
+| `to_regclass('capability_health')` | NULL — the old name resolves to nothing |
+| block 0141 in `startup_migration_applied` | first = last applied `2026-10-30T18:44:07.134Z`, so it ran once |
+| block 0134 after the drop (`every_boot`) | applied `18:44:07.089Z` and took its skip branch rather than failing, which the boot completing proves |
+| breaker intact | 318 rows, 317 closed / 1 open |
+
+Receipt: `archive/receipts/2026-10-30-check-h7-block-0141-post-deploy.json`.
+
 **A property of production now:** a rollback to a build between blocks 0132
 and 0134 needs `CREATE VIEW capability_health AS SELECT * FROM source_health`
 by hand, and a build older than 0132 is already incompatible because 0132
