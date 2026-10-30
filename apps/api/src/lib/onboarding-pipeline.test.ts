@@ -166,6 +166,59 @@ describe("shared onboarding pipeline", () => {
     expect(updated.output_field_reliability.answer).toBe("guaranteed");
     expect(guardedExecute).toHaveBeenCalledTimes(2);
   });
+  it("discovers timestamps and vendor release stamps as not_null, never equals", async () => {
+    const m = manifest();
+    m.test_fixtures.known_answer.expected_fields = [];
+    vi.mocked(guardedExecute).mockResolvedValue({
+      output: {
+        answer: "expected",
+        as_of: "2026-10-30T09:46:31.924Z",
+        accessed_at: "2026-10-30",
+        overture_release: "2026-10-21.0",
+      },
+    } as any);
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(m),
+      mode: "onboard",
+      discover: true,
+    });
+    const fields = (yaml.load(result.updatedManifestYaml!) as any).test_fixtures
+      .known_answer.expected_fields as Array<Record<string, unknown>>;
+    const byField = new Map(fields.map((f) => [f.field, f]));
+    for (const field of ["as_of", "accessed_at", "overture_release"]) {
+      expect(byField.get(field)).toMatchObject({ operator: "not_null" });
+      expect(byField.get(field)).not.toHaveProperty("value");
+    }
+    // The enum heuristic still applies to values that do not move.
+    expect(byField.get("answer")).toMatchObject({
+      operator: "equals",
+      value: "expected",
+    });
+  });
+  it("verifies a discovered fixture whose as_of moves between the two executions", async () => {
+    // Discovery and verification each execute the capability, so a frozen
+    // `as_of` assertion fails on the second call. This is the 2026-10-30
+    // onboarding failure, reproduced.
+    const m = manifest();
+    m.test_fixtures.known_answer.expected_fields = [];
+    vi.mocked(guardedExecute)
+      .mockResolvedValueOnce({
+        output: { answer: "expected", as_of: "2026-10-30T09:46:31.924Z" },
+      } as any)
+      .mockResolvedValueOnce({
+        output: { answer: "expected", as_of: "2026-10-30T09:46:38.002Z" },
+      } as any);
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(m),
+      mode: "onboard",
+      discover: true,
+      strict: true,
+    });
+    expect(result).toMatchObject({
+      status: "success",
+      verification: { passed: true },
+    });
+  });
   it("blocks writes when strict verification fails", async () => {
     vi.mocked(guardedExecute).mockResolvedValue({
       output: { answer: "different" },

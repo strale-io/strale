@@ -548,6 +548,28 @@ export async function runOnboarding(
         );
       }
 
+      /**
+       * An ISO timestamp is a short string with no spaces, so the enum
+       * heuristic below used to freeze the moment of onboarding into a
+       * known_answer assertion — `as_of: equals 2026-10-30T09:46:31.924Z`.
+       * Verification re-executes the capability, so a sub-second `as_of`
+       * failed at once and a day-truncated one failed at the next midnight.
+       * Four of the six capabilities onboarded on 2026-10-30 carried one, and
+       * their suites are scheduled, so each would have reported a false
+       * failure every hour. Vendor release stamps (`overture_release:
+       * 2026-10-21.0`) break the same way when the vendor publishes.
+       *
+       * Such fields keep `not_null`: that a timestamp is present is the real
+       * invariant, and its value is not ours to assert.
+       */
+      function looksTimeVarying(field: string, value: string): boolean {
+        // 2026-10-30, 2026-10-30T09:46:31.924Z, and 2026-10-21.0 alike.
+        if (/^\d{4}-\d{2}-\d{2}([T.]|$)/.test(value)) return true;
+        return /(^|_)(as_of|accessed_at|fetched_at|retrieved_at|checked_at|generated_at|captured_at|updated|updated_at|timestamp|date)$/.test(
+          field
+        );
+      }
+
       function generateExpectedFields(
         output: Record<string, unknown>,
         useLooseAssertions: boolean
@@ -571,7 +593,8 @@ export async function runOnboarding(
             } else if (
               typeof value === "string" &&
               value.length <= 30 &&
-              !/\s/.test(value)
+              !/\s/.test(value) &&
+              !looksTimeVarying(key, value)
             ) {
               // Short strings without spaces look like enums
               field.operator = "equals";
