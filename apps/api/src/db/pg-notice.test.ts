@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { handlePgNotice } from "./index.js";
+import { handlePgNotice } from "./pg-notice.js";
 import { log } from "../lib/log.js";
 
 vi.mock("../lib/log.js", () => ({
