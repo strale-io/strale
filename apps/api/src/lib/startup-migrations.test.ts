@@ -1825,14 +1825,24 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
     // production failure. Handling it on getDb()'s pool alone did nothing,
     // because these runner-owned clients are what emit them.
     clientOptions.length = 0;
-    mockGetDb.mockReturnValueOnce({
+    // mockReturnValue, not ...Once: this file has no beforeEach reset, so a
+    // single queued value is consumed by whichever test runs first and the
+    // run then carries on into real blocks. CI proved that — it reached block
+    // 0062 and failed on its post-condition instead of here. Every getDb()
+    // must throw for the first block to abort deterministically, and the mock
+    // is reset afterwards so later tests still see the bare default.
+    mockGetDb.mockReturnValue({
       async execute() {
         throw new Error("stop after the clients are built");
       },
     });
-    await expect(runStartupMigrations()).rejects.toThrow(
-      /stop after the clients are built/
-    );
+    try {
+      await expect(runStartupMigrations()).rejects.toThrow(
+        /stop after the clients are built/
+      );
+    } finally {
+      mockGetDb.mockReset();
+    }
     expect(clientOptions.length).toBeGreaterThan(0);
     for (const options of clientOptions) {
       expect(options.onnotice, "every runner client needs onnotice").toBe(
