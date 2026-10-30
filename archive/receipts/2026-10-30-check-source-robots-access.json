@@ -1,0 +1,99 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "df0475244c1b04aadd73bd4b4368c67d23bb5364"
+  },
+  "at": "2026-10-30T19:54:53.861Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/9fc61106-b17f-5cfa-997d-917c48371fa3/scratchpad/robots-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "what": "Blast radius of the 2026-10-28 robots.txt rollout (#786) across every scrape-backed capability, measured instead of inferred from the two found by reading revenue data",
+    "method": "npm run sources:robots-check — for each data_source_type: scrape manifest, the Strale-chosen literal URLs in the manifest and the executor are checked against the source's live robots.txt using production's own parser and matcher (parseRobotsTxt, rulesFor with STRALE_ROBOTS_TOKEN, isPathAllowed), with the same access-result rules assertRobotsAllowed applies (RFC 9309 2.3.1). No credential, no production database.",
+    "negative_control": "price-compare, delisted on 2026-10-30 for this exact reason, is reported as not listed — the sweep agrees with a fact established independently. The 24 scrape-backed capabilities not flagged include allabolag, ABR, curia, enforcementtracker and eleven container carriers whose paths robots.txt allows, so the check is not flagging everything it touches.",
+    "limits": "Static by necessity, so it covers only what a literal URL can show: a target assembled from a vendor response, a redirect chain, or a host read from the database is invisible to it. It proves reachability of the page, never that the capability's output is correct."
+  },
+  "topic": "source-robots-access",
+  "raw": {
+    "ok": true,
+    "what": "Blast radius of the 2026-10-28 robots.txt rollout (#786) across every scrape-backed capability, measured instead of inferred from the two found by reading revenue data",
+    "method": "npm run sources:robots-check — for each data_source_type: scrape manifest, the Strale-chosen literal URLs in the manifest and the executor are checked against the source's live robots.txt using production's own parser and matcher (parseRobotsTxt, rulesFor with STRALE_ROBOTS_TOKEN, isPathAllowed), with the same access-result rules assertRobotsAllowed applies (RFC 9309 2.3.1). No credential, no production database.",
+    "scope": {
+      "manifests_total": 358,
+      "scrape_backed": 31,
+      "with_no_strale_chosen_literal_url": 19,
+      "with_no_single_file_executor": 1,
+      "excluded_by_design": "URLs whose HOST carries a placeholder are caller-directed fetches (DEC-20261023-A): the target is unknown until the call and a block is a refusal, not a fault"
+    },
+    "results": {
+      "disallowed_urls": 7,
+      "disallowed_capabilities": 7,
+      "listed_in_public_catalogue": 3,
+      "listed": [
+        {
+          "slug": "eu-trademark-search",
+          "price_cents": 50,
+          "url": "https://euipo.europa.eu/eSearch/#basic/${query}",
+          "robots_rule": "disallow: /eSearch/ under User-agent: *",
+          "path_matched": "/eSearch/",
+          "control_flow": "single fetch path, no fallback — every call refuses",
+          "status": "known before this sweep; DQ-42, a revenue earner, so delist-or-build is the founder's call"
+        },
+        {
+          "slug": "customs-duty-lookup",
+          "price_cents": 20,
+          "url": "https://ec.europa.eu/taxation_customs/dds2/taric/measures.jsp",
+          "robots_rule": "Disallow: /taxation_customs/dds2/taric/ under User-agent: *",
+          "control_flow": "TARIC primary, Access2Markets fallback on throw; trade.ec.europa.eu/robots.txt disallows only /wp-login.php, so the fallback is allowed",
+          "status": "still answers, from a narrower source than its provenance implies; last customer call 2026-10-29T13:38Z, public pass_rate 71"
+        },
+        {
+          "slug": "container-track",
+          "price_cents": 5,
+          "url": "https://www.maersk.com/tracking/${containerNumber}",
+          "robots_rule": "Disallow: /tracking/* under User-agent: *",
+          "control_flow": "carrier chosen from the ISO 6346 owner code; MAEU routes to maersk.com and is caught into tracking_unavailable, the other twelve carriers are unaffected",
+          "status": "quiet degradation for the largest carrier; last customer call 2026-10-30T12:24Z, public pass_rate 100"
+        }
+      ],
+      "not_listed": [
+        {
+          "slug": "trustpilot-score",
+          "url": "https://www.trustpilot.com/review/${domain}",
+          "note": "only path"
+        },
+        {
+          "slug": "patent-search",
+          "url": "https://patents.google.com/?q=${query}&num=${n}",
+          "note": "text-query path only; /patent/${id} stays allowed"
+        },
+        {
+          "slug": "salary-benchmark",
+          "url": "https://www.google.com/search?q=${query}",
+          "note": "Glassdoor fallback"
+        },
+        {
+          "slug": "employer-review-summary",
+          "url": "https://www.google.com/search?q=${query}",
+          "note": "Glassdoor fallback"
+        }
+      ],
+      "robots_unavailable": [
+        {
+          "slug": "container-track",
+          "url": "https://www.hmm21.com/cms/business/ebiz/trackTrace/trackTrace/index.jsp?type=1&number=${n}",
+          "note": "answered 503 on the first and third runs and 200 with a Disallow on the second, which is why unavailable is reported in its own bucket and never fails --strict"
+        }
+      ]
+    },
+    "negative_control": "price-compare, delisted on 2026-10-30 for this exact reason, is reported as not listed — the sweep agrees with a fact established independently. The 24 scrape-backed capabilities not flagged include allabolag, ABR, curia, enforcementtracker and eleven container carriers whose paths robots.txt allows, so the check is not flagging everything it touches.",
+    "cross_checks": {
+      "catalogue": "GET https://api.strale.io/v1/capabilities?limit=500 — 296 listed; trustpilot-score, patent-search, salary-benchmark, employer-review-summary and price-compare absent",
+      "trust_surface": "GET https://api.strale.io/v1/public/ops/trust/capabilities/batch — eu-trademark-search badge strale_tested, pass_rate 67, last_tested 2026-10-30T12:24:50Z, for a capability that cannot serve a call",
+      "fetch_path_enforces_robots": "apps/api/src/capabilities/lib/web-provider.ts:532 calls assertRobotsAllowed(targetUrl); browserless-extract.ts re-exports fetchRenderedHtml from it, which is what all seven executors call"
+    },
+    "limits": "Static by necessity, so it covers only what a literal URL can show: a target assembled from a vendor response, a redirect chain, or a host read from the database is invisible to it. It proves reachability of the page, never that the capability's output is correct."
+  }
+}

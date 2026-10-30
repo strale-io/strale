@@ -786,7 +786,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 12 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 13 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running; incident 13, 2026-10-28, is that same arm, now with a price on it). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1212,6 +1212,75 @@ puts a production database credential into GitHub Actions. That is a
 credential-issuing act, which is the founder's; it is in DECISION-QUEUE.md,
 not routed around. Until it is answered the three production-reading
 mechanisms stay blind — but now visibly, every morning, instead of silently.
+
+#### Incident 13 — 2026-10-28 — a guard rollout disabled paid tools nothing can test
+
+The robots.txt rollout (#786) made the fetch path honour `Disallow`, which
+DEC-20261023-A requires. Two capabilities' own sources disallow the page they
+fetch, so from that deploy they refused every call: `eu-trademark-search`
+(EUIPO `/eSearch/`, €0.50, €5.50 of x402 revenue in the week to 10-22) and
+`price-compare` (pricerunner `/search`). Nothing in the catalogue changed —
+both stayed listed, priced and x402-enabled — so this is the same arm as
+incident 12: *the declaration stayed true while the thing it declared stopped
+running.* Found on 2026-10-30, two days later, by a human reading revenue data.
+
+**Why no check caught it, and why none could.** Paid capabilities are not
+proactively tested: DEC-20260503-B wires scheduled testing to
+`external_cost_cents = 0`, so for the entire paid catalogue there was no check
+that could have failed. The F5 reading applies exactly — the green's scope
+(zero-cost tools) was narrower than the proposition its reader took it for (the
+catalogue works) — but it is counted here once, not twice, because the
+mechanism is the declaration, not the test. The trust surface was worse than
+silent: on 2026-10-30 `GET /v1/public/ops/trust/capabilities/batch` still
+returned `badge: "strale_tested"` with `pass_rate: 67` for
+`eu-trademark-search`, a capability that cannot serve a single call. A pass rate
+assembled from schema and negative tests says nothing about whether the source
+is reachable, and the badge does not distinguish them.
+
+**The population, measured rather than assumed.** The two were found by reading
+traffic; nobody had asked how many others the rollout hit. All 31
+`data_source_type: scrape` manifests were swept on 2026-10-30 against the live
+robots.txt of each Strale-chosen source, using production's own parser
+(`npm run sources:robots-check`; receipt
+`archive/receipts/2026-10-30-check-source-robots-access.json`). Seven
+capabilities are disallowed. Four — `trustpilot-score`, `patent-search`,
+`salary-benchmark`, `employer-review-summary` — are already unlisted, so no
+customer path reaches them. Three are listed and sellable, and only one of
+those is dead:
+
+| capability | price | effect |
+|---|---|---|
+| `eu-trademark-search` | €0.50 | its only path; every call refuses. DQ-42 — a revenue earner, so delist-or-build is the founder's |
+| `customs-duty-lookup` | €0.20 | EU TARIC primary disallowed; the Access2Markets fallback is allowed, so it still answers from a narrower source than its provenance implies |
+| `container-track` | €0.05 | Maersk (`MAEU`, the largest carrier) disallowed, so those containers return "tracking unavailable"; the other twelve carriers are unaffected |
+
+So the rollout's blast radius on listed capabilities is one outage and two
+quiet degradations — and the sweep finding exactly the two already known
+(`price-compare` is correctly reported unlisted, having been delisted on 10-30)
+is the reason to believe the rest of the answer.
+
+**The guard.** `npm run sources:robots-check`
+(`apps/api/scripts/check-source-robots-access.ts`, logic and tests in
+`apps/api/src/lib/source-robots-candidates.ts`). It is static by necessity —
+the tools it has to cover are the ones no harness may call — and it draws the
+one distinction that makes it readable: a placeholder in the *host* means the
+customer named the page (caller-directed, nothing to check in advance), while a
+placeholder in the path leaves the source Strale's choice. It annotates each
+finding with whether the slug is in the public catalogue, because that is what
+triage turns on. Not a CI gate, and not in the weekly aggregate exit: a
+source's robots.txt is not ours to keep green, and four of the seven findings
+will never be fixed, so gating on it would make the weekly issue permanently
+red — which is how a reader learns to skip it.
+
+**The rollout step this adds.** Before changing what the fetch path refuses,
+run the sweep and read it. A change to shared fetch policy is a change to every
+capability behind it, and the population is enumerable in one command; the
+reason this went unnoticed for two days is that nobody enumerated it.
+
+**Not repaired here.** The trust badge still reads `strale_tested` / 67% for a
+capability whose source refuses it. Fixing that means a test type that
+distinguishes "the source answered" from "the schema validated", which is F1
+work and wants its own batch, not a line in this one.
 
 ### F8 · Duplicated authority
 

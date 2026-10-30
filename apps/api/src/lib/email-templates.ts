@@ -121,8 +121,6 @@ export function emailWrapper(
   <tr><td style="padding:16px 32px 24px;border-top:1px solid ${COLORS.borderLight};">
     <p style="margin:0;font-size:11px;color:${COLORS.textTertiary};line-height:1.6;">
       Strale Platform Health Monitor &middot; ${now} CET<br>
-      <a href="https://api.strale.io/v1/internal/trust/capabilities/batch" style="color:${COLORS.textTertiary};text-decoration:underline;">Trust API</a>
-      &middot;
       <a href="https://strale.dev/trust" style="color:${COLORS.textTertiary};text-decoration:underline;">Methodology</a>
     </p>
   </td></tr>

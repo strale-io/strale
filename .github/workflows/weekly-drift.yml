@@ -72,6 +72,22 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # Does a Strale-chosen source still allow the page its capability fetches?
+      # Reported, deliberately NOT part of the aggregate exit, and run without
+      # --strict. A source's robots.txt is not ours to keep green: four of the
+      # seven capabilities the first sweep flagged are unlisted and will never
+      # be "fixed", so gating on it would make this issue permanently red —
+      # the exact noise the manifest-drift comment above describes. The output
+      # marks which findings are listed in the public catalogue, which is the
+      # line to read.
+      - id: source-robots
+        run: |
+          set +e
+          set -o pipefail
+          npx tsx apps/api/scripts/check-source-robots-access.ts 2>&1 | tee /tmp/source-robots.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Vendor Roster ↔ Decisions DB drift. Flags vendor rows whose
       # Last evaluated date is older than a Decision in the window
       # mentioning that vendor — surfaces the 2026-04-30 failure mode
@@ -229,6 +245,11 @@ jobs:
             echo "## fetch() AbortSignal coverage"
             echo '```'
             cat /tmp/fetch-timeout.txt
+            echo '```'
+            echo ""
+            echo "## Strale-chosen sources vs their robots.txt (report only)"
+            echo '```'
+            cat /tmp/source-robots.txt
             echo '```'
             echo ""
             echo "## Vendor Roster ↔ Decisions drift"
