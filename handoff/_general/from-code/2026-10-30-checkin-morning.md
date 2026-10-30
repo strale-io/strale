@@ -178,7 +178,35 @@ DQ-27, DQ-14 unchanged.
 
 ## D. The work
 
-(filled below once the two fix PRs land)
+Two worktree-isolated agents (Sonnet), each reviewed by a fresh read-only
+Claude context (same provider, separate context, per the 2026-09-07 policy).
+
+**#844 — delist `price-compare`; move the `image-resize` fixture.**
+`DEACTIVATED` entry in `auto-register.ts`; block 0140 (ledger M083, run policy
+`once`; known_overlaps extended for the five `capabilities` columns) sets the
+three flags false and records `deactivation_reason`; `manifests/image-resize.yaml`
+known_answer → `https://strale.dev/og-image.png` (robots allow, 200 image/png).
+No solution uses `price-compare` (read-only query). **Review round 1: NO-GO,
+H1:** the DEACTIVATED boot sync (`auto-register.ts` ~562–603) runs before
+`runStartupMigrations` (`index.ts`), clears the flags without a reason, so a
+flags-only guard matched nothing and `once` would retire the block unapplied.
+Fixed in `6d4090bb` (guard also matches `deactivation_reason IS DISTINCT FROM
+<reason>`), discriminating test fails on the old guard (2 failed) and passes on
+the fix (221/221 in `startup-migrations.test.ts`); unmerged row re-ledgered
+(`migrations:check` ok); root typecheck exit 0. Deploy dependency
+(DEC-20260504-C): the block runs via `runStartupMigrations` from `index.ts`;
+post-deploy check below. **The `image-resize` production suite is not changed
+by this PR** — `onboard.ts --backfill` (a production write) is needed.
+
+**#845 — `openapi-validate` object spec; `prompt-compress` fenced reply.**
+Object `spec` serialised; other types → `CapabilityRefusalError`. Shared
+`extractJsonObject` (`capabilities/lib/llm-json.ts`) retries once with raw
+newlines inside strings escaped — the agent's best match for the customer's
+failure, **not confirmed** against the actual model output (`unverified:`
+cause). `prompt-compress` no longer echoes raw model output. 7 new tests: 6
+fail on origin/main, all pass with the fix; 303 related tests pass;
+`models:check` ok; typecheck exit 0; `validate-capability` ✓ for both slugs
+(tail only captured).
 
 ## E. Authorities updated
 
