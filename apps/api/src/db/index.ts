@@ -1,9 +1,28 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres, { type Sql } from "postgres";
+import { log } from "../lib/log.js";
 import * as schema from "./schema.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export type Database = PostgresJsDatabase<typeof schema>;
+
+/** postgres-js prints every server NOTICE to the console as a raw object,
+ * about seven lines each. The startup migrations are idempotent DDL, so each
+ * boot emits a burst of "already exists, skipping" notices — enough to cross
+ * Railway's 500-logs-per-second-per-replica limit, which then DROPS messages
+ * silently ("Messages dropped: 137", 2026-10-30). Real lines went with them,
+ * and an onboarding failure became undiagnosable because its own error line
+ * never survived. Drop the benign DDL class; keep everything else as one
+ * structured line, because an unexpected notice is a signal.
+ */
+export function handlePgNotice(notice: { message?: unknown; code?: unknown }): void {
+  const message = String(notice.message ?? "");
+  if (/(already exists|does not exist), skipping$/.test(message)) return;
+  log.info(
+    { label: "pg-notice", code: notice.code, pg_message: message },
+    "pg-notice"
+  );
+}
 let scopedDatabase: AsyncLocalStorage<Database> | undefined;
 
 /** CLI only: deep calls must use the operator-authorized handle. Lazily
@@ -82,6 +101,7 @@ export function getDb(): PostgresJsDatabase<typeof schema> {
         statement_timeout: stmtTimeoutMs,
         idle_in_transaction_session_timeout: idleTxTimeoutMs,
       },
+      onnotice: handlePgNotice,
     });
     _db = drizzle(_client, { schema });
   }
