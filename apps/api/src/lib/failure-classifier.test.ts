@@ -141,3 +141,29 @@ describe("classifyFailure — HTML page where JSON was promised", () => {
     expect(result.verdict).toBe("capability_bug");
   });
 });
+
+describe("classifyFailure — keyword-rank-check refusing an opaque Google redirect", () => {
+  // Google's `/goto` wrapper (2026-10-30) leaves a result position's host
+  // unknown when Serper's `/resolve` cannot open it. keyword-rank-check then
+  // declines to report a rank rather than report a possibly-wrong one. That
+  // refusal is correct behaviour and must not be scored against the tool.
+  const REFUSAL =
+    'Google returned opaque redirect links for result position(s) 4, 5, 6 and Serper\'s link ' +
+    "resolution did not return a real URL for them (Serper /resolve returned HTTP 503.). " +
+    'Those positions could be "mysite.example", so no ranking is reported rather than a ' +
+    "possibly wrong one. Retry shortly; this is a transient upstream condition.";
+
+  it("is upstream_transient, not capability_bug or unknown", () => {
+    const result = classifyFailure(REFUSAL, false, false, "known_answer", {});
+    expect(result.verdict).toBe("upstream_transient");
+  });
+
+  it("is still upstream_transient when no vendor error was appended", () => {
+    const result = classifyFailure(
+      "Google returned opaque redirect links for result position(s) 4 and Serper's link " +
+        "resolution did not return a real URL for them. Retry shortly.",
+      false, false, "schema_check", {},
+    );
+    expect(result.verdict).toBe("upstream_transient");
+  });
+});

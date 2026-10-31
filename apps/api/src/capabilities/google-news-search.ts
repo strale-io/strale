@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -76,11 +77,20 @@ registerCapability("google-news-search", async (input: CapabilityInput) => {
   }
 
   const data = (await res.json()) as Record<string, unknown>;
+
+  // Google wraps result links past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30), on `/news` as well as `/search`
+  // -- verified live on 2026-10-31. Resolve them before answering.
+  const resolution = await resolveSerperLinks(data, serperKey);
+
   const news = (data.news as Array<Record<string, unknown>>) ?? [];
   const results = news.slice(0, numResults).map((r, i) => ({
     position: i + 1,
     title: (r.title as string) ?? null,
-    url: (r.link as string) ?? null,
+    // A redirect wrapper is not an article address; say so instead of
+    // handing the caller a link that resolves to Google.
+    url: usableResultUrl(r.link),
+    url_unresolved: usableResultUrl(r.link) === null,
     source: (r.source as string) ?? null,
     // Serper returns relative dates ("2 hours ago") — passed through
     // verbatim; no fabricated ISO timestamps.
@@ -95,6 +105,7 @@ registerCapability("google-news-search", async (input: CapabilityInput) => {
       time_range: timeRange || null,
       country: country ?? null,
       result_count: results.length,
+      unresolved_url_count: resolution.unresolved.length,
       results,
     },
     provenance: {

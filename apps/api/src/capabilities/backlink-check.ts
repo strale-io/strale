@@ -6,6 +6,7 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import { deriveResultDomain, isGotoLink, resolveSerperLinks } from "../lib/serper-links.js";
 
 // F-0-006 Bucket D (preemptive migration): user domain is embedded in the
 // query string to hardcoded third-party APIs (index.commoncrawl.org,
@@ -31,6 +32,9 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     .toLowerCase();
 
   let source = "commoncrawl.org";
+  // Google redirect links that stayed opaque, so a dropped row is a reported
+  // absence rather than a silent one.
+  let unresolvedLinkCount = 0;
   const backlinks: Array<{
     source_url: string;
     source_domain: string;
@@ -97,20 +101,37 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
             MAX_FETCHED_API_RESPONSE_BYTES,
             "domain",
           );
+          // Google wraps every organic link past the top three in an opaque
+          // `google.com/goto` redirect (2026-10-30). Unresolved, the old
+          // `extractDomain` read `google.com` off each wrapper and pushed it
+          // into `backlinks` — so `referring_domains_count` counted Google as
+          // a site linking to the caller, and `source_url` was unopenable.
+          await resolveSerperLinks(data, serperKey, safeFetch);
           const organic = (data.organic as any[]) ?? [];
           for (const item of organic) {
             const sourceUrl = item.link ?? item.url ?? "";
-            const sourceDomain = extractDomain(sourceUrl);
-            if (sourceDomain && sourceDomain !== domain) {
-              // Check if already in list
-              if (!backlinks.some((b) => b.source_url === sourceUrl)) {
-                backlinks.push({
-                  source_url: sourceUrl,
-                  source_domain: sourceDomain,
-                  anchor_text: item.title ?? null,
-                  first_seen: null,
-                });
-              }
+            // A link whose real URL is unknown is dropped, not guessed at.
+            // A backlink list is a list of addresses; an entry without one is
+            // not a weaker row, it is a wrong row. `unresolved_link_count`
+            // makes the absence visible rather than silent.
+            //
+            // The wrapper test comes first on purpose: it must count even
+            // when no host could be derived at all, which is the ordinary
+            // case for a wrapper with no `displayedLink` breadcrumb.
+            if (isGotoLink(sourceUrl)) {
+              unresolvedLinkCount += 1;
+              continue;
+            }
+            const sourceDomain = deriveResultDomain(sourceUrl, item.displayedLink);
+            if (!sourceDomain || sourceDomain === domain) continue;
+            // Check if already in list
+            if (!backlinks.some((b) => b.source_url === sourceUrl)) {
+              backlinks.push({
+                source_url: sourceUrl,
+                source_domain: sourceDomain,
+                anchor_text: item.title ?? null,
+                first_seen: null,
+              });
             }
           }
         }
@@ -142,6 +163,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
       backlinks,
       total_backlinks: backlinks.length,
       referring_domains_count: referringDomains.size,
+      unresolved_link_count: unresolvedLinkCount,
       top_anchors: topAnchors,
       dofollow_estimate: null,
       nofollow_estimate: null,

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -47,6 +48,15 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
 
   const data = (await res.json()) as Record<string, unknown>;
 
+  // Whether Google wraps People-Also-Ask links in a `google.com/goto`
+  // redirect was NOT established: a live `/search` on 2026-10-31 returned PAA
+  // entries carrying only `question` -- no `link`, `snippet` or `title` -- so
+  // there was nothing to observe. Resolution is wired anyway because it costs
+  // one string test when no wrapper is present, and because the alternative
+  // is emitting a redirect as `source_url` the first time Google does wrap
+  // one. `usableResultUrl` is the backstop either way.
+  const resolution = await resolveSerperLinks(data, serperKey);
+
   const paa = (data.peopleAlsoAsk as Array<Record<string, unknown>>) ?? [];
   const related = (data.relatedSearches as Array<Record<string, unknown>>) ?? [];
 
@@ -54,7 +64,7 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
     question: (r.question as string) ?? null,
     answer_snippet: (r.snippet as string) ?? null,
     source_title: (r.title as string) ?? null,
-    source_url: (r.link as string) ?? null,
+    source_url: usableResultUrl(r.link),
   }));
   const relatedSearches = related.map((r) => r.query as string).filter(Boolean);
 
@@ -67,6 +77,7 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
       related_questions: relatedQuestions,
       related_searches: relatedSearches,
       question_count: relatedQuestions.length,
+      unresolved_url_count: resolution.unresolved.length,
     },
     provenance: {
       source: "serper.dev (Google SERP)",

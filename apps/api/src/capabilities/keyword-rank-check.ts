@@ -1,5 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  deriveResultDomain,
+  resolveSerperLinks,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -102,18 +107,54 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
 
   const data = await resp.json();
 
-  const organicResults = ((data.organic as any[]) ?? []).map((item: any, idx: number) => ({
-    url: (item.link as string) ?? (item.url as string) ?? "",
-    title: (item.title as string) ?? "",
-    snippet: (item.snippet as string) ?? "",
-    position: (item.position as number) ?? idx + 1,
-    domain: extractDomain((item.link as string) ?? (item.url as string) ?? ""),
-  }));
+  // Google wraps every organic link past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30). Undo that before a domain is
+  // derived from anything: the old `extractDomain` read `www.google.com` off
+  // the wrapper and happily compared it against the caller's target, so a
+  // rank check past position 3 was answering about the wrong host.
+  const resolution = await resolveSerperLinks(data, serperKey);
+
+  const organicResults = ((data.organic as any[]) ?? []).map((item: any, idx: number) => {
+    const link = (item.link as string) ?? (item.url as string) ?? "";
+    return {
+      url: usableResultUrl(link),
+      title: (item.title as string) ?? "",
+      snippet: (item.snippet as string) ?? "",
+      position: (item.position as number) ?? idx + 1,
+      domain: deriveResultDomain(link, item.displayedLink),
+    };
+  });
 
   const resultsScanned = organicResults.length;
 
+  // Positions whose host is still unknown. The position itself comes from
+  // Google and stays trustworthy; what is unknown is *whose* result it is.
+  const unresolvedPositions = organicResults
+    .filter((r) => r.domain === null)
+    .map((r) => r.position)
+    .sort((a, b) => a - b);
+
   // Find the first (best) match for our target domain among the scanned results.
   const matchIdx = organicResults.findIndex((r) => domainsMatch(r.domain, domain));
+
+  // An unknown host above the best match — or anywhere at all, when there is
+  // no match — could be the caller's own domain, so neither `position` nor
+  // `found: false` can be stated. Refusing is the only honest answer: a
+  // ranking a customer pays for must not be a guess. (DEC-20260428-B: never
+  // assert a fact the input does not support.)
+  const bestMatchPosition = matchIdx >= 0 ? organicResults[matchIdx].position : null;
+  const blockingUnresolved = unresolvedPositions.filter(
+    (position) => bestMatchPosition === null || position < bestMatchPosition,
+  );
+  if (blockingUnresolved.length > 0) {
+    throw new Error(
+      `Google returned opaque redirect links for result position(s) ${blockingUnresolved.join(", ")} ` +
+        `and Serper's link resolution did not return a real URL for them` +
+        `${resolution.error ? ` (${resolution.error})` : ""}. ` +
+        `Those positions could be "${domain}", so no ranking is reported rather than a possibly wrong one. ` +
+        `Retry shortly; this is a transient upstream condition.`,
+    );
+  }
   const match = matchIdx >= 0 ? organicResults[matchIdx] : null;
 
   const competitorsAbove = match
@@ -142,6 +183,10 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
       snippet: match ? match.snippet : null,
       results_scanned: resultsScanned,
       scan_depth_requested: depth,
+      // Honest about the redirect wrapper even on a clean answer: positions
+      // below the match may stay opaque, and a caller reading
+      // `competitors_above` deserves to know none were hidden.
+      unresolved_positions: unresolvedPositions,
       competitors_above: competitorsAbove,
     },
     provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
@@ -195,14 +240,6 @@ function isBarePublicSuffix(domain: string): boolean {
   return BARE_PUBLIC_SUFFIXES.has(domain);
 }
 
-function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
 /**
  * Compares a result's domain against the target domain.
  *
@@ -217,7 +254,7 @@ function extractDomain(url: string): string {
  * is a wrong answer, not a lenient one, and subdomain rank tracking
  * ("blog.", "docs.", "shop.") is a mainstream use of this capability.
  */
-function domainsMatch(resultDomain: string, targetDomain: string): boolean {
+function domainsMatch(resultDomain: string | null, targetDomain: string): boolean {
   if (!resultDomain || !targetDomain) return false;
   if (resultDomain === targetDomain) return true;
   return resultDomain.endsWith(`.${targetDomain}`);

@@ -2,6 +2,7 @@ import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
@@ -39,6 +40,14 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   }
 
   const data = await res.json() as Record<string, unknown>;
+
+  // Google wraps organic links past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30). Resolve before the results reach
+  // the model: an LLM asked to pass a URL through will pass the wrapper
+  // through, and the mention list would cite Google as the source of every
+  // mention past position 3.
+  await resolveSerperLinks(data, serperKey);
+
   const organic = (data.organic as Array<Record<string, unknown>>) ?? [];
 
   if (organic.length === 0) {
@@ -55,8 +64,10 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   }
 
   // Build context from search results for Claude analysis
+  // A result whose real URL is unknown is described as such rather than
+  // given to the model as an address it would pass through to the caller.
   const resultsText = organic.map((r, i) =>
-    `${i + 1}. ${r.title}\n   URL: ${r.link}\n   ${r.snippet ?? ""}`
+    `${i + 1}. ${r.title}\n   URL: ${usableResultUrl(r.link) ?? "(unavailable)"}\n   ${r.snippet ?? ""}`
   ).join("\n\n");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

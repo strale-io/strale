@@ -66,6 +66,7 @@
         "apps/api/src/lib/onboard-dependency-health.ts",
         "apps/api/src/lib/platform-refusal-breaker.test.ts",
         "apps/api/src/lib/schema-validator.ts",
+        "apps/api/src/lib/serper-links.test.ts",
         "apps/api/src/lib/solution-gate.test.ts",
         "apps/api/src/lib/solution-pricing.ts",
         "apps/api/src/lib/startup-migrations.test.ts",
