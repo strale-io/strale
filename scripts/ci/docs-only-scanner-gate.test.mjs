@@ -27,68 +27,127 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join, relative } from 'node:path';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
+import { isDocsPath } from '../production-watch/classify.mjs';
 
-const ROOT = new URL('../../', import.meta.url);
-const { jobs } = yaml.load(readFileSync(new URL('.github/workflows/ci.yml', ROOT), 'utf8'));
+const ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const PRELOAD = fileURLToPath(new URL('./fs-trace-preload.mjs', import.meta.url));
+const { jobs } = yaml.load(readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8'));
 
 const DOCS_ONLY_GATE = "needs.classify.outputs.docs_only == 'false'";
 
-/** Scripts a step runs, as repo-relative paths. */
-function scriptsIn(run) {
-  return [...String(run ?? '').matchAll(/(?:^|\s)((?:apps\/api\/)?scripts\/[\w./-]+\.mjs)/g)].map((m) => m[1]);
-}
+/**
+ * Gated steps that are not content scanners, with the reason. Each reads
+ * source, build output or a package's own tests — nothing under docs/,
+ * archive/, handoff/ or a root *.md feeds their verdict.
+ */
+const NOT_A_SCANNER = new Map([
+  ['npm --workspace=packages/mcp-server run build', 'build'],
+  ['npm --workspace=packages/sdk-typescript run build', 'build'],
+  ['npm run typecheck', 'tsc over source'],
+  ['npm test --workspace=packages/zapier-strale', 'package test suite'],
+  ['npm run lint --workspace=packages/n8n-nodes-strale', 'eslint over package source'],
+  ['npm test --workspace=packages/n8n-nodes-strale', 'package test suite'],
+  ['npm test --workspace=packages/ai-sdk-strale', 'package test suite'],
+  ['npm test --workspace=packages/cli', 'package test suite'],
+  ['node --test apps/api/scripts/check-framework-packages.test.mjs', 'test of a scanner, not a scanner'],
+  ['npm test', 'apps/api vitest suite'],
+]);
 
 /**
- * Does this script enumerate the whole working tree?
- *
- * That is the property that matters: `git ls-files` or `git grep` with no
- * directory restriction reaches `archive/` and `handoff/`, so a docs-only PR
- * can introduce exactly what the scanner refuses while the scanner is skipped.
- * A scanner reading somewhere a docs-only PR cannot touch — `manifests/`, say —
- * is correctly gated and must not be flagged.
- *
- * Keyed on the git subcommand appearing as an argv string, not on prose: two
- * gated scanners merely mention `archive/` in a comment or in an
- * `apps/api/scripts/archive/` allowlist entry, and flagging those would make
- * the rule cry wolf until someone muted it.
- *
- * Known limit, stated rather than hidden: a scanner that reads `docs/` through
- * `readdirSync` instead of git would not be caught. None is gated today, and a
- * narrow rule that stays trusted beats a loose one that gets switched off.
+ * Resolve a step's `run` to the node script CI executes, its argv and cwd,
+ * or null when the step does not run a node script. `npm --workspace=W run S`
+ * is followed through W/package.json, so a lint wrapper is traced as the
+ * script it wraps, in the directory npm runs it from.
  */
-function scansWholeTree(path) {
-  const url = new URL(path, ROOT);
-  if (!existsSync(url)) return false;
-  const src = readFileSync(url, 'utf8');
-  return /["']ls-files["']|["']grep["']/.test(src);
+function resolveScanner(run) {
+  const cmd = run.trim();
+  if (cmd.includes('\n')) return null;
+  let m = cmd.match(/^node ((?:apps\/api\/)?scripts\/[\w./-]+\.mjs)((?: [\w=-]+)*)$/);
+  if (m) return { script: m[1], args: m[2].trim().split(' ').filter(Boolean), cwd: ROOT };
+  m = cmd.match(/^npm --workspace=([\w/-]+) run ([\w:-]+)$/);
+  if (m) {
+    const pkgDir = join(ROOT, m[1]);
+    const inner = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8')).scripts?.[m[2]];
+    const n = String(inner ?? '').match(/^node ([\w./-]+\.mjs)((?: [\w=-]+)*)$/);
+    if (n) return { script: join(m[1], n[1]), args: n[2].trim().split(' ').filter(Boolean), cwd: pkgDir };
+  }
+  return null;
+}
+
+/** Run a script under the fs trace; return its exit status and what it read. */
+function trace(scriptAbs, args, cwd) {
+  const dir = mkdtempSync(join(tmpdir(), 'fs-trace-'));
+  const out = join(dir, 'trace.json');
+  try {
+    const r = spawnSync(process.execPath, ['--import', PRELOAD, scriptAbs, ...args], {
+      cwd, env: { ...process.env, FS_TRACE_OUT: out }, encoding: 'utf8',
+    });
+    const { paths, spawns } = JSON.parse(readFileSync(out, 'utf8'));
+    return { status: r.status, stderr: r.stderr, paths, spawns };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** What in a trace a docs-only PR could have changed. */
+function docsReach({ paths, spawns }) {
+  const inRepo = (p) => {
+    const rel = relative(ROOT, p).split('\\').join('/');
+    return rel && !rel.startsWith('..') ? rel : null;
+  };
+  // `rel + '/x'` so listing a docs directory itself (readdirSync('docs'))
+  // counts: isDocsPath matches what is under docs/, not the bare name.
+  const docPaths = paths.map(inRepo).filter((rel) => rel && (isDocsPath(rel) || isDocsPath(`${rel}/x`)));
+  const wholeTree = spawns
+    .filter(([cmd, sub]) => /(^|\/)git$/.test(cmd) && (sub === 'ls-files' || sub === 'grep'))
+    .map((s) => s.slice(0, 2).join(' '));
+  return [...new Set([...docPaths, ...wholeTree])];
 }
 
 const steps = (jobs.check?.steps ?? []).filter((s) => typeof s.run === 'string');
+const gated = steps.filter((s) => s.if === DOCS_ONLY_GATE);
 
 test('the check job still has a docs-only gate to get wrong', () => {
   // If this fails the gate was removed entirely and this test is obsolete,
   // rather than silently passing because nothing is gated any more.
-  assert.ok(
-    steps.some((s) => s.if === DOCS_ONLY_GATE),
-    'no step is gated on docs_only; delete this test or update the gate string',
-  );
+  assert.ok(gated.length > 0, 'no step is gated on docs_only; delete this test or update the gate string');
 });
 
-test('every whole-tree scanner in `check` runs unconditionally', () => {
-  const skipped = [];
-  for (const step of steps) {
-    if (step.if !== DOCS_ONLY_GATE) continue;
-    for (const script of scriptsIn(step.run)) {
-      if (scansWholeTree(script)) skipped.push(script);
-    }
+test('every gated step is either a traced scanner or named as not one', () => {
+  const unclassified = gated
+    .map((s) => s.run.trim())
+    .filter((run) => !resolveScanner(run) && !NOT_A_SCANNER.has(run));
+  assert.deepEqual(unclassified, [], 'classify these gated steps: trace them, or add them to NOT_A_SCANNER with a reason');
+  const stale = [...NOT_A_SCANNER.keys()].filter((run) => !gated.some((s) => s.run.trim() === run));
+  assert.deepEqual(stale, [], 'NOT_A_SCANNER names steps that are no longer gated; remove them');
+});
+
+test('no gated scanner reads anything a docs-only PR can change', () => {
+  const scanners = gated.map((s) => resolveScanner(s.run)).filter(Boolean);
+  // Twelve on 2026-11-01. A floor, so a resolver regression that traces
+  // nothing cannot pass vacuously.
+  assert.ok(scanners.length >= 12, `only ${scanners.length} gated scanners resolved`);
+  const offenders = [];
+  for (const { script, args, cwd } of scanners) {
+    const t = trace(join(ROOT, script), args, cwd);
+    // A scanner that crashed before reading anything would pass the reach
+    // check vacuously, so it must have run to completion and read its inputs.
+    assert.equal(t.status, 0, `${script} exited ${t.status} under the trace:\n${t.stderr}`);
+    assert.ok(t.paths.length > 1, `${script} read nothing under the trace`);
+    const reach = docsReach(t);
+    if (reach.length) offenders.push(`${script}: ${reach.slice(0, 5).join(', ')}`);
   }
   assert.deepEqual(
-    skipped,
+    offenders,
     [],
     `these scanners read files a docs-only PR can change, but are gated on ${DOCS_ONLY_GATE}, ` +
-      `so a green PR can still fail in the merge queue: ${skipped.join(', ')}`,
+      'so a green PR can still fail in the merge queue — ungate them',
   );
 });
 
@@ -99,25 +158,33 @@ test('the production-write guard specifically is ungated', () => {
   assert.equal(step.if, undefined, 'the production-write guard must run on every PR, docs-only included');
 });
 
-test('scansWholeTree discriminates', () => {
-  // Neither vacuously false — which would make the rule above pass by scanning
-  // nothing — nor indiscriminately true, which would flag correctly gated CODE
-  // steps until someone muted the rule. The cases are the real ones: the guard
-  // this test exists for, a scanner restricted to manifests/, and a scanner
-  // that only mentions archive/ in prose.
-  assert.equal(scansWholeTree('scripts/guard-production-write-access.mjs'), true);
-  assert.equal(scansWholeTree('apps/api/scripts/check-cost-class-coherence.mjs'), false);
-  assert.equal(scansWholeTree('apps/api/scripts/check-framework-packages.mjs'), false);
-  assert.equal(scansWholeTree('scripts/this-file-does-not-exist.mjs'), false);
+test('the trace discriminates', () => {
+  // Positive controls: the guard this test exists for (git ls-files), and a
+  // scanner walking docs/ with readdirSync — the blind spot of the
+  // source-text version. Negative control: a scanner restricted to manifests/.
+  const guard = trace(join(ROOT, 'scripts/guard-production-write-access.mjs'), [], ROOT);
+  assert.ok(docsReach(guard).includes('git ls-files'), 'the trace no longer sees the guard enumerate the tree');
+
+  const dir = mkdtempSync(join(tmpdir(), 'docs-walker-'));
+  try {
+    const walker = join(dir, 'walk-docs.mjs');
+    writeFileSync(walker, `import { readdirSync } from 'node:fs';\nreaddirSync(${JSON.stringify(join(ROOT, 'docs'))});\n`);
+    assert.deepEqual(docsReach(trace(walker, [], ROOT)), ['docs']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+
+  const manifestsOnly = trace(join(ROOT, 'apps/api/scripts/check-cost-class-coherence.mjs'), [], ROOT);
+  assert.ok(manifestsOnly.paths.some((p) => p.includes('/manifests/')), 'negative control read no manifests');
+  assert.deepEqual(docsReach(manifestsOnly), []);
 });
 
 test('archive/ and handoff/ are still docs-only paths, so the premise holds', () => {
-  // The rule assumes an unrestricted scan can see files a docs-only PR wrote,
-  // which is only true while isDocsPath matches those directories.
-  const src = readFileSync(new URL('scripts/production-watch/classify.mjs', ROOT), 'utf8');
-  const line = src.split('\n').find((l) => l.includes('isDocsPath ='));
-  assert.ok(line, 'isDocsPath is gone; this test no longer describes the classifier');
+  // The rule assumes a read of these directories sees files a docs-only PR
+  // wrote, which is only true while isDocsPath matches them.
   for (const root of ['docs', 'archive', 'handoff']) {
-    assert.ok(line.includes(root), `isDocsPath no longer matches ${root}/`);
+    assert.equal(isDocsPath(`${root}/x.md`), true, `isDocsPath no longer matches ${root}/`);
   }
+  assert.equal(isDocsPath('README.md'), true);
+  assert.equal(isDocsPath('manifests/x.yaml'), false);
 });
