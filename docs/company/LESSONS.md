@@ -786,7 +786,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 12 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 13 (incident 13, 2026-10-31, below; incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1212,6 +1212,23 @@ puts a production database credential into GitHub Actions. That is a
 credential-issuing act, which is the founder's; it is in DECISION-QUEUE.md,
 not routed around. Until it is answered the three production-reading
 mechanisms stay blind — but now visibly, every morning, instead of silently.
+
+**Incident 13 (2026-10-31) — a job recorded `ok` for five months while it had
+never once done its work.** `ingest-ee-directors` has run daily since 2026-05-18.
+Production's request to the Estonian open-data host answers HTTP 403
+(`ingest-ee-directors-failed`, logged 2026-10-30 10:05Z; a free production fetch
+of the same host on 2026-10-31 returned the same block, while this PC gets 200),
+so `ee_directors` and `ee_directors_sync` are both empty. The handler catches the
+error and returns `outcome: "errored"`, and the coordinator then writes
+`last_outcome = 'ok'` to `job_schedule` because the handler resolved. Only the
+external watch's heartbeat, which requires a real success, could see it, and that
+appeared once the heartbeat's three-interval allowance for older rows ran out.
+Meanwhile the tool told buyers that an empty directors list meant a newly
+registered company or resigned directors. Repaired: that wording. Open: `last_outcome`
+still reads `ok` for a job whose handler reported an error, and access itself,
+which is a question for the register (OUTBOX `rik-open-data-403`), never a route
+around the block (DEC-20261023-A). A status column is evidence only of what wrote
+it; read the table the job is meant to fill.
 
 ### F8 · Duplicated authority
 

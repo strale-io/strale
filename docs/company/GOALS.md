@@ -135,6 +135,16 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-10-31 — the week in progress looks like a record, but about
+  €64 of its €139.57 (day 6) is one-off.** The largest x402 payer ran 1,055
+  `mx-lookup` calls in one day on 2026-10-30 (€21.10; two calls in the prior
+  nine days), and two registered accounts ran catalogue-wide sweeps (€39.18 and
+  €3.33). What remains is about €76, level with the prior two completed weeks.
+  Second-sourced: `commercial-brief` largest-payer movement (+€39.51 since the
+  previous run) against that payer's `transactions` (+€39.25, 1,435 calls).
+  The same payer repeatedly asks `exchange-rate` and `forex-history` for
+  currencies our ECB-based sources lack (NGN 17, KES 5 and others; 28 and 14
+  failures in two days): unserved demand from the buyer we most depend on.
 - **Measured 2026-10-30 — a registered account at an agent-integration
   platform is buying across almost the whole catalogue with its own money.**
   The account (signed up 2026-09-02, €100 card top-up on 2026-09-24) made 339
