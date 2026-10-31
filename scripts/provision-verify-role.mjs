@@ -39,6 +39,7 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { scramVerifier } from "./scram-verifier.mjs";
+import { withRequiredTls, classifyRefusal, INSUFFICIENT_PRIVILEGE } from "./verify-role-lib.mjs";
 import postgres from "postgres";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -66,7 +67,6 @@ const ALLOWED = [
   ["source_health", "circuit-breaker state per slug."],
   ["test_run_log", "run-level counters and timings."],
   ["transaction_quality", "quality flags and latency per transaction id."],
-  ["wallets", "balance per user id. A number and a uuid."],
   ["startup_migration_applied", "which migration block ran, and when. The H7 evidence base."],
   ["startup_migration_ledger", "the one-shot ledger."],
   ["execution_manifest_snapshots", "deploy-time manifest digests."],
@@ -136,6 +136,14 @@ const VIEWS = {
              scheduled_testing_eligible, created_at, updated_at
         FROM public.test_suites`,
   },
+  wallets_meta: {
+    over: "wallets",
+    why: "balances keyed by the same surrogate transactions_meta uses, so the two join without exposing user_id",
+    sql: `
+      SELECT md5(user_id::text || 'strale_verify.v1') AS user_surrogate,
+             balance_cents, created_at, updated_at
+        FROM public.wallets`,
+  },
   rate_limit_counters_meta: {
     over: "rate_limit_counters",
     why: "request-rate shape without the bucket key, whose unsalted SHA-256 of an IPv4 address is reversible by rainbow table",
@@ -175,6 +183,7 @@ const EXCLUDED = [
   ["x402_orphan_settlements", "raw_args holds the caller's full inputs verbatim (x402-recording.ts masks only the NEVER_PERSIST_INPUTS secrets list, not personal data) and payer_address is an unhashed on-chain wallet. No retention rule covers either. Counts via x402_orphan_settlements_meta."],
   ["x402_settlement_intents", "failure_reason is free text from a vendor. States via x402_settlement_intents_meta."],
   ["capability_invocations", "carries transaction_id AND a raw user_id, which together reverse transactions_meta.user_surrogate into a surrogate-to-user map, and wallets then gives a balance per real user. Facts via capability_invocations_meta."],
+  ["wallets", "user_id plus the salt (a literal in this repository and readable via pg_get_viewdef) rebuilds the transactions_meta.user_surrogate map inside the database, tying balance to per-customer tool history. Balances via wallets_meta."],
   ["job_files", "async job output file names and content types, derived from the customer payload that produced them."],
   ["ee_directors", "named natural persons, addresses and isikukood_hash. Estonian director PII."],
   ["cy_directors", "named natural persons. Cypriot director PII."],
@@ -326,6 +335,13 @@ if (!bwsToken) throw new Error("no Bitwarden write token supplied; the secret co
 
 const sql = postgres(writeUrl, { max: 1, prepare: false });
 const roleExists = (await sql`SELECT 1 FROM pg_roles WHERE rolname = ${ROLE}`).length > 0;
+// Every credential is collected before anything is changed. On a repair run
+// the proof needs the role's current URL, and prompting for it after the DDL
+// had committed would leave a cancelled prompt with grants applied and
+// nothing proven.
+const typedVerifyUrl = roleExists && !ROTATE
+  ? (await promptHidden(`current ${ROLE} URL to prove with (input hidden; from Bitwarden ${SECRET_NAME})`)).trim()
+  : null;
 
 if (roleExists && !ROTATE) {
   console.log(`${ROLE} already exists. Grants will be repaired; the password is left alone.`);
@@ -391,22 +407,6 @@ await sql.begin(async (tx) => {
 
 // ── Prove it, before storing anything ───────────────────────────────────────
 
-const INSUFFICIENT_PRIVILEGE = "42501";
-
-async function refusedWithPrivilegeError(probe, statement) {
-  try {
-    await probe.unsafe(statement);
-    return { ok: false, why: "the statement succeeded" };
-  } catch (err) {
-    // A bare catch would call a typo, a renamed table or a dropped connection
-    // "refused" — the hollow-gate failure this project calls F5. Only
-    // insufficient_privilege counts.
-    const code = err?.code ?? err?.cause?.code;
-    return code === INSUFFICIENT_PRIVILEGE
-      ? { ok: true }
-      : { ok: false, why: `refused with SQLSTATE ${code ?? "none"} (${err?.message ?? err}), not ${INSUFFICIENT_PRIVILEGE}` };
-  }
-}
 
 /**
  * The URL to prove with.
@@ -422,11 +422,6 @@ async function refusedWithPrivilegeError(probe, statement) {
  * derived URL would otherwise hand cloud sessions a cleartext connection to
  * production across the public internet.
  */
-function withRequiredTls(url) {
-  const u = new URL(url);
-  u.searchParams.set("sslmode", "require");
-  return u.toString();
-}
 
 let verifyUrl;
 if (settingPassword) {
@@ -435,9 +430,29 @@ if (settingPassword) {
   host.password = password;
   verifyUrl = withRequiredTls(host.toString());
 } else {
-  verifyUrl = withRequiredTls(
-    (await promptHidden(`current ${ROLE} URL to prove with (input hidden; from Bitwarden ${SECRET_NAME})`)).trim(),
-  );
+  verifyUrl = withRequiredTls(typedVerifyUrl);
+  // R4: the stored secret is not rewritten on a repair run, so a secret that
+  // still carries sslmode=disable would pass a proof made over a URL this
+  // script upgraded in memory. Say so rather than certify it.
+  if (verifyUrl !== typedVerifyUrl) {
+    await sql.end();
+    console.error(
+      `the stored ${SECRET_NAME} does not require TLS. The proof would run over a connection\n` +
+      "this script upgraded in memory, certifying something the stored secret does not do.\n" +
+      "Re-run with --rotate to mint and store a URL that requires TLS.",
+    );
+    process.exit(1);
+  }
+}
+
+/** Run a statement that must be refused, and classify the outcome. */
+async function attemptRefused(probe, statement) {
+  try {
+    await probe.unsafe(statement);
+    return classifyRefusal(null);
+  } catch (err) {
+    return classifyRefusal(err);
+  }
 }
 
 let stored = null;
@@ -452,7 +467,7 @@ let stored = null;
     // Every withheld table, not a sample: a pre-existing grant, a PUBLIC grant
     // or role membership on any one of them would defeat the whole design.
     for (const [t] of EXCLUDED) {
-      const r = await refusedWithPrivilegeError(probe, `SELECT * FROM public.${t} LIMIT 1`);
+      const r = await attemptRefused(probe, `SELECT * FROM public.${t} LIMIT 1`);
       if (!r.ok) failures.push(`${t} is readable or failed wrongly: ${r.why}`);
     }
     await probe.unsafe("SET default_transaction_read_only = off");
@@ -463,12 +478,13 @@ let stored = null;
       ["CREATE TABLE", "CREATE TABLE strale_verify_probe_should_not_exist (id int)"],
       ["CREATE SCHEMA", "CREATE SCHEMA strale_verify_probe_schema"],
     ]) {
-      const r = await refusedWithPrivilegeError(probe, statement);
+      const r = await attemptRefused(probe, statement);
       if (!r.ok) failures.push(`${what} was not refused: ${r.why}`);
     }
     // If CREATE TABLE somehow succeeded, do not leave a stray production table
     // that schema.ts-based classification cannot see.
     await probe.unsafe("DROP TABLE IF EXISTS strale_verify_probe_should_not_exist").catch(() => {});
+    await probe.unsafe("DROP SCHEMA IF EXISTS strale_verify_probe_schema").catch(() => {});
   } finally {
     await probe.end();
   }

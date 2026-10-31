@@ -169,7 +169,37 @@ them, not assumed. The verifier moved to `scripts/scram-verifier.mjs` so it
 can be imported without running the script, and carries an RFC 7677
 known-answer test.
 
-**18 tables readable, 29 withheld, 7 narrow views.**
+**A third pass returned GO with two conditions, both now fixed.**
+
+- **`wallets.user_id` still inverted the surrogate.** Closing
+  `capability_invocations` shut one path; `wallets` was the other, and the
+  salt is a literal in this repository and readable through
+  `pg_get_viewdef`, so the role could rebuild the whole map with one query
+  inside the database. `wallets` is withheld now and `wallets_meta` exposes
+  balances keyed by the same surrogate, so the two still join and the claim is
+  finally true.
+- **The boundary was enforced by name for only 15 of 29 withheld tables.**
+  Moving `health_monitor_events` into ALLOWED passed all 81 gates, and the
+  runtime proof could not compensate because it derives its probe list from
+  the same array — a table moved out simply stops being probed. The small side
+  is frozen instead: ALLOWED is pinned by name, and every table `schema.ts`
+  declares outside it must be excluded, so a move in either direction fails.
+
+Three more test escapes it found, all closed by making the helpers behave
+rather than merely read correctly: gutting the refusal check with `|| true`
+passed because the test grepped for the literal `42501`, which survived in the
+constant and the comment; reducing the TLS helper to `return url` passed
+because nothing asserted the behaviour; and `scramVerifier(password, 1)` at
+the call site passed because the module test pins only the default parameter.
+Both helpers now live in `scripts/verify-role-lib.mjs` and are exercised with
+real inputs. The repair-run prompt moved up beside the others, so no
+credential is collected after the DDL has committed, and a stored URL that
+does not require TLS is refused rather than certified over a connection this
+script upgraded in memory.
+
+All four of the reviewer's new plants were replanted and each fails.
+
+**17 tables readable, 30 withheld, 8 narrow views.**
 
 ### What a session cannot do, and why that is correct
 

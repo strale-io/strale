@@ -50,6 +50,28 @@ test('every table declared in schema.ts is classified', () => {
   assert.deepEqual(missing, [], 'unclassified in provision-verify-role.mjs: ' + missing.join(', '));
 });
 
+test('ALLOWED is frozen by name, so a move in either direction fails', () => {
+  // Review condition B: `mustExclude` named only 15 of 29 withheld tables, so
+  // moving health_monitor_events into ALLOWED passed all 81 gates — and the
+  // runtime proof could not compensate, because it derives its probe list
+  // from the same EXCLUDED array. Freezing the small side closes both.
+  const frozen = [
+    'capabilities', 'capability_budget_counters', 'capability_limitations', 'solutions',
+    'solution_steps', 'source_health', 'test_run_log', 'transaction_quality',
+    'startup_migration_applied', 'startup_migration_ledger', 'execution_manifest_snapshots',
+    'digest_snapshots', 'vendor_capability_dependencies', 'vendor_capability_suspensions',
+    'vendor_solution_suspensions', 'cy_directors_sync', 'ee_directors_sync',
+  ];
+  assert.deepEqual(
+    allowed.map((a) => a.table).sort(), [...frozen].sort(),
+    'ALLOWED changed. Re-review the table against customer content, personal data, ' +
+    'credentials and free text, then update this frozen list deliberately.',
+  );
+  // Everything the schema declares and this list does not name must be withheld.
+  const unprotected = declared.filter((t) => !frozen.includes(t) && !excluded.some((e) => e.table === t));
+  assert.deepEqual(unprotected, [], 'declared but neither frozen-allowed nor excluded: ' + unprotected.join(', '));
+});
+
 test('the sensitive tables are excluded by name', () => {
   // Review findings 1 and 5: x402_orphan_settlements.raw_args is verbatim
   // customer input, and rate_limit_counters keys are an unsalted SHA-256 of
@@ -126,6 +148,10 @@ test('the view SET is frozen, and each view by expression not just alias', () =>
     x402_orphan_settlements_meta: ['id', 'created_at'],
     capability_invocations_meta: ['id', 'capability_slug', 'rail', 'context_kind', 'is_free_tier', 'success', 'failure_class', 'fault', 'billable', 'counts_against_capability', 'latency_ms', 'created_at'],
     test_suites_meta: ['id', 'capability_slug', 'test_name', 'test_type', 'active', 'schedule_tier', 'estimated_cost_cents', 'test_status', 'test_mode', 'external_cost_cents', 'scheduled_testing_eligible', 'created_at', 'updated_at'],
+    wallets_meta: [
+      "md5(user_id::text || 'strale_verify.v1') AS user_surrogate",
+      'balance_cents', 'created_at', 'updated_at',
+    ],
     rate_limit_counters_meta: ['window_start', 'count'],
   };
 
@@ -177,14 +203,46 @@ test('the password is never sent to Postgres in plaintext', () => {
   assert.match(alter[1], /scramVerifier|SCRAM-SHA-256/, 'the raw password is interpolated into the statement');
 });
 
-test('the proof requires insufficient_privilege, not any error', () => {
-  // Review finding 4: a bare catch called a renamed table, a typo or a
-  // dropped connection "refused" — the hollow-gate family.
-  assert.match(script, /42501/, 'the proof no longer checks the SQLSTATE');
+test('the refusal classifier behaves, not merely mentions 42501', async () => {
+  // Re-review R2: a planted `|| true` gutted the check while the old test,
+  // which grepped for the literal "42501", still passed — the constant and
+  // the comment kept it alive. Exercise it instead.
+  const { classifyRefusal, INSUFFICIENT_PRIVILEGE } = await import('./verify-role-lib.mjs');
+  assert.equal(INSUFFICIENT_PRIVILEGE, '42501');
+  assert.equal(classifyRefusal({ code: '42501' }).ok, true, 'insufficient_privilege is a refusal');
+  assert.equal(classifyRefusal(null).ok, false, 'success is not a refusal');
+  for (const code of ['42P01', '42703', '57014', 'ECONNRESET', undefined]) {
+    assert.equal(classifyRefusal({ code }).ok, false, `SQLSTATE ${code} must not count as refused`);
+  }
+  assert.equal(classifyRefusal({ cause: { code: '42501' } }).ok, true, 'a wrapped driver error still counts');
   assert.ok(
     /for \(const \[t\] of EXCLUDED\)/.test(script),
     'the proof must assert refusal on every withheld table, not a sample',
   );
+});
+
+test('TLS forcing behaves, and cannot be downgraded', async () => {
+  // Re-review R2: reducing withRequiredTls to `return url` passed, because
+  // nothing asserted the behaviour.
+  const { withRequiredTls } = await import('./verify-role-lib.mjs');
+  for (const input of [
+    'postgresql://u:p@h:5432/db?sslmode=disable',
+    'postgresql://u:p@h:5432/db',
+    'postgresql://u:p@h:5432/db?sslmode=disable&sslmode=disable',
+    'postgresql://u:p@h:5432/db?application_name=x',
+  ]) {
+    const out = withRequiredTls(input);
+    assert.match(out, /sslmode=require/, `TLS not forced on ${input}`);
+    assert.ok(!/sslmode=disable/.test(out), `a disable survived on ${input}`);
+  }
+  assert.match(withRequiredTls('postgresql://u:p@h/db?application_name=x'), /application_name=x/, 'other parameters must survive');
+});
+
+test('the single scramVerifier call site passes no weakening override', () => {
+  // Re-review R2: `scramVerifier(password, 1)` at the call site passed, since
+  // the module test only pins the default parameter.
+  const calls = [...script.matchAll(/scramVerifier\(([^)]*)\)/g)].map((m) => m[1].trim());
+  assert.deepEqual(calls, ['password'], 'scramVerifier must be called with the password alone, so the 4096 default applies');
 });
 
 test('the SCRAM verifier matches the RFC 7677 known answer', async () => {
