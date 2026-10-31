@@ -5,88 +5,136 @@
  * ── Why this role exists ────────────────────────────────────────────────────
  *
  * Production verification (DEC-20260504-C) needs to read the database. The
- * existing `strale_ro` role can read all 49 tables, `transactions` included,
+ * existing `strale_ro` role can read every table, `transactions` included,
  * which holds customer inputs and outputs unredacted for 90 days. Putting that
- * credential in a store cloud sessions can read would widen who can read
- * customer content. `strale_verify` is the narrower credential: everything a
+ * credential where cloud sessions can read it would widen who can read
+ * customer content. `strale_verify` is the narrower credential: what a
  * verification query needs, and no customer content anywhere.
  *
  * ── What it may read ────────────────────────────────────────────────────────
  *
- * Explicit SELECT grants on the tables in ALLOWED below, and nothing else.
- * There is deliberately no `ALTER DEFAULT PRIVILEGES`: a table created
- * tomorrow is unreadable until someone grants it by name, so a future table
- * holding customer content cannot quietly become readable. The cost is that
- * this script must be re-run (it is idempotent) after a migration adds a table
- * worth reading; `npm run verify-role:check` reports what is missing.
+ * Explicit SELECT grants on the tables in ALLOWED, plus the narrow views in
+ * VIEWS, and nothing else. There is deliberately no `ALTER DEFAULT
+ * PRIVILEGES`: a table created tomorrow is unreadable until granted by name,
+ * so a future table holding customer content cannot quietly become readable.
  *
- * ── Safety ──────────────────────────────────────────────────────────────────
+ * ── Credentials ─────────────────────────────────────────────────────────────
  *
- * The password is generated here, never printed, never logged, never written
- * to disk, and goes straight into Bitwarden. The write credential is read
- * through the authority module, so this run is attributable. Every statement
- * is idempotent, so a second run repairs drift rather than failing.
+ * Both are typed at a hidden prompt. There is no environment-variable path:
+ * an env var set on a PowerShell command line is written to
+ * ConsoleHost_history.txt in plain text, and — the worse problem — a non-TTY
+ * fallback is a second, unguarded door to the production write credential that
+ * an agent session (which has no TTY) would take by default. A terminal is
+ * required, full stop.
  *
- * Usage:  node scripts/provision-verify-role.mjs [--dry-run] [--check]
+ * The role's password never crosses the wire or reaches a Postgres log: this
+ * computes the SCRAM-SHA-256 verifier locally and sends that, which Postgres
+ * stores verbatim.
+ *
+ * Usage:  node scripts/provision-verify-role.mjs [--dry-run] [--rotate]
+ *         node scripts/provision-verify-role.mjs --check   (needs only the
+ *                                                           verify URL)
  */
 
 import { execFileSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
 import postgres from "postgres";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const CHECK_ONLY = process.argv.includes("--check");
+const ROTATE = process.argv.includes("--rotate");
 
 const ROLE = "strale_verify";
 const SECRET_NAME = "STRALE_RAILWAY_DB_VERIFY_URL";
 const BWS_PROJECT = "strale";
 
 /**
- * Tables `strale_verify` may read, each with the reason it is safe.
+ * Tables `strale_verify` may read in full, each with the reason it is safe.
  *
- * The test applied to every one of the 47 public tables: does it hold customer
- * content, personal data, a credential, a token, or a secret? If yes it is in
- * EXCLUDED below with the reason. Metadata about a row — its id, which tool,
- * status, price, timing — is not content, which is what makes the
- * `transactions_meta` view possible.
+ * The test applied to every table: does it hold customer content, personal
+ * data, a credential, a token, or a secret — in ANY column? A single free-text
+ * or payload column disqualifies the whole table; where the rest of the table
+ * is still needed, it moves to VIEWS instead.
  */
 const ALLOWED = [
-  ["capabilities", "the public catalogue: slugs, prices, flags, schemas. Already served by /v1/capabilities."],
+  ["capabilities", "the tool catalogue. Mostly public via /v1/capabilities; the rest (cost_class, quota_cap, deactivation_reason, invisible rows) is internal commercial data, not customer data."],
   ["capability_budget_counters", "integer counters per capability, no payload."],
-  ["capability_invocations", "invocation facts: slug, timestamp, outcome. No input or output."],
+  ["capability_invocations", "invocation facts: slug, timestamp, outcome, a bare user uuid. Verified column by column: no input, no output, no free text."],
   ["capability_limitations", "published limitation text, already public via /v1/public/ops."],
   ["solutions", "the public solution catalogue."],
-  ["solution_steps", "which capability each solution step calls. input_map names fields, carries no values."],
+  ["solution_steps", "authored bundle wiring written at onboarding. input_map maps field NAMES and is never written from a request."],
   ["source_health", "circuit-breaker state per slug."],
-  ["test_suites", "suite definitions. Fixture inputs are authored test data, not customer data."],
+  ["test_suites", "suite definitions and authored fixture inputs. Customer output goes to test_results, which is excluded; a piggyback suite row is inserted with input {}."],
   ["test_run_log", "run-level counters and timings."],
   ["transaction_quality", "quality flags and latency per transaction id."],
-  ["wallets", "balance per user id. A number, no identity."],
-  ["wallet_reservations", "reservation amounts and states."],
+  ["wallets", "balance per user id. A number and a uuid."],
   ["startup_migration_applied", "which migration block ran, and when. The H7 evidence base."],
   ["startup_migration_ledger", "the one-shot ledger."],
   ["execution_manifest_snapshots", "deploy-time manifest digests."],
   ["digest_snapshots", "digest bookkeeping."],
-  ["job_schedule", "job names, lease owners and freshness. The job-staleness watch reads this."],
-  ["job_callbacks", "callback bookkeeping, no payload."],
-  ["rate_limit_counters", "counters keyed by hash."],
-  ["vendor_accounts", "vendor plan and quota state. Provider names are not secrets."],
   ["vendor_capability_dependencies", "which capability depends on which provider."],
   ["vendor_capability_suspensions", "suspension state per capability."],
   ["vendor_solution_suspensions", "suspension state per solution."],
   ["cy_directors_sync", "sync bookkeeping only; the data table itself is excluded."],
   ["ee_directors_sync", "sync bookkeeping only; the data table itself is excluded."],
-  ["x402_settlement_intents", "settlement intent states and payment hashes, needed for the x402 reconciliation."],
-  ["x402_orphan_settlements", "orphan settlements, needed for the same reconciliation."],
 ];
 
 /**
+ * Tables reachable only through a narrow view, because one or two columns
+ * carry content the role must not see while the rest is needed.
+ */
+const VIEWS = {
+  transactions_meta: {
+    over: "transactions",
+    why: "metadata for every verification query; input and output never leave the base table",
+    sql: `
+      SELECT id, capability_id, solution_slug, status, payment_method,
+             price_cents, cost_cents, latency_ms, is_free_tier, created_at, completed_at,
+             redacted_at, receipt_status, receipt_rail, x402_settlement_id, legal_hold,
+             md5(user_id::text || 'strale_verify.v1') AS user_surrogate,
+             (input  IS NOT NULL AND input::text  <> '{}') AS has_input,
+             (output IS NOT NULL AND output::text <> '{}') AS has_output
+        FROM public.transactions
+       WHERE deleted_at IS NULL`,
+  },
+  job_schedule_meta: {
+    over: "job_schedule",
+    why: "job freshness for the staleness watch, without last_error, which routinely quotes the row that failed",
+    sql: `
+      SELECT job_name, lease_owner, lease_expires_at, last_run_at, last_success_at,
+             consecutive_failures, enabled
+        FROM public.job_schedule`,
+  },
+  x402_settlement_intents_meta: {
+    over: "x402_settlement_intents",
+    why: "settlement reconciliation, without failure_reason, which is free text from a vendor",
+    sql: `
+      SELECT id, payment_hash, state, created_at, updated_at
+        FROM public.x402_settlement_intents`,
+  },
+  x402_orphan_settlements_meta: {
+    over: "x402_orphan_settlements",
+    why: "the orphan count for reconciliation, without payer_address (an unhashed wallet) or raw_args (verbatim customer input)",
+    sql: `
+      SELECT id, created_at
+        FROM public.x402_orphan_settlements`,
+  },
+  rate_limit_counters_meta: {
+    over: "rate_limit_counters",
+    why: "request-rate shape without the bucket key, whose unsalted SHA-256 of an IPv4 address is reversible by rainbow table",
+    sql: `
+      SELECT window_start, count
+        FROM public.rate_limit_counters`,
+  },
+};
+
+/**
  * Tables `strale_verify` may NOT read, and why. Every one holds customer
- * content, personal data, a credential, a token, or a secret.
+ * content, personal data, a credential, a token, or a secret. The proof step
+ * asserts refusal on every single one of these, not just a sample.
  */
 const EXCLUDED = [
-  ["transactions", "customer inputs and outputs, unredacted for 90 days. The reason this role exists. Metadata reachable through transactions_meta."],
+  ["transactions", "customer inputs and outputs, unredacted for 90 days. The reason this role exists. Metadata via transactions_meta."],
   ["users", "email, name, api_key_hash, signup IP hash. Customer identity."],
   ["api_keys", "api_key_hash. A credential, even hashed."],
   ["api_key_recovery_tokens", "token_hash and requester IP hash. A credential."],
@@ -95,118 +143,103 @@ const EXCLUDED = [
   ["oauth_clients", "registered client identities."],
   ["oauth_grants", "which key holds which grant."],
   ["wallet_transactions", "Stripe session ids and free-text descriptions tied to a paying customer."],
+  ["wallet_reservations", "api_key_id and user_id attribute work to a customer key, exactly as batch_orders does, plus a free-text terminal_reason."],
   ["batch_orders", "api_key_id, so it attributes work to a customer key."],
   ["test_results", "actual_output — piggyback rows are fed verbatim from real customer traffic."],
   ["dispute_requests", "contact_email and disposition notes. Personal data by definition."],
   ["trial_grants", "email_hash and ip_hash. Pseudonymous personal data."],
+  ["discovery_hits", "ip_hash per discovery request: pseudonymous personal data under GDPR."],
+  ["rate_limit_counters", "bucket keys are an unsalted SHA-256 of the client IP, reversible across the IPv4 space by rainbow table, so these are recoverable IP addresses. Counts via rate_limit_counters_meta."],
   ["suggest_log", "customer search queries, free text."],
   ["failed_requests", "the task text a caller sent, plus error_detail and ip_hash."],
-  ["discovery_hits", "ip_hash per discovery request: pseudonymous personal data under GDPR."],
+  ["job_callbacks", "a customer-supplied callback url, which for Slack, Discord and Zapier style endpoints IS the bearer secret, plus last_error carrying remote response bodies."],
+  ["job_schedule", "last_error quotes the row that failed. Freshness via job_schedule_meta."],
+  ["x402_orphan_settlements", "raw_args holds the caller's full inputs verbatim (x402-recording.ts masks only the NEVER_PERSIST_INPUTS secrets list, not personal data) and payer_address is an unhashed on-chain wallet. No retention rule covers either. Counts via x402_orphan_settlements_meta."],
+  ["x402_settlement_intents", "failure_reason is free text from a vendor. States via x402_settlement_intents_meta."],
+  ["job_files", "async job output file names and content types, derived from the customer payload that produced them."],
   ["ee_directors", "named natural persons, addresses and isikukood_hash. Estonian director PII."],
   ["cy_directors", "named natural persons. Cypriot director PII."],
   ["health_monitor_events", "a free-text details blob that has historically quoted row content."],
-  ["job_files", "async job file names and content types, derived from customer payloads."],
+  ["vendor_accounts", "payment_method, last_error and an unbounded metadata jsonb."],
 ];
 
-const allowedUnique = ALLOWED;
+// ── Credential prompts ──────────────────────────────────────────────────────
 
-/**
- * Read a secret from the terminal without echoing it.
- *
- * Why not an environment variable set on the command line: PowerShell saves
- * every line to `ConsoleHost_history.txt` in plain text, so
- * `$env:X="postgres://user:password@host/db"` writes the production write
- * credential to disk, unencrypted, where it stays. Bash does the same in
- * `.bash_history`. Typing it at a hidden prompt leaves it in this process's
- * memory and nowhere else.
- *
- * Raw mode gives us the keystrokes before the terminal echoes them. Ctrl-C
- * still aborts, and backspace works, because a prompt that cannot be corrected
- * invites a paste into the shell instead, which is the thing being avoided.
- */
 function promptHidden(label) {
   return new Promise((resolve, reject) => {
     if (!process.stdin.isTTY) {
-      reject(new Error(`${label} must be typed at an interactive prompt; this is not a terminal`));
+      reject(new Error(
+        `${label} must be typed at an interactive prompt. This script has no ` +
+        "environment-variable path on purpose: a value set on a command line is " +
+        "saved to shell history in plain text, and a non-TTY fallback would be a " +
+        "second door to the production write credential that an agent session " +
+        "would take by default. Run it yourself, in a terminal.",
+      ));
       return;
     }
-    process.stdout.write(`${label}: `);
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-    let value = "";
+    let settled = false;
+    const finish = (fn, arg) => {
+      if (settled) return;
+      settled = true;
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      process.stdin.removeListener("data", onData);
+      process.stdout.write("\n");
+      fn(arg);
+    };
     const onData = (chunk) => {
       for (const ch of chunk) {
-        if (ch === "\r" || ch === "\n") {
-          process.stdin.setRawMode(false);
-          process.stdin.pause();
-          process.stdin.removeListener("data", onData);
-          process.stdout.write("\n");
-          resolve(value);
-          return;
-        }
-        if (ch === "\u0003") {
-          process.stdin.setRawMode(false);
-          process.stdout.write("\n");
-          reject(new Error("cancelled"));
-          return;
-        }
+        if (ch === "\r" || ch === "\n") return finish(resolve, value);
+        if (ch === "\u0003") return finish(reject, new Error("cancelled"));
         if (ch === "\u007f" || ch === "\b") value = value.slice(0, -1);
         else if (ch >= " ") value += ch;
       }
     };
+    let value = "";
+    process.stdout.write(`${label}: `);
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
     process.stdin.on("data", onData);
   });
 }
 
 /**
- * The writable URL is typed at a hidden prompt, not read from the env file.
- *
- * `guard-production-write-access.mjs` refuses any file but the authority
- * module that names the parked credential, and a script that read it would be
- * exactly the bypass that guard exists to prevent. The authority module cannot
- * release it here either: creating a database role is not in
- * AUTONOMOUS_PURPOSES, so it is founder-gated, and with no grant key installed
- * every founder-gated release is refused. That refusal is correct. The way
- * through is the founder running this script and typing the credential.
- *
- * STRALE_OPERATOR_WRITE_URL is still honoured when stdin is not a terminal, so
- * the script remains usable from automation, but an interactive run always
- * prompts and so never reaches shell history.
+ * The SCRAM-SHA-256 verifier Postgres stores, computed here so the plaintext
+ * password never crosses the wire and never reaches a server log — Railway's
+ * log is visible in its dashboard and retained.
  */
-async function readWriteUrl() {
-  const fromEnv = process.env.STRALE_OPERATOR_WRITE_URL;
-  const value = process.stdin.isTTY
-    ? (await promptHidden("Writable production Postgres URL (input hidden)")).trim()
-    : (fromEnv ?? "").trim();
-  if (!value) {
-    throw new Error(
-      process.stdin.isTTY
-        ? "no URL entered"
-        : "STRALE_OPERATOR_WRITE_URL is unset and stdin is not a terminal, so there is nothing to prompt",
-    );
-  }
-  if (!/^postgres(ql)?:\/\//.test(value)) {
-    throw new Error("that does not look like a postgres connection string");
-  }
-  return value;
+function scramVerifier(password, iterations = 4096) {
+  const salt = randomBytes(16);
+  const saltedPassword = pbkdf2Sync(password, salt, iterations, 32, "sha256");
+  const clientKey = createHmac("sha256", saltedPassword).update("Client Key").digest();
+  const storedKey = createHash("sha256").update(clientKey).digest();
+  const serverKey = createHmac("sha256", saltedPassword).update("Server Key").digest();
+  return `SCRAM-SHA-256$${iterations}:${salt.toString("base64")}$${storedKey.toString("base64")}:${serverKey.toString("base64")}`;
 }
 
-async function readBwsToken() {
-  const fromEnv = process.env.BWS_WRITE_TOKEN;
-  const value = process.stdin.isTTY
-    ? (await promptHidden("Bitwarden write token (input hidden)")).trim()
-    : (fromEnv ?? "").trim();
-  if (!value) throw new Error("no Bitwarden write token supplied; the secret cannot be stored");
-  return value;
+/**
+ * The environment for the `bws` child.
+ *
+ * An earlier version allowlisted PATH and SystemRoot, to avoid handing the
+ * child anything of ours. Two reasons it does not any more, and neither is to
+ * quieten `env:check` — which refuses an undocumented `process.env.NAME` read,
+ * correctly, and would have refused those two: a two-variable allowlist is
+ * wrong on Windows, where a child process needs more than PATH and SystemRoot
+ * to load system libraries; and since both credentials are now prompted, this
+ * process holds no secret in its environment for a child to inherit. What is
+ * left to be careful about is the token, which is set deliberately here and
+ * nowhere else.
+ */
+function bwsEnv(token) {
+  return { ...process.env, BWS_ACCESS_TOKEN: token };
 }
 
-function bwsPut(name, value, token) {
-  const projectId = execFileSync("bws", ["project", "list", "--output", "json"], {
-    encoding: "utf8",
-    env: { ...process.env, BWS_ACCESS_TOKEN: token },
-  });
-  const project = JSON.parse(projectId).find((p) => p.name === BWS_PROJECT);
+function bwsStore(name, value, token) {
+  const projects = JSON.parse(
+    execFileSync("bws", ["project", "list", "--output", "json"], { encoding: "utf8", env: bwsEnv(token) }),
+  );
+  const project = projects.find((p) => p.name === BWS_PROJECT);
   if (!project) throw new Error(`no Bitwarden project named ${BWS_PROJECT}`);
   const note = [
     "account: petter@strale.io",
@@ -215,106 +248,177 @@ function bwsPut(name, value, token) {
     "tier: read",
     "expiry: none - rotate with the Railway Postgres credential",
   ].join("\n");
-  // The value is passed as an argv element, never echoed.
-  execFileSync("bws", ["secret", "create", name, value, project.id, "--note", note], {
-    encoding: "utf8",
-    env: { ...process.env, BWS_ACCESS_TOKEN: token },
-    stdio: ["ignore", "ignore", "inherit"],
-  });
+
+  const existing = JSON.parse(
+    execFileSync("bws", ["secret", "list", project.id, "--output", "json"], { encoding: "utf8", env: bwsEnv(token) }),
+  ).find((s) => s.key === name);
+
+  // `create` fails on a key that already exists, which would otherwise leave
+  // the role holding a rotated password nobody has.
+  const args = existing
+    ? ["secret", "edit", existing.id, "--key", name, "--value", value, "--note", note]
+    : ["secret", "create", name, value, project.id, "--note", note];
+  execFileSync("bws", args, { encoding: "utf8", env: bwsEnv(token), stdio: ["ignore", "ignore", "inherit"] });
+  return existing ? "updated" : "created";
 }
 
-// --dry-run prints the plan and touches nothing, so it needs no credential:
-// it is the command to run first, to see what would happen.
+// ── Dry run: the plan, no credential needed ─────────────────────────────────
+
 if (DRY_RUN) {
-  console.log(`dry run — nothing is created, nothing is stored`);
+  console.log("dry run — nothing is created, nothing is stored");
   console.log(`role:            ${ROLE}`);
-  console.log(`tables granted:  ${allowedUnique.length}`);
-  console.log(`tables excluded: ${EXCLUDED.length}`);
-  console.log(`plus the view:   public.transactions_meta (metadata only, no input or output values)`);
+  console.log(`tables granted:  ${ALLOWED.length}`);
+  console.log(`views granted:   ${Object.keys(VIEWS).length}`);
+  console.log(`tables withheld: ${EXCLUDED.length} (refusal asserted on every one before anything is stored)`);
   console.log(`bitwarden:       ${SECRET_NAME} in project ${BWS_PROJECT}`);
-  console.log(`no ALTER DEFAULT PRIVILEGES — a table added later needs an explicit grant`);
-  console.log(`\nexcluded, with the reason each is withheld:`);
-  for (const [t, why] of EXCLUDED) console.log(`  ${t.padEnd(28)} ${why}`);
+  console.log("no ALTER DEFAULT PRIVILEGES — a table added later needs an explicit grant\n");
+  console.log("withheld, with the reason each is:");
+  for (const [t, why] of EXCLUDED) console.log(`  ${t.padEnd(30)} ${why}`);
+  console.log("\nreachable only through a narrow view:");
+  for (const [v, d] of Object.entries(VIEWS)) console.log(`  ${v.padEnd(30)} over ${d.over} — ${d.why}`);
   process.exit(0);
 }
 
-const writeUrl = await readWriteUrl();
-const sql = postgres(writeUrl, { max: 1, prepare: false });
-
-const existing = await sql`SELECT 1 FROM pg_roles WHERE rolname = ${ROLE}`;
-const roleExists = existing.length > 0;
+// ── Check mode: uses the verify role's own URL, never the write credential ──
 
 if (CHECK_ONLY) {
-  if (!roleExists) {
-    console.log(`${ROLE} does not exist yet`);
-  } else {
-    const granted = await sql`
-      SELECT table_name FROM information_schema.table_privileges
-       WHERE grantee = ${ROLE} AND privilege_type = 'SELECT' AND table_schema = 'public'`;
-    const have = new Set(granted.map((r) => r.table_name));
-    const missing = allowedUnique.map(([t]) => t).filter((t) => !have.has(t));
-    const extra = [...have].filter((t) => !allowedUnique.some(([a]) => a === t) && t !== "transactions_meta");
-    console.log(JSON.stringify({ role: ROLE, granted: have.size, missing, unexpected: extra }, null, 1));
+  const url = await promptHidden(`${ROLE} connection URL (input hidden; from Bitwarden ${SECRET_NAME})`);
+  const probe = postgres(url.trim(), { max: 1, prepare: false });
+  try {
+    // has_table_privilege resolves PUBLIC grants and role membership, which
+    // information_schema.table_privileges does not.
+    const rows = await probe`
+      SELECT tablename AS t, has_table_privilege(${ROLE}, 'public.' || tablename, 'SELECT') AS readable
+        FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`;
+    const readable = rows.filter((r) => r.readable).map((r) => r.t);
+    const allowedNames = ALLOWED.map(([t]) => t);
+    console.log(JSON.stringify({
+      readable: readable.length,
+      missing: allowedNames.filter((t) => !readable.includes(t)),
+      unexpected: readable.filter((t) => !allowedNames.includes(t)),
+    }, null, 1));
+  } finally {
+    await probe.end();
   }
-  await sql.end();
   process.exit(0);
 }
 
-const password = randomBytes(24).toString("base64url");
+// ── Provision ───────────────────────────────────────────────────────────────
 
-const statements = [
-  roleExists
-    ? sql`SELECT 1`
-    : sql.unsafe(`CREATE ROLE ${ROLE} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION`),
-  sql.unsafe(`ALTER ROLE ${ROLE} WITH PASSWORD '${password.replace(/'/g, "''")}'`),
-  sql.unsafe(`ALTER ROLE ${ROLE} SET default_transaction_read_only = on`),
-  sql.unsafe(`GRANT USAGE ON SCHEMA public TO ${ROLE}`),
-  sql.unsafe(`
-    CREATE OR REPLACE VIEW public.transactions_meta AS
-    SELECT id, capability_id, solution_slug, user_id, status, payment_method,
-           price_cents, cost_cents, latency_ms, is_free_tier, created_at, completed_at,
-           redacted_at, deleted_at, deletion_reason, receipt_status, receipt_rail,
-           x402_settlement_id, legal_hold,
-           (input  IS NOT NULL AND input::text  <> '{}') AS has_input,
-           (output IS NOT NULL AND output::text <> '{}') AS has_output,
-           CASE WHEN jsonb_typeof(output) = 'object'
-                THEN ARRAY(SELECT jsonb_object_keys(output)) END AS output_field_names
-      FROM public.transactions`),
-  sql.unsafe(`GRANT SELECT ON public.transactions_meta TO ${ROLE}`),
-  ...allowedUnique.map(([t]) => sql.unsafe(`GRANT SELECT ON public.${t} TO ${ROLE}`)),
-];
+// Both credentials are collected BEFORE anything is changed, so a cancelled or
+// mistyped prompt can never land after the password has been rotated.
+const writeUrl = (await promptHidden("Writable production Postgres URL (input hidden)")).trim();
+if (!/^postgres(ql)?:\/\//.test(writeUrl)) throw new Error("that does not look like a postgres connection string");
+const bwsToken = (await promptHidden("Bitwarden write token (input hidden)")).trim();
+if (!bwsToken) throw new Error("no Bitwarden write token supplied; the secret could not be stored");
 
-for (const s of statements) await s;
+const sql = postgres(writeUrl, { max: 1, prepare: false });
+const roleExists = (await sql`SELECT 1 FROM pg_roles WHERE rolname = ${ROLE}`).length > 0;
 
-// Prove it before storing it: the credential must be able to read an allowed
-// table and must be refused on transactions, with the read-only flag off.
-const host = new URL(writeUrl);
-host.username = ROLE;
-host.password = password;
-const verifyUrl = host.toString();
+if (roleExists && !ROTATE) {
+  console.log(`${ROLE} already exists. Grants will be repaired; the password is left alone.`);
+  console.log("Pass --rotate to set a new password (the new URL is then stored in Bitwarden).");
+}
+const settingPassword = !roleExists || ROTATE;
+const password = settingPassword ? randomBytes(24).toString("base64url") : null;
 
-const probe = postgres(verifyUrl, { max: 1, prepare: false });
-const proof = { reads_allowed: false, reads_meta: false, transactions_refused: false, write_refused: false };
-try {
-  await probe`SELECT 1 FROM capabilities LIMIT 1`;
-  proof.reads_allowed = true;
-  await probe`SELECT id FROM transactions_meta LIMIT 1`;
-  proof.reads_meta = true;
-  try { await probe`SELECT input FROM transactions LIMIT 1`; } catch { proof.transactions_refused = true; }
-  await probe.unsafe("SET default_transaction_read_only = off");
-  try { await probe.unsafe("UPDATE capabilities SET name = name WHERE false"); } catch { proof.write_refused = true; }
-} finally {
-  await probe.end();
+// One transaction: role creation, password and every grant land together or
+// not at all, so a failure cannot leave a half-granted role.
+await sql.begin(async (tx) => {
+  if (!roleExists) await tx.unsafe(`CREATE ROLE ${ROLE} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION`);
+  if (settingPassword) await tx.unsafe(`ALTER ROLE ${ROLE} WITH PASSWORD '${scramVerifier(password)}'`);
+  await tx.unsafe(`ALTER ROLE ${ROLE} SET default_transaction_read_only = on`);
+  await tx.unsafe(`GRANT USAGE ON SCHEMA public TO ${ROLE}`);
+  // The role must not be able to create objects in production. On PostgreSQL
+  // before 15 the public schema still carries CREATE for PUBLIC by default.
+  await tx.unsafe(`REVOKE CREATE ON SCHEMA public FROM PUBLIC`);
+  await tx.unsafe(`REVOKE CREATE ON SCHEMA public FROM ${ROLE}`);
+  for (const [name, def] of Object.entries(VIEWS)) {
+    // DROP first: CREATE OR REPLACE refuses a changed column list.
+    await tx.unsafe(`DROP VIEW IF EXISTS public.${name}`);
+    await tx.unsafe(`CREATE VIEW public.${name} AS ${def.sql}`);
+    await tx.unsafe(`GRANT SELECT ON public.${name} TO ${ROLE}`);
+  }
+  for (const [t] of ALLOWED) await tx.unsafe(`GRANT SELECT ON public.${t} TO ${ROLE}`);
+});
+
+// ── Prove it, before storing anything ───────────────────────────────────────
+
+const INSUFFICIENT_PRIVILEGE = "42501";
+
+async function refusedWithPrivilegeError(probe, statement) {
+  try {
+    await probe.unsafe(statement);
+    return { ok: false, why: "the statement succeeded" };
+  } catch (err) {
+    // A bare catch would call a typo, a renamed table or a dropped connection
+    // "refused" — the hollow-gate failure this project calls F5. Only
+    // insufficient_privilege counts.
+    const code = err?.code ?? err?.cause?.code;
+    return code === INSUFFICIENT_PRIVILEGE
+      ? { ok: true }
+      : { ok: false, why: `refused with SQLSTATE ${code ?? "none"} (${err?.message ?? err}), not ${INSUFFICIENT_PRIVILEGE}` };
+  }
 }
 
-console.log(JSON.stringify(proof, null, 1));
-if (!Object.values(proof).every(Boolean)) {
-  await sql.end();
-  throw new Error("the role did not pass its own proof; nothing was stored in Bitwarden");
-}
+let stored = null;
+if (settingPassword) {
+  const host = new URL(writeUrl);
+  host.username = ROLE;
+  host.password = password;
+  const verifyUrl = host.toString();
 
-bwsPut(SECRET_NAME, verifyUrl, await readBwsToken());
-console.log(`stored ${SECRET_NAME} in Bitwarden project ${BWS_PROJECT}`);
-console.log("the password was never printed and is not on disk");
+  const probe = postgres(verifyUrl, { max: 1, prepare: false });
+  const failures = [];
+  try {
+    await probe`SELECT 1 FROM capabilities LIMIT 1`;
+    await probe`SELECT id FROM transactions_meta LIMIT 1`;
+    // Every withheld table, not a sample: a pre-existing grant, a PUBLIC grant
+    // or role membership on any one of them would defeat the whole design.
+    for (const [t] of EXCLUDED) {
+      const r = await refusedWithPrivilegeError(probe, `SELECT * FROM public.${t} LIMIT 1`);
+      if (!r.ok) failures.push(`${t} is readable or failed wrongly: ${r.why}`);
+    }
+    await probe.unsafe("SET default_transaction_read_only = off");
+    for (const [what, statement] of [
+      ["UPDATE", "UPDATE capabilities SET name = name WHERE false"],
+      ["CREATE TABLE", "CREATE TABLE strale_verify_probe_should_not_exist (id int)"],
+    ]) {
+      const r = await refusedWithPrivilegeError(probe, statement);
+      if (!r.ok) failures.push(`${what} was not refused: ${r.why}`);
+    }
+  } finally {
+    await probe.end();
+  }
+
+  if (failures.length > 0) {
+    await sql.end();
+    console.error("the role did not pass its own proof; NOTHING was stored in Bitwarden:");
+    for (const f of failures) console.error(`  - ${f}`);
+    console.error(
+      `\nThe password was rotated before this check, so ${ROLE}'s current password is ` +
+      "now unknown. Fix the findings and re-run with --rotate to set a fresh one.",
+    );
+    process.exit(1);
+  }
+
+  console.log(`proof: reads allowed tables, reads the views, refused on all ${EXCLUDED.length} withheld tables, refused UPDATE and CREATE with the read-only flag off`);
+
+  try {
+    stored = bwsStore(SECRET_NAME, verifyUrl, bwsToken);
+  } catch (err) {
+    await sql.end();
+    console.error(`storing the secret failed: ${err.message}`);
+    console.error(
+      `The password was rotated, so ${ROLE}'s password now exists only in this ` +
+      "process. Re-run with --rotate once Bitwarden is reachable.",
+    );
+    process.exit(1);
+  }
+  console.log(`${stored} ${SECRET_NAME} in Bitwarden project ${BWS_PROJECT}`);
+  console.log("the password was never printed, never sent to Postgres in plaintext, and is not on disk");
+} else {
+  console.log("grants repaired; no password was set, so Bitwarden was not touched");
+}
 
 await sql.end();

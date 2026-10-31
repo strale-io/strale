@@ -62,6 +62,66 @@ Two deliberate choices worth knowing:
   payload. A test asserts the view never selects `input` or `output` as a
   value, only inside a presence test or a key listing.
 
+### The security review returned FAIL, and what it found
+
+A fresh read-only context reviewed this as a security-tier change. **Verdict:
+FAIL**, on findings that deserved it. All are fixed; the ones that changed the
+design:
+
+- **`x402_orphan_settlements` was in ALLOWED and holds verbatim customer
+  input.** `x402-recording.ts` writes the caller's whole `inputs` object into
+  `raw_args`, masked only against `NEVER_PERSIST_INPUTS` — a secrets list, not
+  a personal-data list — so a `pep-check` orphan row holds the screened
+  person's name as sent. `payer_address` is an unhashed wallet. No retention
+  rule covers either. My reason, "orphan settlements, needed for the
+  reconciliation", described what I wanted from the table rather than what is
+  in it. Excluded; the count comes from a view.
+- **`rate_limit_counters` keys are reversible IPs.** `hashIp` is an unsalted,
+  unkeyed SHA-256 truncated to 16 hex characters; the IPv4 space is 2³², so a
+  rainbow table recovers the address. I had excluded `trial_grants` and
+  `discovery_hits` for exactly this and then allowed the same value from the
+  same function. Excluded; counts come from a view.
+- **A non-TTY fallback was a second door to the write credential.** The
+  guard's needle is the literal `DATABASE_URL_WRITE`, so a differently named
+  variable is invisible to it, and an agent session has no TTY and would have
+  taken that branch by default — production DDL from an env var with no
+  authority. The env-var path is gone entirely, along with its manifest rows;
+  the script now refuses without a terminal.
+- **The proof was hollow.** A bare `catch` counted a renamed table, a typo or
+  a dropped connection as "refused". It now requires SQLSTATE 42501, asserts
+  refusal on **every** withheld table rather than only `transactions`, and
+  also attempts `CREATE TABLE` — the role has `USAGE` on `public`, and before
+  PostgreSQL 15 that schema carries `CREATE` for `PUBLIC`.
+- **The role could end up with a password nobody holds.** It was rotated on
+  every run, second statement, before everything that can fail — including a
+  Bitwarden step that used `create`, which errors on a key that already
+  exists. Now both credentials are prompted first, the DDL runs in one
+  transaction, the password is set only on creation unless `--rotate` is
+  passed, Bitwarden is `edit`-or-`create`, and any failure after rotation
+  prints what state the role is in.
+- **The password reached the Postgres log.** `ALTER ROLE ... PASSWORD
+  '<plaintext>'` is logged by `log_statement` and Railway retains that log, so
+  the old "never logged" claim was false. The SCRAM-SHA-256 verifier is now
+  computed locally and sent instead, so the plaintext never crosses the wire.
+- **`job_callbacks`, `wallet_reservations`, `job_files`** excluded: a callback
+  URL is frequently the bearer secret itself; `wallet_reservations` carries
+  `api_key_id` exactly as the already-excluded `batch_orders` does; job file
+  names derive from customer payloads.
+- **`job_schedule.last_error` and `x402_settlement_intents.failure_reason`**
+  are free text of the kind that excluded `health_monitor_events`. Both tables
+  now come through views without those columns.
+- **`transactions_meta` no longer exposes `user_id`** (a surrogate hash
+  instead, which preserves grouping without the join key into `wallets`), no
+  longer exposes `output_field_names` (three capabilities return LLM output
+  with no key-set enforcement, so a caller can influence key names), and
+  filters out soft-deleted rows.
+- **The view test was defeatable.** It searched a ±40-character window around
+  each `input`/`output` token, so a bare `input,` beside a presence test
+  passed. Column lists are frozen now. Planting that exact line makes two
+  tests fail, which was verified rather than assumed.
+
+Twenty tables are readable, twenty-seven withheld, five narrow views.
+
 ### What a session cannot do, and why that is correct
 
 The script is run by Petter, not by a session, and it reads the writable URL
