@@ -322,6 +322,38 @@ if (roleExists && !ROTATE) {
 const settingPassword = !roleExists || ROTATE;
 const password = settingPassword ? randomBytes(24).toString("base64url") : null;
 
+/**
+ * Refuse, rather than fix, if the public schema grants CREATE.
+ *
+ * An earlier version ran `REVOKE CREATE ON SCHEMA public FROM PUBLIC` here.
+ * That is a database-wide change affecting every role, made as a side effect
+ * of provisioning one credential — the wrong blast radius for this script, and
+ * capable of breaking the application or a migration that relies on it. The
+ * 2026-10-31 audit of `strale_ro` already showed `has_schema_privilege(...,
+ * 'public', 'CREATE')` false, so on this database the revoke was a no-op
+ * dressed as a safeguard.
+ *
+ * So it is a precondition instead, checked before anything is written. If
+ * PUBLIC really does hold CREATE, the right response is a human deciding what
+ * else depends on it, not this script silently changing it.
+ */
+const createable = await sql`
+  SELECT has_schema_privilege('public', 'public', 'CREATE') AS public_create,
+         ${roleExists} AND has_schema_privilege(${ROLE}, 'public', 'CREATE') AS role_create`;
+const { public_create: publicCreate, role_create: roleCreate } = createable[0];
+if (publicCreate || roleCreate) {
+  await sql.end();
+  console.error("refusing: the public schema grants CREATE, so this credential could create objects in production.");
+  if (publicCreate) console.error("  - PUBLIC holds CREATE on schema public");
+  if (roleCreate) console.error(`  - ${ROLE} holds CREATE on schema public`);
+  console.error(
+    "\nThis script will not revoke it: that is a database-wide change affecting every\n" +
+    "role, and what depends on it is a judgement call. Decide, revoke deliberately,\n" +
+    "then re-run. Nothing has been changed.",
+  );
+  process.exit(1);
+}
+
 // One transaction: role creation, password and every grant land together or
 // not at all, so a failure cannot leave a half-granted role.
 await sql.begin(async (tx) => {
@@ -329,10 +361,6 @@ await sql.begin(async (tx) => {
   if (settingPassword) await tx.unsafe(`ALTER ROLE ${ROLE} WITH PASSWORD '${scramVerifier(password)}'`);
   await tx.unsafe(`ALTER ROLE ${ROLE} SET default_transaction_read_only = on`);
   await tx.unsafe(`GRANT USAGE ON SCHEMA public TO ${ROLE}`);
-  // The role must not be able to create objects in production. On PostgreSQL
-  // before 15 the public schema still carries CREATE for PUBLIC by default.
-  await tx.unsafe(`REVOKE CREATE ON SCHEMA public FROM PUBLIC`);
-  await tx.unsafe(`REVOKE CREATE ON SCHEMA public FROM ${ROLE}`);
   for (const [name, def] of Object.entries(VIEWS)) {
     // DROP first: CREATE OR REPLACE refuses a changed column list.
     await tx.unsafe(`DROP VIEW IF EXISTS public.${name}`);

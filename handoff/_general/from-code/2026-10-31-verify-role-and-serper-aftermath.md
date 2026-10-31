@@ -92,6 +92,14 @@ design:
   refusal on **every** withheld table rather than only `transactions`, and
   also attempts `CREATE TABLE` — the role has `USAGE` on `public`, and before
   PostgreSQL 15 that schema carries `CREATE` for `PUBLIC`.
+
+  The first fix for that last point ran `REVOKE CREATE ON SCHEMA public FROM
+  PUBLIC`, which Petter rejected on 2026-10-31 and was right to: a
+  database-wide change touching every role has no business in a script that
+  provisions one credential, and the `strale_ro` audit had already shown
+  PUBLIC holds no CREATE here, so it was a no-op dressed as a safeguard. It is
+  a precondition now — the script checks, reports what holds CREATE, and
+  refuses without changing anything.
 - **The role could end up with a password nobody holds.** It was rotated on
   every run, second statement, before everything that can fail — including a
   Bitwarden step that used `create`, which errors on a key that already

@@ -77,13 +77,24 @@ test('the executed SQL grants nothing blanket and nothing on an excluded table',
   }
 });
 
-test('the role is denied CREATE in the production schema', () => {
-  // Review finding 4: before PostgreSQL 15 the public schema carries CREATE
-  // for PUBLIC, so USAGE alone would let this credential create objects.
+test('the script refuses on CREATE rights rather than revoking them database-wide', () => {
+  // Review finding 4 asked that CREATE be denied. An earlier fix ran
+  // `REVOKE CREATE ON SCHEMA public FROM PUBLIC`, which changes every role on
+  // the database as a side effect of provisioning one credential — the wrong
+  // blast radius, and a no-op on this database anyway (the strale_ro audit
+  // showed PUBLIC holds no CREATE). It is a precondition now: the script
+  // checks and refuses, and changes nothing.
   const sqlText = [...script.matchAll(/(?:tx|sql)\.unsafe\(\s*`([\s\S]*?)`\s*\)/g)].map((m) => m[1]).join('\n');
-  assert.match(sqlText, /REVOKE CREATE ON SCHEMA public FROM PUBLIC/i);
-  assert.match(sqlText, /REVOKE CREATE ON SCHEMA public FROM \$\{ROLE\}|REVOKE CREATE ON SCHEMA public FROM strale_verify/i);
+  assert.ok(!/REVOKE/i.test(sqlText), 'the script must not revoke anything; it is a provisioning script, not a repair tool');
+  assert.match(script, /has_schema_privilege\('public', 'public', 'CREATE'\)/, 'the PUBLIC CREATE precondition is gone');
+  assert.match(script, /has_schema_privilege\(\$\{ROLE\}, 'public', 'CREATE'\)/, 'the role CREATE precondition is gone');
+  // And the refusal must come before any write.
+  assert.ok(
+    script.indexOf('refusing: the public schema grants CREATE') < script.indexOf('await sql.begin('),
+    'the precondition must be checked before the transaction that writes',
+  );
 });
+
 
 test('each view exposes exactly its frozen column list', () => {
   // Review finding 11: the previous test searched a ±40-character window
