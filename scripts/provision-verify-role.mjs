@@ -111,37 +111,97 @@ const EXCLUDED = [
 const allowedUnique = ALLOWED;
 
 /**
- * The operator supplies the writable URL in their own shell, as
- * STRALE_OPERATOR_WRITE_URL. This script deliberately does NOT read it out of
- * the env file.
+ * Read a secret from the terminal without echoing it.
  *
- * Two reasons. `guard-production-write-access.mjs` refuses any file but the
- * authority module that names the parked credential, and a script that read it
- * would be exactly the bypass that guard exists to prevent. And the authority
- * module itself cannot release it here: creating a database role is not in
- * AUTONOMOUS_PURPOSES, so it is founder-gated, and with no grant key installed
- * every founder-gated release is refused. That refusal is correct. The way
- * through is not a session opening the credential — it is the founder running
- * this script themselves, which is what this function expects.
+ * Why not an environment variable set on the command line: PowerShell saves
+ * every line to `ConsoleHost_history.txt` in plain text, so
+ * `$env:X="postgres://user:password@host/db"` writes the production write
+ * credential to disk, unencrypted, where it stays. Bash does the same in
+ * `.bash_history`. Typing it at a hidden prompt leaves it in this process's
+ * memory and nowhere else.
+ *
+ * Raw mode gives us the keystrokes before the terminal echoes them. Ctrl-C
+ * still aborts, and backspace works, because a prompt that cannot be corrected
+ * invites a paste into the shell instead, which is the thing being avoided.
  */
-function readWriteUrl() {
-  const value = process.env.STRALE_OPERATOR_WRITE_URL;
-  if (!value || !value.trim()) {
-    throw new Error(
-      "STRALE_OPERATOR_WRITE_URL is not set. This script is run by the founder, " +
-        "who supplies the writable connection string in their own shell. A session " +
-        "cannot open it: role creation is founder-gated and no grant key is installed.",
-    );
-  }
-  if (!/^postgres(ql)?:\/\//.test(value.trim())) {
-    throw new Error("STRALE_OPERATOR_WRITE_URL does not look like a postgres connection string");
-  }
-  return value.trim();
+function promptHidden(label) {
+  return new Promise((resolve, reject) => {
+    if (!process.stdin.isTTY) {
+      reject(new Error(`${label} must be typed at an interactive prompt; this is not a terminal`));
+      return;
+    }
+    process.stdout.write(`${label}: `);
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
+    let value = "";
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") {
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+          process.stdin.removeListener("data", onData);
+          process.stdout.write("\n");
+          resolve(value);
+          return;
+        }
+        if (ch === "\u0003") {
+          process.stdin.setRawMode(false);
+          process.stdout.write("\n");
+          reject(new Error("cancelled"));
+          return;
+        }
+        if (ch === "\u007f" || ch === "\b") value = value.slice(0, -1);
+        else if (ch >= " ") value += ch;
+      }
+    };
+    process.stdin.on("data", onData);
+  });
 }
 
-function bwsPut(name, value) {
-  const token = process.env.BWS_WRITE_TOKEN;
-  if (!token) throw new Error("BWS_WRITE_TOKEN is not set; this script cannot store the secret");
+/**
+ * The writable URL is typed at a hidden prompt, not read from the env file.
+ *
+ * `guard-production-write-access.mjs` refuses any file but the authority
+ * module that names the parked credential, and a script that read it would be
+ * exactly the bypass that guard exists to prevent. The authority module cannot
+ * release it here either: creating a database role is not in
+ * AUTONOMOUS_PURPOSES, so it is founder-gated, and with no grant key installed
+ * every founder-gated release is refused. That refusal is correct. The way
+ * through is the founder running this script and typing the credential.
+ *
+ * STRALE_OPERATOR_WRITE_URL is still honoured when stdin is not a terminal, so
+ * the script remains usable from automation, but an interactive run always
+ * prompts and so never reaches shell history.
+ */
+async function readWriteUrl() {
+  const fromEnv = process.env.STRALE_OPERATOR_WRITE_URL;
+  const value = process.stdin.isTTY
+    ? (await promptHidden("Writable production Postgres URL (input hidden)")).trim()
+    : (fromEnv ?? "").trim();
+  if (!value) {
+    throw new Error(
+      process.stdin.isTTY
+        ? "no URL entered"
+        : "STRALE_OPERATOR_WRITE_URL is unset and stdin is not a terminal, so there is nothing to prompt",
+    );
+  }
+  if (!/^postgres(ql)?:\/\//.test(value)) {
+    throw new Error("that does not look like a postgres connection string");
+  }
+  return value;
+}
+
+async function readBwsToken() {
+  const fromEnv = process.env.BWS_WRITE_TOKEN;
+  const value = process.stdin.isTTY
+    ? (await promptHidden("Bitwarden write token (input hidden)")).trim()
+    : (fromEnv ?? "").trim();
+  if (!value) throw new Error("no Bitwarden write token supplied; the secret cannot be stored");
+  return value;
+}
+
+function bwsPut(name, value, token) {
   const projectId = execFileSync("bws", ["project", "list", "--output", "json"], {
     encoding: "utf8",
     env: { ...process.env, BWS_ACCESS_TOKEN: token },
@@ -178,7 +238,7 @@ if (DRY_RUN) {
   process.exit(0);
 }
 
-const writeUrl = readWriteUrl();
+const writeUrl = await readWriteUrl();
 const sql = postgres(writeUrl, { max: 1, prepare: false });
 
 const existing = await sql`SELECT 1 FROM pg_roles WHERE rolname = ${ROLE}`;
@@ -253,7 +313,7 @@ if (!Object.values(proof).every(Boolean)) {
   throw new Error("the role did not pass its own proof; nothing was stored in Bitwarden");
 }
 
-bwsPut(SECRET_NAME, verifyUrl);
+bwsPut(SECRET_NAME, verifyUrl, await readBwsToken());
 console.log(`stored ${SECRET_NAME} in Bitwarden project ${BWS_PROJECT}`);
 console.log("the password was never printed and is not on disk");
 
