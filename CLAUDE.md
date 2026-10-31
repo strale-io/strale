@@ -253,7 +253,7 @@ https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
 - Database: PostgreSQL
 - ORM: Drizzle
 - Payments: Stripe Checkout (wallet top-ups only, no Connect)
-- Hosting: Railway (US East / Virginia, project: desirable-serenity)
+- Hosting: Railway (US East / Virginia, project: Strale, id 16920e2f-8258-47db-86c0-60ec9d7edc13, service strale). Corrected 2026-10-31: this line read "project: desirable-serenity", which `railway status` contradicts.
 - Headless browser: Browserless.io (managed, NOT self-hosted Puppeteer)
 - SDKs: TypeScript first, then Python
 
