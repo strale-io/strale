@@ -19,7 +19,8 @@ name: CI
 # receipts, migrations, context, handoff, and the
 # check-shape-contracts.mjs drift check, plus the content scanners that
 # read docs/ and handoff/ or manifest data: check-no-committed-secrets,
-# check-pii, check-manifest-guaranteed-consistency) runs
+# check-pii, check-manifest-guaranteed-consistency,
+# guard-production-write-access) runs
 # unconditionally on every PR,
 # in the same order as before this change, because those scripts read
 # docs/config content that a docs-only PR can itself change and none of
@@ -571,9 +572,15 @@ jobs:
       # any other file can read it, a writable connection can be opened with no
       # authority attached and the model is decorative. That property is a grep,
       # so it is checked by one, on every change, rather than trusted.
-      # CODE (scans apps/api/src for the production-write credential).
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: node scripts/guard-production-write-access.mjs
+      # REGISTER-class, not CODE, despite the incident it comes from: the guard
+      # greps `git ls-files -- *.ts *.mjs *.js *.md *.yaml *.yml *.json` over the
+      # whole repository, so a docs-only PR can introduce the very reference it
+      # exists to refuse. It was gated on docs_only until 2026-10-31, when PR
+      # #857 — a receipt, a handoff and two register files — went green on the
+      # PR and was then rejected by the merge queue, which classifies as
+      # not-docs-only and so ran the guard. Held ungated by
+      # scripts/ci/docs-only-scanner-gate.test.mjs.
+      - run: node scripts/guard-production-write-access.mjs
 
       # Program track registers (docs/programs/*/tracks.yaml) are the resume
       # surface for multi-batch work on both AI tools. A register that fails
