@@ -485,6 +485,7 @@
         "packages/zapier-strale/test/fixtures/README.md",
         "scripts/candidates.test.mjs",
         "scripts/check-receipts.mjs",
+        "scripts/ci/docs-only-scanner-gate.test.mjs",
         "scripts/digest-repo-native-lib.mjs",
         "scripts/digest-shadow.mjs",
         "scripts/empty-inputs.test.mjs",
