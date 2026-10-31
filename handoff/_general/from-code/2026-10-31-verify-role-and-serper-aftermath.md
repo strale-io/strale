@@ -55,8 +55,8 @@ Two deliberate choices worth knowing:
   be re-run after a migration adds something worth reading, and
   `npm run verify-role:check` reports what is missing.
 - **`transactions_meta`**, a view giving ids, tool, status, price, timings,
-  receipt state, plus `has_input` / `has_output` booleans and the *names* of
-  output fields. No value from either column. That is enough for every
+  receipt state, plus `has_input` / `has_output` booleans. No value from
+  either content column, no settlement hash, no raw user id. That is enough for every
   verification this orchestrator has run — the H7 block evidence, the x402
   reconciliation, the H3 checkpoint counts — without reading one customer
   payload. A test asserts the view never selects `input` or `output` as a
@@ -128,13 +128,53 @@ design:
   passed. Column lists are frozen now. Planting that exact line makes two
   tests fail, which was verified rather than assumed.
 
-Twenty tables are readable, twenty-seven withheld, five narrow views.
+**A second security review of the reworked version returned NO-GO**, and was
+right again. It planted three defects and the test suite passed all three,
+including a sixth view selecting `users.email`. What it found:
+
+- **`transactions_meta.x402_settlement_id` is a Base chain hash.** One
+  explorer lookup gives the payer wallet and its whole USDC history, so the
+  view handed over exactly what excluding `x402_orphan_settlements` was meant
+  to withhold. Replaced with a `was_x402` boolean.
+- **The `user_surrogate` was reversible.** `capability_invocations` carries
+  `transaction_id` *and* raw `user_id`, so one join rebuilds the
+  surrogate-to-user map, and `wallets` then gives a balance per real user. The
+  table is now reached through a view without either column.
+- **The proof never ran on a repair run** — the path that applies every grant
+  and rebuilds every view while the stored credential stays live. It runs on
+  every run now; a repair run asks for the current URL from Bitwarden.
+- **Nothing ever revoked**, so the lists were additive: a table moved from
+  ALLOWED to EXCLUDED kept its grant, as would anything an earlier draft
+  granted. A role-scoped `REVOKE ALL` now precedes the grants.
+- **The stored URL would have inherited `sslmode=disable`** from the parked
+  operator URL, handing cloud sessions a cleartext connection to production.
+  TLS is forced and `pg_stat_ssl` is asserted in the proof.
+- **`test_suites` holds named natural persons** — `pep-check` screens a real
+  person and the captured baseline holds their classification. Excluded, with
+  a definitions-only view.
+- The precondition relied on SQL `AND` short-circuiting, which the manual does
+  not guarantee; it uses `CASE` now. `--check` was a report that exited 0
+  whatever it found; it is a gate. The probe now also tries INSERT, DELETE and
+  CREATE SCHEMA, and drops its probe table if CREATE ever succeeds.
+
+The two questions Petter added both came back clean, and are worth recording
+because they were the parts I could not verify myself: the SCRAM construction
+reproduces the RFC 7677 vector byte for byte, with a fresh 128-bit
+`randomBytes` salt per call and 4096 iterations; and
+`has_schema_privilege('public', ...)` does check the PUBLIC pseudo-role, per
+the PostgreSQL manual, so the precondition is real rather than theatre.
+
+The three planted defects now each fail the suite — verified by replanting
+them, not assumed. The verifier moved to `scripts/scram-verifier.mjs` so it
+can be imported without running the script, and carries an RFC 7677
+known-answer test.
+
+**18 tables readable, 29 withheld, 7 narrow views.**
 
 ### What a session cannot do, and why that is correct
 
-The script is run by Petter, not by a session, and it reads the writable URL
-from `STRALE_OPERATOR_WRITE_URL` in his own shell rather than from the env
-file. Two reasons, and the second is the real one:
+The script is run by Petter, not by a session, and both credentials are typed
+at hidden prompts; there is no environment-variable path at all. Two reasons, and the second is the real one:
 
 1. `guard-production-write-access.mjs` refuses any file but the authority
    module that names the parked credential — a script that read it would be
