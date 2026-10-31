@@ -110,20 +110,32 @@ tracks:
       - apps/api/src/routes/x402-settlement-characterization.test.ts
   - id: T5
     title: "H5: Cost recording and Anthropic client"
-    status: active
+    status: done
     gate: none
     depends_on: []
     owner: session
-    next_action: Shipped in PR 777 (per-call cost recording, shared Anthropic client,
-      margin per tool). Remaining for exit, a production query showing per-call
-      costs recorded on real calls.
+    next_action: Done. PR 777 shipped per-call cost recording, the shared Anthropic
+      client and margin per tool; the production check it was waiting on ran on
+      2026-10-31. On real traffic since the 10-27 deploy, cost context is recorded on
+      92.6 percent of completed x402 calls (2,862 of 3,092) and 96.6 percent of
+      completed non-harness wallet calls (773 of 800). The naive figure is 1 percent,
+      and it is wrong - 23,297 harness calls execute without an HTTP request and so
+      never open the cost scope, which is the wrong-denominator trap. Nothing recorded
+      a cost before the deploy and 477 after, so the mechanism is attributable to that
+      PR. Nulls carry a stated reason rather than a guess (unmetered_upstream per slug
+      dominates), shared-client usage is attributed per model, and no call costs more
+      than it charges. Follow-up outside the exit criteria - roughly 3 to 7 percent of
+      real calls still carry no breakdown and the cause is undiagnosed, and
+      transactions_meta lacks cost_breakdown so this check needed the PC-only strale_ro
+      credential; adding that column would let a cloud session repeat it.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Per-call costs and shared client usage are recorded and verified.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-10-31-check-h5-cost-recording-production.json
   - id: T6
     title: "H6: Input validation and fetch hardening"
-    status: queued
+    status: active
     gate: none
     depends_on: []
     owner: session
