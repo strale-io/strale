@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -48,12 +49,21 @@ registerCapability("google-search", async (input: CapabilityInput) => {
 
   const data = await res.json() as Record<string, unknown>;
 
+  // Google wraps every organic link past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30), and Serper passes it through.
+  // Serper's free `/resolve` endpoint turns them back into real URLs; the
+  // walk also covers `sitelinks`, `answerBox` and People-Also-Ask links.
+  const resolution = await resolveSerperLinks(data, serperKey);
+
   // Map Serper response to our format
   const organic = (data.organic as Array<Record<string, unknown>>) ?? [];
   const results = organic.map((r, i) => ({
     position: i + 1,
     title: r.title as string,
-    url: r.link as string,
+    // `null` with a flag, never the wrapper: a caller that cannot tell a
+    // redirect from an address will fetch Google instead of the result.
+    url: usableResultUrl(r.link),
+    url_unresolved: usableResultUrl(r.link) === null,
     snippet: r.snippet as string,
     date: (r.date as string) ?? null,
     sitelinks: r.sitelinks ?? null,
@@ -75,8 +85,11 @@ registerCapability("google-search", async (input: CapabilityInput) => {
       people_also_ask: peopleAlsoAsk.map((q) => ({
         question: q.question,
         snippet: q.snippet,
-        link: q.link,
+        link: usableResultUrl(q.link),
       })),
+      // How many result links Google would not let us open. Nonzero means
+      // some `url` fields are null; it is not an error.
+      unresolved_url_count: resolution.unresolved.length,
       search_parameters: {
         language: language || (searchInfo?.hl as string) || null,
         // Lowercase, matching the `gl` actually sent and matching what

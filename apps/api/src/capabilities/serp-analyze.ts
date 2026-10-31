@@ -1,5 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  deriveResultDomain,
+  resolveSerperLinks,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -36,23 +41,38 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
 
   const data = await resp.json();
 
+  // Google wraps every organic link past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30). Resolve before anything reads a
+  // link: the old `extractDomain` turned every wrapper into `www.google.com`,
+  // so `top_domains` claimed Google held positions 4-10 of its own SERP.
+  // The walk also covers `answerBox.link` and People-Also-Ask links, which
+  // nobody has observed wrapped — they are handled if and when Google wraps
+  // them, rather than assumed safe.
+  const resolution = await resolveSerperLinks(data, serperKey);
+
   // Parse organic results
   const organicResults = ((data.organic as any[]) ?? []).map(
-    (item: any, idx: number) => ({
-      url: item.link ?? item.url ?? "",
-      title: item.title ?? "",
-      snippet: item.snippet ?? "",
-      position: item.position ?? idx + 1,
-      domain: extractDomain(item.link ?? item.url ?? ""),
-    }),
+    (item: any, idx: number) => {
+      const link = item.link ?? item.url ?? "";
+      return {
+        // An opaque wrapper is not a URL a caller can open, and emitting it
+        // as one is worse than saying so.
+        url: usableResultUrl(link),
+        title: item.title ?? "",
+        snippet: item.snippet ?? "",
+        position: item.position ?? idx + 1,
+        domain: deriveResultDomain(link, item.displayedLink),
+        link_unresolved: usableResultUrl(link) === null,
+      };
+    },
   );
 
   // Featured snippet / answer box
-  let featuredSnippet: { text: string; source_url: string } | null = null;
+  let featuredSnippet: { text: string; source_url: string | null } | null = null;
   if (data.answerBox) {
     featuredSnippet = {
       text: data.answerBox.snippet ?? data.answerBox.answer ?? data.answerBox.title ?? "",
-      source_url: data.answerBox.link ?? "",
+      source_url: usableResultUrl(data.answerBox.link),
     };
   }
 
@@ -98,15 +118,17 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
       total_results: totalResults,
       serp_features: serpFeatures,
       top_domains: topDomains,
+      // Positions whose host could not be established. An empty array means
+      // every scanned result's domain is known.
+      unresolved_positions: organicResults
+        .filter((r) => r.domain === null)
+        .map((r) => r.position),
+      link_resolution: {
+        attempted: resolution.attempted,
+        resolved: resolution.resolved,
+        unresolved: resolution.unresolved.length,
+      },
     },
     provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
   };
 });
-
-function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
