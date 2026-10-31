@@ -55,8 +55,8 @@ Two deliberate choices worth knowing:
   be re-run after a migration adds something worth reading, and
   `npm run verify-role:check` reports what is missing.
 - **`transactions_meta`**, a view giving ids, tool, status, price, timings,
-  receipt state, plus `has_input` / `has_output` booleans and the *names* of
-  output fields. No value from either column. That is enough for every
+  receipt state, plus `has_input` / `has_output` booleans. No value from
+  either content column, no settlement hash, no raw user id. That is enough for every
   verification this orchestrator has run — the H7 block evidence, the x402
   reconciliation, the H3 checkpoint counts — without reading one customer
   payload. A test asserts the view never selects `input` or `output` as a
@@ -92,6 +92,14 @@ design:
   refusal on **every** withheld table rather than only `transactions`, and
   also attempts `CREATE TABLE` — the role has `USAGE` on `public`, and before
   PostgreSQL 15 that schema carries `CREATE` for `PUBLIC`.
+
+  The first fix for that last point ran `REVOKE CREATE ON SCHEMA public FROM
+  PUBLIC`, which Petter rejected on 2026-10-31 and was right to: a
+  database-wide change touching every role has no business in a script that
+  provisions one credential, and the `strale_ro` audit had already shown
+  PUBLIC holds no CREATE here, so it was a no-op dressed as a safeguard. It is
+  a precondition now — the script checks, reports what holds CREATE, and
+  refuses without changing anything.
 - **The role could end up with a password nobody holds.** It was rotated on
   every run, second statement, before everything that can fail — including a
   Bitwarden step that used `create`, which errors on a key that already
@@ -120,13 +128,83 @@ design:
   passed. Column lists are frozen now. Planting that exact line makes two
   tests fail, which was verified rather than assumed.
 
-Twenty tables are readable, twenty-seven withheld, five narrow views.
+**A second security review of the reworked version returned NO-GO**, and was
+right again. It planted three defects and the test suite passed all three,
+including a sixth view selecting `users.email`. What it found:
+
+- **`transactions_meta.x402_settlement_id` is a Base chain hash.** One
+  explorer lookup gives the payer wallet and its whole USDC history, so the
+  view handed over exactly what excluding `x402_orphan_settlements` was meant
+  to withhold. Replaced with a `was_x402` boolean.
+- **The `user_surrogate` was reversible.** `capability_invocations` carries
+  `transaction_id` *and* raw `user_id`, so one join rebuilds the
+  surrogate-to-user map, and `wallets` then gives a balance per real user. The
+  table is now reached through a view without either column.
+- **The proof never ran on a repair run** — the path that applies every grant
+  and rebuilds every view while the stored credential stays live. It runs on
+  every run now; a repair run asks for the current URL from Bitwarden.
+- **Nothing ever revoked**, so the lists were additive: a table moved from
+  ALLOWED to EXCLUDED kept its grant, as would anything an earlier draft
+  granted. A role-scoped `REVOKE ALL` now precedes the grants.
+- **The stored URL would have inherited `sslmode=disable`** from the parked
+  operator URL, handing cloud sessions a cleartext connection to production.
+  TLS is forced and `pg_stat_ssl` is asserted in the proof.
+- **`test_suites` holds named natural persons** — `pep-check` screens a real
+  person and the captured baseline holds their classification. Excluded, with
+  a definitions-only view.
+- The precondition relied on SQL `AND` short-circuiting, which the manual does
+  not guarantee; it uses `CASE` now. `--check` was a report that exited 0
+  whatever it found; it is a gate. The probe now also tries INSERT, DELETE and
+  CREATE SCHEMA, and drops its probe table if CREATE ever succeeds.
+
+The two questions Petter added both came back clean, and are worth recording
+because they were the parts I could not verify myself: the SCRAM construction
+reproduces the RFC 7677 vector byte for byte, with a fresh 128-bit
+`randomBytes` salt per call and 4096 iterations; and
+`has_schema_privilege('public', ...)` does check the PUBLIC pseudo-role, per
+the PostgreSQL manual, so the precondition is real rather than theatre.
+
+The three planted defects now each fail the suite — verified by replanting
+them, not assumed. The verifier moved to `scripts/scram-verifier.mjs` so it
+can be imported without running the script, and carries an RFC 7677
+known-answer test.
+
+**A third pass returned GO with two conditions, both now fixed.**
+
+- **`wallets.user_id` still inverted the surrogate.** Closing
+  `capability_invocations` shut one path; `wallets` was the other, and the
+  salt is a literal in this repository and readable through
+  `pg_get_viewdef`, so the role could rebuild the whole map with one query
+  inside the database. `wallets` is withheld now and `wallets_meta` exposes
+  balances keyed by the same surrogate, so the two still join and the claim is
+  finally true.
+- **The boundary was enforced by name for only 15 of 29 withheld tables.**
+  Moving `health_monitor_events` into ALLOWED passed all 81 gates, and the
+  runtime proof could not compensate because it derives its probe list from
+  the same array — a table moved out simply stops being probed. The small side
+  is frozen instead: ALLOWED is pinned by name, and every table `schema.ts`
+  declares outside it must be excluded, so a move in either direction fails.
+
+Three more test escapes it found, all closed by making the helpers behave
+rather than merely read correctly: gutting the refusal check with `|| true`
+passed because the test grepped for the literal `42501`, which survived in the
+constant and the comment; reducing the TLS helper to `return url` passed
+because nothing asserted the behaviour; and `scramVerifier(password, 1)` at
+the call site passed because the module test pins only the default parameter.
+Both helpers now live in `scripts/verify-role-lib.mjs` and are exercised with
+real inputs. The repair-run prompt moved up beside the others, so no
+credential is collected after the DDL has committed, and a stored URL that
+does not require TLS is refused rather than certified over a connection this
+script upgraded in memory.
+
+All four of the reviewer's new plants were replanted and each fails.
+
+**17 tables readable, 30 withheld, 8 narrow views.**
 
 ### What a session cannot do, and why that is correct
 
-The script is run by Petter, not by a session, and it reads the writable URL
-from `STRALE_OPERATOR_WRITE_URL` in his own shell rather than from the env
-file. Two reasons, and the second is the real one:
+The script is run by Petter, not by a session, and both credentials are typed
+at hidden prompts; there is no environment-variable path at all. Two reasons, and the second is the real one:
 
 1. `guard-production-write-access.mjs` refuses any file but the authority
    module that names the parked credential — a script that read it would be

@@ -37,7 +37,9 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
+import { scramVerifier } from "./scram-verifier.mjs";
+import { withRequiredTls, classifyRefusal, INSUFFICIENT_PRIVILEGE } from "./verify-role-lib.mjs";
 import postgres from "postgres";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -59,15 +61,12 @@ const BWS_PROJECT = "strale";
 const ALLOWED = [
   ["capabilities", "the tool catalogue. Mostly public via /v1/capabilities; the rest (cost_class, quota_cap, deactivation_reason, invisible rows) is internal commercial data, not customer data."],
   ["capability_budget_counters", "integer counters per capability, no payload."],
-  ["capability_invocations", "invocation facts: slug, timestamp, outcome, a bare user uuid. Verified column by column: no input, no output, no free text."],
   ["capability_limitations", "published limitation text, already public via /v1/public/ops."],
   ["solutions", "the public solution catalogue."],
   ["solution_steps", "authored bundle wiring written at onboarding. input_map maps field NAMES and is never written from a request."],
   ["source_health", "circuit-breaker state per slug."],
-  ["test_suites", "suite definitions and authored fixture inputs. Customer output goes to test_results, which is excluded; a piggyback suite row is inserted with input {}."],
   ["test_run_log", "run-level counters and timings."],
   ["transaction_quality", "quality flags and latency per transaction id."],
-  ["wallets", "balance per user id. A number and a uuid."],
   ["startup_migration_applied", "which migration block ran, and when. The H7 evidence base."],
   ["startup_migration_ledger", "the one-shot ledger."],
   ["execution_manifest_snapshots", "deploy-time manifest digests."],
@@ -90,7 +89,8 @@ const VIEWS = {
     sql: `
       SELECT id, capability_id, solution_slug, status, payment_method,
              price_cents, cost_cents, latency_ms, is_free_tier, created_at, completed_at,
-             redacted_at, receipt_status, receipt_rail, x402_settlement_id, legal_hold,
+             redacted_at, receipt_status, receipt_rail, legal_hold,
+             (x402_settlement_id IS NOT NULL) AS was_x402,
              md5(user_id::text || 'strale_verify.v1') AS user_surrogate,
              (input  IS NOT NULL AND input::text  <> '{}') AS has_input,
              (output IS NOT NULL AND output::text <> '{}') AS has_output
@@ -119,6 +119,31 @@ const VIEWS = {
       SELECT id, created_at
         FROM public.x402_orphan_settlements`,
   },
+  capability_invocations_meta: {
+    over: "capability_invocations",
+    why: "invocation facts without user_id or transaction_id, which together reverse transactions_meta.user_surrogate into a surrogate-to-user map",
+    sql: `
+      SELECT id, capability_slug, rail, context_kind, is_free_tier, success,
+             failure_class, fault, billable, counts_against_capability, latency_ms, created_at
+        FROM public.capability_invocations`,
+  },
+  test_suites_meta: {
+    over: "test_suites",
+    why: "suite definitions without input, expected_output or baseline_output, which for compliance capabilities hold named natural persons",
+    sql: `
+      SELECT id, capability_slug, test_name, test_type, active, schedule_tier,
+             estimated_cost_cents, test_status, test_mode, external_cost_cents,
+             scheduled_testing_eligible, created_at, updated_at
+        FROM public.test_suites`,
+  },
+  wallets_meta: {
+    over: "wallets",
+    why: "balances keyed by the same surrogate transactions_meta uses, so the two join without exposing user_id",
+    sql: `
+      SELECT md5(user_id::text || 'strale_verify.v1') AS user_surrogate,
+             balance_cents, created_at, updated_at
+        FROM public.wallets`,
+  },
   rate_limit_counters_meta: {
     over: "rate_limit_counters",
     why: "request-rate shape without the bucket key, whose unsalted SHA-256 of an IPv4 address is reversible by rainbow table",
@@ -146,6 +171,7 @@ const EXCLUDED = [
   ["wallet_reservations", "api_key_id and user_id attribute work to a customer key, exactly as batch_orders does, plus a free-text terminal_reason."],
   ["batch_orders", "api_key_id, so it attributes work to a customer key."],
   ["test_results", "actual_output — piggyback rows are fed verbatim from real customer traffic."],
+  ["test_suites", "input, expected_output and baseline_output for compliance capabilities hold named natural persons: pep-check screens a real person and the captured baseline holds their PEP classification. Not customer data, and mostly public via the manifests, but the rule is personal data in ANY column. Definitions via test_suites_meta."],
   ["dispute_requests", "contact_email and disposition notes. Personal data by definition."],
   ["trial_grants", "email_hash and ip_hash. Pseudonymous personal data."],
   ["discovery_hits", "ip_hash per discovery request: pseudonymous personal data under GDPR."],
@@ -156,6 +182,8 @@ const EXCLUDED = [
   ["job_schedule", "last_error quotes the row that failed. Freshness via job_schedule_meta."],
   ["x402_orphan_settlements", "raw_args holds the caller's full inputs verbatim (x402-recording.ts masks only the NEVER_PERSIST_INPUTS secrets list, not personal data) and payer_address is an unhashed on-chain wallet. No retention rule covers either. Counts via x402_orphan_settlements_meta."],
   ["x402_settlement_intents", "failure_reason is free text from a vendor. States via x402_settlement_intents_meta."],
+  ["capability_invocations", "carries transaction_id AND a raw user_id, which together reverse transactions_meta.user_surrogate into a surrogate-to-user map, and wallets then gives a balance per real user. Facts via capability_invocations_meta."],
+  ["wallets", "user_id plus the salt (a literal in this repository and readable via pg_get_viewdef) rebuilds the transactions_meta.user_surrogate map inside the database, tying balance to per-customer tool history. Balances via wallets_meta."],
   ["job_files", "async job output file names and content types, derived from the customer payload that produced them."],
   ["ee_directors", "named natural persons, addresses and isikukood_hash. Estonian director PII."],
   ["cy_directors", "named natural persons. Cypriot director PII."],
@@ -204,19 +232,6 @@ function promptHidden(label) {
   });
 }
 
-/**
- * The SCRAM-SHA-256 verifier Postgres stores, computed here so the plaintext
- * password never crosses the wire and never reaches a server log — Railway's
- * log is visible in its dashboard and retained.
- */
-function scramVerifier(password, iterations = 4096) {
-  const salt = randomBytes(16);
-  const saltedPassword = pbkdf2Sync(password, salt, iterations, 32, "sha256");
-  const clientKey = createHmac("sha256", saltedPassword).update("Client Key").digest();
-  const storedKey = createHash("sha256").update(clientKey).digest();
-  const serverKey = createHmac("sha256", saltedPassword).update("Server Key").digest();
-  return `SCRAM-SHA-256$${iterations}:${salt.toString("base64")}$${storedKey.toString("base64")}:${serverKey.toString("base64")}`;
-}
 
 /**
  * The environment for the `bws` child.
@@ -292,11 +307,17 @@ if (CHECK_ONLY) {
         FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`;
     const readable = rows.filter((r) => r.readable).map((r) => r.t);
     const allowedNames = ALLOWED.map(([t]) => t);
-    console.log(JSON.stringify({
-      readable: readable.length,
-      missing: allowedNames.filter((t) => !readable.includes(t)),
-      unexpected: readable.filter((t) => !allowedNames.includes(t)),
-    }, null, 1));
+    const missing = allowedNames.filter((t) => !readable.includes(t));
+    const unexpected = readable.filter((t) => !allowedNames.includes(t));
+    const createDrift = (await probe`
+      SELECT has_schema_privilege('public', 'public', 'CREATE') AS public_create,
+             has_schema_privilege(${ROLE}, 'public', 'CREATE') AS role_create`)[0];
+    console.log(JSON.stringify({ readable: readable.length, missing, unexpected, ...createDrift }, null, 1));
+    if (missing.length || unexpected.length || createDrift.public_create || createDrift.role_create) {
+      console.error("\ndrift found: re-run the provisioning script, or decide deliberately about the CREATE grant");
+      await probe.end();
+      process.exit(1);
+    }
   } finally {
     await probe.end();
   }
@@ -314,6 +335,13 @@ if (!bwsToken) throw new Error("no Bitwarden write token supplied; the secret co
 
 const sql = postgres(writeUrl, { max: 1, prepare: false });
 const roleExists = (await sql`SELECT 1 FROM pg_roles WHERE rolname = ${ROLE}`).length > 0;
+// Every credential is collected before anything is changed. On a repair run
+// the proof needs the role's current URL, and prompting for it after the DDL
+// had committed would leave a cancelled prompt with grants applied and
+// nothing proven.
+const typedVerifyUrl = roleExists && !ROTATE
+  ? (await promptHidden(`current ${ROLE} URL to prove with (input hidden; from Bitwarden ${SECRET_NAME})`)).trim()
+  : null;
 
 if (roleExists && !ROTATE) {
   console.log(`${ROLE} already exists. Grants will be repaired; the password is left alone.`);
@@ -322,6 +350,38 @@ if (roleExists && !ROTATE) {
 const settingPassword = !roleExists || ROTATE;
 const password = settingPassword ? randomBytes(24).toString("base64url") : null;
 
+/**
+ * Refuse, rather than fix, if the public schema grants CREATE.
+ *
+ * An earlier version ran `REVOKE CREATE ON SCHEMA public FROM PUBLIC` here.
+ * That is a database-wide change affecting every role, made as a side effect
+ * of provisioning one credential — the wrong blast radius for this script, and
+ * capable of breaking the application or a migration that relies on it. The
+ * 2026-10-31 audit of `strale_ro` already showed `has_schema_privilege(...,
+ * 'public', 'CREATE')` false, so on this database the revoke was a no-op
+ * dressed as a safeguard.
+ *
+ * So it is a precondition instead, checked before anything is written. If
+ * PUBLIC really does hold CREATE, the right response is a human deciding what
+ * else depends on it, not this script silently changing it.
+ */
+const createable = await sql`
+  SELECT has_schema_privilege('public', 'public', 'CREATE') AS public_create,
+         CASE WHEN ${roleExists} THEN has_schema_privilege(${ROLE}, 'public', 'CREATE') ELSE false END AS role_create`;
+const { public_create: publicCreate, role_create: roleCreate } = createable[0];
+if (publicCreate || roleCreate) {
+  await sql.end();
+  console.error("refusing: the public schema grants CREATE, so this credential could create objects in production.");
+  if (publicCreate) console.error("  - PUBLIC holds CREATE on schema public");
+  if (roleCreate) console.error(`  - ${ROLE} holds CREATE on schema public`);
+  console.error(
+    "\nThis script will not revoke it: that is a database-wide change affecting every\n" +
+    "role, and what depends on it is a judgement call. Decide, revoke deliberately,\n" +
+    "then re-run. Nothing has been changed.",
+  );
+  process.exit(1);
+}
+
 // One transaction: role creation, password and every grant land together or
 // not at all, so a failure cannot leave a half-granted role.
 await sql.begin(async (tx) => {
@@ -329,10 +389,13 @@ await sql.begin(async (tx) => {
   if (settingPassword) await tx.unsafe(`ALTER ROLE ${ROLE} WITH PASSWORD '${scramVerifier(password)}'`);
   await tx.unsafe(`ALTER ROLE ${ROLE} SET default_transaction_read_only = on`);
   await tx.unsafe(`GRANT USAGE ON SCHEMA public TO ${ROLE}`);
-  // The role must not be able to create objects in production. On PostgreSQL
-  // before 15 the public schema still carries CREATE for PUBLIC by default.
-  await tx.unsafe(`REVOKE CREATE ON SCHEMA public FROM PUBLIC`);
-  await tx.unsafe(`REVOKE CREATE ON SCHEMA public FROM ${ROLE}`);
+  // Reconcile, do not accumulate. Without this the lists are additive: a table
+  // moved from ALLOWED to EXCLUDED keeps its grant, and so would anything an
+  // earlier draft of this script granted — the pre-review draft had
+  // x402_orphan_settlements and rate_limit_counters in ALLOWED.
+  await tx.unsafe(`REVOKE ALL ON ALL TABLES IN SCHEMA public FROM ${ROLE}`);
+  await tx.unsafe(`REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM ${ROLE}`);
+  await tx.unsafe(`REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM ${ROLE}`);
   for (const [name, def] of Object.entries(VIEWS)) {
     // DROP first: CREATE OR REPLACE refuses a changed column list.
     await tx.unsafe(`DROP VIEW IF EXISTS public.${name}`);
@@ -344,49 +407,84 @@ await sql.begin(async (tx) => {
 
 // ── Prove it, before storing anything ───────────────────────────────────────
 
-const INSUFFICIENT_PRIVILEGE = "42501";
 
-async function refusedWithPrivilegeError(probe, statement) {
-  try {
-    await probe.unsafe(statement);
-    return { ok: false, why: "the statement succeeded" };
-  } catch (err) {
-    // A bare catch would call a typo, a renamed table or a dropped connection
-    // "refused" — the hollow-gate failure this project calls F5. Only
-    // insufficient_privilege counts.
-    const code = err?.code ?? err?.cause?.code;
-    return code === INSUFFICIENT_PRIVILEGE
-      ? { ok: true }
-      : { ok: false, why: `refused with SQLSTATE ${code ?? "none"} (${err?.message ?? err}), not ${INSUFFICIENT_PRIVILEGE}` };
-  }
-}
+/**
+ * The URL to prove with.
+ *
+ * On a create or rotate run that is the URL just minted. On a repair run the
+ * password is unchanged and unknown to this process, so the operator supplies
+ * the current one from Bitwarden: the proof must run on EVERY run, because a
+ * repair run applies all the grants and rebuilds every view while the stored
+ * credential stays live — proving nothing there was the review's finding 3.
+ *
+ * TLS is forced on. postgres.js enables none by default, and the parked
+ * operator URL in this repository's own docs carries sslmode=disable, so a
+ * derived URL would otherwise hand cloud sessions a cleartext connection to
+ * production across the public internet.
+ */
 
-let stored = null;
+let verifyUrl;
 if (settingPassword) {
   const host = new URL(writeUrl);
   host.username = ROLE;
   host.password = password;
-  const verifyUrl = host.toString();
+  verifyUrl = withRequiredTls(host.toString());
+} else {
+  verifyUrl = withRequiredTls(typedVerifyUrl);
+  // R4: the stored secret is not rewritten on a repair run, so a secret that
+  // still carries sslmode=disable would pass a proof made over a URL this
+  // script upgraded in memory. Say so rather than certify it.
+  if (verifyUrl !== typedVerifyUrl) {
+    await sql.end();
+    console.error(
+      `the stored ${SECRET_NAME} does not require TLS. The proof would run over a connection\n` +
+      "this script upgraded in memory, certifying something the stored secret does not do.\n" +
+      "Re-run with --rotate to mint and store a URL that requires TLS.",
+    );
+    process.exit(1);
+  }
+}
 
+/** Run a statement that must be refused, and classify the outcome. */
+async function attemptRefused(probe, statement) {
+  try {
+    await probe.unsafe(statement);
+    return classifyRefusal(null);
+  } catch (err) {
+    return classifyRefusal(err);
+  }
+}
+
+let stored = null;
+{
   const probe = postgres(verifyUrl, { max: 1, prepare: false });
   const failures = [];
   try {
     await probe`SELECT 1 FROM capabilities LIMIT 1`;
-    await probe`SELECT id FROM transactions_meta LIMIT 1`;
+    for (const v of Object.keys(VIEWS)) await probe.unsafe(`SELECT 1 FROM public.${v} LIMIT 1`);
+    const [{ ssl }] = await probe`SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()`;
+    if (ssl !== true) failures.push("the connection is not using TLS, so the stored URL would be cleartext to production");
     // Every withheld table, not a sample: a pre-existing grant, a PUBLIC grant
     // or role membership on any one of them would defeat the whole design.
     for (const [t] of EXCLUDED) {
-      const r = await refusedWithPrivilegeError(probe, `SELECT * FROM public.${t} LIMIT 1`);
+      const r = await attemptRefused(probe, `SELECT * FROM public.${t} LIMIT 1`);
       if (!r.ok) failures.push(`${t} is readable or failed wrongly: ${r.why}`);
     }
     await probe.unsafe("SET default_transaction_read_only = off");
     for (const [what, statement] of [
       ["UPDATE", "UPDATE capabilities SET name = name WHERE false"],
+      ["INSERT", "INSERT INTO capabilities (slug) SELECT 'probe' WHERE false"],
+      ["DELETE", "DELETE FROM capabilities WHERE false"],
       ["CREATE TABLE", "CREATE TABLE strale_verify_probe_should_not_exist (id int)"],
+      ["CREATE SCHEMA", "CREATE SCHEMA strale_verify_probe_schema"],
     ]) {
-      const r = await refusedWithPrivilegeError(probe, statement);
+      const r = await attemptRefused(probe, statement);
       if (!r.ok) failures.push(`${what} was not refused: ${r.why}`);
     }
+    // If CREATE TABLE somehow succeeded, do not leave a stray production table
+    // that schema.ts-based classification cannot see.
+    await probe.unsafe("DROP TABLE IF EXISTS strale_verify_probe_should_not_exist").catch(() => {});
+    await probe.unsafe("DROP SCHEMA IF EXISTS strale_verify_probe_schema").catch(() => {});
   } finally {
     await probe.end();
   }
@@ -402,7 +500,13 @@ if (settingPassword) {
     process.exit(1);
   }
 
-  console.log(`proof: reads allowed tables, reads the views, refused on all ${EXCLUDED.length} withheld tables, refused UPDATE and CREATE with the read-only flag off`);
+  console.log(`proof: TLS on, reads the ${ALLOWED.length} allowed tables and all ${Object.keys(VIEWS).length} views, refused on all ${EXCLUDED.length} withheld tables, refused UPDATE/INSERT/DELETE/CREATE TABLE/CREATE SCHEMA with the read-only flag off`);
+
+  if (!settingPassword) {
+    console.log("grants reconciled and proven; the password was not changed, so Bitwarden was not touched");
+    await sql.end();
+    process.exit(0);
+  }
 
   try {
     stored = bwsStore(SECRET_NAME, verifyUrl, bwsToken);
@@ -417,8 +521,10 @@ if (settingPassword) {
   }
   console.log(`${stored} ${SECRET_NAME} in Bitwarden project ${BWS_PROJECT}`);
   console.log("the password was never printed, never sent to Postgres in plaintext, and is not on disk");
-} else {
-  console.log("grants repaired; no password was set, so Bitwarden was not touched");
+  console.log(
+    "note: bws takes the secret as a command-line argument (it offers no stdin channel), so the\n" +
+    "      value is briefly visible in this machine's process list to anything that can read it",
+  );
 }
 
 await sql.end();
