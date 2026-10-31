@@ -109,9 +109,12 @@ operator scripts after the 2026-09-02 `.env` rebuild. Use `openOperatorDb()` (se
 `file:///.../node_modules/postgres/src/index.js` by absolute URL (it is hoisted to the repo-root `node_modules`, not `apps/api/node_modules`) and parse `.env` by hand; a
 relative import resolves against the script's directory, giving a misleading ENOENT.
 
-**Writes need `DATABASE_URL_WRITE` plus an `Authority` object; there is no write grant for autonomous sessions.** `openOperatorWriteDb(authority)` in `operator-db.ts` refuses
-with no `Authority` or no `DATABASE_URL_WRITE`. The superuser URL is parked in root `.env` as a commented line `# DATABASE_URL_WRITE=<url>` (with `?sslmode=disable`);
-uncomment only for an operator write the founder or charter authorises, then re-comment, and scope the script with `WHERE ... IS NULL` so it cannot overwrite recorded state.
+**Writes need the parked production write credential plus an `Authority` object; there is no write grant for autonomous sessions.**
+`openOperatorWriteDb(authority)` in `operator-db.ts` refuses without an `Authority`, and the credential itself is released only by
+`productionWriteUrl(authority)` in `production-authority.ts`, the one module allowed to read it. The superuser URL is parked in the root `.env` as a commented line (with
+`?sslmode=disable`); uncomment only for an operator write the founder or charter authorises, then re-comment, and scope the script with `WHERE ... IS NULL` so it cannot
+overwrite recorded state. The variable is deliberately not named here: `scripts/guard-production-write-access.mjs` refuses any file but the authority module that names it,
+and that guard runs on documentation-only changes too.
 Hand the step to Petter otherwise; do not describe the session as unable when it is choosing not to. `onboard.ts` mixes gates (suite writes via the operator connection,
 `persistCapability` via `getDb()`): point both URLs at the write role for one invocation. Every `onboard.ts` run, including `--dry-run`, needs the grant. Production-authority
 terms: `apps/api/src/lib/production-authority.ts`.
