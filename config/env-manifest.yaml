@@ -1139,6 +1139,21 @@
   set_in:
     - .env
   cost_note: Local test key; never set anywhere on 2026-09-02.
+- name: STRALE_VERIFY_DRY_RUN_URL
+  purpose: A read-only Postgres URL that scripts/provision-verify-role.mjs --dry-run
+    plans its views against with EXPLAIN, so a wrong column fails the dry run instead
+    of the real one. Read-only by design and never a write credential; the dry run
+    prompts for it with hidden input when unset, and this variable exists so the check
+    can also run unattended. Setting it costs nothing - it reads the catalogue and
+    executes no view.
+  provider: Railway
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+  set_in:
+    - .env
+  cost_note: Part of the existing Railway Postgres service; no separate cost.
 - name: STRIPE_SECRET_KEY
   purpose: Stripe secret key for wallet top-up Checkout sessions. LIVE (sk_live_) in production, sk_test_ locally.
   provider: Stripe
