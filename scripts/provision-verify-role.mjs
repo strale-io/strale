@@ -101,8 +101,8 @@ const VIEWS = {
     over: "job_schedule",
     why: "job freshness for the staleness watch, without last_error, which routinely quotes the row that failed",
     sql: `
-      SELECT job_name, lease_owner, lease_expires_at, last_run_at, last_success_at,
-             consecutive_failures, enabled
+      SELECT job_name, interval_ms, next_run_at, lease_owner, lease_expires_at,
+             last_started_at, last_finished_at, last_outcome, consecutive_failures, updated_at
         FROM public.job_schedule`,
   },
   x402_settlement_intents_meta: {
@@ -291,6 +291,49 @@ if (DRY_RUN) {
   for (const [t, why] of EXCLUDED) console.log(`  ${t.padEnd(30)} ${why}`);
   console.log("\nreachable only through a narrow view:");
   for (const [v, d] of Object.entries(VIEWS)) console.log(`  ${v.padEnd(30)} over ${d.over} — ${d.why}`);
+
+  /**
+   * Validate every view against the LIVE schema before the real run touches
+   * anything.
+   *
+   * On 2026-10-31 the first real run died mid-transaction on
+   * `job_schedule_meta`: it selected `last_run_at` and `last_success_at`,
+   * which do not exist — the columns are `last_started_at`,
+   * `last_finished_at` and `next_run_at`. The transaction rolled back
+   * cleanly, so nothing was left half-made, but the founder had already typed
+   * the production write credential at a prompt for a run that could never
+   * have succeeded.
+   *
+   * EXPLAIN asks Postgres to plan the statement: it resolves every column and
+   * type and executes nothing. A regex over the SQL cannot do this — a first
+   * attempt flagged aliases and salt literals as missing columns, the same
+   * source-text-instead-of-behaviour mistake recorded as F5 incident 13. This
+   * needs only read access, so it runs with whatever read-only credential the
+   * operator has to hand.
+   */
+  const url = process.env.STRALE_VERIFY_DRY_RUN_URL
+    ?? (await promptHidden("a read-only Postgres URL to validate the views against (input hidden)")).trim();
+  const probe = postgres(url, { max: 1, prepare: false });
+  const broken = [];
+  try {
+    for (const [view, def] of Object.entries(VIEWS)) {
+      try {
+        await probe.unsafe(`EXPLAIN ${def.sql}`);
+      } catch (err) {
+        broken.push(`${view}: ${err?.message ?? err}${err?.hint ? ` (hint: ${err.hint})` : ""}`);
+      }
+    }
+  } finally {
+    await probe.end();
+  }
+
+  if (broken.length > 0) {
+    console.error(`\n${broken.length} of ${Object.keys(VIEWS).length} views do not match the live schema:`);
+    for (const b of broken) console.error(`  - ${b}`);
+    console.error("\nFix these before running for real; the real run would die mid-transaction.");
+    process.exit(1);
+  }
+  console.log(`\nall ${Object.keys(VIEWS).length} views planned against the live schema — every column resolves`);
   process.exit(0);
 }
 

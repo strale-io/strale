@@ -201,6 +201,42 @@ All four of the reviewer's new plants were replanted and each fails.
 
 **17 tables readable, 30 withheld, 8 narrow views.**
 
+## The first real run failed, and what that changed
+
+On 2026-10-31 Petter ran the script. It died mid-transaction building
+`job_schedule_meta`, which selected `last_run_at` and `last_success_at` —
+columns that do not exist. The real ones are `last_started_at`,
+`last_finished_at` and `next_run_at`. I had written plausible names instead of
+the schema's.
+
+**Nothing was left half-made.** Checked afterwards with `strale_ro`: no
+`strale_verify` role, none of the eight views, no role-level settings, no
+stray probe objects. The `sql.begin()` transaction did exactly what it was
+added for, so a rerun starts clean with nothing to repair. The NOTICEs about
+`DROP VIEW IF EXISTS` skipping were first-run noise, not damage.
+
+The gap it exposed is worth more than the typo: **every check in this file
+reads the repository, and none of them read the database.** The frozen column
+lists, the exclusion lists and the SQL extraction all agree with each other
+and none of them could know `job_schedule` had different columns. So
+`--dry-run` now plans every view with `EXPLAIN` against a read-only
+connection: Postgres resolves each column and type and executes nothing, and a
+wrong column fails the dry run instead of the real one. It needs only read
+access, so it costs nothing to run first — which is the point, since the
+failure happened *after* the founder had typed the production write
+credential at a prompt.
+
+A first attempt validated the SQL with a regex and flagged `was_x402`,
+`user_surrogate` and the salt literal as missing columns. That is the same
+source-text-instead-of-behaviour mistake recorded as F5 incident 13, made
+while writing the fix for a different instance of it. Asking the database is
+the only version that works.
+
+Verified by replanting the original bad columns: the dry run reports
+`job_schedule_meta: column "last_run_at" does not exist (hint: Perhaps you
+meant to reference the column "job_schedule.next_run_at")` and exits 1; with
+the fix it reports all eight planned and exits 0.
+
 ### What a session cannot do, and why that is correct
 
 The script is run by Petter, not by a session, and both credentials are typed
