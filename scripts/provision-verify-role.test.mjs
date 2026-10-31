@@ -143,7 +143,7 @@ test('the view SET is frozen, and each view by expression not just alias', () =>
       "(input IS NOT NULL AND input::text <> '{}') AS has_input",
       "(output IS NOT NULL AND output::text <> '{}') AS has_output",
     ],
-    job_schedule_meta: ['job_name', 'lease_owner', 'lease_expires_at', 'last_run_at', 'last_success_at', 'consecutive_failures', 'enabled'],
+    job_schedule_meta: ['job_name', 'interval_ms', 'next_run_at', 'lease_owner', 'lease_expires_at', 'last_started_at', 'last_finished_at', 'last_outcome', 'consecutive_failures', 'updated_at'],
     x402_settlement_intents_meta: ['id', 'payment_hash', 'state', 'created_at', 'updated_at'],
     x402_orphan_settlements_meta: ['id', 'created_at'],
     capability_invocations_meta: ['id', 'capability_slug', 'rail', 'context_kind', 'is_free_tier', 'success', 'failure_class', 'fault', 'billable', 'counts_against_capability', 'latency_ms', 'created_at'],
@@ -269,4 +269,19 @@ test('the verifier salts from a CSPRNG and iterates at least 4096 times', async 
   assert.notEqual(a, b, 'two runs produced the same verifier, so the salt is not fresh per call');
   const iterations = Number(/SCRAM-SHA-256\$(\d+):/.exec(a)[1]);
   assert.ok(iterations >= 4096, `iteration count ${iterations} is below the 4096 floor`);
+});
+
+test('--dry-run validates every view against the live schema', () => {
+  // 2026-10-31: the first real run died mid-transaction on job_schedule_meta,
+  // which selected last_run_at and last_success_at — columns that do not
+  // exist. The rollback was clean, but the founder had already typed the
+  // production write credential for a run that could never have succeeded.
+  // A regex cannot catch this (the first attempt flagged aliases and salt
+  // literals); EXPLAIN asks Postgres to resolve every column and runs nothing.
+  assert.match(script, /EXPLAIN \$\{def\.sql\}/, 'the dry run no longer plans each view against the database');
+  assert.ok(
+    script.indexOf('EXPLAIN ${def.sql}') < script.indexOf('const writeUrl'),
+    'the schema validation must happen in --dry-run, before the write credential is ever requested',
+  );
+  assert.match(script, /do not match the live schema/, 'a broken view must be reported, not swallowed');
 });
