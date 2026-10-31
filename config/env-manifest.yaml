@@ -288,6 +288,20 @@
   set_in:
     - none
   cost_note: "Intended home is Railway, set by Petter alongside BUS_GITHUB_TOKEN. Not set as of 2026-10-29."
+- name: BWS_WRITE_TOKEN
+  purpose: Bitwarden Secrets Manager machine-account token with WRITE access to project
+    strale. Used only by scripts/provision-verify-role.mjs, run by the founder on the
+    PC, to store a generated credential without it ever being printed. Cloud sessions
+    get a read-only BWS_ACCESS_TOKEN instead and must never hold this one
+    (DEC-20261027-C).
+  provider: Bitwarden
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+  set_in:
+    - .env
+  cost_note: Included in the Bitwarden Secrets Manager plan; the token itself costs nothing.
 - name: CAPABILITY_PROMOTION_ENFORCE
   purpose: "Feature flag: set to 'true' to make quarantine/promotion decisions in jobs/capability-promotion.ts take effect rather than log-only."
   provider: internal
@@ -1099,6 +1113,21 @@
     - .env
   example_value: "200"
   cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
+- name: STRALE_OPERATOR_WRITE_URL
+  purpose: Writable production Postgres URL, supplied by the founder in his own shell
+    for a one-off operator run (scripts/provision-verify-role.mjs). Deliberately NOT the
+    parked credential read from a file - guard-production-write-access.mjs refuses any
+    file but the authority module naming that, and the authority module cannot release
+    it for role creation, which is founder-gated with no grant key installed. Unset
+    everywhere except that one interactive run.
+  provider: Railway
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+  set_in:
+    - .env
+  cost_note: Part of the existing Railway Postgres service; no separate cost.
 - name: STRALE_PROCESSING_REGION
   purpose: Manual override for the EU AI Act processing-location marker when RAILWAY_REPLICA_REGION isn't authoritative (legacy alias, see processing-location.ts).
   provider: internal
