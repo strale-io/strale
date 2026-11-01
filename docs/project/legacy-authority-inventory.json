@@ -33,7 +33,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "bc5c5e67d76d526bda84ecad2bd35770a9e7f2ad2e24e3081b11b6bf4bfa07af",
+      "sha256": "5df4aa5c43b7a5447e074daa5082f8af868163501013032dd46e8ce54ce1109b",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -329,7 +329,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "b2e146f376d690079a64419eb2f892dcf40fb6f92573b79765185f7c9067576b",
+      "sha256": "1fe5cae25e04bcde2e2d73139242368a672f599c5c221cba463b0d9b9817219b",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",

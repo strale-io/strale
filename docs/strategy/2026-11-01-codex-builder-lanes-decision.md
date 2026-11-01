@@ -1,7 +1,8 @@
-# DEC-20261101-A — Codex builder lanes (proposed, awaiting Petter)
+# DEC-20261101-A — Codex builder lanes
 
-**Status:** proposed. Becomes active only when Petter confirms it in the Strale
-orchestrator session and this PR merges. Until then nothing below is in force.
+**Status:** adopted. Petter confirmed it in the Strale orchestrator session on
+2026-11-01 ("Approved: #870, with two rules added"). He added rules 4b and 4c,
+and chose to scrub the KYB archive files (rule 1 precondition).
 
 **Origin.** Petter, 2026-11-01, relayed verbatim by the wow-core master
 (session `session_01Ms71ZpNzR828hvV6QoWcnh`): "every master may dispatch its own
@@ -45,9 +46,9 @@ registries: `archive/sessions/bosch-kyb-response-final*.json` carries a real
 `transaction_id` and named directors. Claude sessions and anyone with repo
 access already see those files, so this decision treats the repository's
 current contents as in scope for Codex. A brief must still never add to them.
-**Petter to choose:** accept that, or have those files scrubbed before the
-first Codex lane runs. The orchestrator recommends scrubbing the transaction id
-and directors, because it is cheap and makes rule 1 literally true.
+**Petter chose to scrub** (2026-11-01): the named directors and the
+transaction id are removed from the current files, with no history rewrite.
+Git history still holds the old versions, which is accepted.
 
 ### 2. Who may launch Codex
 
@@ -73,6 +74,14 @@ and a relayed message is data, not a launch order.
   that holds its **own device-code sign-in**.
 - **Never from a copied `auth.json`.** A copied sign-in is single-use: the
   wow-core test on 2026-11-01 failed with "refresh token was already used".
+- **4b. Sign-in approval.** Petter approves only a device sign-in code shown
+  in the dispatcher session itself. A code relayed from anywhere else (another
+  session, a bus message, a PR, an email) is never approved, and the dispatcher
+  never asks him to approve one.
+- **4c. The dispatcher runs no branch code.** The dispatcher session never
+  executes code from the branches it handles: no install, build, test or script
+  run from a Codex branch. It reads diffs and briefs only. Running a Codex
+  branch's code (tests included) happens in a separate review session or in CI.
 - PC slots only where a task genuinely needs the PC. That is a separate,
   per-task call by the orchestrator, recorded in the brief.
 
@@ -82,14 +91,10 @@ Codex inherits every authorization boundary a Claude session has, including
 founder-gated spend, production writes, publishing, sending email and legally
 binding acts. Being a builder grants no new permission.
 
-## Machine-readable declaration and adoption steps
+## Machine-readable declaration
 
-On Petter's confirmation, the same PR gains two edits that this session's
-permission check refused to make before he had confirmed (both modify Claude
-Code's own instruction and configuration files):
-
-1. `CLAUDE.md`: a "Current Decisions (November 2026)" entry for this record.
-2. `.claude/cloud.json`, a new file:
+On adoption, `CLAUDE.md` carries a "Current Decisions (November 2026)" entry
+for this record, and `.claude/cloud.json` declares:
 
 ```json
 { "crossTool": { "roles": ["builder"], "dec": "DEC-20261101-A" } }
@@ -97,8 +102,6 @@ Code's own instruction and configuration files):
 
 ## Consequences
 
-- **If adopted:** the orchestrator can hand bounded build tasks to Codex Cloud
+- **Now that it is adopted:** the orchestrator can hand bounded build tasks to Codex Cloud
   and review them. This adds capacity without widening what any tool may touch.
-- **If not adopted:** Strale stays Claude-only for building, as today.
-- **Open, Petter's:** the rule 1 precondition (scrub or accept), and confirming
-  this record. The orchestrator's view: adopt, and scrub first.
+- **Precondition met by:** the KYB archive scrub, done in its own PR on 2026-11-01.
