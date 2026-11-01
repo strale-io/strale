@@ -1,7 +1,11 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
+import {
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { logError } from "../lib/log.js";
 
 /**
@@ -181,6 +185,13 @@ async function querySerper(
   output: Record<string, unknown>;
   provenance: { source: string; fetched_at: string; acquisition_method: "vendor_api"; upstream_vendor: string };
 }> {
+  // One budget for the search and the link resolution together. Round-2
+  // review: 15 s for the search plus a slice for resolution could exceed the
+  // 15 s SYNC_TRANSACTION_WALL_MS, turning a screening answer into an
+  // infrastructure error. Taken at the top of the Serper leg, which is this
+  // fallback's whole body.
+  const budget = startSerperBudget();
+
   // Search for adverse media: company name + risk keywords
   const query = `"${name}" (fraud OR sanctions OR investigation OR lawsuit OR regulatory OR penalty)`;
 
@@ -188,7 +199,7 @@ async function querySerper(
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: query, num: 20, tbs: "qdr:y" }), // last year
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!res.ok) {
@@ -204,7 +215,7 @@ async function querySerper(
   // On a screening output that matters more than elsewhere: `source_link` is
   // what a compliance reviewer follows to check the hit, and a redirect is
   // not auditable evidence.
-  const resolution = await resolveSerperLinks(data, serperKey);
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
   const results = data.organic ?? [];
 
   // Classify each result by category
@@ -259,8 +270,10 @@ async function querySerper(
       fallback_reason: fallbackReason,
       // Screening results whose source link Google would not let us open.
       // Nonzero means some `top_articles[].source_link` are null; the hits
-      // themselves are still counted.
-      unresolved_source_links: resolution.unresolved.length,
+      // themselves are still counted. Round-2 review: counted over the
+      // articles this output emits, not over every wrapper in the response.
+      unresolved_source_links: topArticles.filter((a) => a.source_link_unresolved).length,
+      link_resolution_attempted: resolution.attempted,
     },
     provenance: { source: "google-serper", fetched_at: now, acquisition_method: "vendor_api", upstream_vendor: "serper" },
   };

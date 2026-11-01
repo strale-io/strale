@@ -1,6 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
+import {
+  isGotoLink,
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -13,6 +18,12 @@ import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 // is a standard content-research primitive missing from the catalog.
 
 registerCapability("serp-related-questions", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   for (const k of ["query", "q", "keyword", "task"] as const) {
     if (input[k] !== undefined && typeof input[k] !== "string") {
       throw new Error(`'${k}' must be a string. Received ${typeof input[k]}.`);
@@ -38,7 +49,7 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!res.ok) {
@@ -55,7 +66,7 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
   // one string test when no wrapper is present, and because the alternative
   // is emitting a redirect as `source_url` the first time Google does wrap
   // one. `usableResultUrl` is the backstop either way.
-  const resolution = await resolveSerperLinks(data, serperKey);
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
 
   const paa = (data.peopleAlsoAsk as Array<Record<string, unknown>>) ?? [];
   const related = (data.relatedSearches as Array<Record<string, unknown>>) ?? [];
@@ -77,7 +88,11 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
       related_questions: relatedQuestions,
       related_searches: relatedSearches,
       question_count: relatedQuestions.length,
-      unresolved_url_count: resolution.unresolved.length,
+      // Round-2 review: the nulls in this output, not every wrapper in the
+      // response. A PAA entry with no `link` at all is absent, not
+      // unresolved, so only a wrapped one is counted.
+      unresolved_url_count: paa.filter((r) => isGotoLink(r.link)).length,
+      link_resolution_attempted: resolution.attempted,
     },
     provenance: {
       source: "serper.dev (Google SERP)",

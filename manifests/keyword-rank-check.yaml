@@ -62,6 +62,10 @@ output_schema:
         - "null"
     competitors_above:
       type: array
+    unresolved_positions:
+      type: array
+    breadcrumb_derived_positions:
+      type: array
 data_source: Serper.dev API (Google SERP, organic results)
 data_source_type: api
 transparency_tag: algorithmic
@@ -113,6 +117,13 @@ output_field_reliability:
   url: common
   title: common
   snippet: common
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_positions: guaranteed
+  breadcrumb_derived_positions: guaranteed
+
 limitations:
   - title: Point-in-time sample, not an average
     text: >-
