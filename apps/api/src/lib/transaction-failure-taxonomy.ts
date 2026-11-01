@@ -182,7 +182,7 @@ const TIMEOUT_RE = /timed? ?out|timeout|deadline|aborted due to timeout|operatio
 // Upstream/vendor failure. Checked BEFORE the caller-input patterns so
 // target-site 5xx phrasings ("URL returned HTTP 503", "registry returned a
 // server error (HTTP 503)") land here, not in caller_input (review H-2).
-const UPSTREAM_RE = /HTTP 5\d\d|upstream|unavailable|rate.?limit(?:ed)?|too many requests|\b429\b|quota|service.*(?:down|error)|returned a server error|ECONNRESET|ECONNREFUSED|ENOTFOUND|socket hang up|anti-bot challenge/i;
+const UPSTREAM_RE = /HTTP 5\d\d|API error 5\d\d|upstream|unavailable|rate.?limit(?:ed)?|too many requests|\b429\b|quota|service.*(?:down|error)|returned a server error|ECONNRESET|ECONNREFUSED|ENOTFOUND|socket hang up|anti-bot challenge/i;
 
 // Curated caller-attributable patterns. Route-level validation phrasings plus
 // the subset of the circuit-breaker's user-input list that is genuinely the

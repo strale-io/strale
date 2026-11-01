@@ -204,6 +204,17 @@ directly: every recurring shape in it that is genuinely ours earns a rule in
 `INTERNAL_RE` with its observed call count attached, and the bucket's size
 over time is the honest measure of whether the taxonomy is catching up.
 
+**Incident, 2026-10-31 to 11-01: three more signals that judged the wrong
+thing, all the same shape.** A cost-control refusal (the tool never ran) raised
+"correctness 0%" twelve times across `serp-analyze` and `keyword-rank-check`
+after one test run. A source 5xx worded "API error 522" rather than "HTTP 522"
+read as `unclassified` and held `forex-history` under its floor for six alarms.
+A source 404 for a currency it does not carry read as a plain failure on three FX
+tools, which also counts toward the breaker. The first two were repaired in the
+invariant and the taxonomy; the third at the capability, as a refusal. Tests fail
+against the prior source. The family's mechanism stands: a health consumer reading
+an error string it was never told about defaults to blaming the tool.
+
 ### F2 · Wrong denominator / mislabelled window
 
 > A correctly-executed query answering a subtly different question: a 30-day
