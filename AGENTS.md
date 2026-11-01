@@ -274,6 +274,7 @@ exactly the kind of thing that drifts; read CLAUDE.md (or the linked Notion
 Decisions DB entry) for the actual text before acting on any of these. The
 IDs every session should know exist, topic only, no numbers:
 
+- **DEC-20261101-A** — Codex builder lanes: what Codex never receives, who may launch it, which branches it may push, and how its dispatcher signs in and stays off branch code. A Codex session building for Strale reads it first; see CLAUDE.md and `docs/strategy/2026-11-01-codex-builder-lanes-decision.md`.
 - **DEC-20261027-B** — Platform hardening and distribution plan adopted, with scoped publish/pricing grants and retained founder gates; see CLAUDE.md and `docs/strategy/2026-10-27-platform-and-distribution-adoption.md`.
 - **DEC-20261024-A** — Way of working: WoW-Core consumer, T7 re-scoped, codex:check to be retired, daily run by exception (items 2, 4, 5 for Petter to confirm); see CLAUDE.md.
 - **DEC-20261024-B** — Website structure/messaging, Open Flow design system and the portfolio plan adopted; see CLAUDE.md.

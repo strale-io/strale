@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "f75678aea9ce5cf65e3303f5bc5e5ce8aaecf667656ed0ae3e485caf16407c29",
+      "sha256": "b8c1f0224227c18fc0d604527879609610f60703d5f5acee23f73980186fc309",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -33,7 +33,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "bc5c5e67d76d526bda84ecad2bd35770a9e7f2ad2e24e3081b11b6bf4bfa07af",
+      "sha256": "5df4aa5c43b7a5447e074daa5082f8af868163501013032dd46e8ce54ce1109b",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -107,6 +107,7 @@
         "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
         "docs/strategy/2026-10-26-tool-search-decision.md",
+        "docs/strategy/2026-11-01-codex-builder-lanes-decision.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
         "manifests/pep-check.yaml",
@@ -328,7 +329,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "99736ac1fc116aa80affd0ec79e8b6cad3faa42d43550a8e29f9f0cc70133577",
+      "sha256": "1fe5cae25e04bcde2e2d73139242368a672f599c5c221cba463b0d9b9817219b",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -491,6 +492,7 @@
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
         "docs/strategy/2026-10-27-platform-and-distribution-adoption.md",
+        "docs/strategy/2026-11-01-codex-builder-lanes-decision.md",
         "package.json",
         "packages/zapier-strale/README.md",
         "packages/zapier-strale/test/fixtures/README.md",
