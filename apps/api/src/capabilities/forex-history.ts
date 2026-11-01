@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 registerCapability("forex-history", async (input: CapabilityInput) => {
@@ -14,11 +15,31 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
 
   if (!from || !to) throw new Error("'from' and 'to' currency codes are required.");
 
+  // Checked here because Frankfurter answers 404 for a bad range as well, which
+  // would read as an unavailable currency below.
+  for (const [field, value] of [["start_date", startDate], ["end_date", endDate]] as const) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+      throw inputRefusal(`'${field}' must be a date in YYYY-MM-DD format.`, field, `Send '${field}' as YYYY-MM-DD.`);
+    }
+  }
+  if (startDate > endDate) {
+    throw inputRefusal("'start_date' must be on or before 'end_date'.", "start_date", "Send a 'start_date' on or before 'end_date'.");
+  }
+
   const url = `https://api.frankfurter.app/${startDate}..${endDate}?from=${from}&to=${to}`;
   const resp = await fetch(url, { signal: AbortSignal.timeout(30_000) });
   if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Frankfurter API error ${resp.status}: ${text.slice(0, 200)}`);
+    // Frankfurter answers 404 for a currency it does not carry. Anything else is
+    // the source's fault, and its body (an HTML error page at a 522) is not for
+    // the caller.
+    if (resp.status === 404) {
+      throw inputRefusal(
+        `'from' and 'to' must be currencies Frankfurter publishes; ${from}→${to} is not available.`,
+        "to",
+        "Use currencies from the European Central Bank reference-rate list.",
+      );
+    }
+    throw new Error(`Frankfurter API returned HTTP ${resp.status}.`);
   }
 
   const data = await resp.json() as {

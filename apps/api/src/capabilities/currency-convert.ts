@@ -34,15 +34,15 @@ registerCapability("currency-convert", async (input: CapabilityInput) => {
   let date: string;
 
   if (from === "EUR") {
-    const r = await fetchEcbRate(to);
+    const r = await fetchEcbRate(to, "to");
     rate = r.rate;
     date = r.date;
   } else if (to === "EUR") {
-    const r = await fetchEcbRate(from);
+    const r = await fetchEcbRate(from, "from");
     rate = 1 / r.rate;
     date = r.date;
   } else {
-    const [rFrom, rTo] = await Promise.all([fetchEcbRate(from), fetchEcbRate(to)]);
+    const [rFrom, rTo] = await Promise.all([fetchEcbRate(from, "from"), fetchEcbRate(to, "to")]);
     rate = rTo.rate / rFrom.rate;
     date = rFrom.date > rTo.date ? rFrom.date : rTo.date;
   }
@@ -62,13 +62,23 @@ registerCapability("currency-convert", async (input: CapabilityInput) => {
   };
 });
 
-async function fetchEcbRate(currency: string): Promise<{ rate: number; date: string }> {
+async function fetchEcbRate(currency: string, field: "from" | "to"): Promise<{ rate: number; date: string }> {
   const url = `${ECB_API}/D.${currency}.EUR.SP00.A?lastNObservations=1&format=jsondata`;
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
   });
 
+  // The ECB answers 404 for a currency it publishes no reference rate for. That
+  // is the ask, not the source: as a plain error, three such calls in a row
+  // would open the breaker on this tool for every buyer.
+  if (res.status === 404) {
+    throw inputRefusal(
+      `'${field}' must be a currency with an ECB daily reference rate; ${currency} has none.`,
+      field,
+      "Use a currency the European Central Bank publishes a daily reference rate for.",
+    );
+  }
   if (!res.ok) throw new Error(`ECB API returned HTTP ${res.status} for ${currency}.`);
   const data = (await res.json()) as any;
 

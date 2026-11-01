@@ -33,6 +33,10 @@ const PROD_REASONS = {
   upstream429:
     "Execution error: GDELT API returned HTTP 429. The news search service may be temporarily unavailable. Please try again.",
   timeout: "Execution error: The operation was aborted due to timeout",
+  // 2026-10-31: a tool that never ran, and a 5xx not worded "HTTP 5xx".
+  costControl:
+    "Execution error: Capability 'serp-analyze' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+  frankfurter522: 'Execution error: Frankfurter API error 522: <html class="no-',
   // Capability-attributable: the fixture or the contract is ours either way.
   missingField: "guaranteed_field_missing:best_match",
   allNull:
@@ -157,6 +161,19 @@ describe("scoreCorrectness", () => {
 
     expect(r.attributableFailures.map((x) => x.test_name)).toEqual(["id-known-answer"]);
     expect(r.environmentalFailures.map((x) => x.test_name)).toEqual(["news-known-answer"]);
+  });
+
+  it("does not judge a tool the cost-control gate refused to run", () => {
+    const r = scoreCorrectness([fail(PROD_REASONS.costControl)]);
+    expect(r.environmentalFailures).toHaveLength(1);
+    expect(r.attributableFailures).toHaveLength(0);
+    expect(r.correctnessRate).toBe(100);
+  });
+
+  it("does not judge a tool on its source's 5xx, however the status is worded", () => {
+    const r = scoreCorrectness([...[...Array(5)].map(() => pass()), fail(PROD_REASONS.frankfurter522)]);
+    expect(r.environmentalFailures).toHaveLength(1);
+    expect(r.correctnessRate).toBe(100);
   });
 
   it("is unchanged for a healthy capability", () => {

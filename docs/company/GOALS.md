@@ -1281,6 +1281,16 @@ conversion.
   this is the first week a second recurring buyer is measurable. No outreach
   (DQ-21 and the charter's customer-data boundary).
 
+- **Week of 10-26 will close as the largest on record, read before its last
+  day ended, and the repeatable part is larger than the 10-31 estimate**
+  (measured 2026-11-01 ~07:10Z; commercial pack, and `payerFacts` by UTC day).
+  **€165.51 so far**, 12 payers, **68.9% one buyer** (€113.99 vs €51.52). About
+  €64 is one-off (the €21.10 `mx-lookup` job, a €43 catalogue sweep by two
+  accounts), leaving about €101, not the €76 read on 10-31. The rise is the
+  largest buyer's daily spend: €16.60 on 10-31 and €18.65 by 07:10Z on 11-01,
+  against about €8 a day the week before, across more tools. Two days of
+  evidence. M1's concentration bar is still missed. No outreach.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
