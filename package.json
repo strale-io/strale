@@ -70,7 +70,8 @@
     "handoff:baseline": "node scripts/handoff/handoff-check.mjs baseline",
     "hooks:install": "node scripts/handoff/install-hooks.mjs",
     "prepare": "node scripts/handoff/install-hooks.mjs || exit 0",
-    "gates:test": "node --test scripts/empty-inputs.test.mjs scripts/ci/boot-probe.test.mjs scripts/ci/boot-workflow.test.mjs",
+    "gates:test": "node --test scripts/empty-inputs.test.mjs scripts/ci/boot-probe.test.mjs scripts/ci/boot-workflow.test.mjs scripts/ci/docs-only-scanner-gate.test.mjs scripts/provision-verify-role.test.mjs",
+    "verify-role:check": "node scripts/provision-verify-role.mjs --check",
     "anthropic:check": "node apps/api/scripts/check-anthropic-client.mjs",
     "anthropic:test": "node --test apps/api/scripts/check-anthropic-client.test.mjs"
   },

@@ -204,6 +204,17 @@ directly: every recurring shape in it that is genuinely ours earns a rule in
 `INTERNAL_RE` with its observed call count attached, and the bucket's size
 over time is the honest measure of whether the taxonomy is catching up.
 
+**Incident, 2026-10-31 to 11-01: three more signals that judged the wrong
+thing, all the same shape.** A cost-control refusal (the tool never ran) raised
+"correctness 0%" twelve times across `serp-analyze` and `keyword-rank-check`
+after one test run. A source 5xx worded "API error 522" rather than "HTTP 522"
+read as `unclassified` and held `forex-history` under its floor for six alarms.
+A source 404 for a currency it does not carry read as a plain failure on three FX
+tools, which also counts toward the breaker. The first two were repaired in the
+invariant and the taxonomy; the third at the capability, as a refusal. Tests fail
+against the prior source. The family's mechanism stands: a health consumer reading
+an error string it was never told about defaults to blaming the tool.
+
 ### F2 · Wrong denominator / mislabelled window
 
 > A correctly-executed query answering a subtly different question: a 30-day
@@ -457,7 +468,7 @@ to verify were broken?* For F7 incident 8: *which consumers read this setting,
 and did the strictest one accept it?* Same question. A reader who agrees with
 the paragraph above and does not ask one of these has changed nothing.
 
-**Count: 12 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded, incident 11 (2026-10-18) is a unit test fed a message its production caller never produces, and incident 12 (2026-10-28) is a monitoring check whose query could never run.** Integration
+**Count: 13 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded, incident 11 (2026-10-18) is a unit test fed a message its production caller never produces, incident 12 (2026-10-28) is a monitoring check whose query could never run, and incident 13 (2026-10-31, tagged `[GENERIC]`) is seven planted defects escaping one script's tests because each assertion matched the guard's source text rather than its behaviour.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -720,6 +731,64 @@ through `mutation-test.mjs`. *The discriminating question in this dress:* **if
 this check errored on every run, what would tell me?** Here the answer was
 "nothing, for seven months".
 
+**Incident 13, 2026-10-31 — `[GENERIC]` · a test that matches the source text
+of a guard instead of its behaviour.** Seven planted defects escaped the test
+suite for one script across three security reviews. The script provisions
+`strale_verify`, the read-only database credential meant to let cloud sessions
+verify production without reading customer content — so each escape was a test
+certifying the one property the whole change exists to hold.
+
+The escapes, each a single planted mutation against a green suite:
+
+| planted | why the test passed |
+|---|---|
+| a sixth view selecting `users.email` | the frozen-column map was keyed by view name, so a view not in the map was never examined |
+| `storedKey = clientKey`, i.e. no SHA-256, plus `iterations = 1` | nothing imported or ran `scramVerifier`; the test asserted the file *contained* `SCRAM-SHA-256$` |
+| `user_id AS user_surrogate` | the frozen list compared **aliases**, and the alias was unchanged |
+| `health_monitor_events` moved from EXCLUDED into ALLOWED | the by-name list covered 15 of 29 withheld tables, and the runtime proof derives its probe list from the same array, so a table moved out simply stops being probed |
+| `return url` at the top of `withRequiredTls` | nothing asserted the behaviour; the function's existence was the test |
+| `if (code !== undefined \|\| true) return { ok: true }` in the refusal classifier | the test grepped for the literal `42501`, which survives in the constant and in the comment explaining it |
+| `scramVerifier(password, 1)` at the call site | the module test pinned the **default parameter**, which an override at the one call site does not touch |
+
+**The common instrument is narrower than F5's usual one.** These tests ran,
+over a non-empty input set, against the right artefact — reachability, the
+family's step-1 finding, was not the defect. They read the guard's *source text*
+and asserted a string was present. Every mutation left the string in place and
+removed the behaviour, which is exactly what a string can never distinguish.
+Three of the seven were defeated by the explanatory comment next to the code:
+the clearer the writing, the more text there was for the assertion to match.
+
+*The discriminating question in this dress:* **could I break this guard and
+leave the file still matching my assertion?** For any test whose subject is a
+regex over source, the answer is almost always yes.
+
+**The repair, and its shape matters more than the instance.** Each helper moved
+into a module importable without executing the script — `scram-verifier.mjs`,
+`verify-role-lib.mjs` — and is now exercised with inputs: an RFC 7677
+known-answer vector for the verifier, wrapped driver errors and non-privilege
+SQLSTATEs for the classifier, URLs already carrying `sslmode=disable` for the
+TLS helper. Where source matching is genuinely the only option, as for the view
+definitions and the allow list, the *small* side is frozen by name and the large
+side derived from it, so a move in either direction fails rather than only a
+move out of the enumerated set. All seven were replanted afterwards and each
+fails.
+
+**Why `[GENERIC]`:** nothing here is about databases, credentials or this
+repository. A test that greps a guard's source is a hollow test in any codebase,
+it reads as rigorous precisely because it names the right thing, and the three
+comment-matching escapes show the failure mode gets *worse* as the code gets
+better documented. The actionable rule is one line: **a test whose subject is
+source text proves spelling, not behaviour — import the thing and run it, or
+freeze the small side and derive the large one.**
+
+Two structural notes for whoever reads this next. The author wrote the tests
+that let these through and also wrote the planting harness that found them, so
+the catching is not independent evidence of care — the reviewer planted the
+first three and four more after the repair, and each round found escapes the
+author's own replanting had not. And the escapes concentrated in exactly the
+guards whose prose explained their own importance, which is an argument for
+planting against *every* new guard rather than only the ones that feel risky.
+
 ### F6 · Stale or unsupported public claim
 
 > Something we tell the world that is no longer true, or was never quite true.
@@ -786,7 +855,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 12 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 13 (incident 13, 2026-10-31, below; incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1212,6 +1281,23 @@ puts a production database credential into GitHub Actions. That is a
 credential-issuing act, which is the founder's; it is in DECISION-QUEUE.md,
 not routed around. Until it is answered the three production-reading
 mechanisms stay blind — but now visibly, every morning, instead of silently.
+
+**Incident 13 (2026-10-31) — a job recorded `ok` for five months while it had
+never once done its work.** `ingest-ee-directors` has run daily since 2026-05-18.
+Production's request to the Estonian open-data host answers HTTP 403
+(`ingest-ee-directors-failed`, logged 2026-10-30 10:05Z; a free production fetch
+of the same host on 2026-10-31 returned the same block, while this PC gets 200),
+so `ee_directors` and `ee_directors_sync` are both empty. The handler catches the
+error and returns `outcome: "errored"`, and the coordinator then writes
+`last_outcome = 'ok'` to `job_schedule` because the handler resolved. Only the
+external watch's heartbeat, which requires a real success, could see it, and that
+appeared once the heartbeat's three-interval allowance for older rows ran out.
+Meanwhile the tool told buyers that an empty directors list meant a newly
+registered company or resigned directors. Repaired: that wording. Open: `last_outcome`
+still reads `ok` for a job whose handler reported an error, and access itself,
+which is a question for the register (OUTBOX `rik-open-data-403`), never a route
+around the block (DEC-20261023-A). A status column is evidence only of what wrote
+it; read the table the job is meant to fill.
 
 ### F8 · Duplicated authority
 

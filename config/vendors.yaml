@@ -1624,6 +1624,32 @@ vendors:
         status: unknown
     authorization:
       status: unknown
+  - id: bitwarden
+    name: Bitwarden
+    aliases:
+      - Bitwarden
+    lifecycle:
+      - state: active
+        date: 2026-10-31
+        decision: unknown
+        reason: Secrets store for the fleet (EU region, project strale), per the
+          2026-10-27 security decision recorded in CLAUDE.md rather than as a record
+          file. Named as the provider of BWS_WRITE_TOKEN, the PC-only write token the
+          verify-role provisioning script uses. Registered as infrastructure, as Railway
+          is, rather than waved through as a sentinel - it is an external party holding
+          credentials.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
   - id: railway
     name: Railway
     aliases:

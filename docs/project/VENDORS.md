@@ -35,6 +35,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | azure-document-intelligence | Azure AI Document Intelligence | evaluating | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | banfico | Banfico | rejected | 2026-09-11 | unknown | unknown |
 | better-stack | Better Stack | active | 2026-09-10 | unknown | unknown |
+| bitwarden | Bitwarden | active | 2026-10-31 | unknown | unknown |
 | bodacc | BODACC | active | 2026-09-11 | unknown | unknown |
 | bolagsverket | Bolagsverket | active | 2026-09-10 | unknown | unknown |
 | bottomline | Bottomline | rejected | 2026-09-11 | unknown | unknown |

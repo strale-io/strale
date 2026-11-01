@@ -616,6 +616,15 @@
   set_in:
     - railway
   cost_note: Cost tier not independently re-verified this session.
+- name: FS_TRACE_DIR
+  purpose: Directory where scripts/ci/fs-trace-preload.mjs writes one ndjson trace per node process. Set only by scripts/ci/run-without-docs-reads.mjs for the child it runs; never set by hand.
+  provider: internal
+  holder: github-actions
+  cost_class: none
+  required_in:
+    - ci
+  set_in:
+    - workflow
 - name: GITHUB_OUTPUT
   purpose: GitHub Actions runtime-injected file path for writing step outputs. Not set by us — a workflow-provided variable.
   provider: internal
@@ -783,6 +792,15 @@
     - .env
     - workflow
   example_value: development
+- name: NODE_OPTIONS
+  purpose: Node's own option variable. scripts/ci/run-without-docs-reads.mjs appends `--import fs-trace-preload.mjs` to whatever value it inherits, so the trace reaches every node process a CI step starts.
+  provider: internal
+  holder: github-actions
+  cost_class: none
+  required_in:
+    - ci
+  set_in:
+    - workflow
 - name: NOTION_API_KEY
   purpose: "Notion integration token used by the daily digest to fetch Journal-entry activity. NOTE: a second, differently-named variable (NOTION_TOKEN) is used elsewhere for what appears to be the same integration — worth consolidating to one name."
   provider: Notion
@@ -1139,6 +1157,21 @@
   set_in:
     - .env
   cost_note: Local test key; never set anywhere on 2026-09-02.
+- name: STRALE_VERIFY_DRY_RUN_URL
+  purpose: A read-only Postgres URL that scripts/provision-verify-role.mjs --dry-run
+    plans its views against with EXPLAIN, so a wrong column fails the dry run instead
+    of the real one. Read-only by design and never a write credential; the dry run
+    prompts for it with hidden input when unset, and this variable exists so the check
+    can also run unattended. Setting it costs nothing - it reads the catalogue and
+    executes no view.
+  provider: Railway
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+  set_in:
+    - .env
+  cost_note: Part of the existing Railway Postgres service; no separate cost.
 - name: STRIPE_SECRET_KEY
   purpose: Stripe secret key for wallet top-up Checkout sessions. LIVE (sk_live_) in production, sk_test_ locally.
   provider: Stripe
