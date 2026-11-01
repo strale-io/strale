@@ -30,7 +30,9 @@ for (const [target, names] of [[fs, READS], [fs.promises, PROMISE_READS]]) for (
   const traced = function traced(p, ...rest) {
     if (typeof p === 'string' || p instanceof URL) {
       const abs = resolve(p instanceof URL ? fileURLToPath(p) : p);
-      if (!paths.has(abs)) { paths.add(abs); live({ path: abs }); }
+      const recursive = /^(readdir|opendir)/.test(name) && rest[0]?.recursive === true;
+      if (recursive) live({ path: abs, recursive: true });
+      else if (!paths.has(abs)) { paths.add(abs); live({ path: abs }); }
     }
     return original.call(this, p, ...rest);
   };

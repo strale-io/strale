@@ -136,6 +136,12 @@ test('the docs-reading tests run on every PR', () => {
     'a gated bare `npm test` runs the docs readers where a docs-only PR skips them');
 });
 
+test('apps/api tests run in forked processes, which the trace reaches', () => {
+  // The preload rides NODE_OPTIONS into child processes, not worker threads.
+  const src = readFileSync(join(ROOT, 'apps/api/vitest.config.ts'), 'utf8');
+  assert.match(src, /^\s*pool:\s*["']forks["']/m, 'apps/api vitest must pin pool: "forks" for the docs-read trace to see its workers');
+});
+
 test('the production-write guard specifically is ungated', () => {
   // The 2026-10-31 case, named so a regression reads as itself.
   const step = steps.find((s) => s.run.includes('guard-production-write-access.mjs'));
@@ -157,6 +163,7 @@ test('the trace discriminates', () => {
     const cases = {
       'readdir.mjs': [`import { readdirSync } from 'node:fs';\nreaddirSync(${JSON.stringify(join(ROOT, 'docs'))});`, ['docs']],
       'promises.mjs': [`import { readFile } from 'node:fs/promises';\nawait readFile(${JSON.stringify(join(ROOT, 'CLAUDE.md'))});`, ['CLAUDE.md']],
+      'recursive-root.mjs': [`import { readdirSync } from 'node:fs';\nreaddirSync(${JSON.stringify(ROOT)}, { recursive: true });`, ['recursive listing of .']],
       'shell.mjs': [`import { execSync } from 'node:child_process';\nexecSync('git ls-files -z', { cwd: ${JSON.stringify(ROOT)} });`, ['git ls-files']],
     };
     for (const [name, [src, want]] of Object.entries(cases)) {

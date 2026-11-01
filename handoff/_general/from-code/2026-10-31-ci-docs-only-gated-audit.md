@@ -50,3 +50,15 @@ ancestor checks. `git fetch --unshallow origin` plus fetching
 Serper renewal (now owned by the orchestrator, due 2026-11-06): cost at
 observed volume, whether anything needs it past 11-08, and whether a funded
 verification key for `/resolve` belongs in the same decision.
+
+## Independent reviews
+
+Two fresh read-only Claude agents (same provider, separate context, per the
+2026-09-07 review policy). Review 1 found the two docs-reading suites above.
+Review 2: PASS WITH NITS; fixed — apps/api vitest pinned to `pool: "forks"`
+(the trace reaches child processes, not worker threads) and asserted by the
+gate test; a recursive listing of the repo root or an ancestor now counts;
+the preload is passed as a file URL so `--import` works on Windows. Known
+limits left as stated: a child spawned with an env that drops NODE_OPTIONS,
+non-node children (`sh -c 'git ls-files'`, `grep -r`), and worker threads in
+code that is not vitest.

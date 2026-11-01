@@ -34,6 +34,11 @@ export default defineConfig({
     // so give bootstrap hooks more headroom while keeping individual
     // test timeouts tight.
     hookTimeout: 30_000,
+    // Forks, not threads: CI's docs-read trace (fs-trace-preload.mjs, carried
+    // by NODE_OPTIONS) reaches child processes but not worker threads, so a
+    // thread pool would let the `code` project read docs unobserved.
+    // docs-only-scanner-gate.test.mjs holds this.
+    pool: "forks",
     // `vitest run` runs both; CI runs them as separate steps
     // (`--project code` gated on docs_only, `--project docs` always).
     projects: [

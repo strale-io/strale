@@ -20,7 +20,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDocsPath } from '../production-watch/classify.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -46,7 +46,11 @@ export function gitSubcommand(spawn) {
 export function docsReach(events) {
   const hits = new Set();
   for (const e of events) {
-    if (e.path) {
+    if (e.path && e.recursive && !relative(e.path, ROOT).startsWith('..')) {
+      // A recursive listing of the repository root, or of a directory above
+      // it, reaches every docs file without naming one.
+      hits.add(`recursive listing of ${relative(ROOT, e.path) || '.'}`);
+    } else if (e.path) {
       const rel = relative(ROOT, e.path).split('\\').join('/');
       // `${rel}/x` so listing a docs directory itself counts.
       if (rel && !rel.startsWith('..') && (isDocsPath(rel) || isDocsPath(`${rel}/x`))) hits.add(rel);
@@ -68,7 +72,8 @@ export function runTraced(argv, { cwd = process.cwd(), stdio = 'inherit' } = {})
       env: {
         ...process.env,
         FS_TRACE_DIR: dir,
-        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${JSON.stringify(PRELOAD)}`.trim(),
+        // A file URL, not a path: a Windows path is not a valid --import specifier.
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${JSON.stringify(pathToFileURL(PRELOAD).href)}`.trim(),
       },
     });
     const files = readdirSync(dir);
