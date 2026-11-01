@@ -1,7 +1,22 @@
 # Production verification from cloud sessions: a GitHub Action (proposal)
 
-**Status:** proposed on 2026-11-01. It needs Petter's go and two settings only
-he can make (below). Until it exists, **production verification
+**Status:** approved by Petter on 2026-11-01, with one change: the workflow
+lives in a **new private repository, `strale-io/strale-ops`**, not in this
+public one.
+
+Why private: `strale-io/strale` is public, so its Actions logs are public.
+Even the counts these checks print (transaction volume, user counts, the
+deployed version) would be published. Founder decision 2026-11-01, recorded
+in wow-core#214: a production read credential may go into GitHub Actions
+**only in a private repository**, and this is the first named use.
+
+The secret's source also moved that day: `STRALE_RAILWAY_DB_VERIFY_URL` now
+lives in Bitwarden project **`pc-only`**, readable only from the PC, and the
+cloud fleet token can no longer read it.
+
+Everything else below stands: fixed named checks, counts-only output, an
+environment limited to `main`, and read-only enforced twice. Until the
+private repository runs its first check, **production verification
 (DEC-20260504-C step 4) stays on the PC.**
 
 ## The gap, as established
@@ -25,7 +40,8 @@ the credential:
 
 ## Proposal
 
-A manually triggered workflow, `.github/workflows/prod-verify.yml`, runs
+A manually triggered workflow, `.github/workflows/prod-verify.yml` in
+`strale-io/strale-ops`, runs
 named read-only checks on a GitHub-hosted runner, which can reach Postgres.
 Cloud sessions trigger it and read its result through the GitHub tools they
 already have (`actions_run_trigger`, then `actions_get` / job logs).
@@ -91,16 +107,27 @@ jobs:
 
 ## What Petter has to do
 
-1. **Go/no-go** on this design.
-2. **Create the GitHub environment** `prod-verify`, with its deployment-branch
-   rule set to `main` only, and add the secret `STRALE_VERIFY_DATABASE_URL`
-   with the same value as the Bitwarden `STRALE_RAILWAY_DB_VERIFY_URL`. Under
-   DEC-20261027-C, only Petter places credentials.
+1. ~~Go/no-go~~: go, 2026-11-01, hosted privately.
+2. **Check that strale-io is on a paid plan (Team or above).** GitHub offers
+   environments in private repositories only on paid plans. On Free, the
+   main-only environment is unavailable, so it is either an upgrade (his
+   spend call) or a weaker repository secret.
+3. Create the private repository `strale-io/strale-ops`, with a README so
+   `main` exists.
+4. Create its environment `prod-verify`, with deployment branches limited to
+   `main`.
+5. Add the environment secret `STRALE_VERIFY_DATABASE_URL`, copied directly
+   from Bitwarden project `pc-only` (`STRALE_RAILWAY_DB_VERIFY_URL`). The
+   value never passes through chat. Under DEC-20261027-C, only Petter places
+   credentials.
+6. Give the Claude GitHub App access to `strale-ops`, so the orchestrator can
+   attach it.
 
-**After that, a session will:** write the workflow, `run.mjs` and
+**After that, a session will:** attach `strale-ops` with push access and write the workflow, `run.mjs` and
 `checks.mjs` with tests covering the type gate (a planted free-text column
 must fail the job) and identifier validation. The PR gets an independent
 review, and the first run is triggered from a cloud session.
 
-**Cost:** none expected. Runs are a few seconds on GitHub-hosted runners
-(confidence: moderate, pending the account's Actions billing).
+**Cost:** a few seconds per run, drawn from the private-repository Actions
+allowance of the org's plan. No charge is expected beyond the plan itself
+(confidence: moderate).
