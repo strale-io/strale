@@ -39,6 +39,8 @@ output_schema:
       type: number
     referring_domains_count:
       type: number
+    unresolved_link_count:
+      type: number
 data_source: CommonCrawl index (public backlink database)
 data_source_type: api
 transparency_tag: algorithmic
@@ -95,6 +97,12 @@ output_field_reliability:
   top_anchors: guaranteed
   total_backlinks: guaranteed
   referring_domains_count: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_link_count: guaranteed
+
 limitations:
   - title: Recent or niche backlinks can be missing
     text: Uses CommonCrawl index data — covers a subset of the web and may miss recently created or niche backlinks

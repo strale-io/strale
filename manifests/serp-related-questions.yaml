@@ -63,6 +63,10 @@ output_schema:
       description: '"People Also Ask" entries — empty array means Google shows no PAA box for this query (a real answer, not a failure)'
     related_searches: { type: array }
     question_count: { type: integer }
+    unresolved_url_count:
+      type: number
+    link_resolution_attempted:
+      type: boolean
 test_fixtures:
   known_answer:
     input:
@@ -81,6 +85,13 @@ output_field_reliability:
   related_questions: guaranteed
   related_searches: guaranteed
   question_count: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_url_count: guaranteed
+  link_resolution_attempted: guaranteed
+
 limitations:
   - title: Empty results are a real answer, not a failure
     text: >-

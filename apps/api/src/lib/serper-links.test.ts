@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deriveResultDomain,
+  describeResultDomain,
   isGotoLink,
   resolveSerperLinks,
+  stripUnresolvedGotoLinks,
   usableResultUrl,
 } from "./serper-links.js";
 
@@ -236,7 +238,8 @@ describe("serper-links — resolveSerperLinks", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       organic: [{ link: GOTO_4 }, { link: GOTO_5 }],
     });
-    expect(result.resolved).toBe(3);
+    // Distinct links, not sites rewritten: GOTO_4 appears twice and counts once.
+    expect(result.resolved).toBe(2);
     expect(response.news[0].link).toBe(REAL_4);
     expect(response.answerBox.link).toBe(REAL_5);
     expect(response.organic[0].sitelinks[0].link).toBe(REAL_4);
@@ -269,5 +272,140 @@ describe("serper-links — resolveSerperLinks", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).organic).toHaveLength(100);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).organic).toHaveLength(1);
     expect(result.resolved).toBe(101);
+  });
+});
+
+describe("serper-links — round-2 review findings", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("sees knowledgeGraph.website and descriptionLink, which link/url alone missed", async () => {
+    fetchMock.mockResolvedValue(okJson({ organic: [{ link: REAL_4 }, { link: REAL_5 }] }));
+    const response = {
+      knowledgeGraph: { title: "kg", website: GOTO_4, descriptionLink: GOTO_5 },
+    };
+
+    const result = await resolveSerperLinks(response, "k");
+
+    expect(result.resolved).toBe(2);
+    expect(response.knowledgeGraph.website).toBe(REAL_4);
+    expect(response.knowledgeGraph.descriptionLink).toBe(REAL_5);
+  });
+
+  it("strips what resolution could not open, including forwarded sub-objects", () => {
+    const response = {
+      organic: [{ link: REAL_4, sitelinks: [{ title: "sl", link: GOTO_4 }] }],
+      answerBox: { snippet: "ans", link: GOTO_5 },
+      knowledgeGraph: { title: "kg", website: GOTO_4 },
+    };
+
+    const stripped = stripUnresolvedGotoLinks(response);
+
+    expect(stripped).toBe(3);
+    expect(JSON.stringify(response)).not.toContain("/goto");
+    expect(response.organic[0].sitelinks[0].link).toBeNull();
+    expect(response.answerBox.link).toBeNull();
+    expect(response.knowledgeGraph.website).toBeNull();
+    // A real link is left exactly as it was.
+    expect(response.organic[0].link).toBe(REAL_4);
+  });
+
+  it("matches the wrapper path case-insensitively and percent-decoded", () => {
+    expect(isGotoLink("https://www.google.com/GOTO?url=x")).toBe(true);
+    expect(isGotoLink("https://www.google.com/got%6f?url=x")).toBe(true);
+  });
+
+  it("refuses ANY Google host as a result's domain, not only a /goto path", () => {
+    // If Google moves to `/url?q=` or `/aclk`, isGotoLink stops matching —
+    // and without this the original wrong-answer bug would re-arm silently.
+    expect(deriveResultDomain("https://www.google.com/url?q=https://real.example")).toBeNull();
+    expect(deriveResultDomain("https://www.google.co.uk/aclk?sa=l")).toBeNull();
+    expect(describeResultDomain("https://www.google.com/url?q=x").source).toBe("none");
+  });
+
+  it("reports where a host came from, so a breadcrumb is never mistaken for the destination", () => {
+    expect(describeResultDomain(REAL_4)).toEqual({ domain: "teamwork.com", source: "url" });
+    expect(describeResultDomain(GOTO_4, "https://www.teamwork.com › Blog")).toEqual({
+      domain: "teamwork.com",
+      source: "breadcrumb",
+    });
+    expect(describeResultDomain(GOTO_4)).toEqual({ domain: null, source: "none" });
+  });
+
+  it("refuses a non-goto Google URL offered as a resolution", async () => {
+    fetchMock.mockResolvedValue(
+      okJson({ organic: [{ link: "https://www.google.com/url?q=x" }, { link: REAL_5 }] }),
+    );
+    const response = { organic: [{ link: GOTO_4 }, { link: GOTO_5 }] };
+
+    const result = await resolveSerperLinks(response, "k");
+
+    expect(result.resolved).toBe(1);
+    expect(result.unresolved).toEqual([GOTO_4]);
+    expect(response.organic[0].link).toBe(GOTO_4);
+  });
+
+  it("shares one deadline across batches instead of giving each its own", async () => {
+    const links = Array.from({ length: 201 }, (_, i) => `${GOTO_4}${i}`);
+    const response = { organic: links.map((link) => ({ link })) };
+    // Each call burns most of the budget, so the third must not even be sent.
+    fetchMock.mockImplementation(async (_url, init: RequestInit) => {
+      const sent = JSON.parse(init.body as string).organic as Array<{ link: string }>;
+      await new Promise((r) => setTimeout(r, 60));
+      return okJson({ organic: sent.map((e) => ({ link: `https://real.example/${e.link.length}` })) });
+    });
+
+    const result = await resolveSerperLinks(response, "k", undefined, Date.now() + 120);
+
+    expect(fetchMock.mock.calls.length).toBeLessThan(3);
+    expect(result.error).toMatch(/budget ran out/);
+    expect(result.unresolved.length).toBeGreaterThan(0);
+  });
+
+  it("reports every batch's failure, not only the last", async () => {
+    const links = Array.from({ length: 101 }, (_, i) => `${GOTO_4}${i}`);
+    const response = { organic: links.map((link) => ({ link })) };
+    fetchMock
+      .mockResolvedValueOnce(new Response("a", { status: 502 }))
+      .mockResolvedValueOnce(new Response("b", { status: 429 }));
+
+    const result = await resolveSerperLinks(response, "k");
+
+    expect(result.error).toMatch(/HTTP 502/);
+    expect(result.error).toMatch(/HTTP 429/);
+    expect(result.unresolved).toHaveLength(101);
+  });
+
+  it("does not throw when the response object cannot be written to", async () => {
+    fetchMock.mockResolvedValue(okJson({ organic: [{ link: REAL_4 }] }));
+    const response = Object.freeze({ organic: Object.freeze([Object.freeze({ link: GOTO_4 })]) });
+
+    // Documented as never throwing; a frozen payload must not break that.
+    const result = await resolveSerperLinks(response, "k");
+
+    expect(result.attempted).toBe(true);
+    expect(result.unresolved).toEqual([GOTO_4]);
+  });
+
+  it("counts distinct links, so resolved and unresolved share a denominator", async () => {
+    // GOTO_4 appears three times and resolves once; `resolved` must say 1.
+    fetchMock.mockResolvedValue(okJson({ organic: [{ link: REAL_4 }, { link: GOTO_5 }] }));
+    const response = {
+      organic: [{ link: GOTO_4 }, { link: GOTO_4 }],
+      news: [{ link: GOTO_4 }],
+      answerBox: { link: GOTO_5 },
+    };
+
+    const result = await resolveSerperLinks(response, "k");
+
+    expect(result.resolved).toBe(1);
+    expect(result.unresolved).toEqual([GOTO_5]);
   });
 });

@@ -190,6 +190,13 @@ output_field_reliability:
   screened_at: guaranteed
   period: guaranteed
   fallback_reason: rare
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_source_links: common
+  link_resolution_attempted: common
+
 limitations:
   - title: Language coverage is not fully documented
     text: >-

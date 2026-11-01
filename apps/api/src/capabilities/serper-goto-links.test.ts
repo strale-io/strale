@@ -118,7 +118,77 @@ describe("Google /goto links never become a google.com answer", () => {
 
       expect(out.position).toBe(2);
       expect(out.unresolved_positions).toEqual([4, 5, 6]);
+      expect(out.breadcrumb_derived_positions).toEqual([]);
       expect(out.competitors_above.map((c: any) => c.domain)).toEqual(["a.example"]);
+    });
+
+    // ── round-2 review findings ──
+
+    it("refuses when a position's host came only from Google's breadcrumb", async () => {
+      // A breadcrumb is Google's DISPLAY url: for AMP, syndicated and
+      // redirecting results it is routinely not the destination host. Before
+      // this, such a position got a non-null domain, was absent from
+      // unresolved_positions, and was reported as a match at position 4 with
+      // url: null — the caller could not tell it was never resolved.
+      const search = {
+        searchParameters: { q: "x" },
+        organic: [
+          { title: "a", link: "https://a.example/p", snippet: "s", position: 1 },
+          {
+            title: "wrapped",
+            link: GOTO(4),
+            displayedLink: "https://mysite.example > blog",
+            snippet: "s",
+            position: 4,
+          },
+        ],
+      };
+      stubSearchThenResolve(search, "fail");
+
+      await expect(run()({ domain: "mysite.example", keyword: "widgets" })).rejects.toThrow(
+        /opaque redirect links for result position\(s\) 4/,
+      );
+    });
+
+    it("marks a breadcrumb-derived position when it sits below the match", async () => {
+      const search = {
+        searchParameters: { q: "x" },
+        organic: [
+          { title: "mine", link: "https://mysite.example/p", snippet: "s", position: 1 },
+          {
+            title: "wrapped",
+            link: GOTO(4),
+            displayedLink: "https://other.example > blog",
+            snippet: "s",
+            position: 4,
+          },
+        ],
+      };
+      stubSearchThenResolve(search, "fail");
+
+      const out = (await run()({ domain: "mysite.example", keyword: "widgets" })).output as any;
+
+      expect(out.position).toBe(1);
+      expect(out.breadcrumb_derived_positions).toEqual([4]);
+      expect(out.unresolved_positions).toEqual([]);
+    });
+
+    it("blocks by array index, not by position value", async () => {
+      // Serper's array order and its position values can disagree. Comparing
+      // position VALUES let an unresolved result land in competitors_above
+      // (built with slice(0, matchIdx)) without blocking.
+      const search = {
+        searchParameters: { q: "x" },
+        organic: [
+          { title: "opaque", link: GOTO(9), snippet: "s", position: 9 },
+          { title: "mine", link: "https://mysite.example/p", snippet: "s", position: 5 },
+        ],
+      };
+      stubSearchThenResolve(search, "fail");
+
+      await expect(run()({ domain: "mysite.example", keyword: "widgets" })).rejects.toThrow(
+        /opaque redirect links for result position\(s\) 9/,
+      );
     });
   });
 
@@ -152,7 +222,7 @@ describe("Google /goto links never become a google.com answer", () => {
       const wrapped = out.organic_results.filter((r: any) => r.link_unresolved);
       expect(wrapped).toHaveLength(3);
       expect(wrapped.every((r: any) => r.url === null && r.domain === null)).toBe(true);
-      expect(out.link_resolution).toEqual({ attempted: true, resolved: 0, unresolved: 3 });
+      expect(out.link_resolution).toEqual({ attempted: true, unresolved_results: 3 });
     });
 
     it("does not emit a wrapped answerBox link as a source URL", async () => {
@@ -293,6 +363,155 @@ describe("Google /goto links never become a google.com answer", () => {
       } finally {
         if (dilisense !== undefined) process.env.DILISENSE_API_KEY = dilisense;
       }
+    });
+  });
+
+  describe("round-2 review findings", () => {
+    it("google-search suppresses wrappers it forwards wholesale, not only results[]", async () => {
+      // Before this, `sitelinks`, `answer_box` and `knowledge_graph` were
+      // passed through raw, so a failed /resolve emitted the wrapper in all
+      // three — and knowledgeGraph.website / .descriptionLink were invisible
+      // to the walk entirely, so they leaked even on the success path.
+      const search = {
+        organic: [
+          {
+            title: "a",
+            link: GOTO(1),
+            snippet: "s",
+            position: 1,
+            sitelinks: [{ title: "sl", link: GOTO(2) }],
+          },
+        ],
+        answerBox: { snippet: "ans", link: GOTO(3) },
+        knowledgeGraph: { title: "kg", website: GOTO(4), descriptionLink: GOTO(5) },
+        peopleAlsoAsk: [{ question: "q", snippet: "s", link: GOTO(6) }],
+      };
+      stubSearchThenResolve(search, "fail");
+
+      const out = (await getDirectExecutor("google-search")!({ query: "widgets" })).output as any;
+
+      expect(JSON.stringify(out)).not.toContain("/goto");
+      expect(out.results[0].url).toBeNull();
+      expect(out.results[0].sitelinks[0].link).toBeNull();
+      expect(out.answer_box.link).toBeNull();
+      expect(out.knowledge_graph.website).toBeNull();
+      expect(out.knowledge_graph.descriptionLink).toBeNull();
+      expect(out.people_also_ask[0].link).toBeNull();
+      // The knowledge panel itself is kept — only the unusable link goes.
+      expect(out.knowledge_graph.title).toBe("kg");
+    });
+
+    it("google-search resolves a wrapped knowledgeGraph.website on the success path", async () => {
+      const search = {
+        organic: [{ title: "a", link: "https://a.example/p", snippet: "s", position: 1 }],
+        knowledgeGraph: { title: "kg", website: GOTO(4) },
+      };
+      stubSearchThenResolve(search, [REAL(4)]);
+
+      const out = (await getDirectExecutor("google-search")!({ query: "widgets" })).output as any;
+
+      expect(out.knowledge_graph.website).toBe(REAL(4));
+      expect(out.unresolved_url_count).toBe(0);
+    });
+
+    it("google-search counts the nulls the caller sees, not wrappers elsewhere", async () => {
+      // `resolution.unresolved.length` spanned the whole Serper response,
+      // including surfaces this output never emits.
+      const search = {
+        organic: [
+          { title: "a", link: "https://a.example/p", snippet: "s", position: 1 },
+          { title: "b", link: GOTO(2), snippet: "s", position: 2 },
+        ],
+        // Three more wrappers in a surface the old count included.
+        knowledgeGraph: { title: "kg", website: GOTO(7), descriptionLink: GOTO(8) },
+      };
+      stubSearchThenResolve(search, "fail");
+
+      const out = (await getDirectExecutor("google-search")!({ query: "widgets" })).output as any;
+
+      // One result url + the two stripped knowledge-graph links = 3 nulls the
+      // caller can actually see, and every one of them IS in this output.
+      expect(out.unresolved_url_count).toBe(3);
+      expect(
+        out.results.filter((r: any) => r.url_unresolved).length +
+          [out.knowledge_graph.website, out.knowledge_graph.descriptionLink].filter(
+            (v: unknown) => v === null,
+          ).length,
+      ).toBe(3);
+    });
+
+    it("google-news-search does not count entries it never returns", async () => {
+      // num_results slices to 1; the second entry's wrapper must not be
+      // counted against an output that does not contain it.
+      const search = {
+        news: [
+          { title: "a", link: "https://a.example/n", source: "A", date: "1h ago" },
+          { title: "b", link: GOTO(2), source: "B", date: "2h ago" },
+        ],
+      };
+      stubSearchThenResolve(search, "fail");
+
+      const out = (await getDirectExecutor("google-news-search")!({
+        query: "widgets",
+        num_results: 1,
+      })).output as any;
+
+      expect(out.results).toHaveLength(1);
+      expect(out.unresolved_url_count).toBe(0);
+    });
+
+    it("backlink-check drops an entry with a breadcrumb but no link at all", async () => {
+      // Deriving the host from the breadcrumb would have admitted a row with
+      // `source_url: ""` — inflating total_backlinks and
+      // referring_domains_count with an address nobody can open.
+      fetchMock.mockImplementation((url: string | URL) => {
+        const target = String(url);
+        if (target.includes("commoncrawl.org")) return Promise.resolve(new Response("", { status: 200 }));
+        if (target.includes("/resolve")) return Promise.resolve(new Response("down", { status: 503 }));
+        return Promise.resolve(
+          okJson({
+            organic: [
+              { title: "t", displayedLink: "https://blogger.example > posts", snippet: "s" },
+              { title: "u", link: "https://real.example/a", snippet: "s" },
+            ],
+          }),
+        );
+      });
+
+      const out = (await getDirectExecutor("backlink-check")!({ domain: "mysite.example" }))
+        .output as any;
+
+      expect(out.backlinks.map((b: any) => b.source_url)).toEqual(["https://real.example/a"]);
+      expect(out.total_backlinks).toBe(1);
+      expect(out.referring_domains_count).toBe(1);
+      expect(out.backlinks.every((b: any) => b.source_url)).toBe(true);
+    });
+
+    it("serp-analyze reports where each host came from", async () => {
+      const search = {
+        searchParameters: { q: "x" },
+        organic: [
+          { title: "a", link: "https://a.example/p", snippet: "s", position: 1 },
+          {
+            title: "b",
+            link: GOTO(4),
+            displayedLink: "https://b.example > blog",
+            snippet: "s",
+            position: 4,
+          },
+          { title: "c", link: GOTO(5), snippet: "s", position: 5 },
+        ],
+      };
+      stubSearchThenResolve(search, "fail");
+
+      const out = (await getDirectExecutor("serp-analyze")!({ keyword: "widgets" })).output as any;
+
+      expect(out.organic_results.map((r: any) => r.domain_source)).toEqual([
+        "url",
+        "breadcrumb",
+        "none",
+      ]);
+      expect(out.link_resolution).toEqual({ attempted: true, unresolved_results: 2 });
     });
   });
 });

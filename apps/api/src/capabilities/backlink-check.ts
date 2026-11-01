@@ -6,7 +6,13 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import { deriveResultDomain, isGotoLink, resolveSerperLinks } from "../lib/serper-links.js";
+import {
+  deriveResultDomain,
+  isGotoLink,
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 
 // F-0-006 Bucket D (preemptive migration): user domain is embedded in the
 // query string to hardcoded third-party APIs (index.commoncrawl.org,
@@ -15,6 +21,12 @@ import { deriveResultDomain, isGotoLink, resolveSerperLinks } from "../lib/serpe
 // if either hostname is ever swapped to a user-provided value, the guard
 // is already in place.
 registerCapability("backlink-check", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   const raw = (
     (input.domain as string) ??
     (input.url as string) ??
@@ -47,7 +59,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${encodeURIComponent(domain)}&output=json&limit=50`;
     const ccResp = await safeFetch(ccUrl, {
       headers: { "User-Agent": "Strale/1.0" },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(budget.searchTimeoutMs),
     });
 
     if (ccResp.ok) {
@@ -91,7 +103,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
           method: "POST",
           headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
           body: JSON.stringify({ q: query, num: 10 }),
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(budget.searchTimeoutMs),
         }, 1, safeFetch);
 
         if (resp.ok) {
@@ -106,7 +118,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
           // `extractDomain` read `google.com` off each wrapper and pushed it
           // into `backlinks` — so `referring_domains_count` counted Google as
           // a site linking to the caller, and `source_url` was unopenable.
-          await resolveSerperLinks(data, serperKey, safeFetch);
+          await resolveSerperLinks(data, serperKey, safeFetch, budget.resolveDeadline);
           const organic = (data.organic as any[]) ?? [];
           for (const item of organic) {
             const sourceUrl = item.link ?? item.url ?? "";
@@ -118,8 +130,15 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
             // The wrapper test comes first on purpose: it must count even
             // when no host could be derived at all, which is the ordinary
             // case for a wrapper with no `displayedLink` breadcrumb.
-            if (isGotoLink(sourceUrl)) {
-              unresolvedLinkCount += 1;
+            // Round-2 review: test the URL, not just the wrapper. An
+            // organic entry with no `link` at all but a `displayedLink`
+            // breadcrumb used to be skipped (`extractDomain("")` was `""`);
+            // deriving the host from the breadcrumb would now admit it with
+            // `source_url: ""`, inflating `total_backlinks` and
+            // `referring_domains_count` with an address nobody can open —
+            // exactly the wrong row the comment above refuses.
+            if (!usableResultUrl(sourceUrl)) {
+              if (isGotoLink(sourceUrl)) unresolvedLinkCount += 1;
               continue;
             }
             const sourceDomain = deriveResultDomain(sourceUrl, item.displayedLink);

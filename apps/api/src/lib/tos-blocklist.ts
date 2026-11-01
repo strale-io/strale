@@ -63,6 +63,20 @@ export interface ProhibitedTarget {
   alternatives: string;
 }
 
+/**
+ * The Google host family, in any market: `google.com`, `google.se`,
+ * `www.google.co.uk`, `news.google.com`.
+ *
+ * Exported because two matchers need the same answer and a second copy
+ * silently diverges ("one list, many matchers"). The DEC-20260427-H-4 rule
+ * below uses it to refuse Google Search, and `serper-links.ts` uses it to
+ * refuse treating a Google host as a search result's own domain. The suffix
+ * is bounded to one or two short labels on purpose: a looser
+ * `google(\.[a-z]+)+$` would call `google.com.phishing.example` a Google
+ * host, and subdomain labels are anchored so only real labels prefix it.
+ */
+export const GOOGLE_HOST_RE = /^(?:[a-z0-9-]+\.)*google\.[a-z]{2,3}(?:\.[a-z]{2})?$/;
+
 export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
   {
     host: "trustpilot.com",
@@ -102,7 +116,7 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
     // Money-integrity 2026-08-12: the H-4 ruling covers Google Search, not
     // one hostname — google.se/.de/.co.uk /search were still executable
     // (product-search exploited exactly this). ccTLD family, same path rule.
-    hostRe: /^(?:[a-z0-9-]+\.)*google\.[a-z]{2,3}(?:\.[a-z]{2})?$/,
+    hostRe: GOOGLE_HOST_RE,
     testHost: "www.google.se",
     host: "google.<ccTLD>",
     pathPrefix: "/search",

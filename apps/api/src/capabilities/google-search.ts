@@ -1,12 +1,23 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
+import {
+  resolveSerperLinks,
+  startSerperBudget,
+  stripUnresolvedGotoLinks,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 // Uses Serper.dev API (free tier: 2,500 queries/month, no CAPTCHA issues)
 // Requires SERPER_API_KEY env var
 registerCapability("google-search", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   const query = ((input.query as string) ?? (input.q as string) ?? (input.search as string) ?? "").trim();
   if (!query) throw new Error("'query' is required.");
   if (query.length < 2) throw new Error("'query' must be at least 2 characters.");
@@ -39,7 +50,7 @@ registerCapability("google-search", async (input: CapabilityInput) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!res.ok) {
@@ -51,9 +62,9 @@ registerCapability("google-search", async (input: CapabilityInput) => {
 
   // Google wraps every organic link past the top three in an opaque
   // `google.com/goto` redirect (2026-10-30), and Serper passes it through.
-  // Serper's free `/resolve` endpoint turns them back into real URLs; the
-  // walk also covers `sitelinks`, `answerBox` and People-Also-Ask links.
-  const resolution = await resolveSerperLinks(data, serperKey);
+  // Serper's free `/resolve` endpoint turns them back into real URLs.
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
+
 
   // Map Serper response to our format
   const organic = (data.organic as Array<Record<string, unknown>>) ?? [];
@@ -73,6 +84,22 @@ registerCapability("google-search", async (input: CapabilityInput) => {
   const answerBox = data.answerBox ?? null;
   const peopleAlsoAsk = (data.peopleAlsoAsk as Array<Record<string, unknown>>) ?? [];
 
+  // Round-2 review: resolution is not suppression. These three are forwarded
+  // WHOLESALE, so when `/resolve` fails they still carried the wrapper — and
+  // a wrapped `knowledgeGraph.website` (Google's own "Website" button) was
+  // invisible to the walk entirely until `website`/`descriptionLink` joined
+  // its key set. Nulling what stayed wrapped is the only honest shape for a
+  // field this capability does not itself project.
+  //
+  // Only these, and only now: stripping the whole response would also null
+  // `organic[].link`, which `results` above has already turned into its own
+  // `url` / `url_unresolved` pair — and the same wrapper would then be
+  // counted twice below.
+  const strippedElsewhere =
+    stripUnresolvedGotoLinks(knowledgeGraph) +
+    stripUnresolvedGotoLinks(answerBox) +
+    organic.reduce((total, r) => total + stripUnresolvedGotoLinks(r.sitelinks), 0);
+
   const searchInfo = data.searchParameters as Record<string, unknown> | undefined;
 
   return {
@@ -87,9 +114,16 @@ registerCapability("google-search", async (input: CapabilityInput) => {
         snippet: q.snippet,
         link: usableResultUrl(q.link),
       })),
-      // How many result links Google would not let us open. Nonzero means
-      // some `url` fields are null; it is not an error.
-      unresolved_url_count: resolution.unresolved.length,
+      // How many links in THIS output Google would not let us open — the
+      // nulls the caller can actually see. Round-2 review: reporting
+      // `resolution.unresolved.length` counted wrappers anywhere in Serper's
+      // response, including surfaces this output never emits, so the number
+      // did not match the nulls. Nonzero is not an error.
+      unresolved_url_count:
+        results.filter((r) => r.url_unresolved).length +
+        peopleAlsoAsk.filter((q) => q.link !== undefined && usableResultUrl(q.link) === null).length +
+        strippedElsewhere,
+      link_resolution_attempted: resolution.attempted,
       search_parameters: {
         language: language || (searchInfo?.hl as string) || null,
         // Lowercase, matching the `gl` actually sent and matching what
