@@ -97,7 +97,10 @@ default_transaction_read_only`, SELECT only). Audit 2026-10-31: even with `SET d
 public tables including `transactions` (customer inputs/outputs for 90 days), so it must not be shared to cloud sessions; the narrower `strale_verify` role is the cloud-safe
 credential: provisioned on 2026-10-31 by `scripts/provision-verify-role.mjs`, it reads 17 tables and 8 metadata views, withholds 30, and was proven independently from
 Bitwarden the same day (TLS 1.3, every withheld table refused with SQLSTATE 42501, all writes and CREATE refused). Its URL is `STRALE_RAILWAY_DB_VERIFY_URL` in Bitwarden
-project `strale`, readable with the fleet token. Handoff `2026-10-31-verify-role-and-serper-aftermath.md`. Doc:
+project `strale`, readable with the fleet token. **But cloud containers cannot reach Postgres (established 2026-11-01):** the network level is Full,
+yet direct TCP to the Railway proxy host times out, and through the agent proxy a CONNECT is accepted (200) while a Postgres SSLRequest gets no reply. So
+the credential is readable from a cloud session but unusable there; **production verification stays on the PC** until the GitHub Actions route in
+`docs/operations/2026-11-01-prod-verify-action-proposal.md` exists. Handoff `2026-10-31-verify-role-and-serper-aftermath.md`. Doc:
 `docs/security/2026-09-06-read-only-database-credential.md`.
 
 **Connection recipe that actually works (every wrong turn gives a misleading error).** (1) Point dotenv at the repo root: `apps/api/` has no `.env`, `import "dotenv/config"`
