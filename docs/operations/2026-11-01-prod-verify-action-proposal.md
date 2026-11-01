@@ -1,5 +1,13 @@
 # Production verification from cloud sessions: a GitHub Action (proposal)
 
+**Status: deferred, do not build (Petter, 2026-11-01).** A main-only environment
+in the private `strale-ops` repository needs GitHub Team, which is a spend
+decision, and Petter declined it for now. Production verification stays on the
+PC. **Trigger to raise it again:** if deploys start waiting on Petter's PC for
+the DEC-20260504-C step-4 check, tell him, with the current GitHub Team price
+looked up at that time, and he decides then. Until then no session writes the
+workflow. The design below stays as the ready answer.
+
 **Status:** approved by Petter on 2026-11-01, with one change: the workflow
 lives in a **new private repository, `strale-io/strale-ops`**, not in this
 public one.
