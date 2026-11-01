@@ -28,35 +28,27 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 import { isDocsPath } from '../production-watch/classify.mjs';
+import { runTraced, docsReach } from './run-without-docs-reads.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const PRELOAD = fileURLToPath(new URL('./fs-trace-preload.mjs', import.meta.url));
 const { jobs } = yaml.load(readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8'));
 
 const DOCS_ONLY_GATE = "needs.classify.outputs.docs_only == 'false'";
+const WRAPPER = 'node scripts/ci/run-without-docs-reads.mjs ';
 
 /**
- * Gated steps that are not content scanners, with the reason. Each reads
- * source, build output or a package's own tests — nothing under docs/,
- * archive/, handoff/ or a root *.md feeds their verdict.
+ * Gated steps that read only source and emit build output; nothing under
+ * docs/, archive/, handoff/ or a root *.md feeds them.
  */
 const NOT_A_SCANNER = new Map([
-  ['npm --workspace=packages/mcp-server run build', 'build'],
-  ['npm --workspace=packages/sdk-typescript run build', 'build'],
-  ['npm run typecheck', 'tsc over source'],
-  ['npm test --workspace=packages/zapier-strale', 'package test suite'],
-  ['npm run lint --workspace=packages/n8n-nodes-strale', 'eslint over package source'],
-  ['npm test --workspace=packages/n8n-nodes-strale', 'package test suite'],
-  ['npm test --workspace=packages/ai-sdk-strale', 'package test suite'],
-  ['npm test --workspace=packages/cli', 'package test suite'],
-  ['node --test apps/api/scripts/check-framework-packages.test.mjs', 'test of a scanner, not a scanner'],
-  ['npm test', 'apps/api vitest suite'],
+  ['npm --workspace=packages/mcp-server run build', 'tsc build'],
+  ['npm --workspace=packages/sdk-typescript run build', 'tsc build'],
+  ['npm run typecheck', 'tsc --noEmit over source'],
 ]);
 
 /**
@@ -69,7 +61,7 @@ function resolveScanner(run) {
   const cmd = run.trim();
   if (cmd.includes('\n')) return null;
   let m = cmd.match(/^node ((?:apps\/api\/)?scripts\/[\w./-]+\.mjs)((?: [\w=-]+)*)$/);
-  if (m) return { script: m[1], args: m[2].trim().split(' ').filter(Boolean), cwd: ROOT };
+  if (m && !cmd.startsWith(WRAPPER)) return { script: m[1], args: m[2].trim().split(' ').filter(Boolean), cwd: ROOT };
   m = cmd.match(/^npm --workspace=([\w/-]+) run ([\w:-]+)$/);
   if (m) {
     const pkgDir = join(ROOT, m[1]);
@@ -80,34 +72,10 @@ function resolveScanner(run) {
   return null;
 }
 
-/** Run a script under the fs trace; return its exit status and what it read. */
-function trace(scriptAbs, args, cwd) {
-  const dir = mkdtempSync(join(tmpdir(), 'fs-trace-'));
-  const out = join(dir, 'trace.json');
-  try {
-    const r = spawnSync(process.execPath, ['--import', PRELOAD, scriptAbs, ...args], {
-      cwd, env: { ...process.env, FS_TRACE_OUT: out }, encoding: 'utf8',
-    });
-    const { paths, spawns } = JSON.parse(readFileSync(out, 'utf8'));
-    return { status: r.status, stderr: r.stderr, paths, spawns };
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
+const isWrapped = (run) => run.trim().startsWith(WRAPPER) && !run.includes('\n');
 
-/** What in a trace a docs-only PR could have changed. */
-function docsReach({ paths, spawns }) {
-  const inRepo = (p) => {
-    const rel = relative(ROOT, p).split('\\').join('/');
-    return rel && !rel.startsWith('..') ? rel : null;
-  };
-  // `rel + '/x'` so listing a docs directory itself (readdirSync('docs'))
-  // counts: isDocsPath matches what is under docs/, not the bare name.
-  const docPaths = paths.map(inRepo).filter((rel) => rel && (isDocsPath(rel) || isDocsPath(`${rel}/x`)));
-  const wholeTree = spawns
-    .filter(([cmd, sub]) => /(^|\/)git$/.test(cmd) && (sub === 'ls-files' || sub === 'grep'))
-    .map((s) => s.slice(0, 2).join(' '));
-  return [...new Set([...docPaths, ...wholeTree])];
+function trace(argv, cwd = ROOT) {
+  return runTraced(argv, { cwd, stdio: 'pipe' });
 }
 
 const steps = (jobs.check?.steps ?? []).filter((s) => typeof s.run === 'string');
@@ -119,11 +87,15 @@ test('the check job still has a docs-only gate to get wrong', () => {
   assert.ok(gated.length > 0, 'no step is gated on docs_only; delete this test or update the gate string');
 });
 
-test('every gated step is either a traced scanner or named as not one', () => {
+test('every gated step is a traced scanner, wrapped, or a named build', () => {
   const unclassified = gated
     .map((s) => s.run.trim())
-    .filter((run) => !resolveScanner(run) && !NOT_A_SCANNER.has(run));
-  assert.deepEqual(unclassified, [], 'classify these gated steps: trace them, or add them to NOT_A_SCANNER with a reason');
+    .filter((run) => !resolveScanner(run) && !isWrapped(run) && !NOT_A_SCANNER.has(run));
+  assert.deepEqual(
+    unclassified,
+    [],
+    `classify these gated steps: prefix them with \`${WRAPPER.trim()}\`, or ungate them`,
+  );
   const stale = [...NOT_A_SCANNER.keys()].filter((run) => !gated.some((s) => s.run.trim() === run));
   assert.deepEqual(stale, [], 'NOT_A_SCANNER names steps that are no longer gated; remove them');
 });
@@ -135,12 +107,12 @@ test('no gated scanner reads anything a docs-only PR can change', () => {
   assert.ok(scanners.length >= 12, `only ${scanners.length} gated scanners resolved`);
   const offenders = [];
   for (const { script, args, cwd } of scanners) {
-    const t = trace(join(ROOT, script), args, cwd);
+    const t = trace([process.execPath, join(ROOT, script), ...args], cwd);
     // A scanner that crashed before reading anything would pass the reach
     // check vacuously, so it must have run to completion and read its inputs.
-    assert.equal(t.status, 0, `${script} exited ${t.status} under the trace:\n${t.stderr}`);
-    assert.ok(t.paths.length > 1, `${script} read nothing under the trace`);
-    const reach = docsReach(t);
+    assert.equal(t.status, 0, `${script} exited ${t.status} under the trace`);
+    assert.ok(t.events.filter((e) => e.path).length > 1, `${script} read nothing under the trace`);
+    const reach = docsReach(t.events);
     if (reach.length) offenders.push(`${script}: ${reach.slice(0, 5).join(', ')}`);
   }
   assert.deepEqual(
@@ -151,6 +123,19 @@ test('no gated scanner reads anything a docs-only PR can change', () => {
   );
 });
 
+test('the docs-reading tests run on every PR', () => {
+  // The other half of the split: DOCS_READERS is excluded from the gated
+  // apps/api run, so it must run somewhere unconditional, and the gated run
+  // must be the guarded one.
+  const docs = steps.find((s) => s.run.trim() === 'npm run test:docs --workspace=apps/api');
+  assert.ok(docs, 'no step runs the apps/api DOCS_READERS project');
+  assert.equal(docs.if, undefined, 'the DOCS_READERS step must run on docs-only PRs');
+  const code = steps.find((s) => s.run.includes('test:code --workspace=apps/api'));
+  assert.ok(code && isWrapped(code.run), 'the gated apps/api run must go through run-without-docs-reads.mjs');
+  assert.ok(!steps.some((s) => s.if === DOCS_ONLY_GATE && /^npm test\s*$/.test(s.run.trim())),
+    'a gated bare `npm test` runs the docs readers where a docs-only PR skips them');
+});
+
 test('the production-write guard specifically is ungated', () => {
   // The 2026-10-31 case, named so a regression reads as itself.
   const step = steps.find((s) => s.run.includes('guard-production-write-access.mjs'));
@@ -159,29 +144,46 @@ test('the production-write guard specifically is ungated', () => {
 });
 
 test('the trace discriminates', () => {
-  // Positive controls: the guard this test exists for (git ls-files), and a
-  // scanner walking docs/ with readdirSync — the blind spot of the
-  // source-text version. Negative control: a scanner restricted to manifests/.
-  const guard = trace(join(ROOT, 'scripts/guard-production-write-access.mjs'), [], ROOT);
-  assert.ok(docsReach(guard).includes('git ls-files'), 'the trace no longer sees the guard enumerate the tree');
+  // Positive controls: the guard this test exists for (git ls-files), a
+  // scanner walking docs/ with readdirSync — the blind spot of the source-text
+  // version — a fs/promises read, a shell-string git call, and a real suite
+  // that reads docs through a test runner's child process (Zapier's mocha).
+  // Negative control: a scanner restricted to manifests/.
+  const guard = trace([process.execPath, join(ROOT, 'scripts/guard-production-write-access.mjs')]);
+  assert.ok(docsReach(guard.events).includes('git ls-files'), 'the trace no longer sees the guard enumerate the tree');
 
   const dir = mkdtempSync(join(tmpdir(), 'docs-walker-'));
   try {
-    const walker = join(dir, 'walk-docs.mjs');
-    writeFileSync(walker, `import { readdirSync } from 'node:fs';\nreaddirSync(${JSON.stringify(join(ROOT, 'docs'))});\n`);
-    assert.deepEqual(docsReach(trace(walker, [], ROOT)), ['docs']);
+    const cases = {
+      'readdir.mjs': [`import { readdirSync } from 'node:fs';\nreaddirSync(${JSON.stringify(join(ROOT, 'docs'))});`, ['docs']],
+      'promises.mjs': [`import { readFile } from 'node:fs/promises';\nawait readFile(${JSON.stringify(join(ROOT, 'CLAUDE.md'))});`, ['CLAUDE.md']],
+      'shell.mjs': [`import { execSync } from 'node:child_process';\nexecSync('git ls-files -z', { cwd: ${JSON.stringify(ROOT)} });`, ['git ls-files']],
+    };
+    for (const [name, [src, want]] of Object.entries(cases)) {
+      writeFileSync(join(dir, name), `${src}\n`);
+      assert.deepEqual(docsReach(trace([process.execPath, join(dir, name)]).events), want, name);
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 
-  const manifestsOnly = trace(join(ROOT, 'apps/api/scripts/check-cost-class-coherence.mjs'), [], ROOT);
-  assert.ok(manifestsOnly.paths.some((p) => p.includes('/manifests/')), 'negative control read no manifests');
-  assert.deepEqual(docsReach(manifestsOnly), []);
+  const zapier = trace(['npm', 'test', '--workspace=packages/zapier-strale']);
+  assert.equal(zapier.status, 0);
+  assert.deepEqual(docsReach(zapier.events), ['docs/company/claims.yaml'], 'the trace no longer reaches a test runner child');
+
+  const manifestsOnly = trace([process.execPath, join(ROOT, 'apps/api/scripts/check-cost-class-coherence.mjs')]);
+  assert.ok(manifestsOnly.events.some((e) => e.path?.includes('/manifests/')), 'negative control read no manifests');
+  assert.deepEqual(docsReach(manifestsOnly.events), []);
+});
+
+test('the runner refuses a command the trace never reached', () => {
+  // `true` is not a node process, so no preload ran and no event exists: a
+  // pass there would prove nothing, and the CLI must say so with exit 1.
+  const r = runTraced([process.execPath, join(ROOT, 'scripts/ci/run-without-docs-reads.mjs'), 'true'], { stdio: 'pipe' });
+  assert.equal(r.status, 1);
 });
 
 test('archive/ and handoff/ are still docs-only paths, so the premise holds', () => {
-  // The rule assumes a read of these directories sees files a docs-only PR
-  // wrote, which is only true while isDocsPath matches them.
   for (const root of ['docs', 'archive', 'handoff']) {
     assert.equal(isDocsPath(`${root}/x.md`), true, `isDocsPath no longer matches ${root}/`);
   }

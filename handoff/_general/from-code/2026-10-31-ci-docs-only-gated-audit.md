@@ -1,39 +1,52 @@
-Intent: close the checkpoint's next action — audit the twelve CI steps still gated on `docs_only` — and leave the rule held by a test that observes reads instead of matching source text.
+Intent: close the checkpoint's next action — audit the CI steps still gated on `docs_only` — and leave the rule held by observed reads, not source text.
 
-# docs_only gated-scanner audit, 2026-10-31
+# docs_only gated-step audit, 2026-10-31 / 11-01
 
 Resumes `2026-11-01-orchestrator-checkpoint-cloud-move.md` (§ Next action).
 
 ## Result
 
-All twelve gated scanners are **correctly gated**; none moves. Each reads only
-paths a docs-only PR cannot change (`isDocsPath`: `docs/`, `archive/`,
-`handoff/`, a root `*.md`):
-
-| scanner | reads |
-|---|---|
-| check-mjs-syntax, check-no-direct-getexecutor-in-scripts | `apps/api/scripts/` |
-| lint:no-bare-catch, lint:no-new-console, check-no-external-column-access, check-fetch-timeout-coverage | `apps/api/src/` |
-| lint:no-unguarded-user-fetch, check-ssrf-inventory | `apps/api/src/capabilities/` |
-| check-framework-packages | `packages/` |
-| check-cost-class-coherence, check-identity-fixture-shape, check-tier-coverage | `manifests/` (+ capabilities, tier fixtures) |
+- **The twelve named scanners are correctly gated.** Each reads only paths a
+  docs-only PR cannot change (`isDocsPath`: `docs/`, `archive/`, `handoff/`,
+  a root `*.md`): `apps/api/src`, `apps/api/scripts`, `packages/`,
+  `manifests/`.
+- **Two gated test suites were not**, which the checkpoint's list did not
+  name (found by the independent review, then measured):
+  - `npm test` (apps/api): **eight test files** read docs — CLAUDE.md,
+    CHARTER.md, DAILY-RUN.md, DECISION-QUEUE.md, README.md, an archive/
+    receipt, ~590 files under docs/, a whole-tree `git grep`, and the
+    platform-facts drift checker over docs/listings. A docs-only PR could
+    break any of them and go green.
+  - `npm test --workspace=packages/zapier-strale`: reads
+    `docs/company/claims.yaml`.
 
 ## What changed
 
-`scripts/ci/docs-only-scanner-gate.test.mjs` now **runs** every gated
-`node *.mjs` scanner (following `npm --workspace=W run S` to the script and
-the cwd npm uses) under `scripts/ci/fs-trace-preload.mjs`, which records each
-fs read and child-process spawn. It fails if a gated scanner reads a docs
-path, lists a docs directory, or spawns `git ls-files` / `git grep`. The
-previous version inferred this from source text and named its own blind spot
-(a `readdirSync('docs')` walker passed); a positive control now covers that
-exact case. The ten gated steps that are not scanners (builds, typecheck,
-package test suites) are named in `NOT_A_SCANNER`, so a new gated step must be
-traced or classified. Fail-before: planting `readdirSync("docs")` in
-check-ssrf-inventory turns test 3 red; removing it turns it green.
+- `scripts/ci/fs-trace-preload.mjs` + `scripts/ci/run-without-docs-reads.mjs`:
+  run a command with the preload carried into every node process via
+  NODE_OPTIONS; fail on any docs read or whole-tree git call; fail if no
+  process reported a trace.
+- apps/api vitest now has two projects: `code` (gated, run under the
+  wrapper) and `docs` = `DOCS_READERS` in `apps/api/vitest.config.ts`
+  (always runs, needs no build). Local `npm test` still runs all 448 files.
+- Zapier suite ungated (1 s). n8n lint/test, ai-sdk, cli and the
+  framework-packages test stay gated, under the wrapper (all traced clean).
+- `docs-only-scanner-gate.test.mjs` runs the twelve scanners under the trace
+  and requires every gated step to be traced, wrapped, or a named build;
+  positive controls cover readdirSync, fs/promises, shell-string git, a
+  mocha child process.
+- Fail-before: a planted `readdirSync("docs")` in check-ssrf-inventory turns
+  test 3 red; the first wrapped `test:code` run failed listing the
+  drift-checker reads until free-tier-rate-limit.test.ts joined DOCS_READERS.
+
+## Cloud-clone note
+
+A fresh cloud clone is shallow; the pre-commit context check then fails on
+ancestor checks. `git fetch --unshallow origin` plus fetching
+`ad67e433` (operator-actions prepared_ref) clears it.
 
 ## Next
 
-Nothing left from the checkpoint's next action. Next orchestrator pick comes
-from the checkpoint's "Open, and owned by nobody yet" list; the time-bound one
-is the Serper renewal cost due 2026-11-06 (expiry 2026-11-08).
+Serper renewal (now owned by the orchestrator, due 2026-11-06): cost at
+observed volume, whether anything needs it past 11-08, and whether a funded
+verification key for `/resolve` belongs in the same decision.

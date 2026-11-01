@@ -433,22 +433,23 @@ jobs:
       # CODE (scans packages/*-strale source).
       - if: needs.classify.outputs.docs_only == 'false'
         run: node apps/api/scripts/check-framework-packages.mjs
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: npm test --workspace=packages/zapier-strale
+      # Always runs: app.test.js reads docs/company/claims.yaml, so a
+      # docs-only PR can break it (scripts/ci/docs-only-scanner-gate.test.mjs).
+      - run: npm test --workspace=packages/zapier-strale
       # D8: the n8n node is built, linted with n8n's own rules and driven
       # through n8n-workflow's primitives offline (no paid calls).
       - if: needs.classify.outputs.docs_only == 'false'
-        run: npm run lint --workspace=packages/n8n-nodes-strale
+        run: node scripts/ci/run-without-docs-reads.mjs npm run lint --workspace=packages/n8n-nodes-strale
       - if: needs.classify.outputs.docs_only == 'false'
-        run: npm test --workspace=packages/n8n-nodes-strale
+        run: node scripts/ci/run-without-docs-reads.mjs npm test --workspace=packages/n8n-nodes-strale
       # D6: the AI SDK package's offline tool-loop test (mock model, mocked API).
       - if: needs.classify.outputs.docs_only == 'false'
-        run: npm test --workspace=packages/ai-sdk-strale
+        run: node scripts/ci/run-without-docs-reads.mjs npm test --workspace=packages/ai-sdk-strale
       # Portfolio Phase 3 item 3: the agent-safe CLI, offline (mocked HTTP).
       - if: needs.classify.outputs.docs_only == 'false'
-        run: npm test --workspace=packages/cli
+        run: node scripts/ci/run-without-docs-reads.mjs npm test --workspace=packages/cli
       - if: needs.classify.outputs.docs_only == 'false'
-        run: node --test apps/api/scripts/check-framework-packages.test.mjs
+        run: node scripts/ci/run-without-docs-reads.mjs node --test apps/api/scripts/check-framework-packages.test.mjs
       # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
       # Prose drifts back toward its author's frame, and the daily report had
       # already become an engineering activity log once. This lints every brief
@@ -773,6 +774,14 @@ jobs:
       - run: npm run context:check
       - run: npm run context:test
 
-      # CODE — the full apps/api suite. Skipped on a documentation-only PR.
+      # CODE — the apps/api suite minus the tests that read documentation.
+      # Skipped on a documentation-only PR, and run under
+      # run-without-docs-reads.mjs, which fails it if any test reads a path
+      # such a PR can change: that test belongs in DOCS_READERS
+      # (apps/api/vitest.config.ts) instead.
       - if: needs.classify.outputs.docs_only == 'false'
-        run: npm test
+        run: node scripts/ci/run-without-docs-reads.mjs npm run test:code --workspace=apps/api
+      # The apps/api tests that read docs/, archive/, a root *.md or the whole
+      # tree (DOCS_READERS). Always runs: a documentation-only PR can break
+      # them. No build needed.
+      - run: npm run test:docs --workspace=apps/api

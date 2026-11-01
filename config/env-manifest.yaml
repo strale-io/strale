@@ -616,6 +616,15 @@
   set_in:
     - railway
   cost_note: Cost tier not independently re-verified this session.
+- name: FS_TRACE_DIR
+  purpose: Directory where scripts/ci/fs-trace-preload.mjs writes one ndjson trace per node process. Set only by scripts/ci/run-without-docs-reads.mjs for the child it runs; never set by hand.
+  provider: internal
+  holder: github-actions
+  cost_class: none
+  required_in:
+    - ci
+  set_in:
+    - workflow
 - name: GITHUB_OUTPUT
   purpose: GitHub Actions runtime-injected file path for writing step outputs. Not set by us — a workflow-provided variable.
   provider: internal
@@ -783,6 +792,15 @@
     - .env
     - workflow
   example_value: development
+- name: NODE_OPTIONS
+  purpose: Node's own option variable. scripts/ci/run-without-docs-reads.mjs appends `--import fs-trace-preload.mjs` to whatever value it inherits, so the trace reaches every node process a CI step starts.
+  provider: internal
+  holder: github-actions
+  cost_class: none
+  required_in:
+    - ci
+  set_in:
+    - workflow
 - name: NOTION_API_KEY
   purpose: "Notion integration token used by the daily digest to fetch Journal-entry activity. NOTE: a second, differently-named variable (NOTION_TOKEN) is used elsewhere for what appears to be the same integration — worth consolidating to one name."
   provider: Notion
