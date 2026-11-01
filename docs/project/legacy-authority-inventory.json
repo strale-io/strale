@@ -107,6 +107,7 @@
         "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
         "docs/strategy/2026-10-26-tool-search-decision.md",
+        "docs/strategy/2026-11-01-codex-builder-lanes-decision.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
         "manifests/pep-check.yaml",
@@ -328,7 +329,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "99736ac1fc116aa80affd0ec79e8b6cad3faa42d43550a8e29f9f0cc70133577",
+      "sha256": "b2e146f376d690079a64419eb2f892dcf40fb6f92573b79765185f7c9067576b",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -491,6 +492,7 @@
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
         "docs/strategy/2026-10-27-platform-and-distribution-adoption.md",
+        "docs/strategy/2026-11-01-codex-builder-lanes-decision.md",
         "package.json",
         "packages/zapier-strale/README.md",
         "packages/zapier-strale/test/fixtures/README.md",
