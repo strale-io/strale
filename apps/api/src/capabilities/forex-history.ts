@@ -17,13 +17,15 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
 
   // Checked here because Frankfurter answers 404 for a bad range as well, which
   // would read as an unavailable currency below.
-  for (const [field, value] of [["start_date", startDate], ["end_date", endDate]] as const) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
-      throw inputRefusal(`'${field}' must be a date in YYYY-MM-DD format.`, field, `Send '${field}' as YYYY-MM-DD.`);
-    }
+  const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
+  if (!isIsoDate(startDate)) {
+    throw inputRefusal("'start_date' must be a date in YYYY-MM-DD format.", "start_date", "Send 'start_date' as YYYY-MM-DD.");
+  }
+  if (!isIsoDate(endDate)) {
+    throw inputRefusal("'end_date' must be a date in YYYY-MM-DD format.", "end_date", "Send 'end_date' as YYYY-MM-DD.");
   }
   if (startDate > endDate) {
-    throw inputRefusal("'start_date' must be on or before 'end_date'.", "start_date", "Send a 'start_date' on or before 'end_date'.");
+    throw inputRefusal("'start_date' must be on or before 'end_date'.", "start_date", "Send 'start_date' on or before 'end_date'.");
   }
 
   const url = `https://api.frankfurter.app/${startDate}..${endDate}?from=${from}&to=${to}`;
@@ -36,7 +38,7 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
       throw inputRefusal(
         `'from' and 'to' must be currencies Frankfurter publishes; ${from}→${to} is not available.`,
         "to",
-        "Use currencies from the European Central Bank reference-rate list.",
+        "Send 'to' as a currency from the European Central Bank reference-rate list.",
       );
     }
     throw new Error(`Frankfurter API returned HTTP ${resp.status}.`);

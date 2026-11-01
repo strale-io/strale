@@ -73,11 +73,10 @@ async function fetchEcbRate(currency: string, field: "from" | "to"): Promise<{ r
   // is the ask, not the source: as a plain error, three such calls in a row
   // would open the breaker on this tool for every buyer.
   if (res.status === 404) {
-    throw inputRefusal(
-      `'${field}' must be a currency with an ECB daily reference rate; ${currency} has none.`,
-      field,
-      "Use a currency the European Central Bank publishes a daily reference rate for.",
-    );
+    const message = `'${field}' must be a currency with an ECB daily reference rate; ${currency} has none.`;
+    throw field === "from"
+      ? inputRefusal(message, "from", "Send 'from' as a currency with a European Central Bank daily reference rate.")
+      : inputRefusal(message, "to", "Send 'to' as a currency with a European Central Bank daily reference rate.");
   }
   if (!res.ok) throw new Error(`ECB API returned HTTP ${res.status} for ${currency}.`);
   const data = (await res.json()) as any;
