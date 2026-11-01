@@ -91,7 +91,7 @@ id                                    created_at                  capability_id 
 2d8e59fb-f283-4485-be81-fae2c888e90f  2026-04-11 15:26:05+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
 8e4fdc04-9e0f-4336-95f3-12a1b3ceb2dd  2026-04-11 15:25:46+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
 d6f1dde8-373e-4613-b2c4-7d8fe1e84f9c  2026-04-11 15:24:58+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
-a291445d-693e-4e96-aef4-4da1b69be2c7  2026-04-09 15:18:55+00     null                                    kyb-complete-de   6b3838be-c8cd-4047-a4da-19305f60c09b
+[redacted-transaction-id]             2026-04-09 15:18:55+00     null                                    kyb-complete-de   [redacted-user-id]
 f4cf738d-1fce-4d69-8fcd-e851eee32eb6  2026-04-09 14:59:06+00     812b37f3-709e-4af9-b505-d89064214402   null              null
 ```
 
