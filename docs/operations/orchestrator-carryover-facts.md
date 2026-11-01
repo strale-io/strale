@@ -96,10 +96,10 @@ dashboard 2026-04-27; transfers rest on SCCs, UK IDTA and sub-processor DPF cert
 default_transaction_read_only`, SELECT only). Audit 2026-10-31: even with `SET default_transaction_read_only = off` an UPDATE/INSERT/CREATE is refused. It can still SELECT all
 public tables including `transactions` (customer inputs/outputs for 90 days), so it must not be shared to cloud sessions; the narrower `strale_verify` role is the cloud-safe
 credential: provisioned on 2026-10-31 by `scripts/provision-verify-role.mjs`, it reads 17 tables and 8 metadata views, withholds 30, and was proven independently from
-Bitwarden the same day (TLS 1.3, every withheld table refused with SQLSTATE 42501, all writes and CREATE refused). Its URL is `STRALE_RAILWAY_DB_VERIFY_URL` in Bitwarden
-project `strale`, readable with the fleet token. **But cloud containers cannot reach Postgres (established 2026-11-01):** the network level is Full,
+Bitwarden the same day (TLS 1.3, every withheld table refused with SQLSTATE 42501, all writes and CREATE refused). Its URL is `STRALE_RAILWAY_DB_VERIFY_URL`, since 2026-11-01 in Bitwarden
+project `pc-only` (PC write token only; the cloud fleet token can no longer read it, wow-core#214). **But cloud containers cannot reach Postgres (established 2026-11-01):** the network level is Full,
 yet direct TCP to the Railway proxy host times out, and through the agent proxy a CONNECT is accepted (200) while a Postgres SSLRequest gets no reply. So
-the credential is readable from a cloud session but unusable there; **production verification stays on the PC** until the GitHub Actions route in
+a cloud session could neither use the credential nor, after the move, read it; **production verification stays on the PC** until the GitHub Actions route (approved 2026-11-01, hosted in the private repo `strale-io/strale-ops`; the credential moved to Bitwarden project `pc-only` the same day) in
 `docs/operations/2026-11-01-prod-verify-action-proposal.md` exists. Handoff `2026-10-31-verify-role-and-serper-aftermath.md`. Doc:
 `docs/security/2026-09-06-read-only-database-credential.md`.
 
