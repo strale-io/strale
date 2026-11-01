@@ -14,17 +14,17 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-44** · `your_call` · owner Petter · raised 2026-10-31 · needed by 2026-11-06 — **our Google search credit expires on 8 November; renewing costs $50 for six months, and not renewing takes seven tools off sale**
+**DQ-44** · `your_call` · owner Petter · raised 2026-10-31 · needed by 2026-11-06 — **our Google search credit expires on 8 November; renewing costs about $62.50 for six months, and not renewing takes seven tools off sale**
 
 *The choice:* renew the Serper Starter pack, or let it lapse and retire the tools that depend on it.
 
-*What is established:* every Serper tier expires after six months, and $50 for 50,000 credits is the smallest (serper.dev, read 2026-10-31). Eight tools need the key; seven stop without it, and `adverse-media-check` loses its fallback. Outside buyers made 16 calls on them in October and 19 in September, though the largest buyer's 38 `google-search` calls on 10-30 sit inside the x402 figures. Serper's account endpoint reports 47,497 credits left on 2026-10-31, so almost all of the pack would expire unused; that handoff's "46,900 consumed, ~3,100 remaining" reads the same number backwards, and its 10x under-costing inference falls with it. Evidence: `handoff/_general/from-code/2026-10-31-serper-goto-link-repair.md`, from PR #859; OUTBOX `serper-credit-rollover` asks whether unused credits can carry over.
+*What is established:* every Serper tier expires after six months, and $50 for 50,000 credits is the smallest (serper.dev, read 2026-10-31). That price is before VAT: the last pack, bought 2026-05-08, was charged $62.50 through Paddle, which is $50 plus 25 %. We use about 430 credits a month, so a pack is roughly 5 % used when it expires. Eight tools need the key; seven stop without it, and `adverse-media-check` loses its fallback. Outside buyers made 16 calls on them in October and 19 in September, though the largest buyer's 38 `google-search` calls on 10-30 sit inside the x402 figures. Serper's account endpoint reports 47,497 credits left on 2026-10-31, so almost all of the pack would expire unused; that handoff's "46,900 consumed, ~3,100 remaining" reads the same number backwards, and its 10x under-costing inference falls with it. Evidence: `handoff/_general/from-code/2026-10-31-serper-goto-link-repair.md`, from PR #859; OUTBOX `serper-credit-rollover` asks whether unused credits can carry over; on 2026-11-01 it was still a draft, not sent, and only the local inbox session can send it.
 
-*Options:* renew $50; or let it lapse and delist the seven.
+*Options:* renew (about $62.50 charged); or let it lapse and take the seven tools off sale on 8 November ourselves, so buyers get a clear "not available" rather than failed calls.
 
 *Recommendation:* renew, after the rollover question gets its answer if it comes by 6 November. It is inside the weekly envelope and the catalogue's breadth is the positioning (DEC-20261023-B).
 
-*Consequence:* renewing costs about $8.33 a month against a few euros of income from these tools today. Lapsing saves that and removes web search from the catalogue on 8 November.
+*Consequence:* renewing costs about $10.40 a month including VAT, against a few euros of income from these tools today. Longer term, another search provider sells a $50 balance that never expires, which at our volume would last years instead of six months; that needs their written permission to resell first, and is a separate decision. Lapsing saves that and removes web search from the catalogue on 8 November.
 
 **DQ-43** · `your_call` · owner Petter · raised 2026-10-30 · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
 
