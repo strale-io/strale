@@ -25,85 +25,100 @@ const BLOCKED_HOSTS = new Set([
 ]);
 
 /**
- * Check if an IP address is in a blocked range (private, link-local, loopback,
- * carrier-grade NAT, cloud metadata). F-0-006: extended to close common SSRF
- * bypasses (IPv4-mapped IPv6, 100.64/10, cloud metadata IPv6).
+ * Special-purpose ranges that must never be the target of a server-side
+ * connection, as CIDR blocks. WP12 exit item 1 (CR-11): this replaced string
+ * prefix matching, which missed whole ranges (IPv4-compatible `::/96`,
+ * `100::/64`, `2001::/23`, `192.0.0.0/24`, `192.88.99.0/24`) and blocked
+ * hostnames by their first letters (`fdic.gov`, `ffmpeg.org`).
+ *
+ * Sources: the IANA IPv4 and IPv6 Special-Purpose Address Registries, plus
+ * carrier-grade NAT and multicast. IPv4-mapped IPv6 (`::ffff:0:0/96`) is
+ * judged by the IPv4 table, so a mapped public address stays allowed.
+ */
+const BLOCKED_V4: Array<[string, number]> = [
+  ["0.0.0.0", 8],        // "this network"
+  ["10.0.0.0", 8],       // private
+  ["100.64.0.0", 10],    // carrier-grade NAT (F-0-006)
+  ["127.0.0.0", 8],      // loopback
+  ["169.254.0.0", 16],   // link-local, cloud metadata
+  ["172.16.0.0", 12],    // private
+  ["192.0.0.0", 24],     // IETF protocol assignments
+  ["192.0.2.0", 24],     // documentation
+  ["192.88.99.0", 24],   // 6to4 relay anycast
+  ["192.168.0.0", 16],   // private
+  ["198.18.0.0", 15],    // benchmarking
+  ["198.51.100.0", 24],  // documentation
+  ["203.0.113.0", 24],   // documentation
+  ["224.0.0.0", 4],      // multicast
+  ["240.0.0.0", 4],      // reserved, broadcast
+];
+const BLOCKED_V6: Array<[string, number]> = [
+  ["::", 8],             // reserved 0000::/8: unspecified, loopback, IPv4-compatible,
+                         // IPv4-translated ::ffff:0:0:0/96 (mapped is judged first, by IPv4)
+  ["64:ff9b::", 32],     // NAT64, well-known and local-use, incl. non-standard prefixes
+  ["100::", 64],         // discard-only
+  ["2001::", 23],        // IETF protocol assignments, incl. Teredo 2001::/32
+  ["2001:db8::", 32],    // documentation
+  ["2002::", 16],        // 6to4
+  ["fc00::", 7],         // unique-local, incl. AWS metadata fd00:ec2::254
+  ["fe80::", 10],        // link-local
+  ["fec0::", 10],        // site-local (deprecated)
+  ["ff00::", 8],         // multicast
+];
+
+const V4_BLOCKLIST = new net.BlockList();
+for (const [addr, prefix] of BLOCKED_V4) V4_BLOCKLIST.addSubnet(addr, prefix, "ipv4");
+const V6_BLOCKLIST = new net.BlockList();
+for (const [addr, prefix] of BLOCKED_V6) V6_BLOCKLIST.addSubnet(addr, prefix, "ipv6");
+
+/** The IPv4 address an IPv4-mapped IPv6 address carries, or null. */
+function mappedV4(v6: string): string | null {
+  // Canonical (WHATWG) form compresses `::ffff:10.0.0.1` to `::ffff:a00:1`.
+  const canonical = new URL(`http://[${v6}]/`).hostname.slice(1, -1);
+  const m = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(canonical);
+  if (!m) return null;
+  const hi = parseInt(m[1], 16);
+  const lo = parseInt(m[2], 16);
+  return `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+}
+
+/**
+ * True when `addr` is an IP address in a range a server-side connection must
+ * never reach. A hostname is not an address: it returns false here and is
+ * judged by the addresses it resolves to (validateUrl, validateHost, and
+ * safe-fetch's connect-time lookup).
  */
 export function isBlockedIp(addr: string): boolean {
-  let a = addr.toLowerCase();
-  // Canonicalize expanded IPv6, including mapped addresses, before prefix checks.
-  if (net.isIP(a) === 6) a = new URL(`http://[${a}]/`).hostname.slice(1, -1);
-  if (net.isIP(a) === 4) {
-    const [first, second, third] = a.split(".").map(Number);
-    if (first === 0 || first >= 224) return true;
-    if (first === 198 && (second === 18 || second === 19)) return true;
-    if ((first === 192 && second === 0 && third === 2) ||
-        (first === 198 && second === 51 && third === 100) ||
-        (first === 203 && second === 0 && third === 113)) return true;
+  const a = addr.trim().toLowerCase();
+  const family = net.isIP(a);
+  if (family === 4) return V4_BLOCKLIST.check(a, "ipv4");
+  if (family === 6) {
+    // A zone ID (`fe80::1%eth0`) scopes the address to a local interface by
+    // definition, and the canonicaliser below cannot parse one: refuse it.
+    if (a.includes("%")) return true;
+    const v4 = mappedV4(a);
+    if (v4 !== null) return V4_BLOCKLIST.check(v4, "ipv4");
+    return V6_BLOCKLIST.check(a, "ipv6");
   }
-  // NAT64, 6to4 and documentation networks must never route a fetch.
-  if (a.startsWith("64:ff9b:") || a.startsWith("2002:") ||
-      a.startsWith("2001:db8:") || a.startsWith("ff")) return true;
-  if (a === "::" || /^f[cd][0-9a-f]{2}:/.test(a) || /^fe[89ab][0-9a-f]:/.test(a)) return true;
-
-  // ── Loopback ──
-  if (a === "127.0.0.1" || a === "::1" || a.startsWith("127.")) return true;
-
-  // ── IPv4 private ranges ──
-  if (a.startsWith("10.")) return true;
-  if (a.startsWith("192.168.")) return true;
-  if (a.startsWith("172.")) {
-    const second = parseInt(a.split(".")[1], 10);
-    if (second >= 16 && second <= 31) return true;
-  }
-
-  // ── Carrier-grade NAT 100.64.0.0/10 (F-0-006) ──
-  // A server reaching an address in this range is almost certainly hitting
-  // the provider's internal network, not public internet.
-  if (a.startsWith("100.")) {
-    const second = parseInt(a.split(".")[1], 10);
-    if (second >= 64 && second <= 127) return true;
-  }
-
-  // ── Link-local ──
-  if (a.startsWith("169.254.")) return true;
-
-  // ── IPv6 private / link-local / unique-local ──
-  if (a.startsWith("fc00:") || a.startsWith("fd")) return true;
-  if (a.startsWith("fe80:")) return true;
-
-  // ── IPv4-mapped IPv6 (F-0-006) ──
-  // `::ffff:10.0.0.1` is the dotted-quad form; `::ffff:a00:1` is the
-  // URL/WHATWG-normalized hex-compact form of the same address. Both
-  // must map through the IPv4 blocklist, or an attacker trivially
-  // bypasses the IPv4 ranges above by switching representations.
-  if (a.startsWith("::ffff:")) {
-    const mapped = a.slice(7);
-    // Already dotted-quad? (contains a `.`)
-    if (mapped.includes(".")) return isBlockedIp(mapped);
-    // Hex-compact form: two 16-bit groups like `a00:1` (= 0x0a00 0x0001
-    // = 10.0.0.1). Convert to dotted-quad then re-apply the IPv4 check.
-    const groups = mapped.split(":");
-    if (groups.length === 2 && groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) {
-      const hi = parseInt(groups[0], 16);
-      const lo = parseInt(groups[1], 16);
-      const quad = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
-      return isBlockedIp(quad);
-    }
-    // Unrecognised ::ffff: shape — be conservative and block.
-    return true;
-  }
-
-  // ── Cloud metadata IPv6 (F-0-006) ──
-  // AWS EC2 metadata: fd00:ec2::254 (canonical), fd00:ec2:: range.
-  // The fd-prefix already matches via the IPv6 private check above but the
-  // explicit guard makes the intent auditable.
-  if (a.startsWith("fd00:ec2:")) return true;
-
-  // ── Unspecified ──
-  if (a === "0.0.0.0" || a === "::") return true;
-
   return false;
+}
+
+/**
+ * Split a host argument into the host and an optional port. Accepts a bare
+ * hostname or IP, `host:port`, `[v6]` and `[v6]:port`. Returns null for any
+ * other shape, such as a string with stray colons that is not an IP: it must
+ * be refused, never resolved, or a mangled IPv6 literal fails DNS and passes.
+ */
+function splitHostPort(raw: string): string | null {
+  const s = raw.trim().toLowerCase();
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(s);
+  if (bracketed) return net.isIP(bracketed[1]) === 6 ? bracketed[1] : null;
+  if (net.isIP(s)) return s;
+  const colons = s.split(":").length - 1;
+  if (colons === 0) return s;
+  if (s.startsWith(":")) return null; // ":443": a port with no host
+  if (colons === 1 && /:\d+$/.test(s)) return s.replace(/:\d+$/, "");
+  return null;
 }
 
 /**
@@ -185,7 +200,10 @@ export async function validateUrl(urlString: string): Promise<void> {
  * Used by port-check, ssl-certificate-chain, and similar capabilities.
  */
 export async function validateHost(hostname: string): Promise<void> {
-  const clean = hostname.toLowerCase().replace(/:\d+$/, "");
+  const clean = splitHostPort(hostname);
+  if (clean === null) {
+    throw new UrlValidationError("This host is not a valid hostname or IP address.");
+  }
 
   if (BLOCKED_HOSTS.has(clean)) {
     throw new UrlValidationError("This host targets a restricted address.");
@@ -219,5 +237,20 @@ export async function validateHost(hostname: string): Promise<void> {
     }
   } catch (err) {
     if (err instanceof Error && err.message.includes("restricted")) throw err;
+  }
+  // c-ares (dns.resolve*) is not what a raw socket uses. net.connect resolves
+  // with getaddrinfo, which also accepts shorthand IPv4 (`127.1`,
+  // `2130706433`) and /etc/hosts names. Both fail resolve4 and passed above,
+  // then connected to 127.0.0.1. Check what the connection will actually use.
+  let looked: Array<{ address: string }> = [];
+  try {
+    looked = await dns.lookup(clean, { all: true, verbatim: true });
+  } catch {
+    // Unresolvable: the connection fails too.
+  }
+  for (const { address } of looked) {
+    if (isBlockedIp(address)) {
+      throw new UrlValidationError("This host resolves to a restricted address.");
+    }
   }
 }
