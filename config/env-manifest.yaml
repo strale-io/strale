@@ -1064,12 +1064,11 @@
   set_in:
     - none
 - name: STRALE_OPS_READ_TOKEN
-  purpose: Bearer token for GET /v1/ops-read/:check, the fixed read-only production checks operator sessions run (routes/ops-read.ts). At least 32 characters; unset or short means every ops-read path answers 404. Petter generates it in Bitwarden (project strale, same name) and sets the same value in Railway.
+  purpose: Bearer token for GET /v1/ops-read/:check, the fixed read-only production checks operator sessions run (routes/ops-read.ts). At least 32 characters; unset or short means every ops-read path answers 404. Read tier (it opens only read-only aggregates). Petter generates it in Bitwarden (project strale, same name) and sets the same value in Railway.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
 - name: STRALE_API_KEY

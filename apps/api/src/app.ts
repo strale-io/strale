@@ -320,9 +320,6 @@ app.use("/v1/public/ops/*", publicCors);
 app.use("/v1/public/ops/*", rateLimitByIp(120, 60_000));
 app.use("/v1/internal/*", restrictedCors);
 app.use("/v1/internal/*", rateLimitByIp(120, 60_000));
-// Read-only operator checks (routes/ops-read.ts): own token, answers 404
-// without it, and a tighter limit than the dashboards.
-app.use("/v1/ops-read/*", rateLimitByIp(30, 60_000, "ops-read"));
 app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 app.use("/SKILL.md", publicCors);

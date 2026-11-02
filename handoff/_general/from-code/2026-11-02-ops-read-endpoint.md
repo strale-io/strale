@@ -8,16 +8,17 @@ Intent: Let cloud sessions answer fixed production questions without the PC-only
 - **Auth:**
   - Bearer `STRALE_OPS_READ_TOKEN`, separate from ADMIN_SECRET, at least 32 characters, constant-time compare.
   - Without it, or when unset or short, every path answers exactly like an unknown route (404, same body).
-  - Rate limited at 30 requests a minute per IP.
+  - Rate limited at 30 requests a minute per IP, applied after the token check, so an unauthenticated response carries no rate-limit headers and never answers 429.
   - Excluded from the OpenAPI spec with a reason in `openapi-internal-routes.ts`. Not in the sitemap or llms.txt.
 - **Checks** (fixed SQL; the only caller input is a validated YYYY-MM-DD range, bound as text):
-  - `build`: the deployed commit.
+  - `build`: the deployed commit, and whether the transaction really is read-only (`current_setting('transaction_read_only')`).
   - `parked-suites`: suites parked by the paid-call guard (`quarantine_reason LIKE 'paid_call_blocked:%'`), as id, slug, test type, mode, active and last result time.
-  - `test-call-cost?from=&to=` (max 92 days): runs per UTC day of Strale's own test suites, with declared external cost. Piggyback rows are excluded. The same totals are given per parked suite.
+  - `test-call-cost?from=&to=` (max 30 days, the `test_results` retention; `oldest_result_day` shows how far back data exists): runs per UTC day of Strale's own test suites, with declared external cost. Piggyback rows are excluded. The same totals are given per parked suite.
   - Test runs have no measured cost (their LLM spend is only logged), so past cost = parked-suite runs x price per call.
 - **Safety:**
   - Every check runs in a `READ ONLY` transaction with `statement_timeout = 5s`.
-  - `assertSafeOutput` lets only counts, sums, slugs, uuids, dates, ISO timestamps and booleans out. Any other string fails the request with a 500 that does not echo the value.
+  - `assertSafeOutput` checks every key against `OUTPUT_FIELDS`, each with one allowed shape. An unlisted key or wrong shape fails the request with a 500 that does not echo the value.
+  - The date range is validated before any database work.
   - No input, output, baseline or reason column is selected.
 - `config/env-manifest.yaml` row for `STRALE_OPS_READ_TOKEN`.
 - `docs/operations/2026-11-01-prod-verify-action-proposal.md` is marked superseded.
@@ -36,6 +37,8 @@ Intent: Let cloud sessions answer fixed production questions without the PC-only
   - the read-only transaction config;
   - planted text gives a 500 without echoing it;
   - 400 on a bad range.
+- Independent review round 1: PASS WITH FIXES. Fixed: rate-limit headers exposed the prefix, range longer than retention, a key-agnostic output filter, range validated inside the transaction, and `build` needing the database for nothing. The X-Forwarded-For spoofing finding is pre-existing and handled separately.
+- The `STRALE_OPS_READ_TOKEN` is classed read tier, so Bitwarden is allowed (DEC-20261027-C).
 - Full API unit suite, root typecheck, env:check, models:check and API lints are green.
 
 ## Deploy dependency (DEC-20260504-C)

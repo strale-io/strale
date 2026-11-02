@@ -5,8 +5,8 @@
  * Without a valid `STRALE_OPS_READ_TOKEN` bearer, or when the token is unset
  * or too short, every path here answers exactly like an unknown route (404,
  * same body as app.notFound), so the surface is not discoverable. It is not
- * in the OpenAPI document, the sitemap or llms.txt. Rate limited at the mount
- * in app.ts.
+ * in the OpenAPI document, the sitemap or llms.txt. Rate limited after the
+ * token check (see below).
  */
 import { Hono, type Context } from "hono";
 import { sql } from "drizzle-orm";
@@ -20,6 +20,7 @@ import {
   type ReadExecutor,
 } from "../lib/ops-read.js";
 import { log, logError } from "../lib/log.js";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 
 /** Identical to app.notFound, so an unauthenticated caller learns nothing. */
 function notFound(c: Context) {
@@ -41,15 +42,31 @@ opsReadRoute.use("*", async (c, next) => {
   return next();
 });
 
+// After the token check, so an unauthenticated response carries no
+// X-RateLimit-* headers and never answers 429: both would mark this prefix
+// as different from an unknown route. A 32+ character random token makes
+// brute force moot; the limit protects the database from a token holder.
+opsReadRoute.use("*", rateLimitByIp(30, 60_000, "ops-read"));
+
 opsReadRoute.get("/:check", async (c) => {
   const name = c.req.param("check");
   if (!isOpsReadCheck(name)) return notFound(c);
-  const query = { from: c.req.query("from"), to: c.req.query("to") };
+  const def = OPS_READ_CHECKS[name];
+  let params: unknown;
+  try {
+    // Before any database work: a bad range costs no pool connection.
+    params = def.prepare({ from: c.req.query("from"), to: c.req.query("to") });
+  } catch (err) {
+    if (err instanceof OpsReadInputError) {
+      return c.json({ error_code: "invalid_request" as const, message: err.message }, 400);
+    }
+    throw err;
+  }
   try {
     const result = await getDb().transaction(
       async (tx) => {
         await tx.execute(sqlStatementTimeout);
-        return OPS_READ_CHECKS[name](tx as unknown as ReadExecutor, query);
+        return def.run(tx as unknown as ReadExecutor, params);
       },
       { accessMode: "read only" },
     );
@@ -57,9 +74,6 @@ opsReadRoute.get("/:check", async (c) => {
     log.info({ label: "ops-read-check", check: name }, "ops-read-check");
     return c.json(body as Record<string, unknown>);
   } catch (err) {
-    if (err instanceof OpsReadInputError) {
-      return c.json({ error_code: "invalid_request" as const, message: err.message }, 400);
-    }
     logError("ops-read-check-failed", err, { check: name });
     return c.json({ error_code: "internal_error" as const, message: "The check failed." }, 500);
   }

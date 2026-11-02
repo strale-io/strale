@@ -69,6 +69,33 @@ describe("/v1/ops-read is invisible without the token", () => {
     expect(txConfigs).toHaveLength(0);
   });
 
+  it("headers match an unknown route exactly, and it never answers 429", async () => {
+    const app = await loadApp();
+    const strip = (h: Headers) => [...h.entries()].filter(([k]) => k !== "x-request-id" && k !== "date");
+    // A client IP, or the limiter skips the request and the test proves nothing.
+    const ip = { "x-forwarded-for": "203.0.113.7" };
+    const unknown = await app.request("/v1/nope-route", { headers: ip });
+    for (let i = 0; i < 35; i++) {
+      const res = await app.request("/v1/ops-read/build", { headers: ip });
+      expect(res.status).toBe(404);
+      expect(strip(res.headers)).toEqual(strip(unknown.headers));
+      expect(res.headers.has("x-ratelimit-limit")).toBe(false);
+    }
+  });
+
+  it("a token holder is rate limited (30 a minute)", async () => {
+    nextRows = [];
+    const app = await loadApp();
+    const headers = { ...auth, "x-forwarded-for": "203.0.113.99" };
+    const statuses: number[] = [];
+    for (let i = 0; i < 31; i++) {
+      nextRows = [[{ read_only: true }]];
+      statuses.push((await app.request("/v1/ops-read/build", { headers })).status);
+    }
+    expect(statuses.slice(0, 30).every((s) => s === 200)).toBe(true);
+    expect(statuses[30]).toBe(429);
+  });
+
   it("an unknown check is 404 even with the token", async () => {
     const app = await loadApp();
     const res = await app.request("/v1/ops-read/select-star", { headers: auth });
@@ -88,11 +115,12 @@ describe("/v1/ops-read is invisible without the token", () => {
 });
 
 describe("/v1/ops-read with the token", () => {
-  it("build returns the deployed commit in a read-only transaction", async () => {
+  it("build returns the deployed commit and the read-only flag, in a read-only transaction", async () => {
+    nextRows = [[{ read_only: true }]];
     const app = await loadApp();
     const res = await app.request("/v1/ops-read/build", { headers: auth });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ check: "build", result: { commit: "b8e19865ee06" } });
+    expect(await res.json()).toEqual({ check: "build", result: { commit: "b8e19865ee06", read_only: true } });
     expect(txConfigs).toEqual([{ accessMode: "read only" }]);
   });
 
@@ -136,12 +164,14 @@ describe("/v1/ops-read with the token", () => {
     const res = await app.request("/v1/ops-read/test-call-cost?from=2026-01-01&to=2026-11-01", { headers: auth });
     expect(res.status).toBe(400);
     expect((await res.json()).error_code).toBe("invalid_request");
+    expect(txConfigs).toHaveLength(0);
   });
 
   it("test-call-cost returns daily aggregates", async () => {
     nextRows = [
       [{ day: "2026-10-31", runs: 120, declared_external_cost_cents: "0" }],
       [{ test_suite_id: "6b7c1f8e-2f3a-4b5c-9d8e-1f2a3b4c5d6e", capability_slug: "canadian-company-data", test_type: "known_answer", runs: 24, declared_external_cost_cents: "0" }],
+      [{ oldest_result_day: "2026-10-03" }],
     ];
     const app = await loadApp();
     const res = await app.request("/v1/ops-read/test-call-cost?from=2026-10-31&to=2026-10-31", { headers: auth });
@@ -149,5 +179,6 @@ describe("/v1/ops-read with the token", () => {
     const body = await res.json();
     expect(body.result.days[0].runs).toBe(120);
     expect(body.result.parked_suites[0].runs).toBe(24);
+    expect(body.result.oldest_result_day).toBe("2026-10-03");
   });
 });
