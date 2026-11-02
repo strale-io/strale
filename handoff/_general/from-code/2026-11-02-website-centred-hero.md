@@ -48,3 +48,18 @@ Every section also fits at 1280×800, 1440×900 and 1920×1080.
 - **Company data.** Two equal columns: copy and the two cards on the left, countries and the button on the right. The chips are more compact on desktop. The art is dropped from 1024px up; on phones it still leads the section.
 - **Pricing.** "Pricing in full" sits beside the heading, the art is beside each card title, and the rows are tighter.
 - **Phones.** Layouts are unchanged apart from the company-data order and the pricing title row, both checked at 390×844.
+
+## Inner pages and large screens (later, same day)
+
+- Inner pages at 1270x686 (tools, company data, pricing, use cases, docs,
+  security, about): page heads are consistent (title, lead, art at right) and
+  fit the first screen with the next block starting above the fold. Long
+  reference sections (tool list, coverage table, sub-processors) are taller
+  than one screen by nature; nothing overflows or clips. No change made.
+- Home at 1920x1080 and 2560x1440: every section fits. The hero pill sat 20px
+  under the nav at every height because the board grows to fill; cd86ac11
+  makes that padding height-aware (686: 20px unchanged, 900: 28px, 1080:
+  35px). At 2560 CSS px the content stays at the 1440px container, which is
+  the token cap; growing past it would need a new token and decision.
+- Next: Petter's view of the hero on #892, then the narrow-screen (390, 768)
+  pass on the inner pages.
