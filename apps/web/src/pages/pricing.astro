@@ -9,7 +9,7 @@ import Base from "../layouts/Base.astro";
 import { getSiteData, tools as allTools } from "../lib/site-data";
 import { formatEur, formatUsd, plural } from "../lib/format";
 import { JOB_GROUPS } from "../content/jobs";
-import { MAX_PRICE_CAP_CENTS, FREE_TIER_DAILY_LIMIT } from "../lib/code-facts";
+import { MAX_PRICE_CAP_CENTS, FREE_TIER_MONTHLY_LIMIT } from "../lib/code-facts";
 import artBalance from "../assets/illustrations/pay-balance.webp";
 import artWallet from "../assets/illustrations/pay-wallet.webp";
 
@@ -151,7 +151,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
       <div class="container stack-loose">
         <div class="section-head">
           <h2 id="free-title" class="t-section">Free to try, right now</h2>
-          <p class="t-lead muted">Call these with no key and no account, up to {FREE_TIER_DAILY_LIMIT} times a day. With an API key they stay free.</p>
+          <p class="t-lead muted">Call these with no key and no account, up to {FREE_TIER_MONTHLY_LIMIT} times a month. With an API key they stay free.</p>
         </div>
         <ul class="chip-row" role="list">
           {free.map((t) => <li><a class="tool-chip" href={`/tools/${t.slug}`}>{t.name}</a></li>)}

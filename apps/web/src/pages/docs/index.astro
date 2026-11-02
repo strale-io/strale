@@ -8,7 +8,7 @@ import CodeBlock from "../../components/CodeBlock.astro";
 import artDocs from "../../assets/illustrations/developer-jobs.webp";
 import { getSiteData, tools as allTools, API_BASE } from "../../lib/site-data.ts";
 import { formatEur, json, plural } from "../../lib/format.ts";
-import { FREE_TIER_DAILY_LIMIT, MAX_PRICE_CAP_CENTS, MIN_TOPUP_CENTS } from "../../lib/code-facts.ts";
+import { FREE_TIER_MONTHLY_LIMIT, MAX_PRICE_CAP_CENTS, MIN_TOPUP_CENTS } from "../../lib/code-facts.ts";
 import { firstCallTool, firstCallSnippets, KEY_REQUESTS_PER_SECOND, IDEMPOTENCY_KEY_MAX, DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS, ASYNC_THRESHOLD_SECONDS, HOURLY_SPEND_CAP_CENTS } from "../../content/docs-facts.ts";
 
 const data = await getSiteData();
@@ -73,7 +73,7 @@ const toc = [
 
   <section id="first-call" aria-labelledby="first-call-title">
     <h2 id="first-call-title" class="t-section">Make your first call</h2>
-    <p class="t-body">The first call runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>, a free tool. The API and MCP calls need no key. Without a key you get {FREE_TIER_DAILY_LIMIT} free calls a day per IP address, across all free tools. The SDK calls take an API key, and a free tool costs nothing with one.</p>
+    <p class="t-body">The first call runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>, a free tool. The API and MCP calls need no key. Without a key you get {FREE_TIER_MONTHLY_LIMIT} free calls a month per IP address, across all free tools. The SDK calls take an API key, and a free tool costs nothing with one.</p>
     <CodeBlock id="first-call-code" title="First call" panels={snippets} />
     {output && <CodeBlock id="first-call-out" title={`${tool.name} output`} wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} />}
     <p class="t-compact muted">The output above is the tool’s published example. A live call returns the same fields for your input. More free tools: <a class="link" href="/tools?free=1">free tools</a>. For a key, <a class="link" href="/signup">sign up</a>.</p>
@@ -123,7 +123,7 @@ const toc = [
           <tr><th scope="row"><code>insufficient_balance</code></th><td>402</td><td>The wallet holds less than the tool costs. <code>details</code> has <code>wallet_balance_cents</code> and <code>required_cents</code>.</td><td>Top up with <code>POST /v1/wallet/topup</code> (minimum {formatEur(MIN_TOPUP_CENTS)}), then retry.</td></tr>
           <tr><th scope="row"><code>budget_exceeded</code></th><td>402</td><td>The tool costs more than <code>max_price_cents</code>. <code>details.actual_price_cents</code> has the price.</td><td>Raise <code>max_price_cents</code> if the price is acceptable.</td></tr>
           <tr><th scope="row"><code>no_matching_capability</code></th><td>404</td><td>No tool matches the <code>task</code> or slug within the budget.</td><td>Check the slug on the <a class="link" href="/tools">tools page</a>, or rephrase the task.</td></tr>
-          <tr><th scope="row"><code>rate_limited</code></th><td>429</td><td>A key may send {KEY_REQUESTS_PER_SECOND} requests a second. Without a key, free tools allow {FREE_TIER_DAILY_LIMIT} calls a day per IP address.</td><td>Wait for the <code>Retry-After</code> seconds, then retry. After the daily limit, use a key.</td></tr>
+          <tr><th scope="row"><code>rate_limited</code></th><td>429</td><td>A key may send {KEY_REQUESTS_PER_SECOND} requests a second. Without a key, free tools allow {FREE_TIER_MONTHLY_LIMIT} calls a month per IP address.</td><td>Wait for the <code>Retry-After</code> seconds, then retry. After the monthly allowance, use a key.</td></tr>
           <tr><th scope="row"><code>spend_cap_exceeded</code></th><td>429</td><td>The call would take the account past its hourly spend limit. <code>details</code> has <code>spent_cents</code>, <code>requested_cents</code> and <code>limit_cents</code>.</td><td>Wait for the hour to roll over, or ask for a higher limit.</td></tr>
           <tr><th scope="row"><code>execution_failed</code></th><td>500</td><td>The tool ran and failed, usually because its source did not answer. <code>details.error</code> says why. Not charged.</td><td>Retry with backoff. If the same input fails again, the input is the cause.</td></tr>
           <tr><th scope="row"><code>capability_unavailable</code></th><td>503</td><td>The tool is switched off for now. Not charged.</td><td>Retry later, or use another tool for the job.</td></tr>
