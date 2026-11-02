@@ -86,7 +86,9 @@
  * officers, UBOs) are a real but genuinely ambiguous case this script does
  * NOT try to adjudicate — see the 2026-08-14 session report for the
  * archive/sessions/bosch-kyb-response-final*.json finding, flagged to a
- * human rather than auto-scrubbed.
+ * human rather than auto-scrubbed. Petter chose to scrub on 2026-11-01
+ * (DEC-20261101-A precondition): the directors and transaction ids are
+ * redacted in the current files; git history keeps the originals.
  *
  * Usage:
  *   node apps/api/scripts/check-pii.mjs           # report, exit 0

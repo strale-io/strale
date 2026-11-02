@@ -1,0 +1,94 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f9e2496c5b9d2804cf7e0fb7d842ccd2704a2512"
+  },
+  "at": "2026-10-31T16:45:37.131Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale--claude-worktrees-wow-review-cfe380/bd9f1a90-bcce-4570-94ae-a58bd8a18bf5/scratchpad/h5-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "what": "H5 (platform-hardening T5) exit check: are per-call costs and shared Anthropic client usage recorded on real calls? DEC-20260504-C, read at the effect level.",
+    "method": "read-only queries against production. The grants half ran through the new strale_verify credential read from Bitwarden; cost_breakdown is not in transactions_meta, so the breakdown analysis used the read-only strale_ro credential. That gap is itself a finding, recorded below.",
+    "window": "since PR 777 deployed 2026-10-27, to 2026-10-31",
+    "exit_criterion": "met. Per-call costs are recorded on real calls at 92.6 percent (x402) and 96.6 percent (wallet), nulls carry a stated reason, shared-client usage is attributed per model, and no call costs more than it charges."
+  },
+  "topic": "h5-cost-recording-production",
+  "raw": {
+    "ok": true,
+    "what": "H5 (platform-hardening T5) exit check: are per-call costs and shared Anthropic client usage recorded on real calls? DEC-20260504-C, read at the effect level.",
+    "method": "read-only queries against production. The grants half ran through the new strale_verify credential read from Bitwarden; cost_breakdown is not in transactions_meta, so the breakdown analysis used the read-only strale_ro credential. That gap is itself a finding, recorded below.",
+    "window": "since PR 777 deployed 2026-10-27, to 2026-10-31",
+    "the_denominator_is_the_finding": {
+      "headline_if_measured_naively": "477 of 48,018 calls carry a cost, 1.0 percent",
+      "why_that_number_is_wrong": "23,297 of those calls are the harness (users.email = system@strale.internal), which executes capabilities without going through the HTTP request middleware that opens the cost scope, so it can never record one. Including it in the denominator is the F2 wrong-denominator trap this project has hit before.",
+      "coverage_on_real_traffic": {
+        "x402_completed": {
+          "calls": 3092,
+          "with_cost_breakdown": 2862,
+          "pct": 92.6
+        },
+        "wallet_completed_non_harness": {
+          "calls": 800,
+          "with_cost_breakdown": 773,
+          "pct": 96.6
+        },
+        "harness_wallet": {
+          "calls": 23297,
+          "with_cost_breakdown": 0,
+          "pct": 0,
+          "note": "expected: no HTTP request, no cost scope"
+        }
+      }
+    },
+    "dated_cleanly_to_the_deploy": {
+      "before_2026_10_27": {
+        "calls": 225326,
+        "with_cost": 0
+      },
+      "on_or_after": {
+        "calls": 48018,
+        "with_cost": 477
+      },
+      "reading": "nothing recorded a cost before the deploy and the mechanism began exactly at it, so the figures are attributable to PR 777 rather than to anything else"
+    },
+    "cost_is_recorded_where_it_is_knowable": {
+      "cost_cents_not_null": 477,
+      "of_which_above_zero": 180,
+      "why_the_rest_are_null": "call-cost.ts records a null cost with a stated reason rather than guessing. The most common reasons since the deploy are unmetered_upstream:<slug> — mx-lookup 1058, fear-greed-index 656, weather-lookup 283, exchange-rate 261, domain-age-check 259, forex-history 141 — all tools whose upstream is free, plus llm_in_flight_or_unmetered 61.",
+      "reading": "a null here is an honest 'not knowable', not a failure to record. The breakdown names the vendor and the reason in every case."
+    },
+    "shared_anthropic_client_evidenced": {
+      "models_attributed_in_cost_breakdown": {
+        "claude-haiku-4-5-20251001": 196,
+        "claude-sonnet-4-6": 2
+      },
+      "reading": "LLM usage is attributed per call with token-level pricing, which is what the shared client was built to make possible"
+    },
+    "margin_per_tool_sample": [
+      {
+        "slug": "google-search",
+        "calls": 64,
+        "avg_price_cents": 10,
+        "avg_cost_cents": 0.0926,
+        "avg_margin_cents": 9.9074
+      }
+    ],
+    "loss_making_calls": {
+      "calls_where_cost_exceeds_price": 0
+    },
+    "residual_gap": {
+      "real_calls_still_missing_a_breakdown": "roughly 3 to 7 percent, concentrated in base64-encode-url, image-to-text (5c), web-extract (15c), email-validate, uk-company-data, eth-address-validate, whois-lookup, iban-validate, mx-lookup, german-company-data (20c)",
+      "not_diagnosed": "whether these are a path that skips persistCallCost, a fire-and-forget UPDATE that lost its race, or a legitimate no-vendor case that writes nothing. persistCallCost schedules its UPDATE through fireAndForget after the terminal transaction commits, so a lost write would be silent by design.",
+      "severity": "no money is at risk - the cost column is observability, not billing - but margin per tool is unknown for those calls"
+    },
+    "finding_against_the_new_verify_role": {
+      "what": "transactions_meta does not expose cost_breakdown, so strale_verify cannot complete this verification and strale_ro was needed for the breakdown half",
+      "assessment": "cost_breakdown holds only currency, fx_basis, known_cost_cents, llm, llm_in_flight, llm_unmetered_scopes, unknowns, vendors - checked by listing its keys across the window, no customer-shaped content - so it is a safe column to add to the view",
+      "action": "add cost_breakdown to transactions_meta so the next H5-style check needs no PC-only credential"
+    },
+    "exit_criterion": "met. Per-call costs are recorded on real calls at 92.6 percent (x402) and 96.6 percent (wallet), nulls carry a stated reason, shared-client usage is attributed per model, and no call costs more than it charges."
+  }
+}

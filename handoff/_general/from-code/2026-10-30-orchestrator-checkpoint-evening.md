@@ -2,6 +2,12 @@ Intent: successor to the 2026-10-30 morning orchestrator checkpoint, so the Stra
 
 # Orchestrator checkpoint, 2026-10-30 (evening, Swedish time)
 
+> **SUPERSEDED on 2026-11-01 by
+> [`2026-11-01-orchestrator-checkpoint-cloud-move.md`](2026-11-01-orchestrator-checkpoint-cloud-move.md)**,
+> written for the move of the orchestrator role to the cloud. Resume from that
+> file: H3, H5 and H7 all closed after this one was written, and its remaining-work
+> list is stale.
+
 **This supersedes `2026-10-30-orchestrator-checkpoint.md`** (which itself
 superseded `2026-10-28-orchestrator-checkpoint.md`). Read this one, then
 `docs/programs/platform-hardening/PROGRAM.md` and

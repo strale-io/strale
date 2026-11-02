@@ -101,6 +101,43 @@ async function readSyncTimestamp(): Promise<Date | null> {
   return rows[0]?.lastSuccessAt ?? null;
 }
 
+/**
+ * Why `legal_representatives` holds what it holds. An empty list has two very
+ * different meanings: the company has none on file, or we hold no copy of the
+ * dataset at all. Only a completed ingest (`lastSyncedAt`) can tell them apart,
+ * and a caller must never read our missing copy as a fact about the company.
+ */
+export function legalRepresentativesReason(
+  count: number,
+  lastSyncedAt: Date | null,
+  cacheError: string | null,
+): string {
+  if (cacheError) {
+    return `ee_directors cache query failed (${cacheError}); tier_1 data unaffected.`;
+  }
+  if (count > 0) {
+    const syncedNote = lastSyncedAt ? ` Last cache refresh: ${lastSyncedAt.toISOString()}.` : "";
+    return (
+      "Legal representatives sourced from RIK Ariregister Open Data " +
+      "(ettevotja_rekvisiidid__kaardile_kantud_isikud, CC BY 4.0). " +
+      "Personal ID codes (isikukood) and date of birth are redacted by RIK " +
+      "upstream since 2024-11-01 — fields kept null for canonical-shape parity." +
+      syncedNote
+    );
+  }
+  if (!lastSyncedAt) {
+    return (
+      "Legal representatives are unavailable from this service: the RIK Ariregister " +
+      "open-data file has not been loaded. An empty list here says nothing about " +
+      "whether this company has representatives; check the register directly."
+    );
+  }
+  return (
+    "ee_directors cache returned no active representatives for this registry code " +
+    `(newly registered entity or all directors resigned). Last cache refresh: ${lastSyncedAt.toISOString()}.`
+  );
+}
+
 // Estonian registry code: 8 digits
 const REG_CODE_RE = /^\d{8}$/;
 
@@ -299,24 +336,7 @@ registerCapability("estonian-company-data", async (input: CapabilityInput) => {
     o.legal_representatives = legalReps;
     o.total_legal_representatives = legalReps.length;
     o.tier_2_available = legalReps.length > 0;
-    if (cacheError) {
-      o.tier_2_available_reason = `ee_directors cache query failed (${cacheError}); tier_1 data unaffected.`;
-    } else if (legalReps.length > 0) {
-      const syncedNote = lastSyncedAt
-        ? ` Last cache refresh: ${lastSyncedAt.toISOString()}.`
-        : "";
-      o.tier_2_available_reason =
-        "Legal representatives sourced from RIK Ariregister Open Data " +
-        "(ettevotja_rekvisiidid__kaardile_kantud_isikud, CC BY 4.0). " +
-        "Personal ID codes (isikukood) and date of birth are redacted by RIK " +
-        "upstream since 2024-11-01 — fields kept null for canonical-shape parity." +
-        syncedNote;
-    } else {
-      o.tier_2_available_reason =
-        "ee_directors cache returned no active representatives for this " +
-        "registry code (newly registered entity, all directors resigned, or " +
-        "cache not yet populated by first nightly ingest tick).";
-    }
+    o.tier_2_available_reason = legalRepresentativesReason(legalReps.length, lastSyncedAt, cacheError);
     o.ubo_availability = "unavailable_no_registry";
     o.ubo_availability_reason = "Programmatic UBO access not currently exposed by Ariregister at v1; verification pending public-source confirmation";
   }

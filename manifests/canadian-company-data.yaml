@@ -123,6 +123,12 @@ test_fixtures:
     # incorporation 2004-09-28 — verified live 2026-08-14 via a POST to
     # fdrlCrpSrch.html?lang=eng (6 candidates returned; only this one
     # normalizes to "shopify") followed by the official JSON API.
+    # Since 2026-11-02 a plain company_name goes straight to that free site
+    # search; the paid Claude extraction step runs only for free text or
+    # when the direct search has no confident match. So this fixture is the
+    # free, live name-path test Gate 5 (DEC-20260411-B) requires, and the
+    # paid-call guard (lib/paid-call-guard.ts) parks it if it ever starts
+    # needing Claude again.
     - input:
         company_name: Shopify
       expected_fields:

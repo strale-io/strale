@@ -1,3 +1,4 @@
+import { assertPaidCallAllowed } from "../lib/paid-call-guard.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 /**
@@ -60,6 +61,7 @@ registerCapability("us-sec-filings-extended", async (input: CapabilityInput) => 
     sort: [{ filedAt: { order: "desc" } }],
   };
 
+  assertPaidCallAllowed("sec-api"); // billed per call; never from Strale's own tests
   const res = await fetch(`${SEC_API}?token=${encodeURIComponent(token)}`, {
     method: "POST",
     headers: {

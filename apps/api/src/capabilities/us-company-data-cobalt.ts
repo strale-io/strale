@@ -1,3 +1,4 @@
+import { assertPaidCallAllowed } from "../lib/paid-call-guard.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 /**
@@ -55,6 +56,7 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
     ? `${COBALT_API}/search?searchQuery=${encodeURIComponent(companyId)}&state=${state}&liveData=true`
     : `${COBALT_API}/search?searchQuery=${encodeURIComponent(companyName)}&state=${state}&liveData=true`;
 
+  assertPaidCallAllowed("cobalt"); // billed per call; never from Strale's own tests
   const res = await fetch(endpoint, {
     headers,
     signal: AbortSignal.timeout(20000),

@@ -82,6 +82,8 @@ output_schema:
       type: string
     total_results_found:
       type: integer
+    unresolved_url_count:
+      type: number
 data_source: Serper.dev API (Google Search results, brand monitoring)
 data_source_type: api
 transparency_tag: ai_generated
@@ -126,6 +128,12 @@ output_field_reliability:
   mentions: guaranteed
   brand_name: guaranteed
   total_results_found: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_url_count: guaranteed
+
 limitations:
   - title: Social, private and paywalled mentions are excluded
     text: Searches web results via Serper.dev — does not cover social media posts, private forums, or paywalled content

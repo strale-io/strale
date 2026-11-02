@@ -176,9 +176,16 @@ function rateLimitIp(c: Context): string | null {
   const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
   const cfIp = c.req.header("cf-connecting-ip")?.trim();
   const realIp = c.req.header("x-real-ip")?.trim();
-  // NOTE: When running behind Railway's proxy, x-forwarded-for is set by
-  // the load balancer and cannot be spoofed by clients. If deployed
-  // behind a different proxy, configure trusted proxy headers accordingly.
+  // NOTE: Behind Railway's edge, a client-supplied X-Forwarded-For, X-Real-IP
+  // or CF-Connecting-IP does not become the rate-limit key: measured against
+  // production on 2026-11-02, a different forged value on every request did
+  // not produce fresh buckets (archive/receipts/2026-11-02-audit-forwarded-
+  // for-rate-limit-key.json). Railway does not document this, and its staff
+  // have given contradicting answers on whether the edge strips or appends a
+  // client-sent header, so it is a measured fact that can change on their
+  // side: re-run that probe after any Railway networking change, and before
+  // trusting these headers for anything stronger than rate limiting. Behind
+  // a different proxy, configure trusted proxy headers accordingly.
   if (forwarded && isPlausibleIp(forwarded)) return forwarded;
   if (cfIp && isPlausibleIp(cfIp)) return cfIp;
   if (realIp && isPlausibleIp(realIp)) return realIp;

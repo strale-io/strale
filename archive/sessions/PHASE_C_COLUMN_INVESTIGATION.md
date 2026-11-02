@@ -88,22 +88,22 @@ only observe values, not when they were written.
 
 ```
 id                                    created_at                  capability_id                           solution_slug     user_id
-2d8e59fb-f283-4485-be81-fae2c888e90f  2026-04-11 15:26:05+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
-8e4fdc04-9e0f-4336-95f3-12a1b3ceb2dd  2026-04-11 15:25:46+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
-d6f1dde8-373e-4613-b2c4-7d8fe1e84f9c  2026-04-11 15:24:58+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
-a291445d-693e-4e96-aef4-4da1b69be2c7  2026-04-09 15:18:55+00     null                                    kyb-complete-de   6b3838be-c8cd-4047-a4da-19305f60c09b
-f4cf738d-1fce-4d69-8fcd-e851eee32eb6  2026-04-09 14:59:06+00     812b37f3-709e-4af9-b505-d89064214402   null              null
+[redacted-transaction-id]             2026-04-11 15:26:05+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
+[redacted-transaction-id]             2026-04-11 15:25:46+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
+[redacted-transaction-id]             2026-04-11 15:24:58+00     f67d3452-60ab-4777-86fc-16c6ba47ce7f   null              null
+[redacted-transaction-id]             2026-04-09 15:18:55+00     null                                    kyb-complete-de   [redacted-user-id]
+[redacted-transaction-id]             2026-04-09 14:59:06+00     812b37f3-709e-4af9-b505-d89064214402   null              null
 ```
 
 **`test` cohort** — newest 5 (all one user):
 
 ```
 id                                    created_at                  capability_id                           user_id
-068f8e9b-b442-4d85-b3a5-21305fac6379  2026-04-02 18:49:29+00     9ebfb261-1608-4384-8bd5-a78ff9e40634   374b977e-42d9-432a-ac72-fd0893a24a45
-b89998e7-4ee4-43a3-b861-7491f2f7a9d5  2026-04-01 02:26:46+00     6b43c5a9-503a-4ece-95ef-452ce3f701a9   374b977e-42d9-432a-ac72-fd0893a24a45
-de7c021d-8e95-4d7f-89f0-31391e1f5f52  2026-03-31 20:21:40+00     5fa0a55e-b50c-46f7-904d-f7f252118706   374b977e-42d9-432a-ac72-fd0893a24a45
-d40e002f-32ed-478e-ad33-54841c0bf45c  2026-03-28 00:30:55+00     ef612955-4378-4907-bba5-e2965c8c0d50   374b977e-42d9-432a-ac72-fd0893a24a45
-7cbb4b32-2671-4889-8f20-a995adcd8a38  2026-03-27 16:29:09+00     5aab0c7b-861d-4393-904a-861f60c35893   374b977e-42d9-432a-ac72-fd0893a24a45
+[redacted-transaction-id]             2026-04-02 18:49:29+00     9ebfb261-1608-4384-8bd5-a78ff9e40634   374b977e-42d9-432a-ac72-fd0893a24a45
+[redacted-transaction-id]             2026-04-01 02:26:46+00     6b43c5a9-503a-4ece-95ef-452ce3f701a9   374b977e-42d9-432a-ac72-fd0893a24a45
+[redacted-transaction-id]             2026-03-31 20:21:40+00     5fa0a55e-b50c-46f7-904d-f7f252118706   374b977e-42d9-432a-ac72-fd0893a24a45
+[redacted-transaction-id]             2026-03-28 00:30:55+00     ef612955-4378-4907-bba5-e2965c8c0d50   374b977e-42d9-432a-ac72-fd0893a24a45
+[redacted-transaction-id]             2026-03-27 16:29:09+00     5aab0c7b-861d-4393-904a-861f60c35893   374b977e-42d9-432a-ac72-fd0893a24a45
 ```
 
 **User breakdown by cohort** (top 15):

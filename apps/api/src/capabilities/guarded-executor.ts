@@ -30,6 +30,7 @@
  * https://www.notion.so/35d67c87082c812ba68ec4e424f8cad1
  */
 
+import { runWithoutPaidCalls } from "../lib/paid-call-guard.js";
 import { sql } from "drizzle-orm";
 import { getDb, type Database } from "../db/index.js";
 import { log, logError, logWarn } from "../lib/log.js";
@@ -661,7 +662,11 @@ export async function guardedExecute(
   // an evidence table.
   const startedAt = Date.now();
   try {
-    const result = await executor(input);
+    // Non-customer contexts may not spend money upstream, whatever the
+    // capability's cost_class says (lib/paid-call-guard.ts).
+    const result = ctx.kind === "customer_paid"
+      ? await executor(input)
+      : await runWithoutPaidCalls(ctx.kind, () => executor(input));
     scope.signal?.throwIfAborted();
     await recordInvocation({
       capabilitySlug: slug,

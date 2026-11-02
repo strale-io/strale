@@ -1,3 +1,4 @@
+import { runWithoutPaidCalls, isPaidCallBlockedMessage, PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
 import { isCheckEnforced, runKnownAnswerCheck } from "./known-answer-checks.js";
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
 import { deployCommitOrNull } from "./receipt/deploy-identity.js";
@@ -577,6 +578,16 @@ async function runSingleTest(
     return runDryRunSchemaTest(suite);
   }
 
+  // ── Parked by the paid-call guard: refuse before any budget slot is taken.
+  // The scheduler already excludes these; this covers manual and batch runs.
+  if (isParkedForPaidCall(suite)) {
+    log.info(
+      { label: "test-runner-skip-paid-call-parked", capability_slug: suite.capabilitySlug, test_suite_id: suite.id },
+      "test-runner-skip-paid-call-parked",
+    );
+    return null;
+  }
+
   // ── Regression test: compare current output structure against baseline ───
   if (suite.testType === "regression") {
     return runRegressionTest(suite);
@@ -787,11 +798,11 @@ async function runSingleTest(
     try {
       if (shouldRetry) {
         capResult = await withRetry(
-          () => executor(suite.input as Record<string, unknown>),
+          () => runWithoutPaidCalls("internal_test", () => executor(suite.input as Record<string, unknown>)),
           { maxRetries: 1, baseDelayMs: 2000, slug: suite.capabilitySlug },
         );
       } else {
-        capResult = await executor(suite.input as Record<string, unknown>);
+        capResult = await runWithoutPaidCalls("internal_test", () => executor(suite.input as Record<string, unknown>));
       }
       responseTimeMs = Date.now() - startTime;
     } catch (err) {
@@ -802,6 +813,11 @@ async function runSingleTest(
   } else {
     responseTimeMs = 0;
   }
+
+  // The paid-call guard stopped this run before it spent money upstream.
+  // Skip it like an exhausted budget: no result row, so it neither passes a
+  // negative/edge_case test nor shows as a failure on public surfaces.
+  if (isPaidCallBlockedMessage(executionError)) return await skipPaidCallBlocked(suite, executionError);
 
   // Validate the result
   const reliability = fieldReliabilityMap?.get(suite.capabilitySlug) ?? null;
@@ -1195,9 +1211,53 @@ async function runFixtureTest(
 
 // ─── Regression test (FREE — compares structure) ─────────────────────────────
 
+function isParkedForPaidCall(suite: typeof testSuites.$inferSelect): boolean {
+  return suite.testStatus === "quarantined"
+    && (suite.quarantineReason?.startsWith(PAID_CALL_QUARANTINE_MARKER) ?? false);
+}
+
+/**
+ * A run the paid-call guard (lib/paid-call-guard.ts) stopped before it spent
+ * money upstream. No test_results row, internal transaction or
+ * fixture-recapture count is written. The suite is parked (quarantined under
+ * PAID_CALL_QUARANTINE_MARKER) so it is never scheduled again: without a row
+ * its last run never advances, and every retry would reserve a test-budget
+ * slot on a quota-limited capability (independent review, PR #878).
+ * `updated_at` is left alone: parking is not an edit to what the suite asserts.
+ */
+async function skipPaidCallBlocked(
+  suite: typeof testSuites.$inferSelect,
+  reason: string | null,
+): Promise<null> {
+  log.warn(
+    {
+      label: "test-runner-skip-paid-call-blocked",
+      capability_slug: suite.capabilitySlug,
+      test_suite_id: suite.id,
+      test_type: suite.testType,
+      reason,
+    },
+    "test-runner-skip-paid-call-blocked",
+  );
+  try {
+    await getDb()
+      .update(testSuites)
+      .set({
+        testStatus: "quarantined",
+        quarantineReason:
+          `${PAID_CALL_QUARANTINE_MARKER} this suite's input reaches a paid upstream call ` +
+          `(${reason ?? "unknown"}) — needs human: move it to a free input, then reset test_status.`,
+      })
+      .where(eq(testSuites.id, suite.id));
+  } catch (err) {
+    logError("test-runner-park-paid-call-failed", err, { capability_slug: suite.capabilitySlug, test_suite_id: suite.id });
+  }
+  return null;
+}
+
 async function runRegressionTest(
   suite: typeof testSuites.$inferSelect,
-): Promise<SingleTestResult> {
+): Promise<SingleTestResult | null> {
   const db = getDb();
   const startTime = Date.now();
 
@@ -1276,7 +1336,7 @@ async function runRegressionTest(
     responseTimeMs = 0;
   } else {
     try {
-      const result = await executor(suite.input as Record<string, unknown>);
+      const result = await runWithoutPaidCalls("internal_test", () => executor(suite.input as Record<string, unknown>));
       responseTimeMs = Date.now() - startTime;
       currentOutput = result?.output ?? null;
     } catch (err) {
@@ -1284,6 +1344,8 @@ async function runRegressionTest(
       executionError = err instanceof Error ? err.message : String(err);
     }
   }
+
+  if (isPaidCallBlockedMessage(executionError)) return await skipPaidCallBlocked(suite, executionError);
 
   if (executionError || !currentOutput) {
     const failureReason = executionError

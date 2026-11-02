@@ -15,6 +15,8 @@
  *   6. unknown              — none of the above matched
  */
 
+import { isPaidCallBlockedMessage } from "./paid-call-guard.js";
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type FailureClassification =
@@ -130,6 +132,15 @@ const UPSTREAM_TRANSIENT_PATTERNS = [
   /ERR_CERT/i,                     // target site SSL certificate issue
   /ERR_NAME_NOT_RESOLVED/i,        // target site DNS failure
   /net::ERR_/i,                    // any Chromium network error from target site
+  // keyword-rank-check refusing to report a ranking because Google's `/goto`
+  // redirect left a result position opaque and Serper's `/resolve` could not
+  // open it (2026-10-30). The capability is working exactly as designed: it
+  // declines rather than report a possibly-wrong rank. Without this pattern
+  // the message falls through to `unknown`, and a correct refusal becomes a
+  // quality signal against the tool — the F1/refusal failure family. The
+  // condition is upstream and genuinely transient: the next search gets a
+  // fresh set of links.
+  /opaque redirect links for result position/i,
 ];
 
 const CAPABILITY_BUG_PATTERNS = [
@@ -238,6 +249,16 @@ export function classifyFailure(
 
   // ── 1. TEST_INFRASTRUCTURE ─────────────────────────────────────────────
   // Missing env vars, quota, geo-restriction, Browserless infra issues
+  // The paid-call guard (lib/paid-call-guard.ts) stopped Strale's own test
+  // before it spent money upstream: our infrastructure, not a capability signal.
+  if (isPaidCallBlockedMessage(reason)) {
+    return {
+      verdict: "test_infrastructure",
+      confidence: "high",
+      reason: `Test stopped before a paid upstream call: ${truncate(reason, 120)}`,
+    };
+  }
+
   if (matchesAny(reason, INFRA_ENV_PATTERNS)) {
     return {
       verdict: "test_infrastructure",

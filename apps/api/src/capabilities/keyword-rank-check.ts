@@ -1,9 +1,21 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  describeResultDomain,
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   const rawDomain = (
     (input.domain as string) ??
     (input.url as string) ??
@@ -92,7 +104,7 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: keyword, gl: country, hl: language, num: depth }),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!resp.ok) {
@@ -102,18 +114,71 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
 
   const data = await resp.json();
 
-  const organicResults = ((data.organic as any[]) ?? []).map((item: any, idx: number) => ({
-    url: (item.link as string) ?? (item.url as string) ?? "",
-    title: (item.title as string) ?? "",
-    snippet: (item.snippet as string) ?? "",
-    position: (item.position as number) ?? idx + 1,
-    domain: extractDomain((item.link as string) ?? (item.url as string) ?? ""),
-  }));
+  // Google wraps every organic link past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30). Undo that before a domain is
+  // derived from anything: the old `extractDomain` read `www.google.com` off
+  // the wrapper and happily compared it against the caller's target, so a
+  // rank check past position 3 was answering about the wrong host.
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
+
+  const organicResults = ((data.organic as any[]) ?? []).map((item: any, idx: number) => {
+    const link = (item.link as string) ?? (item.url as string) ?? "";
+    const host = describeResultDomain(link, item.displayedLink);
+    return {
+      url: usableResultUrl(link),
+      title: (item.title as string) ?? "",
+      snippet: (item.snippet as string) ?? "",
+      position: (item.position as number) ?? idx + 1,
+      domain: host.domain,
+      // Where the host came from. `breadcrumb` means Google's display
+      // breadcrumb named it while the link itself stayed opaque — see the
+      // output field below for why the caller is told.
+      domain_source: host.source,
+    };
+  });
 
   const resultsScanned = organicResults.length;
 
+  // Results whose host could not be established at all, and results whose
+  // host came only from Google's display breadcrumb. Round-2 review: the
+  // second group must block too. A breadcrumb is Google's *display* URL, and
+  // for AMP, syndicated and redirecting results it is routinely not the
+  // destination host — so a breadcrumb-derived position could still be the
+  // caller's domain under a different host, and reporting a rank from it is
+  // the guess this capability exists to refuse.
+  //
+  // Indices, not position numbers. Round-2 review: `competitors_above` is
+  // built with `slice(0, matchIdx)`, so comparing position *values* against
+  // the match let an unresolved result land among the competitors without
+  // blocking whenever Serper's array order and its `position` values
+  // disagree. One space, used by both tests.
+  const uncertainIdx = organicResults
+    .map((r, idx) => (r.domain === null || r.domain_source === "breadcrumb" ? idx : -1))
+    .filter((idx) => idx >= 0);
+
   // Find the first (best) match for our target domain among the scanned results.
   const matchIdx = organicResults.findIndex((r) => domainsMatch(r.domain, domain));
+
+  // An uncertain host above the best match — or anywhere at all, when there
+  // is no match — could be the caller's own domain, so neither `position` nor
+  // `found: false` can be stated. Refusing is the only honest answer: a
+  // ranking a customer pays for must not be a guess. (DEC-20260428-B: never
+  // assert a fact the input does not support.)
+  // `<=`, not `<`. The match itself can be the uncertain one: a position whose
+  // host came only from the breadcrumb can *be* what we matched on, in which
+  // case the reported rank rests on Google's display URL rather than on the
+  // destination — the same guess, one step further in.
+  const blocking = uncertainIdx.filter((idx) => matchIdx < 0 || idx <= matchIdx);
+  if (blocking.length > 0) {
+    const positions = blocking.map((idx) => organicResults[idx].position);
+    throw new Error(
+      `Google returned opaque redirect links for result position(s) ${positions.join(", ")} ` +
+        `and Serper's link resolution did not return a real URL for them` +
+        `${resolution.error ? ` (${resolution.error})` : ""}. ` +
+        `Those positions could be "${domain}", so no ranking is reported rather than a possibly wrong one. ` +
+        `Retry shortly; this is a transient upstream condition.`,
+    );
+  }
   const match = matchIdx >= 0 ? organicResults[matchIdx] : null;
 
   const competitorsAbove = match
@@ -142,6 +207,21 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
       snippet: match ? match.snippet : null,
       results_scanned: resultsScanned,
       scan_depth_requested: depth,
+      // Honest about the redirect wrapper even on a clean answer: positions
+      // below the match may stay opaque, and a caller reading
+      // `competitors_above` deserves to know none were hidden.
+      unresolved_positions: organicResults
+        .filter((r) => r.domain === null)
+        .map((r) => r.position)
+        .sort((a, b) => a - b),
+      // Positions whose host came from Google's display breadcrumb rather
+      // than from the destination URL. Round-2 review: the previous version
+      // reported these as ordinary known hosts, so a caller could not tell
+      // that position 4 was never actually resolved.
+      breadcrumb_derived_positions: organicResults
+        .filter((r) => r.domain_source === "breadcrumb")
+        .map((r) => r.position)
+        .sort((a, b) => a - b),
       competitors_above: competitorsAbove,
     },
     provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
@@ -195,14 +275,6 @@ function isBarePublicSuffix(domain: string): boolean {
   return BARE_PUBLIC_SUFFIXES.has(domain);
 }
 
-function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
 /**
  * Compares a result's domain against the target domain.
  *
@@ -217,7 +289,7 @@ function extractDomain(url: string): string {
  * is a wrong answer, not a lenient one, and subdomain rank tracking
  * ("blog.", "docs.", "shop.") is a mainstream use of this capability.
  */
-function domainsMatch(resultDomain: string, targetDomain: string): boolean {
+function domainsMatch(resultDomain: string | null, targetDomain: string): boolean {
   if (!resultDomain || !targetDomain) return false;
   if (resultDomain === targetDomain) return true;
   return resultDomain.endsWith(`.${targetDomain}`);

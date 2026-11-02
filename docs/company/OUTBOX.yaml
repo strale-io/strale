@@ -161,3 +161,50 @@ threads:
       Petter
       Strale (Moonlighter AB, Sweden)
       petter@strale.io
+  - id: rik-open-data-403
+    to: RIK Ariregister open-data contact (unverified: confirm the address on rik.ee before sending; from petter@strale.io)
+    subject: "Automated access to the Ariregister open-data file from our server"
+    asked: Whether our server may download the daily open-data file, and if so what we should do to be allowed
+    unblocks: Estonian directors in estonian-company-data (production-watch issue 856)
+    sent:
+    follow_up_by:
+    status: draft
+    note: Written 2026-10-31 by the morning run. The server's outbound address is not stated; add it from Railway if RIK asks. Do not route around the block in the meantime (DEC-20261023-A).
+    body: |
+      Hello,
+
+      Moonlighter AB runs Strale, an API service that gives business customers company
+      information from official registers. We would like to use the Ariregister open-data file
+      ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip under its CC BY 4.0 licence, naming
+      the Estonian Centre of Registers and Information Systems as the source.
+
+      Requests from our server, hosted in the United States, receive HTTP 403 from
+      avaandmed.ariregister.rik.ee, while the same request from a computer in Sweden succeeds.
+      We download the file at most once a day and identify ourselves as Strale.
+
+      Is automated download from a hosted server permitted? If it is, what do we need to do for
+      our server to be allowed? If you prefer another route, such as a contract for the
+      register's services, please tell us which one.
+
+      Kind regards,
+      Petter Lindstrom
+      Moonlighter AB (Strale)
+  - id: serper-credit-rollover
+    to: support@serper.dev (from petter@strale.io)
+    subject: "Unused credits when renewing the Starter pack"
+    asked: Whether unused credits carry over if we renew before they expire on 8 November
+    unblocks: DQ-44
+    sent:
+    follow_up_by:
+    status: draft
+    note: Written 2026-10-31 by the morning run. Needed by 2026-11-06. If unanswered by then, DQ-44 is decided without it.
+    body: |
+      Hello,
+
+      Our Starter credits expire on 8 November with most of the 50,000 unused. If we renew
+      before then, do the unused credits carry over to the new pack? If not, is there another
+      way to keep them?
+
+      Kind regards,
+      Petter Lindstrom
+      Moonlighter AB (Strale)

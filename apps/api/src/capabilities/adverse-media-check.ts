@@ -1,6 +1,11 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { logError } from "../lib/log.js";
 
 /**
@@ -180,6 +185,13 @@ async function querySerper(
   output: Record<string, unknown>;
   provenance: { source: string; fetched_at: string; acquisition_method: "vendor_api"; upstream_vendor: string };
 }> {
+  // One budget for the search and the link resolution together. Round-2
+  // review: 15 s for the search plus a slice for resolution could exceed the
+  // 15 s SYNC_TRANSACTION_WALL_MS, turning a screening answer into an
+  // infrastructure error. Taken at the top of the Serper leg, which is this
+  // fallback's whole body.
+  const budget = startSerperBudget();
+
   // Search for adverse media: company name + risk keywords
   const query = `"${name}" (fraud OR sanctions OR investigation OR lawsuit OR regulatory OR penalty)`;
 
@@ -187,33 +199,57 @@ async function querySerper(
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: query, num: 20, tbs: "qdr:y" }), // last year
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!res.ok) {
     throw new Error(`Serper API error: HTTP ${res.status}`);
   }
 
-  const data = (await res.json()) as { organic?: Array<{ title: string; link: string; snippet: string; date?: string }> };
+  const data = (await res.json()) as {
+    organic?: Array<{ title: string; link: string; snippet: string; date?: string }>;
+  };
+
+  // Google wraps every organic link past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30), and Serper passes it through.
+  // On a screening output that matters more than elsewhere: `source_link` is
+  // what a compliance reviewer follows to check the hit, and a redirect is
+  // not auditable evidence.
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
   const results = data.organic ?? [];
 
   // Classify each result by category
   const categories: Record<string, number> = {};
-  const topArticles: Array<{ headline: string; source_link: string; timestamp: string | null; language: string | null; category: string }> = [];
+  const topArticles: Array<{
+    headline: string;
+    source_link: string | null;
+    source_link_unresolved: boolean;
+    timestamp: string | null;
+    language: string | null;
+    category: string;
+  }> = [];
 
   for (const r of results) {
     const category = classifyArticle(r.title, r.snippet);
     categories[category] = (categories[category] ?? 0) + 1;
     // Serper does not return article publication date or language; emit null rather than fabricate (DEC-20260428-B).
+    // The finding is kept either way. Dropping a hit because its link is
+    // opaque would understate the risk on a screening output, which is the
+    // worse failure here; an unopenable URL presented as a source is the
+    // other. So the article stays, counted in `total_hits` and in its
+    // category, and the link is reported absent rather than wrong
+    // (DEC-20260428-B: never assert what the input does not support).
     topArticles.push({
       headline: r.title,
-      source_link: r.link,
+      source_link: usableResultUrl(r.link),
+      source_link_unresolved: usableResultUrl(r.link) === null,
       timestamp: r.date ?? null,
       language: null,
       category,
     });
   }
 
+  const emittedArticles = topArticles.slice(0, 10);
   const totalHits = results.length;
   const categoriesFound = Object.entries(categories).filter(([, v]) => v > 0).map(([k]) => k);
 
@@ -227,12 +263,18 @@ async function querySerper(
       categories,
       categories_found: categoriesFound,
       severe_categories: SEVERE_CATEGORIES,
-      top_articles: topArticles.slice(0, 10),
+      top_articles: emittedArticles,
       lists_queried: SERPER_LISTS_QUERIED,
       screened_at: now,
       period: "last 12 months",
       source: "serper",
       fallback_reason: fallbackReason,
+      // Screening results whose source link Google would not let us open.
+      // Nonzero means some `top_articles[].source_link` are null; the hits
+      // themselves are still counted. Round-2 review: counted over the
+      // articles this output emits, not over every wrapper in the response.
+      unresolved_source_links: emittedArticles.filter((a) => a.source_link_unresolved).length,
+      link_resolution_attempted: resolution.attempted,
     },
     provenance: { source: "google-serper", fetched_at: now, acquisition_method: "vendor_api", upstream_vendor: "serper" },
   };

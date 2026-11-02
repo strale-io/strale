@@ -389,6 +389,11 @@ export const ENVIRONMENTAL_FAILURE_CLASSES: ReadonlySet<TransactionFailureClass>
 >(["upstream", "config", "timeout"]);
 
 export function isEnvironmentalFailure(reason: string | null | undefined): boolean {
+  // The cost-control gate refused to run a paid tool for a test, so the tool
+  // never executed. Not a class of its own: cost-control-refusal-accounting.test.ts
+  // pins the taxonomy result on purpose. On 2026-10-31 one test run raised
+  // "correctness 0%" twelve times across two working search tools this way.
+  if (reason?.includes("refuses invocation from context kind")) return true;
   return ENVIRONMENTAL_FAILURE_CLASSES.has(classifyTransactionFailure(reason));
 }
 

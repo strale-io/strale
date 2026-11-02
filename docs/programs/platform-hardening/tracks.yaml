@@ -1,7 +1,7 @@
 schema_version: 1
 program: platform-hardening
 program_status: active
-updated: 2026-10-30
+updated: 2026-10-31
 tracks:
   - id: T1
     title: "H1: Watch production"
@@ -53,22 +53,39 @@ tracks:
       - .github/workflows/ci.yml
   - id: T3
     title: "H3: Manifest text and guaranteed fields"
-    status: active
+    status: done
     gate: none
     depends_on:
       - T2
     owner: session
-    next_action: Shipped in PR 776 (manifest text applied after deploy, drift sweep fails
-      on difference, guaranteed fields measured on real calls). Remaining for
-      exit, a production check that deploy text and drift agree and that
-      guaranteed-field measurements are recorded. Compliance and methodology
-      publication stays founder-gated.
+    next_action: Done. PR 776 shipped the deploy-time manifest text sync, the
+      actionable drift sweep and real-traffic guaranteed-field monitoring; the
+      post-deploy verification it left open ran on 2026-10-31 against commit
+      df0475244c1b and both exit criteria are met. The strict sweep returns
+      exit 0 with sync_writable_differences 0 over 350 examined rows, the served
+      first limitation on iban-validate is the expected string, and
+      manifest_text_hash is checkpointed on 326 of 362 capabilities, where the
+      other 36 split by the real isReportOnly predicate into 12 manifest-less
+      rows and 24 report-only rows with 0 unexplained, and the predicate matches
+      exactly 24 rows in the catalogue of which all 24 are unchecked, so the
+      publication guard is observed working rather than inferred. The claim and
+      fetch guards in the same exit bullet pass. Piggyback has recorded 795
+      served calls over 290 tools since the deploy. Follow-up outside the exit
+      criteria, carried in the handoff - 16 tools returned a response missing a
+      field their manifest declares guaranteed, and 14 of those are absent from
+      the static consistency allowlist, so only runtime measurement finds them;
+      the cause per tool is not diagnosed, the samples are small, and the live
+      alert will essentially never fire at these volumes, which is the case for
+      the weekly persisted-miss check the H3 handoff proposed.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Deploy text and drift checks agree with manifests.
       - Guaranteed fields are measured on real traffic; claim/fetch guards cover
         the expanded surfaces.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-10-31-check-h3-manifest-text-and-guaranteed-fields.json
+      - archive/receipts/2026-10-27-test-run-manifest-text-sync-round-2.json
+      - handoff/_general/from-code/2026-10-31-h3-verification-and-pc-only-inventory.md
   - id: T4
     title: "H4: Money path"
     status: done
@@ -93,20 +110,32 @@ tracks:
       - apps/api/src/routes/x402-settlement-characterization.test.ts
   - id: T5
     title: "H5: Cost recording and Anthropic client"
-    status: queued
+    status: done
     gate: none
     depends_on: []
     owner: session
-    next_action: Shipped in PR 777 (per-call cost recording, shared Anthropic client,
-      margin per tool). Remaining for exit, a production query showing per-call
-      costs recorded on real calls.
+    next_action: Done. PR 777 shipped per-call cost recording, the shared Anthropic
+      client and margin per tool; the production check it was waiting on ran on
+      2026-10-31. On real traffic since the 10-27 deploy, cost context is recorded on
+      92.6 percent of completed x402 calls (2,862 of 3,092) and 96.6 percent of
+      completed non-harness wallet calls (773 of 800). The naive figure is 1 percent,
+      and it is wrong - 23,297 harness calls execute without an HTTP request and so
+      never open the cost scope, which is the wrong-denominator trap. Nothing recorded
+      a cost before the deploy and 477 after, so the mechanism is attributable to that
+      PR. Nulls carry a stated reason rather than a guess (unmetered_upstream per slug
+      dominates), shared-client usage is attributed per model, and no call costs more
+      than it charges. Follow-up outside the exit criteria - roughly 3 to 7 percent of
+      real calls still carry no breakdown and the cause is undiagnosed, and
+      transactions_meta lacks cost_breakdown so this check needed the PC-only strale_ro
+      credential; adding that column would let a cloud session repeat it.
     resume_file: docs/research/2026-10-27-codebase-architecture-review.md
     exit:
       - Per-call costs and shared client usage are recorded and verified.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-10-31-check-h5-cost-recording-production.json
   - id: T6
     title: "H6: Input validation and fetch hardening"
-    status: queued
+    status: active
     gate: none
     depends_on: []
     owner: session

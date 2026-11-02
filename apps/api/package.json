@@ -9,6 +9,8 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:code": "vitest run --project code",
+    "test:docs": "vitest run --project docs",
     "typecheck": "tsc --noEmit",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
     "lint:no-bare-catch": "node scripts/check-no-bare-catch.mjs src",
