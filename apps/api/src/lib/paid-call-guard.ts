@@ -73,6 +73,15 @@ export class PaidCallBlockedError extends Error {
   }
 }
 
+/**
+ * `test_suites.quarantine_reason` prefix for a suite parked because its run
+ * reached a paid call. The scheduler never selects such a suite and the test
+ * runner refuses it before reserving a test-budget slot; the health sweep
+ * never releases it. A person moves the suite to a free input (registration
+ * number, fixture mode) and resets test_status.
+ */
+export const PAID_CALL_QUARANTINE_MARKER = "paid_call_blocked:";
+
 /** Run `fn` as Strale's own (non-customer) traffic: paid upstream calls refuse. */
 export function runWithoutPaidCalls<T>(kind: NonCustomerKind, fn: () => T): T {
   return scope.run({ kind }, fn);

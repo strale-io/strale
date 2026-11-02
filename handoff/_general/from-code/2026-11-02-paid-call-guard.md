@@ -22,16 +22,23 @@ Intent: Make sure Strale's own test traffic never pays an upstream vendor (Pette
   - admin recalibrate (`routes/internal-tests.ts`);
   - fixture verification (`db/seed-tests.ts`) and `db/audit-tests.ts`.
 - Operator scripts a person runs by hand to exercise live upstreams are named exemptions in the guard header. `sweep-paid-fixtures.ts` spends on purpose under the EUR 25 sweep cap.
-- A blocked scheduled run is skipped like an exhausted test budget: no test_results row, no internal transaction, no fixture-recapture count, and a `test-runner-skip-paid-call-blocked` warn line naming the suite. It never shows as a pass or a public failure.
+- A blocked scheduled run writes no test_results row, internal transaction or fixture-recapture count, so it never shows as a pass or a public failure. It logs `test-runner-skip-paid-call-blocked`.
+- The blocked suite is then parked: `test_status = 'quarantined'` with reason prefix `paid_call_blocked:`.
+  - The scheduler's selection queries exclude parked suites.
+  - The test runner refuses a parked suite before the budget gate, so it uses no test-budget slot.
+  - The health sweep never releases one.
+  - Without parking, a skipped suite would be due again every hour and use a free_quota test slot each time (second review round).
+  - To unpark: a person moves the suite to a free input, then resets test_status.
 - Customer calls (`/v1/do`, x402, solutions) never enter the scope and are unchanged.
 - Independent review (fresh same-provider agent, separate context): PASS WITH FIXES. Its findings 1-4 and 7 are fixed. Findings 5 (a capability that swallows the block) and 6 (a blocked free_quota run still uses a test-budget slot) are noted and not fixed.
 
 ## Evidence
 
-- `paid-call-guard.test.ts` (7 tests), `test-runner.paid-call-skip.test.ts` (4), and 2 new cases in `guarded-executor.test.ts`.
+- `paid-call-guard.test.ts` (7 tests), `test-runner.paid-call-skip.test.ts` (6), and 2 new cases in `guarded-executor.test.ts`.
 - With the guard calls removed: 3 tests fail. With the runSingleTest/guardedExecute wraps removed: 4 fail. Restored: all pass.
-- Full API unit suite: 8,126 passed, 0 failed. Root typecheck, models:check, env:check and the API lint guards are green.
+- Parking: 3 tests fail with it removed, all pass with it.
+- Full API unit suite: 8,128 passed, 0 failed. Root typecheck, models:check, env:check and the API lint guards are green.
 
 ## Next
 
-- Next authorised action: after merge and deploy, search the production logs for `test-runner-skip-paid-call-blocked` to list which suites were paying; then point those suites at registration-number inputs or move them to fixture mode | Owner: Strale orchestrator | Blocker: none once deployed; the log search needs log access (Better Stack once live, or Railway logs from the PC).
+- Next authorised action: after merge and deploy, list parked suites with `SELECT capability_slug, test_type, input FROM test_suites WHERE quarantine_reason LIKE 'paid_call_blocked:%'` (or the `test-runner-skip-paid-call-blocked` log line); then point those suites at registration-number inputs or move them to fixture mode | Owner: Strale orchestrator | Blocker: the production DB read is PC-only.

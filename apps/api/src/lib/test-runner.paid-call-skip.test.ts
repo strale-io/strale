@@ -133,7 +133,9 @@ vi.mock("../db/index.js", () => ({ getDb: () => mockDb }));
 
 import { runTests } from "./test-runner.js";
 import { testResults as testResultsTable } from "../db/schema.js";
-import { assertPaidCallAllowed } from "./paid-call-guard.js";
+import { assertPaidCallAllowed, PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 function baseSuite(testType: string, testMode: string): SuiteRow {
   return {
@@ -180,11 +182,37 @@ afterEach(() => {
 const run = () => runTests({ capabilitySlug: suite.capabilitySlug, testType: suite.testType, suiteId: suite.id });
 
 describe("scheduled tests never make a paid call", () => {
-  it("known_answer (live): the paid call is stopped and no result row is written", async () => {
+  it("known_answer (live): the paid call is stopped, no result row is written, the suite is parked", async () => {
     suite = baseSuite("known_answer", "live");
     await run();
     expect(executorCallCount).toBe(1);
     expect(insertedResults).toHaveLength(0);
+    expect(suite.testStatus).toBe("quarantined");
+    expect(suite.quarantineReason?.startsWith(PAID_CALL_QUARANTINE_MARKER)).toBe(true);
+  });
+
+  // Independent review, PR #878: without parking, a skipped suite is due again
+  // every hour and each retry reserves a test-budget slot on a free_quota
+  // capability. A parked suite must be refused before the budget gate.
+  it("a parked suite is refused before the budget gate and never reaches the executor", async () => {
+    suite = baseSuite("known_answer", "live");
+    suite.testStatus = "quarantined";
+    suite.quarantineReason = `${PAID_CALL_QUARANTINE_MARKER} parked earlier`;
+    await run();
+    expect(mockIsBudgetExhausted).not.toHaveBeenCalled();
+    expect(mockAssertGuardedAllow).not.toHaveBeenCalled();
+    expect(executorCallCount).toBe(0);
+    expect(insertedResults).toHaveLength(0);
+  });
+
+  it("the scheduler excludes parked suites from both of its selection queries", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../jobs/test-scheduler.ts", import.meta.url)),
+      "utf8",
+    );
+    const exclusion =
+      "AND NOT (ts.test_status = 'quarantined' AND COALESCE(ts.quarantine_reason, '') LIKE ${PAID_CALL_QUARANTINE_MARKER + '%'})";
+    expect(source.split(exclusion).length - 1).toBe(2);
   });
 
   it("negative: a stopped paid call is not recorded as a passing refusal", async () => {
@@ -198,7 +226,8 @@ describe("scheduled tests never make a paid call", () => {
     await run();
     expect(insertedResults).toHaveLength(0);
     expect(suite.fixtureRecaptureFailures).toBe(0);
-    expect(suite.testStatus).toBe("normal");
+    // Parked by the paid-call guard, not by the recapture cap.
+    expect(suite.quarantineReason?.startsWith(PAID_CALL_QUARANTINE_MARKER)).toBe(true);
   });
 
   it("control: an executor that makes no paid call still records its result", async () => {
