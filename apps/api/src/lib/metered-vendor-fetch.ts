@@ -7,6 +7,7 @@ import {
 } from "./vendor-control-tower.js";
 import { logWarn } from "./log.js";
 import { readErrorTextTruncated } from "./resource-limits.js";
+import { assertPaidCallAllowed, BILLABLE_METERED_VENDORS } from "./paid-call-guard.js";
 
 export async function meteredVendorFetch(
   providerName: string,
@@ -16,6 +17,8 @@ export async function meteredVendorFetch(
   fetchImpl: (url: string | URL, init?: RequestInit) => Promise<Response> = fetch,
   classifyHttpFailures = true,
 ): Promise<Response> {
+  // Strale's own test traffic never pays a vendor (lib/paid-call-guard.ts).
+  if (BILLABLE_METERED_VENDORS.has(providerName)) assertPaidCallAllowed(providerName);
   // Unit capability tests replace fetch with a local spy and intentionally run
   // without DATABASE_URL. Requiring a database before reaching that spy would
   // make input-validation tests fail without strengthening production. The

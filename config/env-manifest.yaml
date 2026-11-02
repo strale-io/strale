@@ -1063,6 +1063,14 @@
   required_in: []
   set_in:
     - none
+- name: STRALE_OPS_READ_TOKEN
+  purpose: Bearer token for GET /v1/ops-read/:check, the fixed read-only production checks operator sessions run (routes/ops-read.ts). At least 32 characters; unset or short means every ops-read path answers 404. Read tier (it opens only read-only aggregates). Petter generates it in Bitwarden (project strale, same name) and sets the same value in Railway.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - railway
 - name: STRALE_API_KEY
   purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds. Also read by strale-ai-sdk (packages/ai-sdk-strale) as the default key for its tools, and by strale-cli (packages/cli) as its only credential source.
   provider: internal

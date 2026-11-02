@@ -7,6 +7,7 @@ import {
 import { extractCompanyName } from "./lib/browserless-extract.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 
 // Canada — Corporations Canada (ISED)
 //
@@ -219,7 +220,7 @@ export function buildNameSearchBody(query: string): URLSearchParams {
   });
 }
 
-async function searchByName(query: string): Promise<CaNameCandidate[]> {
+async function searchByName(query: string, opts: { allowEmpty?: boolean } = {}): Promise<CaNameCandidate[]> {
   const response = await safeFetch(NAME_SEARCH_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -233,6 +234,7 @@ async function searchByName(query: string): Promise<CaNameCandidate[]> {
   const html = await readPageHtml(response, "company_name");
   const candidates = parseNameSearchResults(html);
   if (candidates.length === 0) {
+    if (opts.allowEmpty) return candidates;
     throw new Error(`No Canadian company found matching "${query}".`);
   }
   return candidates;
@@ -267,6 +269,51 @@ export function pickByName(query: string, candidates: CaNameCandidate[]): CaName
   return { corpId: resolved.id, matchedName: resolved.matchedName, matchConfidence: resolved.matchConfidence };
 }
 
+/**
+ * Resolve a company name to a corpId.
+ *
+ * A caller-supplied `company_name` is already a name, so it goes straight to
+ * the free Corporations Canada search first. Only an EXACT match is accepted
+ * there: a `high` (fuzzy) match on raw caller text could land on a different
+ * corporation when the caller added a city or descriptor ("Shopify Ottawa"
+ * vs a registered "OTTAWA SHOPIFY SERVICES INC."), which the Claude
+ * extraction step would have stripped. Anything short of exact (a fuzzy
+ * match, a refusal, no candidates) takes the previous path: Claude extracts
+ * the name, then search and pick as before. Free text in `task` always takes
+ * that path.
+ *
+ * Why (2026-11-02): this used to call Claude first for every name. That made
+ * the only live name-path test ("Shopify", required by Gate 5,
+ * DEC-20260411-B) a paid call on every scheduled run, which Strale's own
+ * tests may not make (lib/paid-call-guard.ts). Searching first keeps that
+ * test live and free, and saves customers the extraction call when they send
+ * a plain registered name.
+ */
+async function resolveByName(text: string, isStructuredName: boolean): Promise<CaNameResolution> {
+  let direct: CaNameCandidate[] | null = null;
+  if (isStructuredName) {
+    direct = await searchByName(text, { allowEmpty: true });
+    const exact = exactMatchOrNull(text, direct);
+    if (exact) return exact;
+  }
+  const name = await extractCompanyName(text, "Canadian");
+  // Claude often returns the text unchanged ("Bank"); don't repeat the search.
+  const candidates = direct !== null && direct.length > 0 && name === text ? direct : await searchByName(name);
+  return pickByName(name, candidates);
+}
+
+/** pickByName's answer when it is an exact match; null when fuzzy or refused. */
+function exactMatchOrNull(text: string, candidates: CaNameCandidate[]): CaNameResolution | null {
+  if (candidates.length === 0) return null;
+  try {
+    const r = pickByName(text, candidates);
+    return r.matchConfidence === "exact" ? r : null;
+  } catch (err) {
+    if (err instanceof CapabilityRefusalError) return null;
+    throw err;
+  }
+}
+
 registerCapability("canadian-company-data", async (input: CapabilityInput) => {
   const raw = (input.corporation_number as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
@@ -281,9 +328,8 @@ registerCapability("canadian-company-data", async (input: CapabilityInput) => {
   let registryNumber = findRegistryNumber(trimmed);
   let nameResolution: CaNameResolution | null = null;
   if (!registryNumber) {
-    const name = await extractCompanyName(trimmed, "Canadian");
-    const candidates = await searchByName(name);
-    nameResolution = pickByName(name, candidates);
+    const isStructuredName = input.corporation_number == null && typeof input.company_name === "string";
+    nameResolution = await resolveByName(trimmed, isStructuredName);
     registryNumber = nameResolution.corpId;
   }
 

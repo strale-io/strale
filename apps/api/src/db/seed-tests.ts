@@ -6,6 +6,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 import { getDb } from "./index.js";
 import { testSuites } from "./schema.js";
 import { eq } from "drizzle-orm";
+import { PaidCallBlockedError, runWithoutPaidCalls } from "../lib/paid-call-guard.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -68,8 +69,12 @@ async function verifyTestFixture(
   // Skip schema_check tests — they don't need pre-verification
   if (test.testType === "schema_check") return { ok: true };
 
-  const executor = await tryGetExecutor(test.capabilitySlug);
-  if (!executor) return { ok: true }; // Can't verify without executor — allow insert
+  const rawExecutor = await tryGetExecutor(test.capabilitySlug);
+  if (!rawExecutor) return { ok: true }; // Can't verify without executor — allow insert
+  // Verification is Strale's own traffic: paid upstream calls refuse
+  // (lib/paid-call-guard.ts).
+  const executor = (input: Record<string, unknown>) =>
+    runWithoutPaidCalls("internal_test", () => rawExecutor(input));
 
   // Negative tests should THROW — verify they do
   if (test.testType === "negative") {
@@ -78,7 +83,9 @@ async function verifyTestFixture(
       // If we get here, the negative test is wrong — capability should have thrown
       return { ok: false, reason: "Negative test succeeded but should throw an error" };
     } catch {
-      return { ok: true }; // Expected — negative test is valid
+      // Expected — negative test is valid (or the guard stopped a paid call,
+      // in which case it cannot be verified and is allowed like a missing executor)
+      return { ok: true };
     }
   }
 
@@ -89,6 +96,9 @@ async function verifyTestFixture(
   try {
     result = await executor(test.input);
   } catch (err) {
+    // Stopped before a paid call: cannot verify for free, so allow the insert
+    // the same way a missing executor does.
+    if (err instanceof PaidCallBlockedError) return { ok: true };
     return {
       ok: false,
       reason: `Execution threw: ${err instanceof Error ? err.message : String(err)}`,

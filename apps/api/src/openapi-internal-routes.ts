@@ -4,6 +4,10 @@ const groups: Array<{ reason: string; routes: string[] }> = [
     "GET /health/jobs",
     "GET /health/deep",
   ] },
+  { reason: "Read-only operator checks behind STRALE_OPS_READ_TOKEN; answers 404 without it and is deliberately absent from public docs (routes/ops-read.ts).", routes: [
+    "ALL /v1/ops-read/*",
+    "GET /v1/ops-read/:check",
+  ] },
   { reason: "Discovery, website redirect or protocol transport; described by its own protocol rather than the REST OpenAPI contract.", routes: [
     "GET /openapi.json",
     "OPTIONS /mcp",

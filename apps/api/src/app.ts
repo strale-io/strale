@@ -37,6 +37,7 @@ import {
 import { trustIndexRoute as web3AssuranceTrustIndexRoute } from "./web3-assurance/trust-index.js";
 import { suggestRoute } from "./routes/suggest.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
+import { opsReadRoute } from "./routes/ops-read.js";
 import { internalLimitationsRoute } from "./routes/internal-limitations.js";
 import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
@@ -532,6 +533,7 @@ app.post(
 );
 app.route("/v1/demand-signals", demandSignalsRoute);
 app.route("/v1/admin", adminRoute);
+app.route("/v1/ops-read", opsReadRoute);
 app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/solutions", solutionExecuteRoute);
 app.route("/v1/web3-assurance", web3AssuranceRoute);

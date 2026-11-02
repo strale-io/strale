@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SYNCED FROM wow-core — edit there.
 // A small cross-session message bus backed by issues in a private GitHub repository.
-import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +12,14 @@ const NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const BODY_LIMIT = 60_000;
 const DEFAULT_FROM = 'session';
 const ASK_CHANNEL = 'needs-founder';
+// The account lock (PACE_CORE §2a "Account takeover"): the newest LEASE names the sessions that may act.
+export const LEASE_CHANNEL = 'fleet-lease';
+const CLOUD_SESSION = /^(?:session|cse)_[A-Za-z0-9]+$/;
+// A cloud session reaches only the repositories attached to it; the bus repository usually is not.
+const NO_ACCESS = /not enabled for this session/i;
+// A command that needs the bus may attach it; the startup inbox never asks for an attach (COMMS_CORE §2).
+const NO_ACCESS_HINT = 'this session cannot reach the bus repository. If this task needs the bus, attach it with add_repo as owner and repo, naming exactly the repository in WOW_BUS_REPO (where the wow-core hook is wired and WOW_BUS_REPO is set, that one call runs without a prompt); if a prompt or refusal appears, do not retry: report on your PR (a comment starting "To orchestrator:") and carry on.';
+const NO_ACCESS_INBOX = 'this session cannot reach the bus repository; carry on (attach it only when a task needs the bus, COMMS_CORE §2).';
 
 class UsageError extends Error {}
 class ApiError extends Error {}
@@ -22,14 +30,13 @@ function parse(argv) {
   const allowed = {
     send: new Set(['--to', '--from', '--body', '--body-file']),
     read: new Set(['--channel', '--peek', '--from-now', '--json']),
-    watch: new Set(['--channel', '--events', '--interval', '--once']),
     channels: new Set(['--json']),
     inbox: new Set(['--config', '--project', '--channel', '--json']),
-    register: new Set(['--channel', '--session', '--kind', '--from']),
     ask: new Set(['--project', '--ask', '--why', '--deadline', '--rec', '--from']),
     done: new Set(['--note', '--from']),
     asks: new Set(['--open', '--project', '--json']),
     digest: new Set(['--channel', '--post', '--now', '--from']),
+    lease: new Set(['--take', '--check', '--add', '--account', '--sessions', '--session', '--parent', '--from', '--json']),
   }[command];
   if (!allowed) throw new UsageError(`unknown command ${command}`);
   const options = { command };
@@ -38,7 +45,7 @@ function parse(argv) {
     if (command === 'done' && i === 1 && !key.startsWith('--')) { options._ = [key]; continue; }
     if (!allowed.has(key)) throw new UsageError(`unknown argument ${key}`);
     const name = key.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    if (['--peek', '--from-now', '--json', '--once', '--open', '--post'].includes(key)) {
+    if (['--peek', '--from-now', '--json', '--open', '--post', '--take', '--check'].includes(key)) {
       if (options[name]) throw new UsageError(`${key} specified more than once`);
       options[name] = true;
     } else {
@@ -64,16 +71,6 @@ function parse(argv) {
   } else if (command === 'read') {
     requireName('channel');
     if (options.peek && options.fromNow) throw new UsageError('--peek and --from-now cannot be combined');
-  } else if (command === 'watch') {
-    requireName('channel');
-    if (!options.events) throw new UsageError('--events is required');
-    options.interval = options.interval === undefined ? 60 : Number(options.interval);
-    if (!Number.isFinite(options.interval) || options.interval <= 0) throw new UsageError('--interval must be a positive number');
-  } else if (command === 'register') {
-    requireName('channel');
-    if (!['cloud', 'local'].includes(options.kind)) throw new UsageError('--kind must be cloud or local');
-    const valid = options.kind === 'cloud' ? /^(?:session|cse)_[A-Za-z0-9]+$/ : /^local_[0-9a-f-]{8,64}$/;
-    if (!valid.test(options.session || '')) throw new UsageError(`invalid ${options.kind} session id`);
   } else if (command === 'ask') {
     for (const key of ['ask', 'why', 'deadline', 'rec']) if (options[key] === undefined) throw new UsageError(`--${key} is required`);
     for (const key of ['project', 'ask', 'why', 'rec']) validateField(key, options[key]);
@@ -87,8 +84,27 @@ function parse(argv) {
     for (const channel of options.channels || []) if (!NAME.test(channel)) throw new UsageError('invalid channel: use [a-z0-9][a-z0-9-]{0,62}');
   } else if (command === 'digest') {
     options.channel ??= ASK_CHANNEL; requireName('channel');
-    options.from ??= 'watchdog';
+    options.from ??= 'digest';
     if (options.now !== undefined && !Number.isFinite(Date.parse(options.now))) throw new UsageError('--now must be an ISO date');
+  } else if (command === 'lease') {
+    if ([options.take, options.check, options.add !== undefined].filter(Boolean).length > 1) throw new UsageError('use one of --take, --check or --add');
+    const takeOnly = ['account', 'sessions'].filter((key) => options[key] !== undefined);
+    const checkOnly = ['session', 'parent'].filter((key) => options[key] !== undefined);
+    if (!options.take && takeOnly.length) throw new UsageError(`--${takeOnly[0]} needs --take`);
+    if (!options.check && checkOnly.length) throw new UsageError(`--${checkOnly[0]} needs --check`);
+    if (options.from !== undefined && !options.take && options.add === undefined) throw new UsageError('--from needs --take or --add');
+    if ((options.take || options.check || options.add !== undefined) && options.json) throw new UsageError('--json only shows the lease');
+    if (options.add !== undefined && !/^[a-z0-9][a-z0-9-]{0,62}:(?:session|cse)_[A-Za-z0-9]+$/.test(options.add)) throw new UsageError('--add must be one <project>:<cloud session id>');
+    if (options.take) {
+      requireName('account');
+      if (!parseLease(`LEASE account=${options.account} sessions=${options.sessions ?? ''}`)) {
+        throw new UsageError('--sessions must be <project>:<cloud session id>[,...], each project once');
+      }
+    }
+    if (options.check) {
+      if (!CLOUD_SESSION.test(options.session || '')) throw new UsageError('--session must be a cloud session id (session_... or cse_...)');
+      if (options.parent !== undefined && !CLOUD_SESSION.test(options.parent)) throw new UsageError('--parent must be a cloud session id');
+    }
   }
   if (options.from !== undefined && !NAME.test(options.from)) throw new UsageError('invalid from');
   return options;
@@ -174,26 +190,77 @@ function newer(id, cursor) {
   if (cursor === null) return true;
   try { return BigInt(String(id)) > BigInt(cursor); } catch { return String(id) !== cursor; }
 }
+// Cloud sessions' GitHub proxy appends this attribution footer to every comment they post.
+const FOOTER = /\n+---\n_Generated by \[Claude Code\]\(https:\/\/claude\.ai\/code\)_\s*$/;
+export function withoutFooter(text) { return String(text || '').replace(/\r\n/g, '\n').replace(FOOTER, ''); }
 function parseMessage(comment) {
-  const text = String(comment.body || '').replace(/\r\n/g, '\n');
+  const text = withoutFooter(comment.body);
   const match = text.match(/^From ([a-z0-9][a-z0-9-]{0,62}):\n\n([\s\S]*)$/);
   return match ? { id: comment.id, createdAt: comment.created_at, sender: match[1], body: match[2] } : null;
 }
-function messageBody(comment) { return parseMessage(comment)?.body ?? String(comment.body || '').replace(/\r\n/g, '\n'); }
+function messageBody(comment) { return parseMessage(comment)?.body ?? withoutFooter(comment.body); }
 
-export function parseRegister(body) {
-  const match = String(body || '').replace(/\r\n/g, '\n').match(/^REGISTER channel=([a-z0-9][a-z0-9-]{0,62}) session=(\S+) kind=(cloud|local)$/);
+// One line, nothing after it but the cloud footer: `LEASE account=<label> sessions=<project>:<id>,...`.
+export function parseLease(body) {
+  const match = withoutFooter(body).trim().match(/^LEASE account=([a-z0-9][a-z0-9-]{0,62}) sessions=(\S+)$/);
   if (!match) return null;
-  const valid = match[3] === 'cloud' ? /^(?:session|cse)_[A-Za-z0-9]+$/ : /^local_[0-9a-f-]{8,64}$/;
-  return valid.test(match[2]) ? { channel: match[1], session: match[2], kind: match[3] } : null;
+  const sessions = [];
+  for (const part of match[2].split(',')) {
+    const pair = part.match(/^([a-z0-9][a-z0-9-]{0,62}):((?:session|cse)_[A-Za-z0-9]+)$/);
+    if (!pair || sessions.some((row) => row.project === pair[1])) return null;
+    sessions.push({ project: pair[1], session: pair[2] });
+  }
+  return { account: match[1], sessions };
 }
+// The platform shows one session as session_<x> and as cse_<x>; both name the same session.
+const sessionKey = (id) => String(id).replace(/^(?:session|cse)_/, '');
+export function newestLease(comments) {
+  const ordered = [...comments].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || Number(b.id) - Number(a.id));
+  for (const comment of ordered) {
+    const message = parseMessage(comment); const lease = message && parseLease(message.body);
+    if (lease) return { id: comment.id, createdAt: comment.created_at, sender: message.sender, ...lease };
+  }
+  return null;
+}
+// No lease yet means nothing to fence: carry on. With the environment's account label, the account decides
+// (every session on the leased account stays active); without it, the session or its parent must be named.
+export function leaseVerdict(lease, session, parent, account) {
+  if (!lease) return { active: true, line: 'no lease: carry on' };
+  const since = `account=${lease.account} since ${iso(lease.createdAt)}`;
+  if (account) {
+    return account === lease.account
+      ? { active: true, line: `active: the lease (${since}) is this account's (WOW_ACCOUNT_LABEL)` }
+      : { active: false, line: `stand down: the lease (${since}) belongs to another account than this one (${account}); turn off this session's own scheduled tasks, say so in one line to your master or on your PR, and stop` };
+  }
+  const named = lease.sessions.find((row) => [session, parent].filter(Boolean).some((id) => sessionKey(id) === sessionKey(row.session)));
+  return named
+    ? { active: true, line: `active: the lease (${since}) names ${named.project}:${named.session}` }
+    : { active: false, line: `stand down: the lease (${since}) names neither this session nor its parent; turn off this session's own scheduled tasks, say so in one line to your master or on your PR, and stop` };
+}
+// A master restarted after the takeover adds itself: the newest lease with its project's entry replaced.
+export function leaseWith(lease, entry) {
+  const [project, session] = entry.split(':');
+  return { account: lease.account, sessions: [...lease.sessions.filter((row) => row.project !== project), { project, session }] };
+}
+const leaseLine = (lease) => `LEASE account=${lease.account} sessions=${lease.sessions.map((row) => `${row.project}:${row.session}`).join(',')}`;
 
+// A comment that starts with ASK or DONE but does not parse is kept as a "malformed" row, so an ask
+// posted by hand never disappears from asks, inbox or the digest (2026-10-29: four hand-posted asks
+// with deadlines like "after 31 Oct" were invisible). `bus.mjs done <id>` closes it like any ask.
+function malformedRow(comment, body) {
+  // Control and line-separator characters are dropped: the row is printed into hooks and posted in the digest.
+  const first = body.split('\n', 1)[0].replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, '');
+  const project = (first.match(/^ASK ([^|]+?) \|/) || first.match(/^DONE ([a-z][a-z0-9-]{0,62})(?: |$)/) || [])[1]?.trim() || '';
+  return { id: comment.id, createdAt: comment.created_at, project, ask: [...first].slice(0, 160).join(''), why: '', deadline: 'none',
+    recommendation: 'repost with bus.mjs ask, then close this one with bus.mjs done', state: 'malformed' };
+}
 export function openAsks(comments) {
   const asks = [];
   const ordered = [...comments].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || Number(a.id) - Number(b.id));
   for (const comment of ordered) {
     const body = messageBody(comment);
-    const close = body.match(/^DONE ([0-9]+)(?: |$)/);
+    if (!/^(?:ASK|DONE)(?![A-Za-z0-9_])/.test(body)) continue;
+    const close = body.match(/^DONE ([0-9]+)(?: |\n|$)/);
     if (close) {
       const target = asks.find((ask) => String(ask.id) === close[1]);
       if (target) target.state = 'done';
@@ -202,9 +269,11 @@ export function openAsks(comments) {
     const match = body.match(/^ASK ([^|\r\n]+) \| ([^|\r\n]+) \| ([^|\r\n]+) \| (none|\d{4}-\d{2}-\d{2}) \| ([^|\r\n]+)(?:\n|$)/);
     if (match && (match[4] === 'none' || validDate(match[4]))) asks.push({ id: comment.id, createdAt: comment.created_at, project: match[1].trim(), ask: match[2].trim(),
       why: match[3].trim(), deadline: match[4], recommendation: match[5].trim(), state: 'open' });
+    else asks.push(malformedRow(comment, body));
   }
   return asks;
 }
+const unresolved = (row) => row.state !== 'done';
 async function channelComments(channel) {
   const issue = await channelIssue(channel, false);
   if (!issue) return [];
@@ -220,7 +289,10 @@ async function sendMessage(to, from, body) {
 
 async function askRows(channel = ASK_CHANNEL) { return openAsks(await channelComments(channel)); }
 function oneLine(error) { return String(error.message || error).split(/[\r\n\u2028\u2029]/, 1)[0]; }
-function displayAsk(row) { return `${row.state.toUpperCase()} #${row.id} ${row.project} | ${row.ask} | ${row.deadline} | rec: ${row.recommendation}`; }
+function displayAsk(row) {
+  if (row.state === 'malformed') return `MALFORMED #${row.id} ${row.project || '?'} | ${row.ask} | ${row.recommendation}`;
+  return `${row.state.toUpperCase()} #${row.id} ${row.project} | ${row.ask} | ${row.deadline} | rec: ${row.recommendation}`;
+}
 function messageLines(channel, row) {
   // Each line is cut to 300 characters: the inbox cap counts lines, so one long line must not flood a hook.
   return [`--- ${iso(row.createdAt)} ${channel} from ${row.sender} (#${row.id})`, ...String(row.body).split(/\r?\n/).map((line) => [...line].slice(0, 300).join(''))];
@@ -249,7 +321,7 @@ async function printInbox(options) {
     const all = await channelComments(channel); const fresh = commentsAfter(all, readCursor(channel)).map(parseMessage).filter(Boolean);
     result.channels.push({ channel, messages: fresh });
   }
-  if (project) result.asks = (await askRows()).filter((ask) => ask.state === 'open' && ask.project === project);
+  if (project) result.asks = (await askRows()).filter((ask) => unresolved(ask) && ask.project === project);
   const lines = [DATA_HEADER];
   if (options.json) lines.push(JSON.stringify(boundedJsonInbox(result)));
   else {
@@ -278,10 +350,11 @@ async function printInbox(options) {
 
 function digestText(rows, now) {
   const day = now.toISOString().slice(0, 10); const today = Date.parse(`${day}T00:00:00Z`);
-  const groups = [['OVERDUE', []], ['DUE WITHIN 7 DAYS', []], ['LATER OR NONE', []]];
+  const groups = [['MALFORMED (repost with bus.mjs ask, then bus.mjs done <id>)', []], ['OVERDUE', []], ['DUE WITHIN 7 DAYS', []], ['LATER OR NONE', []]];
   for (const row of rows) {
+    if (row.state === 'malformed') { groups[0][1].push(`MALFORMED #${row.id} | ${row.project || '?'} | ${row.ask}`); continue; }
     const deadline = row.deadline === 'none' ? null : Date.parse(`${row.deadline}T00:00:00Z`);
-    const group = deadline !== null && deadline < today ? groups[0][1] : deadline !== null && deadline <= today + 7 * 86400000 ? groups[1][1] : groups[2][1];
+    const group = deadline !== null && deadline < today ? groups[1][1] : deadline !== null && deadline <= today + 7 * 86400000 ? groups[2][1] : groups[3][1];
     const createdDay = Date.parse(`${String(row.createdAt).slice(0, 10)}T00:00:00Z`);
     const age = Math.max(0, Math.floor((today - createdDay) / 86400000));
     group.push(`${age}d | ${row.project} | ${row.ask} | rec: ${row.recommendation} | #${row.id}`);
@@ -300,34 +373,6 @@ async function printRead(options) {
   else for (const row of rows) console.log(`--- ${iso(row.createdAt)} from ${row.sender} (#${row.id})\n${row.body}`);
   if (!options.peek) advance(options.channel, fresh);
 }
-function eventLine(channel, message) {
-  const time = new Date(message.createdAt).toISOString().slice(11, 16).replace(':', ':');
-  const first = String(message.body).split(/[\r\n\u2028\u2029]/, 1)[0].replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
-  return `${time}Z BUS ${channel} from ${message.sender}: ${[...first].slice(0, 120).join('')}`;
-}
-function appendEvent(file, line) { mkdirSync(path.dirname(path.resolve(file)), { recursive: true }); appendFileSync(file, `${line}\n`, 'utf8'); }
-export async function watchOnce(options) {
-  try {
-    // The watcher keeps its own cursor (<channel>.watch): sharing read's cursor made a read after a
-    // watch event return nothing, losing the full message body.
-    const key = `${options.channel}.watch`;
-    const cursor = readCursor(key) ?? readCursor(options.channel); // first run: start where read is
-    const all = await channelComments(options.channel); const fresh = commentsAfter(all, cursor);
-    const rows = fresh.map(parseMessage).filter(Boolean);
-    for (const row of rows) appendEvent(options.events, eventLine(options.channel, row));
-    advance(key, fresh);
-    return { error: null };
-  } catch (error) {
-    const detail = String(error.message || error).split(/[\r\n\u2028\u2029]/, 1)[0]
-      .replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
-    if (options.reportError !== false) try {
-      appendEvent(options.events, `${new Date().toISOString().slice(11, 16)}Z BUS-ERROR ${options.channel}: ${detail}`);
-    } catch { /* The next iteration must survive even when the error log itself is unwritable. */ }
-    return { error: detail };
-  }
-}
-const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-
 async function main() {
   let options;
   try { options = parse(process.argv.slice(2)); }
@@ -335,9 +380,11 @@ async function main() {
     if (process.argv[2] === 'inbox') { console.log(`[bus] inbox unavailable: ${oneLine(error)}`); return; }
     throw error;
   }
-  if (options.help) { console.log('usage: bus.mjs send|read|watch|channels|inbox|register|ask|done|asks|digest [options]'); return; }
+  if (options.help) { console.log('usage: bus.mjs send|read|channels|inbox|ask|done|asks|digest|lease [options]'); return; }
   if (options.command === 'inbox') {
-    try { await printInbox(options); } catch (error) { console.log(`[bus] inbox unavailable: ${oneLine(error)}`); }
+    try { await printInbox(options); } catch (error) {
+      console.log(`[bus] inbox unavailable: ${NO_ACCESS.test(oneLine(error)) ? NO_ACCESS_INBOX : oneLine(error)}`);
+    }
     return;
   }
   if (options.command === 'send') {
@@ -353,9 +400,6 @@ async function main() {
   else if (options.command === 'channels') {
     const rows = (await channels()).map((issue) => ({ channel: issue.title.slice(9), issue: issue.number }));
     console.log(options.json ? JSON.stringify(rows, null, 2) : rows.map((row) => `${row.channel} (#${row.issue})`).join('\n'));
-  } else if (options.command === 'register') {
-    const comment = await sendMessage('pc-agent', options.from, `REGISTER channel=${options.channel} session=${options.session} kind=${options.kind}`);
-    console.log(`registered ${comment.id}`);
   } else if (options.command === 'ask') {
     const body = `ASK ${options.project} | ${options.ask} | ${options.why} | ${options.deadline} | ${options.rec}`;
     const comment = await sendMessage(ASK_CHANNEL, options.from, body); console.log(String(comment.id));
@@ -364,11 +408,11 @@ async function main() {
     const comment = await sendMessage(ASK_CHANNEL, options.from, `DONE ${options._[0]}${note}`); console.log(`sent ${comment.id}`);
   } else if (options.command === 'asks') {
     let rows = await askRows();
-    if (options.open) rows = rows.filter((row) => row.state === 'open');
+    if (options.open) rows = rows.filter(unresolved);
     if (options.project) rows = rows.filter((row) => row.project === options.project);
     console.log(options.json ? JSON.stringify(rows, null, 2) : rows.map(displayAsk).join('\n'));
   } else if (options.command === 'digest') {
-    const all = await channelComments(options.channel); const rows = openAsks(all).filter((row) => row.state === 'open');
+    const all = await channelComments(options.channel); const rows = openAsks(all).filter(unresolved);
     const now = new Date(options.now || Date.now()); const body = digestText(rows, now);
     if (!options.post) console.log(body);
     else if (rows.length && !all.some((comment) => {
@@ -377,9 +421,25 @@ async function main() {
     })) {
       const comment = await sendMessage(options.channel, options.from, body); console.log(`sent ${comment.id}`);
     }
-  } else {
-    // Standalone watch is intended for the PC agent's one-loop case; cloud loops should use watchdog --bus.
-    do { await watchOnce(options); if (!options.once) await sleep(options.interval * 1000); } while (!options.once);
+  } else if (options.command === 'lease') {
+    if (options.take) {
+      const comment = await sendMessage(LEASE_CHANNEL, options.from, `LEASE account=${options.account} sessions=${options.sessions}`);
+      console.log(`leased ${comment.id}`); return;
+    }
+    const lease = newestLease(await channelComments(LEASE_CHANNEL));
+    if (options.add !== undefined) {
+      if (!lease) throw new UsageError('no lease to add to: the takeover takes the first one');
+      const comment = await sendMessage(LEASE_CHANNEL, options.from, leaseLine(leaseWith(lease, options.add)));
+      console.log(`leased ${comment.id}`); return;
+    }
+    if (options.check) {
+      const account = process.env.WOW_ACCOUNT_LABEL || undefined;
+      if (account !== undefined && !NAME.test(account)) throw new UsageError('WOW_ACCOUNT_LABEL must be [a-z0-9][a-z0-9-]{0,62}');
+      const verdict = leaseVerdict(lease, options.session, options.parent, account);
+      console.log(verdict.line); if (!verdict.active) process.exitCode = 3; return;
+    }
+    if (options.json) console.log(JSON.stringify(lease, null, 2));
+    else console.log(lease ? `${leaseLine(lease)} (since ${iso(lease.createdAt)}, from ${lease.sender}, #${lease.id})` : 'no lease');
   }
 }
 
@@ -387,6 +447,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   main().catch((error) => {
     const usage = error instanceof UsageError;
     console.error(`bus: ${error.message}`);
+    if (NO_ACCESS.test(error.message)) console.error(`bus: ${NO_ACCESS_HINT}`);
     process.exit(usage ? 1 : 2);
   });
 }
