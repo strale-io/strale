@@ -22,6 +22,29 @@ export interface CallCost {
   llm_unmetered_scopes: number;
   /** Explicit, recorded reporting conversion; no effect on charge prices. */
   usd_per_eur: number;
+  /**
+   * Outcome of free link-resolution calls (Serper `/resolve`), as counts only:
+   * never a URL or any other content. A zero-unit call leaves no cost item,
+   * so without this a working and a broken resolver look the same in
+   * `transactions.cost_breakdown`.
+   */
+  link_resolution?: LinkResolutionCounts;
+}
+export interface LinkResolutionCounts {
+  /** Resolution attempts that had at least one wrapped link to resolve. */
+  attempts: number;
+  /** Distinct wrapped links seen across those attempts. */
+  links: number;
+  resolved: number;
+  unresolved: number;
+  /** `/resolve` requests that failed: HTTP error, shape mismatch or exception. */
+  failed_requests: number;
+  /** Attempts that stopped because the shared time budget ran out. */
+  budget_exhausted: number;
+  /** Attempts skipped because no API key was configured. */
+  no_key: number;
+  /** Resolved links that could not be written back into the response. */
+  rewrite_failed: number;
 }
 const scope = new AsyncLocalStorage<CallCost>();
 export function withCallCost<T>(run: () => T, usdPerEur: number): T {
@@ -118,6 +141,17 @@ export function recordVendorCost(provider: string, units: number, outcome: "succ
   cost.vendors.push({ provider, units, cost_cents: null, reason,
     ...(provider === "esortcode" ? { native_currency: "GBP", native_cost: units * 0.15 } : {}) });
   noteUnknownCost(`${provider}:${reason}`);
+}
+export function recordLinkResolution(outcome: Partial<LinkResolutionCounts>): void {
+  const cost = scope.getStore();
+  if (!cost) return;
+  const counts = (cost.link_resolution ??= {
+    attempts: 0, links: 0, resolved: 0, unresolved: 0, failed_requests: 0, budget_exhausted: 0, no_key: 0, rewrite_failed: 0,
+  });
+  for (const key of Object.keys(counts) as Array<keyof LinkResolutionCounts>) {
+    const value = outcome[key];
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) counts[key] += Math.floor(value);
+  }
 }
 export function snapshotCallCost(): { cost_cents: string | null; cost_breakdown: Record<string, unknown> } {
   const cost = scope.getStore();
