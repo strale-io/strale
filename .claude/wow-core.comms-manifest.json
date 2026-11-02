@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "profile": "comms",
-  "wow_core_commit": "c35b691e154641fdf0351d29eef751bb7995a0cc",
+  "wow_core_commit": "6d08fdcd6465dde2598126ed6f84459d0d02b135",
   "files": [
     ".claude/scripts/bus.mjs",
     ".claude/scripts/gh-api.mjs",
