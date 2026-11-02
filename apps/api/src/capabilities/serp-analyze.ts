@@ -1,14 +1,21 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import {
-  deriveResultDomain,
+  describeResultDomain,
   resolveSerperLinks,
+  startSerperBudget,
   usableResultUrl,
 } from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 registerCapability("serp-analyze", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   const keyword = (
     (input.keyword as string) ??
     (input.query as string) ??
@@ -31,7 +38,7 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: keyword, gl: country, hl: language, num: 10 }),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!resp.ok) {
@@ -48,12 +55,13 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
   // The walk also covers `answerBox.link` and People-Also-Ask links, which
   // nobody has observed wrapped — they are handled if and when Google wraps
   // them, rather than assumed safe.
-  const resolution = await resolveSerperLinks(data, serperKey);
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
 
   // Parse organic results
   const organicResults = ((data.organic as any[]) ?? []).map(
     (item: any, idx: number) => {
       const link = item.link ?? item.url ?? "";
+      const host = describeResultDomain(link, item.displayedLink);
       return {
         // An opaque wrapper is not a URL a caller can open, and emitting it
         // as one is worse than saying so.
@@ -61,7 +69,10 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
         title: item.title ?? "",
         snippet: item.snippet ?? "",
         position: item.position ?? idx + 1,
-        domain: deriveResultDomain(link, item.displayedLink),
+        domain: host.domain,
+        // "url" when the destination named the host, "breadcrumb" when only
+        // Google's display breadcrumb did, "none" when neither could.
+        domain_source: host.source,
         link_unresolved: usableResultUrl(link) === null,
       };
     },
@@ -123,10 +134,14 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
       unresolved_positions: organicResults
         .filter((r) => r.domain === null)
         .map((r) => r.position),
+      // Round-2 review: count what the CALLER sees, not what was found
+      // anywhere in Serper's response. `resolution.unresolved` spans
+      // surfaces this output never emits, and `resolution.resolved` counts
+      // rewritten sites rather than distinct links — two denominators in one
+      // object.
       link_resolution: {
         attempted: resolution.attempted,
-        resolved: resolution.resolved,
-        unresolved: resolution.unresolved.length,
+        unresolved_results: organicResults.filter((r) => r.link_unresolved).length,
       },
     },
     provenance: { source: "google-serper", fetched_at: new Date().toISOString() },

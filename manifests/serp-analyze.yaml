@@ -149,6 +149,10 @@ output_schema:
       type: array
     featured_snippet:
       type: object
+    unresolved_positions:
+      type: array
+    link_resolution:
+      type: object
 data_source: Serper.dev API (SERP analysis and feature extraction)
 data_source_type: api
 transparency_tag: algorithmic
@@ -202,6 +206,13 @@ output_field_reliability:
   # This is the "expected non-null on optional field" class that broke 8 EU
   # registries; see the field-reliability rules in CLAUDE.md.
   featured_snippet: common
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_positions: guaranteed
+  link_resolution: guaranteed
+
 limitations:
   - title: Search rankings change over time
     text: Analyses search results at a point in time — SERP rankings change frequently based on Google algorithm updates

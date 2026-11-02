@@ -147,23 +147,37 @@ describe("classifyFailure — keyword-rank-check refusing an opaque Google redir
   // unknown when Serper's `/resolve` cannot open it. keyword-rank-check then
   // declines to report a rank rather than report a possibly-wrong one. That
   // refusal is correct behaviour and must not be scored against the tool.
+  //
+  // Round-2 review: the first fixture used to embed "Serper /resolve returned
+  // HTTP 503", which already matches /HTTP 503/i, so it passed with or
+  // without the new pattern and proved nothing. The vendor detail is gone, so
+  // the refusal pattern is the only thing that can classify this string.
   const REFUSAL =
     'Google returned opaque redirect links for result position(s) 4, 5, 6 and Serper\'s link ' +
-    "resolution did not return a real URL for them (Serper /resolve returned HTTP 503.). " +
+    "resolution did not return a real URL for them. " +
     'Those positions could be "mysite.example", so no ranking is reported rather than a ' +
-    "possibly wrong one. Retry shortly; this is a transient upstream condition.";
+    "possibly wrong one. Retry shortly.";
 
   it("is upstream_transient, not capability_bug or unknown", () => {
     const result = classifyFailure(REFUSAL, false, false, "known_answer", {});
     expect(result.verdict).toBe("upstream_transient");
   });
 
-  it("is still upstream_transient when no vendor error was appended", () => {
+  it("is still upstream_transient when a vendor HTTP status is appended", () => {
+    // The appended detail must not be what classifies it, and must not break
+    // the classification either.
     const result = classifyFailure(
-      "Google returned opaque redirect links for result position(s) 4 and Serper's link " +
-        "resolution did not return a real URL for them. Retry shortly.",
+      REFUSAL.replace("for them.", "for them (Serper /resolve returned HTTP 503.)."),
       false, false, "schema_check", {},
     );
     expect(result.verdict).toBe("upstream_transient");
+  });
+
+  it("does not swallow a genuine capability bug", () => {
+    // Guards the new pattern against being loose enough to hide a real fault.
+    const result = classifyFailure(
+      "Cannot read properties of undefined (reading 'organic')", false, false, "known_answer", {},
+    );
+    expect(result.verdict).toBe("capability_bug");
   });
 });

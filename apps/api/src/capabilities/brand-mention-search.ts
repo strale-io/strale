@@ -2,12 +2,22 @@ import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
-import { resolveSerperLinks, usableResultUrl } from "../lib/serper-links.js";
+import {
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Uses Serper.dev API for search (avoids CAPTCHA issues from direct Google scraping)
 registerCapability("brand-mention-search", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   const brandName = ((input.brand_name as string) ?? (input.brand as string) ?? (input.name as string) ?? "").trim();
   if (!brandName) throw new Error("'brand_name' is required.");
   if (brandName.length < 2) throw new Error("'brand_name' must be at least 2 characters.");
@@ -19,6 +29,10 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   if (!serperKey) {
     throw new Error("SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).");
   }
+  // Checked before the paid search (Principle B): a call that cannot reach
+  // the model must not spend a Serper credit first.
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   // Build search query
   let query = `"${brandName}"`;
@@ -31,7 +45,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ q: query, num: maxResults }),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!res.ok) {
@@ -46,7 +60,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   // the model: an LLM asked to pass a URL through will pass the wrapper
   // through, and the mention list would cite Google as the source of every
   // mention past position 3.
-  await resolveSerperLinks(data, serperKey);
+  await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
 
   const organic = (data.organic as Array<Record<string, unknown>>) ?? [];
 
@@ -58,6 +72,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
         mentions: [],
         total_results_found: 0,
         summary: "No mentions found for this brand.",
+        unresolved_url_count: 0,
       },
       provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
     };
@@ -69,9 +84,6 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   const resultsText = organic.map((r, i) =>
     `${i + 1}. ${r.title}\n   URL: ${usableResultUrl(r.link) ?? "(unavailable)"}\n   ${r.snippet ?? ""}`
   ).join("\n\n");
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = createAnthropicClient({ apiKey });
   // extractJsonWithLlm's stop_reason check now catches the truncation case
@@ -113,6 +125,30 @@ Return JSON:
   });
   output.brand_name = brandName;
   output.query = query;
+
+  // Round-2 review: the model is the last writer on this capability's output,
+  // and it was handed `URL: (unavailable)` for any result whose link stayed
+  // wrapped. Two bad outputs follow from that — the literal string
+  // "(unavailable)" in a field a caller will fetch, or, more likely because
+  // the title and snippet name the host, a plausible URL the model
+  // reconstructed. A fabricated source on an `ai_generated` capability is
+  // exactly what DEC-20260428-B forbids: never assert what the input does
+  // not support. So every emitted URL is checked against the set of real
+  // links that actually came back from Serper, and anything else is nulled
+  // and marked rather than trusted.
+  const servedUrls = new Set(
+    organic.map((r) => usableResultUrl(r.link)).filter((url): url is string => url !== null),
+  );
+  let fabricated = 0;
+  if (Array.isArray(output.mentions)) {
+    for (const mention of output.mentions as Array<Record<string, unknown>>) {
+      if (typeof mention.url === "string" && servedUrls.has(mention.url)) continue;
+      mention.url = null;
+      mention.url_unavailable = true;
+      fabricated += 1;
+    }
+  }
+  output.unresolved_url_count = fabricated;
 
   return {
     output,
