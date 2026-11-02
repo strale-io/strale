@@ -17,18 +17,20 @@ export interface JobGroup {
   label: string;
   /** The level-2 line, as a sentence. */
   line: string;
+  /** A shorter line for the home page cards, a strict subset of `line`, so two rows of three fit a laptop window. */
+  card?: string;
   examples: string[];
 }
 
 export const JOB_GROUPS: JobGroup[] = [
-  { id: "web", label: "Search and read the web", line: "Search results, search-result analysis, and any page as clean text for the model.", examples: ["google-search", "serp-analyze", "url-to-markdown"] },
+  { id: "web", label: "Search and read the web", line: "Search results, search-result analysis, and any page as clean text for the model.", card: "Search results and any page as clean text for the model.", examples: ["google-search", "serp-analyze", "url-to-markdown"] },
   { id: "documents", label: "Read documents", line: "Text from images, and the fields from invoices, receipts and PDFs.", examples: ["image-to-text", "invoice-extract", "pdf-extract"] },
-  { id: "text", label: "Write and analyse text", line: "Translation, summaries, classification, sentiment and language detection, and drafts of emails, posts and outlines.", examples: ["translate", "summarize", "sentiment-analyze"] },
-  { id: "check", label: "Check details before acting", line: "Email addresses, phone numbers, IBAN format and EU VAT numbers.", examples: ["email-validate", "phone-validate", "iban-validate", "vat-validate"] },
+  { id: "text", label: "Write and analyse text", line: "Translation, summaries, classification, sentiment and language detection, and drafts of emails, posts and outlines.", card: "Translation, summaries, classification and sentiment, and drafts.", examples: ["translate", "summarize", "sentiment-analyze"] },
+  { id: "check", label: "Check details before acting", line: "Email addresses, phone numbers, IBAN format and EU VAT numbers.", card: "Email addresses, phone numbers, IBANs and EU VAT numbers.", examples: ["email-validate", "phone-validate", "iban-validate", "vat-validate"] },
   { id: "company", label: "Company records", line: "Companies in official records: name and registration number, plus status, address and directors where the source provides them.", examples: ["uk-company-data", "swedish-company-data", "japanese-company-data"] },
   { id: "screening", label: "Screening and ownership", line: "Sanctions and politically exposed person lists, adverse media, and ownership where it is published.", examples: ["sanctions-check", "pep-check", "adverse-media-check"] },
-  { id: "sites", label: "Domains, websites and security", line: "DNS, WHOIS, SSL and mail-server checks, uptime and redirects, tech stack, SEO and page speed, and security checks for headers, secrets, packages and known vulnerabilities.", examples: ["dns-lookup", "ssl-check", "seo-audit", "tech-stack-detect"] },
-  { id: "code", label: "Code and developer tools", line: "Generate config, docs, tests and SQL, explain errors and regular expressions, convert code, look up packages and repositories, and count and trim prompts.", examples: ["json-to-typescript", "sql-generate", "regex-explain"] },
+  { id: "sites", label: "Domains, websites and security", card: "DNS, WHOIS and SSL checks, uptime, SEO and security headers.", line: "DNS, WHOIS, SSL and mail-server checks, uptime and redirects, tech stack, SEO and page speed, and security checks for headers, secrets, packages and known vulnerabilities.", examples: ["dns-lookup", "ssl-check", "seo-audit", "tech-stack-detect"] },
+  { id: "code", label: "Code and developer tools", card: "Generate config, tests and SQL; explain errors and regexes.", line: "Generate config, docs, tests and SQL, explain errors and regular expressions, convert code, look up packages and repositories, and count and trim prompts.", examples: ["json-to-typescript", "sql-generate", "regex-explain"] },
   { id: "data", label: "Clean and convert data", line: "CSV, JSON and XML conversion, repair and validation, de-duplication and data-quality checks, parsing names, addresses, dates and phone numbers, PII redaction and unit conversion.", examples: ["csv-to-json", "json-repair", "deduplicate"] },
   { id: "crypto", label: "Crypto and wallets", line: "Wallet address checks, balances, age and transactions, ENS names, gas prices, protocol data and VASP licence checks.", examples: ["wallet-balance-lookup", "ens-resolve", "eth-address-validate"] },
   { id: "reference", label: "Reference and market data", line: "Exchange rates, public holidays, tax rates, trade codes and shipping.", examples: ["exchange-rate", "public-holiday-lookup", "hs-code-lookup"] },

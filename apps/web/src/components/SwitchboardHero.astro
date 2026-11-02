@@ -208,7 +208,7 @@ const words = headline.split(/\s+/).filter(Boolean);
      never move relative to each other. Title size follows the window height as well as its width, so the
      two-line headline and the whole band share a short laptop window. */
   @media (min-width: 1024px) {
-    .sb-layout { min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width)); justify-content: center; gap: var(--space-24); padding-block: var(--space-24); }
+    .sb-layout { min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width) * 2); justify-content: center; gap: var(--space-24); padding-block: var(--space-20); }
     .sb-copy { gap: var(--space-12); }
     .sb-lead { max-width: none; }
     .sb-title { font-size: max(calc(var(--space-32) + var(--space-4)), min(var(--type-hero-size), calc(var(--viewport-height) * 0.068))); max-width: 30ch; }

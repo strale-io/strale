@@ -27,3 +27,24 @@ Intent: rebuild the home hero to Petter's 2026-11-02 brief: centred text with th
 
 - **Inspect every homepage section at 1270×686 the same way** (Petter's point 2), then scale each up. Tilja's measured rule is worth adopting: every section fits the window (1280×800 and 1440×900, header included), measured in the browser.
 - **Bring the website stack (#725 → #736 → this) up to date with `main`.**
+
+## Second pass: every home section fits the Surface Pro window
+
+Each section was measured at 1270×686: section height plus the 64px header, against the window. Before: jobs 1,198px, company data 1,130px, pricing 876px. After, every section fits:
+
+| Section | Height |
+|---|---|
+| Hero | 621 |
+| Jobs | 593 |
+| One call | 456 |
+| Company data | 621 |
+| Pricing | 570 |
+| Call to action | 402 |
+
+Every section also fits at 1280×800, 1440×900 and 1920×1080.
+
+- **Section padding (1024px and up)** follows the window height, as Tilja's does: `clamp(48px, 9svh, section-space)`, about 62px at 686px tall. The "One call" section's larger padding scales the same way.
+- **Jobs.** The art stands beside the copy and the whole card is the link. "Browse all jobs" moved up beside the heading, and the lead runs on one line. Home cards use a new short `card` line in `content/jobs.ts` that restates part of the full `line`; the catalogue keeps the full line.
+- **Company data.** Two equal columns: copy and the two cards on the left, countries and the button on the right. The chips are more compact on desktop. The art is dropped from 1024px up; on phones it still leads the section.
+- **Pricing.** "Pricing in full" sits beside the heading, the art is beside each card title, and the rows are tighter.
+- **Phones.** Layouts are unchanged apart from the company-data order and the pricing title row, both checked at 390×844.
