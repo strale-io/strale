@@ -110,7 +110,7 @@ output_field_reliability:
   explanation: guaranteed
   field_breakdown: guaranteed
 limitations:
-  - title: Explains standard 5-field cron syntax only — non-standard extensions like seconds field may not be fully explained
+  - title: Non-standard cron extensions may be misread
     text: >-
       Explains standard 5-field cron syntax — non-standard extensions (seconds, years, L/W/# operators) may not be fully
       explained

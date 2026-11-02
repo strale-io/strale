@@ -7,7 +7,7 @@ import CodeBlock from "../../components/CodeBlock.astro";
 import { getSiteData, tools as allTools, API_BASE } from "../../lib/site-data.ts";
 import { solutionSnippets, toolSnippets, pyValue } from "../../lib/snippets.ts";
 import { formatEur, json } from "../../lib/format.ts";
-import { FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS } from "../../lib/code-facts.ts";
+import { FREE_TIER_MONTHLY_LIMIT, MIN_TOPUP_CENTS } from "../../lib/code-facts.ts";
 import { firstCallTool, KEY_REQUESTS_PER_SECOND } from "../../content/docs-facts.ts";
 
 const data = await getSiteData();
@@ -93,7 +93,7 @@ const toc = [
 >
   <section id="first-call" aria-labelledby="first-call-title">
     <h2 id="first-call-title" class="t-section">Make your first call</h2>
-    <p class="t-body">Free tools run without a key, {FREE_TIER_DAILY_LIMIT} calls a day per IP address. This call runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>.</p>
+    <p class="t-body">Free tools run without a key, {FREE_TIER_MONTHLY_LIMIT} calls a month per IP address. This call runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>.</p>
     <ol class="steps">
       <li>
         <h3 class="t-subhead">Send the request</h3>

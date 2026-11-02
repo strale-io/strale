@@ -30,11 +30,15 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
   auditMigrationArtifacts,
   deriveExpectedArtifacts,
+  readMigrationSourceFiles,
   readMigrationsSourceText,
 } from "./migration-artifact-audit.js";
 import type { MigrationExecutor } from "./startup-migrations.js";
@@ -171,6 +175,31 @@ describe("deriveExpectedArtifacts — synthetic fixtures", () => {
       );
     },
   );
+});
+
+describe("readMigrationSourceFiles — the runner plus one file per block", () => {
+  it("reads every block file, not just the runner", () => {
+    const files = readMigrationSourceFiles();
+    expect(files[0].path).toMatch(/startup-migrations\.ts$/);
+    expect(files.filter((f) => f.path.includes(`startup-migrations${"/"}blocks`)).length).toBeGreaterThanOrEqual(70);
+  });
+
+  it("refuses a build with no block files instead of certifying an empty schema", () => {
+    // The runner alone holds no block: a reader that found only it would
+    // derive zero artifacts, and the collapse guard (which needs blocks in
+    // the text) would not fire.
+    const root = mkdtempSync(join(tmpdir(), "strale-migration-src-"));
+    try {
+      mkdirSync(join(root, "lib"));
+      mkdirSync(join(root, "startup-migrations", "blocks"), { recursive: true });
+      writeFileSync(join(root, "lib", "startup-migrations.js"), "export const BLOCKS = [];\n");
+      writeFileSync(join(root, "startup-migrations", "blocks", "0001-x.d.js"), "");
+      expect(() => readMigrationSourceFiles(join(root, "lib", "migration-artifact-audit.js")))
+        .toThrow(/no migration block files/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("deriveExpectedArtifacts — real startup-migrations.ts source", () => {

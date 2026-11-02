@@ -75,12 +75,12 @@ output_field_reliability:
   rate: guaranteed
   inverse_rate: guaranteed
 limitations:
-  - title: Exchange rates update hourly during market hours but may be stale on weekends and holidays
+  - title: Rates can be stale on weekends and holidays
     text: Rates updated every hour during market hours, may be stale during weekends and holidays
     category: freshness
     severity: info
     workaround: For weekend transactions, use the Friday close rate and flag the amount for reconciliation on Monday
-  - title: Uses mid-market rates — actual bank conversion rates differ by 0.5-3% depending on provider
+  - title: Bank conversion rates can differ by 0.5–3%
     text: Mid-market rates — actual bank conversion rates will differ by 0.5-3% depending on provider
     category: accuracy
     severity: info

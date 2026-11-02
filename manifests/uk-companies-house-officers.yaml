@@ -116,8 +116,7 @@ output_field_reliability:
   resigned_officers: guaranteed
 limitations:
   - title: >-
-      Returns current and recently resigned officers — historical data beyond Companies House retention may be
-      incomplete
+      Older officer records can be incomplete
     text: >-
       Returns current and recently resigned officers — historical officer data beyond Companies House retention may be
       incomplete

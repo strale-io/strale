@@ -137,33 +137,30 @@ output_field_reliability:
   resolution_method: guaranteed
   searched_name: common
 limitations:
-  - title: SEC coverage varies by state — some states have limited registry data
+  - title: State registry coverage varies
     text: >-
       Coverage varies by state — Delaware, California, New York most complete. Some states have limited electronic
       registry access
     category: coverage
     severity: warning
     workaround: For states with limited coverage, supplement with the state's Secretary of State website directly
-  - title: Name lookups can return a different company that merely mentions the name
+  - title: Name searches can match filings by another company
     text: >-
-      Company-name (and ticker) lookups resolve via SEC full-text *filing* search, which returns the top-scoring
-      filing that mentions the query — not an entity lookup. A private company with no SEC filings of its own (e.g.
-      a pre-IPO firm like Stripe) has no filing to match, so the top hit is a *different* public filer that merely
-      mentions the name. By default a low-confidence name lookup errors rather than returning that wrong identity,
-      so it can't silently feed downstream sanctions/PEP screening; confident matches return normally with
-      match_confidence "exact"/"high".
+      Name and ticker searches find SEC filings mentioning the query, which can belong to another
+      company, particularly for private companies without filings. Low-confidence matches return an
+      error by default; accepted matches report exact or high `match_confidence`.
     category: accuracy
     severity: warning
     workaround: >-
       Supply the CIK directly for an exact, unambiguous lookup. To receive the best-effort match for an
       unresolved name anyway, pass allow_low_confidence=true and gate on the returned is_exact_match /
       match_confidence fields yourself.
-  - title: Private company financial data is not included — public filings only
+  - title: Private company financial information is not included
     text: Does not include privately held financial data — only publicly filed information
     category: coverage
     severity: info
-    workaround: Request financials directly from the company or use a commercial data provider like D&B for private company data
-  - title: Secretary of State filings may lag 1-5 business days behind actual filing
+    workaround: Request privately held financial information directly from the company.
+  - title: State filings can lag by 1–5 business days
     text: Secretary of State filings may lag 1-5 business days behind actual filing date
     category: freshness
     severity: info

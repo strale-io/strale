@@ -11,11 +11,13 @@
 // CLAUDE.md, a mirror file, the manifest, or the router.
 //
 // Usage: node scripts/check-protocol-coverage.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllProtocolCoverage, repoRootFrom, MANIFEST_PATH } from "./protocol-coverage-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { findings, warnings, protocolCount } = checkAllProtocolCoverage(root);
+requireInputs(protocolCount, "protocol coverage: rows");
 
 if (json) {
   console.log(

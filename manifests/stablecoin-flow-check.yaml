@@ -6,7 +6,7 @@
 
 slug: stablecoin-flow-check
 name: "Stablecoin Flow Check"
-description: "Get stablecoin supply and flows by chain, by stablecoin (such as USDC's market cap and circulation) or for the whole market, from DeFi Llama."
+description: "Look up reported stablecoin supply by chain, asset or market. Returns circulation figures, changes and available breakdowns."
 category: web3
 cost_class: free_unlimited
 quota_window: none

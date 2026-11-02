@@ -56,7 +56,7 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     "portuguese-company-data": ["inactive"],
     "romanian-company-data": ["inactive"],
     "australian-company-data": ["inactive", "dissolved"],
-    "japanese-company-data": ["inactive", "dissolved"],
+    "japanese-company-data": ["inactive", "dissolved", "closed"],
   };
   it.each(Object.entries(deadStatuses).flatMap(([slug, statuses]) => statuses.map(status => [slug, status])))(
     "%s %s is not a passed company check", async (slug, status) => {

@@ -92,7 +92,7 @@ output_field_reliability:
   size_bytes: guaranteed
   content_type: guaranteed
 limitations:
-  - title: Headless browser rendering may not match desktop browsers for web fonts and JavaScript-dependent layouts
+  - title: Fonts and dynamic layouts may render differently
     text: >-
       Renders via headless browser — web fonts, external CSS, and JavaScript-dependent layouts may not render
       identically to desktop browsers

@@ -1,0 +1,224 @@
+{
+  "uk-company-data": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "uk-company-data",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "company_name": "Example Company",
+        "company_number": "EXAMPLE",
+        "status": "active",
+        "address": "Example address"
+      },
+      "provenance": {
+        "source": "Example registry",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "swedish-company-data": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "swedish-company-data",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "company_name": "Example Company",
+        "org_number": "EXAMPLE",
+        "status": "active",
+        "registered_address": {
+          "street": "Example street",
+          "postal_code": "EXAMPLE",
+          "city": "Example city",
+          "country": "SE"
+        }
+      },
+      "provenance": {
+        "source": "Example registry",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "norwegian-company-data": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "norwegian-company-data",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "company_name": "Example Company",
+        "org_number": "EXAMPLE",
+        "status": "active",
+        "address": "Example address"
+      },
+      "provenance": {
+        "source": "Example registry",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "finnish-company-data": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "finnish-company-data",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "company_name": "Example Company",
+        "business_id": "EXAMPLE",
+        "status": "active",
+        "address": "Example address"
+      },
+      "provenance": {
+        "source": "Example registry",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "vat-validate": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "vat-validate",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "valid": false,
+        "vat_number": "EXAMPLE",
+        "country_code": "SE",
+        "company_name": "",
+        "company_address": ""
+      },
+      "provenance": {
+        "source": "VIES",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "sanctions-check": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "sanctions-check",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "query": "Example Person",
+        "schema": "Person",
+        "is_sanctioned": false,
+        "match_count": 0,
+        "total_results": 0,
+        "matches": [],
+        "lists_queried": {
+          "collection": "example",
+          "source_count": 0,
+          "major_lists": []
+        },
+        "source": "dilisense",
+        "queried_at": "2026-10-27T12:00:00.000Z"
+      },
+      "provenance": {
+        "source": "Example registry",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "pep-check": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "pep-check",
+      "price_cents": 2,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "query": "Example Person",
+        "is_pep": false,
+        "match_count": 0,
+        "total_results": 0,
+        "matches": [],
+        "lists_queried": {
+          "collection": "example",
+          "source_count": 0,
+          "major_lists": []
+        },
+        "source": "dilisense",
+        "screened_at": "2026-10-27T12:00:00.000Z"
+      },
+      "provenance": {
+        "source": "Example registry",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "iban-validate": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "iban-validate",
+      "price_cents": 0,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "valid": true,
+        "country_code": "SE",
+        "check_digits": "00",
+        "bban": "EXAMPLE",
+        "bank_code": "500",
+        "branch_code": null,
+        "expected_length": 24
+      },
+      "provenance": {
+        "source": "iban-validate:algorithmic",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  },
+  "email-validate": {
+    "result": {
+      "transaction_id": "synthetic-transaction",
+      "status": "completed",
+      "capability_used": "email-validate",
+      "price_cents": 0,
+      "latency_ms": 10,
+      "wallet_balance_cents": 100,
+      "output": {
+        "valid": true,
+        "email": "person@example.com",
+        "format_valid": true,
+        "domain": "example.com",
+        "has_mx_records": true,
+        "mx_records": [
+          "mx.example.com"
+        ],
+        "is_disposable": false,
+        "is_role_address": false,
+        "is_free_provider": false
+      },
+      "provenance": {
+        "source": "algorithmic+dns",
+        "fetched_at": "2026-10-27T12:00:00.000Z"
+      }
+    },
+    "meta": {}
+  }
+}

@@ -49,7 +49,7 @@
  * reduced to the mechanism it itself called inadequate. Found by review.
  */
 
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import { capabilityInvocations, healthMonitorEvents } from "../db/schema.js";
 import type { ExecutionOutcome } from "./execution-outcome.js";
 import type { InvocationContext } from "../capabilities/guarded-executor.js";
@@ -159,8 +159,8 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * while every hop the value took afterwards was pinned. Inverted to always-true
  * the anonymous rail becomes permanently invisible to the floor; inverted to
  * always-false, genuine free traffic is scored as customer experience AND the
- * same variable disables the 10/day per-IP free cap, since that counter reads
- * `is_free_tier = true`.
+ * same variable decides whether the anonymous free-tier allowance
+ * (lib/free-tier-allowance.ts, counted in rate_limit_counters) applies.
  */
 export function computeServedFree(x402Paid: unknown): boolean {
   return !x402Paid;
@@ -219,9 +219,10 @@ export const FACT_WRITE_FAILED_EVENT = "invocation_fact_write_failed";
  * volume stays comparable to transaction volume and the floor's completeness
  * cross-check means something.
  */
-export async function recordInvocation(fact: InvocationFact): Promise<void> {
+export async function recordInvocation(fact: InvocationFact, scope: { db?: Database; signal?: AbortSignal } = {}): Promise<void> {
+  scope.signal?.throwIfAborted();
   try {
-    const db = getDb();
+    const db = scope.db ?? getDb();
     await db.insert(capabilityInvocations).values({
       capabilitySlug: fact.capabilitySlug,
       rail: fact.rail,
@@ -241,6 +242,7 @@ export async function recordInvocation(fact: InvocationFact): Promise<void> {
       latencyMs: Number.isFinite(fact.latencyMs) ? Math.max(0, Math.round(fact.latencyMs)) : 0,
     });
   } catch (err) {
+    scope.signal?.throwIfAborted();
     // No in-process counter here. The first version kept one and described it
     // as "exposed for the health surface"; nothing ever read it, and an
     // in-process counter dies with the process that observed the problem
@@ -250,7 +252,7 @@ export async function recordInvocation(fact: InvocationFact): Promise<void> {
       slug: fact.capabilitySlug,
       rail: fact.rail,
     });
-    await writeFailureMarker(fact.capabilitySlug, err);
+    await writeFailureMarker(fact.capabilitySlug, err, scope.db);
   }
 }
 
@@ -260,9 +262,9 @@ export async function recordInvocation(fact: InvocationFact): Promise<void> {
  * unreachable" it fails too — which is precisely why the floor does not rely
  * on it alone.
  */
-async function writeFailureMarker(slug: string, cause: unknown): Promise<void> {
+async function writeFailureMarker(slug: string, cause: unknown, handle?: Database): Promise<void> {
   try {
-    const db = getDb();
+    const db = handle ?? getDb();
     await db.insert(healthMonitorEvents).values({
       eventType: FACT_WRITE_FAILED_EVENT,
       capabilitySlug: slug,

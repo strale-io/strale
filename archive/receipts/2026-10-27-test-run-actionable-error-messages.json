@@ -1,0 +1,591 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "79d645891033d297c53db66bd059ffb61633331c"
+  },
+  "at": "2026-10-27T11:27:43.217Z",
+  "inputs": {
+    "base_commit": "79d64589",
+    "candidate_state": "uncommitted; Git metadata read-only"
+  },
+  "summary": {
+    "api_tests_passed": 6126,
+    "api_tests_skipped": 346,
+    "ci_commands_passed": 57,
+    "node_tests_passed_in_ci_and_sdk": 680,
+    "sdk_tests_passed": 5,
+    "mcp_tests_passed": 22,
+    "actionable_tests_passed": 175,
+    "fail_before_api_tests_failed": 179,
+    "fail_before_api_tests_unchanged_passed": 9,
+    "fail_before_sdk_tests_failed": 1,
+    "route_sites_with_fix": 120,
+    "route_sites_without_fix": 44,
+    "explicit_executor_refusals": 48,
+    "executors_adopted": 30,
+    "candidate_uncommitted": true,
+    "independent_review_rounds": 2
+  },
+  "topic": "actionable-error-messages",
+  "raw": {
+    "summary": {
+      "api_tests_passed": 6126,
+      "api_tests_skipped": 346,
+      "ci_commands_passed": 57,
+      "node_tests_passed_in_ci_and_sdk": 680,
+      "sdk_tests_passed": 5,
+      "mcp_tests_passed": 22,
+      "actionable_tests_passed": 175,
+      "fail_before_api_tests_failed": 179,
+      "fail_before_api_tests_unchanged_passed": 9,
+      "fail_before_sdk_tests_failed": 1,
+      "route_sites_with_fix": 120,
+      "route_sites_without_fix": 44,
+      "explicit_executor_refusals": 48,
+      "executors_adopted": 30,
+      "candidate_uncommitted": true,
+      "independent_review_rounds": 2
+    },
+    "inputs": {
+      "base_commit": "79d64589",
+      "candidate_state": "uncommitted; Git metadata read-only"
+    },
+    "checks": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "tests_passed": 30
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "tests_passed": 31
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "tests_passed": 55
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "tests_passed": 24
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "tests_passed": 78
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "tests_passed": 15
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "tests_passed": 20
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "tests_passed": 3
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "tests_passed": 12
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "tests_passed": 16
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "tests_passed": 43
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "tests_passed": 24
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "tests_passed": 14
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "tests_passed": 18
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "tests_passed": 6
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "tests_passed": 12
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "tests_passed": 25
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "tests_passed": 23
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "tests_passed": 46
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "tests_passed": 180
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript test",
+        "exit_code": 0,
+        "tests_passed": 5
+      }
+    ],
+    "api_summary": [
+      "Test Files  343 passed | 33 skipped (376)",
+      "Tests  6126 passed | 346 skipped (6472)"
+    ],
+    "fail_before": {
+      "base_commit": "79d64589",
+      "method": "git archive into an isolated directory; independent npm ci --offline --ignore-scripts; overlay only regression tests and snapshots; build original clients; run tests",
+      "api_failed": 179,
+      "api_unchanged_passed": 9,
+      "sdk_failed": 1,
+      "sdk_unchanged_passed": 4
+    },
+    "live_get_baseline": {
+      "unknown_capability": {
+        "status": 404,
+        "error_code": "not_found",
+        "details_present": false
+      },
+      "wallet_without_key": {
+        "status": 401,
+        "error_code": "unauthorized",
+        "details_present": false
+      }
+    },
+    "limitations": [
+      "Git add and commit rejected because .git is read-only.",
+      "context:generate refuses this clone as a primary worktree.",
+      "Onboarding --dry-run stops at the production-authority guard; DB readiness and smoke checks not run.",
+      "Database-dependent and other configured API tests are skipped without their external prerequisites.",
+      "No pushes, PRs, merges, package publications or production writes."
+    ],
+    "candidate_files": [
+      {
+        "path": "apps/api/src/app.ts",
+        "sha256": "fb91f6678b21cdfe2a160a3f4e23dc04176d28528c64a6cdba7db69e652a787d"
+      },
+      {
+        "path": "apps/api/src/capabilities/address-parse.ts",
+        "sha256": "bc17aeeb2afbf1283b3e7168cf1d0d55ce0a103a7c11d23aa4c5c5808a3aaa09"
+      },
+      {
+        "path": "apps/api/src/capabilities/address-validate.ts",
+        "sha256": "8466bae4585200d20f1d83ca43cf78851d1c145b3a1329d235b9236cbdac552b"
+      },
+      {
+        "path": "apps/api/src/capabilities/adverse-media-check.ts",
+        "sha256": "08b3841167d8d929f7c6ed4f58c7adf2cd9b938418ff8a6f6fbccc51e06178a5"
+      },
+      {
+        "path": "apps/api/src/capabilities/business-day-check.ts",
+        "sha256": "d7054ff37a9b4819241329e09ba1e065bf5f6cd86c25c7e59b2cffc10b7a69e7"
+      },
+      {
+        "path": "apps/api/src/capabilities/company-id-detect.ts",
+        "sha256": "64fa5b83ce9b6b1b2de994abfe4cae94aeb623d7326b5dc4f0553117c1193d22"
+      },
+      {
+        "path": "apps/api/src/capabilities/company-news.ts",
+        "sha256": "5a8c108927f4e35f8b6507166f2c6c354d585d1efdaf10d64cedfe6592047631"
+      },
+      {
+        "path": "apps/api/src/capabilities/company-tech-stack.ts",
+        "sha256": "8ef8e9a379ed41e6c4c6c84c61d9a469a0de31357a6274c9b5369a6629b7b29a"
+      },
+      {
+        "path": "apps/api/src/capabilities/csv-clean.ts",
+        "sha256": "60599c90db38c71e5ce22607f204cd3af275bb52c0e663885819072ffab02abe"
+      },
+      {
+        "path": "apps/api/src/capabilities/csv-to-json.ts",
+        "sha256": "42772d771696b814fb3c072327dbbda27d1e5239a5a372cf068324421299645e"
+      },
+      {
+        "path": "apps/api/src/capabilities/currency-convert.ts",
+        "sha256": "d8f00ad8c6c04b6c0eaadfcff6ffe7168c00d35638a809b510ee494ab4a6be82"
+      },
+      {
+        "path": "apps/api/src/capabilities/date-parse.ts",
+        "sha256": "ab1188d4be68ba26e9edc7e5e7539a1c754b2ad094aa401a953f372e4df7b42c"
+      },
+      {
+        "path": "apps/api/src/capabilities/deduplicate.ts",
+        "sha256": "336bef6dd6b722a26d834d2942b2c10a361d866aba848e0f4282da15f2192fc0"
+      },
+      {
+        "path": "apps/api/src/capabilities/dns-lookup.ts",
+        "sha256": "5881dbe69cd453cb02c3701a23da42f65719fcfe9149fcc20978d8b4f5303e0b"
+      },
+      {
+        "path": "apps/api/src/capabilities/domain-age-check.ts",
+        "sha256": "239685c79f0a3108890a60974758ddf54c0d0fc74987c110088b89528a862c4f"
+      },
+      {
+        "path": "apps/api/src/capabilities/email-auth-check.ts",
+        "sha256": "2d3e32ac981f734e4ed94e6f1aa520735a5ed9e6e4ecf0f2812fab6275c4d130"
+      },
+      {
+        "path": "apps/api/src/capabilities/email-deliverability-check.ts",
+        "sha256": "858066e0dc702d20aba0cca7ba31f6d224fdad69072637087cc9c667ae26eae3"
+      },
+      {
+        "path": "apps/api/src/capabilities/email-reputation-score.ts",
+        "sha256": "e33442aff894fedb95160a47a63000f2fe814b2323bb40fd47a77db7244b018d"
+      },
+      {
+        "path": "apps/api/src/capabilities/email-validate.ts",
+        "sha256": "3ef3b5e490e79470a2a715193877805843f26291a8d8def973ee40fd7282d7be"
+      },
+      {
+        "path": "apps/api/src/capabilities/french-company-data.ts",
+        "sha256": "45a11a996e121013fa308ff211be397bfbcf3a9b274953787b711e0ae06e879c"
+      },
+      {
+        "path": "apps/api/src/capabilities/iban-validate.ts",
+        "sha256": "fc0f027f3e9aec56f6054eaa2f3d15cbbee7415ca86571a45ecbe7ea944e2f9e"
+      },
+      {
+        "path": "apps/api/src/capabilities/japanese-company-data.ts",
+        "sha256": "de44a86d76973dc6b827e22d354cb78c2c9c318c6fa2348b4079a892770613cd"
+      },
+      {
+        "path": "apps/api/src/capabilities/pdf-extract.ts",
+        "sha256": "6868a7eeab72274cb7b6b4ac28ded1469e910d707a60b820942b8e265db94ce4"
+      },
+      {
+        "path": "apps/api/src/capabilities/pep-check.ts",
+        "sha256": "76f566876a2435fe77f426aed2abd849e14771ce32eab853bdbde8629a66b609"
+      },
+      {
+        "path": "apps/api/src/capabilities/phone-validate.ts",
+        "sha256": "67f58921ce79ad245573c759dde593b0c4fe292a3df8f45a02ce005276b752d2"
+      },
+      {
+        "path": "apps/api/src/capabilities/sanctions-check.ts",
+        "sha256": "c8adaf904cff0ea0e9cdfefee6f9c5659aabf2f9d48e509494f1edeaa05eacba"
+      },
+      {
+        "path": "apps/api/src/capabilities/ssl-check.ts",
+        "sha256": "17de03636198520014f1b642715788c1155e61c0860987b583da47eb37322127"
+      },
+      {
+        "path": "apps/api/src/capabilities/uk-company-data.ts",
+        "sha256": "7dce3c41fd8bd3f80d2298526fbe5147dd9309fb914901625a201194ed308872"
+      },
+      {
+        "path": "apps/api/src/capabilities/url-to-markdown.ts",
+        "sha256": "8522a421d893d954537918dca48baf70589a03e7404b12b9d26570f87fd15e56"
+      },
+      {
+        "path": "apps/api/src/capabilities/vat-validate.ts",
+        "sha256": "cceb024d4b449d2ceee12d05ac5f58a734ce869c292abcc197f67e1ddc6ceca9"
+      },
+      {
+        "path": "apps/api/src/capabilities/web-extract.ts",
+        "sha256": "3c63818066234bb146a70aa3c3c94d8777688f189ad9e4df9c0aee42ce555a26"
+      },
+      {
+        "path": "apps/api/src/lib/__snapshots__/actionable-errors.test.ts.snap",
+        "sha256": "0ad5614b4829ab7c7961259a2fba2552b4ac0da703c0a720cff80c90d0246efc"
+      },
+      {
+        "path": "apps/api/src/lib/actionable-errors.test.ts",
+        "sha256": "8a6dc141607d9d480961201dd0a874315ea92624446a66bc2f19d534bcbb8d0f"
+      },
+      {
+        "path": "apps/api/src/lib/api-keys.test.ts",
+        "sha256": "ab50ff4003a99790d442a72ce940f826ce517623658ca2471dc9b3a70b8711b0"
+      },
+      {
+        "path": "apps/api/src/lib/capability-refusal.ts",
+        "sha256": "0949a30ad15090cd351b1c0f2fc7d09e581f70552d9ec6a731cc017c825ccd04"
+      },
+      {
+        "path": "apps/api/src/lib/errors.ts",
+        "sha256": "78e709f361e04d8e3d7f4e609d06a0c8517a95838f9795627eddfe1f19ff47a3"
+      },
+      {
+        "path": "apps/api/src/lib/x402-gateway.ts",
+        "sha256": "c0d57c37cda96ba0d9313d05fc7042159fd1900b3ba1ea98c3fb1626e1acc32e"
+      },
+      {
+        "path": "apps/api/src/openapi.ts",
+        "sha256": "2764d60ee21f82d12adcb3448a63bce44d710c0ee9c73fed994e22ef8f75d896"
+      },
+      {
+        "path": "apps/api/src/routes/a2a.ts",
+        "sha256": "f779bd5535357d4e53a77893a49a77e171edfed89931f0b4e2ed7597ea1ea559"
+      },
+      {
+        "path": "apps/api/src/routes/api-keys.integration.test.ts",
+        "sha256": "5e1fd1731fbe98f93e755a9fb46ee2384c539988a56c5b0db18a7df0f45ce851"
+      },
+      {
+        "path": "apps/api/src/routes/api-keys.test.ts",
+        "sha256": "b7e1a8837a7ff75230e76e00468e1aaaa937664c1bcd6a42a2368d120ef129a5"
+      },
+      {
+        "path": "apps/api/src/routes/api-keys.ts",
+        "sha256": "352cca046336c263e4bcdb366d7f5e7ef040cbbd1371812708a6c924b6664eeb"
+      },
+      {
+        "path": "apps/api/src/routes/audit.ts",
+        "sha256": "f374a71734460bf263a3d471d06246d93d20d2cef9d982116a81c09385d0a5d9"
+      },
+      {
+        "path": "apps/api/src/routes/auth.ts",
+        "sha256": "fe25185f93fd982743a677d02a543f077affed902d9d73460e85baeb5a14594e"
+      },
+      {
+        "path": "apps/api/src/routes/dispute.ts",
+        "sha256": "2961c9d443cdde03176e2bf68be66ffe7185abf7154e97ac003b515d4919f2f7"
+      },
+      {
+        "path": "apps/api/src/routes/do.core.test.ts",
+        "sha256": "d2bd2eeb25551f4ef5903ae4f74cd43016c757f5b15de2b615b3ff2853d53e83"
+      },
+      {
+        "path": "apps/api/src/routes/do.ts",
+        "sha256": "99dd2b7c2fe880f784a20bb348354c4e113f6da3f7c2945532cd26e4674312f4"
+      },
+      {
+        "path": "apps/api/src/routes/mcp.ts",
+        "sha256": "1c2e26ce49f66c2cc8aeeaee48b63160880918bd2e17eae097eecbd573a77bdd"
+      },
+      {
+        "path": "apps/api/src/routes/primary-key-boundary.test.ts",
+        "sha256": "358a174dcdc961b6279642fb320466fabc1f86216f32e943df6173e78240e82c"
+      },
+      {
+        "path": "apps/api/src/routes/solution-execute.ts",
+        "sha256": "2feae876de5a2c3d453a95eca2c22e831480a5d322f6606343474e99ca9eb16c"
+      },
+      {
+        "path": "apps/api/src/routes/suggest.ts",
+        "sha256": "924899827514f2fd7e3c004458a821be4274235120a2482bbe58c4d9a2e1d127"
+      },
+      {
+        "path": "apps/api/src/routes/transactions.ts",
+        "sha256": "586546f8bf5e8d3bdee5abc50899b2fcd3bb38dc9c16311c8e6266f7429f40e4"
+      },
+      {
+        "path": "apps/api/src/routes/wallet.ts",
+        "sha256": "ca79fdbcb6fa539e9c840ea53907ed2863cf55b30ccae08d08fba84ccae09056"
+      },
+      {
+        "path": "apps/api/src/routes/x402-gateway-v2.ts",
+        "sha256": "b4031473c8eaf646ab68603f5bfe3baaeb158e53fd6a5f2ab3e650da7154779f"
+      },
+      {
+        "path": "archive/README.md",
+        "sha256": "73c37a36fb8007a56b0d804973d608dd87a1238a891dd29c7fc252d8e3a4f5fb"
+      },
+      {
+        "path": "archive/sessions/2026-10-27-actionable-error-messages-review.md",
+        "sha256": "1213e246dd57ebaf732f892996deac40b5956582d27ec3c04013a21e650224de"
+      },
+      {
+        "path": "archive/sessions/2026-10-27-actionable-errors-inventory.md",
+        "sha256": "7114e8edf97314cc3615bafa12c41060137109aba122e08718816a1b90135fb5"
+      },
+      {
+        "path": "docs/api-quickstart.md",
+        "sha256": "de12fef9d57371684d444fd695db6a4ad9058988a85b9dfdfaf6741b3e99780c"
+      },
+      {
+        "path": "packages/mcp-server/src/tools.ts",
+        "sha256": "cbcca427be34bdd73055750ed7bf73f983b57a167e5767a2ad285564f3272e7e"
+      },
+      {
+        "path": "packages/sdk-typescript/src/client.ts",
+        "sha256": "26ba58f4cb936eac4fd8cd4c9a703321631b8644ae4f2f4827d58acb4c25c074"
+      },
+      {
+        "path": "packages/sdk-typescript/src/errors.ts",
+        "sha256": "d11f613f3143a7f3e2fd937027e733551db4c89e820f7dfd841562b274cec125"
+      },
+      {
+        "path": "packages/sdk-typescript/src/types.ts",
+        "sha256": "99267ea525c91b00c4f6a8eb7fb7aa89f03339a2cc314e795179094f2b1d7d1b"
+      },
+      {
+        "path": "packages/sdk-typescript/test/actionable-errors.test.mjs",
+        "sha256": "500109a82ccf516b7bb04888fbad5fe78fbe92b52b98d2f423d74ca56ba5ec77"
+      }
+    ]
+  }
+}

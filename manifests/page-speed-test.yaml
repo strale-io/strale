@@ -96,12 +96,12 @@ output_field_reliability:
   opportunities: guaranteed
   performance_score: guaranteed
 limitations:
-  - title: Page speed scores reflect a single point-in-time test and may vary throughout the day
+  - title: Performance scores can vary throughout the day
     text: Scores reflect a point-in-time test — site performance may vary throughout the day
     category: freshness
     severity: info
     workaround: Schedule periodic tests (e.g., every 6 hours) and track the trend rather than relying on a single measurement
-  - title: Results are measured from a single geographic location and may not reflect all users' experience
+  - title: One location may not reflect every user’s experience
     text: Results measured from a single geographic location — actual user experience varies by region
     category: accuracy
     severity: info
@@ -110,12 +110,9 @@ limitations:
       independent of location
   - title: Pages Lighthouse cannot load are refused, not scored
     text: >-
-      PageSpeed Insights runs Lighthouse against the URL from Google's own
-      network. When Lighthouse cannot load the page — the site is down,
-      blocks automated visitors, sits behind authentication, or redirects in a
-      loop — the call is refused rather than returning a zero score, and no
-      charge is taken. This is the most common reason a request fails: 138 of
-      363 failures over the 90 days to 2026-08-29.
+      If Lighthouse cannot load the page because it is unavailable, blocks automated visitors,
+      requires authentication or redirects in a loop, the call is refused. No score is returned and no
+      charge is taken.
     category: coverage
     severity: info
     workaround: Check the URL loads in a browser from a clean session, and that it is reachable without a login

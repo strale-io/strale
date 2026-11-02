@@ -35,7 +35,8 @@ export const COVERAGE_MATRIX_DIR = "apps/api/coverage-matrix";
 export const ENV_MANIFEST_PATH = "config/env-manifest.yaml";
 export const DECISIONS_DIR = "docs/decisions/records";
 export const PLATFORM_FACTS_PATH = "apps/api/src/lib/platform-facts.ts";
-export const STARTUP_MIGRATIONS_PATH = "apps/api/src/lib/startup-migrations.ts";
+// The startup-migration block that seeds vendor_accounts (block 0111).
+export const VENDOR_ACCOUNTS_SEED_PATH = "apps/api/src/startup-migrations/blocks/0111-vendor-control-tower.ts";
 export const VENDOR_VIEW_PATH = "docs/project/VENDORS.md";
 
 const RETIRED_STATES = new Set(["retired", "deprecated"]);
@@ -273,7 +274,7 @@ export function extractStaticFactsVendors(root) {
 }
 
 /**
- * Parses apps/api/src/lib/startup-migrations.ts with the TypeScript compiler
+ * Parses VENDOR_ACCOUNTS_SEED_PATH with the TypeScript compiler
  * API, locates the `sql` tagged template containing the
  * `INSERT INTO vendor_accounts (...) VALUES ...` statement, and returns the
  * first (provider_name) value of every top-level VALUES tuple. The tuple
@@ -285,7 +286,7 @@ export function extractStaticFactsVendors(root) {
  * providers.
  */
 export function extractVendorAccountsSeed(root) {
-  const filePath = resolve(root, STARTUP_MIGRATIONS_PATH);
+  const filePath = resolve(root, VENDOR_ACCOUNTS_SEED_PATH);
   const text = readFileSync(filePath, "utf8");
   const sf = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 
@@ -301,12 +302,12 @@ export function extractVendorAccountsSeed(root) {
   }
   find(sf);
   if (templateText === null) {
-    throw new Error(`could not find a sql\`INSERT INTO vendor_accounts (...) VALUES ...\` tagged template in ${STARTUP_MIGRATIONS_PATH}`);
+    throw new Error(`could not find a sql\`INSERT INTO vendor_accounts (...) VALUES ...\` tagged template in ${VENDOR_ACCOUNTS_SEED_PATH}`);
   }
 
   const valuesMatch = /\bVALUES\b/i.exec(templateText);
   if (!valuesMatch) {
-    throw new Error(`the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH} has no VALUES keyword`);
+    throw new Error(`the INSERT INTO vendor_accounts statement in ${VENDOR_ACCOUNTS_SEED_PATH} has no VALUES keyword`);
   }
   let tuplesText = templateText.slice(valuesMatch.index + valuesMatch[0].length);
   // The tuple list ends at "ON CONFLICT" (its "(provider_name)" column list is
@@ -328,7 +329,7 @@ export function extractVendorAccountsSeed(root) {
         j++;
       }
       if (depth !== 0) {
-        throw new Error(`unbalanced parentheses in the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH}`);
+        throw new Error(`unbalanced parentheses in the INSERT INTO vendor_accounts statement in ${VENDOR_ACCOUNTS_SEED_PATH}`);
       }
       tuples.push(tuplesText.slice(i + 1, j - 1));
       i = j;
@@ -337,14 +338,14 @@ export function extractVendorAccountsSeed(root) {
     }
   }
   if (tuples.length === 0) {
-    throw new Error(`found no VALUES tuples in the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH}`);
+    throw new Error(`found no VALUES tuples in the INSERT INTO vendor_accounts statement in ${VENDOR_ACCOUNTS_SEED_PATH}`);
   }
 
   const names = [];
   for (const tuple of tuples) {
     const m = /^\s*'([^']*)'/.exec(tuple);
     if (!m) {
-      throw new Error(`a VALUES tuple in the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH} does not start with a plain string literal: ${tuple.slice(0, 40)}`);
+      throw new Error(`a VALUES tuple in the INSERT INTO vendor_accounts statement in ${VENDOR_ACCOUNTS_SEED_PATH} does not start with a plain string literal: ${tuple.slice(0, 40)}`);
     }
     names.push(m[1]);
   }
@@ -795,7 +796,7 @@ export function checkDependencySyncSkipped(root) {
   try {
     seededNames = new Set(extractVendorAccountsSeed(root));
   } catch (error) {
-    findings.push({ code: "VENDOR_ACCOUNTS_SEED_UNREADABLE", file: STARTUP_MIGRATIONS_PATH, detail: String(error) });
+    findings.push({ code: "VENDOR_ACCOUNTS_SEED_UNREADABLE", file: VENDOR_ACCOUNTS_SEED_PATH, detail: String(error) });
     return { findings, warnings };
   }
 
@@ -808,7 +809,7 @@ export function checkDependencySyncSkipped(root) {
       warnings.push({
         code: "DEPENDENCY_SYNC_SKIPPED",
         file: DEPENDENCY_MANIFEST_PATH,
-        detail: `${p.name}: tier "${p.tier}" is not paid or self-hosted, so the boot-time sync in ${STARTUP_MIGRATIONS_PATH} never writes its vendor_capability_dependencies rows`,
+        detail: `${p.name}: tier "${p.tier}" is not paid or self-hosted, so the boot-time sync in ${VENDOR_ACCOUNTS_SEED_PATH} never writes its vendor_capability_dependencies rows`,
       });
       continue;
     }
@@ -816,7 +817,7 @@ export function checkDependencySyncSkipped(root) {
       warnings.push({
         code: "DEPENDENCY_SYNC_SKIPPED",
         file: DEPENDENCY_MANIFEST_PATH,
-        detail: `${p.name}: tier "${p.tier}" but not seeded at boot by ${STARTUP_MIGRATIONS_PATH}'s INSERT INTO vendor_accounts, so the sync's JOIN to vendor_accounts matches no rows for it`,
+        detail: `${p.name}: tier "${p.tier}" but not seeded at boot by ${VENDOR_ACCOUNTS_SEED_PATH}'s INSERT INTO vendor_accounts, so the sync's JOIN to vendor_accounts matches no rows for it`,
       });
     }
   }

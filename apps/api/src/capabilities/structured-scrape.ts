@@ -1,7 +1,8 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 
 registerCapability("structured-scrape", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? "").trim();
@@ -21,7 +22,7 @@ registerCapability("structured-scrape", async (input: CapabilityInput) => {
 
   const schemaStr = typeof schema === "string" ? schema : JSON.stringify(schema, null, 2);
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const r = await client.messages.create({
     model: MODELS.capability_default.id,
     max_tokens: 2000,

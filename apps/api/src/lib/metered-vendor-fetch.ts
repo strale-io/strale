@@ -1,3 +1,4 @@
+import { recordVendorCost } from "./call-cost.js";
 /** Shared fetch wrapper for APIs whose calls consume credits or cash. */
 import {
   assertVendorAvailable,
@@ -6,6 +7,7 @@ import {
 } from "./vendor-control-tower.js";
 import { logWarn } from "./log.js";
 import { readErrorTextTruncated } from "./resource-limits.js";
+import { assertPaidCallAllowed, BILLABLE_METERED_VENDORS } from "./paid-call-guard.js";
 
 export async function meteredVendorFetch(
   providerName: string,
@@ -15,6 +17,8 @@ export async function meteredVendorFetch(
   fetchImpl: (url: string | URL, init?: RequestInit) => Promise<Response> = fetch,
   classifyHttpFailures = true,
 ): Promise<Response> {
+  // Strale's own test traffic never pays a vendor (lib/paid-call-guard.ts).
+  if (BILLABLE_METERED_VENDORS.has(providerName)) assertPaidCallAllowed(providerName);
   // Unit capability tests replace fetch with a local spy and intentionally run
   // without DATABASE_URL. Requiring a database before reaching that spy would
   // make input-validation tests fail without strengthening production. The
@@ -23,10 +27,26 @@ export async function meteredVendorFetch(
     process.env.NODE_ENV === "test" &&
     !process.env.DATABASE_URL &&
     process.env.VENDOR_CONTROL_TOWER_FORCE !== "1";
-  if (unitTestWithoutDb) return fetchImpl(url, init);
+  if (unitTestWithoutDb) {
+    try {
+      const response = await fetchImpl(url, init);
+      recordVendorCost(providerName, units, response.ok ? "success" : "failure");
+      return response;
+    } catch (error) {
+      recordVendorCost(providerName, units);
+      throw error;
+    }
+  }
 
   await assertVendorAvailable(providerName);
-  const response = await fetchImpl(url, init);
+  let response: Response;
+  try {
+    response = await fetchImpl(url, init);
+    recordVendorCost(providerName, units, response.ok ? "success" : "failure");
+  } catch (error) {
+    recordVendorCost(providerName, units);
+    throw error;
+  }
   try {
     if (response.ok) await recordVendorUsage(providerName, units);
     else if (classifyHttpFailures) {

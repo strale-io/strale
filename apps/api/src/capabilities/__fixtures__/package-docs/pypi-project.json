@@ -1,0 +1,60 @@
+{
+  "info": {
+    "description": "# Requests\n\n[![Version](https://img.shields.io/pypi/v/requests.svg?maxAge=86400)](https://pypi.org/project/requests/)\n[![Supported Versions](https://img.shields.io/pypi/pyversions/requests.svg)](https://pypi.org/project/requests)\n[![Downloa",
+    "description_content_type": "text/markdown",
+    "home_page": null,
+    "license": "Apache-2.0",
+    "license_expression": null,
+    "name": "requests",
+    "project_urls": {
+      "Documentation": "https://requests.readthedocs.io",
+      "Source": "https://github.com/psf/requests"
+    },
+    "summary": "Python HTTP for Humans.",
+    "version": "2.34.2",
+    "yanked": false,
+    "yanked_reason": null,
+    "author": "",
+    "maintainer": "",
+    "author_email": "Fixture author <author@example.invalid>",
+    "maintainer_email": "Fixture maintainer <maintainer@example.invalid>"
+  },
+  "releases": {
+    "2.34.2": [
+      {
+        "upload_time_iso_8601": "2026-05-14T19:25:26.443000Z",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "upload_time_iso_8601": "2026-05-14T19:25:27.735762Z",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "2.34.1": [
+      {
+        "upload_time_iso_8601": "2026-05-13T19:20:22.827819Z",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "upload_time_iso_8601": "2026-05-13T19:20:24.662635Z",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "2.34.0": [
+      {
+        "upload_time_iso_8601": "2026-05-11T19:29:49.923155Z",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "upload_time_iso_8601": "2026-05-11T19:29:51.717818Z",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ]
+  }
+}

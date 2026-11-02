@@ -1,0 +1,153 @@
+{
+  "slug": "country-economic-indicators",
+  "recorded_at": "2026-10-29T16:05:19.066Z",
+  "input": {
+    "country_code": "SE"
+  },
+  "redactions": [
+    "Set-Cookie values replaced with 'redacted'"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/SE/indicator/NY.GDP.MKTP.CD?format=json&mrv=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "X-Requested-With",
+          "access-control-allow-methods": "GET",
+          "access-control-allow-origin": "*",
+          "age": "53574",
+          "cache-control": "public, max-age=86400",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236bcbddc3b041-ATL",
+          "content-type": "application/json;charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:19 GMT",
+          "expires": "Fri, 30 Oct 2026 16:05:19 GMT",
+          "last-modified": "Thu, 29 Oct 2026 01:12:24 GMT",
+          "request-context": "appId=cid-v1:da002513-bd8b-4441-9f30-737944134422",
+          "server": "cloudflare",
+          "set-cookie": "_cfuvid=redacted; HttpOnly; SameSite=None; Secure; Path=/; Domain=worldbank.org",
+          "vary": "accept-encoding",
+          "x-powered-by": "ASP.NET"
+        },
+        "body": "[{\"page\":1,\"pages\":1,\"per_page\":50,\"total\":1,\"sourceid\":\"2\",\"lastupdated\":\"2026-10-08\"},[{\"indicator\":{\"id\":\"NY.GDP.MKTP.CD\",\"value\":\"GDP (current US$)\"},\"country\":{\"id\":\"SE\",\"value\":\"Sweden\"},\"countryiso3code\":\"SWE\",\"date\":\"2025\",\"value\":668998664082.081,\"unit\":\"\",\"obs_status\":\"\",\"decimal\":0}]]",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/SE/indicator/SP.POP.TOTL?format=json&mrv=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "X-Requested-With",
+          "access-control-allow-methods": "GET",
+          "access-control-allow-origin": "*",
+          "cache-control": "public, max-age=79275",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236bcc1a2e44d0-ATL",
+          "content-type": "application/json;charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:19 GMT",
+          "expires": "Fri, 30 Oct 2026 14:06:34 GMT",
+          "last-modified": "Wed, 28 Oct 2026 23:13:39 GMT",
+          "request-context": "appId=cid-v1:da002513-bd8b-4441-9f30-737944134422",
+          "server": "cloudflare",
+          "set-cookie": "_cfuvid=redacted; HttpOnly; SameSite=None; Secure; Path=/; Domain=worldbank.org",
+          "vary": "accept-encoding",
+          "x-powered-by": "ASP.NET"
+        },
+        "body": "[{\"page\":1,\"pages\":1,\"per_page\":50,\"total\":1,\"sourceid\":\"2\",\"lastupdated\":\"2026-10-08\"},[{\"indicator\":{\"id\":\"SP.POP.TOTL\",\"value\":\"Population, total\"},\"country\":{\"id\":\"SE\",\"value\":\"Sweden\"},\"countryiso3code\":\"SWE\",\"date\":\"2025\",\"value\":10596620,\"unit\":\"\",\"obs_status\":\"\",\"decimal\":0}]]",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/SE/indicator/NY.GDP.MKTP.KD.ZG?format=json&mrv=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "X-Requested-With",
+          "access-control-allow-methods": "GET",
+          "access-control-allow-origin": "*",
+          "cache-control": "public, max-age=86400",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236bcc5e366947-ATL",
+          "content-type": "application/json;charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:19 GMT",
+          "expires": "Fri, 30 Oct 2026 16:05:19 GMT",
+          "last-modified": "Thu, 29 Oct 2026 03:12:39 GMT",
+          "request-context": "appId=cid-v1:da002513-bd8b-4441-9f30-737944134422",
+          "server": "cloudflare",
+          "set-cookie": "_cfuvid=redacted; HttpOnly; SameSite=None; Secure; Path=/; Domain=worldbank.org",
+          "vary": "accept-encoding",
+          "x-powered-by": "ASP.NET"
+        },
+        "body": "[{\"page\":1,\"pages\":1,\"per_page\":50,\"total\":1,\"sourceid\":\"2\",\"lastupdated\":\"2026-10-08\"},[{\"indicator\":{\"id\":\"NY.GDP.MKTP.KD.ZG\",\"value\":\"GDP growth (annual %)\"},\"country\":{\"id\":\"SE\",\"value\":\"Sweden\"},\"countryiso3code\":\"SWE\",\"date\":\"2025\",\"value\":1.54316373266217,\"unit\":\"\",\"obs_status\":\"\",\"decimal\":1}]]",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/SE/indicator/FP.CPI.TOTL.ZG?format=json&mrv=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "X-Requested-With",
+          "access-control-allow-methods": "GET",
+          "access-control-allow-origin": "*",
+          "cache-control": "public, max-age=86400",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236bcc5be2a179-ATL",
+          "content-type": "application/json;charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:19 GMT",
+          "expires": "Fri, 30 Oct 2026 16:05:19 GMT",
+          "last-modified": "Thu, 29 Oct 2026 03:12:39 GMT",
+          "request-context": "appId=cid-v1:da002513-bd8b-4441-9f30-737944134422",
+          "server": "cloudflare",
+          "set-cookie": "_cfuvid=redacted; HttpOnly; SameSite=None; Secure; Path=/; Domain=worldbank.org",
+          "vary": "accept-encoding",
+          "x-powered-by": "ASP.NET"
+        },
+        "body": "[{\"page\":1,\"pages\":1,\"per_page\":50,\"total\":1,\"sourceid\":\"2\",\"lastupdated\":\"2026-10-08\"},[{\"indicator\":{\"id\":\"FP.CPI.TOTL.ZG\",\"value\":\"Inflation, consumer prices (annual %)\"},\"country\":{\"id\":\"SE\",\"value\":\"Sweden\"},\"countryiso3code\":\"SWE\",\"date\":\"2025\",\"value\":0.679015259300199,\"unit\":\"\",\"obs_status\":\"\",\"decimal\":1}]]",
+        "body_encoding": "utf8"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/SE/indicator/SL.UEM.TOTL.ZS?format=json&mrv=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "X-Requested-With",
+          "access-control-allow-methods": "GET",
+          "access-control-allow-origin": "*",
+          "cache-control": "public, max-age=86400",
+          "cf-cache-status": "EXPIRED",
+          "cf-ray": "a5236bcc0b3d3747-ATL",
+          "content-type": "application/json;charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:19 GMT",
+          "expires": "Fri, 30 Oct 2026 16:05:19 GMT",
+          "last-modified": "Thu, 29 Oct 2026 16:05:19 GMT",
+          "request-context": "appId=cid-v1:da002513-bd8b-4441-9f30-737944134422",
+          "server": "cloudflare",
+          "set-cookie": "_cfuvid=redacted; HttpOnly; SameSite=None; Secure; Path=/; Domain=worldbank.org",
+          "vary": "accept-encoding",
+          "x-powered-by": "ASP.NET"
+        },
+        "body": "[{\"page\":1,\"pages\":1,\"per_page\":50,\"total\":1,\"sourceid\":\"2\",\"lastupdated\":\"2026-10-08\"},[{\"indicator\":{\"id\":\"SL.UEM.TOTL.ZS\",\"value\":\"Unemployment, total (% of total labor force) (modeled ILO estimate)\"},\"country\":{\"id\":\"SE\",\"value\":\"Sweden\"},\"countryiso3code\":\"SWE\",\"date\":\"2025\",\"value\":8.694,\"unit\":\"\",\"obs_status\":\"\",\"decimal\":1}]]",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

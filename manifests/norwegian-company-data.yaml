@@ -184,12 +184,12 @@ limitations:
     text: "Status uses deleted-unit tombstones before bankruptcy, compulsory dissolution and voluntary dissolution flags. Deleted records may lack live-unit details."
     category: coverage
     severity: info
-  - title: Does not cover sole proprietorships — about 15% of Norwegian businesses
-    text: Does not cover sole proprietorships (enkeltpersonforetak)
+  - title: Sole proprietorships are not covered
+    text: Does not cover sole proprietorships (enkeltpersonforetak), which account for about 15% of Norwegian businesses.
     category: coverage
     severity: info
     workaround: Query Brønnøysundregistrene (brreg.no) directly for enkeltpersonforetak using the person's national ID
-  - title: Financial data comes from annual reports and can be up to 12 months old
+  - title: Financial figures can be up to 12 months old
     text: Financial data from annual reports — can be up to 12 months old
     category: freshness
     severity: info

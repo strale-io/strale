@@ -104,7 +104,7 @@ output_field_reliability:
   total_amount: guaranteed
   payment_count: guaranteed
 limitations:
-  - title: Validates standard SEPA XML schemas pain.001 and pain.002 only — bank-specific extensions are not checked
+  - title: Bank-specific XML extensions are not checked
     text: >-
       Validates against standard SEPA XML schemas (pain.001, pain.002) — bank-specific extensions or proprietary formats
       are not checked

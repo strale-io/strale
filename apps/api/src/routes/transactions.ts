@@ -1,8 +1,10 @@
+import { recoveryDetails } from "../lib/errors.js";
 import { Hono } from "hono";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { transactions, capabilities, transactionQuality } from "../db/schema.js";
-import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
+import { transactions, capabilities, transactionQuality, jobCallbacks } from "../db/schema.js";
+import { apiOrigin, listFilesWithUrls } from "../lib/jobs/files.js";
+import { requirePrimaryKey, authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import {
@@ -103,6 +105,7 @@ transactionsRoute.get(
         input: row.input,
         output: row.output,
         error: row.error ? sanitizeFailureReason(row.error) : null,
+        ...(row.error ? { details: recoveryDetails("execution_failed", "", { error: sanitizeFailureReason(row.error) }) } : {}),
         price_cents: row.price_cents,
         latency_ms: row.latency_ms,
         provenance: row.provenance,
@@ -162,7 +165,30 @@ transactionsRoute.get(
         return c.json(apiError("not_found", "Transaction not found."), 404);
       }
 
-      return c.json(formatRow(row));
+      // Portfolio 2.11: async-job extras. Files carry a URL minted on this
+      // read and valid for an hour, so a poll is also how a link is renewed.
+      // Both lookups are by primary/indexed key and return nothing for the
+      // vast majority of transactions.
+      const [files, [callback]] = await Promise.all([
+        listFilesWithUrls(db, id, apiOrigin()),
+        db
+          .select({
+            state: jobCallbacks.state,
+            attempts: jobCallbacks.attempts,
+            next_attempt_at: jobCallbacks.nextAttemptAt,
+            last_status_code: jobCallbacks.lastStatusCode,
+            delivered_at: jobCallbacks.deliveredAt,
+          })
+          .from(jobCallbacks)
+          .where(eq(jobCallbacks.transactionId, id))
+          .limit(1),
+      ]);
+
+      return c.json({
+        ...formatRow(row),
+        ...(files.length > 0 ? { files } : {}),
+        ...(callback ? { callback } : {}),
+      });
     }
 
     // F-A-005: Unauthenticated lookups return a redacted envelope — body fields
@@ -320,6 +346,7 @@ transactionsRoute.get(
 transactionsRoute.delete(
   "/:id",
   authMiddleware,
+  requirePrimaryKey,
   rateLimitByKey(5, 1000),
   async (c) => {
     const id = c.req.param("id") as string;
@@ -394,6 +421,7 @@ transactionsRoute.delete(
 transactionsRoute.post(
   "/:id/audit-token",
   authMiddleware,
+  requirePrimaryKey,
   rateLimitByKey(5, 1000),
   async (c) => {
     const id = c.req.param("id") as string;
@@ -416,7 +444,7 @@ transactionsRoute.post(
         return c.json(
           apiError(
             "invalid_request",
-            "expires_in_days must be an integer between 1 and 365.",
+            "expires_in_days must be an integer between 1 and 365.", { fix: "Send 'expires_in_days' as an integer between 1 and 365." },
           ),
           400,
         );

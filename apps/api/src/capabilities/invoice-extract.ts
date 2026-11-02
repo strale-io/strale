@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
@@ -139,7 +140,7 @@ registerCapability("invoice-extract", async (input: CapabilityInput) => {
     };
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
 
   const response = await client.messages.create({
     model: MODELS.capability_default.id,

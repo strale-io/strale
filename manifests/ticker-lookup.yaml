@@ -100,7 +100,7 @@ output_field_reliability:
   matches: guaranteed
   top_match: guaranteed
 limitations:
-  - title: Yahoo Finance autocomplete covers major global exchanges but may miss OTC or recently listed securities
+  - title: OTC and newly listed securities can be missing
     text: >-
       Uses Yahoo Finance autocomplete — covers major exchanges globally but may miss OTC or very recently listed
       securities

@@ -109,21 +109,63 @@ surfaces:
       at smithery.ai/servers/strale/agent-tools, confirming the duplicate
       is still live today; smithery.ai/server/strale-mcp still 404s.
 
+  - id: mcp-entry-company-check
+    surface: Narrow MCP server, Strale Company Check (D7)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io (io.github.strale-io/company-check) and smithery.ai
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/mcp-server/entry-points/company-check/server.json
+    notes: >-
+      Live at https://api.strale.io/mcp/company-check since commit 810a9753 (PR 804),
+      verified 2026-10-29 (initialize serverInfo strale-company-check, tools/list,
+      free-tool call). Not yet in the official registry or on Smithery: the
+      session cannot dispatch publish-mcp-entry-points.yml (HTTP 403) and
+      Smithery needs Petter's sign-in. Becomes listed when either entry exists.
+
+  - id: mcp-entry-eu-vat-check
+    surface: Narrow MCP server, Strale EU VAT Check (D7)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io (io.github.strale-io/eu-vat-check) and smithery.ai
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/mcp-server/entry-points/eu-vat-check/server.json
+    notes: >-
+      Live at https://api.strale.io/mcp/eu-vat-check since commit 810a9753 (PR 804),
+      verified 2026-10-29 (initialize serverInfo strale-eu-vat-check, tools/list,
+      free-tool call). Not yet in the official registry or on Smithery: the
+      session cannot dispatch publish-mcp-entry-points.yml (HTTP 403) and
+      Smithery needs Petter's sign-in. Becomes listed when either entry exists.
+
+  - id: mcp-entry-web-reader
+    surface: Narrow MCP server, Strale Web Page Reader (D7)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io (io.github.strale-io/web-reader) and smithery.ai
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/mcp-server/entry-points/web-reader/server.json
+    notes: >-
+      Live at https://api.strale.io/mcp/web-reader since commit 810a9753 (PR 804),
+      verified 2026-10-29 (initialize serverInfo strale-web-reader, tools/list,
+      free-tool call). Not yet in the official registry or on Smithery: the
+      session cannot dispatch publish-mcp-entry-points.yml (HTTP 403) and
+      Smithery needs Petter's sign-in. Becomes listed when either entry exists.
+
   - id: docker-mcp-registry-pr
     surface: Docker MCP registry submission
     kind: registry-listing
     target: docker/mcp-registry
     status: open
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://github.com/docker/mcp-registry/pull/2202
     notes: >-
-      Re-checked 2026-09-11 with `gh pr view
-      https://github.com/docker/mcp-registry/pull/2202 --json
-      state,createdAt,mergedAt`: state OPEN, created 2026-04-01, not
-      merged. archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
-      (section 2.5, as of 2026-08-12) records Strale as not listed in the
-      Docker MCP Catalog, a weak negative, consistent with the submission
-      still awaiting merge. Previously: open, as of 2026-04-27, per the same PR.
+      Re-checked 2026-10-29 (PR page): still open since 2026-04-01, no
+      reviews, last activity 2026-04-27. Its files carry retired claims
+      (country count, trial-credit amount, quality scores), an icon URL that
+      serves HTML, and no tools.json. A corrected entry is prepared in
+      docs/release/directory-submissions/docker-mcp-registry/ for a push to
+      the PR's existing branch (petterlindstrom79's fork); a new PR would
+      duplicate it. Previously: open, as of 2026-09-11, per gh pr view.
 
   # -- docs/company/DIRECTORY-MAP.md as a named population source (review
   #    round 1): the crawler-hit table and the Coinbase x402 Bazaar finding
@@ -365,8 +407,9 @@ surfaces:
     kind: framework-pr
     target: FlowiseAI/Flowise
     status: open
-    status_date: 2026-04-27
+    status_date: 2026-10-27
     evidence: https://github.com/FlowiseAI/Flowise/pull/6209
+    notes: Open PR; no merge established. The distribution strategy’s archived classification was incorrect.
 
   - id: crewai-examples-kyb-pr
     surface: crewAI-examples KYB compliance crew
@@ -513,8 +556,15 @@ surfaces:
     kind: package
     target: npm
     status: published
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://www.npmjs.com/package/strale-semantic-kernel
+    notes: >-
+      Deprecation prepared 2026-10-29 (distribution T12): README notice and
+      package description in the repo. npm still serves 0.1.4 without a
+      deprecation flag; the npm deprecate command is in
+      docs/release/directory-submissions/package-housekeeping.md and needs an
+      npm owner. Becomes withdrawn when the flag is set. Built on the
+      unofficial community port semantic-kernel (afshinm/semantic-kernel-js).
 
   - id: pkg-langchain-ts
     surface: straleio-langchain
@@ -537,40 +587,51 @@ surfaces:
     kind: package
     target: PyPI
     status: published
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://pypi.org/project/crewai-strale/
+    notes: >-
+      Frozen 2026-10-29 (distribution T12): maintenance only, fixes for
+      breakage, no new features; README notice in the repo, shown on PyPI at
+      the next release. PyPI serves 0.1.4.
 
   - id: pkg-composio-strale
     surface: composio-strale
     kind: package
     target: PyPI
     status: published
-    status_date: 2026-09-11
+    status_date: 2026-10-29
     evidence: https://pypi.org/project/composio-strale/
+    notes: >-
+      Frozen 2026-10-29 (distribution T12): maintenance only, fixes for
+      breakage, no new features; README notice in the repo, shown on PyPI at
+      the next release. PyPI serves 0.1.4.
 
   - id: pkg-google-adk-strale
     surface: google-adk-strale
     kind: package
     target: PyPI
-    status: published
+    status: withdrawn
     status_date: 2026-09-11
     evidence: https://pypi.org/project/google-adk-strale/
+    notes: Yanked from PyPI after framework integrity failures; do not recommend or republish.
 
   - id: pkg-openai-agents-strale
     surface: openai-agents-strale
     kind: package
     target: PyPI
-    status: published
+    status: withdrawn
     status_date: 2026-09-11
     evidence: https://pypi.org/project/openai-agents-strale/
+    notes: Yanked from PyPI after framework integrity failures; do not recommend or republish.
 
   - id: pkg-pydantic-ai-strale
     surface: pydantic-ai-strale
     kind: package
     target: PyPI
-    status: published
+    status: withdrawn
     status_date: 2026-09-11
     evidence: https://pypi.org/project/pydantic-ai-strale/
+    notes: Yanked from PyPI after framework integrity failures; do not recommend or republish.
 
   - id: pkg-strale-capabilities
     surface: strale-capabilities
@@ -820,3 +881,78 @@ surfaces:
       direct page read. Re-checked today: `curl -sS -o /dev/null -w
       "%{http_code}" https://mcpmarket.com/server/strale` returned 403;
       inconclusive, kept the document's finding.
+
+  - id: pipedream-integration
+    surface: Pipedream Strale app
+    kind: other
+    target: PipedreamHQ/pipedream
+    status: listed
+    status_date: 2026-10-27
+    evidence: docs/research/2026-10-27-distribution-strategy-sweeps/integrations.md
+    notes: Published integration calls a retired endpoint. Repair belongs to a later external PR; no upstream changes in this batch.
+
+  - id: pkg-zapier-strale
+    surface: Strale Zapier integration
+    kind: package
+    target: Zapier Developer Platform
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/zapier-strale/README.md
+    notes: >-
+      0.2.0 has five visible fixed actions (company lookup, EU VAT, IBAN, email,
+      name screening), tested offline with zapier-platform-core's app tester.
+      The two hidden actions whose tools are not public were removed. Not
+      registered, pushed to Zapier or published; zapier push needs Petter's
+      Zapier account.
+
+  - id: pkg-n8n-nodes-strale
+    surface: Strale n8n community node (D8)
+    kind: package
+    target: npm n8n-nodes-strale; n8n Creator Portal
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/n8n-nodes-strale/README.md
+    notes: >-
+      1.0.0 merged in PR 817 (2026-10-29) with three fixed operations (company
+      lookup, EU VAT check, name screening), offline tests on n8n-workflow
+      primitives, n8n-node lint and a local scanner pass. Not yet published:
+      npm still serves 0.1.4 (2026-04-05), which calls retired routes and
+      fails the current n8n scanner with 7 errors. Publish needs the npm
+      trusted publisher for release-npm.yml and the npm-release approval;
+      Creator Portal submission needs Petter's account.
+
+  - id: cline-marketplace-submission
+    surface: Cline MCP Marketplace
+    kind: directory
+    target: cline/mcp-marketplace
+    status: proposed
+    status_date: 2026-10-29
+    evidence: docs/release/directory-submissions/README.md
+    notes: >-
+      Issue text, llms-install.md and 400x400 logo prepared 2026-10-29. Needs a
+      person to test the install in Cline and open the issue from a GitHub
+      account.
+
+  - id: awesome-remote-mcp-servers-pr
+    surface: punkpeye/awesome-remote-mcp-servers README entry
+    kind: directory
+    target: punkpeye/awesome-remote-mcp-servers
+    status: proposed
+    status_date: 2026-10-29
+    evidence: docs/release/directory-submissions/README.md
+    notes: >-
+      Three-line Aggregators entry prepared 2026-10-29 with the Glama connector
+      badge (io.github.strale-io/strale, live). The opening account must star
+      the repository.
+
+  - id: cursor-plugin-submission
+    surface: Cursor plugin marketplace
+    kind: directory
+    target: cursor.com/marketplace
+    status: built
+    status_date: 2026-10-29
+    evidence: packages/cursor-plugin/.cursor-plugin/plugin.json
+    notes: >-
+      Plugin (remote MCP server plus one rule) built 2026-10-29 and validated
+      against Cursor's plugin schema. Submission at
+      cursor.com/marketplace/publish needs a Cursor account.

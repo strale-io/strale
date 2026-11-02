@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 const MONTH_NAMES: Record<string, number> = {
@@ -17,7 +18,7 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 
 registerCapability("date-parse", async (input: CapabilityInput) => {
   const dateString = ((input.date_string as string) ?? (input.date as string) ?? (input.task as string) ?? "").trim();
-  if (!dateString) throw new Error("'date_string' is required.");
+  if (!dateString) throw inputRefusal("'date_string' is required.", "date_string", "Send 'date_string' as a non-empty date string such as 2026-10-27.");
 
   const preferredFormat = ((input.preferred_format as string) ?? "").toUpperCase(); // DMY, MDY, YMD
 

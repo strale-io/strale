@@ -65,7 +65,7 @@ output_field_reliability:
   matches: guaranteed
   total_matches: guaranteed
 limitations:
-  - title: AI-based port information covers major seaports and airports — small inland ports may have limited data
+  - title: Small inland ports can have limited data
     text: AI-based port information — covers major seaports and airports; small inland ports may have limited data
     category: coverage
     severity: info

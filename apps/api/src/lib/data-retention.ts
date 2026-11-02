@@ -381,7 +381,7 @@ async function purgeHealthMonitorEvents(
 }
 
 // purgeSqsSnapshots retired with the SQS engine (DEC-20260503-B). The
-// sqs_daily_snapshot table is dropped in PR2.
+// sqs_daily_snapshot table was dropped by startup-migration block 0132.
 
 /**
  * Redact the PII columns of transactions belonging to capabilities flagged

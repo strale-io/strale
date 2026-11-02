@@ -217,7 +217,7 @@ const TXN_PROJECTION = `        SELECT s.slug, s.lifecycle_state, s.visible, s.x
 
 describe("WP9 — the floor's fact/transaction sources", () => {
   const src = readCode("quality-floor.ts");
-  const migration = readCode("../lib/startup-migrations.ts");
+  const migration = readCode("../startup-migrations/blocks/0101-capability-invocations.ts");
 
   it("asks whether the fact table exists before mentioning it in a query", () => {
     // Postgres resolves relations at parse time, so a query that merely NAMES a
@@ -439,7 +439,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // ACCESS EXCLUSIVE on a table the customer path writes to.
     const block = migration.slice(
       migration.indexOf("export async function runMigration0101_capabilityInvocations"),
-      migration.indexOf("export const BLOCKS"),
+      migration.length,
     );
     expect(block.length).toBeGreaterThan(500);
     expect(block).not.toContain(
@@ -500,7 +500,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // assertions in this describe already slice, and these did not.
     const trigger = migration.slice(
       migration.indexOf("export async function runMigration0101_capabilityInvocations"),
-      migration.indexOf("export const BLOCKS"),
+      migration.length,
     );
     expect(trigger.length).toBeGreaterThan(500);
     expect(trigger).toContain("IF TG_OP = 'UPDATE' THEN");

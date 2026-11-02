@@ -82,7 +82,7 @@ output_field_reliability:
   typescript: guaranteed
   interface_count: guaranteed
 limitations:
-  - title: Union types and optional fields may not be detected correctly from a single JSON sample
+  - title: One sample may miss union types and optional fields
     text: >-
       Infers TypeScript interfaces from JSON samples — union types and optional fields may not be correctly detected
       from a single sample

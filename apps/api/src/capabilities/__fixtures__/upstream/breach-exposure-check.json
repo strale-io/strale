@@ -1,0 +1,38 @@
+{
+  "slug": "breach-exposure-check",
+  "recorded_at": "2026-10-28T22:20:04.245Z",
+  "input": {
+    "domain": "adobe.com"
+  },
+  "redactions": [
+    "Set-Cookie values replaced with 'redacted'"
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://haveibeenpwned.com/api/v3/breaches?Domain=adobe.com"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cache-control": "public, max-age=300",
+          "cf-placement": "remote-SJC",
+          "cf-ray": "a51d535fde1f5205-ATL",
+          "content-type": "application/json",
+          "date": "Wed, 28 Oct 2026 22:20:04 GMT",
+          "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()",
+          "server": "cloudflare",
+          "set-cookie": "__cf_bm=redacted; HttpOnly; SameSite=None; Secure; Path=/; Domain=haveibeenpwned.com; Expires=Wed, 28 Oct 2026 22:50:04 GMT",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "accept-encoding",
+          "x-content-type-options": "nosniff"
+        },
+        "body": "[{\"Name\":\"Adobe\",\"Title\":\"Adobe\",\"Domain\":\"adobe.com\",\"BreachDate\":\"2013-10-04\",\"AddedDate\":\"2013-12-04T00:00:00Z\",\"ModifiedDate\":\"2022-05-15T23:52:49Z\",\"PwnCount\":152445165,\"Description\":\"In October 2013, 153 million Adobe accounts were breached with each containing an internal ID, username, email, <em>encrypted</em> password and a password hint in plain text. The password cryptography was poorly done and many were quickly resolved back to plain text. The unencrypted hints also <a href=\\\"http://www.troyhunt.com/2013/11/adobe-credentials-and-serious.html\\\" target=\\\"_blank\\\" rel=\\\"noopener\\\">disclosed much about the passwords</a> adding further to the risk that hundreds of millions of Adobe customers already faced.\",\"LogoPath\":\"https://logos.haveibeenpwned.com/Adobe.png\",\"Attribution\":null,\"DisclosureUrl\":null,\"DataClasses\":[\"Email addresses\",\"Password hints\",\"Passwords\",\"Usernames\"],\"IsVerified\":true,\"IsFabricated\":false,\"IsSensitive\":false,\"IsRetired\":false,\"IsSpamList\":false,\"IsMalware\":false,\"IsSubscriptionFree\":false,\"IsStealerLog\":false}]",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

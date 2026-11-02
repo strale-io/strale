@@ -190,7 +190,9 @@ limitations:
     workaround: null
   - title: "Chains covered"
     text: >-
-      Ethereum (1), Base (8453), Arbitrum One (42161), OP Mainnet (10) and Polygon PoS (137), read through Alchemy; any other chain_id is refused. These are the chains for which Alchemy documents its transfer index and block timestamps. Values are in the chain's native coin, named in native_symbol (POL on Polygon).
+      Covers Ethereum (1), Base (8453), Arbitrum One (42161), OP Mainnet (10) and Polygon PoS (137)
+      through Alchemy; other `chain_id` values are refused. Values use the chain’s native coin named
+      in `native_symbol`, including POL on Polygon.
     category: coverage
     severity: info
     workaround: null

@@ -1,4 +1,4 @@
-"""crewai-strale — All 250+ Strale capabilities as CrewAI tools."""
+"""crewai-strale — All available Strale capabilities as CrewAI tools."""
 
 from .client import StraleClient
 from .toolkit import (

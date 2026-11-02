@@ -1,0 +1,39 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0301e5933c85764d164dff2d89b28522f90bde0b"
+  },
+  "at": "2026-10-29T00:16:45.956Z",
+  "inputs": {
+    "source": "/tmp/claude-0/receipt-in.json"
+  },
+  "summary": {
+    "integration_test_files": 37,
+    "integration_tests": 359,
+    "failed": 0,
+    "block_outcomes_identical_to_main": 73,
+    "schema_dump_identical": true
+  },
+  "topic": "h7d-migrations-split",
+  "raw": {
+    "ok": true,
+    "postgres": "16.15",
+    "integration_lane": {
+      "test_files_passed": 37,
+      "tests_passed": 359,
+      "failed": 0
+    },
+    "block_outcomes_vs_main": {
+      "blocks": 73,
+      "identical": true,
+      "excluded": "0109 epoch timestamp"
+    },
+    "schema_only_dump_vs_main": "identical",
+    "dist_boot": {
+      "probe": "passed",
+      "executors_registered": 327
+    },
+    "log": "H7d PR1 local evidence, Postgres 16.15, fresh databases, tree 0301e593\n== integration lane (drizzle push + apply-startup-migrations + vitest integration.test.ts)\n Test Files  37 passed (37)\n      Tests  359 passed (359)\n== block outcomes branch vs main (excluding 0109 epoch timestamp)\nidentical: 73 blocks\n== pg_dump --schema-only diff (restrict tokens excluded)\nidentical\n== dist boot probe\n[startup] Health gate passed: 327 executors registered\n"
+  }
+}

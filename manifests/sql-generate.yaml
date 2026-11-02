@@ -93,7 +93,7 @@ output_field_reliability:
   tables_referenced: guaranteed
   estimated_complexity: guaranteed
 limitations:
-  - title: AI-generated SQL with complex joins and subqueries must be tested against your schema before production use
+  - title: Complex queries need testing against your schema
     text: AI-generated SQL — complex joins and subqueries should be tested against your schema before running on production
     category: accuracy
     severity: warning

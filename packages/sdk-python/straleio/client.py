@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 import asyncio
 import time
 from typing import Any, Dict, List, Optional, Union
@@ -24,6 +26,13 @@ DEFAULT_BASE_URL = "https://api.strale.io"
 DEFAULT_TIMEOUT = 60.0
 DEFAULT_POLL_INTERVAL = 2.0
 DEFAULT_MAX_POLL_WAIT = 120.0
+
+
+def _client_version() -> str:
+    try:
+        return version("straleio")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 class Strale:
@@ -62,7 +71,7 @@ class Strale:
             headers={
                 "Authorization": f"Bearer {self._api_key}",
                 # Channel attribution: identifies this SDK on the API side.
-                "X-Strale-Client": "straleio-python/0.1.4",
+                "X-Strale-Client": f"straleio-python/{_client_version()}",
             },
         )
 

@@ -7,7 +7,10 @@ registerCapability("ssl-certificate-chain", async (input: CapabilityInput) => {
   if (!host) throw new Error("'host' (hostname or domain) is required.");
 
   // Strip protocol/path
-  host = host.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
+  host = host.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  // Strip a port only from `host:port`; a bare IPv6 literal has many colons and
+  // its last group is not a port.
+  if (host.split(":").length === 2) host = host.replace(/:\d+$/, "");
   await validateHost(host);
   const port = Number(input.port ?? 443);
 

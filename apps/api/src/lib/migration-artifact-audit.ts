@@ -37,7 +37,7 @@
  * changes, extend the parser rather than hand-listing constraint names.
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sql } from "drizzle-orm";
@@ -134,8 +134,8 @@ function blockAt(segments: Array<{ block: string; start: number; end: number }>,
 }
 
 /**
- * Pure function: given the raw source text of `startup-migrations.ts`
- * (or its compiled `.js` — template-literal SQL survives `tsc` unchanged),
+ * Pure function: given the raw migration source text (see
+ * `readMigrationsSourceText`; template-literal SQL survives `tsc` unchanged),
  * derive every schema artifact its blocks create.
  */
 export function deriveExpectedArtifacts(sourceText: string): MigrationArtifact[] {
@@ -184,18 +184,33 @@ export function deriveExpectedArtifacts(sourceText: string): MigrationArtifact[]
 }
 
 /**
- * Reads `startup-migrations.{ts,js}` from disk — always the sibling of
- * this module, whatever extension is currently running (`.ts` under tsx
- * in dev/test, `.js` under the compiled `dist/` output in prod). Never
- * imported as code, only read as text: the SQL inside the `sql\`...\``
- * template literals is identical before and after `tsc` strips types, so
- * parsing either file's text produces the same artifact list.
+ * The migration source files, read from disk as text: the runner module
+ * `startup-migrations.{ts,js}` (this module's sibling) and every block file
+ * in `../startup-migrations/blocks/`, whatever extension is currently
+ * running (`.ts` under tsx in dev/test, `.js` under the compiled `dist/`
+ * output in prod). Never imported as code, only read: the SQL inside the
+ * `sql\`...\`` template literals is identical before and after `tsc` strips
+ * types, so parsing either form produces the same artifact list. Throws when
+ * no block file is found, so a build that left the blocks out cannot pass
+ * schema validation with an empty expectation.
  */
-export function readMigrationsSourceText(): string {
-  const selfPath = fileURLToPath(import.meta.url);
+export function readMigrationSourceFiles(
+  selfPath: string = fileURLToPath(import.meta.url),
+): Array<{ path: string; text: string }> {
   const ext = selfPath.slice(selfPath.lastIndexOf("."));
-  const migrationsPath = join(dirname(selfPath), `startup-migrations${ext}`);
-  return readFileSync(migrationsPath, "utf-8");
+  const runnerPath = join(dirname(selfPath), `startup-migrations${ext}`);
+  const blocksDir = join(dirname(selfPath), "..", "startup-migrations", "blocks");
+  const blockPaths = readdirSync(blocksDir)
+    .filter((f) => f.endsWith(ext) && !f.endsWith(`.test${ext}`) && !f.endsWith(`.d${ext}`))
+    .sort()
+    .map((f) => join(blocksDir, f));
+  if (blockPaths.length === 0) throw new Error(`no migration block files in ${blocksDir}`);
+  return [runnerPath, ...blockPaths].map((path) => ({ path, text: readFileSync(path, "utf-8") }));
+}
+
+/** Every migration source file's text, concatenated (runner first, then blocks by file name). */
+export function readMigrationsSourceText(): string {
+  return readMigrationSourceFiles().map((f) => f.text).join("\n");
 }
 
 function normalizeRows<T>(result: unknown): T[] {

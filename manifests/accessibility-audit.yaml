@@ -108,11 +108,10 @@ output_field_reliability:
   manual_review_needed: guaranteed
 limitations:
   - title: >-
-      Automated HTML checks cover common WCAG criteria only — cognitive accessibility and screen reader behavior require
-      manual testing
+      Manual accessibility testing is still needed
     text: >-
-      Automated HTML analysis checks common WCAG criteria — cannot assess cognitive accessibility, screen reader
-      behavior, or keyboard-only navigation
+      Automated HTML analysis checks common WCAG criteria — cannot assess cognitive accessibility,
+      screen reader behaviour, or keyboard-only navigation
     category: coverage
     severity: info
     workaround: >-

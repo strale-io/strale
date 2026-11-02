@@ -3,7 +3,7 @@
 
 slug: backlink-check
 name: "Backlink Check"
-description: "Find backlinks to a domain from Common Crawl and Google search: linking domains, anchor text, and follow and nofollow counts."
+description: "Find possible backlinks to a domain from search results and web archives. Returns linking pages and available link details."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -38,6 +38,8 @@ output_schema:
     total_backlinks:
       type: number
     referring_domains_count:
+      type: number
+    unresolved_link_count:
       type: number
 data_source: CommonCrawl index (public backlink database)
 data_source_type: api
@@ -95,19 +97,21 @@ output_field_reliability:
   top_anchors: guaranteed
   total_backlinks: guaranteed
   referring_domains_count: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_link_count: guaranteed
+
 limitations:
-  - title: Uses CommonCrawl index data, which covers a subset of the web and may miss recent or niche backlinks
+  - title: Recent or niche backlinks can be missing
     text: Uses CommonCrawl index data — covers a subset of the web and may miss recently created or niche backlinks
     category: coverage
     severity: info
-    workaround: Combine with google-search using 'link:domain.com' queries for additional backlink discovery
+    workaround: Check referring pages directly for recently created or missing backlinks.
   - title: API responses are limited to 4 MiB
     text: >-
-      A response body above 4 MiB from the upstream endpoint is refused rather than
-      parsed, enforced while streaming. The limit sits below the 16 MiB page limit
-      deliberately: JSON is materialised into an object graph costing several times
-      its source bytes. Observed real responses for this source are well under
-      100 KiB.
+      API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info
 
@@ -117,4 +121,4 @@ data_access:
   acquisition_method: vendor_api
   upstream_vendor: commoncrawl
   checks: pending
-  checks_note: "Pending: CommonCrawl index terms not recorded; the fallback is Serper, pending DQ-39."
+  checks_note: "Pending: CommonCrawl index terms not recorded; the fallback is Serper, whose per-call value-added use is permitted in writing (DQ-39, accepted 2026-10-28)."

@@ -109,8 +109,9 @@ every `evidence:` / `production_evidence:` path cited from a decision
 record, a program track, or a remediation package resolves, and warns on a
 post-2026-09-02 handoff stating a test count with no receipt link. Write one
 with `npm run receipt -- --kind <kind> --topic <topic> --from <file|->`.
-Migration blocks in `apps/api/src/lib/startup-migrations.ts` are
-append-only and ledgered: `apps/api/src/lib/startup-migrations.ledger.json`
+Migration blocks, one file each under `apps/api/src/startup-migrations/blocks/`
+and run in the order `BLOCKS` in `apps/api/src/lib/startup-migrations.ts`
+gives, are append-only and ledgered: `apps/api/src/lib/startup-migrations.ledger.json`
 carries a content hash and `columns_written` per block, and `npm run
 migrations:check` fails on an edited block (the fix is a new block, never
 an in-place edit), an unledgered block, or two blocks writing the same
@@ -273,6 +274,8 @@ exactly the kind of thing that drifts; read CLAUDE.md (or the linked Notion
 Decisions DB entry) for the actual text before acting on any of these. The
 IDs every session should know exist, topic only, no numbers:
 
+- **DEC-20261101-A** — Codex builder lanes: what Codex never receives, who may launch it, which branches it may push, and how its dispatcher signs in and stays off branch code. A Codex session building for Strale reads it first; see CLAUDE.md and `docs/strategy/2026-11-01-codex-builder-lanes-decision.md`.
+- **DEC-20261027-B** — Platform hardening and distribution plan adopted, with scoped publish/pricing grants and retained founder gates; see CLAUDE.md and `docs/strategy/2026-10-27-platform-and-distribution-adoption.md`.
 - **DEC-20261024-A** — Way of working: WoW-Core consumer, T7 re-scoped, codex:check to be retired, daily run by exception (items 2, 4, 5 for Petter to confirm); see CLAUDE.md.
 - **DEC-20261025-A** — Website direction Open Flow 0.2, Daylight: white canvas, ambient motion only in the hero and live-tests panel, generated illustrations; see CLAUDE.md.
 - **DEC-20261024-B** — Website structure/messaging, Open Flow design system and the portfolio plan adopted; see CLAUDE.md.
@@ -340,8 +343,9 @@ drift:
 - Free-tier flag is `is_free_tier = true` in the `capabilities` table;
   `free_tier_slugs` on `/v1/platform/facts` lists the servable ones
   (`getFreeTierSlugs`). The
-  per-IP daily limit is FREE_TIER_DAILY_LIMIT in `src/routes/do.ts` — read
-  it there, don't restate it.
+  per-IP calendar-month UTC allowance is `STATIC_FACTS.free_tier_monthly_limit`
+  in `src/lib/platform-facts.ts`, enforced by `free-tier-allowance.ts` with
+  an hourly anti-abuse guard — read it there, don't restate it.
 - x402 pay-per-use (rail details: `platform-facts.ts`) is DB-driven: `x402_enabled` on the
   `capabilities` row. Catalog: `GET /x402/catalog`.
 - KYB Essentials/Complete and Invoice Verify solution families (multi-country

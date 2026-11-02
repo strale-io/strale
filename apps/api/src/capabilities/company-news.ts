@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { logWarn } from "../lib/log.js";
 
@@ -64,7 +65,7 @@ registerCapability("company-news", async (input: CapabilityInput) => {
   const maxArticles = Math.min(Number(input.max_articles) || 10, 25);
 
   if (!companyName || companyName.length < 2) {
-    throw new Error("'company_name' is required (minimum 2 characters). Provide the company name to search for in global news.");
+    throw inputRefusal("'company_name' is required (minimum 2 characters). Provide the company name to search for in global news.", "company_name", "Send 'company_name' as a company name with at least 2 characters.");
   }
 
   // Build GDELT query — quote the company name for exact match

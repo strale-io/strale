@@ -51,6 +51,7 @@
  *   node apps/api/scripts/check-tier-coverage.mjs --strict   # CI mode, enforcing
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -107,14 +108,10 @@ function scan() {
     process.exit(2);
   }
   if (!existsSync(fixturesDir)) {
-    // No fixtures captured yet — gate is a no-op. Not an error.
-    console.log(
-      "tier-coverage: no fixtures directory at apps/api/test/fixtures/tier-coverage/ — skipping all checks",
-    );
-    return { scanned: 0, withFixture: 0, findings: [] };
+    throw new Error("EMPTY_INPUT: tier coverage: captured fixture directory is missing");
   }
 
-  const files = readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  const files = requireInputs(readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml")), "manifest guard: manifests/*.{yaml,yml}");
   const findings = [];
   let withFixture = 0;
 
@@ -189,6 +186,7 @@ function scan() {
 }
 
 const { scanned, withFixture, findings } = scan();
+requireInputs(withFixture, "tier coverage: manifest-matched captured fixtures");
 const allowed = loadAllowlist();
 const newFindings = findings.filter((f) => !allowed.has(f.slug));
 

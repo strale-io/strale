@@ -1,0 +1,243 @@
+name: Release (PyPI)
+
+# Publishing uses PyPI **trusted publishing** (OIDC). There is deliberately no
+# PYPI_TOKEN secret: the publish job exchanges a short-lived GitHub OIDC
+# identity for a PyPI upload token, and pypa/gh-action-pypi-publish uploads
+# digital attestations alongside the files.
+#
+# The PATH AND FILENAME of this workflow, and the environment name, are part of
+# the trusted-publisher configuration registered on pypi.org for each project.
+# Renaming or moving this file breaks publishing until the PyPI-side config is
+# updated to match. See docs/release/pypi-publishing.md.
+#
+# Never triggered by a push to a branch: only a package-scoped tag or a manual
+# dispatch from main.
+
+on:
+  push:
+    # Tag convention: pypi/<pypi-project-name>/v<version>, e.g.
+    # pypi/langchain-strale/v0.2.0. Deliberately has no '@', so it cannot
+    # match release-npm.yml's `*@*` filter (and '*' never matches '/').
+    tags:
+      - "pypi/*/v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package directory to publish
+        required: true
+        type: choice
+        options:
+          - packages/langchain-strale
+          - packages/sdk-python
+          - packages/crewai-strale
+      dry_run:
+        description: Build and test only — do not publish
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-pypi-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Everything that can fail runs here, without the OIDC permission. The
+  # publish job only uploads the files this job built and tested.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      dir: ${{ steps.target.outputs.dir }}
+      name: ${{ steps.target.outputs.name }}
+      version: ${{ steps.target.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # the ancestry check below needs main's history
+          persist-credentials: false
+
+      # A tag can point at any commit on any branch, and a dispatch can name
+      # any branch. Only what is on main is released.
+      - name: Release only from main
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Dispatch this workflow from main (got $REF)."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_SHA is not on main. Merge the version bump first, then tag the merge commit."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Resolve release target
+        id: target
+        env:
+          EVENT: ${{ github.event_name }}
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ "$EVENT" = "push" ]; then
+            python apps/api/scripts/pypi-release.py resolve --tag "$GITHUB_REF_NAME"
+          else
+            python apps/api/scripts/pypi-release.py resolve --dir "$PACKAGE"
+          fi
+
+      # DEC-20260422-A: a framework-named *-strale package must actually import
+      # the framework it claims to integrate with. Enforced at PR time too; this
+      # is the last gate before the artefact becomes public and immutable.
+      - name: Framework-package integrity (DEC-20260422-A)
+        run: node apps/api/scripts/check-framework-packages.mjs
+
+      - name: Refuse to republish an existing version
+        env:
+          NAME: ${{ steps.target.outputs.name }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: python apps/api/scripts/pypi-release.py unpublished --name "$NAME" --version "$VERSION"
+
+      # Pinned: these produce and validate an artefact that cannot be replaced.
+      - name: Build sdist and wheel
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+        run: |
+          python -m pip install build==1.3.0 twine==6.2.0
+          python -m build --outdir dist "$DIR"
+          python -m twine check --strict dist/*
+          ls -l dist
+
+      - name: Check the built files are the resolved version
+        env:
+          NAME: ${{ steps.target.outputs.name }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          stem=$(echo "$NAME" | tr '-' '_')
+          test -f "dist/${stem}-${VERSION}.tar.gz"
+          test -f "dist/${stem}-${VERSION}-py3-none-any.whl"
+          test "$(ls dist | wc -l)" -eq 2
+
+      # The offline tests run against the built wheel, not the source tree:
+      # --import-mode=importlib keeps pytest from putting the package directory
+      # on sys.path, so the import resolves to the installed artefact.
+      # Key-gated tests skip without STRALE_API_KEY, which is never set here.
+      - name: Offline tests against the built wheel
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+        run: |
+          python -m venv "$RUNNER_TEMP/test-venv"
+          "$RUNNER_TEMP/test-venv/bin/pip" install dist/*.whl "pytest>=8,<9" "responses>=0.25,<1"
+          "$RUNNER_TEMP/test-venv/bin/python" -m pytest "$DIR/tests" -q -rs --import-mode=importlib -p no:cacheprovider
+
+      - name: Pre-publish smoke on the built wheel
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+          VERSION: ${{ steps.target.outputs.version }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m venv smoke-venv
+          smoke-venv/bin/pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          smoke-venv/bin/python "$GITHUB_WORKSPACE/apps/api/scripts/pypi-release.py" smoke --dir "$DIR" --version "$VERSION"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    # Two guards, not one, as in release-npm.yml. `inputs` is empty on
+    # non-dispatch events and null == false is TRUE in Actions, so the dry-run
+    # test is bound to its own event; and a push only counts when it is a tag.
+    if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/pypi/')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Publishing is irreversible. Protect this environment with a required
+    # reviewer; the PyPI trusted publisher is pinned to it.
+    environment:
+      name: pypi-release
+      url: https://pypi.org/project/${{ needs.build.outputs.name }}/${{ needs.build.outputs.version }}/
+    permissions:
+      contents: read
+      id-token: write # required: this is what trusted publishing exchanges
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
+
+  # The published artefact, installed the way a stranger would, from PyPI into
+  # a clean venv — not from the repo or the build job's files.
+  post-publish-smoke:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: apps/api/scripts/pypi-release.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install the published version in a clean venv
+        env:
+          NAME: ${{ needs.build.outputs.name }}
+          VERSION: ${{ needs.build.outputs.version }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m venv published-venv
+          # PyPI's index can lag the upload by a minute or two.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if published-venv/bin/pip install --no-cache-dir --only-binary="$NAME" "$NAME==$VERSION"; then
+              exit 0
+            fi
+            echo "not installable yet (attempt $i); retrying in 30s"
+            sleep 30
+          done
+          echo "::error::$NAME==$VERSION did not become installable from PyPI"
+          exit 1
+
+      - name: Import and one offline call
+        env:
+          DIR: ${{ needs.build.outputs.dir }}
+          VERSION: ${{ needs.build.outputs.version }}
+        working-directory: ${{ runner.temp }}
+        run: published-venv/bin/python "$GITHUB_WORKSPACE/apps/api/scripts/pypi-release.py" smoke --dir "$DIR" --version "$VERSION"
+
+  summary:
+    needs: [build, publish, post-publish-smoke]
+    if: ${{ always() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        env:
+          NAME: ${{ needs.build.outputs.name }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PUBLISH: ${{ needs.publish.result }}
+          SMOKE: ${{ needs.post-publish-smoke.result }}
+        run: |
+          {
+            echo "### ${NAME}==${VERSION}"
+            case "$PUBLISH" in
+              success) echo "Published via trusted publishing. Post-publish smoke: ${SMOKE}." ;;
+              skipped) echo "Not published (dry run) — built, tested and smoke-tested from the wheel only." ;;
+              *) echo "Publish ${PUBLISH}." ;;
+            esac
+            echo "The production contract smoke test (docs/release/pypi-publishing.md) is still a manual step."
+          } >> "$GITHUB_STEP_SUMMARY"

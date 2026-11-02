@@ -1,5 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -21,6 +26,12 @@ const TIME_RANGES: Record<string, string> = {
 };
 
 registerCapability("google-news-search", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   for (const k of ["query", "q", "search", "task", "time_range"] as const) {
     if (input[k] !== undefined && typeof input[k] !== "string") {
       throw new Error(`'${k}' must be a string. Received ${typeof input[k]}.`);
@@ -67,7 +78,7 @@ registerCapability("google-news-search", async (input: CapabilityInput) => {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(budget.searchTimeoutMs),
   });
 
   if (!res.ok) {
@@ -76,11 +87,20 @@ registerCapability("google-news-search", async (input: CapabilityInput) => {
   }
 
   const data = (await res.json()) as Record<string, unknown>;
+
+  // Google wraps result links past the top three in an opaque
+  // `google.com/goto` redirect (2026-10-30), on `/news` as well as `/search`
+  // -- verified live on 2026-10-31. Resolve them before answering.
+  const resolution = await resolveSerperLinks(data, serperKey, undefined, budget.resolveDeadline);
+
   const news = (data.news as Array<Record<string, unknown>>) ?? [];
   const results = news.slice(0, numResults).map((r, i) => ({
     position: i + 1,
     title: (r.title as string) ?? null,
-    url: (r.link as string) ?? null,
+    // A redirect wrapper is not an article address; say so instead of
+    // handing the caller a link that resolves to Google.
+    url: usableResultUrl(r.link),
+    url_unresolved: usableResultUrl(r.link) === null,
     source: (r.source as string) ?? null,
     // Serper returns relative dates ("2 hours ago") — passed through
     // verbatim; no fabricated ISO timestamps.
@@ -95,6 +115,11 @@ registerCapability("google-news-search", async (input: CapabilityInput) => {
       time_range: timeRange || null,
       country: country ?? null,
       result_count: results.length,
+      // Round-2 review: count the nulls in THIS output. The response can
+      // carry twenty news entries while `num_results` returns ten, and
+      // `resolution.unresolved.length` counted the ten the caller never sees.
+      unresolved_url_count: results.filter((r) => r.url_unresolved).length,
+      link_resolution_attempted: resolution.attempted,
       results,
     },
     provenance: {

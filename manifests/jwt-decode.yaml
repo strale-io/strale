@@ -97,7 +97,7 @@ output_field_reliability:
   expires_at: guaranteed
   is_expired: guaranteed
 limitations:
-  - title: Decodes JWT payload only — signature is not verified, so a decoded token is not proof of authenticity
+  - title: JWT signatures are not verified
     text: Decodes JWT payload without signature verification — a decoded token is not proof of authenticity
     category: coverage
     severity: info

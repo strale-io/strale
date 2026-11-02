@@ -1,0 +1,210 @@
+schema_version: 1
+program: platform-hardening
+program_status: active
+updated: 2026-10-31
+tracks:
+  - id: T1
+    title: "H1: Watch production"
+    status: done
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Done. PRs 774, 811 and 813 shipped the watches; on 2026-10-29
+      scripts/production-watch/demonstrate-alerts.mjs ran each one's real alerting
+      code against a forced mismatch up to delivery (deploy SHA, stale job,
+      strale-mcp 0 cap trust, x402 broad and one-buyer drops), all four fired
+      on the mismatch and stayed silent on healthy controls; live reads showed
+      production on main's commit, 25 of 25 jobs fresh. In production the job
+      watch opened issue 803 (meta-daily stale) at 00:28 and closed it on
+      recovery at 10:48 on 2026-10-29, and the Published MCP contract run
+      40900016312 passed at 16:17 the same day (Stockholm time). Bounded retry
+      is verified by scripts/production-watch/watch.test.mjs only; no real
+      retry has been needed yet. Follow-up outside the exit criteria, waiting
+      on Petter setting BUS_GITHUB_TOKEN and BUS_REPO in Railway (ask
+      6491949026), with bus delivery a no-op until then (proven in the
+      receipt), is to confirm the first real warning lands on channel
+      strale-planning. Railway auto-redeploy token remains Petter's decision.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Merge SHA is checked against production and mismatch alerts are
+        demonstrated.
+      - Job freshness, published MCP contract and bounded workflow retry are
+        verified.
+    evidence:
+      - archive/receipts/2026-10-29-check-h1-alert-demonstration.json
+      - scripts/production-watch/demonstrate-alerts.mjs
+      - scripts/production-watch/watch.test.mjs
+      - apps/api/src/jobs/x402-alert-delivery.e2e.test.ts
+  - id: T2
+    title: "H2: Build and boot the real image"
+    status: done
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Done. PR 773 made a fresh DB bootable and added the integration-db and
+      image-boot-smoke CI jobs, which pass on main (PR 802 head). Empty gate
+      inputs fail via scripts/empty-inputs.test.mjs.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Fresh disposable DB and real image boot succeed in CI.
+      - Empty input sets make every gate fail.
+    evidence:
+      - handoff/_general/from-code/2026-10-27-ci-boot-smoke.md
+      - .github/workflows/ci.yml
+  - id: T3
+    title: "H3: Manifest text and guaranteed fields"
+    status: done
+    gate: none
+    depends_on:
+      - T2
+    owner: session
+    next_action: Done. PR 776 shipped the deploy-time manifest text sync, the
+      actionable drift sweep and real-traffic guaranteed-field monitoring; the
+      post-deploy verification it left open ran on 2026-10-31 against commit
+      df0475244c1b and both exit criteria are met. The strict sweep returns
+      exit 0 with sync_writable_differences 0 over 350 examined rows, the served
+      first limitation on iban-validate is the expected string, and
+      manifest_text_hash is checkpointed on 326 of 362 capabilities, where the
+      other 36 split by the real isReportOnly predicate into 12 manifest-less
+      rows and 24 report-only rows with 0 unexplained, and the predicate matches
+      exactly 24 rows in the catalogue of which all 24 are unchecked, so the
+      publication guard is observed working rather than inferred. The claim and
+      fetch guards in the same exit bullet pass. Piggyback has recorded 795
+      served calls over 290 tools since the deploy. Follow-up outside the exit
+      criteria, carried in the handoff - 16 tools returned a response missing a
+      field their manifest declares guaranteed, and 14 of those are absent from
+      the static consistency allowlist, so only runtime measurement finds them;
+      the cause per tool is not diagnosed, the samples are small, and the live
+      alert will essentially never fire at these volumes, which is the case for
+      the weekly persisted-miss check the H3 handoff proposed.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Deploy text and drift checks agree with manifests.
+      - Guaranteed fields are measured on real traffic; claim/fetch guards cover
+        the expanded surfaces.
+    evidence:
+      - archive/receipts/2026-10-31-check-h3-manifest-text-and-guaranteed-fields.json
+      - archive/receipts/2026-10-27-test-run-manifest-text-sync-round-2.json
+      - handoff/_general/from-code/2026-10-31-h3-verification-and-pc-only-inventory.md
+  - id: T4
+    title: "H4: Money path"
+    status: done
+    gate: none
+    depends_on:
+      - T2
+    owner: session
+    next_action: Done. PR 779 (sync reserve, execute outside the transaction, capture,
+      timeout_seconds), PR 794 (/v1/do x402 claim, replay and recording parity)
+      and PR 829 (a payment is bound to its capability or solution, 409
+      payment_already_used on both rails; a thrown settlement on /v1/do is a
+      structured payment_failed) are live, PR 829 since 2026-10-29 17:20 Swedish
+      time. Follow-up outside T4, a thrown settlement on the /x402 gateway still
+      returns the generic 500.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Reservation and capture regression tests discriminate the repaired money
+        path.
+      - Timeout and concurrent x402 replay behavior are verified.
+    evidence:
+      - archive/receipts/2026-10-29-test-run-h4-x402-payment-binding.json
+      - apps/api/src/routes/x402-settlement-characterization.test.ts
+  - id: T5
+    title: "H5: Cost recording and Anthropic client"
+    status: done
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Done. PR 777 shipped per-call cost recording, the shared Anthropic
+      client and margin per tool; the production check it was waiting on ran on
+      2026-10-31. On real traffic since the 10-27 deploy, cost context is recorded on
+      92.6 percent of completed x402 calls (2,862 of 3,092) and 96.6 percent of
+      completed non-harness wallet calls (773 of 800). The naive figure is 1 percent,
+      and it is wrong - 23,297 harness calls execute without an HTTP request and so
+      never open the cost scope, which is the wrong-denominator trap. Nothing recorded
+      a cost before the deploy and 477 after, so the mechanism is attributable to that
+      PR. Nulls carry a stated reason rather than a guess (unmetered_upstream per slug
+      dominates), shared-client usage is attributed per model, and no call costs more
+      than it charges. Follow-up outside the exit criteria - roughly 3 to 7 percent of
+      real calls still carry no breakdown and the cause is undiagnosed, and
+      transactions_meta lacks cost_breakdown so this check needed the PC-only strale_ro
+      credential; adding that column would let a cloud session repeat it.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Per-call costs and shared client usage are recorded and verified.
+    evidence:
+      - archive/receipts/2026-10-31-check-h5-cost-recording-production.json
+  - id: T6
+    title: "H6: Input validation and fetch hardening"
+    status: active
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Shipped in PR 786 with INPUT_VALIDATION_MODE in report mode. Collect seven
+      consecutive days of clean mismatch reports with representative wallet and
+      x402 traffic, reconcile schema drift, then enable enforce and verify 400
+      invalid_input before payment side effects. Railway config as code still
+      needs Railway settings confirmed; see handoff/_general/from-
+      code/2026-10-28-fetch-hardening.md.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Validation and fetch protections have discriminating checks.
+      - Log redaction is verified and Railway settings are confirmed against
+        measured needs.
+    evidence: []
+  - id: T7
+    title: "H7: Structural clean-up"
+    status: done
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Done. H7a to H7d (PRs 787 to 808), the source_health rename (PR 832,
+      block 0134) and H7e (PRs 834 and 837) are merged, and the contract half of
+      the rename — block 0141 drops the capability_health compatibility view —
+      closes the track. Production was verified read-only on 2026-10-30 on commit
+      928513ffc4c5, in receipt
+      archive/receipts/2026-10-30-check-h7-production-verification.json. The SQS
+      residual columns and sqs_daily_snapshot are gone (block 0132), source_health
+      carries 318 rows with its drizzle-derived constraint names and the breaker
+      still records through it (317 closed, 1 open), block 0137's three compliance
+      columns and index are present, block 0139 left 0 target rows and had restored
+      17 customer deletions, and the once and retired blocks (0030, 0087, 0089,
+      0103, 0118, 0137, 0139) still carry their 2026-10-29 last_applied_at in
+      startup_migration_applied while the every_boot blocks moved to the
+      2026-10-30 boots, so H7d's ledger-hash skip holds. Follow-up outside the exit criteria, carried in the
+      orchestrator checkpoint — a rollback to a build between blocks 0132 and 0134
+      now needs the capability_health view recreated by hand, and a build older
+      than 0132 is already incompatible because 0132 dropped the SQS columns.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Migration ledger and boot behavior remain verified after extraction.
+      - Settlement seams, shared helpers and expanded executor contracts pass
+        their checks.
+    evidence:
+      - archive/receipts/2026-10-30-check-h7-production-verification.json
+      - archive/receipts/2026-10-30-test-run-h7-capability-health-view-drop.json
+      - archive/receipts/2026-10-29-test-run-h7-migration-block-repairs.json
+      - archive/receipts/2026-10-30-check-h7-block-0141-post-deploy.json
+      - handoff/_general/from-code/2026-10-30-h7-capability-health-view-drop.md
+  - id: T8
+    title: "H8: External log sink"
+    status: founder_gated
+    gate: none
+    depends_on:
+      - T6
+    owner: petter
+    blocker: The sink is decided (DEC-20261029-A) and the code ships dormant. What remains
+      is Petter's Better Stack sign-up, the EU source, the two Railway vars and the alert.
+    next_action: Shipped dormant in PR 823 under DEC-20261029-A, live 2026-10-29 at
+      12:43 Swedish time, where platform facts showed log_sink_shipping false and
+      static.log_sink present. Next, Petter signs up, creates the EU source, sets
+      BETTERSTACK_SOURCE_TOKEN and BETTERSTACK_INGEST_HOST in Railway and creates
+      the error-rate alert (PR 823 comment, docs/operations/betterstack-log-sink.md).
+      Then verify log_sink_shipping true, the log-sink.enabled boot line with
+      eu_region true and redacted lines in Live tail, and close T8.
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - Founder approval and redaction prerequisite are recorded before enabling
+        a sink.
+      - Approved sink and error-rate alert are verified.
+    evidence:
+      - archive/receipts/2026-10-29-test-run-h8-log-redaction-mutations.json

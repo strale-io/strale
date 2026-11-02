@@ -11,7 +11,7 @@ import OutputsTable from "../../components/tool/OutputsTable.astro";
 import Limitations from "../../components/tool/Limitations.astro";
 import { getSiteData, tools as allTools, solutionsFor, API_BASE, type Tool } from "../../lib/site-data.ts";
 import { formatEur, formatUsd, formatDate, json, plural } from "../../lib/format.ts";
-import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { FREE_TIER_MONTHLY_LIMIT } from "../../lib/code-facts.ts";
 import { toolSnippets } from "../../lib/snippets.ts";
 import { TRANSPARENCY } from "../../lib/describe.ts";
 import { JOB_GROUPS } from "../../content/jobs.ts";
@@ -81,7 +81,7 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
           {tool.free && (
             <form class="try card" data-try data-api={API_BASE} data-slug={slug}>
               <h3 class="t-subhead">Try it</h3>
-              <p class="t-compact muted">Runs the real tool from your browser, with no key. Free calls are limited to {FREE_TIER_DAILY_LIMIT} a day across all free tools.</p>
+              <p class="t-compact muted">Runs the real tool from your browser, with no key. Free calls are limited to {FREE_TIER_MONTHLY_LIMIT} a month across all free tools.</p>
               <div class="field">
                 <label class="field-label" for="try-inputs">Inputs (JSON)</label>
                 <textarea class="textarea code-input" id="try-inputs" name="inputs" spellcheck="false" aria-describedby="try-help">{json(inputs)}</textarea>
@@ -123,7 +123,7 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
           {tool.free ? (
             <>
               <p class="t-stat">Free</p>
-              <p class="t-compact muted">Without a key: up to {FREE_TIER_DAILY_LIMIT} calls a day across all free tools. With an API key, normal rate limits apply and nothing is charged.</p>
+              <p class="t-compact muted">Without a key: up to {FREE_TIER_MONTHLY_LIMIT} calls a month across all free tools. With an API key, normal rate limits apply and nothing is charged.</p>
               {tool.x402 && tool.x402.price_usd > 0 && <p class="t-compact">Over x402 it is a paid call: <span class="num">{formatUsd(tool.x402.price_usd)}</span> USDC per request.</p>}
             </>
           ) : (

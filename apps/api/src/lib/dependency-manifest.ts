@@ -16,6 +16,7 @@
  * 4. Deploy — the invariant checker will flag any remaining code references
  *    to the retired provider's baseUrl
  */
+import { STRALE_USER_AGENT } from "./site-access.js";
 
 export type AuthType =
   | "api-key-header"
@@ -31,7 +32,7 @@ export type ProviderTier =
 
 export interface HealthProbe {
   path: string;
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "HEAD";
   body?: Record<string, unknown>;
   healthyStatuses: number[];
   timeoutMs: number;
@@ -53,6 +54,8 @@ export interface DependencyProvider {
   fallbackBaseUrls?: string[];
   authType: AuthType;
   envVar?: string;
+  /** No fallback is possible without this credential; refuse before execution. */
+  credentialsRequired?: boolean;
   authHeader?: string;
   /** Query-param name when authType === "api-key-query". Required for probes
    *  that don't set skipAuth. Capability execution code can also read this
@@ -71,6 +74,45 @@ export interface DependencyProvider {
 }
 
 export const PROVIDERS: DependencyProvider[] = [
+  {
+    name: "npm",
+    displayName: "npm",
+    description: "Public package registry JSON API; no credentials or billable calls.",
+    baseUrl: "https://registry.npmjs.org",
+    authType: "none",
+    extraProbeHeaders: { "User-Agent": STRALE_USER_AGENT },
+    healthProbe: { path: "/-/ping", method: "GET", healthyStatuses: [200], timeoutMs: 5000, skipAuth: true },
+    capabilities: ["npm-package-info", "package-docs"],
+    tier: "free",
+  },
+
+  {
+    name: "pypi",
+    displayName: "PyPI",
+    description: "Public package registry JSON API; no credentials or billable calls.",
+    baseUrl: "https://pypi.org",
+    authType: "none",
+    extraProbeHeaders: { "User-Agent": STRALE_USER_AGENT },
+    healthProbe: { path: "/simple/requests/", method: "HEAD", healthyStatuses: [200], timeoutMs: 5000, skipAuth: true },
+    capabilities: ["pypi-package-info", "package-docs"],
+    tier: "free",
+  },
+
+  {
+    name: "nta-houjin",
+    displayName: "NTA Corporate Number Web-API",
+    description: "Official Japanese corporate-number register, API v4.",
+    baseUrl: "https://api.houjin-bangou.nta.go.jp",
+    authType: "api-key-query",
+    envVar: "NTA_HOUJIN_APP_ID",
+    credentialsRequired: true,
+    authQueryParam: "id",
+    // Static root reachability only: no ID, query or corporate-data lookup.
+    healthProbe: { path: "/", method: "GET", healthyStatuses: [200, 400, 401, 403, 404], timeoutMs: 5000, skipAuth: true },
+    capabilities: ["japanese-company-data"],
+    tier: "free",
+  },
+
   // ─── Self-hosted ──────────────────────────────────────────────────────────
   {
     name: "browserless",
@@ -113,7 +155,7 @@ export const PROVIDERS: DependencyProvider[] = [
       "accessibility-audit", "australian-company-data", "business-license-check-se",
       "company-tech-stack", "competitor-compare", "container-track", "cookie-scan",
       "customs-duty-lookup", "employer-review-summary", "eu-court-case-search",
-      "eu-trademark-search", "gdpr-fine-lookup", "japanese-company-data",
+      "eu-trademark-search", "gdpr-fine-lookup",
       "patent-search", "price-compare", "pricing-page-extract",
       "privacy-policy-analyze", "product-reviews-extract", "product-search",
       "return-policy-extract", "salary-benchmark", "seo-audit", "structured-scrape",
@@ -155,7 +197,7 @@ export const PROVIDERS: DependencyProvider[] = [
       "eu-trademark-search", "fake-data-generate",
       "finnish-company-data", "french-company-data", "gdpr-fine-lookup",
       "github-actions-generate", "github-repo-analyze", "hs-code-lookup",
-      "image-to-text", "invoice-extract", "japanese-company-data", "jsdoc-generate",
+      "image-to-text", "invoice-extract", "jsdoc-generate",
       "job-posting-analyze", "landing-page-roast", "meeting-notes-extract",
       "nginx-config-generate", "norwegian-company-data", "openapi-generate",
       "patent-search", "pdf-extract", "pii-redact",
@@ -508,6 +550,23 @@ export const PROVIDERS: DependencyProvider[] = [
   //    basket: what the largest x402 buyer purchases elsewhere). All keyless;
   //    probes are the cheapest documented call on each host.
   {
+    name: "overture-maps",
+    displayName: "Overture Maps Foundation (places theme)",
+    description: "Monthly open places GeoParquet release on the AWS Open Data bucket, read anonymously.",
+    baseUrl: "https://overturemaps-us-west-2.s3.us-west-2.amazonaws.com",
+    authType: "none",
+    // The release listing places-search itself reads first: free, keyless,
+    // a few hundred bytes (Principle A).
+    healthProbe: {
+      path: "/?list-type=2&prefix=release/&delimiter=/",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 6000,
+    },
+    capabilities: ["places-search"],
+    tier: "free",
+  },
+  {
     name: "openalex",
     displayName: "OpenAlex",
     description: "Open catalogue of scholarly works, authors and venues (OurResearch).",
@@ -792,6 +851,14 @@ export function getRetiredProviders(): DependencyProvider[] {
 /** Look up a provider by name */
 export function getProvider(name: string): DependencyProvider | undefined {
   return PROVIDERS.find((p) => p.name === name);
+}
+
+/** Only explicitly mandatory credentials gate customer execution. Providers
+ * with fallbacks retain their existing behaviour. No secret values escape.
+ */
+export function hasMissingRequiredCredential(slug: string): boolean {
+  return getActiveProviders().some(p => p.credentialsRequired && p.capabilities.includes(slug)
+    && !!p.envVar && !process.env[p.envVar]?.trim());
 }
 
 /**

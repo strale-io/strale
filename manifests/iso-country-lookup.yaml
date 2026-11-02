@@ -63,7 +63,7 @@ output_field_reliability:
   total_matches: common
   error: rare
 limitations:
-  - title: Country data is based on ISO 3166-1 — newly created or renamed countries may not yet be reflected
+  - title: Country changes may not be reflected immediately
     text: Country data based on ISO 3166-1 standard — newly created or renamed countries may take time to be reflected
     category: freshness
     severity: info

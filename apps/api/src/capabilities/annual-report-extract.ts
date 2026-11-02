@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
@@ -243,7 +244,7 @@ registerCapability(
     const { pdfBase64, source } = await findAnnualReportPdf(orgNumber, year);
 
     // Step 2: Send to Claude for extraction
-    const client = new Anthropic({ apiKey });
+    const client = createAnthropicClient({ apiKey });
 
     // Determine if we have a PDF or page text
     const isPdf = source.includes("page text") ? false : true;

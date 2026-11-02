@@ -132,6 +132,10 @@ output_schema:
       type: array
     total_results_estimate:
       type: string
+    unresolved_url_count:
+      type: number
+    link_resolution_attempted:
+      type: boolean
 data_source: Serper.dev API (Google Search results)
 data_source_type: api
 transparency_tag: algorithmic
@@ -166,19 +170,26 @@ output_field_reliability:
   query: guaranteed
   results: guaranteed
   total_results_estimate: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_url_count: guaranteed
+  link_resolution_attempted: guaranteed
+
 limitations:
-  - title: Results come from Google's index via Serper.dev — paywalled, login-required, and deep web content not accessible
+  - title: Private and paywalled content is not accessible
     text: >-
       Results from Serper.dev API — limited to Google's index; paywalled, login-required, or deep web content is not
       accessible
     category: coverage
     severity: info
-    workaround: For deep web or database content, use specialized search capabilities (ted-procurement, patent-search) instead
+    workaround: Use ted-procurement for public tender notices, or check the relevant official database directly.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: serper
-  checks: pending
-  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API. Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

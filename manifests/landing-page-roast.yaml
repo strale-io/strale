@@ -91,7 +91,7 @@ output_field_reliability:
   trust_signals: guaranteed
   headline_effectiveness: guaranteed
 limitations:
-  - title: AI critique covers conversion best practices only — subjective elements like brand tone are not assessed
+  - title: Brand tone is not assessed
     text: AI-generated critique based on conversion best practices — subjective elements like brand tone are not assessed
     category: accuracy
     severity: info
@@ -100,9 +100,8 @@ limitations:
       guide
   - title: Screenshots are limited to 4 MiB
     text: >-
-      A page whose viewport screenshot exceeds 4 MiB is refused — the analysis
-      model cannot accept larger images anyway, so this converts an opaque
-      upstream error into a caller_input refusal. No charge is taken.
+      Pages whose viewport screenshot exceeds 4 MiB are refused with a caller_input error. The call is
+      not charged.
     category: coverage
     severity: info
 

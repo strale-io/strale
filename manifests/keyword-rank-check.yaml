@@ -1,6 +1,6 @@
 slug: keyword-rank-check
 name: "Keyword Rank Check"
-description: "Find where a domain ranks on Google for a keyword: position, page, the matching result, and the competitors ranking above it. Scans the top 10 results by default (up to 100), so a domain not found may still rank lower."
+description: "Find a domain in the top Google results for a keyword, scanning 10 results by default and up to 100. Lower-ranked domains can be missed."
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -62,6 +62,10 @@ output_schema:
         - "null"
     competitors_above:
       type: array
+    unresolved_positions:
+      type: array
+    breadcrumb_derived_positions:
+      type: array
 data_source: Serper.dev API (Google SERP, organic results)
 data_source_type: api
 transparency_tag: algorithmic
@@ -113,27 +117,34 @@ output_field_reliability:
   url: common
   title: common
   snippet: common
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_positions: guaranteed
+  breadcrumb_derived_positions: guaranteed
+
 limitations:
   - title: Point-in-time sample, not an average
     text: >-
-      Each call reflects a single snapshot of Google's results at the moment of the request. Rankings fluctuate
-      with algorithm updates, personalization signals stripped out of the API call, and time of day. Do not treat
-      one call as a stable ranking — sample repeatedly over time for trend analysis.
+      Each call captures one Google results snapshot, and rankings vary with algorithm changes, time
+      and personalisation absent from the API request. Repeat checks over time to assess trends rather
+      than treating one result as a stable ranking.
     category: accuracy
     severity: info
     workaround: Call periodically (e.g. daily/weekly) and track position over time rather than relying on a single result.
   - title: Location is approximated by country/language, not exact geo
     text: >-
-      Serper's gl/hl parameters approximate a country-level search context. They do not reproduce city-level local
-      pack results or a specific searcher's true location, device, or personalization/history, which can shift
-      real-world rankings the caller sees.
+      Serper's gl/hl parameters approximate a country-level search context. They do not reproduce
+      city-level local pack results or a specific searcher's true location, device, or
+      personalisation/history, which can shift real-world rankings the caller sees.
     category: coverage
     severity: info
   - title: Scan depth is bounded and explicit
     text: >-
-      Only the top `depth` results (default 10, max 100) are scanned for a match. A domain ranking below the
-      scanned depth is reported as not found (found: false, position: null) — this is distinct from "does not
-      rank at all". Increase `depth` to search further down the results page.
+      Only the top `depth` results are searched, with a default of 10 and maximum of 100. A
+      lower-ranked domain returns `found` false and `position` null, which does not mean it has no
+      ranking.
     category: coverage
     severity: info
     workaround: Increase the depth parameter (up to 100) if the domain is expected to rank beyond position 10.
@@ -143,5 +154,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: serper
-  checks: pending
-  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API. Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

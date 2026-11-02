@@ -6,9 +6,7 @@
 
 slug: phishing-site-check
 name: Phishing Site Check
-description: >-
-  Check if a URL is a known phishing site targeting Web3 users. Detects cloned dApp frontends, fake token claim pages,
-  and wallet drainer sites. Uses GoPlus Security's phishing database.
+description: "Currently unavailable. Check a URL against reported Web3 phishing records, returning a flag and confidence estimate."
 category: web3
 cost_class: free_quota
 quota_window: daily
@@ -69,10 +67,6 @@ limitations:
     workaround: null
   - title: API responses are limited to 4 MiB
     text: >-
-      A response body above 4 MiB from the upstream endpoint is refused rather than
-      parsed, enforced while streaming. The limit sits below the 16 MiB page limit
-      deliberately: JSON is materialised into an object graph costing several times
-      its source bytes. Observed real responses for this source are well under
-      100 KiB.
+      API response bodies above 4 MiB are refused during download rather than parsed.
     category: coverage
     severity: info

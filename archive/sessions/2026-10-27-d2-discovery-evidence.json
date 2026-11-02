@@ -1,0 +1,5476 @@
+{
+  "search_positions": [
+    {
+      "query": "PEP check",
+      "status": 200,
+      "result_count": 5,
+      "partialResults": false,
+      "positions": [
+        {
+          "position": 1,
+          "resource": "https://api.strale.io/x402/pep-check"
+        }
+      ]
+    },
+    {
+      "query": "beneficial ownership",
+      "status": 200,
+      "result_count": 16,
+      "partialResults": false,
+      "positions": [
+        {
+          "position": 2,
+          "resource": "https://api.strale.io/x402/beneficial-ownership-lookup"
+        },
+        {
+          "position": 5,
+          "resource": "https://api.strale.io/x402/v2/beneficial-ownership-lookup"
+        }
+      ]
+    },
+    {
+      "query": "screenshot url",
+      "status": 200,
+      "result_count": 17,
+      "partialResults": false,
+      "positions": [
+        {
+          "position": 7,
+          "resource": "https://api.strale.io/x402/screenshot-url"
+        }
+      ]
+    },
+    {
+      "query": "UK company data",
+      "status": 200,
+      "result_count": 19,
+      "partialResults": false,
+      "positions": [
+        {
+          "position": 9,
+          "resource": "https://api.strale.io/x402/uk-company-data"
+        }
+      ]
+    },
+    {
+      "query": "sanctions screening",
+      "status": 200,
+      "result_count": 11,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "email validation",
+      "status": 200,
+      "result_count": 13,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "WHOIS lookup",
+      "status": 200,
+      "result_count": 17,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "translate text",
+      "status": 200,
+      "result_count": 16,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "OCR image to text",
+      "status": 200,
+      "result_count": 13,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "VAT number validation",
+      "status": 200,
+      "result_count": 19,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "tech stack detection",
+      "status": 200,
+      "result_count": 9,
+      "partialResults": false,
+      "positions": []
+    },
+    {
+      "query": "keyword suggestions SEO",
+      "status": 200,
+      "result_count": 17,
+      "partialResults": false,
+      "positions": []
+    }
+  ],
+  "production_challenges": [
+    {
+      "slug": "email-validate",
+      "status": 402,
+      "version": 2,
+      "resource": {
+        "url": "https://api.strale.io/x402/v2/email-validate",
+        "description": "Check email syntax, mail-server records, disposable domains, role addresses and likely typos. Returns checks without confirming a mailbox exists.",
+        "mimeType": "application/json"
+      },
+      "input": {
+        "type": "http",
+        "queryParams": {
+          "email": "example_email"
+        },
+        "method": "GET"
+      },
+      "output_present": false,
+      "payment_required_header": true
+    },
+    {
+      "slug": "whois-lookup",
+      "status": 402,
+      "version": 2,
+      "resource": {
+        "url": "https://api.strale.io/x402/v2/whois-lookup",
+        "description": "Look up a domain's WHOIS record: registrar, creation and expiry dates, name servers, registrant details and the raw record.",
+        "mimeType": "application/json"
+      },
+      "input": {
+        "type": "http",
+        "queryParams": {
+          "domain": "example_domain"
+        },
+        "method": "GET"
+      },
+      "output_present": false,
+      "payment_required_header": true
+    },
+    {
+      "slug": "image-to-text",
+      "status": 402,
+      "version": 2,
+      "resource": {
+        "url": "https://api.strale.io/x402/v2/image-to-text",
+        "description": "Read text from an image, including screenshots and document photos. Returns extracted text, a confidence estimate and detected language.",
+        "mimeType": "application/json"
+      },
+      "input": {
+        "type": "http",
+        "queryParams": {
+          "base64": "example_base64"
+        },
+        "method": "GET"
+      },
+      "output_present": false,
+      "payment_required_header": true
+    }
+  ],
+  "enabled": [
+    {
+      "slug": "tool-call-validate",
+      "input": "personal data field",
+      "output": "data/corrected_input must be object"
+    },
+    {
+      "slug": "website-carbon-estimate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "slovenian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "skill-gap-analyze",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "gas-price-check",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "nginx-config-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "url-health-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "timezone-meeting-find",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "c2pa-inspect",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "webhook-test-payload",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "unit-convert",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "sec-edgar-filings",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "eu-regulation-search",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "sql-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "pubmed-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "phone-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "npm-package-info",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "incoterms-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-balance-lookup",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "irish-company-data",
+      "input": "processes_personal_data",
+      "output": "data/status_date must be string; data/dissolution_date must be string; data/nace_v2_code must be string"
+    },
+    {
+      "slug": "weather-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "french-insolvency-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "food-safety-rating-uk",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "timezone-lookup",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "canadian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "seo-audit",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "page-exists",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "privacy-policy-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "cz-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "eu-ai-act-classify",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "lei-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "payment-reference-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "stock-quote",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "spanish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "api-health-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "name-parse",
+      "input": "processes_personal_data",
+      "output": "data/last_name must be string; data/middle_name must be string; data/prefix must be string; data/suffix must be string; data/nickname must be string"
+    },
+    {
+      "slug": "polish-company-data",
+      "input": "processes_personal_data",
+      "output": "data/address must be string; data/registration_date must be string"
+    },
+    {
+      "slug": "llm-cost-calculate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "password-strength",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "paid-api-preflight",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "company-name-match",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "terms-of-service-extract",
+      "input": "published",
+      "output": "data/governing_law must be string"
+    },
+    {
+      "slug": "gitignore-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "employment-cost-estimate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "xml-to-json",
+      "input": "published",
+      "output": "data/json must be object"
+    },
+    {
+      "slug": "port-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-csv",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "tax-id-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "pypi-package-info",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "image-resize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "curl-to-code",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "job-board-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "license-compatibility-check",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "swiss-company-data",
+      "input": "processes_personal_data",
+      "output": "data/ch_id must be integer; data/purpose must be string; data/registration_date must be string"
+    },
+    {
+      "slug": "secret-scan",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "norwegian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "date-parse",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "aml-risk-score",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "holiday-calendar",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "address-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "cron-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "github-actions-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "dangerous-goods-classify",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "classify-text",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "job-posting-analyze",
+      "input": "published",
+      "output": "data/title must be string"
+    },
+    {
+      "slug": "keyword-rank-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "skill-extract",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "forex-history",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "austrian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "code-review",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "vasp-non-compliant-check",
+      "input": "missing example",
+      "output": "data/register_last_updated must be string"
+    },
+    {
+      "slug": "work-permit-requirements",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "flatten-json",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "data-quality-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "protocol-tvl-lookup",
+      "input": "missing example",
+      "output": "data/tvl_change_1d_pct must be number; data/tvl_change_7d_pct must be number"
+    },
+    {
+      "slug": "uk-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "invoice-extract",
+      "input": "processes_personal_data",
+      "output": "data/vendor_name must be string; data/vendor_vat must be string; data/buyer_name must be string; data/buyer_vat must be string; data/invoice_number must be string; data/invoice_date must be string; data/due_date must be string; data/currency must be string; data/subtotal must be number; data/vat_amount must be number; data/vat_rate must be number; data/total_amount must be number; data/iban must be string; data/payment_reference must be string"
+    },
+    {
+      "slug": "doi-resolve",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "age-verify",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "sql-optimize",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "iban-to-bank",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "web-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "shipping-cost-estimate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "bank-bic-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "jwt-decode",
+      "input": "published",
+      "output": "data/expires_at must be string; data/is_expired must be boolean"
+    },
+    {
+      "slug": "csv-to-json",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "language-detect",
+      "input": "possible personal name",
+      "output": "missing example"
+    },
+    {
+      "slug": "cz-unreliable-vat-payer",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "usgs-earthquake-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "uk-companies-house-officers",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-transactions-lookup",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "cookie-scan",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "shipping-track",
+      "input": "published",
+      "output": "data/best_match must be object"
+    },
+    {
+      "slug": "postal-code-lookup",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "swift-message-parse",
+      "input": "processes_personal_data",
+      "output": "data/amount must be number; data/currency must be string; data/sender_bic must be string; data/receiver_bic must be string"
+    },
+    {
+      "slug": "email-validate-bulk",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "invoice-validate",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "github-repo-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-zod",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "accessibility-audit",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "marketplace-fee-calculate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "id-number-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "country-economic-indicators",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "og-image-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "header-security-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "academic-paper-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "domain-reputation",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "public-holiday-lookup",
+      "input": "published",
+      "output": "data/next_upcoming must be object"
+    },
+    {
+      "slug": "redirect-trace",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "whois-lookup",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "swift-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "port-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "dns-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "price-compare",
+      "input": "published",
+      "output": "data/lowest_price must be object; data/average_price must be number; data/highest_price must be object"
+    },
+    {
+      "slug": "vat-format-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "openapi-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ens-reverse-lookup",
+      "input": "processes_personal_data",
+      "output": "data/ens_name must be string"
+    },
+    {
+      "slug": "no-bankruptcy-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "exchange-rate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "sitemap-parse",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "uptime-check",
+      "input": "published",
+      "output": "data/status_code must be integer"
+    },
+    {
+      "slug": "cve-details",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "page-speed-test",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "cve-lookup",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "gdpr-fine-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-typescript",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "ssl-certificate-chain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "country-tax-rates",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "release-notes-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "currency-convert",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "data-protection-authority-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "regex-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "clinical-trials-search",
+      "input": "published",
+      "output": "data/status_filter must be string"
+    },
+    {
+      "slug": "stablecoin-flow-check",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "us-product-recall-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "adverse-media-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "pep-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "changelog-generate",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "log-parse",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "company-industry-classify",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "sepa-xml-validate",
+      "input": "processes_personal_data",
+      "output": "data/message_type must be string"
+    },
+    {
+      "slug": "email-reputation-score",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "charity-lookup-uk",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "latvian-company-data",
+      "input": "processes_personal_data",
+      "output": "data/termination_date must be string"
+    },
+    {
+      "slug": "greek-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "email-deliverability-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "estonian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "fr-bodacc-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "diff-json",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "backlink-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "deduplicate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "beneficial-ownership-lookup",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "sanctions-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "iban-validate",
+      "input": "processes_personal_data",
+      "output": "data/branch_code must be string"
+    },
+    {
+      "slug": "insolvency-check",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "arxiv-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "email-validate",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "belgian-company-data",
+      "input": "processes_personal_data",
+      "output": "data/industry must be string; data/commercial_name must be string"
+    },
+    {
+      "slug": "swedish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "schema-infer",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "company-id-detect",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "protocol-fees-lookup",
+      "input": "missing example",
+      "output": "data/revenue_7d_usd must be number; data/revenue_24h_usd must be number; data/revenue_30d_usd must be number"
+    },
+    {
+      "slug": "token-count",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "phone-type-detect",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "slovak-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "pii-redact",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "product-reviews-extract",
+      "input": "published",
+      "output": "data/common_cons must be array; data/common_pros must be array; data/review_count must be number; data/average_rating must be number"
+    },
+    {
+      "slug": "customs-duty-lookup",
+      "input": "published",
+      "output": "data/duty_rate must be string; data/duty_type must be string"
+    },
+    {
+      "slug": "fear-greed-index",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "country-trade-data",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "breach-exposure-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "base64-encode-url",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ssl-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "startup-domain-check",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "vat-rate-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "tech-stack-detect",
+      "input": "published",
+      "output": "data/cms must be string; data/hosting must be string; data/css_framework must be string; data/frontend_framework must be string"
+    },
+    {
+      "slug": "translate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "company-enrich",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "json-schema-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "html-to-pdf",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "markdown-to-html",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "phone-normalize",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "iso-country-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "robots-txt-parse",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "au-company-data",
+      "input": "processes_personal_data",
+      "output": "data/acn must be string; data/business_names must be array"
+    },
+    {
+      "slug": "isbn-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "financial-year-dates",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-age-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "hacker-news-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "container-track",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "screenshot-url",
+      "input": "person lookup or screening tool",
+      "output": "published"
+    },
+    {
+      "slug": "email-auth-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "social-profile-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "google-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "json-repair",
+      "input": "uninspectable structured text",
+      "output": "published"
+    },
+    {
+      "slug": "vat-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ens-resolve",
+      "input": "processes_personal_data",
+      "output": "data/address must be string; data/avatar_url must be string"
+    },
+    {
+      "slug": "credit-score-band",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "gdpr-website-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "japanese-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "finnish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "sql-explain",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "context-window-optimize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "french-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "regex-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "pricing-page-extract",
+      "input": "published",
+      "output": "data/pricing_model must be string"
+    },
+    {
+      "slug": "github-repo-compare",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "competitor-compare",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "email-draft",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "http-to-curl",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "blog-post-outline",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "api-mock-response",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "schema-migration-generate",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "openapi-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "pdf-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "eori-validate",
+      "input": "published",
+      "output": "data/trader_name must be string"
+    },
+    {
+      "slug": "croatian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "brazilian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "eth-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "business-day-check",
+      "input": "phone or card number",
+      "output": "missing example"
+    },
+    {
+      "slug": "paper-details",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "address-parse",
+      "input": "processes_personal_data",
+      "output": "data/postal_code must be string"
+    },
+    {
+      "slug": "company-tech-stack",
+      "input": "published",
+      "output": "data/frontend_framework must be string"
+    },
+    {
+      "slug": "env-template-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "docstring-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "meeting-notes-extract",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "uk-disqualified-director-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "image-to-text",
+      "input": "published",
+      "output": "data/text_type must be string; data/language_detected must be string"
+    },
+    {
+      "slug": "social-post-generate",
+      "input": "published",
+      "output": "data/thread_version must be array"
+    },
+    {
+      "slug": "prompt-optimize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "return-policy-extract",
+      "input": "published",
+      "output": "data/free_returns must be boolean; data/refund_method must be string; data/return_window_days must be number"
+    },
+    {
+      "slug": "agent-trace-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "vasp-verify",
+      "input": "missing example",
+      "output": "data/register_last_updated must be string"
+    },
+    {
+      "slug": "us-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "dockerfile-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "package-security-audit",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "sentiment-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "fake-data-generate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "commit-message-generate",
+      "input": "published",
+      "output": "data/body must be string"
+    },
+    {
+      "slug": "json-to-pydantic",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "domain-age-check",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "url-to-markdown",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "german-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "serp-analyze",
+      "input": "published",
+      "output": "data/featured_snippet must be object"
+    },
+    {
+      "slug": "summarize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "meta-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "domain-contact-extract",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "crontab-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "eu-trademark-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "url-to-text",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "link-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "structured-scrape",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "contract-extract",
+      "input": "processes_personal_data",
+      "output": "data/effective_date must be string"
+    },
+    {
+      "slug": "receipt-categorize",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "dependency-audit",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "landing-page-roast",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "pr-description-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ted-procurement",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "mx-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "prompt-compress",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "test-case-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "csv-clean",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "risk-narrative-generate",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "llm-output-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "jsdoc-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "readme-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "hs-code-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "code-convert",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "api-docs-generate",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "barcode-lookup",
+      "input": "card-shaped number",
+      "output": "published"
+    },
+    {
+      "slug": "error-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "brand-mention-search",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "resume-parse",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "address-geocode",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "ticker-lookup",
+      "input": "published",
+      "output": "published"
+    }
+  ],
+  "missingManifests": [],
+  "live_challenges": [
+    {
+      "kind": "capability",
+      "slug": "tool-call-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "website-carbon-estimate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "slovenian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "skill-gap-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "gas-price-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "nginx-config-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "url-health-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "timezone-meeting-find",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "c2pa-inspect",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "webhook-test-payload",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "unit-convert",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sec-edgar-filings",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "eu-regulation-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sql-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pubmed-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "phone-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "npm-package-info",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "incoterms-explain",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "wallet-balance-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "irish-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "weather-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "french-insolvency-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "food-safety-rating-uk",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "timezone-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "canadian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "seo-audit",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "page-exists",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "privacy-policy-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "cz-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "eu-ai-act-classify",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "lei-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "payment-reference-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "stock-quote",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "spanish-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "api-health-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "name-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "polish-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "llm-cost-calculate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "password-strength",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "paid-api-preflight",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "company-name-match",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "terms-of-service-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "gitignore-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "employment-cost-estimate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "xml-to-json",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "port-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "json-to-csv",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "tax-id-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pypi-package-info",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "image-resize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "curl-to-code",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "job-board-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "license-compatibility-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "swiss-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "secret-scan",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "norwegian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "date-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "aml-risk-score",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "holiday-calendar",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "address-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "cron-explain",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "github-actions-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "dangerous-goods-classify",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "classify-text",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "job-posting-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "keyword-rank-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "skill-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "forex-history",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "austrian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "code-review",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "vasp-non-compliant-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "work-permit-requirements",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "flatten-json",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "data-quality-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "protocol-tvl-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "uk-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "invoice-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "doi-resolve",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "age-verify",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sql-optimize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "iban-to-bank",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "web-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "shipping-cost-estimate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "bank-bic-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "jwt-decode",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "csv-to-json",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "language-detect",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "cz-unreliable-vat-payer",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "usgs-earthquake-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "uk-companies-house-officers",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "wallet-transactions-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "cookie-scan",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "shipping-track",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "postal-code-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "swift-message-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "email-validate-bulk",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "invoice-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "github-repo-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "json-to-zod",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "accessibility-audit",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "marketplace-fee-calculate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "id-number-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "country-economic-indicators",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "og-image-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "header-security-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "academic-paper-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "domain-reputation",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "public-holiday-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "redirect-trace",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "whois-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "swift-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "port-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "dns-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "price-compare",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "vat-format-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "openapi-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "ens-reverse-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "no-bankruptcy-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "exchange-rate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sitemap-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "uptime-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "cve-details",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "page-speed-test",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "cve-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "gdpr-fine-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "json-to-typescript",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "ssl-certificate-chain",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "country-tax-rates",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "release-notes-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "currency-convert",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "data-protection-authority-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "regex-explain",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "clinical-trials-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "stablecoin-flow-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "us-product-recall-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "adverse-media-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pep-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "changelog-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "log-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "company-industry-classify",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sepa-xml-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "email-reputation-score",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "charity-lookup-uk",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "latvian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "greek-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "email-deliverability-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "estonian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "fr-bodacc-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "diff-json",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "backlink-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "deduplicate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "beneficial-ownership-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sanctions-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "iban-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "insolvency-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "arxiv-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "email-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "belgian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "swedish-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "schema-infer",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "company-id-detect",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "protocol-fees-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "token-count",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "phone-type-detect",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "slovak-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pii-redact",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "product-reviews-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "customs-duty-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "fear-greed-index",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "country-trade-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "breach-exposure-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "base64-encode-url",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "ssl-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "startup-domain-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "vat-rate-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "tech-stack-detect",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "translate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "company-enrich",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "json-schema-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "html-to-pdf",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "markdown-to-html",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "phone-normalize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "iso-country-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "robots-txt-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "au-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "isbn-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "financial-year-dates",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "wallet-age-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "hacker-news-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "container-track",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "screenshot-url",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "email-auth-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "social-profile-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "google-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "json-repair",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "vat-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "ens-resolve",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "credit-score-band",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "gdpr-website-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "japanese-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "finnish-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sql-explain",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "context-window-optimize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "french-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "regex-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pricing-page-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "github-repo-compare",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "competitor-compare",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "email-draft",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "http-to-curl",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "blog-post-outline",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "api-mock-response",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "schema-migration-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "openapi-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pdf-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "eori-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "croatian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "brazilian-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "eth-address-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "business-day-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "paper-details",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "address-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "company-tech-stack",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "env-template-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "docstring-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "meeting-notes-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "uk-disqualified-director-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "image-to-text",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "social-post-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "prompt-optimize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "return-policy-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "agent-trace-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "vasp-verify",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "us-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "dockerfile-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "package-security-audit",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "sentiment-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "fake-data-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "commit-message-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "json-to-pydantic",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "domain-age-check",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "url-to-markdown",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "german-company-data",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "serp-analyze",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "summarize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "meta-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "domain-contact-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "crontab-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "eu-trademark-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "url-to-text",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "link-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "structured-scrape",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "contract-extract",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "receipt-categorize",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "dependency-audit",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "landing-page-roast",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "pr-description-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "ted-procurement",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "mx-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "prompt-compress",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "test-case-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "csv-clean",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "risk-narrative-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "llm-output-validate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "jsdoc-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "readme-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "hs-code-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "code-convert",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "api-docs-generate",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "barcode-lookup",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "error-explain",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "brand-mention-search",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "resume-parse",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "address-geocode",
+      "failures": []
+    },
+    {
+      "kind": "capability",
+      "slug": "ticker-lookup",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyc-finland",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "defi-risk-check",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "gdpr-audit",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "hr-candidate-screen",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "web3-counterparty-kyb",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-fr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "lead-enrich",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-fr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "prospect-profile",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "web3-vasp-check",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "domain-intel",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "contact-verify",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "verify-us-company",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-process",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "website-security-audit",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "vendor-onboard",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "vendor-risk-assess",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "domain-trust",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "email-audit",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "crypto-counterparty-kyb",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "sepa-readiness",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "customer-risk-screen",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "token-project-dd",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "lead-email-verify",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "web3-protocol-health",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-hr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "payment-validate",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "competitor-snapshot",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "enhanced-due-diligence",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "web-extract-clean",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "page-seo-check",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-gr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-gr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-de",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-be",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-uk",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-gr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-us",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyc-sweden",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-sg",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-no",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-sg",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-be",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-no",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-uk",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "prospect-brief",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "website-health",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyc-norway",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "ai-act-assess",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "defi-protocol-risk",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-hr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "competitor-read",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-us",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-ie",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-pl",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-es",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-pl",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-es",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-fi",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-au",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-fi",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-uk",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-au",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-ch",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-ie",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-ca",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-at",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-se",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-hr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-fr",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-es",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-us",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-at",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-de",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-ie",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-ch",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-no",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-sg",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-complete-ch",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-at",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-be",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-pl",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-ca",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-au",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-de",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "invoice-verify-se",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-ca",
+      "failures": []
+    },
+    {
+      "kind": "solution",
+      "slug": "kyb-essentials-fi",
+      "failures": []
+    }
+  ],
+  "live_solution_count": 88,
+  "baseline_commit": "d004d774",
+  "manifest_count": 356,
+  "challenges": 712,
+  "validator": {
+    "before_failed": 712,
+    "after_failed": 0
+  },
+  "audit": [
+    {
+      "slug": "academic-paper-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "accessibility-audit",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "address-geocode",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "address-parse",
+      "input": "processes_personal_data",
+      "output": "data/postal_code must be string"
+    },
+    {
+      "slug": "address-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "adverse-media-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "age-verify",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "agent-trace-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "aml-risk-score",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "annual-report-extract",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "api-docs-generate",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "api-health-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "api-mock-response",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "approval-security-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "arxiv-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "au-company-data",
+      "input": "processes_personal_data",
+      "output": "data/acn must be string; data/business_names must be array"
+    },
+    {
+      "slug": "australian-company-data",
+      "input": "processes_personal_data",
+      "output": "data/company_name must be string; data/business_type must be string"
+    },
+    {
+      "slug": "austrian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "backlink-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "bank-bic-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "barcode-lookup",
+      "input": "card-shaped number",
+      "output": "published"
+    },
+    {
+      "slug": "base64-encode-url",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "belgian-company-data",
+      "input": "processes_personal_data",
+      "output": "data/industry must be string; data/commercial_name must be string"
+    },
+    {
+      "slug": "beneficial-ownership-lookup",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "bitcoin-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "blog-post-outline",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "brand-mention-search",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "brazilian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "breach-exposure-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "bulgarian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "business-day-check",
+      "input": "phone or card number",
+      "output": "missing example"
+    },
+    {
+      "slug": "business-license-check-se",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "c2pa-inspect",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "canadian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "cert-transparency-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "changelog-generate",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "charity-lookup-uk",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "citation-graph",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "classify-text",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "clinical-trials-search",
+      "input": "published",
+      "output": "data/status_filter must be string"
+    },
+    {
+      "slug": "code-convert",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "code-review",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "commit-message-generate",
+      "input": "published",
+      "output": "data/body must be string"
+    },
+    {
+      "slug": "company-enrich",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "company-fundamentals",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "company-id-detect",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "company-industry-classify",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "company-name-match",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "company-news",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "company-status-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "company-tech-stack",
+      "input": "published",
+      "output": "data/frontend_framework must be string"
+    },
+    {
+      "slug": "competitor-compare",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "container-track",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "context-window-optimize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "contract-extract",
+      "input": "processes_personal_data",
+      "output": "data/effective_date must be string"
+    },
+    {
+      "slug": "contract-verify-check",
+      "input": "missing example",
+      "output": "data/license_type must be string"
+    },
+    {
+      "slug": "cookie-scan",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "country-economic-indicators",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "country-tax-rates",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "country-trade-data",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "credit-report-summary",
+      "input": "processes_personal_data",
+      "output": "data/credit_rating must be string; data/risk_indicator must be string"
+    },
+    {
+      "slug": "credit-score-band",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "croatian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "cron-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "crontab-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "crypto-price",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "csv-clean",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "csv-to-json",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "curl-to-code",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "currency-convert",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "customs-duty-lookup",
+      "input": "published",
+      "output": "data/duty_rate must be string; data/duty_type must be string"
+    },
+    {
+      "slug": "cve-details",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "cve-lookup",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "cypriot-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "cz-bank-account-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "cz-birth-number-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "cz-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "cz-datova-schranka-id-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "cz-ico-validate",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "cz-unreliable-vat-payer",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "dangerous-goods-classify",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "danish-company-data",
+      "input": "processes_personal_data",
+      "output": "data/employee_range must be string"
+    },
+    {
+      "slug": "data-protection-authority-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "data-quality-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "date-parse",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "deduplicate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "dependency-audit",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "diff-json",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "diff-review",
+      "input": "email address",
+      "output": "missing example"
+    },
+    {
+      "slug": "dns-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "docker-hub-info",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "dockerfile-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "docstring-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "dogecoin-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "doi-resolve",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "domain-age-check",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "domain-contact-extract",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "domain-reputation",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "dutch-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "ecb-interest-rates",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "email-auth-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "email-deliverability-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "email-draft",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "email-finder",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "email-pattern-discover",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "email-reputation-score",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "email-validate-bulk",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "email-validate",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "employer-review-summary",
+      "input": "published",
+      "output": "data/overall_rating must be number; data/recommend_percent must be number"
+    },
+    {
+      "slug": "employment-cost-estimate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ens-resolve",
+      "input": "processes_personal_data",
+      "output": "data/address must be string; data/avatar_url must be string"
+    },
+    {
+      "slug": "ens-reverse-lookup",
+      "input": "processes_personal_data",
+      "output": "data/ens_name must be string"
+    },
+    {
+      "slug": "entity-resolve",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "env-template-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "eori-validate",
+      "input": "published",
+      "output": "data/trader_name must be string"
+    },
+    {
+      "slug": "error-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "estonian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "eth-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "eu-ai-act-classify",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "eu-court-case-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "eu-regulation-search",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "eu-trademark-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "eurostat-data",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "exchange-rate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "fake-data-generate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "fda-safety-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "fear-greed-index",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "financial-year-dates",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "finnish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "flatten-json",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "flight-status",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "food-safety-rating-uk",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "forex-history",
+      "input": "phone or card number",
+      "output": "published"
+    },
+    {
+      "slug": "fr-bodacc-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "french-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "french-insolvency-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "gas-price-check",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "gdpr-fine-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "gdpr-website-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "german-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "github-actions-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "github-repo-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "github-repo-compare",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "github-user-profile",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "gitignore-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "gleif-l2-children-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "gleif-l2-ubo-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "google-news-search",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "google-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "greek-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "hacker-news-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "header-security-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "holiday-calendar",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "host-exposure-lookup",
+      "input": "IP address",
+      "output": "published"
+    },
+    {
+      "slug": "hs-code-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "html-to-pdf",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "http-to-curl",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "hungarian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "iban-to-bank",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "iban-validate",
+      "input": "processes_personal_data",
+      "output": "data/branch_code must be string"
+    },
+    {
+      "slug": "id-number-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "image-resize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "image-to-text",
+      "input": "published",
+      "output": "data/text_type must be string; data/language_detected must be string"
+    },
+    {
+      "slug": "incoterms-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "insolvency-check",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "invoice-counterparty-check",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "invoice-extract",
+      "input": "processes_personal_data",
+      "output": "data/vendor_name must be string; data/vendor_vat must be string; data/buyer_name must be string; data/buyer_vat must be string; data/invoice_number must be string; data/invoice_date must be string; data/due_date must be string; data/currency must be string; data/subtotal must be number; data/vat_amount must be number; data/vat_rate must be number; data/total_amount must be number; data/iban must be string; data/payment_reference must be string"
+    },
+    {
+      "slug": "invoice-validate",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "ip-geolocation",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "ip-risk-score",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "irish-company-data",
+      "input": "processes_personal_data",
+      "output": "data/status_date must be string; data/dissolution_date must be string; data/nace_v2_code must be string"
+    },
+    {
+      "slug": "isbn-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "iso-country-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "italian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "japanese-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "job-board-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "job-posting-analyze",
+      "input": "published",
+      "output": "data/title must be string"
+    },
+    {
+      "slug": "jsdoc-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "json-repair",
+      "input": "uninspectable structured text",
+      "output": "published"
+    },
+    {
+      "slug": "json-schema-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-csv",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-pydantic",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-typescript",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "json-to-zod",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "jwt-decode",
+      "input": "published",
+      "output": "data/expires_at must be string; data/is_expired must be boolean"
+    },
+    {
+      "slug": "keyword-rank-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "keyword-suggest",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "landing-page-roast",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "language-detect",
+      "input": "possible personal name",
+      "output": "missing example"
+    },
+    {
+      "slug": "latvian-company-data",
+      "input": "processes_personal_data",
+      "output": "data/termination_date must be string"
+    },
+    {
+      "slug": "lei-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "license-compatibility-check",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "link-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "linkedin-url-validate",
+      "input": "processes_personal_data",
+      "output": "data/slug must be string; data/accessible must be boolean"
+    },
+    {
+      "slug": "lithuanian-company-data",
+      "input": "processes_personal_data",
+      "output": "data/deregistration_date must be string"
+    },
+    {
+      "slug": "llm-cost-calculate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "llm-output-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "log-parse",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "luxembourgish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "maltese-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "markdown-to-html",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "marketplace-fee-calculate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "meeting-notes-extract",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "meta-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "mx-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "name-parse",
+      "input": "processes_personal_data",
+      "output": "data/last_name must be string; data/middle_name must be string; data/prefix must be string; data/suffix must be string; data/nickname must be string"
+    },
+    {
+      "slug": "nginx-config-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "nl-bag-address",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "nl-energy-label",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "nl-housing-price-index",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "nl-housing-stats",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "nl-woz-value",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "no-bankruptcy-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "norwegian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "npm-package-info",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "officer-search",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "og-image-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "openapi-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "openapi-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "package-docs",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "package-security-audit",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "page-exists",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "page-speed-test",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "paid-api-preflight",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "paper-details",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "password-strength",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "patent-search",
+      "input": "processes_personal_data",
+      "output": "data/total_found must be integer"
+    },
+    {
+      "slug": "payment-reference-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "pdf-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "pep-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "phishing-site-check",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "phone-normalize",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "phone-type-detect",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "phone-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "pii-redact",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "polish-company-data",
+      "input": "processes_personal_data",
+      "output": "data/address must be string; data/registration_date must be string"
+    },
+    {
+      "slug": "port-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "port-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "portuguese-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "postal-code-lookup",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "pr-description-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "price-compare",
+      "input": "published",
+      "output": "data/lowest_price must be object; data/average_price must be number; data/highest_price must be object"
+    },
+    {
+      "slug": "pricing-page-extract",
+      "input": "published",
+      "output": "data/pricing_model must be string"
+    },
+    {
+      "slug": "privacy-policy-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "product-reviews-extract",
+      "input": "published",
+      "output": "data/common_cons must be array; data/common_pros must be array; data/review_count must be number; data/average_rating must be number"
+    },
+    {
+      "slug": "product-search",
+      "input": "published",
+      "output": "data/total_results_estimate must be number"
+    },
+    {
+      "slug": "prompt-compress",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "prompt-optimize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "protocol-fees-lookup",
+      "input": "missing example",
+      "output": "data/revenue_7d_usd must be number; data/revenue_24h_usd must be number; data/revenue_30d_usd must be number"
+    },
+    {
+      "slug": "protocol-tvl-lookup",
+      "input": "missing example",
+      "output": "data/tvl_change_1d_pct must be number; data/tvl_change_7d_pct must be number"
+    },
+    {
+      "slug": "public-holiday-lookup",
+      "input": "published",
+      "output": "data/next_upcoming must be object"
+    },
+    {
+      "slug": "pubmed-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "pypi-package-info",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "readme-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "receipt-categorize",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "redirect-trace",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "regex-explain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "regex-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "release-notes-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "resume-parse",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "return-policy-extract",
+      "input": "published",
+      "output": "data/free_returns must be boolean; data/refund_method must be string; data/return_window_days must be number"
+    },
+    {
+      "slug": "risk-narrative-generate",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "robots-txt-parse",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "romanian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "salary-benchmark",
+      "input": "possible personal name",
+      "output": "data/p25 must be number; data/p75 must be number; data/currency must be string; data/median_salary must be number"
+    },
+    {
+      "slug": "sanctions-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "schema-infer",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "schema-migration-generate",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "screenshot-url",
+      "input": "person lookup or screening tool",
+      "output": "published"
+    },
+    {
+      "slug": "sec-edgar-filings",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "sec-filing-events",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "secret-scan",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "secure-random",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "sentiment-analyze",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "seo-audit",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "sepa-xml-validate",
+      "input": "processes_personal_data",
+      "output": "data/message_type must be string"
+    },
+    {
+      "slug": "serp-analyze",
+      "input": "published",
+      "output": "data/featured_snippet must be object"
+    },
+    {
+      "slug": "serp-related-questions",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "shipping-cost-estimate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "shipping-track",
+      "input": "published",
+      "output": "data/best_match must be object"
+    },
+    {
+      "slug": "singapore-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "sitemap-parse",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "skill-extract",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "skill-gap-analyze",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "slovak-company-data",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "slovenian-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "social-post-generate",
+      "input": "published",
+      "output": "data/thread_version must be array"
+    },
+    {
+      "slug": "social-profile-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "solana-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "spanish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "sql-explain",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "sql-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "sql-optimize",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "ssl-certificate-chain",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ssl-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "stablecoin-flow-check",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "startup-domain-check",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "stock-quote",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "structured-scrape",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "summarize",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "swedish-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "swift-message-parse",
+      "input": "processes_personal_data",
+      "output": "data/amount must be number; data/currency must be string; data/sender_bic must be string; data/receiver_bic must be string"
+    },
+    {
+      "slug": "swift-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "swiss-company-data",
+      "input": "processes_personal_data",
+      "output": "data/ch_id must be integer; data/purpose must be string; data/registration_date must be string"
+    },
+    {
+      "slug": "tax-id-validate",
+      "input": "processes_personal_data",
+      "output": "missing example"
+    },
+    {
+      "slug": "tech-stack-detect",
+      "input": "published",
+      "output": "data/cms must be string; data/hosting must be string; data/css_framework must be string; data/frontend_framework must be string"
+    },
+    {
+      "slug": "ted-procurement",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "terms-of-service-extract",
+      "input": "published",
+      "output": "data/governing_law must be string"
+    },
+    {
+      "slug": "test-case-generate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "ticker-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "timezone-lookup",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "timezone-meeting-find",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "token-count",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "token-security-check",
+      "input": "missing example",
+      "output": "published"
+    },
+    {
+      "slug": "tool-call-validate",
+      "input": "personal data field",
+      "output": "data/corrected_input must be object"
+    },
+    {
+      "slug": "translate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "tron-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "trustpilot-score",
+      "input": "published",
+      "output": "data/rating_distribution must be object"
+    },
+    {
+      "slug": "uk-companies-house-officers",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "uk-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "uk-cop-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "uk-disqualified-director-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "uk-filing-events",
+      "input": "personal data field",
+      "output": "missing example"
+    },
+    {
+      "slug": "uk-gazette-notice-search",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "unit-convert",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "uptime-check",
+      "input": "published",
+      "output": "data/status_code must be integer"
+    },
+    {
+      "slug": "url-health-check",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "url-to-markdown",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "url-to-text",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "us-company-data-cobalt",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "us-company-data",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "us-court-search",
+      "input": "possible personal name",
+      "output": "published"
+    },
+    {
+      "slug": "us-ein-match",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "us-product-recall-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "us-sec-filings-extended",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "usgs-earthquake-search",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "vasp-non-compliant-check",
+      "input": "missing example",
+      "output": "data/register_last_updated must be string"
+    },
+    {
+      "slug": "vasp-verify",
+      "input": "missing example",
+      "output": "data/register_last_updated must be string"
+    },
+    {
+      "slug": "vat-format-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "vat-rate-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "vat-validate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-age-check",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-balance-lookup",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-risk-score",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "wallet-transactions-lookup",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "weather-lookup",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "web-extract",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "webhook-test-payload",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "website-carbon-estimate",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "website-to-company",
+      "input": "published",
+      "output": "missing example"
+    },
+    {
+      "slug": "whois-lookup",
+      "input": "processes_personal_data",
+      "output": "published"
+    },
+    {
+      "slug": "work-permit-requirements",
+      "input": "published",
+      "output": "published"
+    },
+    {
+      "slug": "workflow-security-audit",
+      "input": "possible personal name",
+      "output": "missing example"
+    },
+    {
+      "slug": "xml-to-json",
+      "input": "published",
+      "output": "data/json must be object"
+    },
+    {
+      "slug": "xrp-address-validate",
+      "input": "personal data field",
+      "output": "published"
+    },
+    {
+      "slug": "youtube-summarize",
+      "input": "published",
+      "output": "missing example"
+    }
+  ],
+  "samples": [
+    {
+      "slug": "email-validate",
+      "before": {
+        "x402Version": 2,
+        "resource": {
+          "url": "https://api.strale.io/x402/v2/email-validate",
+          "description": "Check email syntax, mail-server records, disposable domains, role addresses and likely typos. Returns checks without confirming a mailbox exists.",
+          "mimeType": "application/json"
+        },
+        "input": {
+          "type": "http",
+          "bodyType": "json",
+          "body": {
+            "email": "example_email"
+          },
+          "method": "POST"
+        },
+        "output": {
+          "example_present": false
+        },
+        "payment": {
+          "maxAmountRequired": "54000",
+          "payTo": "0x0000000000000000000000000000000000000001",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "network": "base-sepolia",
+          "scheme": "exact",
+          "resource": "https://api.strale.io/x402/v2/email-validate",
+          "maxTimeoutSeconds": 300
+        }
+      },
+      "after": {
+        "x402Version": 2,
+        "resource": {
+          "url": "https://api.strale.io/x402/v2/email-validate",
+          "mimeType": "application/json",
+          "serviceName": "Strale",
+          "tags": [
+            "validation",
+            "email validation"
+          ],
+          "iconUrl": "https://strale.dev/favicon-32x32.png",
+          "description": "Email Validation: Check email syntax, mail-server records, disposable domains, role addresses and likely typos. Returns checks without confirming a mailbox exists."
+        },
+        "input": {
+          "type": "http",
+          "bodyType": "json",
+          "method": "POST"
+        },
+        "output": {
+          "type": "json",
+          "example_present": true
+        },
+        "payment": {
+          "maxAmountRequired": "54000",
+          "payTo": "0x0000000000000000000000000000000000000001",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "network": "base-sepolia",
+          "scheme": "exact",
+          "resource": "https://api.strale.io/x402/v2/email-validate",
+          "maxTimeoutSeconds": 300
+        }
+      },
+      "v1_payment_fields_byte_identical": true
+    },
+    {
+      "slug": "image-to-text",
+      "before": {
+        "x402Version": 2,
+        "resource": {
+          "url": "https://api.strale.io/x402/v2/image-to-text",
+          "description": "Read text from an image, including screenshots and document photos. Returns extracted text, a confidence estimate and detected language.",
+          "mimeType": "application/json"
+        },
+        "input": {
+          "type": "http",
+          "bodyType": "json",
+          "body": {
+            "base64": "example_base64"
+          },
+          "method": "POST"
+        },
+        "output": {
+          "example_present": false
+        },
+        "payment": {
+          "maxAmountRequired": "54000",
+          "payTo": "0x0000000000000000000000000000000000000001",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "network": "base-sepolia",
+          "scheme": "exact",
+          "resource": "https://api.strale.io/x402/v2/image-to-text",
+          "maxTimeoutSeconds": 300
+        }
+      },
+      "after": {
+        "x402Version": 2,
+        "resource": {
+          "url": "https://api.strale.io/x402/v2/image-to-text",
+          "mimeType": "application/json",
+          "serviceName": "Strale",
+          "tags": [
+            "file-conversion",
+            "OCR",
+            "image to text"
+          ],
+          "iconUrl": "https://strale.dev/favicon-32x32.png",
+          "description": "Image to Text (OCR): Read text from an image, including screenshots and document photos. Returns extracted text, a confidence estimate and detected language."
+        },
+        "input": {
+          "type": "http",
+          "bodyType": "json",
+          "body": {
+            "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Example.jpg"
+          },
+          "method": "POST"
+        },
+        "output": {
+          "type": "json",
+          "example_present": false
+        },
+        "payment": {
+          "maxAmountRequired": "54000",
+          "payTo": "0x0000000000000000000000000000000000000001",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "network": "base-sepolia",
+          "scheme": "exact",
+          "resource": "https://api.strale.io/x402/v2/image-to-text",
+          "maxTimeoutSeconds": 300
+        }
+      },
+      "v1_payment_fields_byte_identical": true
+    },
+    {
+      "slug": "whois-lookup",
+      "before": {
+        "x402Version": 2,
+        "resource": {
+          "url": "https://api.strale.io/x402/v2/whois-lookup",
+          "description": "Look up a domain's WHOIS record: registrar, creation and expiry dates, name servers, registrant details and the raw record.",
+          "mimeType": "application/json"
+        },
+        "input": {
+          "type": "http",
+          "bodyType": "json",
+          "body": {
+            "domain": "example_domain"
+          },
+          "method": "POST"
+        },
+        "output": {
+          "example_present": false
+        },
+        "payment": {
+          "maxAmountRequired": "54000",
+          "payTo": "0x0000000000000000000000000000000000000001",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "network": "base-sepolia",
+          "scheme": "exact",
+          "resource": "https://api.strale.io/x402/v2/whois-lookup",
+          "maxTimeoutSeconds": 300
+        }
+      },
+      "after": {
+        "x402Version": 2,
+        "resource": {
+          "url": "https://api.strale.io/x402/v2/whois-lookup",
+          "mimeType": "application/json",
+          "serviceName": "Strale",
+          "tags": [
+            "web-intelligence",
+            "WHOIS lookup"
+          ],
+          "iconUrl": "https://strale.dev/favicon-32x32.png",
+          "description": "WHOIS Lookup: Look up a domain's WHOIS record: registrar, creation and expiry dates, name servers, registrant details and the raw record."
+        },
+        "input": {
+          "type": "http",
+          "bodyType": "json",
+          "method": "POST"
+        },
+        "output": {
+          "type": "json",
+          "example_present": true
+        },
+        "payment": {
+          "maxAmountRequired": "54000",
+          "payTo": "0x0000000000000000000000000000000000000001",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "network": "base-sepolia",
+          "scheme": "exact",
+          "resource": "https://api.strale.io/x402/v2/whois-lookup",
+          "maxTimeoutSeconds": 300
+        }
+      },
+      "v1_payment_fields_byte_identical": true
+    }
+  ],
+  "vocabulary": [
+    {
+      "query": "PEP check",
+      "slug": "pep-check",
+      "tags": [
+        "compliance",
+        "PEP check"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "beneficial ownership",
+      "slug": "beneficial-ownership-lookup",
+      "tags": [
+        "compliance",
+        "beneficial ownership"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "screenshot url",
+      "slug": "screenshot-url",
+      "tags": [
+        "web-scraping",
+        "screenshot url"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "UK company data",
+      "slug": "uk-company-data",
+      "tags": [
+        "data-extraction",
+        "UK company data"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "sanctions screening",
+      "slug": "sanctions-check",
+      "tags": [
+        "compliance",
+        "sanctions screening"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "email validation",
+      "slug": "email-validate",
+      "tags": [
+        "validation",
+        "email validation"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "WHOIS lookup",
+      "slug": "whois-lookup",
+      "tags": [
+        "web-intelligence",
+        "WHOIS lookup"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "translate text",
+      "slug": "translate",
+      "tags": [
+        "text-processing",
+        "translate text"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "OCR image to text",
+      "slug": "image-to-text",
+      "tags": [
+        "file-conversion",
+        "OCR",
+        "image to text"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "VAT number validation",
+      "slug": "vat-validate",
+      "tags": [
+        "validation",
+        "VAT number validation"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "tech stack detection",
+      "slug": "tech-stack-detect",
+      "tags": [
+        "web-intelligence",
+        "tech stack detection"
+      ],
+      "matched": true,
+      "note": "public description/name plus controlled tags"
+    },
+    {
+      "query": "keyword suggestions SEO",
+      "slug": "keyword-suggest",
+      "tags": [
+        "data-extraction"
+      ],
+      "matched": false,
+      "note": "retired; no replacement claim or SEO promotion (DQ-39)"
+    }
+  ]
+}

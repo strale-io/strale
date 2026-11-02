@@ -64,7 +64,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      image_url: https://www.gstatic.com/webp/gallery/1.jpg
+      image_url: https://strale.dev/og-image.png
       target_width: 100
     expected_fields:
       - field: width
@@ -105,7 +105,7 @@ output_field_reliability:
   size_bytes: guaranteed
   content_type: guaranteed
 limitations:
-  - title: Supports JPEG, PNG, and WebP only — animated GIFs, SVGs, and RAW image formats are not supported
+  - title: Only JPEG, PNG and WebP are supported
     text: Supports common formats (JPEG, PNG, WebP) — animated GIFs, SVGs, and RAW image formats are not supported
     category: coverage
     severity: info

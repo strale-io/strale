@@ -187,6 +187,10 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: object
+      - field: total_results
+        operator: lt
+        reliability: guaranteed
+        value: 100000
   health_check_input:
     name: Google
 output_field_reliability:
@@ -194,7 +198,7 @@ output_field_reliability:
   establishments: guaranteed
   rating_distribution: guaranteed
 limitations:
-  - title: Covers England, Wales, and Northern Ireland via FSA API — Scottish hygiene ratings use a different system
+  - title: Scottish hygiene ratings are not covered
     text: >-
       Covers England, Wales, and Northern Ireland via FSA API — Scottish food hygiene ratings (FHIS) use a different
       system

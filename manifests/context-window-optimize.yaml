@@ -100,10 +100,10 @@ output_field_reliability:
   tokens_remaining: guaranteed
   total_tokens_used: guaranteed
 limitations:
-  - title: Token savings from optimization suggestions vary by LLM — actual counts depend on the specific tokenizer
+  - title: Token savings depend on the target model
     text: >-
-      Optimization suggestions based on general best practices — actual token savings depend on the specific LLM's
-      tokenizer
+      Optimisation suggestions use general practices; actual token savings depend on the target
+      model’s tokenizer.
     category: accuracy
     severity: info
     workaround: Measure actual token counts with the target model's tokenizer before and after applying suggestions

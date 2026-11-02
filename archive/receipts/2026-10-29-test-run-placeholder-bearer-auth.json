@@ -1,0 +1,1714 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e05681a27dca5dfd4978c2b7723c180450f23d1a"
+  },
+  "at": "2026-10-29T17:25:55.569Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/14c33292-615a-5ea0-9682-3635900b2e8a/scratchpad/vt.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 27,
+    "numPassedTestSuites": 27,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 137,
+    "numPassedTests": 137,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1793294753162,
+    "success": true
+  },
+  "topic": "placeholder-bearer-auth",
+  "raw": {
+    "numTotalTestSuites": 27,
+    "numPassedTestSuites": 27,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 137,
+    "numPassedTests": 137,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1793294753162,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"\" as a placeholder",
+            "duration": 1.7299669999999878,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"   \" as a placeholder",
+            "status": "passed",
+            "title": "reads \"   \" as a placeholder",
+            "duration": 0.26469399999999155,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"${STRALE_API_KEY}\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"${STRALE_API_KEY}\" as a placeholder",
+            "duration": 0.27880799999999795,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"${ STRALE_API_KEY }\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"${ STRALE_API_KEY }\" as a placeholder",
+            "duration": 0.30492799999998965,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"${env:STRALE_API_KEY}\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"${env:STRALE_API_KEY}\" as a placeholder",
+            "duration": 0.17088200000000597,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"${input:strale-api-key}\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"${input:strale-api-key}\" as a placeholder",
+            "duration": 0.1057819999999765,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"$STRALE_API_KEY\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"$STRALE_API_KEY\" as a placeholder",
+            "duration": 0.21940599999999222,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"{{STRALE_API_KEY}}\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"{{STRALE_API_KEY}}\" as a placeholder",
+            "duration": 0.17433800000000588,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"{{ $env.STRALE_API_KEY }}\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"{{ $env.STRALE_API_KEY }}\" as a placeholder",
+            "duration": 0.4851550000000202,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"%STRALE_API_KEY%\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"%STRALE_API_KEY%\" as a placeholder",
+            "duration": 0.17779500000000326,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"<your-key>\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"<your-key>\" as a placeholder",
+            "duration": 0.2825069999999812,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"<STRALE_API_KEY>\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"<STRALE_API_KEY>\" as a placeholder",
+            "duration": 0.11546099999998205,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"<your Strale API key>\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"<your Strale API key>\" as a placeholder",
+            "duration": 0.1902949999999919,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"YOUR_API_KEY\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"YOUR_API_KEY\" as a placeholder",
+            "duration": 0.07002700000001028,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"your-api-key\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"your-api-key\" as a placeholder",
+            "duration": 0.05955299999999397,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"YOUR_STRALE_API_KEY\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"YOUR_STRALE_API_KEY\" as a placeholder",
+            "duration": 0.184898000000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"your_api_key_here\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"your_api_key_here\" as a placeholder",
+            "duration": 0.07881399999999417,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"STRALE_API_KEY\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"STRALE_API_KEY\" as a placeholder",
+            "duration": 0.05271299999998291,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"undefined\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"undefined\" as a placeholder",
+            "duration": 0.048510999999990645,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer reads \"null\" as a placeholder",
+            "status": "passed",
+            "title": "reads \"null\" as a placeholder",
+            "duration": 0.060203999999998814,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sk_live_abc123\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sk_live_abc123\" as a placeholder",
+            "duration": 0.1189860000000067,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sk_live_${STRALE_API_KEY}\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sk_live_${STRALE_API_KEY}\" as a placeholder",
+            "duration": 0.06593300000000113,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sk_live_YOUR_API_KEY\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sk_live_YOUR_API_KEY\" as a placeholder",
+            "duration": 0.052238999999985936,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sk_live_\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sk_live_\" as a placeholder",
+            "duration": 0.048664999999999736,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sto_at_0123abcd\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sto_at_0123abcd\" as a placeholder",
+            "duration": 0.045110999999991463,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sto_at_<token>\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sto_at_<token>\" as a placeholder",
+            "duration": 0.0467880000000207,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"sk_test_abc123\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"sk_test_abc123\" as a placeholder",
+            "duration": 0.050034999999979846,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"abc123\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"abc123\" as a placeholder",
+            "duration": 0.04682299999998918,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"Bearer sk_live_abc\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"Bearer sk_live_abc\" as a placeholder",
+            "duration": 0.04777400000000398,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"STRALE_API_KEY_2\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"STRALE_API_KEY_2\" as a placeholder",
+            "duration": 0.05066199999998844,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"my_api_key\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"my_api_key\" as a placeholder",
+            "duration": 0.045984000000004244,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"${STRALE_API_KEY}x\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"${STRALE_API_KEY}x\" as a placeholder",
+            "duration": 1.6361830000000168,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"x${STRALE_API_KEY}\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"x${STRALE_API_KEY}\" as a placeholder",
+            "duration": 0.07695300000000316,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"<a><b>\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"<a><b>\" as a placeholder",
+            "duration": 0.06624400000001174,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"<>\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"<>\" as a placeholder",
+            "duration": 0.04358600000000479,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"{{}}\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"{{}}\" as a placeholder",
+            "duration": 0.05012999999999579,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isPlaceholderBearer"
+            ],
+            "fullName": "isPlaceholderBearer does not read \"$1abc\" as a placeholder",
+            "status": "passed",
+            "title": "does not read \"$1abc\" as a placeholder",
+            "duration": 0.041463000000021566,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads undefined as null",
+            "status": "passed",
+            "title": "reads undefined as null",
+            "duration": 0.1445619999999792,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads null as null",
+            "status": "passed",
+            "title": "reads null as null",
+            "duration": 0.05872600000000716,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"\" as null",
+            "status": "passed",
+            "title": "reads \"\" as null",
+            "duration": 0.04154600000001096,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Basic dXNlcjpwYXNz\" as null",
+            "status": "passed",
+            "title": "reads \"Basic dXNlcjpwYXNz\" as null",
+            "duration": 0.03907599999999434,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"bearer sk_live_lowercase\" as null",
+            "status": "passed",
+            "title": "reads \"bearer sk_live_lowercase\" as null",
+            "duration": 0.03712000000001581,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer \" as null",
+            "status": "passed",
+            "title": "reads \"Bearer \" as null",
+            "duration": 0.14179300000000694,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer ${STRALE_API_KEY}\" as null",
+            "status": "passed",
+            "title": "reads \"Bearer ${STRALE_API_KEY}\" as null",
+            "duration": 0.05804399999999532,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer <your-key>\" as null",
+            "status": "passed",
+            "title": "reads \"Bearer <your-key>\" as null",
+            "duration": 0.06312499999998522,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer YOUR_API_KEY\" as null",
+            "status": "passed",
+            "title": "reads \"Bearer YOUR_API_KEY\" as null",
+            "duration": 0.12469699999999762,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer sk_live_abc\" as \"sk_live_abc\"",
+            "status": "passed",
+            "title": "reads \"Bearer sk_live_abc\" as \"sk_live_abc\"",
+            "duration": 0.04899000000000342,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer sto_at_abc\" as \"sto_at_abc\"",
+            "status": "passed",
+            "title": "reads \"Bearer sto_at_abc\" as \"sto_at_abc\"",
+            "duration": 0.09412299999999618,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer reads \"Bearer not-a-key\" as \"not-a-key\"",
+            "status": "passed",
+            "title": "reads \"Bearer not-a-key\" as \"not-a-key\"",
+            "duration": 0.04914199999998914,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "readBearer"
+            ],
+            "fullName": "readBearer counts and logs placeholders by route without the header value",
+            "status": "passed",
+            "title": "counts and logs placeholders by route without the header value",
+            "duration": 0.45395100000001776,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793294754597,
+        "endTime": 1793294754606.4539,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-placeholder-auth/apps/api/src/lib/bearer-placeholder.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits lets a keyed burst from one IP pass up to the key limit, then limits the key",
+            "status": "passed",
+            "title": "lets a keyed burst from one IP pass up to the key limit, then limits the key",
+            "duration": 42.14231100000006,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits does not share one IP bucket across many keys behind an integration platform's IP",
+            "status": "passed",
+            "title": "does not share one IP bucket across many keys behind an integration platform's IP",
+            "duration": 9.274904000000106,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits limits an unkeyed burst per IP",
+            "status": "passed",
+            "title": "limits an unkeyed burst per IP",
+            "duration": 4.067455999999993,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits limits an invalid key per IP, and answers 429 once the IP's bucket is full",
+            "status": "passed",
+            "title": "limits an invalid key per IP, and answers 429 once the IP's bucket is full",
+            "duration": 5.411749999999984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits counts invalid keys and anonymous calls in the same IP bucket",
+            "status": "passed",
+            "title": "counts invalid keys and anonymous calls in the same IP bucket",
+            "duration": 8.64051500000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits counts Authorization \"Basic dXNlcjpwYXNz\" against the IP bucket",
+            "status": "passed",
+            "title": "counts Authorization \"Basic dXNlcjpwYXNz\" against the IP bucket",
+            "duration": 8.157292000000098,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits counts Authorization \"Bearer \" against the IP bucket",
+            "status": "passed",
+            "title": "counts Authorization \"Bearer \" against the IP bucket",
+            "duration": 7.824260999999979,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits counts Authorization \"bearer sk_live_lowercase_scheme\" against the IP bucket",
+            "status": "passed",
+            "title": "counts Authorization \"bearer sk_live_lowercase_scheme\" against the IP bucket",
+            "duration": 3.8009900000001835,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits serves placeholder key \"${STRALE_API_KEY}\" anonymously, from the same IP bucket as no key, without a key lookup",
+            "status": "passed",
+            "title": "serves placeholder key \"${STRALE_API_KEY}\" anonymously, from the same IP bucket as no key, without a key lookup",
+            "duration": 12.894547999999986,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits serves placeholder key \"<your-key>\" anonymously, from the same IP bucket as no key, without a key lookup",
+            "status": "passed",
+            "title": "serves placeholder key \"<your-key>\" anonymously, from the same IP bucket as no key, without a key lookup",
+            "duration": 12.127525000000105,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits serves placeholder key \"YOUR_API_KEY\" anonymously, from the same IP bucket as no key, without a key lookup",
+            "status": "passed",
+            "title": "serves placeholder key \"YOUR_API_KEY\" anonymously, from the same IP bucket as no key, without a key lookup",
+            "duration": 4.073302999999896,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits still refuses malformed key \"sk_live_${STRALE_API_KEY}\"",
+            "status": "passed",
+            "title": "still refuses malformed key \"sk_live_${STRALE_API_KEY}\"",
+            "duration": 0.8453099999999267,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits still refuses malformed key \"not-a-key\"",
+            "status": "passed",
+            "title": "still refuses malformed key \"not-a-key\"",
+            "duration": 0.5948940000000675,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits still refuses malformed key \"sk_test_abc\"",
+            "status": "passed",
+            "title": "still refuses malformed key \"sk_test_abc\"",
+            "duration": 0.516980999999987,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits still serves a valid key from an IP whose anonymous bucket is full",
+            "status": "passed",
+            "title": "still serves a valid key from an IP whose anonymous bucket is full",
+            "duration": 2.7304039999999077,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do rate limits"
+            ],
+            "fullName": "POST /v1/do rate limits is the chain POST /v1/do actually mounts",
+            "status": "passed",
+            "title": "is the chain POST /v1/do actually mounts",
+            "duration": 0.735595000000103,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "authMiddleware and optionalAuthMiddleware with a placeholder key"
+            ],
+            "fullName": "authMiddleware and optionalAuthMiddleware with a placeholder key optionalAuthMiddleware proceeds anonymously on \"Bearer ${STRALE_API_KEY}\"",
+            "status": "passed",
+            "title": "optionalAuthMiddleware proceeds anonymously on \"Bearer ${STRALE_API_KEY}\"",
+            "duration": 0.9250050000000556,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "authMiddleware and optionalAuthMiddleware with a placeholder key"
+            ],
+            "fullName": "authMiddleware and optionalAuthMiddleware with a placeholder key optionalAuthMiddleware proceeds anonymously on \"Bearer <your-key>\"",
+            "status": "passed",
+            "title": "optionalAuthMiddleware proceeds anonymously on \"Bearer <your-key>\"",
+            "duration": 0.9511030000001028,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "authMiddleware and optionalAuthMiddleware with a placeholder key"
+            ],
+            "fullName": "authMiddleware and optionalAuthMiddleware with a placeholder key optionalAuthMiddleware still refuses a malformed key",
+            "status": "passed",
+            "title": "optionalAuthMiddleware still refuses a malformed key",
+            "duration": 0.5206590000000233,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "authMiddleware and optionalAuthMiddleware with a placeholder key"
+            ],
+            "fullName": "authMiddleware and optionalAuthMiddleware with a placeholder key authMiddleware answers a placeholder exactly like a missing header",
+            "status": "passed",
+            "title": "authMiddleware answers a placeholder exactly like a missing header",
+            "duration": 0.914545999999973,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793294754287,
+        "endTime": 1793294754415.9146,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-placeholder-auth/apps/api/src/lib/middleware.ip-limit.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "POST /v1/do — required NTA credential"
+            ],
+            "fullName": "POST /v1/do — required NTA credential returns capability_unavailable before execution or transaction when the ID is unset",
+            "status": "passed",
+            "title": "returns capability_unavailable before execution or transaction when the ID is unset",
+            "duration": 54.91540400000008,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — happy path (authenticated, paid capability, sync)"
+            ],
+            "fullName": "POST /v1/do — happy path (authenticated, paid capability, sync) records query src on the paid transaction while executing and debiting the wallet",
+            "status": "passed",
+            "title": "records query src on the paid transaction while executing and debiting the wallet",
+            "duration": 15.036137000000053,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — no matching capability"
+            ],
+            "fullName": "POST /v1/do — no matching capability returns a structured no_matching_capability error and logs to failed_requests",
+            "status": "passed",
+            "title": "returns a structured no_matching_capability error and logs to failed_requests",
+            "duration": 4.498964999999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — insufficient balance"
+            ],
+            "fullName": "POST /v1/do — insufficient balance returns 402 insufficient_balance without ever invoking the executor, creating a transaction record, or debiting",
+            "status": "passed",
+            "title": "returns 402 insufficient_balance without ever invoking the executor, creating a transaction record, or debiting",
+            "duration": 2.6238570000000436,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — idempotency replay"
+            ],
+            "fullName": "POST /v1/do — idempotency replay returns the stored result for a repeated Idempotency-Key without re-executing or re-matching, scoped to the requesting user",
+            "status": "passed",
+            "title": "returns the stored result for a repeated Idempotency-Key without re-executing or re-matching, scoped to the requesting user",
+            "duration": 5.146869000000152,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — dry_run"
+            ],
+            "fullName": "POST /v1/do — dry_run reports what would execute without charging or invoking the executor",
+            "status": "passed",
+            "title": "reports what would execute without charging or invoking the executor",
+            "duration": 2.2326989999999114,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — execution failure shape + DEC-14 ordering"
+            ],
+            "fullName": "POST /v1/do — execution failure shape + DEC-14 ordering returns execution_failed with details.error (no top-level error key) and leaves the wallet untouched",
+            "status": "passed",
+            "title": "returns execution_failed with details.error (no top-level error key) and leaves the wallet untouched",
+            "duration": 12.009505000000217,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — wallet-transaction timeout (postgres 25P03/55P03 via DrizzleQueryError)"
+            ],
+            "fullName": "POST /v1/do — wallet-transaction timeout (postgres 25P03/55P03 via DrizzleQueryError) returns 503 timeout_exceeded, not 500, when the wallet-lock select rejects with a wrapped 55P03",
+            "status": "passed",
+            "title": "returns 503 timeout_exceeded, not 500, when the wallet-lock select rejects with a wrapped 55P03",
+            "duration": 5.382777000000033,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — anonymous, task-based, paid capability"
+            ],
+            "fullName": "POST /v1/do — anonymous, task-based, paid capability quotes a price over x402 instead of 500-ing, and never reaches the executor or the wallet",
+            "status": "passed",
+            "title": "quotes a price over x402 instead of 500-ing, and never reaches the executor or the wallet",
+            "duration": 3.511154000000033,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — anonymous, task-based, paid capability"
+            ],
+            "fullName": "POST /v1/do — anonymous, task-based, paid capability falls back to a 401 that names the free capabilities when the x402 rail is not configured",
+            "status": "passed",
+            "title": "falls back to a 401 that names the free capabilities when the x402 rail is not configured",
+            "duration": 8.736223999999993,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key serves a free-tier capability anonymously with \"Bearer ${STRALE_API_KEY}\"",
+            "status": "passed",
+            "title": "serves a free-tier capability anonymously with \"Bearer ${STRALE_API_KEY}\"",
+            "duration": 4.0045860000000175,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key serves a free-tier capability anonymously with \"Bearer <your-key>\"",
+            "status": "passed",
+            "title": "serves a free-tier capability anonymously with \"Bearer <your-key>\"",
+            "duration": 2.16504000000009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key serves a free-tier capability anonymously with \"Bearer YOUR_API_KEY\"",
+            "status": "passed",
+            "title": "serves a free-tier capability anonymously with \"Bearer YOUR_API_KEY\"",
+            "duration": 2.3894410000000335,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key quotes the same x402 402 as no header for a paid capability with \"Bearer ${STRALE_API_KEY}\"",
+            "status": "passed",
+            "title": "quotes the same x402 402 as no header for a paid capability with \"Bearer ${STRALE_API_KEY}\"",
+            "duration": 1.798037000000022,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key quotes the same x402 402 as no header for a paid capability with \"Bearer <your-key>\"",
+            "status": "passed",
+            "title": "quotes the same x402 402 as no header for a paid capability with \"Bearer <your-key>\"",
+            "duration": 1.6965119999999843,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key quotes the same x402 402 as no header for a paid capability with \"Bearer YOUR_API_KEY\"",
+            "status": "passed",
+            "title": "quotes the same x402 402 as no header for a paid capability with \"Bearer YOUR_API_KEY\"",
+            "duration": 1.4257520000001023,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key answers the same 401 as no header when x402 is off, with \"Bearer ${STRALE_API_KEY}\"",
+            "status": "passed",
+            "title": "answers the same 401 as no header when x402 is off, with \"Bearer ${STRALE_API_KEY}\"",
+            "duration": 1.5759209999998802,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key answers the same 401 as no header when x402 is off, with \"Bearer <your-key>\"",
+            "status": "passed",
+            "title": "answers the same 401 as no header when x402 is off, with \"Bearer <your-key>\"",
+            "duration": 1.55113399999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key answers the same 401 as no header when x402 is off, with \"Bearer YOUR_API_KEY\"",
+            "status": "passed",
+            "title": "answers the same 401 as no header when x402 is off, with \"Bearer YOUR_API_KEY\"",
+            "duration": 1.5948829999999816,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — placeholder Authorization reads as no key"
+            ],
+            "fullName": "POST /v1/do — placeholder Authorization reads as no key still refuses a malformed non-placeholder key",
+            "status": "passed",
+            "title": "still refuses a malformed non-placeholder key",
+            "duration": 0.6296100000001843,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — password-strength never persists the password"
+            ],
+            "fullName": "POST /v1/do — password-strength never persists the password success path: executor gets the real password; row, audit hash and fingerprint never do",
+            "status": "passed",
+            "title": "success path: executor gets the real password; row, audit hash and fingerprint never do",
+            "duration": 9.682138000000123,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — password-strength never persists the password"
+            ],
+            "fullName": "POST /v1/do — password-strength never persists the password failure path: the failure audit's input_hash is of the marker form too",
+            "status": "passed",
+            "title": "failure path: the failure audit's input_hash is of the marker form too",
+            "duration": 4.106155999999828,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "returns exact field advice from a paid executor refusal without billing or changing the code",
+            "status": "passed",
+            "title": "returns exact field advice from a paid executor refusal without billing or changing the code",
+            "duration": 2.7129449999999906,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — cost bookkeeping cannot affect settlement"
+            ],
+            "fullName": "POST /v1/do — cost bookkeeping cannot affect settlement writes cost only after debit commit; failing cost=false preserves the paid response",
+            "status": "passed",
+            "title": "writes cost only after debit commit; failing cost=false preserves the paid response",
+            "duration": 4.063902999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "POST /v1/do — cost bookkeeping cannot affect settlement"
+            ],
+            "fullName": "POST /v1/do — cost bookkeeping cannot affect settlement writes cost only after debit commit; failing cost=true preserves the paid response",
+            "status": "passed",
+            "title": "writes cost only after debit commit; failing cost=true preserves the paid response",
+            "duration": 10.833130999999867,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "free-tier: cost failure=false preserves the response without a wallet debit",
+            "status": "passed",
+            "title": "free-tier: cost failure=false preserves the response without a wallet debit",
+            "duration": 4.267481000000089,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "free-tier: cost failure=true preserves the response without a wallet debit",
+            "status": "passed",
+            "title": "free-tier: cost failure=true preserves the response without a wallet debit",
+            "duration": 2.4051499999998214,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path commits a hold before running the executor with no transaction/connection held; captures once with scalar raw binds",
+            "status": "passed",
+            "title": "commits a hold before running the executor with no transaction/connection held; captures once with scalar raw binds",
+            "duration": 3.7902469999999084,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path rejects a concurrent over-commit while the first executor is still running",
+            "status": "passed",
+            "title": "rejects a concurrent over-commit while the first executor is still running",
+            "duration": 58.650630999999976,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path counts an open sync reservation against the user hourly cap",
+            "status": "passed",
+            "title": "counts an open sync reservation against the user hourly cap",
+            "duration": 55.57621700000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path releases a failed hold without a debit or refund",
+            "status": "passed",
+            "title": "releases a failed hold without a debit or refund",
+            "duration": 2.311952999999903,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path clamps timeout_seconds 0.01 to 5 seconds at the same H5 deadline and ignores late success",
+            "status": "passed",
+            "title": "clamps timeout_seconds 0.01 to 5 seconds at the same H5 deadline and ignores late success",
+            "duration": 6.802293000000191,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path normalizes an executor rejection at the deadline before the watchdog fires, without penalizing health",
+            "status": "passed",
+            "title": "normalizes an executor rejection at the deadline before the watchdog fires, without penalizing health",
+            "duration": 3.463520000000017,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path rejects an excluded legacy idempotency row without replaying its output ({\"solutionSlug\":\"legacy-solution\"})",
+            "status": "passed",
+            "title": "rejects an excluded legacy idempotency row without replaying its output ({\"solutionSlug\":\"legacy-solution\"})",
+            "duration": 1.7831450000001041,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path rejects an excluded legacy idempotency row without replaying its output ({\"deletedAt\":\"2026-10-29T17:25:54.875Z\"})",
+            "status": "passed",
+            "title": "rejects an excluded legacy idempotency row without replaying its output ({\"deletedAt\":\"2026-10-29T17:25:54.875Z\"})",
+            "duration": 1.5434129999998731,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path a concurrent same-key retry returns retryable 409 without a second executor, before checking available funds",
+            "status": "passed",
+            "title": "a concurrent same-key retry returns retryable 409 without a second executor, before checking available funds",
+            "duration": 55.05886899999996,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H4 sync money path"
+            ],
+            "fullName": "H4 sync money path rejects mismatched concurrent key reuse",
+            "status": "passed",
+            "title": "rejects mismatched concurrent key reuse",
+            "duration": 4.248174000000063,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "H4 reconciler releases a stale hold reservation with accurate money wording",
+            "status": "passed",
+            "title": "H4 reconciler releases a stale hold reservation with accurate money wording",
+            "duration": 26.29263600000013,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "H4 reconciler releases a stale debit reservation with accurate money wording",
+            "status": "passed",
+            "title": "H4 reconciler releases a stale debit reservation with accurate money wording",
+            "duration": 3.827584999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 dispatch schema validation before reservation"
+            ],
+            "fullName": "H6 dispatch schema validation before reservation enforce handles a type mismatch before any wallet hold",
+            "status": "passed",
+            "title": "enforce handles a type mismatch before any wallet hold",
+            "duration": 7.941493999999921,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "H6 dispatch schema validation before reservation"
+            ],
+            "fullName": "H6 dispatch schema validation before reservation report handles a type mismatch before any wallet hold",
+            "status": "passed",
+            "title": "report handles a type mismatch before any wallet hold",
+            "duration": 4.420767999999953,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 malformed schema {\"type\":\"foo\"} executes twice in report and refuses before hold in enforce",
+            "status": "passed",
+            "title": "Round 2 malformed schema {\"type\":\"foo\"} executes twice in report and refuses before hold in enforce",
+            "duration": 7.590108999999757,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 malformed schema {\"$ref\":\"round2-do-missing\"} executes twice in report and refuses before hold in enforce",
+            "status": "passed",
+            "title": "Round 2 malformed schema {\"$ref\":\"round2-do-missing\"} executes twice in report and refuses before hold in enforce",
+            "duration": 7.847212000000127,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 malformed schema {\"type\":\"string\",\"pattern\":\"[\"} executes twice in report and refuses before hold in enforce",
+            "status": "passed",
+            "title": "Round 2 malformed schema {\"type\":\"string\",\"pattern\":\"[\"} executes twice in report and refuses before hold in enforce",
+            "duration": 7.304406000000199,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 malformed schema {\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"required\":\"a\"} executes twice in report and refuses before hold in enforce",
+            "status": "passed",
+            "title": "Round 2 malformed schema {\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"required\":\"a\"} executes twice in report and refuses before hold in enforce",
+            "duration": 7.090005000000019,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 malformed schema undefined executes twice in report and refuses before hold in enforce",
+            "status": "passed",
+            "title": "Round 2 malformed schema undefined executes twice in report and refuses before hold in enforce",
+            "duration": 6.319003000000066,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "Round 2 a 10000-item bad array executes in report with bounded logged paths",
+            "status": "passed",
+            "title": "Round 2 a 10000-item bad array executes in report with bounded logged paths",
+            "duration": 8.193673000000217,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793294754879,
+        "endTime": 1793294755332.1936,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-placeholder-auth/apps/api/src/routes/do.core.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "tool annotations the directory requires"
+            ],
+            "fullName": "tool annotations the directory requires every tool on /mcp has a title and a read-only or destructive hint",
+            "status": "passed",
+            "title": "every tool on /mcp has a title and a read-only or destructive hint",
+            "duration": 63.45767799999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tool annotations the directory requires"
+            ],
+            "fullName": "tool annotations the directory requires every tool on /mcp/connector has a title and a read-only or destructive hint",
+            "status": "passed",
+            "title": "every tool on /mcp/connector has a title and a read-only or destructive hint",
+            "duration": 5.965296999999964,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "tool annotations the directory requires"
+            ],
+            "fullName": "tool annotations the directory requires the connector leaves out the on-chain tool and mentions no x402 or USDC",
+            "status": "passed",
+            "title": "the connector leaves out the on-chain tool and mentions no x402 or USDC",
+            "duration": 5.548324999999977,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector answers a paid tool without a token with 401 and a challenge, before running it",
+            "status": "passed",
+            "title": "answers a paid tool without a token with 401 and a challenge, before running it",
+            "duration": 2.5248659999999745,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector answers a bundle without a token with 401 and a challenge, before running it",
+            "status": "passed",
+            "title": "answers a bundle without a token with 401 and a challenge, before running it",
+            "duration": 1.8299219999998968,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector answers the balance without a token with 401 and a challenge, before running it",
+            "status": "passed",
+            "title": "answers the balance without a token with 401 and a challenge, before running it",
+            "duration": 1.338132000000087,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector runs a free tool without a token",
+            "status": "passed",
+            "title": "runs a free tool without a token",
+            "duration": 6.517348000000084,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector refuses a crypto tool by name or category without calling it",
+            "status": "passed",
+            "title": "refuses a crypto tool by name or category without calling it",
+            "duration": 18.37135699999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector refuses a malformed bearer with invalid_token",
+            "status": "passed",
+            "title": "refuses a malformed bearer with invalid_token",
+            "duration": 1.545285000000149,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "lazy authentication on /mcp/connector"
+            ],
+            "fullName": "lazy authentication on /mcp/connector the broad /mcp keeps its x402 hand-off and never answers 401",
+            "status": "passed",
+            "title": "the broad /mcp keeps its x402 hand-off and never answers 401",
+            "duration": 4.332141000000092,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token runs a free tool anonymously with \"${STRALE_API_KEY}\", forwarding no Authorization",
+            "status": "passed",
+            "title": "runs a free tool anonymously with \"${STRALE_API_KEY}\", forwarding no Authorization",
+            "duration": 3.8326160000001437,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token runs a free tool anonymously with \"<your-key>\", forwarding no Authorization",
+            "status": "passed",
+            "title": "runs a free tool anonymously with \"<your-key>\", forwarding no Authorization",
+            "duration": 2.8441609999999855,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token runs a free tool anonymously with \"YOUR_API_KEY\", forwarding no Authorization",
+            "status": "passed",
+            "title": "runs a free tool anonymously with \"YOUR_API_KEY\", forwarding no Authorization",
+            "duration": 2.830979999999954,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token answers a paid tool with \"${STRALE_API_KEY}\" with the no-token challenge, not invalid_token",
+            "status": "passed",
+            "title": "answers a paid tool with \"${STRALE_API_KEY}\" with the no-token challenge, not invalid_token",
+            "duration": 1.0152070000001459,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token answers a paid tool with \"<your-key>\" with the no-token challenge, not invalid_token",
+            "status": "passed",
+            "title": "answers a paid tool with \"<your-key>\" with the no-token challenge, not invalid_token",
+            "duration": 0.770296000000144,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token answers a paid tool with \"YOUR_API_KEY\" with the no-token challenge, not invalid_token",
+            "status": "passed",
+            "title": "answers a paid tool with \"YOUR_API_KEY\" with the no-token challenge, not invalid_token",
+            "duration": 1.0722559999999248,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "an unexpanded placeholder bearer reads as no token"
+            ],
+            "fullName": "an unexpanded placeholder bearer reads as no token keeps the broad /mcp x402 hand-off for a paid tool with a placeholder",
+            "status": "passed",
+            "title": "keeps the broad /mcp x402 hand-off for a paid tool with a placeholder",
+            "duration": 2.5467140000000654,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "connector-mode tool results"
+            ],
+            "fullName": "connector-mode tool results getting started lists no crypto tool and offers sign-in, not x402",
+            "status": "passed",
+            "title": "getting started lists no crypto tool and offers sign-in, not x402",
+            "duration": 2.9553839999998672,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "connector-mode tool results"
+            ],
+            "fullName": "connector-mode tool results search drops crypto results",
+            "status": "passed",
+            "title": "search drops crypto results",
+            "duration": 2.9578019999999015,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "connectorProtectedCall"
+            ],
+            "fullName": "connectorProtectedCall finds a protected call anywhere in a batch and ignores the rest",
+            "status": "passed",
+            "title": "finds a protected call anywhere in a batch and ignores the rest",
+            "duration": 0.4370969999999943,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793294754589,
+        "endTime": 1793294754723.437,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-placeholder-auth/apps/api/src/routes/mcp-connector.test.ts"
+      }
+    ]
+  }
+}

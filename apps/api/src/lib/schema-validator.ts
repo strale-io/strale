@@ -42,11 +42,12 @@ import { auditMigrationArtifacts, artifactLabel, type MigrationArtifact } from "
  */
 export async function validateSchema(): Promise<void> {
   const db = getDb();
-  const { missing } = await auditMigrationArtifacts(db);
+  const { artifacts, missing } = await auditMigrationArtifacts(db);
 
   if (missing.length === 0) {
     log.info(
-      { label: "startup-schema-ok" },
+      // The count shows the deployed build read its migration blocks.
+      { label: "startup-schema-ok", artifacts_checked: artifacts.length },
       "Schema validation passed — all migration-derived artifacts present",
     );
     return;
@@ -74,6 +75,7 @@ export async function validateSchema(): Promise<void> {
     `Schema validation failed — DB is missing migration artifacts: ${missingList}`,
     `The database is missing schema (columns/tables/indexes) the deployed code expects (${missingList}). ` +
       `This is a deploy/code problem, not an outage that heals itself — restarting won't fix it. ` +
-      `Roll back: Railway dashboard -> Deployments -> previous working deploy -> Redeploy.`,
+      `Roll back: Railway dashboard -> Deployments -> previous working deploy -> Redeploy. ` +
+      `If the previous deploy fails the same way, set STARTUP_MIGRATIONS_FORCE=1 in Railway and redeploy, then remove it.`,
   );
 }

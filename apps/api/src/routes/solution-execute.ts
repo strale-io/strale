@@ -1,3 +1,4 @@
+import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * POST /v1/solutions/:slug/execute — Execute a bundled solution.
  *
@@ -14,6 +15,8 @@
  * Part of DEC-20260405-A fix plan, phase 1.4.
  */
 
+import { refusalDetails } from "../lib/capability-refusal.js";
+
 import { Hono } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
@@ -23,11 +26,14 @@ import {
   computeIdempotencyFingerprint,
   isReplayable,
 } from "../lib/idempotency-fingerprint.js";
+import { inputForPersistence } from "../lib/never-persist-inputs.js";
 import { extractClientMeta } from "../lib/attribution.js";
-import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
+import { solutions, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
-import { apiError } from "../lib/errors.js";
+import { apiError, recoveryDetails } from "../lib/errors.js";
+import { keyCapError } from "../lib/api-keys.js";
+import { spendCapWouldExceed } from "./do.js";
 import { stepsThatRan, executeSolution } from "../lib/solution-executor.js";
 import {
   aggregateSolutionOutcome,
@@ -60,7 +66,7 @@ solutionExecuteRoute.post(
     // ── 1. Parse request body ─────────────────────────────────────────
     const body = await c.req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return c.json(apiError("invalid_request", "Request body is required."), 400);
+      return c.json(apiError("invalid_request", "Request body is required.", { fix: "Send a JSON object in the request body with Content-Type: application/json." }), 400);
     }
 
     const inputs = body.inputs;
@@ -71,11 +77,11 @@ solutionExecuteRoute.post(
     const idempotencyFingerprint = computeIdempotencyFingerprint({
       rail: "solution",
       capabilitySlug: slug,
-      inputs: inputs as Record<string, unknown> | null,
+      inputs: inputForPersistence(slug, inputs as Record<string, unknown> | null),
     });
     if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) {
       return c.json(
-        apiError("invalid_request", "'inputs' is required and must be an object."),
+        apiError("invalid_request", "'inputs' is required and must be an object.", { fix: "Send 'inputs' as a JSON object containing the solution parameters." }),
         400,
       );
     }
@@ -173,17 +179,25 @@ solutionExecuteRoute.post(
           }
         }
 
-        const [wallet] = await tx
-          .select()
-          .from(wallets)
-          .where(eq(wallets.userId, user.id))
-          .for("update");
+        const wallet = await walletService.lockWalletForUser(tx, user.id);
+
+        const keyError = await keyCapError(tx, user.id, c.get("apiKeyId"), sol.priceCents);
+        if (keyError) return { ok: false as const, policyError: keyError };
 
         if (!wallet || wallet.balanceCents < sol.priceCents) {
           return {
             ok: false as const,
             balance: wallet?.balanceCents ?? 0,
           };
+        }
+
+        // Additional keys must also pass the existing account policy. Keep
+        // the primary solution path's behaviour unchanged.
+        if (c.get("apiKeyId") && user.maxSpendPerHourCents) {
+          const cap = await spendCapWouldExceed(tx, user.id, sol.priceCents, user.maxSpendPerHourCents);
+          if (cap) return { ok: false as const, policyError: apiError("spend_cap_exceeded",
+            "Account hourly spend limit would be exceeded. Raise the account limit or wait for earlier spending to leave the hourly window.",
+            { spent_cents: cap.spent, limit_cents: user.maxSpendPerHourCents, requested_cents: sol.priceCents }) };
         }
 
         // Insert transaction row at "executing" — two-phase write per /v1/do pattern
@@ -205,7 +219,7 @@ solutionExecuteRoute.post(
               src: c.req.query("src"),
               ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
             }) ?? null,
-            input: inputs as Record<string, unknown>,
+            input: inputForPersistence(sol.slug, inputs as Record<string, unknown>),
             priceCents: sol.priceCents,
             transparencyMarker: sol.transparencyTag ?? "mixed",
             // F-AUDIT-01 / CCO #3: previously hardcoded "EU" while running in
@@ -239,6 +253,7 @@ solutionExecuteRoute.post(
           userId: user.id,
           amountCents: sol.priceCents,
           transactionId: txnRecord.id,
+          apiKeyId: c.get("apiKeyId"),
           description: `Solution: ${sol.slug}`,
         });
 
@@ -247,7 +262,7 @@ solutionExecuteRoute.post(
           transactionId: txnRecord.id,
           balanceAfter: reservation.balanceAfter,
           walletId: wallet.id,
-          walletBalanceBefore: wallet.balanceCents,
+          walletBalanceBefore: reservation.balanceAfter + sol.priceCents,
           reservationId: reservation.id,
         };
       });
@@ -255,6 +270,10 @@ solutionExecuteRoute.post(
       // WP6: three distinct not-ok shapes now share this branch, and they mean
       // very different things to the caller. Discriminate before assuming the
       // wallet one, or a replay would be reported as insufficient funds.
+      if (!txResult.ok && "policyError" in txResult) {
+        return c.json(txResult.policyError!, txResult.policyError!.error_code === "unauthorized" ? 401 : 429);
+      }
+
       if (!txResult.ok && "keyConflictWith" in txResult) {
         return c.json(
           apiError(
@@ -368,6 +387,7 @@ solutionExecuteRoute.post(
           transaction_id: transactionId,
           solution_slug: slug,
           error: sanitizeFailureReason(errorMessage),
+          ...refusalDetails(err),
           wallet_balance_cents: walletBalanceBefore,
         }),
         500,
@@ -575,6 +595,8 @@ solutionExecuteRoute.post(
       );
     }
 
+    persistCallCost(transactionId);
+
     c.get("log").info(
       {
         label: "solutions-execute-done",
@@ -610,6 +632,13 @@ solutionExecuteRoute.post(
         status: responseStatus,
         steps: execResult.steps,
         errors: execResult.errors.length > 0 ? execResult.errors : undefined,
+        ...(execResult.errors.length ? { details: {
+          retryable: allFailed,
+          next_step: allFailed
+            ? "This run was refunded; retry with exponential backoff after checking the failed steps."
+            : "Inspect the failed steps before retrying; a rerun charges the solution price again.",
+          errors: execResult.errors.map(error => recoveryDetails("execution_failed", "", { error: sanitizeFailureReason(error.replace(/^[^:]+: /, "")) })),
+        } } : {}),
         step_count: totalSteps,
         latency_ms: latencyMs,
         price_cents: chargedPrice,

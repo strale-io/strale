@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("api-docs-generate", async (input: CapabilityInput) => {
@@ -18,7 +19,7 @@ registerCapability("api-docs-generate", async (input: CapabilityInput) => {
     ? `OpenAPI/Swagger spec:\n${openapiSpec.slice(0, 10000)}`
     : `Endpoint description:\n${endpointDesc!.slice(0, 5000)}`;
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

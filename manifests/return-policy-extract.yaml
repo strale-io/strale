@@ -71,21 +71,21 @@ output_field_reliability:
   refund_method: guaranteed
   return_window_days: guaranteed
 limitations:
-  - title: Complex conditional return policies or product-specific exceptions may be simplified during extraction
+  - title: Complex conditions and exceptions can be simplified
     text: >-
-      Extracts return policy terms via scraping — policies with complex conditional logic or product-specific exceptions
-      may be simplified
+      Complex conditional policies and product-specific exceptions may be simplified during
+      extraction.
     category: accuracy
     severity: info
     workaround: Verify extracted terms against the retailer's full return policy page for product-category-specific conditions
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a retailer with an unusually long list of conditions and
-      exclusions. Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This retailer's policy page produced more content than fits in one call — no direct workaround
+    workaround: Read the retailer’s full return policy directly for conditions that exceed the output limit.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

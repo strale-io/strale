@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
@@ -56,7 +57,7 @@ registerCapability("pii-redact", async (input: CapabilityInput) => {
   // Truncate to prevent abuse (100k chars)
   const truncated = text.length > 100000 ? text.slice(0, 100000) : text;
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const parsed = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

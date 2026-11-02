@@ -83,6 +83,16 @@ export type VerifyResult =
     };
 
 // F-A-006: token format is `HMAC-SHA256(secret, `${txnId}:${expiresAt}`).hex[:32]`.
+/**
+ * A purpose-bound key derived from AUDIT_HMAC_SECRET, so features that need an
+ * HMAC key (signed file URLs, job-callback signatures) do not add an env var
+ * or reuse the audit-token key directly. Distinct labels give independent keys.
+ * Rotating AUDIT_HMAC_SECRET rotates every derived key with it.
+ */
+export function deriveSubkey(label: string): Buffer {
+  return createHmac("sha256", AUDIT_SECRET).update(`strale-subkey:${label}`).digest();
+}
+
 // expiresAt is unix seconds. Caller surfaces it separately (as a query param).
 export function generateAuditToken(
   transactionId: string,

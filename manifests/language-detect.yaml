@@ -1,6 +1,6 @@
 slug: language-detect
 name: "Language Detection"
-description: "Detect the language of a text among 170+ languages, with a confidence score and the next most likely languages."
+description: "Identify the likely language of supplied text. Returns the detected language, confidence and alternative language candidates."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

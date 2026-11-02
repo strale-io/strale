@@ -110,7 +110,7 @@ output_field_reliability:
   invalid_rows: guaranteed
   quality_score: guaranteed
 limitations:
-  - title: Checks for nulls, duplicates, and type mismatches only — domain-specific validation rules are not applied
+  - title: Domain-specific validation rules are not applied
     text: >-
       Checks for common data quality issues (nulls, duplicates, type mismatches) — domain-specific validation rules are
       not applied

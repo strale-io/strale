@@ -75,7 +75,7 @@ limitations:
     category: dependency
     severity: info
   - title: Geocoding is approximate for vague queries
-    text: Vague queries (e.g., just a city name) return approximate center coordinates
+    text: Vague queries (e.g., just a city name) return approximate centre coordinates
     category: accuracy
     severity: info
 

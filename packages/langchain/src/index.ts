@@ -1,3 +1,4 @@
+import { CLIENT_ID } from "./client-id.js";
 import { Tool } from "@langchain/core/tools";
 import type { CallbackManagerForToolRun } from "@langchain/core/callbacks/manager";
 import { Strale, StraleError } from "straleio";
@@ -28,6 +29,7 @@ export class StraleFallbackTool extends Tool {
     super();
     this.client = new Strale({
       apiKey: options.apiKey,
+      clientHeader: CLIENT_ID,
       baseUrl: options.baseUrl,
     });
     this.maxPriceCents = Math.round((options.maxPrice ?? 2.0) * 100);

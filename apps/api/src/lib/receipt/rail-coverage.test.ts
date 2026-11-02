@@ -27,7 +27,12 @@ const SRC = join(import.meta.dirname, "..", "..");
  * Key: path relative to `src/`, using forward slashes.
  */
 const EXEMPT: Record<string, string> = {
-  "lib/startup-migrations.ts":
+  "lib/x402-payment-claims.ts":
+    "Admission-only executing claims, not a new execution rail. Gateway " +
+    "recordX402Transaction finalizes these rows and settles their receipts. " +
+    "Pre-execution rejections delete the claim; crash-abandoned attempts keep " +
+    "receipt_rail and pending receipt state for the existing receipt sweeper.",
+  "startup-migrations/blocks/0109-receipt-epoch.ts":
     "block 0109's behavioural self-check. It inserts an ordinary row inside a " +
     "plpgsql subtransaction and unwinds it, to prove that the receipt defaults " +
     "and the reason-required CHECK actually permit a write - the defect that " +
@@ -122,7 +127,7 @@ describe("receipt rail coverage", () => {
       .map((p) => p.slice(SRC.length + 1).split("\\").join("/"));
 
     for (const expected of [
-      "routes/do.ts",
+      "lib/do/dispatch.ts",
       "routes/solution-execute.ts",
       "routes/x402-gateway-v2.ts",
       "lib/test-runner.ts",

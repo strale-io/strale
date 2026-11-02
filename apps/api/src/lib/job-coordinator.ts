@@ -1,3 +1,5 @@
+import { observeJobOutcome } from "./job-run-context.js";
+import { JOB_INTERVALS, markJobSuccess, persistJobSuccess } from "./job-heartbeats.js";
 /**
  * WP10 — Durable Job Coordinator (CR-08).
  *
@@ -566,6 +568,9 @@ export async function runDueJobs(): Promise<{
 
   for (const def of _registry.values()) {
     if (isShuttingDown()) break;
+    // Record loop progress; a bounded long handler may briefly exceed the
+    // freshness allowance. Individual jobs require completed success.
+    markJobSuccess("job-coordinator");
     if (_unpersisted.has(def.name)) {
       skipped.push(def.name);
       continue;
@@ -602,8 +607,9 @@ export async function runDueJobs(): Promise<{
       // failure, arming no backoff, and leaving the job unclaimable for the
       // rest of its lease. Reviewer-found; latent, because the one handler
       // that uses withDeadline today catches its own.
-      await withDeadline(watchdogLabel, watchdogMs, Promise.resolve(def.handler()));
+      const observed = await observeJobOutcome(() => withDeadline(watchdogLabel, watchdogMs, Promise.resolve(def.handler())));
       await releaseJob(claim, "ok");
+      if (observed.successful && def.name in JOB_INTERVALS) await persistJobSuccess(def.name);
       ran.push(def.name);
       log.info(
         {
@@ -646,6 +652,7 @@ export async function runDueJobs(): Promise<{
     }
   }
 
+  markJobSuccess("job-coordinator");
   return { ran, skipped, timedOut };
 }
 

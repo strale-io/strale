@@ -16,6 +16,9 @@ vendor_roster_url: null
 provider_tos_notes: Direct API + nightly bulk open-data ingest from avaandmed.ariregister.rik.ee. CC BY 4.0; attribution preserved in provenance. Strong e-government posture. cost_class=free_unlimited.
 doctrine_reference: "DEC-20260518-E (exhaustive enumeration); DEC-20260518-F (attribution, kept by DEC-20261023-A); DEC-20260518-A (canonical legal_representatives shape)"
 notes: >-
+  2026-10-31: the bulk ingest has never completed in production: the open-data host answers production with
+  HTTP 403, so legal_representatives[] is empty on every call and the tier_2 count below describes the design,
+  not what is served. Strale stops at a block (DEC-20261023-A); access is being asked of RIK.
   2026-05-18: legal_representatives[] now populated from RIK Ariregister Open Data bulk JSON
   (`ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip`, ~45 MB compressed / ~1 GB JSON,
   daily refresh ~10:37 UTC, CC BY 4.0). Nightly ingest job

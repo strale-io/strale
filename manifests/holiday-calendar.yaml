@@ -1,6 +1,6 @@
 slug: holiday-calendar
 name: "Holiday Calendar"
-description: "Get a country's public holidays for a year, for 200+ countries: names, dates, type (public, bank or optional) and whether each is fixed or moves."
+description: "List public holidays for a supported country and year. Returns dates, names, holiday types and available regional details."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

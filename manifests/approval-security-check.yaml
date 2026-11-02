@@ -6,9 +6,7 @@
 
 slug: approval-security-check
 name: Approval Security Check
-description: >-
-  Check a wallet's token approvals for security risks. Identifies unlimited or risky approvals that could allow funds to
-  be drained. Covers Ethereum, BSC, Base, and other EVM chains via GoPlus Security.
+description: "Currently unavailable. Check wallet token approvals for unlimited spending allowances and reported risks."
 category: web3
 cost_class: free_quota
 quota_window: daily

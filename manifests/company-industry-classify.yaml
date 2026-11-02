@@ -60,7 +60,7 @@ output_field_reliability:
   description: common
 limitations:
   - title: AI-based classification
-    text: Uses LLM for classification — may differ from official SIC/NAICS assignments by government agencies
+    text: Suggested classifications may differ from official SIC or NAICS assignments by government agencies.
     category: accuracy
     severity: info
   - title: Requires company description for best results

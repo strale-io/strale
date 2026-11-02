@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // Shared Nominatim rate limiter (1 req/sec per their usage policy)
@@ -16,7 +17,7 @@ export { nominatimThrottle };
 registerCapability("address-validate", async (input: CapabilityInput) => {
   const address = ((input.address as string) ?? (input.task as string) ?? "").trim();
   if (!address) {
-    throw new Error("'address' is required. Provide a full postal address.");
+    throw inputRefusal("'address' is required. Provide a full postal address.", "address", "Send 'address' as a full postal address string.");
   }
 
   const countryCode = ((input.country_code as string) ?? "").trim().toLowerCase() || undefined;

@@ -52,6 +52,39 @@ function sliceBalancedObject(text: string): string | null {
 }
 
 /**
+ * Escape raw control characters (newline, tab, ...) that appear inside JSON
+ * string literals. Only characters inside string literals are touched.
+ */
+function escapeControlCharsInStrings(span: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of span) {
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+    } else if (escaped) {
+      escaped = false;
+      out += ch;
+    } else if (ch === "\\") {
+      escaped = true;
+      out += ch;
+    } else if (ch === '"') {
+      inString = false;
+      out += ch;
+    } else if (ch.charCodeAt(0) < 0x20) {
+      if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "\\r";
+      else if (ch === "\t") out += "\\t";
+      else out += "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0");
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
  * Parse a JSON object out of a raw LLM response.
  *
  * Tries the contents of a fenced block first (the fence is the model's own
@@ -80,7 +113,14 @@ export function extractJsonObject(raw: string): Record<string, unknown> | null {
       // parse is necessarily a plain object.
       return JSON.parse(span) as Record<string, unknown>;
     } catch {
-      // Try the next candidate.
+      // Strict parse failed. Retry once with raw line breaks inside string
+      // literals escaped (a common model slip with multi-line text fields),
+      // then try the next candidate.
+      try {
+        return JSON.parse(escapeControlCharsInStrings(span)) as Record<string, unknown>;
+      } catch {
+        // Try the next candidate.
+      }
     }
   }
 

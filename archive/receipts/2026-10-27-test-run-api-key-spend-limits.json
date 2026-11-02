@@ -1,0 +1,573 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "ae10877dfef17e5351ded5b3d1356f61b4d5e142"
+  },
+  "at": "2026-10-27T08:36:03.700Z",
+  "inputs": {
+    "base": "10f71df8",
+    "verification_report": "archive/sessions/2026-10-27-api-key-spend-limits-checks.md",
+    "test_scope": "complete API suite; root CI; SDK; bounded fail-before mutations"
+  },
+  "summary": {
+    "ok": false,
+    "failures_count": 2,
+    "local_code_checks_passed": true,
+    "all_requested_gates_passed": false,
+    "api_tests_passed": 5818,
+    "api_tests_skipped": 334,
+    "api_files_passed": 339,
+    "api_files_skipped": 32,
+    "new_key_unit_tests_passed": 26,
+    "new_db_integration_tests_authored": 13,
+    "new_db_integration_tests_executed": 0,
+    "sdk_tests_passed": 2,
+    "ci_check_job_commands_passed": 57,
+    "mutations_caught": 8,
+    "production_writes": 0,
+    "post_deploy_schema_verified": false
+  },
+  "topic": "api-key-spend-limits",
+  "raw": {
+    "ok": false,
+    "local_code_checks_passed": true,
+    "all_requested_gates_passed": false,
+    "api_tests_passed": 5818,
+    "api_tests_skipped": 334,
+    "api_files_passed": 339,
+    "api_files_skipped": 32,
+    "new_key_unit_tests_passed": 26,
+    "new_db_integration_tests_authored": 13,
+    "new_db_integration_tests_executed": 0,
+    "sdk_tests_passed": 2,
+    "ci_check_job_commands_passed": 57,
+    "mutations_caught": 8,
+    "production_writes": 0,
+    "post_deploy_schema_verified": false,
+    "failures": [
+      {
+        "check": "DB integration",
+        "reason": "Missing test DB; only root UID mapped, cannot initialize PostgreSQL or switch UID. Fail-closed command executed zero tests."
+      },
+      {
+        "check": "handoff:check",
+        "reason": "No pushed feature upstream; inherited merged branches left untouched. Original Git metadata read-only. User prohibits pushes and reserves shipping for orchestrator."
+      }
+    ],
+    "checks": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0,
+        "log": "ci-1.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0,
+        "log": "ci-2.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "log": "ci-3.log",
+        "tests_passed": 0,
+        "initial_exit_code": 2
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "log": "ci-4.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "log": "ci-5.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "log": "ci-6.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "log": "ci-7.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "log": "ci-8.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "log": "ci-9.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "log": "ci-10.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "log": "ci-11.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "log": "ci-12.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "log": "ci-13.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "log": "ci-14.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "log": "ci-15.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "log": "ci-16.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "log": "ci-17.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "log": "ci-18.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "log": "ci-19.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "log": "ci-20.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "log": "ci-21.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "log": "ci-22.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "log": "ci-23.log",
+        "tests_passed": 30,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "log": "ci-24.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "log": "ci-25.log",
+        "tests_passed": 31,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "log": "ci-26.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "log": "ci-27.log",
+        "tests_passed": 84,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "log": "ci-28.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "log": "ci-29.log",
+        "tests_passed": 24,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "log": "ci-30.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "log": "ci-31.log",
+        "tests_passed": 78,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "log": "ci-32.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "log": "ci-33.log",
+        "tests_passed": 15,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "log": "ci-34.log",
+        "tests_passed": 20,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "log": "ci-35.log",
+        "tests_passed": 3,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "log": "ci-36.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "log": "ci-37.log",
+        "tests_passed": 12,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "log": "ci-38.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "log": "ci-39.log",
+        "tests_passed": 16,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "log": "ci-40.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "log": "ci-41.log",
+        "tests_passed": 43,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "log": "ci-42.log",
+        "tests_passed": 24,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "log": "ci-43.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "log": "ci-44.log",
+        "tests_passed": 14,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "log": "ci-45.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "log": "ci-46.log",
+        "tests_passed": 18,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "log": "ci-47.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "log": "ci-48.log",
+        "tests_passed": 6,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0,
+        "log": "ci-49.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "log": "ci-50.log",
+        "tests_passed": 12,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "log": "ci-51.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "log": "ci-52.log",
+        "tests_passed": 25,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "log": "ci-53.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "log": "ci-54.log",
+        "tests_passed": 23,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "log": "ci-55.log",
+        "tests_passed": 46,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "log": "ci-56.log",
+        "tests_passed": 0,
+        "initial_exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "log": "ci-57.log",
+        "tests_passed": 180,
+        "initial_exit_code": 0
+      }
+    ],
+    "mutations": [
+      {
+        "name": "main-auth",
+        "file": "apps/api/src/lib/middleware.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "caps",
+        "file": "apps/api/src/lib/api-keys.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "bind-shape",
+        "file": "apps/api/src/lib/api-keys.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "secret-list",
+        "file": "apps/api/src/routes/api-keys.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "attribution",
+        "file": "apps/api/src/lib/wallet-service.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "migration",
+        "file": "apps/api/src/lib/startup-migrations.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "main-sdk",
+        "file": "packages/sdk-typescript/src/client.ts",
+        "exit_code": 0
+      },
+      {
+        "name": "main-routes",
+        "file": "apps/api/src/app.ts",
+        "exit_code": 0
+      }
+    ],
+    "additional_checks": [
+      {
+        "command": "npm ci",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsc --noEmit (apps/api)",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript test",
+        "exit_code": 0,
+        "passed": 2
+      },
+      {
+        "command": "npm --workspace=apps/api test -- --maxWorkers=2",
+        "exit_code": 0,
+        "passed": 5818,
+        "skipped": 334
+      },
+      {
+        "command": "STRALE_REQUIRE_INTEGRATION_DB=1 npx vitest run --no-file-parallelism integration.test.ts",
+        "exit_code": 1,
+        "tests_executed": 0,
+        "suites_refused": 32
+      },
+      {
+        "command": "npm run context:test (writable worktree)",
+        "exit_code": 0,
+        "passed": 180
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit_code": 1
+      }
+    ],
+    "earlier_full_runs": [
+      {
+        "passed": 5813,
+        "skipped": 334,
+        "failed": 0
+      },
+      {
+        "passed": 5812,
+        "skipped": 334,
+        "failed": 2,
+        "failures": "search performance under overlapping runs"
+      },
+      {
+        "passed": 5816,
+        "skipped": 334,
+        "failed": 2,
+        "failures": "search performance and verify timeout under overlapping runs"
+      }
+    ],
+    "live_checks": [
+      {
+        "method": "GET",
+        "path": "/health/version",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/health",
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "commit": "10f71df81716"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "cae26eb696a55d454d1716fd4c16061a08be52e5"
+  },
+  "at": "2026-10-29T01:39:49.590Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r4.json"
+  },
+  "summary": {
+    "integration_tests": 369,
+    "failed": 0,
+    "dropped_columns": 8,
+    "local_snapshot_rows": 500
+  },
+  "topic": "h7d-drop-sqs-residual-schema",
+  "raw": {
+    "ok": true,
+    "postgres": "16.15",
+    "integration_lane": {
+      "test_files_passed": 39,
+      "tests_passed": 369,
+      "failed": 0
+    },
+    "api_suite": {
+      "files_passed": 381,
+      "tests_passed": 7740,
+      "failed": 0
+    },
+    "dist_boot_sequence": [
+      {
+        "boot": 1,
+        "outcome": "deferred",
+        "marker_written_after_listen": true
+      },
+      {
+        "boot": 2,
+        "outcome": "deferred"
+      },
+      {
+        "boot": 3,
+        "marker_backdated_minutes": 11,
+        "outcome": "dropped 8 SQS columns from 356 capabilities rows and sqs_daily_snapshot (500 rows, 98304 bytes)",
+        "schema_artifacts_checked": 88
+      },
+      {
+        "boot": 4,
+        "outcome": "skipped (already dropped)"
+      }
+    ],
+    "mutations_caught": [
+      "marker gate removed",
+      "delay check removed",
+      "one column not dropped",
+      "snapshot rows not counted"
+    ],
+    "public_wire_scan": {
+      "endpoints": 7,
+      "sqs_field_hits": 0,
+      "note": "3 trend hits are capability output_schema properties"
+    }
+  }
+}

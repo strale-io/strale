@@ -33,6 +33,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import {
+  apiKeys,
   disputeRequests,
   failedRequests,
   transactions,
@@ -46,6 +47,7 @@ import {
 } from "./customer-content.js";
 import { anonymiseTrialGrantOnClosure } from "./trial-eligibility.js";
 import { purgeRecoveryTokensOnClosure } from "./key-recovery.js";
+import { revokeOAuthOnClosure } from "./oauth.js";
 
 export type ClosureDisposition = "anonymized" | "deleted" | "retained";
 
@@ -78,6 +80,28 @@ export interface ClosureRule {
  * Ordering is presentation order in the receipt, nothing more.
  */
 export const CLOSURE_PLAN: readonly ClosureRule[] = [
+  {
+    table: "api_keys",
+    columns: ["api_key_hash", "key_prefix", "label", "last_used_at"],
+    disposition: "anonymized",
+  },
+  {
+    table: "api_keys",
+    columns: ["id", "user_id", "created_at", "revoked_at"],
+    disposition: "retained",
+    reason: "Revoked key IDs and account linkage explain historical wallet debits. Labels, prefixes and hashes are cleared; keys cannot authenticate.",
+  },
+  {
+    table: "oauth_authorization_codes",
+    columns: ["user_id", "source_api_key_id", "code_hash"],
+    disposition: "deleted",
+  },
+  {
+    table: "oauth_grants",
+    columns: ["id", "user_id", "api_key_id", "client_id", "created_at", "revoked_at"],
+    disposition: "retained",
+    reason: "Which app was connected (for example Claude) and the key it spent through explain historical wallet debits. Every connection and its tokens are revoked at closure and cannot authenticate.",
+  },
   {
     table: "users",
     columns: ["email", "name", "api_key_hash", "key_prefix", "signup_ip_hash"],
@@ -226,12 +250,36 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
       "Which catalogue entries were viewed, with a truncated IP hash and no account link. Same shape as suggest_log above; pruned at 90 days.",
   },
   {
+    table: "job_files",
+    columns: ["rows", "user_id"],
+    disposition: "deleted",
+    respectsLegalHold: true,
+    reason:
+      "Files an asynchronous job produced for you (for example a transcript). Deleted by this request, " +
+      "except files of a transaction under a legal hold, which are kept with it.",
+  },
+  {
+    table: "job_callbacks",
+    columns: ["rows", "user_id"],
+    disposition: "deleted",
+    reason: "The callback URLs you gave for asynchronous jobs, and their delivery status. Deleted by this request.",
+  },
+  {
     table: "wallet_reservations",
     columns: ["user_id"],
     disposition: "retained",
     reason:
       "Short-lived records of funds held during an execution. `user_id` is NOT NULL on this table, so it cannot be cleared; " +
       "rows are resolved by the reconciler within their deadline and do not accumulate.",
+  },
+  {
+    table: "batch_orders",
+    columns: ["user_id"],
+    disposition: "retained",
+    reason:
+      "The order record for each batch call: which tool, how many items, the quoted price and the ids of the item holds. " +
+      "It holds no inputs or outputs — those are on the item transactions, which closure clears as above. " +
+      "`user_id` is NOT NULL on this table, so it cannot be cleared; the row is what the retained ledger debits of a batch trace back to.",
   },
   {
     table: "capability_invocations",
@@ -345,8 +393,16 @@ export async function applyClosurePlan(
     })
     .where(eq(users.id, params.userId));
 
+  // Keep IDs for the debit ledger, erase labels and usable authentication data.
+  await tx.update(apiKeys).set({
+    apiKeyHash: sql`'revoked:' || ${apiKeys.id}::text`,
+    keyPrefix: "REDACTED", label: "REDACTED", lastUsedAt: null,
+    revokedAt: sql`COALESCE(${apiKeys.revokedAt}, now())`,
+  }).where(eq(apiKeys.userId, params.userId));
+
   await anonymiseTrialGrantOnClosure(tx, { userId: params.userId });
   await purgeRecoveryTokensOnClosure(tx, { userId: params.userId });
+  await revokeOAuthOnClosure(tx, params.userId);
 
   // `client_meta` is the one identifier-bearing field on `transactions` that
   // is NOT inside the hashed payload (`lib/integrity-hash.ts` hashes input,
@@ -377,6 +433,19 @@ export async function applyClosurePlan(
     .update(disputeRequests)
     .set({ userId: null, contactEmail: null })
     .where(eq(disputeRequests.userId, params.userId));
+
+  // Async-job output (portfolio 2.11). File bytes are customer content and go
+  // now, inside this transaction, except on a transaction under legal hold,
+  // which keeps its content like the redaction below. Callbacks hold only a
+  // URL the customer chose and are deleted outright.
+  await tx.execute(sql`
+    DELETE FROM job_files f
+     USING transactions t
+     WHERE t.id = f.transaction_id
+       AND f.user_id = ${params.userId}::uuid
+       AND t.legal_hold = false
+  `);
+  await tx.execute(sql`DELETE FROM job_callbacks WHERE user_id = ${params.userId}::uuid`);
 
   // Erasure that erases.
   //

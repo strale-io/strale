@@ -35,6 +35,8 @@ async function main() {
   // operations noticing.
   const { assertAlertingConfigured } = await import("./lib/alerting.js");
   assertAlertingConfigured();
+  const { logBusAlertingStatus } = await import("./lib/alert-bus.js");
+  logBusAlertingStatus();
 
   // Execution receipts (Phase 5): the process must be able to name the commit
   // it is serving BEFORE it serves anything.
@@ -209,6 +211,18 @@ async function main() {
   // This is the single remaining boot-relative timer on the platform, and it
   // deliberately holds no business fact: it only asks `job_schedule` what is
   // due. Every cadence it acts on survives the restart that resets it.
+  const { initializeHeartbeatGrace } = await import("./lib/job-heartbeats.js");
+  // Monitoring only: if the epoch cannot be written, /health/jobs fails safe
+  // (auxiliary jobs read stale instead of graced), so this must never stop boot.
+  try {
+    await withStartupDbRetry("heartbeat-grace", initializeHeartbeatGrace, { startedAt: dbRetryStartedAt });
+  } catch (err) {
+    const { log } = await import("./lib/log.js");
+    log.warn(
+      { label: "heartbeat-grace-init-failed", err: err instanceof Error ? err.message : String(err) },
+      "heartbeat grace epoch not written; job freshness reports without grace",
+    );
+  }
   const { startJobCoordinator } = await import("./lib/job-coordinator.js");
   startJobCoordinator();
 
@@ -273,6 +287,11 @@ async function main() {
   // "awaiting reconciliation" meant awaiting a human who had to notice first.
   startSettlementReconciler();
 
+  // Portfolio 2.11: async-job callback retries and the bounded file-output
+  // retention purge (DEC-20260504-B), on a 60s tick.
+  const { startAsyncJobs } = await import("./jobs/async-jobs.js");
+  startAsyncJobs();
+
   // Monthly REINDEX CONCURRENTLY on `transactions` — prevents B-tree
   // bloat drift that caused the 2026-04-16 outage. Uses the dedicated-
   // connection advisory-lock pattern because REINDEX CONCURRENTLY can't
@@ -317,8 +336,36 @@ async function main() {
 
   const port = parseInt(process.env.PORT || "3000", 10);
 
+  let sqsHeartbeat: { stop: () => Promise<void> } | undefined;
   const server = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Strale API running on http://localhost:${info.port}`);
+
+    // In-process, after listen. Text sync can fail without taking boot down.
+    void import("./lib/manifest-text-sync.js").then(({ applyManifestText }) => applyManifestText()).catch(async () => {
+      const { log } = await import("./lib/log.js");
+      log.warn({ label: "manifest-text-sync-summary", updated: 0, unchanged: 0, report_only: 0, failed: 1 }, "manifest-text-sync-summary");
+    });
+
+    // Block 0132 drops the residual SQS columns only while this build, which
+    // no longer selects them, is provably the live one: beats start minutes
+    // after listen, past Railway's healthcheck window, and a graceful
+    // shutdown withdraws the latest beat (see "sqs-retirement-beat" below).
+    // Non-fatal.
+    void import("./startup-migrations/sqs-schema-retirement.js").then(async (retirement) => {
+      const { getDb } = await import("./db/index.js");
+      const { log } = await import("./lib/log.js");
+      const { isShuttingDown } = await import("./lib/shutdown.js");
+      sqsHeartbeat = retirement.startSqsRetirementHeartbeat({
+        beat: () => retirement.recordSqsFieldsRemovedAndServing(getDb()),
+        onError: (err) => log.warn({ label: "sqs-retirement-beat-failed",
+          err: err instanceof Error ? err.message : String(err) }, "sqs-retirement-beat-failed"),
+        shuttingDown: isShuttingDown,
+      });
+    }).catch(async (err: unknown) => {
+      const { log } = await import("./lib/log.js");
+      log.warn({ label: "sqs-retirement-beat-not-started", err: err instanceof Error ? err.message : String(err) },
+        "sqs-retirement-beat-not-started");
+    });
 
     // Pre-warm suggest catalog after env + server are ready
     warmCatalog().catch((err: Error) =>
@@ -334,6 +381,9 @@ async function main() {
   const { onShutdown, installShutdownHandlers } = await import("./lib/shutdown.js");
   const { closeDbPool } = await import("./db/index.js");
 
+  // Registered first, so it runs last (LIFO): the drain's own log lines ship too.
+  const { closeLogSink } = await import("./lib/log.js");
+  onShutdown("log-sink", () => closeLogSink());
   onShutdown("db-pool", () => closeDbPool());
   onShutdown(
     "http-server",
@@ -343,11 +393,23 @@ async function main() {
       }),
   );
 
+  // Registered last, so it runs first (LIFO): before the request drain and
+  // the forced-exit timer can cut shutdown short, and long before the pool
+  // closes. A stopped build must not leave a fresh beat that lets block 0132
+  // drop columns under whatever serves next.
+  onShutdown("sqs-retirement-beat", async () => {
+    await sqsHeartbeat?.stop();
+    const { clearSqsRetirementBeat } = await import("./startup-migrations/sqs-schema-retirement.js");
+    const { getDb } = await import("./db/index.js");
+    await clearSqsRetirementBeat(getDb());
+  });
+
   installShutdownHandlers();
 }
 
 main().catch(async (err) => {
-  console.error("Fatal startup error:", err);
+  const { startupErrorDetails, formatStartupError } = await import("./lib/startup-error.js");
+  console.error("Fatal startup error:", startupErrorDetails(err));
 
   // 2026-07-02 outage: the process died silently 10 times and nobody was
   // paged. Best-effort email before exit (production only; RESEND_API_KEY
@@ -374,20 +436,24 @@ main().catch(async (err) => {
               `1) Open Railway deploy logs for the strale service. ` +
               `2) If this started right after a deploy, roll back: Railway dashboard -> ` +
               `Deployments -> previous working deploy -> Redeploy. ` +
-              `3) If nothing was deployed recently, keep this email — the stack trace below ` +
+              `3) If nothing was deployed recently, keep this email — the error diagnostics below ` +
               `is what a debugging session needs.`;
+      const { settleBusDeliveries } = await import("./lib/alert-bus.js");
+      const emailed = sendAlert({
+        subject: "API failed to start",
+        severity: "critical",
+        body:
+          `Strale API startup aborted with a fatal error. Railway restarts it per the ` +
+          `service restart policy (default: up to 10 times), then the service stays ` +
+          `CRASHED until redeployed.\n\n` +
+          `${guidance}\n\n` +
+          `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
+          `Error: ${formatStartupError(err)}`,
+      });
+      // The process exits next, so wait for the bus post too (bounded by its
+      // own 5s timeout, and by this race).
       await Promise.race([
-        sendAlert({
-          subject: "API failed to start",
-          severity: "critical",
-          body:
-            `Strale API startup aborted with a fatal error. Railway restarts it per the ` +
-            `service restart policy (default: up to 10 times), then the service stays ` +
-            `CRASHED until redeployed.\n\n` +
-            `${guidance}\n\n` +
-            `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
-            `Error: ${err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err)}`,
-        }),
+        Promise.all([emailed, settleBusDeliveries()]),
         new Promise<void>((r) => setTimeout(r, 10_000)),
       ]);
     } catch {

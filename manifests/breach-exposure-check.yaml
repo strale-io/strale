@@ -1,6 +1,6 @@
 slug: breach-exposure-check
 name: "Breach Exposure Check"
-description: "Find known data breaches of a company's own domain: when, how many accounts, which kinds of data leaked, and whether passwords were among them. Takes a domain only."
+description: "Find reported breaches of a company's own domain, with dates, affected-account counts and exposed data categories."
 category: compliance
 cost_class: free_unlimited
 quota_window: none
@@ -112,10 +112,9 @@ limitations:
     severity: warning
   - title: No per-email or per-password checking, by design
     text: >-
-      Have I Been Pwned's account endpoint and the Pwned Passwords range API are both excluded.
-      Strale records capability inputs on the transaction for 90 days with no write-time redaction,
-      so an email address or password hash passed here would be retained. Those inputs are rejected
-      with an explanatory error rather than accepted.
+      Per-email and password-hash lookups are rejected with an explanatory error; only domain-level
+      breach queries are supported. Submitted tool inputs are retained for 90 days without redaction
+      at submission, so do not pass an email address or password hash.
     category: coverage
     severity: warning
     workaround: Query Have I Been Pwned directly from your own environment for account-level checks.

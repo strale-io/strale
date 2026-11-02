@@ -1,0 +1,439 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "59a44d2f420e7c79b6997b9c0a5b4b953afc86c9"
+  },
+  "at": "2026-10-26T22:55:23.497Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "base_commit": "59a44d2f420e7c79b6997b9c0a5b4b953afc86c9",
+    "candidate": "uncommitted Round 2 working tree",
+    "baseline_restore": "all modified implementation bytes saved in memory and restored byte-for-byte before final green verification; no branch switches, clones, bundles or agent worktrees"
+  },
+  "topic": "onboarding-run-round2",
+  "raw": {
+    "ok": true,
+    "base_commit": "59a44d2f420e7c79b6997b9c0a5b4b953afc86c9",
+    "candidate": "uncommitted Round 2 working tree",
+    "summary": {
+      "ci_commands_passed": 59,
+      "focused_tests_passed": 180,
+      "full_api_tests_passed": 5746,
+      "full_api_tests_skipped": 321,
+      "baseline_tests_failed": 21
+    },
+    "commands": [
+      {
+        "command": "npm ci",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm test",
+        "exit_code": 0
+      }
+    ],
+    "additional_checks": [
+      {
+        "command": "npx tsc --noEmit -p apps/api/tsconfig.json",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "output": "1 authorised reader, 0 unauthorised references"
+      },
+      {
+        "command": "focused vitest (changed and directly affected tests)",
+        "exit_code": 0,
+        "files_passed": 14,
+        "tests_passed": 180
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "git ls-remote https://github.com/actions/checkout.git refs/tags/v4",
+        "exit_code": 0,
+        "sha": "11d5960a326750d5838078e36cf38b85af677262"
+      },
+      {
+        "command": "git ls-remote https://github.com/actions/upload-artifact.git refs/tags/v4",
+        "exit_code": 0,
+        "sha": "ea165f8d65b6e75b540449e92b4886f43607fa02"
+      },
+      {
+        "command": "npm run context:generate",
+        "exit_code": 1,
+        "reason": "isolated clone is classified as shared primary by the worktree-only guard"
+      },
+      {
+        "command": "node --input-type=module",
+        "stdin": "import {writeGeneratedFiles} from './scripts/project-context-lib.mjs'; writeGeneratedFiles(process.cwd());",
+        "exit_code": 0,
+        "note": "existing generator used in the isolated clone authorized by the session"
+      },
+      {
+        "command": "npx tsx apps/api/scripts/onboard.ts --manifest manifests/eurostat-data.yaml --dry-run",
+        "exit_code": 1,
+        "reason": "refused: no operator production write credential"
+      },
+      {
+        "command": "npm run handoff:check -- --no-fetch --json",
+        "exit_code": 1,
+        "failure_codes": [
+          "dirty",
+          "branch",
+          "merged-branch"
+        ],
+        "note": "session requires uncommitted changes in the isolated clone and forbids branch/worktree/remote changes"
+      }
+    ],
+    "full_api": {
+      "command": "npm test",
+      "files_passed": 333,
+      "files_skipped": 31,
+      "tests_passed": 5746,
+      "tests_skipped": 321
+    },
+    "baseline_discrimination": {
+      "numTotalTests": 105,
+      "numPassedTests": 83,
+      "numFailedTests": 21,
+      "numPendingTests": 1,
+      "baseline": "59a44d2f",
+      "failed_tests": [
+        "late executor resolve cannot write an invocation after abort",
+        "late executor reject cannot write an invocation after abort",
+        "an abort during quota metadata lookup cannot write a budget counter or start the executor",
+        "dedicated onboarding runner fails closed when the onboarding secret equals ADMIN_SECRET",
+        "dedicated onboarding runner reports timeout and accepts a following run even when the pipeline never settles",
+        "onboarding hook execution scope route runs skip detached fixture validation while writing through the explicit handle",
+        "persistCapability (Cluster 2 Phase 3 C2) backfill hook failure preserves active and all serving controls",
+        "persistCapability (Cluster 2 Phase 3 C2) backfill hook failure preserves probation and all serving controls",
+        "CLI uses the shared pipeline, retains operator authority, and writes returned YAML",
+        "shared onboarding pipeline creates all five suites with the injected handle and retains dark launch",
+        "shared onboarding pipeline API pipeline never enters ALS or enables an async hook",
+        "shared onboarding pipeline times out a never-settling executor without persisting",
+        "shared onboarding pipeline CLI create warns and succeeds when its committed hook fails",
+        "onboarding workflow client stops all slugs on 401 / 'unauthorized', including a later slug or poll",
+        "onboarding workflow client stops all slugs on 503 / 'misconfigured', including a later slug or poll",
+        "onboarding workflow client stops all slugs on 200 / 'not_configured', including a later slug or poll",
+        "onboarding workflow client pins workflow actions to commit SHAs",
+        "abort during alert cooldown cannot fail open or record an alert (query rejects: false)",
+        "abort during alert cooldown cannot fail open or record an alert (query rejects: true)",
+        "an email already in flight cannot start alert bookkeeping after abort",
+        "a fact INSERT failing after abort cannot start a failure-marker INSERT"
+      ],
+      "excluded_test": "quota alert writes stay on the bounded handle and stop after abort (new helper absent at baseline)",
+      "adapter_contract_assertions": [
+        "CLI uses the shared pipeline, retains operator authority, and writes returned YAML",
+        "shared onboarding pipeline creates all five suites with the injected handle and retains dark launch"
+      ],
+      "quota_probe": [
+        {
+          "stage": "candidate",
+          "exit_code": 0
+        },
+        {
+          "stage": "baseline",
+          "exit_code": 1
+        },
+        {
+          "stage": "restored",
+          "exit_code": 0
+        }
+      ]
+    },
+    "baseline_restore": "all modified implementation bytes saved in memory and restored byte-for-byte before final green verification; no branch switches, clones, bundles or agent worktrees",
+    "live_probes": [
+      {
+        "method": "GET",
+        "path": "/v1/internal/onboarding/readiness",
+        "output": "{\"error_code\":\"unauthorized\",\"message\":\"Admin authentication required.\"}\n401",
+        "exit_code": 0
+      },
+      {
+        "method": "POST",
+        "path": "/v1/internal/onboarding/fix-latency",
+        "output": "{\"error_code\":\"unauthorized\",\"message\":\"Admin authentication required.\"}\n401",
+        "exit_code": 0
+      },
+      {
+        "method": "POST",
+        "path": "/v1/internal/onboarding/run",
+        "output": "{\"error_code\":\"unauthorized\",\"message\":\"Admin authentication required.\"}\n401",
+        "exit_code": 0
+      }
+    ],
+    "reviews": {
+      "technical": "GO after explicit confirmation of deep abort fencing fix",
+      "product": "GO",
+      "simplify": "manual pass; simplify skill unavailable"
+    },
+    "limitations": [
+      "Git metadata is read-only; changes remain uncommitted for the orchestrator",
+      "Database integration tests skipped without a disposable database",
+      "Undeployed branch; production onboarding, readiness and secret configuration not verified"
+    ],
+    "changed_files_sha256": {
+      ".github/scripts/onboard-capability.mjs": "251a411e50754a1183fbf0ea524cb1fac10cb2c3215a4c0842fcb700108bef25",
+      ".github/workflows/onboard-capability.yml": "42973ba6440349a8aea1162899efae843421c11dd8890f4a700aa846c98717fd",
+      "apps/api/scripts/onboard.ts": "5ed3ad44a2aa054b438b9af1f8a1cf58afa19cbdd8a8a3f0101505e3c06b8456",
+      "apps/api/src/capabilities/guarded-executor.ts": "e229e8b0d07d9e344bd61ef80bd042b35aea481ed90746046db75944b4fe3e89",
+      "apps/api/src/db/index.ts": "f2e67a4c713fbe23bb9e032ee07b5421a2aa9e4f4bfd0f419dd159c479fc7238",
+      "apps/api/src/lib/alert-once.ts": "3f974ac35fe56fa8f3a0fc5d13344faaad1af85361a8d637bade01908e726100",
+      "apps/api/src/lib/capability-onboarding.ts": "500cb3c7ea705741c02cfefaf38fb7e9972715e273f250c6791d622a6babc3fd",
+      "apps/api/src/lib/capability-persistence.test.ts": "857a4edce1624c175a59af1f61e53989ef0df2cc627f7a7f47a769965d2d53df",
+      "apps/api/src/lib/capability-persistence.ts": "a29a4d3c4dfda8b4b41fad6b103916c80f4af4b533cdce6e1dba932c0a019f99",
+      "apps/api/src/lib/capability-readiness.ts": "5609d6536bf4142c3819f51c360ab69e748bf282333997a017ede90c73a5c8ae",
+      "apps/api/src/lib/gate5-path-coverage.ts": "fa8f2794587891b7de09804764058cdf863869334f6d8479eb888ed3836af62b",
+      "apps/api/src/lib/invocation-facts.ts": "9f518039c04b8a4057db745e0e750648d694111ea89013442df22bead1055d6a",
+      "apps/api/src/lib/onboarding-cli.test.ts": "af2d47b0af8159010a0ea6cb761f568c0b4e0ede679dcf53351e098782a16d61",
+      "apps/api/src/lib/onboarding-pipeline.test.ts": "f80b357a30c53fb70a9a2aab80dd96873a5652857a2e599be836e5df5bfb57a7",
+      "apps/api/src/lib/onboarding-pipeline.ts": "fdf38c2a3727712aea45162b4bc17338540949b959838dc3fe369858e0670e18",
+      "apps/api/src/lib/onboarding-workflow.test.ts": "b65db6921f5c97de4711987dafafedebedf9fb951a5aca4ce6a4782bfefa107c",
+      "apps/api/src/routes/internal-auth.test.ts": "6b25360605193bbdba6974689933f6bf701e0ad2de9f4fee41a8211ceee783cb",
+      "apps/api/src/routes/internal-onboarding-run.test.ts": "da4e869ea5fde82fae51e098758b3c6591ba7b22d274b1e6da656b66350ac347",
+      "apps/api/src/routes/internal-onboarding.ts": "d52aa718c0ae0c4718b4ca04684443fdd5418d6ee4072e7bdfbd999fc84c44f7",
+      "docs/operations/run-onboarding.md": "c539a8499b111f7fc76636db743252a2cda8410f38b59247a8d4474dd4e4083c",
+      "handoff/_general/from-code/2026-10-26-feat-onboarding-run-endpoint.md": "f71c606f5257882c8b85a5f19c643603de13d1cdb58adc09a46a5b0534c01550",
+      "apps/api/src/capabilities/guarded-executor-abort.test.ts": "5718c0f4ba2735474e27ef6720786bf7b36d56b337bdfe923acecdb77c724c0f",
+      "apps/api/src/lib/capability-onboarding-budget.test.ts": "2cb19004ded69d58545c8bce5ecc95dec9a8db96821ef7970a9bcd92a0784ff9",
+      "apps/api/src/lib/onboarding-budget.ts": "c615f34d23a9626123b4f38a727dc5b05adcd115af647284bf18e9bbacd8be81",
+      "apps/api/src/lib/onboarding-write-fence.test.ts": "ceaccf27904776c2ec5d6fbcada4ffebc61e88c903d658035cc2fcb2c1819c5f"
+    }
+  }
+}

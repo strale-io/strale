@@ -1,0 +1,417 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d193c4643f55e30da276c0c26632f9e45685ffaa"
+  },
+  "at": "2026-10-27T00:43:59.966Z",
+  "inputs": {
+    "base": "d193c464",
+    "branch": "feat/limitations-sync-mode",
+    "candidate": "uncommitted; read-only Git metadata",
+    "scope": "text-only limitations sync"
+  },
+  "summary": {
+    "focused_passed": 92,
+    "api_passed": 5768,
+    "api_skipped": 321,
+    "api_failed": 0,
+    "main_baseline_failed": 21,
+    "ci_commands_passed": 56,
+    "ci_commands_failed": 0
+  },
+  "topic": "limitations-sync-mode",
+  "raw": {
+    "summary": {
+      "focused_passed": 92,
+      "api_passed": 5768,
+      "api_skipped": 321,
+      "api_failed": 0,
+      "main_baseline_failed": 21,
+      "ci_commands_passed": 56,
+      "ci_commands_failed": 0
+    },
+    "raw": {
+      "base": "d193c4643f55e30da276c0c26632f9e45685ffaa",
+      "candidate": "uncommitted; Git metadata mounted read-only",
+      "file_sha256": {
+        ".github/scripts/onboard-capability.mjs": "075ee1ac0ec19ebc38eec10e6437698106139156996a322ffa1ba7d045174a60",
+        ".github/workflows/onboard-capability.yml": "95e94ec3bcc4811e8eef40a309ae8453073f604c0e8cb6f320f38387e2e16cc9",
+        "apps/api/src/lib/onboarding-pipeline.ts": "30802f44b76fc1a3e2c5461bcd3ef4c7a0e9e8e7489d26f481093dc7f5b386e4",
+        "apps/api/src/lib/onboarding-workflow.test.ts": "b71821cd5e8c261cc6006f961e22a5ac84dbe0b775b16f0ea9a14570c5226b2d",
+        "apps/api/src/lib/limitations-sync.ts": "7caa97d79c897215f8bccd97c1aa0c69e495f6b4f4c6f30079ba116f54fabda4",
+        "apps/api/src/lib/limitations-sync.test.ts": "29a6458eab5e7b27ad6a6fa8d4bba6c6b890e5d1c15958bf15b860750a6fce17",
+        "apps/api/src/lib/manifest-limitations.ts": "6fca3622840e3e883b497eb90e3d9b3c4fa5a8c44fa2dad5e83e6ead34ad1468",
+        "apps/api/src/routes/internal-onboarding-run.test.ts": "db04ac3835686191633fd739f47e5a2e617288965ae3b4f2ee9cb0a777817f0e",
+        "apps/api/src/routes/internal-onboarding.ts": "1463ab7723e9f3a39b734bb023650b4f2de1bd12606c1d15748914957ef5ba3e",
+        "docs/operations/run-onboarding.md": "877648d263d1736e8aebb4a2b2562b8c2d901d7a23b671beac4dc3f6911394ac"
+      },
+      "commands": [
+        {
+          "command": "npm --workspace=packages/sdk-typescript run build",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run typecheck",
+          "exit": 0,
+          "rerun_after_dependency_install": true
+        },
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit": 0,
+          "rerun_after_dependency_install": true
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run programs:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run programs:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run research:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run research:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run design:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run design:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run env:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run env:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run vendors:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run vendors:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run distribution:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run distribution:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run candidates:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run protocols:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run protocols:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run scheduled:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run scheduled:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run models:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run models:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run claims:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run claims:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run docs:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run docs:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run archive:index:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run receipts:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run migrations:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run migrations:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run handoff:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run context:check",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        },
+        {
+          "command": "npm run context:test",
+          "exit": 0,
+          "rerun_after_dependency_install": false
+        }
+      ],
+      "test_results": {
+        "focused": {
+          "numTotalTests": 92,
+          "numPassedTests": 92,
+          "numFailedTests": 0,
+          "numPendingTests": 0
+        },
+        "api": {
+          "numTotalTests": 6089,
+          "numPassedTests": 5768,
+          "numFailedTests": 0,
+          "numPendingTests": 321
+        },
+        "main_baseline": {
+          "numTotalTests": 73,
+          "numPassedTests": 52,
+          "numFailedTests": 21,
+          "numPendingTests": 0
+        }
+      },
+      "fail_before": [
+        {
+          "file": "src/lib/limitations-sync.test.ts",
+          "tests": [
+            "never calls the executor, guarded executor, persistence, hooks, gates or readiness even with discover/fix",
+            "writes only capability_limitations, preserves every capability column and reports observer counts",
+            "reports unchanged with no writes when text and order match",
+            "reports not_found with a reason and no writes for an unknown capability row",
+            "syncs a deactivated row while preserving all its flags",
+            "rolls back on insert failure, reports failed with no committed counts, and allows a later slug",
+            "rolls back on commit failure, reports failed with no committed counts, and allows a later slug",
+            "rolls back if aborted during the diff",
+            "dry-run performs no diff writes even with discovery requested"
+          ]
+        },
+        {
+          "file": "src/lib/onboarding-workflow.test.ts",
+          "tests": [
+            "expands all to every real manifest slug only in limitations mode",
+            "accepts up to 1000 explicit slugs only in limitations mode",
+            "runs all sequentially, continues after a slug failure, and reports text outcomes without readiness",
+            "stops limitations batches on 401 / 'unauthorized' at submit or poll",
+            "stops limitations batches on 503 / 'not_configured' at submit or poll",
+            "stops limitations batches on 200 / 'not_configured' at submit or poll",
+            "pins workflow actions to commit SHAs"
+          ]
+        },
+        {
+          "file": "src/routes/internal-onboarding-run.test.ts",
+          "tests": [
+            "accepts limitations mode for a deactivated slug and reports updated without readiness",
+            "accepts limitations mode for a deactivated slug and reports unchanged without readiness",
+            "retains limitations not_found with its reason",
+            "retains limitations failed with its reason",
+            "requires the same dedicated secret for limitations mode"
+          ]
+        }
+      ],
+      "additional_commands": [
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit": 0
+        },
+        {
+          "command": "npx tsc --noEmit (apps/api)",
+          "exit": 0
+        },
+        {
+          "command": "npx vitest run src/lib/limitations-sync.test.ts src/lib/onboarding-pipeline.test.ts src/lib/onboarding-limitations.test.ts src/lib/onboarding-workflow.test.ts src/routes/internal-onboarding-run.test.ts",
+          "exit": 0
+        },
+        {
+          "command": "npx vitest run --maxWorkers=4",
+          "exit": 0
+        },
+        {
+          "command": "npm ci --ignore-scripts",
+          "exit": 0
+        },
+        {
+          "command": "git diff --check",
+          "exit": 0
+        }
+      ]
+    }
+  }
+}

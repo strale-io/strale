@@ -62,6 +62,7 @@ import {
   DEFAULT_PROMOTION_CONFIG,
   type PromotionStats,
 } from "../lib/capability-promotion.js";
+import { shouldExecuteAsync } from "../lib/execution-routing.js";
 import { logError, logWarn } from "../lib/log.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 
@@ -80,6 +81,7 @@ export interface PromotionEvidenceRow {
   marketplace_eligible: boolean;
   deactivation_reason: string | null;
   has_x402_method: boolean;
+  avg_latency_ms: number | null;
   breaker_state: string | null;
   last_listing_event: string | null;
   /** uuid of the matched event, for the write-time TOCTOU re-check (round-2 fix, Codex blocker #3). */
@@ -136,6 +138,7 @@ export function toPromotionStats(rows: PromotionEvidenceRow[]): PromotionStats[]
       marketplaceEligible: r.marketplace_eligible,
       deactivationReason: r.deactivation_reason,
       hasX402Method: r.has_x402_method,
+      runsAsync: shouldExecuteAsync(r.avg_latency_ms),
       breakerState: r.breaker_state,
       wasDelisted,
       delistingReason: wasDelisted ? r.last_listing_event : null,
@@ -233,8 +236,8 @@ export function isListingStateEvent(
  * The evidence query, shared with scripts/preview-promotions.ts so the preview
  * cannot drift from what the job will actually decide.
  *
- * Two joins are worth naming. `capability_health` is safe to join directly:
- * `capability_health_capability_slug_unique` guarantees one row per slug, so
+ * Two joins are worth naming. `source_health` is safe to join directly:
+ * `source_health_capability_slug_unique` guarantees one row per slug, so
  * it cannot fan the aggregate out or split a capability across grouped rows
  * (verified against prod 2026-08-16 — max 1 row/slug over 298 rows).
  * `test_suites` joins on the result's own suite id, one-to-one by primary key.
@@ -270,6 +273,7 @@ export const PROMOTION_EVIDENCE_SQL = `
          COALESCE(c.marketplace_eligible, false) AS marketplace_eligible,
          c.deactivation_reason,
          (c.x402_method IS NOT NULL)             AS has_x402_method,
+         c.avg_latency_ms,
          h.state                                 AS breaker_state,
          le.action_taken                         AS last_listing_event,
          le.id                                   AS last_listing_event_id,
@@ -286,7 +290,7 @@ export const PROMOTION_EVIDENCE_SQL = `
          COUNT(tr.id) FILTER (WHERE ts.test_type = 'piggyback')::int                  AS piggyback_total,
          COUNT(tr.id) FILTER (WHERE ts.test_type = 'piggyback' AND tr.passed)::int    AS piggyback_passed
   FROM capabilities c
-  LEFT JOIN capability_health h ON h.capability_slug = c.slug
+  LEFT JOIN source_health h ON h.capability_slug = c.slug
   -- The most recent event that changed whether this capability was listed.
   -- Distinguishes "never listed" (dark launch) from "taken down".
   LEFT JOIN LATERAL (
@@ -333,7 +337,7 @@ export const PROMOTION_EVIDENCE_SQL = `
     AND c.visible = false
   GROUP BY c.slug, c.lifecycle_state, c.visible, c.x402_enabled, c.is_free_tier,
            c.maintenance_class, c.marketplace_eligible, c.deactivation_reason,
-           c.x402_method, h.state, le.id, le.action_taken, le.mode, fq.n, lk.passed`;
+           c.x402_method, c.avg_latency_ms, h.state, le.id, le.action_taken, le.mode, fq.n, lk.passed`;
 
 export async function runCapabilityPromotionOnce(): Promise<{
   outcome: string;
@@ -408,7 +412,7 @@ export async function runCapabilityPromotionOnce(): Promise<{
                   isNull(capabilities.deactivationReason),
                   dsql`${capabilities.maintenanceClass} IS NOT DISTINCT FROM ${d.maintenanceClass}`,
                   dsql`NOT EXISTS (
-                    SELECT 1 FROM capability_health h
+                    SELECT 1 FROM source_health h
                     WHERE h.capability_slug = ${d.slug} AND h.state <> 'closed'
                   )`,
                   // Listing-event identity (Codex blocker #3): re-derive "the

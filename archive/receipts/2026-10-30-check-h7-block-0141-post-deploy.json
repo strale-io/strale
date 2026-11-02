@@ -1,0 +1,57 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "5bffffec439ab9246abcda3e035a441e3cbbc8e4"
+  },
+  "at": "2026-10-30T18:44:55.301Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale--claude-worktrees-wow-review-cfe380/bd9f1a90-bcce-4570-94ae-a58bd8a18bf5/scratchpad/h7-postdeploy-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "what": "DEC-20260504-C post-deploy verification of block 0141 (H7), read at the effect level rather than from a boot log line",
+    "deployed_commit": "5406dbe5ba4a",
+    "pr": "strale-io/strale#853",
+    "method": "read-only queries against the production database (root .env DATABASE_URL, strale_ro) plus GET /health",
+    "negative_control": "the same query shape would have returned a row for capability_health had the view survived, and returned none; to_regclass on the old name is NULL",
+    "consequence_now_live": "a rollback to a build between blocks 0132 and 0134 needs CREATE VIEW capability_health AS SELECT * FROM source_health by hand; a build older than 0132 is already incompatible because 0132 dropped the SQS columns"
+  },
+  "topic": "h7-block-0141-post-deploy",
+  "raw": {
+    "ok": true,
+    "what": "DEC-20260504-C post-deploy verification of block 0141 (H7), read at the effect level rather than from a boot log line",
+    "deployed_commit": "5406dbe5ba4a",
+    "pr": "strale-io/strale#853",
+    "method": "read-only queries against the production database (root .env DATABASE_URL, strale_ro) plus GET /health",
+    "results": {
+      "relations_named_capability_health_or_source_health": [
+        {
+          "relname": "source_health",
+          "relkind": "r"
+        }
+      ],
+      "capability_health_view": "gone — to_regclass('capability_health') IS NULL",
+      "block_0141_applied": {
+        "first_applied_at": "2026-10-30T18:44:07.134Z",
+        "last_applied_at": "2026-10-30T18:44:07.134Z",
+        "note": "policy once; ran exactly once"
+      },
+      "block_0134_after_the_drop": {
+        "last_applied_at": "2026-10-30T18:44:07.089Z",
+        "note": "every_boot; it ran and took its skip branch rather than failing, which the boot completing proves"
+      },
+      "boot_outcome": "GET /health returned status ok on commit 5406dbe5ba4a, so the boot that ran 0141 completed",
+      "breaker_intact": {
+        "rows": 318,
+        "newest_updated_at": "2026-10-30T13:17:41.102Z",
+        "states": {
+          "closed": 317,
+          "open": 1
+        }
+      }
+    },
+    "negative_control": "the same query shape would have returned a row for capability_health had the view survived, and returned none; to_regclass on the old name is NULL",
+    "consequence_now_live": "a rollback to a build between blocks 0132 and 0134 needs CREATE VIEW capability_health AS SELECT * FROM source_health by hand; a build older than 0132 is already incompatible because 0132 dropped the SQS columns"
+  }
+}

@@ -106,7 +106,7 @@ output_field_reliability:
   row_count: guaranteed
   column_count: guaranteed
 limitations:
-  - title: Deeply nested JSON objects are flattened with dot notation and may produce very wide CSV output
+  - title: Nested objects can produce very wide CSV files
     text: >-
       Best with flat or shallow JSON arrays — deeply nested objects are flattened with dot notation which may produce
       wide CSVs

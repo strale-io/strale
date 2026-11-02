@@ -6,6 +6,8 @@
  * On retry failure, throws the ORIGINAL error (more informative).
  */
 
+import { APIError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
+import { remainingCallMs } from "./call-cost.js";
 import { logWarn } from "./log.js";
 
 export interface RetryOptions {
@@ -20,6 +22,8 @@ export interface RetryOptions {
   /** Slug for logging (optional) */
   slug?: string;
 }
+
+const MAX_RETRY_AFTER_MS = 10_000;
 
 const DEFAULT_RETRYABLE: RegExp[] = [
   /ECONNRESET/i,
@@ -47,6 +51,10 @@ const NON_RETRYABLE: RegExp[] = [
 ];
 
 function isRetryable(error: Error, extraPatterns: RegExp[]): boolean {
+  // SDK 0.78 exports these classes; do not infer SDK status from JSON text.
+  if (error instanceof APIConnectionTimeoutError || error instanceof APIConnectionError) return true;
+  if (error instanceof APIError) return error.status !== undefined &&
+    ([408, 409, 429].includes(error.status) || error.status >= 500);
   const msg = error.message;
 
   // Check non-retryable first — these should never retry
@@ -67,7 +75,7 @@ export async function withRetry<T>(
   fn: () => Promise<T>,
   options?: RetryOptions,
 ): Promise<T> {
-  const maxRetries = options?.maxRetries ?? 1;
+  const maxRetries = Math.max(0, Math.min(1, options?.maxRetries ?? 1));
   const baseDelayMs = options?.baseDelayMs ?? 1000;
   const maxDelayMs = options?.maxDelayMs ?? 5000;
   const extraPatterns = options?.retryableErrors ?? [];
@@ -92,7 +100,21 @@ export async function withRetry<T>(
 
       // Compute delay with jitter
       const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
-      const jitteredDelay = delay + Math.random() * delay * 0.2;
+      let jitteredDelay = delay + Math.random() * delay * 0.2;
+      const retryAfter = error instanceof APIError ? error.headers?.get("retry-after") : null;
+      if (retryAfter !== null && retryAfter !== undefined) {
+        const seconds = Number(retryAfter);
+        const headerDelay = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now();
+        if (Number.isFinite(headerDelay)) {
+          if (headerDelay > MAX_RETRY_AFTER_MS) throw lastError ?? error;
+          jitteredDelay = Math.max(0, headerDelay);
+        }
+      }
+      // Do not shorten a server's minimum wait to fit our budget and retry early.
+      // If no time remains for another attempt, preserve the original error.
+      let budget: number;
+      try { budget = remainingCallMs(Number.MAX_SAFE_INTEGER); } catch { throw lastError ?? error; }
+      if (jitteredDelay >= budget) throw lastError ?? error;
 
       logWarn("retry-attempt", "retry attempt failed, waiting", {
         slug,
@@ -119,7 +141,7 @@ export async function withRetry<T>(
  * the x402 gateway called the executor bare, so a wallet buyer whose request
  * met a registry's momentary "slow down" failed where an account buyer's
  * identical request was retried and served (2026-10-05: eight paid French
- * lookups lost to HTTP 429 in three minutes). Both rails call this so the
+ * lookups lost to HTTP 429 in three minutes). All customer rails, including solution steps, call this so the
  * policy cannot drift between them again.
  */
 export function executeWithTransientRetry<T>(

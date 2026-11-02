@@ -134,10 +134,10 @@ limitations:
     category: coverage
     severity: info
   - title: Registry status interpretation
-    text: "Status reflects the latest registration or registry-deletion entry in the full KRS extract header; unknown when neither is present. Historical field removal is not entity deregistration. It does not classify liquidation or bankruptcy."
+    text: "Status uses the latest KRS registration or registry-deletion entry and is unknown when neither exists; removal of a historical field does not mean deregistration. Liquidation and bankruptcy are not classified."
     category: coverage
     severity: info
-  - title: Covers KRS-registered entities only — Polish sole traders registered in CEIDG are not included
+  - title: Sole traders registered only in CEIDG are not covered
     text: >-
       Data from KRS — coverage limited to entities registered in the National Court Register; sole traders (CEIDG) not
       included

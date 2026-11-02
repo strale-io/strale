@@ -30,11 +30,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleQueryError } from "drizzle-orm/errors";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { transactions } from "../db/schema.js";
 
 const mocks = vi.hoisted(() => ({
   findAbandonedIntentsResult: [] as unknown[],
   insertRejection: null as unknown,
+  pendingClaim: false,
+  updates: [] as any[],
+  claimRail: "x402" as "x402" | "v1_do",
   logErrorCalls: [] as Array<{ label: string; err: unknown }>,
 }));
 
@@ -44,8 +48,8 @@ vi.mock("../db/index.js", () => ({
       cb({ execute: async () => [{ acquired: true }] }),
     select: () => ({
       from: () => ({
-        where: () => ({
-          limit: async () => [], // no existing transaction row for the settlement id
+        where: (query: any) => ({
+          limit: async () => mocks.pendingClaim && new PgDialect().sqlToQuery(query).sql.includes('"x402_payment_hash"') ? [{ id: "claimed-txn-id" }] : [],
         }),
       }),
     }),
@@ -58,12 +62,20 @@ vi.mock("../db/index.js", () => ({
       }),
     }),
     update: () => ({
-      set: () => ({
-        where: async () => undefined,
+      set: (values: any) => ({
+        where: (q: any) => {
+          const query = new PgDialect().sqlToQuery(q);
+          expect(query.params.some(v => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
+          mocks.updates.push(values);
+          if (values.status === "failed") mocks.claimRail = values.receiptRail ?? mocks.claimRail;
+          return Object.assign(Promise.resolve(), { returning: async () => [{ id: "claimed-txn-id" }] });
+        },
       }),
     }),
   }),
 }));
+
+vi.mock("../lib/x402-payment-claims.js", () => ({ releaseStaleX402Claims: vi.fn(async () => 0) }));
 
 vi.mock("../lib/x402-settlement-intent.js", () => ({
   countEscalated: vi.fn(async () => 0),
@@ -118,6 +130,7 @@ const ABANDONED_INTENT = {
 beforeEach(() => {
   mocks.findAbandonedIntentsResult = [ABANDONED_INTENT];
   mocks.insertRejection = null;
+  mocks.pendingClaim = false; mocks.updates = [];
   mocks.logErrorCalls = [];
   mockLogError.mockClear();
 });
@@ -167,3 +180,29 @@ describe("reconcileSettlementsOnce — 23505 race on the recovery insert", () =>
 // against an unused-import lint regression if the fake db above is ever
 // simplified to stop needing schema-shaped select/insert targets).
 void transactions;
+
+it("H4 recovers a settled pre-execution claim in place instead of colliding on its unique hash", async () => {
+  mocks.pendingClaim = true;
+  mocks.insertRejection = pgError("claim already occupies hash", "23505");
+  const summary = await reconcileSettlementsOnce();
+  expect(summary.recovered).toBe(1);
+  expect(summary.failed).toBe(0);
+  expect(mocks.updates).toContainEqual(expect.objectContaining({ status: "failed", x402PaymentHash: ABANDONED_INTENT.paymentHash,
+    x402SettlementId: ABANDONED_INTENT.settlementId, complianceHashState: "pending" }));
+});
+
+it.each(["v1_do", "x402"] as const)("keeps the %s rail when recovering a stranded claim", async (rail) => {
+  mocks.pendingClaim = true;
+  mocks.claimRail = rail;
+  const summary = await reconcileSettlementsOnce();
+  expect(summary.recovered).toBe(1);
+  expect(mocks.claimRail).toBe(rail);
+});
+
+it("Round 2 existing sweeper releases stale pre-intent claims", async () => {
+  const { releaseStaleX402Claims } = await import("../lib/x402-payment-claims.js");
+  vi.mocked(releaseStaleX402Claims).mockResolvedValueOnce(2);
+  const summary = await reconcileSettlementsOnce();
+  expect(releaseStaleX402Claims).toHaveBeenCalledWith(expect.anything(), 25);
+  expect(summary.staleClaimsReleased).toBe(2);
+});

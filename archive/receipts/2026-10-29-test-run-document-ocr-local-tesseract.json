@@ -1,0 +1,102 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "7703cea074b2fba7a97699d672b1cdbf7002b6fb"
+  },
+  "at": "2026-10-29T22:46:07.384Z",
+  "inputs": {
+    "source": "/tmp/claude-0/scratch/ocr-evidence.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 2,
+    "capability": "document-ocr",
+    "machine": "cloud container, 4 vCPU, CPU only; Tesseract 5.3.4 (Ubuntu 24.04) for the executor runs, Tesseract 5.3.0 (Debian bookworm, this Dockerfile's apt line) for the image probe"
+  },
+  "topic": "document-ocr-local-tesseract",
+  "raw": {
+    "ok": true,
+    "capability": "document-ocr",
+    "machine": "cloud container, 4 vCPU, CPU only; Tesseract 5.3.4 (Ubuntu 24.04) for the executor runs, Tesseract 5.3.0 (Debian bookworm, this Dockerfile's apt line) for the image probe",
+    "runs": [
+      {
+        "name": "real scan, executor, url input",
+        "input": "https://data.riksdagen.se/fil/F31689BF-1E58-4A1F-A577-0B29A22B363B (Riksdagen motion 1975:36, 2 pages, 200 dpi JBIG2)",
+        "languages": "eng+swe",
+        "output_file": "both",
+        "ms": 5962,
+        "pages_ok": 2,
+        "mean_confidence": 92.7,
+        "page_confidence": [
+          92.9,
+          91.8
+        ],
+        "words": 425,
+        "files": {
+          "ocr-pages-1-2.txt": 3150,
+          "ocr-pages-1-2.pdf": 284412
+        }
+      },
+      {
+        "name": "50 pages, executor, base64 input (the scan repeated 25 times)",
+        "output_file": "both",
+        "ms": 85993,
+        "pages_ok": 50,
+        "pages_failed": 0,
+        "mean_confidence": 92.7,
+        "peak_child_rss_kb_total": 342868,
+        "files": {
+          "ocr-pages-1-50.txt": 78815,
+          "ocr-pages-1-50.pdf": 7104704
+        }
+      },
+      {
+        "name": "scripts/ci/ocr-probe.mjs in a node:20-slim layer with the Dockerfile's apt line",
+        "exit": 0,
+        "output": {
+          "engine": "tesseract 5.3.0",
+          "languages": [
+            "dan",
+            "deu",
+            "eng",
+            "fin",
+            "fra",
+            "ita",
+            "nld",
+            "nor",
+            "osd",
+            "spa",
+            "swe"
+          ],
+          "ms": 5335,
+          "confidence": [
+            92.9,
+            91.7
+          ],
+          "words": [
+            363,
+            62
+          ],
+          "searchable_pdf_bytes": 284412
+        }
+      },
+      {
+        "name": "scripts/ci/ocr-probe.mjs in plain node:20-slim (negative control)",
+        "exit": 1,
+        "reason": "tesseract not installed"
+      },
+      {
+        "name": "vitest src/capabilities/document-ocr.test.ts",
+        "tests_passed": 9,
+        "tests_failed": 0
+      }
+    ],
+    "failures": [],
+    "warnings": [
+      "Railway CPU model unknown; production timing not measured",
+      "Full image build not completed locally: npm ci inside docker failed on this sandbox's network; CI image-boot-smoke builds and probes the full image"
+    ]
+  }
+}

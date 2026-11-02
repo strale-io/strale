@@ -10,7 +10,7 @@ import { CATEGORY_GROUP, JOB_GROUPS, SLUG_GROUP, jobFor } from "../src/content/j
 import { COUNTRY_BY_PREFIX, companyDataPrefix } from "../src/content/countries.ts";
 import { deactivatedSlugs } from "../src/lib/load-preview.ts";
 import { highlightJson, highlightShell, escapeHtml } from "../src/lib/highlight.ts";
-import { FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS, executorSource } from "../src/lib/code-facts.ts";
+import { FREE_TIER_MONTHLY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS, executorSource } from "../src/lib/code-facts.ts";
 import { formatEur, formatUsd, usdcAtomic } from "../src/lib/format.ts";
 
 const repo = resolve(import.meta.dirname, "../../..");
@@ -61,7 +61,7 @@ test("highlighting escapes before it decorates", () => {
 });
 
 test("code facts are read from the API source", () => {
-  for (const n of [FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS]) assert.ok(Number.isInteger(n) && n > 0);
+  for (const n of [FREE_TIER_MONTHLY_LIMIT, MIN_TOPUP_CENTS, MAX_PRICE_CAP_CENTS]) assert.ok(Number.isInteger(n) && n > 0);
   assert.equal(executorSource("iban-validate"), "iban-validate:algorithmic");
 });
 

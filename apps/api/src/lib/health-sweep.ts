@@ -1,3 +1,4 @@
+import { checksCompleted, noteJobFailure } from "./job-run-context.js";
 /**
  * Weekly Health Sweep — Sprint 7C
  *
@@ -18,6 +19,7 @@ import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
 import { FIXTURE_RECAPTURE_QUARANTINE_MARKER } from "./test-runner.js";
+import { PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
 // Lifecycle automatic sweep removed with the SQS engine (DEC-20260503-B).
 import { runWeeklyChecks } from "./meta-monitoring.js";
 import { log, logWarn } from "./log.js";
@@ -103,6 +105,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       // Apply remediations (only HIGH/MEDIUM confidence auto-apply)
       await applyRemediation(suite.id, actions);
     } catch (err) {
+      noteJobFailure();
       logWarn("health-sweep-remediation-failed", "remediation failed", {
         capability_slug: suite.capabilitySlug,
         err: err instanceof Error ? err.message : String(err),
@@ -131,7 +134,10 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     // fragile if either threshold changes independently later, and it
     // doesn't document the "needs human" intent anywhere a future reader
     // of THIS sweep would see it.
-    if (suite.quarantineReason?.startsWith(FIXTURE_RECAPTURE_QUARANTINE_MARKER)) {
+    if (
+      suite.quarantineReason?.startsWith(FIXTURE_RECAPTURE_QUARANTINE_MARKER)
+      || suite.quarantineReason?.startsWith(PAID_CALL_QUARANTINE_MARKER)
+    ) {
       report.quarantineSkippedNeedsHuman.push(suite.capabilitySlug);
       continue;
     }
@@ -188,6 +194,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       }
     }
   } catch (err) {
+    noteJobFailure();
     logWarn("health-sweep-upstream-escalation-failed", "upstream escalation sweep failed", {
       err: err instanceof Error ? err.message : String(err),
     });
@@ -202,6 +209,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
   //   Checks: validation queue stuck, probation timeout, degraded count
   try {
     const metaResults = await runWeeklyChecks();
+    if (!checksCompleted(metaResults)) noteJobFailure();
     const failures = metaResults.filter((r) => !r.passed);
     if (failures.length > 0) {
       logWarn("health-sweep-meta-failures", "meta-monitoring checks failed", {
@@ -220,6 +228,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       );
     }
   } catch (err) {
+    noteJobFailure();
     logWarn("health-sweep-meta-failed", "meta-monitoring weekly checks failed", {
       err: err instanceof Error ? err.message : String(err),
     });

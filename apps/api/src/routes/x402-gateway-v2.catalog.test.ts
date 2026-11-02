@@ -14,7 +14,7 @@
  * public route uses.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkL2ForOpenAPI,
   getOpenAPI,
@@ -67,6 +67,7 @@ vi.mock("../db/index.js", () => ({
 const {
   __resetX402CacheForTests,
   build402,
+  encodeBudgetedPaymentRequiredHeader,
   getX402Manifest,
   getX402OpenApiPaths,
   x402GatewayV2,
@@ -178,6 +179,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("NTA required credential before x402 payment", () => {
+  it("returns the standard unavailable error before a payment challenge", async () => {
+    vi.stubEnv("NTA_HOUJIN_APP_ID", "");
+    state.capRows = [capabilityRow({ slug: "japanese-company-data" })];
+    __resetX402CacheForTests();
+    try {
+      const res = await x402GatewayV2.request("/japanese-company-data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ corporate_number: "1180301018771" }) });
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ error_code: "capability_unavailable" });
+      expect(res.headers.get("PAYMENT-REQUIRED")).toBeNull();
+    } finally { vi.unstubAllEnvs(); }
+  });
+});
+
 describe("GET /x402/catalog output_schema projection", () => {
   it("omits output_schema by default — the payload crawlers poll stays lean", async () => {
     const { res, body } = await requestCatalog();
@@ -217,6 +232,7 @@ describe("GET /x402/catalog output_schema projection", () => {
     const entry = body.solutions.find((s) => s.slug === "kyb-essentials-se");
     expect(entry).toBeDefined();
     expect(entry).not.toHaveProperty("output_schema");
+    expect(entry!.endpoint).toBe(`${BASE_URL}/x402/v2/solutions/kyb-essentials-se`);
     expect(Object.keys(entry!).sort()).toEqual(
       ["description", "endpoint", "input_schema", "method", "name", "price_usd", "slug"].sort(),
     );
@@ -239,7 +255,7 @@ describe("GET /x402/catalog output_schema projection", () => {
       description: "Verify any paid API endpoint before your agent spends money.",
       price_usd: eurCentsToUsd(2),
       method: "POST",
-      endpoint: `${BASE_URL}/x402/paid-api-preflight`,
+      endpoint: `${BASE_URL}/x402/v2/paid-api-preflight`,
       input_schema: PAID_INPUT,
       output_schema: PAID_OUTPUT,
     });
@@ -382,5 +398,189 @@ describe("x402 AgentCash discovery contract", () => {
       currency: "USD",
       protocols: ["x402"],
     });
+  });
+});
+
+// CDP's hosted API has no offline package: exercise the published SDK parser
+// and Bazaar Ajv validator for ALL manifests, a superset of enabled DB rows.
+// Enabled status lives in the DB; a fixture does not assert production eligibility.
+import { encodePaymentRequiredHeader } from "@x402/core/http";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import yaml from "js-yaml";
+import { getDiscoveryMetadata, metadataFromManifest, type DiscoveryManifest } from "../lib/x402-discovery-metadata.js";
+import { validateOfflineDiscovery } from "../test-helpers/x402-discovery-validator.js";
+const manifestDirectory = new URL("../../../../manifests/", import.meta.url);
+const discoveryManifests = readdirSync(manifestDirectory).filter(file => file.endsWith(".yaml"))
+  .map(file => yaml.load(readFileSync(new URL(file, manifestDirectory), "utf8")) as DiscoveryManifest);
+
+describe("D2 offline CDP/Bazaar discovery gate", () => {
+  beforeAll(() => {
+    for (const manifest of discoveryManifests) metadataFromManifest(manifest);
+    getDiscoveryMetadata("capability", discoveryManifests[0].slug);
+    validateOfflineDiscovery(build402("Warmup", "Warmup", .054, "https://api.strale.io/x402/v2/warmup", {}, "POST", {}, 2).body);
+  }, 60_000);
+  it("bounds all manifest capability and solution headers", () => {
+    const sizes: number[] = [];
+    let extensions = 0;
+    const missing: string[] = [];
+    const paymentHash = createHash("sha256");
+    const counts = {
+      capability: { GET: { input: 0, output: 0 }, POST: { input: 0, output: 0, emptyBody: 0 } },
+      solution: { GET: { input: 0, output: 0 }, POST: { input: 0, output: 0, emptyBody: 0 } },
+    };
+    for (const kind of ["capability", "solution"] as const) {
+      for (const manifest of discoveryManifests) {
+        for (const method of ["GET", "POST"] as const) {
+          const { body } = build402(manifest.name, manifest.description, 0.054, `https://api.strale.io/x402/v2/${kind === "solution" ? "solutions/" : ""}${manifest.slug}`, manifest.input_schema, method, manifest.output_schema, 2, { kind, slug: manifest.slug });
+          const bytes = Buffer.byteLength(encodePaymentRequiredHeader(body as never));
+          sizes.push(bytes);
+          const info = (body.extensions.bazaar as any)?.info;
+          if (info) extensions++;
+          else if (kind === "capability" && method === "GET") missing.push(manifest.slug);
+          const withoutSchema = (entry: Record<string, unknown>) => Object.fromEntries(Object.entries(entry).filter(([key]) => key !== "outputSchema"));
+          paymentHash.update(JSON.stringify([kind, manifest.slug, method, body.accepts.map(withoutSchema), body.paymentRequirements.map(withoutSchema)]));
+          const input = info?.input[method === "POST" ? "body" : "queryParams"];
+          const published = metadataFromManifest(manifest).inputExample;
+          if (input !== undefined && published !== undefined && kind === "capability") counts[kind][method].input++;
+          if (method === "POST" && input !== undefined && published === undefined) counts[kind].POST.emptyBody++;
+          if (info?.output.example !== undefined) counts[kind][method].output++;
+        }
+      }
+    }
+    sizes.sort((a, b) => a - b);
+    process.stdout.write("D2 header distribution " + JSON.stringify({ challenges: sizes.length, max: sizes.at(-1), p95: sizes[Math.ceil(sizes.length * .95) - 1], median: (sizes[sizes.length / 2 - 1] + sizes[sizes.length / 2]) / 2, over8192: sizes.filter(size => size > 8192).length, extensions, missing, paymentHash: paymentHash.digest("hex"), counts }) + "\n");
+    expect(sizes.filter(size => size > 8192)).toEqual([]);
+  }, 60_000);
+  it("keeps Bazaar discovery for a large us-company-data GET challenge", () => {
+    const manifest = discoveryManifests.find(item => item.slug === "us-company-data")!;
+    const { body } = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${manifest.slug}`, manifest.input_schema, "GET", manifest.output_schema, 2, { kind: "capability", slug: manifest.slug });
+    expect(Buffer.byteLength(encodePaymentRequiredHeader(body as never))).toBeLessThanOrEqual(8192);
+    expect(body.extensions.bazaar).toBeDefined();
+  });
+  it.each(discoveryManifests.flatMap(manifest => ["GET", "POST"].map(method => [manifest.slug, method, manifest] as const)))("validates %s %s challenge", (slug, method, manifest) => {
+    const { body } = build402(manifest.name, manifest.description, 0.054, `https://api.strale.io/x402/v2/${slug}`, manifest.input_schema, method, manifest.output_schema, 2, { kind: "capability", slug });
+    expect(validateOfflineDiscovery(body)).toEqual([]);
+    const metadata = metadataFromManifest(manifest);
+    expect(body.resource.serviceName).toBe("Strale");
+    expect(body.resource.description).toBe(`${manifest.name}: ${manifest.description}`);
+    const extension = body.extensions.bazaar as any;
+    if (extension) {
+      const input = extension.info.input[method === "POST" ? "body" : "queryParams"];
+      // Budgeting may drop the input example or use a valid empty POST body.
+      if (input !== undefined && !(method === "POST" && Object.keys(input).length === 0)) expect(input).toEqual(metadata.inputExample);
+      // Header budgeting may withhold an otherwise safe output example.
+      if (extension.info.output.example !== undefined) expect(extension.info.output.example).toEqual(metadata.outputExample);
+      expect(JSON.stringify(extension.info.input)).not.toMatch(/example_\w+/);
+    }
+  }, 60_000);
+  it("drops output before input as the header approaches its budget", () => {
+    const manifest = discoveryManifests.find(item => {
+      const metadata = metadataFromManifest(item);
+      return metadata.inputExample !== undefined && metadata.outputExample !== undefined;
+    })!;
+    const metadata = metadataFromManifest(manifest);
+    let sawOutputOnlyDropped = false;
+    let sawBothDropped = false;
+    for (let padding = 0; padding < 6500; padding += 16) {
+      const schema = { ...manifest.input_schema, description: "z".repeat(padding) };
+      const { body } = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${manifest.slug}`, schema, "GET", manifest.output_schema, 2, { kind: "capability", slug: manifest.slug });
+      const info = (body.extensions.bazaar as any)?.info;
+      expect(Buffer.byteLength(encodePaymentRequiredHeader(body as never))).toBeLessThanOrEqual(8192);
+      if (info?.input.queryParams === undefined) {
+        expect(info?.output.example).toBeUndefined();
+        sawBothDropped = true;
+      } else if (info.output.example === undefined) {
+        expect(info.input.queryParams).toEqual(metadata.inputExample);
+        sawOutputOnlyDropped = true;
+      }
+      if (sawBothDropped && sawOutputOnlyDropped) break;
+    }
+    expect(sawOutputOnlyDropped).toBe(true);
+    expect(sawBothDropped).toBe(true);
+  }, 60_000);
+  it.each([3000, 12000])("budgets a %i-byte verification-failure reason without changing payment fields", length => {
+    const manifest = discoveryManifests.find(item => metadataFromManifest(item).inputExample !== undefined)!;
+    const { body } = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${manifest.slug}`, manifest.input_schema, "GET", manifest.output_schema, 2, { kind: "capability", slug: manifest.slug });
+    const payment = { ...body.accepts[0] };
+    delete payment.outputSchema;
+    body.error = "Payment verification failed: " + "z".repeat(length);
+    const header = encodeBudgetedPaymentRequiredHeader(body, manifest.slug);
+    expect(Buffer.byteLength(header)).toBeLessThanOrEqual(8192);
+    const after = { ...body.accepts[0] };
+    delete after.outputSchema;
+    expect(after).toEqual(payment);
+    expect(JSON.parse(Buffer.from(header, "base64").toString())).toEqual(body);
+  });
+  it("uses an empty POST body only when the input contract accepts it", () => {
+    const make = (schema: Record<string, unknown>) => build402("Tool", "Description", .054, "https://api.strale.io/x402/v2/tool", schema, "POST", null, 2).body;
+    const empty = make({ type: "object", properties: { option: { type: "boolean" } } });
+    expect((empty.extensions.bazaar as any).info.input.body).toEqual({});
+    expect(validateOfflineDiscovery(empty)).toEqual([]);
+    for (const schema of [
+      { type: "object", required: ["query"], properties: { query: { type: "string" } } },
+      { type: "object", anyOf: [{ required: ["query"] }] },
+    ]) {
+      const required = make(schema);
+      expect(required.extensions.bazaar).toBeUndefined();
+      expect(required.resource).toMatchObject({ serviceName: "Strale", description: "Tool: Description", tags: [], iconUrl: "https://strale.dev/favicon-32x32.png" });
+      expect(validateOfflineDiscovery(required)).toEqual([]);
+    }
+  });
+  it.each(["email-validate", "whois-lookup", "image-to-text"])("preserves every v1 payment field for %s", slug => {
+    const manifest = discoveryManifests.find(item => item.slug === slug)!;
+    const resource = `https://api.strale.io/x402/${slug}`;
+    // Frozen payment-field projection from the d004d774 builder (pre-D2).
+    const before = {
+      maxAmountRequired: "54000", payTo: WALLET ?? "0x0000000000000000000000000000000000000001",
+      asset: NETWORK === "base" ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" : "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      network: NETWORK, scheme: "exact", resource, maxTimeoutSeconds: 300,
+    };
+    const { body, paymentRequirement, headerPayload } = build402(manifest.name, manifest.description, 0.054, resource, manifest.input_schema, "POST", manifest.output_schema, 1, { kind: "capability", slug });
+    const project = (requirement: Record<string, unknown>) => Object.fromEntries(Object.keys(before).map(key => [key, requirement[key]]));
+    expect(JSON.stringify(project(paymentRequirement))).toBe(JSON.stringify(before));
+    expect(project(body.accepts[0])).toEqual(before);
+    expect(project(body.paymentRequirements[0])).toEqual(before);
+    expect(project(JSON.parse(Buffer.from(headerPayload, "base64").toString()).accepts[0])).toEqual(before);
+  });
+  it("does not disclose a capability's example through a solution with the same slug", () => {
+    const manifest = discoveryManifests.find(item => metadataFromManifest(item).inputExample !== undefined && (item.input_schema?.required as string[] | undefined)?.length)!;
+    const make = (kind: "capability" | "solution") => build402("Solution", "Solution description", 0.054, `https://api.strale.io/x402/v2/solutions/${manifest.slug}`, manifest.input_schema, "POST", manifest.output_schema, 2, { kind, slug: manifest.slug }).body;
+    expect((make("capability").extensions.bazaar as any).info.input.body).toBeDefined();
+    const solution = make("solution");
+    expect(solution.extensions.bazaar).toBeUndefined();
+    expect(solution.resource.description).toBe("Solution: Solution description");
+    expect(validateOfflineDiscovery(solution)).toEqual([]);
+  });
+  it("publishes manifest output examples on v2 without touching v1 payment fields", () => {
+    // Text tools whose examples the input-only name heuristic used to withhold.
+    for (const slug of ["redirect-trace", "summarize", "translate"]) {
+      const manifest = discoveryManifests.find(item => item.slug === slug)!;
+      const expected = (manifest.output_schema as any).example;
+      const v2 = build402(manifest.name, manifest.description, .054, `https://api.strale.io/x402/v2/${slug}`, manifest.input_schema, "GET", manifest.output_schema, 2, { kind: "capability", slug });
+      expect((v2.body.extensions.bazaar as any).info.output.example).toEqual(expected);
+      expect(validateOfflineDiscovery(v2.body)).toEqual([]);
+
+      // Legacy /x402/<slug> serves v1 to today's payers. Its payment fields and
+      // X-PAYMENT header must be byte-identical with and without the example.
+      const legacy = `https://api.strale.io/x402/${slug}`;
+      const withExample = build402(manifest.name, manifest.description, .054, legacy, manifest.input_schema, "GET", manifest.output_schema, 1, { kind: "capability", slug });
+      const withoutExample = build402(manifest.name, manifest.description, .054, legacy, manifest.input_schema, "GET", manifest.output_schema, 1);
+      expect(withExample.body.x402Version).toBe(1);
+      expect(withExample.headerPayload).toBe(withoutExample.headerPayload);
+      expect(withExample.body.accepts).toEqual(withoutExample.body.accepts);
+      expect(withExample.body.paymentRequirements).toEqual(withoutExample.body.paymentRequirements);
+      expect(withExample.paymentRequirement).toEqual(withoutExample.paymentRequirement);
+      expect(JSON.parse(Buffer.from(withExample.headerPayload, "base64").toString())).toEqual({ x402Version: 1, accepts: [withExample.paymentRequirement] });
+      expect(withExample.paymentRequirement).toMatchObject({ scheme: "exact", resource: legacy, maxAmountRequired: "54000" });
+    }
+  });
+  it("rejects malformed discovery metadata and v1 envelopes", () => {
+    const body = build402("Tool", "Description", 0.054, "https://api.strale.io/x402/v2/tool", null, "POST", null, 2).body;
+    expect(validateOfflineDiscovery(body)).toEqual([]);
+    expect(validateOfflineDiscovery({ ...body, x402Version: 1 }).length).toBeGreaterThan(0);
+    expect(validateOfflineDiscovery({ ...body, resource: { ...body.resource, serviceName: "", tags: ["x", "X"], iconUrl: "https://127.0.0.1/icon.png" } })).toEqual(expect.arrayContaining(["missing/invalid serviceName", "missing/invalid tags", "invalid iconUrl"]));
+    expect(validateOfflineDiscovery({ ...body, extensions: { bazaar: { ...(body.extensions.bazaar as any), info: { input: { type: "wrong" } } } } }).length).toBeGreaterThan(0);
+    expect(validateOfflineDiscovery({ ...body, extensions: { bazaar: { schema: { $schema: "https://json-schema.org/draft/2020-12/schema" }, info: { input: { type: "anything", method: "BANANA" } } } } })).toEqual(expect.arrayContaining(["missing HTTP input schema contract", "invalid HTTP method contract"]));
   });
 });

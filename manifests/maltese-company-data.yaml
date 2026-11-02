@@ -1,10 +1,6 @@
 slug: maltese-company-data
 name: Maltese Company Data
-description: >-
-  Look up Maltese company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts MT VAT (MT + 8 digits).
-  Returns name, registration number, status, registered address, registration date, LEI, primary NACE code, and
-  last-update timestamp. PARTIAL coverage — some major MT entities (Bank of Valletta, HSBC Malta) returned 204 in
-  2026-05-15 v3 probes. MFSA C-prefix company numbers are NOT accepted.
+description: "Look up Maltese company details by MT-format VAT number. Some registered companies are missing; C-prefix company numbers are not accepted."
 category: company-data
 cost_class: paid_per_call
 price_cents: 16
@@ -94,30 +90,27 @@ output_field_reliability:
   company_size: common
   source_as_of: guaranteed
 limitations:
-  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+  - title: Tool is currently unavailable
     text: >-
-      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
-      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
-      capability-unavailable.
+      This tool is currently unavailable and returns a capability-unavailable error.
     category: availability
     severity: warning
-  - title: PARTIAL coverage — major banks not in catalog
+  - title: Some major banks are missing from the source catalogue
     text: >-
-      Openapi WW-Top accepts the strict MT-prefix VAT shape, but the underlying catalog has gaps. Bank of Valletta
-      and HSBC Malta returned 204 on 2026-05-15 v3 probes despite valid input. GO P.L.C. (MT12826209) confirmed
-      populated.
+      Valid MT-prefix VAT identifiers can return HTTP 204 with no record. Coverage gaps include major
+      Maltese banks.
     category: coverage
     severity: warning
   - title: MFSA C-prefix company numbers rejected
     text: Openapi WW-Top accepts only MT-prefix VAT format. C-prefix MFSA company numbers (e.g. C 2833) return 406.
     category: coverage
     severity: info
-  - title: Legal form not returned at WW-Top tier
-    text: Openapi WW-Top does not return Maltese legal form.
+  - title: Legal form is not included
+    text: The company’s legal form is not included in this tool’s response.
     category: coverage
     severity: info
-  - title: Directors not available at WW-Top tier
-    text: Openapi WW-Top does not return directors / legal representatives. Directors-gap closure is IT-only via Openapi IT-Full.
+  - title: Directors are not included
+    text: Director and legal representative details are not included in this tool’s response.
     category: coverage
     severity: info
 

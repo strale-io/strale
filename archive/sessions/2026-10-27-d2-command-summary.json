@@ -1,0 +1,297 @@
+[
+  {
+    "command": "npm ci",
+    "exit_code": 0,
+    "seconds": 43
+  },
+  {
+    "command": "npm --workspace=packages/mcp-server run build",
+    "exit_code": 0,
+    "seconds": 4
+  },
+  {
+    "command": "npm --workspace=packages/sdk-typescript run build",
+    "exit_code": 0,
+    "seconds": 3
+  },
+  {
+    "command": "npm run typecheck",
+    "exit_code": 0,
+    "seconds": 62
+  },
+  {
+    "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+    "exit_code": 0,
+    "seconds": 3
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-bare-catch",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm --workspace=apps/api run lint:no-new-console",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-framework-packages.mjs",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-pii.mjs --strict",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-shape-contracts.mjs",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "node scripts/guard-production-write-access.mjs",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run programs:check",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run programs:test",
+    "exit_code": 0,
+    "seconds": 4
+  },
+  {
+    "command": "npm run research:check",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run research:test",
+    "exit_code": 0,
+    "seconds": 7
+  },
+  {
+    "command": "npm run design:check",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run design:test",
+    "exit_code": 0,
+    "seconds": 22
+  },
+  {
+    "command": "npm run env:check",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run env:test",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run vendors:check",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run vendors:test",
+    "exit_code": 0,
+    "seconds": 6
+  },
+  {
+    "command": "npm run distribution:check",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run distribution:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run digest:shadow:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run candidates:test",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run protocols:check",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run protocols:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run protocols:coverage",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run protocols:coverage:test",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run scheduled:check",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run scheduled:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run scheduled:outcomes:test",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run models:check",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run models:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run claims:check",
+    "exit_code": 0,
+    "seconds": 2
+  },
+  {
+    "command": "npm run claims:test",
+    "exit_code": 0,
+    "seconds": 4
+  },
+  {
+    "command": "npm run docs:check",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run docs:test",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "archive index warning-only CI wrapper",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run archive:index:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run receipts:check",
+    "exit_code": 0,
+    "seconds": 20
+  },
+  {
+    "command": "npm run receipts:test",
+    "exit_code": 0,
+    "seconds": 5
+  },
+  {
+    "command": "npm run migrations:check",
+    "exit_code": 0,
+    "seconds": 0
+  },
+  {
+    "command": "npm run migrations:test",
+    "exit_code": 0,
+    "seconds": 1
+  },
+  {
+    "command": "npm run handoff:test",
+    "exit_code": 0,
+    "seconds": 37
+  },
+  {
+    "command": "npm run context:check",
+    "exit_code": 0,
+    "seconds": 7
+  },
+  {
+    "command": "npm run context:test",
+    "exit_code": 0,
+    "seconds": 155
+  },
+  {
+    "command": "npm test",
+    "exit_code": 1,
+    "seconds": 283
+  }
+]

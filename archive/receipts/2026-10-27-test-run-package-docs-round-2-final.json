@@ -1,0 +1,48 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f9c98049a754d7182256c24d5b6445c1f4ad0759"
+  },
+  "at": "2026-10-27T12:21:27.562Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "package_docs_passed": 91,
+    "vendor_terms_passed": 94,
+    "data_access_manifests_passed": 6,
+    "dependency_probe_passed": 9,
+    "targeted_total_passed": 200,
+    "api_passed": 6047,
+    "api_failed": 0,
+    "api_skipped": 346,
+    "api_files_passed": 343,
+    "api_files_skipped": 33,
+    "context_tests_passed": 180,
+    "root_ci_commands_passed": 58,
+    "typecheck_passed": true,
+    "manifest_authoring_errors": 0,
+    "live_checks_passed": 4
+  },
+  "topic": "package-docs-round-2-final",
+  "raw": {
+    "ok": true,
+    "package_docs_passed": 91,
+    "vendor_terms_passed": 94,
+    "data_access_manifests_passed": 6,
+    "dependency_probe_passed": 9,
+    "targeted_total_passed": 200,
+    "api_passed": 6047,
+    "api_failed": 0,
+    "api_skipped": 346,
+    "api_files_passed": 343,
+    "api_files_skipped": 33,
+    "context_tests_passed": 180,
+    "root_ci_commands_passed": 58,
+    "typecheck_passed": true,
+    "manifest_authoring_errors": 0,
+    "live_checks_passed": 4
+  }
+}

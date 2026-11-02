@@ -94,13 +94,13 @@ output_field_reliability:
   changelog_markdown: guaranteed
   version_suggestion: guaranteed
 limitations:
-  - title: AI-generated changelog may not correctly distinguish user-facing impact from internal code changes
+  - title: User-facing changes can be misidentified
     text: >-
       AI-generated changelog from commit messages or diffs — may not correctly identify user-facing impact vs internal
       changes
     category: accuracy
     severity: info
-    workaround: Use conventional commit prefixes (feat:, fix:, chore:) in your commits for more accurate categorization
+    workaround: Use conventional commit prefixes (feat:, fix:, chore:) in your commits for more accurate categorisation
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

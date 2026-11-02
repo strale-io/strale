@@ -299,27 +299,27 @@ limitations:
     category: coverage
     severity: warning
   - title: Tax coverage and freshness
-    text: VIES covers EU VAT numbers only here. Non-EU tax-id-validate checks are format-only; its current rules implement no checksums. Format validity is never registry confirmation. VAT answers may be cached for 48 hours; checked_at preserves the source timestamp. Stale fallback evidence is refused.
+    text: VIES confirms EU VAT registrations only; non-EU tax-id-validate checks cover format without checksums and cannot confirm registration. VAT evidence can be cached for 48 hours, with its source time in `checked_at`; stale fallback evidence is refused.
     category: coverage
     severity: warning
   - title: Registry coverage and identifier linkage
-    text: Registry status is limited to company-status-check's supported countries and deterministic mappings for SE organisation VAT, FI and NO MVA. BE maps to an enterprise number but its registry is not covered. DK VAT can be an SE administrative-unit number rather than CVR, and NL BTW is not KVK. No name-based entity resolution is used. company_id is compared with the tax-derived registry number only where a documented mapping exists; all other linkage is unknown. No-record replies are completed evidence with found false. Registry errors are reported without blocking a completed tax and sanctions check.
+    text: Registry checks cover company-status-check countries, with tax-to-registry identifier mappings only for SE organisation VAT, FI and NO MVA; BE enterprise numbers have no covered registry, DK SE numbers can differ from CVR, and NL BTW differs from KVK, so other linkage remains unknown without name-based resolution. `company_id` is compared only where a mapping exists; no-record answers return `found` false, while registry errors do not block completed tax and sanctions checks.
     category: coverage
     severity: warning
   - title: Single screening vendor
-    text: Screening uses Dilisense through sanctions-check. Potential name matches are evidence, not a sanction-status assertion. The vendor returns no match score or per-list version timestamp; neither is fabricated. At most ten match records per screened name are returned; potential_match_count sums the source counts across screenings and may include the same entity more than once. matches_truncated discloses any per-name cap. Each screening retains its own name, name source, source lists and timestamp; the legacy top-level name, source lists and timestamp describe the first screening. country is passed to sanctions-check but its present Dilisense adapter does not filter the upstream query by country.
+    text: Dilisense name matches are potential matches rather than sanction-status findings, with no supplied match score, per-list version timestamp or country filtering; at most ten records per screened name are returned, `matches_truncated` flags the cap, and `potential_match_count` can count an entity more than once across names. Each screening preserves its name, name source, lists and time, while top-level name, lists and time describe only the first screening.
     category: accuracy
     severity: warning
   - title: Name normalisation and source order
-    text: Registry name precedes VIES name, then the invoice name; when VIES and registry names compare as different, both are screened and the discrepancy is reported. Source names have XML entities decoded and control/format characters removed, with whitespace collapsed. Name equivalence removes case, diacritics, punctuation and selected trailing legal forms. Recognised legal-form differences are separately flagged when both names carry a form. It cannot establish entity identity, translate names, detect impersonation or compare bank ownership. Without a registered name, name_match is not_available.
+    text: Registry names take precedence over VIES names, then invoice names, and both registry and VIES names are screened when they differ; comparison decodes XML entities, removes control/format characters, collapses spaces and ignores case, diacritics, punctuation and selected trailing legal forms, with recognised legal-form differences flagged separately. This comparison cannot prove identity, translate names, detect impersonation or establish bank ownership; `name_match` is not_available without a registered name.
     category: accuracy
     severity: warning
   - title: Evidence without a verdict
-    text: By design there is no overall verdict, risk level, recommendation or safe-to-pay claim. The composite is billed only after the tax check and every required sanctions screening complete; invalid VAT is a completed check, while incomplete required checks throw an unbilled structured error. Registry active means registered status, not trading activity.
+    text: Returns evidence without an overall verdict, risk level, recommendation or safe-to-pay conclusion; an active registry status means registered rather than trading. Billing occurs only after tax checks and all required sanctions checks complete, with invalid VAT treated as a completed check and incomplete required checks returning an unbilled error.
     category: coverage
     severity: info
-  - title: Existing upstream access conditions
-    text: This composite adds no upstream or fetch path. It preserves the weakest underlying data-access lane and all source provenance. Official registries and VIES are reused through existing executors. Dilisense's existing allowed-with-checks lane remains pending because the reseller agreement is not signed; this build makes no stronger rights claim. Health probes retain the underlying unauthenticated zero-cost connectivity checks; the known-answer fixture is a paid functional test.
+  - title: Depends on registry, tax and screening availability
+    text: This check depends on the availability and coverage of its underlying registry, VIES and sanctions sources. Source provenance is included in the response.
     category: coverage
     severity: warning
 data_access:

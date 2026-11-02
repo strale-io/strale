@@ -111,7 +111,7 @@ output_field_reliability:
   frontend_framework: guaranteed
   detected_technologies: guaranteed
 limitations:
-  - title: Detects technologies in public-facing web properties only — internal tools and backends are not visible
+  - title: Only publicly visible technologies are detected
     text: >-
       Detects technologies visible in public-facing web properties — internal tools and backend infrastructure are not
       visible

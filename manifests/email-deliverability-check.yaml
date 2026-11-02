@@ -90,7 +90,7 @@ output_field_reliability:
   score: guaranteed
   blacklisted: guaranteed
 limitations:
-  - title: SMTP verification may be blocked by some mail servers, so deliverable results are not guaranteed
+  - title: SMTP checks do not guarantee delivery
     text: SMTP verification may be blocked by some mail servers — a 'deliverable' result is not guaranteed delivery
     category: accuracy
     severity: info

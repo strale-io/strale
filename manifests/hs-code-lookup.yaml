@@ -109,15 +109,14 @@ output_field_reliability:
   primary_description: guaranteed
 limitations:
   - title: >-
-      AI-based HS code suggestion only — official classification requires customs authority review and binding tariff
-      info
+      HS code suggestions require official confirmation
     text: >-
       AI-based HS code suggestion — official classification requires customs authority review and binding tariff
       information
     category: accuracy
     severity: warning
     workaround: Use the suggested HS code as a starting point and verify with your customs broker or national tariff database
-  - title: HS edition tracking is not guaranteed — nomenclature revises on a ~5-year cycle
+  - title: HS edition changes may not be reflected
     text: >-
       Classifications come from the model's knowledge of HS nomenclature, which is pinned to its training
       cutoff. Codes changed in the most recent HS revision (HS2022 → HS2028 cycle) may be suggested in

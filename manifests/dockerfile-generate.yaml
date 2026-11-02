@@ -187,7 +187,7 @@ output_field_reliability:
   security_notes: guaranteed
   estimated_image_size: guaranteed
 limitations:
-  - title: Generated Dockerfiles follow best practices but may not account for project-specific build requirements
+  - title: Project-specific build requirements can be missed
     text: >-
       Generated Dockerfiles follow best practices but may not account for project-specific build requirements or private
       registries

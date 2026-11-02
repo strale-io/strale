@@ -31,7 +31,6 @@ import {
   probeDataTable,
   eventLogTable,
   infrastructureTable,
-  sqsGradeBadge,
 } from "./email-templates.js";
 
 // ─── Main entry ───────────────────────────────────────────────────────────────
@@ -58,8 +57,6 @@ function buildHtml(data: DigestData, weekLabel: string): string {
     // Capability status
     sectionCapabilityStatus(data),
 
-    // SQS distribution
-    sectionSqsDistribution(data),
 
     // Test activity
     sectionTestActivity(data),
@@ -126,44 +123,6 @@ function sectionCapabilityStatus(data: DigestData): string {
       { label: "Draft", value: String(s.draft) },
     ]) +
     sourceAttribution("Source: capabilities table (lifecycle_state column), queried at digest time.");
-}
-
-// ─── 3. SQS Distribution ───────────────────────────────────────────────────
-
-function sectionSqsDistribution(data: DigestData): string {
-  const d = data.sqsDist;
-  const total = d.excellent + d.good + d.fair + d.poor + d.degraded + d.pending;
-
-  if (total === 0) {
-    return sectionHeader("TRUST SCORE DISTRIBUTION") +
-      `<p style="margin:0;font-size:13px;color:${COLORS.textSecondary};font-style:italic;">No active capabilities with SQS scores.</p>` +
-      sourceAttribution("Source: capabilities table (matrix_sqs column).");
-  }
-
-  // Stacked bar as a table row with colored cells
-  const segments: Array<{ label: string; count: number; bg: string; text: string }> = [
-    { label: "A", count: d.excellent, bg: "#16a34a", text: "#ffffff" },
-    { label: "B", count: d.good, bg: "#65a30d", text: "#ffffff" },
-    { label: "C", count: d.fair, bg: "#d97706", text: "#ffffff" },
-    { label: "D", count: d.poor, bg: "#ea580c", text: "#ffffff" },
-    { label: "E", count: d.degraded, bg: "#dc2626", text: "#ffffff" },
-  ].filter((s) => s.count > 0);
-
-  const barCells = segments.map((s) => {
-    const widthPct = Math.max(Math.round((s.count / total) * 100), 8);
-    return `<td style="width:${widthPct}%;background:${s.bg};text-align:center;padding:8px 2px;color:${s.text};font-size:12px;font-weight:700;">${s.label}: ${s.count}</td>`;
-  }).join("\n");
-
-  const pendingNote = d.pending > 0
-    ? `<p style="margin:4px 0 0;font-size:11px;color:${COLORS.textTertiary};">${d.pending} capabilities pending (no score yet)</p>`
-    : "";
-
-  return sectionHeader("TRUST SCORE DISTRIBUTION") +
-    `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:6px;overflow:hidden;margin-bottom:4px;">
-<tr>${barCells}</tr>
-</table>` +
-    pendingNote +
-    sourceAttribution("Source: capabilities table (matrix_sqs column). Grades: A >= 90, B >= 75, C >= 50, D >= 25, E < 25.");
 }
 
 // ─── 4. Test Activity ───────────────────────────────────────────────────────
@@ -242,13 +201,7 @@ function sectionAutomatedActions(data: DigestData): string {
       badge: statusBadge("warning", "CB"),
     });
   }
-  if (t.upstreamExclusions > 0) {
-    events.push({
-      time: "",
-      event: `${t.upstreamExclusions} upstream transient failure${t.upstreamExclusions === 1 ? "" : "s"} excluded from SQS`,
-      badge: statusBadge("upstream"),
-    });
-  }
+
   if (t.byEventType["lifecycle_transition"]) {
     const count = t.byEventType["lifecycle_transition"];
     events.push({
@@ -292,10 +245,9 @@ function sectionInfrastructure(data: DigestData): string {
 
 function sectionQualification(entries: QualificationEntry[]): string {
   const rows = entries.map((e) => {
-    const sqsText = e.currentSqs !== null ? `SQS ${Math.round(e.currentSqs)}` : "no score yet";
     return {
       label: e.slug,
-      value: `${e.runsCompleted}/5 runs · ${sqsText} · ${statusBadge(e.state === "probation" ? "info" : "warning", e.state)}`,
+      value: `${e.runsCompleted}/5 runs · ${statusBadge(e.state === "probation" ? "info" : "warning", e.state)}`,
     };
   });
 

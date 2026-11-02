@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("prompt-compress", async (input: CapabilityInput) => {
@@ -14,7 +15,7 @@ registerCapability("prompt-compress", async (input: CapabilityInput) => {
 
   const originalTokens = Math.ceil(promptText.length / 4);
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   // extractJsonWithLlm's stop_reason check now catches the truncation case
   // the old try/catch's "response may have been truncated" message was
   // guessing at — a genuine max_tokens cutoff is refused distinctly, before
@@ -35,10 +36,9 @@ Return JSON:
   "preserved_instructions": ["list of key instructions that were preserved"]
 }`,
     truncationGuidance: "Provide a shorter prompt_text per call.",
-    parseFailureError: (responseText) =>
-      new Error(
-        `Failed to compress prompt. Raw: ${responseText.slice(0, 200)}`,
-      ),
+    // Short, structured message: never echo the model's raw output.
+    parseFailureError: () =>
+      new Error("Failed to extract compressed prompt: the model returned an unreadable result. Please retry."),
   });
   const compressedTokens = Math.ceil((output.compressed_prompt as string).length / 4);
 

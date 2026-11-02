@@ -30,7 +30,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import type { Measurement, Window } from "./types.js";
 import { coversWindow, evidenceFor, instrumentEnabledAt } from "./instruments.js";
-import { externalCustomers } from "./populations.js";
+import { externalCustomers, internalUserIds } from "./populations.js";
 import { ACTOR_KEY_SQL } from "./actor-identity.js";
 
 /** ISO strings only. See the module docstring. */
@@ -837,4 +837,99 @@ export function activatingSlugs(
   return [...counts.entries()]
     .map(([slug, payers]) => ({ slug, payers }))
     .sort((a, b) => b.payers - a.payers);
+}
+
+export interface ToolMargin {
+  tool: string;
+  calls: number;
+  revenue_cents: number;
+  /** All priced components, including components of incomplete-cost calls. */
+  known_cost_cents: number;
+  cohort_cost_cents: number;
+  known_calls: number;
+  known_revenue_cents: number;
+  unknown_cost_share: number;
+  /** Matched known-cost cohort only; never subtract partial costs from all revenue. */
+  margin: number | null;
+  flag: "negative" | "thin" | null;
+}
+export function toolMargin(row: Omit<ToolMargin, "unknown_cost_share" | "margin" | "flag">, minimumKnownCalls = 20): ToolMargin {
+  const margin = row.known_calls >= minimumKnownCalls && row.known_revenue_cents > 0
+    ? (row.known_revenue_cents - row.cohort_cost_cents) / row.known_revenue_cents : null;
+  return { ...row, unknown_cost_share: row.calls ? 1 - row.known_calls / row.calls : 0,
+    margin, flag: row.known_calls >= minimumKnownCalls && row.cohort_cost_cents > row.known_revenue_cents ? "negative" : margin !== null && margin < 0.30 ? "thin" : null };
+}
+/** Historical NULLs stay unknown. Excludes harness traffic using the commercial population. */
+export async function marginPerTool(window: Window): Promise<ToolMargin[]> {
+  const result = await rows<Record<string, string>>(sql`
+    SELECT COALESCE('solution:' || t.solution_slug, c.slug, 'unknown') AS tool,
+      COUNT(*) AS calls,
+      COALESCE(SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END), 0) AS revenue_cents,
+      COUNT(t.cost_cents) AS known_calls,
+      COALESCE(SUM(t.cost_cents), 0) AS cohort_cost_cents,
+      COALESCE(SUM(COALESCE(t.cost_cents, (t.cost_breakdown->>'known_cost_cents')::numeric)), 0) AS known_cost_cents,
+      COALESCE(SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END) FILTER (WHERE t.cost_cents IS NOT NULL), 0) AS known_revenue_cents
+    FROM transactions t LEFT JOIN capabilities c ON c.id = t.capability_id
+    WHERE t.status IN ('completed', 'failed') AND t.created_at >= ${iso(window.from)}
+      AND t.created_at < ${iso(window.to)} AND ${externalCustomers("t")}
+    GROUP BY 1 ORDER BY SUM(CASE WHEN t.status = 'completed' THEN t.price_cents ELSE 0 END) DESC`);
+  return result.map((r) => toolMargin({ tool: r.tool!, calls: Number(r.calls), revenue_cents: Number(r.revenue_cents),
+    known_calls: Number(r.known_calls), known_cost_cents: Number(r.known_cost_cents), cohort_cost_cents: Number(r.cohort_cost_cents), known_revenue_cents: Number(r.known_revenue_cents) }));
+}
+
+/** D10. Aggregates only: IP hashes are joined in SQL and never returned.
+ * IP-to-signup matches are indicative (shared IPs and missing hashes limit attribution).
+ * The cohort is grouped by signup month; paid conversions are observed through w.to.
+ */
+export async function monthlyFreeFunnel(w: Window) {
+  const monthly = await rows<{ month: string; src: string | null; free_ips: number; free_calls: number }>(sql`
+    SELECT to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+      t.client_meta->>'src' AS src,
+      COUNT(DISTINCT t.client_ip_hash)::int AS free_ips,
+      COUNT(*)::int AS free_calls
+    FROM transactions t
+    WHERE t.is_free_tier = true AND t.user_id IS NULL AND t.status = 'completed'
+      AND t.created_at >= ${iso(w.from)}::timestamptz AND t.created_at < ${iso(w.to)}::timestamptz
+      AND ${externalCustomers("t")}
+    GROUP BY 1, 2 ORDER BY 1, 2`);
+  const [windowTotals] = await rows<{ free_ips: number; free_calls: number }>(sql`
+    SELECT COUNT(DISTINCT t.client_ip_hash)::int AS free_ips, COUNT(*)::int AS free_calls
+    FROM transactions t
+    WHERE t.is_free_tier = true AND t.user_id IS NULL AND t.status = 'completed'
+      AND t.created_at >= ${iso(w.from)}::timestamptz AND t.created_at < ${iso(w.to)}::timestamptz
+      AND ${externalCustomers("t")}`);
+  // A distinct-IP total cannot be summed over source tags: one IP may use several.
+  const totals = await rows<{ month: string; free_ips: number; free_calls: number }>(sql`
+    SELECT to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+      COUNT(DISTINCT t.client_ip_hash)::int AS free_ips, COUNT(*)::int AS free_calls
+    FROM transactions t
+    WHERE t.is_free_tier = true AND t.user_id IS NULL AND t.status = 'completed'
+      AND t.created_at >= ${iso(w.from)}::timestamptz AND t.created_at < ${iso(w.to)}::timestamptz
+      AND ${externalCustomers("t")}
+    GROUP BY 1 ORDER BY 1`);
+  const signups = await rows<{ month: string; signup_src: string | null; first_call_src: string | null; first_free_signups: number; paid_conversions: number }>(sql`
+    SELECT to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+      u.signup_src, first_call.client_meta->>'src' AS first_call_src,
+      COUNT(*)::int AS first_free_signups,
+      COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM transactions p WHERE p.user_id = u.id AND p.status = 'completed'
+          AND p.price_cents > 0 AND p.created_at >= u.created_at AND p.created_at < ${iso(w.to)}::timestamptz
+      ))::int AS paid_conversions
+    FROM users u
+    JOIN LATERAL (
+      SELECT t.is_free_tier, t.client_meta FROM transactions t
+      WHERE (t.user_id = u.id OR (t.user_id IS NULL AND u.signup_ip_hash IS NOT NULL
+        AND t.client_ip_hash = u.signup_ip_hash AND t.created_at <= u.created_at))
+        AND t.status = 'completed' AND t.created_at < ${iso(w.to)}::timestamptz
+        AND ${externalCustomers("t")}
+      ORDER BY t.created_at, t.id LIMIT 1
+    ) first_call ON first_call.is_free_tier = true
+    WHERE u.created_at >= ${iso(w.from)}::timestamptz AND u.created_at < ${iso(w.to)}::timestamptz
+      AND u.id NOT IN (${internalUserIds()})
+    GROUP BY 1, 2, 3 ORDER BY 1, 2, 3`);
+  return {
+    window: { from: iso(w.from), to: iso(w.to) }, window_totals: windowTotals, totals, by_src: monthly, signups,
+    comparison: { august_free_callers: 2, august_window_days: 90, caller_target_multiplier: 5, paid_conversion_target: 2, stop_after_days: 45 },
+    caveat: "Completed anonymous free calls only. Missing hashes cannot identify callers; IP joins can conflate shared networks. Signup cohorts and observed paid conversions are not proof of causation. Source slices are not additive distinct-IP totals.",
+  };
 }

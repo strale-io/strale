@@ -21,7 +21,7 @@ import {
 // Columns intentionally excluded from FIELD_CATEGORIES — system-managed
 // PK/timestamps that are never manifest-authored or operator-tuned directly.
 // Keys are the snake_case DB column names.
-const SCHEMA_EXEMPT = new Set(["id", "created_at", "updated_at"]);
+const SCHEMA_EXEMPT = new Set(["id", "created_at", "updated_at", "manifest_text_hash"]);
 
 /** Drizzle column objects carry the real snake_case name in `.name`;
  *  use it directly rather than round-tripping through a regex. */

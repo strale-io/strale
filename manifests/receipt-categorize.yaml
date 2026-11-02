@@ -120,18 +120,17 @@ output_field_reliability:
   vendor_name: guaranteed
   total_amount: guaranteed
 limitations:
-  - title: Unusual merchants or multi-category purchases may be miscategorized by the AI expense categorizer
+  - title: Unusual or mixed purchases can be miscategorised
     text: >-
-      AI categorization based on merchant name and amount — unusual merchants or multi-category purchases may be
-      miscategorized
+      AI categorisation based on merchant name and amount — unusual merchants or multi-category
+      purchases may be miscategorised
     category: accuracy
     severity: info
-    workaround: Provide your chart of accounts or category taxonomy in the input for more accurate categorization
+    workaround: Provide your chart of accounts or category taxonomy in the input for more accurate categorisation
   - title: Input images are limited to 4 MiB decoded
     text: >-
-      Both image_url fetches and base64 payloads are refused above 4 MiB of decoded
-      image bytes. Oversized input returns a caller_input refusal naming the field;
-      no charge is taken. Resize or compress the image before submitting.
+      Images supplied by URL or base64 are refused above 4 MiB of decoded data, with a caller_input
+      error naming the input field and no charge. Resize or compress the image before submitting.
     category: coverage
     severity: info
 

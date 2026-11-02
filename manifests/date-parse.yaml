@@ -90,7 +90,7 @@ output_field_reliability:
   day_of_week: guaranteed
   is_ambiguous: guaranteed
 limitations:
-  - title: Ambiguous date formats like 01/02/03 may misinterpret month/day order without an explicit locale hint
+  - title: Ambiguous dates need a format or locale hint
     text: >-
       Ambiguous date formats (e.g., 01/02/03) are resolved using locale hints — may misinterpret month/day order without
       explicit format

@@ -92,7 +92,7 @@ output_field_reliability:
   standard_rate: guaranteed
   zero_rated_categories: guaranteed
 limitations:
-  - title: AI-generated VAT rates may not reflect the most recent fiscal policy changes or rate adjustments
+  - title: Recent VAT rate changes may be missing
     text: AI-generated VAT rates — rates change with fiscal policy and may not reflect the most recent adjustments
     category: freshness
     severity: info

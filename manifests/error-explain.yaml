@@ -118,7 +118,7 @@ output_field_reliability:
   root_cause: guaranteed
   plain_explanation: guaranteed
 limitations:
-  - title: Root cause suggestions are pattern-based hypotheses and may not match your specific environment
+  - title: Suggested causes may not match your environment
     text: >-
       AI explanation of error messages — root cause suggestions are based on common patterns and may not match your
       specific environment

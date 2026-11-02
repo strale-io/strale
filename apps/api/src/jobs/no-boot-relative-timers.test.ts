@@ -37,6 +37,7 @@ const EXEMPT: Record<string, string> = {
   "reservation-reconciler.ts": "60s tick loop — restart costs one tick",
   "settlement-reconciler.ts": "60s tick loop — restart costs one tick",
   "integrity-hash-retry.ts": "30s tick loop — restart costs one tick",
+  "async-jobs.ts": "60s tick loop (job callbacks, file purge) — restart costs one tick",
   "test-scheduler.ts":
     "60s poll loop; its seven long-period auxiliary tasks DO use the coordinator, " +
     "via consumeDueSlot",

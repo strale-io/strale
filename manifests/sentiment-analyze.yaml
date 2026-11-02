@@ -92,7 +92,7 @@ output_field_reliability:
   sentiment: guaranteed
   confidence: guaranteed
 limitations:
-  - title: AI-based sentiment analysis may misinterpret sarcasm, irony, and culturally-specific expressions
+  - title: Sarcasm and cultural expressions can be misread
     text: AI-based sentiment — sarcasm, irony, and culturally-specific expressions may be misinterpreted
     category: accuracy
     severity: info

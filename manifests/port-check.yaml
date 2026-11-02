@@ -105,7 +105,7 @@ output_field_reliability:
   closed_count: guaranteed
   closed_ports: guaranteed
 limitations:
-  - title: TCP connection test only — firewalls may block probes from Strale's IP range while allowing other traffic
+  - title: Firewalls can block probes despite a reachable service
     text: >-
       TCP connection test only — firewalls may block probes from Strale's IP range while allowing traffic from other
       sources

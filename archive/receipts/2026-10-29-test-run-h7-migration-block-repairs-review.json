@@ -1,0 +1,38 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "47fe8b2bcc458fed9081afcbd2e6054ec19d2475"
+  },
+  "at": "2026-10-29T16:12:19.703Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r2.json"
+  },
+  "summary": {
+    "ok": true,
+    "round": 2,
+    "postgres": "16 (local)",
+    "review": "fresh read-only Claude context: PASS WITH NITS; fixed NULL-reason rule (now explicit), ledger note, test order dependence, trigger re-check after force, 1095-day purge and NULL-reason tests"
+  },
+  "topic": "h7-migration-block-repairs-review",
+  "raw": {
+    "ok": true,
+    "round": 2,
+    "postgres": "16 (local)",
+    "review": "fresh read-only Claude context: PASS WITH NITS; fixed NULL-reason rule (now explicit), ledger note, test order dependence, trigger re-check after force, 1095-day purge and NULL-reason tests",
+    "integration_lane": {
+      "test_files_passed": 42,
+      "tests_passed": 408,
+      "failed": 0
+    },
+    "lib_and_startup_migrations_unit": {
+      "files_passed": 214,
+      "tests_passed": 3954,
+      "failed": 0
+    },
+    "h7_repairs_and_applied_integration": {
+      "tests_passed": 16,
+      "failed": 0
+    }
+  }
+}

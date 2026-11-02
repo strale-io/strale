@@ -1,3 +1,4 @@
+import { walletReservations } from "../db/schema.js";
 /**
  * What the receipt commits to is what the caller actually received.
  *
@@ -105,6 +106,7 @@ describeMaybe("execution receipts bind what the caller received", () => {
 
   afterEach(async () => {
     for (const { userId, walletId } of seeded) {
+      await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
       await db.delete(transactions).where(eq(transactions.userId, userId));
       await db.delete(walletTransactions).where(eq(walletTransactions.walletId, walletId));
       await db.delete(wallets).where(eq(wallets.id, walletId));

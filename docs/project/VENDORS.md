@@ -28,10 +28,14 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | ares | ARES | active | 2026-09-10 | unknown | unknown |
 | ariregister | Ariregister | active | 2026-09-10 | unknown | unknown |
 | arxiv | arXiv | active | 2026-09-10 | unknown | unknown |
+| assemblyai | AssemblyAI | rejected | 2026-10-29 | unknown | prohibited (verified 2026-10-29) |
 | australian-business-register | Australian Business Register | active | 2026-09-10 | unknown | unknown |
 | aviationstack | Aviationstack | held | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
+| aws-textract | AWS Textract | rejected | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
+| azure-document-intelligence | Azure AI Document Intelligence | evaluating | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | banfico | Banfico | rejected | 2026-09-11 | unknown | unknown |
 | better-stack | Better Stack | active | 2026-09-10 | unknown | unknown |
+| bitwarden | Bitwarden | active | 2026-10-31 | unknown | unknown |
 | bodacc | BODACC | active | 2026-09-11 | unknown | unknown |
 | bolagsverket | Bolagsverket | active | 2026-09-10 | unknown | unknown |
 | bottomline | Bottomline | rejected | 2026-09-11 | unknown | unknown |
@@ -46,19 +50,25 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | courtlistener | CourtListener (Free Law Project) | active | 2026-09-10 | unknown | unknown |
 | cro | CRO | active | 2026-09-10 | unknown | unknown |
 | cvrapi-dk | cvrapi.dk | active | 2026-09-10 | unknown | unknown |
+| deepgram | Deepgram | evaluating | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | defillama | DefiLlama | active | 2026-09-10 | unknown | unknown |
 | dilisense | Dilisense | active | 2026-09-10 | DEC-20260429-A | unknown |
 | einsearch | EINsearch | active | 2026-09-10 | unknown | unknown |
+| elevenlabs | ElevenLabs | rejected | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | esortcode | eSortCode | active | 2026-09-10 | unknown | unknown |
 | etherscan | Etherscan | held | 2026-09-11 | unknown | prohibited (verified 2026-09-10) |
 | eurostat | Eurostat | evaluating | 2026-10-26 | unknown | conditional (verified 2026-10-26) |
+| foursquare-os-places | Foursquare Open Source Places | held | 2026-10-29 | unknown | unknown |
 | france-travail | France Travail | candidate | 2026-09-11 | unknown | unknown |
 | gemi | GEMI | active | 2026-09-10 | unknown | unknown |
 | github | GitHub | active | 2026-09-10 | unknown | conditional (verified 2026-09-10) |
+| gladia | Gladia | rejected | 2026-10-29 | unknown | prohibited (verified 2026-10-29) |
 | gleif | GLEIF | active | 2026-09-10 | unknown | unknown |
 | google | Google | active | 2026-09-10 | unknown | unknown |
+| google-document-ai | Google Cloud Document AI | evaluating | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | goplus | GoPlus | held | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
 | govlink | GovLink | rejected | 2026-09-11 | unknown | unknown |
+| groq | Groq | evaluating | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | hmrc-uk | HMRC (UK) | active | 2026-09-10 | unknown | unknown |
 | hn-algolia | Hacker News (Algolia) | active | 2026-09-10 | unknown | unknown |
 | insee | INSEE | active | 2026-09-10 | unknown | unknown |
@@ -68,11 +78,15 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | kadaster | Kadaster (Dutch BAG) | active | 2026-09-10 | unknown | unknown |
 | krs | KRS | active | 2026-09-10 | unknown | unknown |
 | middesk | Middesk | rejected | 2026-09-11 | unknown | unknown |
+| mistral | Mistral AI | evaluating | 2026-10-29 | unknown | permitted (verified 2026-10-29) |
 | monitorpay | MonitorPay | rejected | 2026-09-11 | unknown | unknown |
 | movitz | Movitz | rejected | 2026-09-11 | unknown | unknown |
 | ncbi-eutils | NCBI E-utilities | active | 2026-09-10 | unknown | unknown |
 | notion | Notion | active | 2026-09-10 | unknown | unknown |
+| npm | npm | active | 2026-10-27 | unknown | conditional (verified 2026-10-27) |
+| nta-houjin | NTA Corporate Number Web-API | active | 2026-10-27 | unknown | permitted (verified 2026-10-27) |
 | nvd | NVD (NIST) | active | 2026-09-10 | unknown | unknown |
+| openai-api | OpenAI API (speech-to-text) | evaluating | 2026-10-29 | unknown | permitted (verified 2026-10-29) |
 | openalex | OpenAlex | active | 2026-09-10 | unknown | permitted (verified 2026-09-06) |
 | openapi-com | Openapi.com | active | 2026-09-11 | unknown | unknown |
 | openmercantil | OpenMercantil.es | active | 2026-09-11 | unknown | unknown |
@@ -80,10 +94,13 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | openregister | OpenRegister | active | 2026-09-10 | unknown | unknown |
 | opensanctions | OpenSanctions | retired | 2026-09-10 | unknown | unknown |
 | opensanctions-self-host | OpenSanctions self-host | held | 2026-09-11 | DEC-20260429-A | unknown |
+| overture-maps | Overture Maps Foundation (places theme) | active | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | persona | Persona | rejected | 2026-09-11 | unknown | unknown |
 | prh | PRH | active | 2026-09-10 | unknown | unknown |
 | publicnode | PublicNode Ethereum RPC | retired | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
+| pypi | PyPI | active | 2026-10-27 | unknown | conditional (verified 2026-10-27) |
 | railway | Railway | active | 2026-09-10 | unknown | unknown |
+| registercheck | registercheck.de (Openlaw GmbH) | evaluating | 2026-10-29 | unknown | unknown |
 | registru-centras | Registru centras | active | 2026-09-10 | unknown | unknown |
 | rekt-database | Rekt Database | active | 2026-09-10 | unknown | unknown |
 | resend | Resend | active | 2026-09-10 | unknown | unknown |
@@ -96,6 +113,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | serper | Serper | active | 2026-09-10 | unknown | unknown |
 | socure | Socure | rejected | 2026-09-11 | unknown | unknown |
 | sourcify | Sourcify | active | 2026-09-11 | unknown | conditional (verified 2026-09-11) |
+| speechmatics | Speechmatics | evaluating | 2026-10-29 | unknown | conditional (verified 2026-10-29) |
 | stripe | Stripe | active | 2026-09-10 | unknown | unknown |
 | sudreg | Sudreg | active | 2026-09-10 | unknown | unknown |
 | supabase-beacon | Supabase (Beacon project) | active | 2026-09-10 | unknown | unknown |

@@ -114,7 +114,7 @@ output_field_reliability:
   company_name: guaranteed
   employee_estimate: guaranteed
 limitations:
-  - title: Enrichment combines multiple web sources via AI — some data points may be inferred rather than verified
+  - title: Some company details can be inferred
     text: Enrichment combines multiple web sources via AI — some data points may be inferred rather than directly verified
     category: accuracy
     severity: info

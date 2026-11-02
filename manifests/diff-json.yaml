@@ -103,13 +103,13 @@ output_field_reliability:
   removed: guaranteed
   identical: guaranteed
 limitations:
-  - title: Semantically equivalent values in different formats like '1.0' vs 1 are reported as differences in the diff
+  - title: Different value formats count as differences
     text: >-
       Computes structural diff — semantically equivalent values in different formats (e.g., '1.0' vs 1) are reported as
       differences
     category: coverage
     severity: info
-    workaround: Normalize number and boolean types before diffing if your data has mixed string/native representations
+    workaround: Normalise number and boolean types before diffing if your data has mixed string/native representations
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

@@ -118,6 +118,18 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: current.temperature_c
+        operator: gt
+        reliability: guaranteed
+        value: -60
+      - field: current.temperature_c
+        operator: lt
+        reliability: guaranteed
+        value: 60
+      - field: current.humidity_percent
+        operator: lt
+        reliability: guaranteed
+        value: 101
   health_check_input:
     city: Stockholm
 output_field_reliability:
@@ -125,7 +137,7 @@ output_field_reliability:
   location: guaranteed
   forecast_7day: guaranteed
 limitations:
-  - title: Open-Meteo forecast accuracy decreases beyond 3 days and varies by geographic region
+  - title: Forecast accuracy decreases beyond three days
     text: Current weather from Open-Meteo — forecast accuracy decreases beyond 3 days and varies by geographic region
     category: accuracy
     severity: info

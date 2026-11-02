@@ -242,7 +242,7 @@ output_field_reliability:
   chain_length: guaranteed
   leaf_certificate: guaranteed
 limitations:
-  - title: Certificate chains are validated against public root CAs — private or internal CAs show as untrusted
+  - title: Private certificate authorities appear untrusted
     text: Validates chain to known root CAs — private/internal CAs will show as untrusted
     category: coverage
     severity: info

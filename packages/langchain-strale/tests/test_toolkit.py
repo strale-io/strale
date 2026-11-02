@@ -23,12 +23,13 @@ class TestToolkitInit:
     def test_get_tools_returns_list(self):
         tools = self.toolkit.get_tools()
         assert isinstance(tools, list)
-        assert len(tools) > 200  # 256 capabilities + 2 meta-tools
+        assert len(tools) > 200  # capabilities + 3 meta-tools
 
     def test_tools_include_meta_tools(self):
         tools = self.toolkit.get_tools()
         names = [t.name for t in tools]
         assert "strale_search" in names
+        assert "strale_execute" in names
         assert "strale_balance" in names
 
     def test_each_tool_has_price_in_description(self):
@@ -68,10 +69,10 @@ class TestToolExecution:
         tools = self.toolkit.get_tools()
         search = next(t for t in tools if t.name == "strale_search")
         result_str = search.invoke({"query": "vat"})
-        results = json.loads(result_str)
-        assert isinstance(results, list)
-        assert len(results) > 0
-        assert any("vat" in r["slug"] for r in results)
+        found = json.loads(result_str)
+        assert found["ok"] is True
+        assert len(found["results"]) > 0
+        assert any("vat" in r["slug"] for r in found["results"])
 
     def test_balance_tool(self):
         tools = self.toolkit.get_tools()

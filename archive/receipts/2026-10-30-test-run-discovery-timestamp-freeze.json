@@ -1,0 +1,45 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "3969cbe6990b68e0c43d0d0c0710211b1c2d9c14"
+  },
+  "at": "2026-10-30T10:01:25.349Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "kind": "test-run",
+    "topic": "discovery-timestamp-freeze",
+    "at": "2026-10-30T10:02:00Z"
+  },
+  "topic": "discovery-timestamp-freeze",
+  "raw": {
+    "kind": "test-run",
+    "topic": "discovery-timestamp-freeze",
+    "produced_by": {
+      "script": "npx vitest run src/lib/onboarding-*.test.ts",
+      "commit": "3969cbe6"
+    },
+    "at": "2026-10-30T10:02:00Z",
+    "inputs": {
+      "files": [
+        "apps/api/src/lib/onboarding-pipeline.test.ts",
+        "apps/api/src/lib/onboarding-cli.test.ts",
+        "apps/api/src/lib/onboarding-workflow.test.ts",
+        "apps/api/src/lib/onboarding-write-fence.test.ts",
+        "apps/api/src/lib/onboarding-gates-orchestrator.test.ts",
+        "apps/api/src/lib/onboarding-limitations.test.ts"
+      ]
+    },
+    "summary": {
+      "files_passed": 6,
+      "tests_passed": 65,
+      "tests_failed": 0,
+      "new_tests": 2,
+      "fail_before_fix": 2,
+      "discrimination_proven": "both new tests fail with looksTimeVarying removed and pass with it restored",
+      "root_typecheck": "clean apart from the pre-existing @duckdb/node-api resolution error, which this change does not touch"
+    }
+  }
+}

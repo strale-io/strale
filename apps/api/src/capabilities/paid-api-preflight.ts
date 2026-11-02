@@ -1,3 +1,4 @@
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
@@ -22,6 +23,7 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
 
   try {
     const res = await safeFetch(fullUrl, {
+      purpose: "availability_probe",
       method: "GET",
       headers: {
         "User-Agent": "Strale/1.0 (paid-api-preflight; admin@strale.io)",
@@ -44,6 +46,7 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     // swallowing it.
     await discardBody(res, "paid-api-preflight: status and headers only");
   } catch (err) {
+    if (isCapabilityRefusal(err)) throw err;
     const responseTimeMs = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);
     return {
@@ -253,11 +256,13 @@ function parseMPP(header: string): Record<string, unknown> {
 async function checkFacilitator(url: string): Promise<boolean> {
   try {
     const res = await safeFetch(url, {
+      purpose: "availability_probe",
       method: "HEAD",
       signal: AbortSignal.timeout(2000),
     });
     return res.ok || res.status < 500;
-  } catch {
+  } catch (err) {
+    if (isCapabilityRefusal(err)) throw err;
     return false;
   }
 }

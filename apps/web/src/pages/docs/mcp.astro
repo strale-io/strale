@@ -7,7 +7,7 @@ import CodeBlock from "../../components/CodeBlock.astro";
 import { getSiteData, API_BASE } from "../../lib/site-data.ts";
 import { PACKAGES } from "../../lib/snippets.ts";
 import { formatEur, json } from "../../lib/format.ts";
-import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { FREE_TIER_MONTHLY_LIMIT } from "../../lib/code-facts.ts";
 import { firstCallTool, MCP_DEFAULT_MAX_PRICE_CENTS, ASYNC_THRESHOLD_SECONDS } from "../../content/docs-facts.ts";
 
 const data = await getSiteData();
@@ -105,7 +105,7 @@ const toc = [
         <h3 class="t-subhead">Read the result</h3>
         <p class="t-body">{output ? <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance. The tool’s published example:</> : <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance.</>}</p>
         {output && <CodeBlock id="mcp-out" title="Output" wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} />}
-        <p class="t-compact muted">Without a key, free tools allow {FREE_TIER_DAILY_LIMIT} calls a day per IP address across all free tools.</p>
+        <p class="t-compact muted">Without a key, free tools allow {FREE_TIER_MONTHLY_LIMIT} calls a month per IP address across all free tools.</p>
       </li>
     </ol>
   </section>

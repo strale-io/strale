@@ -108,7 +108,7 @@ output_field_reliability:
   theme: guaranteed
   body_html: guaranteed
 limitations:
-  - title: Converts standard CommonMark syntax — GitHub-flavored extensions like task lists and tables may not render
+  - title: Some GitHub Markdown extensions may not render
     text: Converts standard CommonMark syntax — GitHub-flavored extensions (task lists, tables) may not all be supported
     category: coverage
     severity: info

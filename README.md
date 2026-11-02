@@ -1,6 +1,6 @@
 # Strale
 
-Trust and quality infrastructure for AI agents.
+Pay-per-call tools for AI agents — one API key or an x402 wallet. MCP server, REST API, TypeScript and Python SDKs.
 
 [![strale MCP server](https://glama.ai/mcp/servers/strale-io/strale/badges/card.svg)](https://glama.ai/mcp/servers/strale-io/strale)
 
@@ -8,23 +8,20 @@ Trust and quality infrastructure for AI agents.
 [![npm](https://img.shields.io/npm/v/straleio?label=straleio)](https://www.npmjs.com/package/straleio)
 [![PyPI](https://img.shields.io/pypi/v/straleio?label=straleio%20PyPI)](https://pypi.org/project/straleio/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![strale.dev](https://img.shields.io/badge/strale.dev-live-green)](https://strale.dev)
+[![strale.dev](https://img.shields.io/badge/strale.dev-live-green)](https://strale.dev?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## What Strale is
 
 Strale is a capability marketplace for AI agents. Agents call `strale.do()`
-at runtime to reach verified capabilities — company registry lookups,
+at runtime to reach tools — company registry lookups,
 compliance checks, financial validation, Web3 security, and more — plus
 bundled solutions for multi-step workflows like a full KYB check or company
 due diligence, instead of the agent's own code hardcoding integrations and
 managing credentials for every data source it might need.
 
-Every capability is watched: free-tier capabilities are tested against real
-upstreams on a schedule, paid capabilities are watched through production
-observability and an enforced quality floor, and every call returns a
-structured, auditable result with source provenance. The current catalog,
-free-tier list, and country coverage are live values, not numbers printed
-here — see [How to use it](#how-to-use-it) below for where to read them.
+Each tool page lists inputs, output fields, price, limitations and source.
+Testing modes vary by tool. Read the current catalogue, free-tier list and
+country coverage from [platform facts](https://api.strale.io/v1/platform/facts).
 
 ## How to use it
 
@@ -35,7 +32,7 @@ here — see [How to use it](#how-to-use-it) below for where to read them.
   "mcpServers": {
     "strale": {
       "type": "streamableHttp",
-      "url": "https://api.strale.io/mcp",
+      "url": "https://api.strale.io/mcp?src=gh-readme",
       "headers": {
         "Authorization": "Bearer sk_live_your_key_here"
       }
@@ -84,7 +81,7 @@ A subset of capabilities (email/IBAN/crypto-address validation, DNS lookup,
 JSON repair, URL-to-markdown, and more) work with no signup, no API key, and
 no wallet — only an IP-based daily rate limit. Read the current list from
 `GET /v1/platform/facts` (`free_tier_slugs`), not from a number in this
-file. Get a key and trial credits at [strale.dev](https://strale.dev) when
+file. Get a key and trial credits at [strale.dev](https://strale.dev?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) when
 you need the rest of the catalog.
 
 ### Framework integrations
@@ -116,30 +113,22 @@ signup required. Not every capability is x402-eligible; read the live,
 dynamic subset from:
 
 ```
-GET https://api.strale.io/x402/catalog
+GET https://api.strale.io/x402/catalog?src=gh-readme
 GET https://api.strale.io/.well-known/x402.json
 ```
 
-### Quality
+### Testing and source context
 
-Capabilities are continuously tested against their real upstreams: known-
-answer, schema, negative, edge-case, and dependency-health checks, plus
-piggyback checks fed by real production traffic where a capability's cost
-model rules out proactive testing. An enforced quality floor quarantines a
-capability that falls below it on real traffic and promotes it back
-automatically on recovery. Strale deliberately publishes no single numeric
-composite quality score — an earlier one was retired because it compressed
-unrelated failure modes into a number that looked more precise than it
-was. What is exposed instead is the raw evidence per capability: status,
-last-tested timestamp, recent test history, known limitations, and the
-data source behind it.
+Testing modes vary by tool. Inspect current availability, test mode and
+last-tested time in public test signals, and read limitations and sources in
+the catalogue before use.
 
 ```
 GET https://api.strale.io/v1/capabilities/vat-validate
 ```
 
 Every capability publishes its limitations honestly, including coverage
-gaps. Methodology: [strale.dev/quality](https://strale.dev/quality).
+gaps. Methodology: [strale.dev/quality](https://strale.dev/quality?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ### IDE rules for safe data handling
 
@@ -164,11 +153,11 @@ registry scraping.
 
 ### More
 
-- [strale.dev](https://strale.dev) — homepage and sign-up
-- [strale.dev/docs](https://strale.dev/docs) — API reference
-- [strale.dev/pricing](https://strale.dev/pricing) — pricing
+- [strale.dev](https://strale.dev?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — homepage and sign-up
+- [strale.dev/docs](https://strale.dev/docs?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — API reference
+- [strale.dev/pricing](https://strale.dev/pricing?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — pricing
 - [scan.strale.io](https://scan.strale.io) — Beacon, a free agent-readiness scanner
-- [api.strale.io/mcp](https://api.strale.io/mcp) — MCP endpoint (Streamable HTTP)
+- [api.strale.io/mcp](https://api.strale.io/mcp?src=gh-readme) — MCP endpoint (Streamable HTTP)
 - [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
 
 ## How the code is organised

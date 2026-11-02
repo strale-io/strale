@@ -23,6 +23,7 @@ import {
   INVOCATION_FACT_DELETE_GUARD_DAYS,
 } from "./invocation-facts.js";
 import { INVOCATION_FACT_RETENTION_DAYS } from "./data-retention.js";
+import { readMigrationsSourceText } from "./migration-artifact-audit.js";
 
 const SRC = join(import.meta.dirname, "..");
 
@@ -250,6 +251,27 @@ describe("evidence completeness", () => {
   });
 });
 
+// H7b: the route gates customer work, then calls the moved dispatch functions.
+// Assert the delegation as well as inspecting their implementation.
+function servingSource(file: string): string {
+  const body = readFileSync(file, "utf8");
+  if (file === join(SRC, "routes/do-batch.ts")) {
+    // The batch route gates once, then runs every item through the same
+    // executeWithRetry wrapper /v1/do uses, which is where the fact is recorded.
+    expect(body).toContain('from "../lib/do/batch.js"');
+    expect(body).toContain("await runBatch({");
+    const batch = readFileSync(join(SRC, "lib/do/batch.ts"), "utf8");
+    expect(batch).toContain("executeWithRetry((inp) =>");
+    return body + batch + readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
+  }
+  if (file !== join(SRC, "routes/do.ts")) return body;
+  expect(body).toContain('from "../lib/do/dispatch.js"');
+  for (const fn of ["executeFreeTier", "executeFreeTierAuthenticated", "executeSync", "executeAsync"]) {
+    expect(body).toContain(`return ${fn}({`);
+  }
+  return body + readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
+}
+
 describe("no serving path may skip the fact", () => {
   /**
    * Exit condition: a guard prevents a new invocation path skipping the fact.
@@ -266,7 +288,7 @@ describe("no serving path may skip the fact", () => {
   it("every file that serves a customer_paid invocation also records it", () => {
     const offenders: string[] = [];
     for (const file of walk(SRC)) {
-      const body = readFileSync(file, "utf8");
+      const body = servingSource(file);
       if (!body.includes(`kind: "customer_paid"`)) continue;
       if (!/record(?:Paid|Anonymous|Customer)?Invocation\(/.test(body)) {
         offenders.push(file.slice(SRC.length + 1).replace(/\\/g, "/"));
@@ -294,7 +316,7 @@ describe("no serving path may skip the fact", () => {
     // allowlisted; an allowlist is how a guard becomes decoration.
     const covered = walk(SRC)
       .filter((f) => {
-        const body = readFileSync(f, "utf8");
+        const body = servingSource(f);
         return (
           body.includes(`kind: "customer_paid"`) && /record(?:Paid|Anonymous|Customer)?Invocation\(/.test(body)
         );
@@ -305,6 +327,7 @@ describe("no serving path may skip the fact", () => {
     expect(covered).toEqual([
       "capabilities/guarded-executor.ts",
       "lib/solution-executor.ts",
+      "routes/do-batch.ts",
       "routes/do.ts",
       "routes/x402-gateway-v2.ts",
     ]);
@@ -324,7 +347,7 @@ describe("no serving path may skip the fact", () => {
     for (const rel of [
       "capabilities/guarded-executor.ts",
       "lib/solution-executor.ts",
-      "routes/do.ts",
+      "lib/do/dispatch.ts",
       "routes/x402-gateway-v2.ts",
     ]) {
       const body = readFileSync(join(SRC, rel), "utf8");
@@ -341,7 +364,7 @@ describe("no serving path may skip the fact", () => {
       }
     }
     // The wrapper must delegate, not reimplement.
-    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    const doRoute = readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
     expect(doRoute).toContain("recordAnonymousInvocation(fact)");
     // And /v1/do must NOT await the write. executeSync runs the executor inside
     // db.transaction holding the wallet row FOR UPDATE, and the writer uses the
@@ -401,7 +424,7 @@ describe("no serving path may skip the fact", () => {
       .filter((f) => /recordAnonymousInvocation\(/.test(readFileSync(f, "utf8")))
       .map((f) => f.slice(SRC.length + 1).split(sep).join("/"))
       .sort();
-    expect(anonWriters).toEqual(["lib/invocation-facts.ts", "routes/do.ts"]);
+    expect(anonWriters).toEqual(["lib/do/dispatch.ts", "lib/invocation-facts.ts"]);
 
     // Exactly one file writes the customer context kind.
     const ctxWriters = walk(SRC)
@@ -415,7 +438,7 @@ describe("no serving path may skip the fact", () => {
     // servedFree. `{ kind: "account", userId }` supplying it is a type error, so
     // this is enforced by tsc and pinned here so the union cannot quietly
     // collapse back to a plain boolean.
-    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    const doRoute = readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
     expect(doRoute).toContain('| { kind: "account"; userId: string };');
     expect((doRoute.match(/\{ kind: "account", userId: user\.id \}/g) ?? []).length).toBe(3);
     expect((doRoute.match(/\{ kind: "anonymous", servedFree \}/g) ?? []).length).toBe(1);
@@ -431,7 +454,7 @@ describe("no serving path may skip the fact", () => {
     // cleanup and its replacement silently matched nothing, so the route could
     // hardcode `const servedFree = true` with the suite green.
     expect(doRoute).toContain(
-      'const servedFree = computeServedFree(c.get("x402_paid" as any));',
+      'const servedFree = computeServedFree(c.get("x402_paid"));',
     );
     expect(doRoute).toContain("isFreeTier: servedFree,");
   });
@@ -462,7 +485,7 @@ describe("no serving path may skip the fact", () => {
     // occurrences entirely.
     const expected: Array<[string, string]> = [
       ["lib/solution-executor.ts", "capabilitySlug: step.capabilitySlug,"],
-      ["routes/do.ts", "capabilitySlug: capability.slug,"],
+      ["lib/do/dispatch.ts", "capabilitySlug: capability.slug,"],
       ["routes/x402-gateway-v2.ts", "capabilitySlug: cap.slug,"],
       ["capabilities/guarded-executor.ts", "capabilitySlug: slug,"],
     ];
@@ -499,7 +522,7 @@ describe("no serving path may skip the fact", () => {
     //
     // solution-executor was already pinned; do.ts and x402 were not. Same shape
     // as five earlier findings -- one writer file guarded, the next one not.
-    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    const doRoute = readFileSync(join(SRC, "lib/do/dispatch.ts"), "utf8");
     expect(doRoute).toContain("outcome: outcomeFromOutput(capability.slug, result?.output)");
     const x402 = readFileSync(join(SRC, "routes/x402-gateway-v2.ts"), "utf8");
     expect(x402).toContain("outcome: outcomeFromOutput(cap.slug, result.output)");
@@ -526,7 +549,7 @@ describe("retention and the database guard must not contradict each other", () =
     // constant the retention rule is checked against. They are checked against
     // each other here, because the failure mode of them drifting is a purge
     // that throws nightly and a test that keeps passing.
-    const migration = readFileSync(join(SRC, "lib/startup-migrations.ts"), "utf8");
+    const migration = readMigrationsSourceText();
     expect(migration).toContain(
       `INTERVAL '${INVOCATION_FACT_DELETE_GUARD_DAYS} days'`,
     );

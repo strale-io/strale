@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "../anthropic-client.js";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { DigestData } from "./types.js";
 import { logError, logWarn } from "../log.js";
 import { MODELS } from "../models.js";
@@ -55,7 +56,6 @@ ${pa.zeroActivity ? "WARNING: ZERO ACTIVITY in the last 24 hours." : ""}
 PLATFORM HEALTH:
 - Circuit breakers open: ${ph.circuitBreakers.length > 0 ? JSON.stringify(ph.circuitBreakers) : "None (all healthy)"}
 - Test pass rate (24h): ${ph.testPassRate.rate}% (${ph.testPassRate.passed}/${ph.testPassRate.total})
-- SQS grade changes: ${ph.sqsChanges.length > 0 ? JSON.stringify(ph.sqsChanges) : "None"}
 
 YESTERDAY'S WORK (from Notion Journal + GitHub commits):
 - Journal entries: ${JSON.stringify(sl.journalEntries.map((e) => ({ title: e.title, type: e.type })))}
@@ -124,7 +124,7 @@ export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
   }
 
   try {
-    const client = new Anthropic({ apiKey });
+    const client = createAnthropicClient({ apiKey });
     const response = await client.messages.create({
       model: MODELS.digest.id,
       max_tokens: 1500,

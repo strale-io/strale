@@ -149,6 +149,10 @@ output_schema:
       type: array
     featured_snippet:
       type: object
+    unresolved_positions:
+      type: array
+    link_resolution:
+      type: object
 data_source: Serper.dev API (SERP analysis and feature extraction)
 data_source_type: api
 transparency_tag: algorithmic
@@ -202,9 +206,16 @@ output_field_reliability:
   # This is the "expected non-null on optional field" class that broke 8 EU
   # registries; see the field-reliability rules in CLAUDE.md.
   featured_snippet: common
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_positions: guaranteed
+  link_resolution: guaranteed
+
 limitations:
-  - title: SERP analysis is a point-in-time snapshot — rankings change frequently with Google algorithm updates
-    text: Analyzes search results at a point in time — SERP rankings change frequently based on Google algorithm updates
+  - title: Search rankings change over time
+    text: Analyses search results at a point in time — SERP rankings change frequently based on Google algorithm updates
     category: accuracy
     severity: info
     workaround: Track SERP positions over time rather than relying on a single snapshot for SEO strategy decisions
@@ -214,5 +225,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: serper
-  checks: pending
-  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API. Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

@@ -14,6 +14,8 @@ import {
   index,
   primaryKey,
   bigint,
+  pgView,
+  customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -35,6 +37,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull().unique(),
   keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  signupSrc: text("signup_src"), // nullable venue label, DB CHECK limits it to 64 characters
   signupIpHash: varchar("signup_ip_hash", { length: 16 }),
   maxSpendPerHourCents: integer("max_spend_per_hour_cents")
     .notNull()
@@ -63,6 +66,71 @@ export const users = pgTable("users", {
     .notNull()
     .defaultNow(),
 });
+
+// Additional keys leave the primary users key and account cap unchanged.
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull().unique(),
+  keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  label: varchar("label", { length: 100 }).notNull(),
+  maxSpendPerHourCents: integer("max_spend_per_hour_cents"),
+  maxSpendTotalCents: integer("max_spend_total_cents"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+}, (table) => [
+  index("api_keys_prefix_idx").on(table.keyPrefix),
+  index("api_keys_user_idx").on(table.userId),
+]);
+
+// ─── OAuth for the Claude connector (block 0133, distribution D4) ──────────
+// Tokens and codes are stored as SHA-256 hex; the raw values are never kept.
+export const oauthClients = pgTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientName: text("client_name"),
+  redirectUris: jsonb("redirect_uris").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const oauthGrants = pgTable("oauth_grants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  apiKeyId: uuid("api_key_id").notNull().references(() => apiKeys.id),
+  clientId: text("client_id").notNull(),
+  scope: text("scope").notNull(),
+  resource: text("resource").notNull(),
+  /** True when the grant created its API key; revoking the grant then revokes the key. */
+  keyMinted: boolean("key_minted").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("oauth_grants_user_idx").on(table.userId)]);
+
+export const oauthAuthorizationCodes = pgTable("oauth_authorization_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  clientId: text("client_id").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  scope: text("scope").notNull(),
+  resource: text("resource").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  sourceApiKeyId: uuid("source_api_key_id").references(() => apiKeys.id),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  grantId: uuid("grant_id").references(() => oauthGrants.id),
+});
+
+export const oauthTokens = pgTable("oauth_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  grantId: uuid("grant_id").notNull().references(() => oauthGrants.id),
+  kind: text("kind").$type<"access" | "refresh">().notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("oauth_tokens_grant_idx").on(table.grantId)]);
 
 // ─── wallets ────────────────────────────────────────────────────────────────
 export const wallets = pgTable("wallets", {
@@ -161,6 +229,7 @@ export const walletTransactions = pgTable(
     walletId: uuid("wallet_id")
       .notNull()
       .references(() => wallets.id),
+    apiKeyId: uuid("api_key_id").references(() => apiKeys.id),
     amountCents: integer("amount_cents").notNull(), // positive = top-up, negative = purchase
     type: varchar("type", { length: 20 }).notNull(), // 'top_up' | 'purchase' | 'refund' | 'trial_credit'
     referenceId: uuid("reference_id"), // links to transactions.id if purchase
@@ -171,6 +240,8 @@ export const walletTransactions = pgTable(
       .defaultNow(),
   },
   (table) => [
+    index("wallet_transactions_api_key_created_idx").on(table.apiKeyId, table.createdAt),
+    index("wallet_transactions_reference_idx").on(table.referenceId),
     uniqueIndex("wallet_transactions_stripe_session_id_unique")
       .on(table.stripeSessionId)
       .where(sql`stripe_session_id IS NOT NULL`),
@@ -216,23 +287,12 @@ export const capabilities = pgTable("capabilities", {
   fallbackVerificationLevel: text("fallback_verification_level"),
   // 'tested' | 'manual' | 'untested' | null
   errorCodesJson: jsonb("error_codes_json"),
-  // Computed SQS scores (written after each test run)
-  qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
-  rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
-  matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }),
-  // Trust metadata (written after each test run + staleness refresh job)
-  matrixSqsRaw: decimal("matrix_sqs_raw", { precision: 5, scale: 1 }),
-  trend: varchar("trend", { length: 20 }).default("stable"),
-  // 'improving' | 'declining' | 'stable' | 'stale'
+  // Trust metadata (written after each test run + staleness refresh job).
+  // The SQS score columns were dropped by startup-migration block 0132.
   freshnessLevel: varchar("freshness_level", { length: 20 }).default("fresh"),
   // 'fresh' | 'aging' | 'stale' | 'expired' | 'unverified'
   lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
   freshnessDecayedAt: timestamp("freshness_decayed_at", { withTimezone: true }),
-  // Execution guidance cache (written after each test run)
-  guidanceUsable: boolean("guidance_usable"),
-  guidanceStrategy: text("guidance_strategy"),
-  // 'direct' | 'retry_with_backoff' | 'queue_for_later' | 'unavailable'
-  guidanceConfidence: decimal("guidance_confidence", { precision: 5, scale: 1 }),
   // Pipeline Phase I: Lifecycle management
   lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("draft"),
   // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended' | 'deactivated'
@@ -254,6 +314,7 @@ export const capabilities = pgTable("capabilities", {
   onboardingHookFailures: integer("onboarding_hook_failures").notNull().default(0),
   deactivationReason: text("deactivation_reason"),
   outputFieldReliability: jsonb("output_field_reliability"),
+  manifestTextHash: text("manifest_text_hash"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }
   visible: boolean("visible").notNull().default(false),
   onboardingManifest: jsonb("onboarding_manifest"),
@@ -348,6 +409,8 @@ export const transactions = pgTable(
     input: jsonb("input").notNull(),
     output: jsonb("output"),
     error: text("error"),
+    costCents: decimal("cost_cents", { precision: 24, scale: 9 }),
+    costBreakdown: jsonb("cost_breakdown"),
     priceCents: integer("price_cents").notNull(),
     latencyMs: integer("latency_ms"),
     provenance: jsonb("provenance"),
@@ -491,6 +554,8 @@ export const transactions = pgTable(
     // proxy, or an attacker trying to double-charge during the
     // verify-then-settle window). Null on wallet-paid rows.
     x402PaymentHash: varchar("x402_payment_hash", { length: 32 }),
+    // Durable invocation budget survives releasing the unique payment claim.
+    x402ExecutionAttempts: jsonb("x402_execution_attempts").$type<{ paymentHash: string; count: number }>(),
     // MCP funnel P0 (migration 0083, 2026-08-15): stable (non-rotating)
     // secret-salted sha256 over (AUDIT_HMAC_SECRET || lowercased payer address),
     // truncated to
@@ -539,6 +604,9 @@ export const transactions = pgTable(
     uniqueIndex("transactions_x402_payment_hash_unique")
       .on(table.x402PaymentHash)
       .where(sql`x402_payment_hash IS NOT NULL`),
+    index("transactions_x402_execution_attempt_hash_idx")
+      .on(sql`(${table.x402ExecutionAttempts}->>'paymentHash')`)
+      .where(sql`x402_execution_attempts IS NOT NULL`),
     // MCP funnel P0: distinct-payer / repeat-rate rollup queries filter on
     // payment_method='x402' and group by this column — not unique (a repeat
     // payer is expected to produce many rows with the same hash).
@@ -961,9 +1029,10 @@ export const capabilityLimitations = pgTable(
   ],
 );
 
-// ─── capability_health (circuit breaker) ────────────────────────────────────
-// Tracks health state per capability for circuit breaker pattern
-export const capabilityHealth = pgTable("capability_health", {
+// ─── source_health (circuit breaker) ────────────────────────────────────
+// Tracks health state per capability for circuit breaker pattern. Named
+// capability_health until block 0134 renamed it (H7, platform-hardening T7).
+export const sourceHealth = pgTable("source_health", {
   id: uuid("id").defaultRandom().primaryKey(),
   capabilitySlug: varchar("capability_slug", { length: 255 })
     .notNull()
@@ -984,6 +1053,14 @@ export const capabilityHealth = pgTable("capability_health", {
     .defaultNow(),
 });
 
+// Compatibility view under the table's old name. Block 0141 has dropped it in
+// production, so this declaration exists only so a fresh database can run
+// block 0118, which still updates capability_health by name: drizzle-kit push
+// creates the view, 0118 updates through it, and 0141 — which runs after 0118
+// — drops it again, leaving the same shape as production. No application code
+// reads it. Do not add a reader: in production the name resolves to nothing.
+export const capabilityHealthCompat = pgView("capability_health").as((qb) => qb.select().from(sourceHealth));
+
 // ─── health_monitor_events (Platform Health Monitor audit trail) ─────────────
 export const healthMonitorEvents = pgTable("health_monitor_events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -999,38 +1076,6 @@ export const healthMonitorEvents = pgTable("health_monitor_events", {
     .notNull()
     .defaultNow(),
 });
-
-// ─── sqs_daily_snapshot ──────────────────────────────────────────────────────
-// Daily snapshots of SQS scores for historical trend analysis
-export const sqsDailySnapshot = pgTable(
-  "sqs_daily_snapshot",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    capabilitySlug: text("capability_slug").notNull(),
-    snapshotDate: date("snapshot_date").notNull(),
-    matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }).notNull(),
-    qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
-    rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
-    qpGrade: varchar("qp_grade", { length: 2 }),
-    rpGrade: varchar("rp_grade", { length: 2 }),
-    trend: varchar("trend", { length: 20 }),
-    healthState: varchar("health_state", { length: 20 }),
-    runsAnalyzed: integer("runs_analyzed"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("sqs_daily_snapshot_slug_date_unique").on(
-      table.capabilitySlug,
-      table.snapshotDate,
-    ),
-    index("sqs_daily_snapshot_slug_date_desc_idx").on(
-      table.capabilitySlug,
-      table.snapshotDate,
-    ),
-  ],
-);
 
 // ─── rate_limit_counters (F-0-002) ──────────────────────────────────────────
 // DB-backed, restart-safe counters for abuse-class endpoints (signup,
@@ -1093,7 +1138,7 @@ export const capabilityBudgetCounters = pgTable(
 
 // ─── Vendor Control Tower ──────────────────────────────────────────────────
 // Account-level billing/allowance state. This is deliberately separate from
-// capability_health: one vendor balance can govern several capabilities, and
+// source_health: one vendor balance can govern several capabilities, and
 // a healthy network endpoint can still refuse every authenticated request
 // because its account has no credits left.
 export const vendorAccounts = pgTable("vendor_accounts", {
@@ -1368,6 +1413,9 @@ export const walletReservations = pgTable(
     amountCents: integer("amount_cents").notNull(),
     /** reserved | executing | captured | released */
     state: varchar("state", { length: 16 }).notNull().default("reserved"),
+    /** debit (legacy async/solutions) or hold (sync: debit only on capture). */
+    mode: varchar("mode", { length: 8 }).notNull().default("debit"),
+    apiKeyId: uuid("api_key_id"),
     /** The execution this reservation is holding funds for. */
     transactionId: uuid("transaction_id"),
     /**
@@ -1398,6 +1446,34 @@ export const walletReservations = pgTable(
     uniqueIndex("wallet_reservations_transaction_id_unique")
       .on(table.transactionId)
       .where(sql`transaction_id IS NOT NULL`),
+  ],
+);
+
+// ─── batch_orders ────────────────────────────────────────────────────────────
+// POST /v1/do/batch (block 0135). Written once when the batch's holds are
+// taken and never updated: each item's outcome lives on its hold in
+// wallet_reservations and the transaction that hold links to.
+export const batchOrders = pgTable(
+  "batch_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    apiKeyId: uuid("api_key_id"),
+    capabilityId: uuid("capability_id").notNull().references(() => capabilities.id),
+    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    idempotencyFingerprint: varchar("idempotency_fingerprint", { length: 64 }).notNull(),
+    itemCount: integer("item_count").notNull(),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    quotedTotalCents: integer("quoted_total_cents").notNull(),
+    maxTotalPriceCents: integer("max_total_price_cents").notNull(),
+    /** One hold per item, in input order. */
+    itemReservationIds: jsonb("item_reservation_ids").$type<string[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("batch_orders_user_idempotency_key_unique")
+      .on(table.userId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
   ],
 );
 
@@ -1588,3 +1664,64 @@ export const executionManifestSnapshots = pgTable("execution_manifest_snapshots"
   snapshot: jsonb("snapshot").notNull(),
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ─── Async jobs: file output and completion callbacks (portfolio 2.11) ──────
+//
+// An async /v1/do execution is a `transactions` row (DEC-22); these two tables
+// hang off it. Created by startup-migration block 0136.
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+/**
+ * A file an async execution produced. Bytes live in Postgres (Strale has no
+ * object store; sizes are capped in lib/jobs/files.ts) and are served only via
+ * a signed, expiring URL. Customer content: deleted with its transaction's
+ * content redaction, at the latest PII_RETENTION_DAYS after creation.
+ */
+export const jobFiles = pgTable(
+  "job_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    transactionId: uuid("transaction_id").notNull().references(() => transactions.id),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("job_files_transaction_id_idx").on(table.transactionId),
+    // The retention purge's age predicate.
+    index("job_files_created_at_idx").on(table.createdAt),
+  ],
+);
+
+/**
+ * One completion callback per async execution that asked for one. Delivery is
+ * signed, retried with backoff and bounded (lib/jobs/callbacks.ts).
+ */
+export const jobCallbacks = pgTable(
+  "job_callbacks",
+  {
+    transactionId: uuid("transaction_id").primaryKey().references(() => transactions.id),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    url: text("url").notNull(),
+    /** pending (delivered once the job is terminal) | delivered | failed */
+    state: varchar("state", { length: 16 }).notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    lastStatusCode: integer("last_status_code"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("job_callbacks_due_idx").on(table.state, table.nextAttemptAt),
+  ],
+);

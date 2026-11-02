@@ -9,7 +9,7 @@ import CodeBlock from "../../components/CodeBlock.astro";
 import { getSiteData } from "../../lib/site-data.ts";
 import { PACKAGES, pyValue } from "../../lib/snippets.ts";
 import { firstCallSnippets, firstCallTool } from "../../content/docs-facts.ts";
-import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { FREE_TIER_MONTHLY_LIMIT } from "../../lib/code-facts.ts";
 
 const data = await getSiteData();
 const { tool, inputs } = firstCallTool(data);
@@ -143,7 +143,7 @@ const toc = [
       </li>
       <li>
         <h3 class="t-subhead">Get a key</h3>
-        <p class="t-body">The SDKs send your API key with every call, so they need one even for free tools. <a class="link" href="/signup">Sign up</a>, then set <code>STRALE_API_KEY</code> in your environment. Free tools cost nothing with a key, and keyless free calls are limited to {FREE_TIER_DAILY_LIMIT} a day per IP address. To call without a key, use the <a class="link" href="/docs/api">REST API</a>.</p>
+        <p class="t-body">The SDKs send your API key with every call, so they need one even for free tools. <a class="link" href="/signup">Sign up</a>, then set <code>STRALE_API_KEY</code> in your environment. Free tools cost nothing with a key, and keyless free calls are limited to {FREE_TIER_MONTHLY_LIMIT} a month per IP address. To call without a key, use the <a class="link" href="/docs/api">REST API</a>.</p>
       </li>
       <li>
         <h3 class="t-subhead">Call a free tool</h3>

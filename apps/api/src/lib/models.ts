@@ -53,8 +53,7 @@ export const MODELS = {
    * `provenance.model_resolved` (the snapshot Anthropic actually
    * resolved to per call) so replay evidence doesn't depend on this
    * field alone. When Anthropic publishes a dated snapshot, update the
-   * id here (or set RISK_NARRATIVE_MODEL on Railway, which still
-   * overrides this default — see risk-narrative-generate.ts).
+   * id here.
    */
   capability_reasoning: {
     id: "claude-sonnet-4-6",
@@ -90,3 +89,18 @@ export type ModelRole = keyof typeof MODELS;
 export function promptDigest(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
+
+/** USD per million tokens, standard global API (not batch). Source read 2026-10-27. */
+interface TokenPrice {
+  input: number; output: number; cache_write_5m: number; cache_write_1h: number; cache_read: number;
+  pinned_at: string; source: string;
+  long_prompt?: { threshold: number; input: number; output: number; cache_write_5m: number; cache_write_1h: number; cache_read: number };
+}
+const PRICE_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing";
+export const MODEL_PRICES: Record<ModelRole, TokenPrice> = {
+  capability_default: { input: 1, output: 5, cache_write_5m: 1.25, cache_write_1h: 2, cache_read: 0.10, pinned_at: "2026-10-27", source: PRICE_SOURCE },
+  capability_reasoning: { input: 3, output: 15, cache_write_5m: 3.75, cache_write_1h: 6, cache_read: 0.30, pinned_at: "2026-10-27", source: PRICE_SOURCE },
+  digest: { input: 3, output: 15, cache_write_5m: 3.75, cache_write_1h: 6, cache_read: 0.30, pinned_at: "2026-10-27", source: PRICE_SOURCE },
+  search_rank: { input: 0.10, output: 0.50, cache_write_5m: 0.125, cache_write_1h: 0.20, cache_read: 0.01, pinned_at: "2026-10-27", source: PRICE_SOURCE,
+    long_prompt: { threshold: 100_000, input: 0.50, output: 2.50, cache_write_5m: 0.625, cache_write_1h: 1, cache_read: 0.05 } },
+};

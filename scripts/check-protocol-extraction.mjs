@@ -6,11 +6,13 @@
 // Never edits CLAUDE.md or a protocol file.
 //
 // Usage: node scripts/check-protocol-extraction.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllProtocolExtraction, repoRootFrom, PROTOCOLS_DIR } from "./protocol-extraction-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { findings, fileCount } = checkAllProtocolExtraction(root);
+requireInputs(fileCount, "protocol extraction: mirror files");
 
 if (json) {
   console.log(

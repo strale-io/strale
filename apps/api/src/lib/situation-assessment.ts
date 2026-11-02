@@ -12,7 +12,7 @@
 
 import { sql, eq, desc, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { healthMonitorEvents, testResults, capabilityHealth, capabilities } from "../db/schema.js";
+import { healthMonitorEvents, testResults, sourceHealth, capabilities } from "../db/schema.js";
 import { getAllUpstreamHealth, getCapabilityUpstreams } from "./upstream-health-gate.js";
 import { getBrowserlessCapabilityCount } from "./chromium-health.js";
 import { getProvider } from "./dependency-manifest.js";
@@ -524,7 +524,6 @@ export async function assessSchedulerStale(lastHeartbeat: Date | null): Promise<
         "If crashed: check recent deployments for breaking changes",
       ],
       automaticActions: [
-        "Freshness decay is gradually reducing SQS scores for all capabilities",
         "This alert will re-fire on each meta-monitoring check until resolved",
       ],
     },

@@ -1,8 +1,6 @@
 slug: serp-related-questions
 name: SERP Related Questions
-description: >-
-  "People Also Ask" questions and related searches for a query, via a licensed SERP API. The
-  content-research primitive for SEO and topic-expansion agents.
+description: "Find related questions and searches for a query. Returns question text, available answer snippets and source links."
 category: web-scraping
 cost_class: paid_prepaid
 quota_window: none
@@ -65,6 +63,10 @@ output_schema:
       description: '"People Also Ask" entries — empty array means Google shows no PAA box for this query (a real answer, not a failure)'
     related_searches: { type: array }
     question_count: { type: integer }
+    unresolved_url_count:
+      type: number
+    link_resolution_attempted:
+      type: boolean
 test_fixtures:
   known_answer:
     input:
@@ -83,6 +85,13 @@ output_field_reliability:
   related_questions: guaranteed
   related_searches: guaranteed
   question_count: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_url_count: guaranteed
+  link_resolution_attempted: guaranteed
+
 limitations:
   - title: Empty results are a real answer, not a failure
     text: >-
@@ -102,5 +111,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: serper
-  checks: pending
-  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API. Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

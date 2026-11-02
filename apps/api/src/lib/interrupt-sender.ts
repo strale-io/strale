@@ -462,7 +462,7 @@ async function buildInfrastructureDown(
       ...(nextRetry ? [{ label: "Next retry", value: nextRetry }] : []),
       ...(envVar ? [{ label: envVar, value: { badge: envVarConfigured ? statusBadge("healthy", "Configured") : statusBadge("warning", "Not set") } }] : []),
     ]) +
-    sourceAttribution("Source: dependency health probe, capability_health table") +
+    sourceAttribution("Source: dependency health probe, source_health table") +
 
     // 6. Affected capabilities table (top 10)
     (capDetails.length > 0
@@ -578,7 +578,6 @@ async function buildSuspensionWarning(
 ): Promise<{ subject: string; html: string }> {
   const slug = payload.capabilitySlug ?? "unknown";
   const d = payload.details;
-  const sqs = d.sqs_score != null ? String(d.sqs_score) : "—";
   const reason = String(d.reason ?? "Degraded SQS below platform floor");
   const degradedDays = d.degraded_days != null ? `${Math.floor(Number(d.degraded_days))}` : "?";
   const autoSuspendAt = d.auto_suspend_at
@@ -601,7 +600,6 @@ async function buildSuspensionWarning(
     </p>` +
 
     metricGrid([
-      { label: "SQS Score", value: sqs, subtitle: "below platform floor" },
       { label: "Days degraded", value: degradedDays },
       { label: "Auto-suspend", value: autoSuspendAt.replace(" CET", ""), subtitle: "CET" },
     ]) +
@@ -615,7 +613,7 @@ async function buildSuspensionWarning(
         { label: "Failure type", value: { badge: categoryBadge(failCategory) } },
       ] : []),
     ]) +
-    sourceAttribution("Source: capabilities table, capability_health") +
+    sourceAttribution("Source: capabilities table, source_health") +
 
     // Category-specific guidance
     (isNonTransient ? categoryGuidanceHtml(failCategory) : "") +
@@ -626,7 +624,6 @@ async function buildSuspensionWarning(
       <p style="margin:0;font-size:13px;color:${COLORS.textWarning};line-height:1.6;">
         &bull; Removed from search, MCP, and the capability catalog<br>
         &bull; Returns 503 for API calls via /v1/do<br>
-        &bull; SQS frozen at current value<br>
         &bull; Auto-recovery check runs weekly during health sweep
       </p>
     </td></tr>

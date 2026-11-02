@@ -96,7 +96,7 @@ output_field_reliability:
   level_counts: guaranteed
   detected_format: guaranteed
 limitations:
-  - title: Custom or proprietary log formats may require specific format hints for accurate AI parsing
+  - title: Custom log formats can require explicit hints
     text: AI-powered log parsing — custom or proprietary log formats may require specific format hints for accurate parsing
     category: coverage
     severity: info

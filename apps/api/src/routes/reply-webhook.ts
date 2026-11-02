@@ -403,7 +403,7 @@ async function getNthPendingProposal(n: number): Promise<ProposalRow | null> {
     SELECT details->>'proposal_id' AS proposal_id
     FROM health_monitor_events
     WHERE event_type IN ('proposal_approved', 'proposal_rejected')
-      AND details->>'proposal_id' = ANY(${proposalIds})
+      AND details->>'proposal_id' IN (${sql.join(proposalIds.map((id) => sql`${id}`), sql`, `)})
   `);
   const resolvedRows = (Array.isArray(resolved) ? resolved : (resolved as any)?.rows ?? []) as any[];
   const resolvedIds = new Set(resolvedRows.map((r: any) => r.proposal_id));

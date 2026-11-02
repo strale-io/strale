@@ -37,7 +37,7 @@ vi.mock("../db/index.js", () => ({
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
       dbCalls.push("transaction");
       // Without the guard, recordFailure opens a transaction and reads
-      // capability_health — that read is the observable asserted against.
+      // source_health — that read is the observable asserted against.
       return fn({
         select: () => ({
           from: () => ({ where: () => ({ limit: () => ({ for: async () => [] }) }) }),
@@ -78,7 +78,7 @@ describe("the platform's own refusals never open the breaker", () => {
     }
   });
 
-  it("recordFailure returns without touching capability_health", async () => {
+  it("recordFailure returns without touching source_health", async () => {
     // The behavioural assertion, and the only one here that fails if the guard
     // is removed from recordFailure — the predicate checks above would keep
     // passing. It watches whether the breaker's write path was entered at all.

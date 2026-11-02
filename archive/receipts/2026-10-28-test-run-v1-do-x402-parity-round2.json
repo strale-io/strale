@@ -1,0 +1,42 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "67807f4d6ca184686eb8df92c5420f62328f5cd1"
+  },
+  "at": "2026-10-28T18:13:07.016Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "full_suite": "374 files passed, 36 skipped; 7596 tests passed, 361 skipped",
+    "focused": "2 files passed, 2 skipped; 54 tests passed, 10 skipped",
+    "fail_before": "Both admission tests failed; v1_do recovery failed and x402 recovery passed in mocked reconciler",
+    "typecheck": "passed after MCP build",
+    "gateway_snapshots": "22 byte-identical to HEAD",
+    "round2_snapshot_changes": "none",
+    "registers": "receipts, programs, docs, claims, models, env passed",
+    "ci_lints": "passed; shape-contract cross-repo comparison skipped because frontend absent",
+    "integration_limitation": "Postgres unavailable; sandbox prevents switching user to start local server; database tests skipped",
+    "flaky_files": "none",
+    "review": "self-check; independent review of round 2 remains with orchestrator",
+    "handoff_gate": "failed: uncommitted work, branch/upstream, sibling worktree, existing merged branches; remote fetch failed"
+  },
+  "topic": "v1-do-x402-parity-round2",
+  "raw": {
+    "ok": true,
+    "full_suite": "374 files passed, 36 skipped; 7596 tests passed, 361 skipped",
+    "focused": "2 files passed, 2 skipped; 54 tests passed, 10 skipped",
+    "fail_before": "Both admission tests failed; v1_do recovery failed and x402 recovery passed in mocked reconciler",
+    "typecheck": "passed after MCP build",
+    "gateway_snapshots": "22 byte-identical to HEAD",
+    "round2_snapshot_changes": "none",
+    "registers": "receipts, programs, docs, claims, models, env passed",
+    "ci_lints": "passed; shape-contract cross-repo comparison skipped because frontend absent",
+    "integration_limitation": "Postgres unavailable; sandbox prevents switching user to start local server; database tests skipped",
+    "flaky_files": "none",
+    "review": "self-check; independent review of round 2 remains with orchestrator",
+    "handoff_gate": "failed: uncommitted work, branch/upstream, sibling worktree, existing merged branches; remote fetch failed"
+  }
+}

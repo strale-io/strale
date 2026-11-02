@@ -1,0 +1,5 @@
+{
+  "command": "cd apps/api && npx vitest run src/lib/search/search-quality.test.ts src/capabilities/domain-contact-extract.test.ts --maxWorkers=1",
+  "exit_code": 0,
+  "output": "\n RUN  v4.1.4 <checkout>/apps/api\n\n\n Test Files  2 passed (2)\n      Tests  38 passed (38)\n   Start at  16:37:23\n   Duration  2.98s (transform 620ms, setup 46ms, import 1.46s, tests 1.09s, environment 0ms)\n\n"
+}

@@ -3,7 +3,7 @@
 
 slug: ip-geolocation
 name: IP Geolocation
-description: Look up geographic location, ISP, and network information for an IP address. Detects proxies and hosting providers.
+description: "Currently unavailable. Look up an IP address's reported location, network and provider."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -104,7 +104,7 @@ output_field_reliability:
   is_proxy: guaranteed
   coordinates: guaranteed
 limitations:
-  - title: City-level accuracy is approximately 80% for fixed IPs but lower for mobile and VPN traffic
+  - title: Mobile and VPN traffic has lower location accuracy
     text: >-
       IP location accuracy varies — city-level accuracy is approximately 80% for fixed IPs but lower for mobile and VPN
       traffic

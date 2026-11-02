@@ -99,16 +99,14 @@ limitations:
     category: coverage
     severity: info
     workaround: Use wallet-balance-lookup, wallet-age-check, or wallet-transactions-lookup for on-chain verification.
-  - title: All-lowercase or all-uppercase addresses skip checksum verification
+  - title: Single-case addresses skip checksum verification
     text: >-
       EIP-55 typo detection requires mixed-case input. All-lowercase or all-uppercase addresses are accepted as
       format-valid (checksum_present=false, checksum_valid=null) but no typo-detection runs against them.
     category: accuracy
     severity: warning
     workaround: >-
-      Always pass the checksummed form returned in 'normalized' to downstream calls so that future copies of the address
-      are typo-protected.
-
+      Pass the checksummed address in `normalized` to downstream calls to preserve typo detection.
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: not_applicable

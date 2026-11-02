@@ -1,0 +1,139 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "1a8f682bedbc6a1876c92853c6cf9aab4cd2037e"
+  },
+  "at": "2026-10-28T09:27:46.898Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "checks_count": 20,
+    "targeted_tests_passed": 144,
+    "guard_tests_passed": 7,
+    "full_suite_failed": 3,
+    "full_suite_passed": 6595,
+    "full_suite_skipped": 358
+  },
+  "topic": "vendor-permissions",
+  "raw": {
+    "ok": false,
+    "checks_count": 20,
+    "targeted_tests_passed": 144,
+    "guard_tests_passed": 7,
+    "full_suite_failed": 3,
+    "full_suite_passed": 6595,
+    "full_suite_skipped": 358,
+    "checks": [
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "output": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output": "\n> claims:check\n> node scripts/check-claims.mjs\n\nchecked 29 rows in docs/company/claims.yaml against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract\n"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "output": "\n> programs:check\n> node scripts/check-program-tracks.mjs\n\nok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml\nok   docs/programs/distribution/tracks.yaml\nok   docs/programs/platform-hardening/tracks.yaml\n"
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "output": "orning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-06-retention-cadence-and-review-followups.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-24-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n"
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "output": "\n> env:check\n> node scripts/check-env.mjs\n\nchecked 129 process.env names against 134 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract\n"
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "output": "\n> models:check\n> node apps/api/scripts/check-model-literals.mjs\n\nchecked 928 files under apps/api/src and apps/api/scripts (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)\nok   model registry contract\n"
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "output": "\n> docs:test\n> node --test scripts/check-docs-index.test.mjs\n\n✔ listDocsSubtrees: lists top-level directories only, sorted (12.324694ms)\n✔ listReferencedSubtrees: reads backtick-quoted subtree names from table rows (0.7598ms)\n✔ clean pass: every real subtree is listed, every listed subtree is real (10.063164ms)\n✔ PLANTED FAILURE: a new docs/ subtree with no line in docs/README.md must fail (18.158521ms)\n✔ PLANTED FAILURE: a subtree listed in docs/README.md that no longer exists must fail (8.038002ms)\n✔ DOCS_README_MISSING when docs/README.md itself is absent (3.969165ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 250.167321\n"
+      },
+      {
+        "command": "npm run vendor-terms:test",
+        "exit_code": 0,
+        "output": "\n> vendor-terms:test\n> node --test scripts/check-vendor-terms.test.mjs\n\n✔ permission contract rejects each missing field, invalid acceptance, decision and evidence (29.450847ms)\n✔ each settled permission downgrade fails, a documented reopening passes (3.066378ms)\n✔ Git merge-base/HEAD detects a planted committed downgrade and accepts supersession (1175.805115ms)\n✔ working-copy downgrade and archive edits fail; absent origin/main reports HEAD-only (623.511344ms)\n✔ malformed historical JSON fails closed (507.455892ms)\n✔ first JSON introduction bootstraps without parsing the legacy TypeScript (708.067135ms)\n✔ archives remain immutable after supersession has merged and no row references them (1287.975198ms)\nℹ tests 7\nℹ suites 0\nℹ pass 7\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4496.913539\n"
+      },
+      {
+        "command": "npm run vendor-terms:check",
+        "exit_code": 0,
+        "output": "\n> vendor-terms:check\n> node scripts/check-vendor-terms.mjs\n\nwarn HEAD: JSON register not yet introduced; no recorded written permissions in this format.\nwarn 57b81389b33d3bc1af5d25a4c1f428b7fa85c4c8: JSON register not yet introduced; no recorded written permissions in this format.\nvendor-terms: 14 records, 0 errors\n"
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run typecheck",
+        "exit_code": 0,
+        "output": "\n> @strale/api@0.1.0 typecheck\n> tsc --noEmit\n\n"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/vendor-terms.test.ts src/lib/data-access.test.ts",
+        "exit_code": 1,
+        "output": "Initial run: import path to root checker was incorrect. Fixed; subsequent targeted run passed."
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/capabilities/auto-register-data-access.test.ts src/lib/vendor-terms.test.ts src/lib/data-access.test.ts",
+        "exit_code": 0,
+        "output": " Test Files  3 passed (3)\n      Tests  144 passed (144)\n   Duration  53.67s (transform 11.69s, setup 189ms, import 7.50s, tests 71.13s, environment 4ms)"
+      },
+      {
+        "command": "npm test (initial full run)",
+        "exit_code": 1,
+        "output": " FAIL  src/lib/vendor-terms.test.ts [ src/lib/vendor-terms.test.ts ]\n FAIL  src/lib/manifest-text-sync.test.ts > bounds writes per boot and prioritises remaining work on the next boot\n FAIL  src/routes/public-trust.test.ts > an unauthenticated public install can read trust metadata > serves the capability batch with no Authorization header\n Test Files  3 failed | 361 passed | 35 skipped (399)\n      Tests  2 failed | 6499 passed | 358 skipped (6859)\n   Duration  408.04s (transform 39.82s, setup 11.33s, import 650.66s, tests 307.89s, environment 76ms)"
+      },
+      {
+        "command": "npm test (after import-path fix)",
+        "exit_code": 1,
+        "output": " FAIL  src/lib/manifest-text-sync.test.ts > bounds writes per boot and prioritises remaining work on the next boot\n FAIL  src/routes/public-trust.test.ts > an unauthenticated public install can read trust metadata > serves the capability batch with no Authorization header\n FAIL  src/lib/search/search-quality.test.ts > frozen public catalogue quality gate > ranks 1,000 mixed natural/typo/country queries in under two seconds\n Test Files  3 failed | 361 passed | 35 skipped (399)\n      Tests  3 failed | 6595 passed | 358 skipped (6956)\n   Duration  418.55s (transform 41.60s, setup 9.31s, import 530.81s, tests 501.56s, environment 80ms)"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/manifest-text-sync.test.ts src/routes/public-trust.test.ts src/lib/*search*.test.ts --maxWorkers=1",
+        "exit_code": 0,
+        "output": " Test Files  3 passed (3)\n      Tests  32 passed (32)\n   Duration  27.33s (transform 6.64s, setup 95ms, import 3.82s, tests 21.89s, environment 0ms)"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/search/search-quality.test.ts --maxWorkers=1",
+        "exit_code": 0,
+        "output": " Test Files  1 passed (1)\n      Tests  13 passed (13)\n   Duration  2.50s (transform 361ms, setup 91ms, import 400ms, tests 1.51s, environment 0ms)"
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "existing-record fidelity comparison (TypeScript transpile of HEAD vs JSON without added metadata)",
+        "exit_code": 0,
+        "output": "All 14 original records preserved exactly."
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit_code": 1,
+        "output": "Expected under explicit no-commit/no-switch/no-push task: dirty tree, isolated clone reported as trunk on feature branch, existing merged local/remote branches, committed resume-surface absent. Remote fetch unavailable; findings may be stale."
+      }
+    ],
+    "reviews": {
+      "technical": "GO, round 2",
+      "product": "GO, round 2"
+    },
+    "limitations": [
+      "Full API suite remains red from timeouts/performance; failing files pass isolated with one worker.",
+      "No separate live checks or production actions.",
+      "Dirty working tree is deliberate; orchestrator will commit."
+    ]
+  }
+}

@@ -73,6 +73,7 @@ describe("web-extract output-truncation handling", () => {
 
     expect(messagesCreate).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ max_tokens: 16000 }),
+      expect.objectContaining({ maxRetries: 0, timeout: expect.any(Number) }),
     );
   });
 

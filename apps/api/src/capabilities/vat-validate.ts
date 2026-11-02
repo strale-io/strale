@@ -16,6 +16,8 @@
  * map below.
  */
 
+import { inputRefusal } from "../lib/capability-refusal.js";
+
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { brregProvider } from "./lib/vat-providers/brreg.js";
 import { hmrcProvider } from "./lib/vat-providers/hmrc.js";
@@ -153,9 +155,7 @@ function parseVatNumber(raw: string): ParsedVat | null {
 registerCapability("vat-validate", async (input: CapabilityInput) => {
   const rawVat = input.vat_number ?? input.vat;
   if (typeof rawVat !== "string" || !rawVat) {
-    throw new Error(
-      "'vat_number' is required. Provide a VAT number including country prefix (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789).",
-    );
+    throw inputRefusal("'vat_number' is required. Provide a VAT number including country prefix (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789).", "vat_number", "Send 'vat_number' as a VAT identifier including its country prefix.");
   }
 
   let parsed = parseVatNumber(rawVat);
@@ -166,15 +166,17 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
   }
 
   if (!parsed) {
-    throw new Error(
+    throw inputRefusal(
       `Could not parse a VAT number from: "${rawVat}". Expected format: country code + digits (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789).`,
+      "vat_number", "Send 'vat_number' as a country prefix followed by the VAT identifier.",
     );
   }
 
   const provider = PROVIDER_BY_PREFIX.get(parsed.countryCode);
   if (!provider) {
-    throw new Error(
+    throw inputRefusal(
       `VAT validation for country code "${parsed.countryCode}" is not yet supported. Currently covered: EU27 + XI (VIES), GB (HMRC), NO (Brreg), CH/LI (Swiss UID).`,
+      "vat_number", "Send 'vat_number' with a supported prefix: an EU country, XI, GB, NO, CH or LI.",
     );
   }
 

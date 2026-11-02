@@ -88,24 +88,24 @@ output_field_reliability:
   missing_elements: guaranteed
   gdpr_compliant_signals: guaranteed
 limitations:
-  - title: AI-powered analysis identifies common GDPR issues but does not replace qualified legal review
+  - title: Analysis does not replace qualified legal review
     text: AI-powered analysis identifies common GDPR requirements — does not replace legal review
     category: accuracy
     severity: info
     workaround: Use the gap analysis output to brief your legal counsel on specific sections requiring human review
-  - title: Analyzes the provided privacy policy URL only — separate cookie policies or terms pages are not included
-    text: Analyzes the linked privacy policy page only — separate cookie policies or terms may not be included
+  - title: Separate policies need separate requests
+    text: Analyses the linked privacy policy page only — separate cookie policies or terms may not be included
     category: coverage
     severity: info
     workaround: Pass each policy URL (privacy, cookies, terms) as separate requests and combine the results
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example an unusually long or detailed privacy policy document.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
-    workaround: This privacy policy produced more content than fits in one call — no direct workaround
+    workaround: Read the original policy directly for details that exceed the output limit.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

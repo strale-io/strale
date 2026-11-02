@@ -1,3 +1,4 @@
+import { getNestedValue as getPath } from "../src/lib/nested-value.js";
 /**
  * Production catalog verification sweep (Readiness program, P0 — DEC-20260812-A).
  *
@@ -92,9 +93,6 @@ interface Row {
   attempts?: number;
 }
 
-function getPath(o: any, p: string): any {
-  return p.split(".").reduce((a, k) => (a == null ? undefined : a[k]), o);
-}
 
 function runChecks(out: any, validationRules: any): { total: number; failed: string[] } {
   const checks: any[] = validationRules?.checks ?? validationRules?.expected_fields ?? [];

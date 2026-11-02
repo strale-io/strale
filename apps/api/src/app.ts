@@ -1,3 +1,5 @@
+import { createHealthJobsRoute } from "./routes/health-jobs.js";
+import { apiKeysRoute } from "./routes/api-keys.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
@@ -12,13 +14,16 @@ import { fireAndForget } from "./lib/fire-and-forget.js";
 import { requestContext } from "./middleware/request-context.js";
 import type { AppEnv } from "./types.js";
 import { doRoute } from "./routes/do.js";
+import { doBatchRoute } from "./routes/do-batch.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
+import { jobsRoute } from "./routes/jobs.js";
 import { transactionsRoute } from "./routes/transactions.js";
 import { authRoute, agentSignupHandler } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
 import { demandSignalsRoute } from "./routes/demand-signals.js";
 import { mcpRoute } from "./routes/mcp.js";
+import { oauthRoute, oauthWellKnownRoute } from "./routes/oauth.js";
 import { agentCardRoute, a2aRoute } from "./routes/a2a.js";
 import { adminRoute } from "./routes/admin.js";
 import { solutionsRoute } from "./routes/solutions.js";
@@ -32,11 +37,12 @@ import {
 import { trustIndexRoute as web3AssuranceTrustIndexRoute } from "./web3-assurance/trust-index.js";
 import { suggestRoute } from "./routes/suggest.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
+import { opsReadRoute } from "./routes/ops-read.js";
 import { internalLimitationsRoute } from "./routes/internal-limitations.js";
 import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
-import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
+import { internalOnboardingRoute, onboardingRunRoute } from "./routes/internal-onboarding.js";
 import { publicTrustRoute } from "./routes/public-trust.js";
 import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenApiPaths } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
@@ -139,6 +145,11 @@ export function classifyError(err: Error): {
   return { error_class: "unknown", ...(wrapped ? { wrapped: true as const } : {}) };
 }
 
+const API_BODY_LIMIT_BYTES = 1024 * 1024;
+const A2A_BODY_LIMIT_BYTES = 256 * 1024;
+const MCP_BODY_LIMIT_BYTES = 512 * 1024;
+const WEBHOOK_BODY_LIMIT_BYTES = 512 * 1024;
+
 /**
  * Fixed client-facing responses for middleware-thrown HTTPExceptions, keyed by
  * status. Deliberately a closed set with constant messages: see the note in
@@ -171,7 +182,7 @@ app.onError((err, c) => {
   if (err instanceof HTTPException) {
     const mapped = HTTP_EXCEPTION_RESPONSES[err.status];
     if (mapped) {
-      return c.json(apiError(mapped.code, mapped.message), err.status);
+      return c.json(apiError(mapped.code, mapped.message, { fix: `Reduce the request body to ${c.req.path.startsWith("/x402/") ? MAX_DECODED_DOCUMENT_BYTES : c.req.path.startsWith("/v1/") ? API_BODY_LIMIT_BYTES : c.req.path === "/a2a" ? A2A_BODY_LIMIT_BYTES : c.req.path.startsWith("/webhooks/") ? WEBHOOK_BODY_LIMIT_BYTES : MCP_BODY_LIMIT_BYTES} bytes or less and resend it.` }), err.status);
     }
     if (err.status < 500) {
       return err.getResponse();
@@ -199,6 +210,7 @@ app.onError((err, c) => {
     {
       error_code: "internal_error" as const,
       message: "An unexpected error occurred. Please try again.",
+      details: { retryable: true, next_step: "Retry with exponential backoff; contact support if the failure continues." },
     },
     500,
   );
@@ -225,11 +237,15 @@ app.use("*", async (c, next) => {
   await next();
   c.header("X-Content-Type-Options", "nosniff");
   c.header("X-Frame-Options", "DENY");
-  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!c.res.headers.has("Referrer-Policy")) c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   c.header("X-XSS-Protection", "0"); // modern browsers use CSP instead
   c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  c.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  // A route that sets its own policy keeps it (the OAuth consent page needs
+  // inline styles); every other response gets the locked-down default.
+  if (!c.res.headers.has("Content-Security-Policy")) {
+    c.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  }
 });
 
 // CORS — split policy: public read-only endpoints allow all origins,
@@ -315,7 +331,11 @@ app.use("/llms-full.txt", publicCors);
 app.use("/SKILL.md", rateLimitByIp(120, 60_000));
 app.use("/llms.txt", rateLimitByIp(120, 60_000));
 app.use("/llms-full.txt", rateLimitByIp(120, 60_000));
-app.use("/.well-known/*", rateLimitByIp(120, 60_000));
+// The OAuth discovery documents are fetched from Claude's shared IP range for
+// every Claude user, so they get their own scoped limiter (routes/oauth.ts)
+// instead of this per-IP bucket.
+const wellKnownLimit = rateLimitByIp(120, 60_000);
+app.use("/.well-known/*", (c, next) => (c.req.path.startsWith("/.well-known/oauth-") ? next() : wellKnownLimit(c, next)));
 app.use("/openapi.json", publicCors);
 app.use("/robots.txt", publicCors);
 app.use("/sitemap.xml", publicCors);
@@ -337,9 +357,11 @@ app.use("/a2a", restrictedCors);
 app.use("*", versionMiddleware());
 
 // Body size limits — prevent memory exhaustion from oversized payloads
-app.use("/v1/*", bodyLimit({ maxSize: 1024 * 1024 }));   // 1 MB for API routes
-app.use("/a2a", bodyLimit({ maxSize: 256 * 1024 }));      // 256 KB for A2A
-app.use("/mcp", bodyLimit({ maxSize: 512 * 1024 }));      // 512 KB for MCP
+app.use("/v1/*", bodyLimit({ maxSize: API_BODY_LIMIT_BYTES }));   // 1 MB for API routes
+app.use("/a2a", bodyLimit({ maxSize: A2A_BODY_LIMIT_BYTES }));      // 256 KB for A2A
+app.use("/mcp", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));      // 512 KB for MCP
+app.use("/mcp/*", bodyLimit({ maxSize: MCP_BODY_LIMIT_BYTES }));    // narrow MCP entry points (D7)
+app.use("/oauth/*", bodyLimit({ maxSize: 16 * 1024 }));             // Claude connector OAuth (D4)
 
 // The x402 rail had NO body cap at all. Every other entry point above has had
 // one for months; this one was simply never added, so `/x402/:slug` buffered
@@ -379,6 +401,8 @@ app.use("*", async (c, next) => {
     '</.well-known/agent-card.json>; rel="agent-card"',
   );
 });
+
+app.route("/health/jobs", createHealthJobsRoute());
 
 // Health check — shallow (app is running). `commit` surfaces the build SHA
 // (12-char short form, matches `git log --oneline`) for deploy-mechanism
@@ -487,15 +511,18 @@ app.get("/openapi.json", async (c) => {
 // verification is unaffected (covered by webhook.body-limit.test.ts). 512 KB
 // is far above any real Stripe event (checkout.session.completed is a few KB)
 // while still bounding pre-auth memory.
-app.use("/webhooks/*", bodyLimit({ maxSize: 512 * 1024 }));
+app.use("/webhooks/*", bodyLimit({ maxSize: WEBHOOK_BODY_LIMIT_BYTES }));
 app.route("/webhooks", webhookRoute);
 
 // API v1 routes
 app.route("/v1", doRoute);
+app.route("/v1", doBatchRoute);
 app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
+app.route("/v1", jobsRoute);
 app.route("/v1/auth", authRoute);
+app.route("/v1/api-keys", apiKeysRoute);
 // F-0-002: DB-backed 1/day limit (survives Railway restarts; in-memory
 // would reset on every redeploy, letting an attacker re-signup by timing
 // their burst around a deploy).
@@ -506,6 +533,7 @@ app.post(
 );
 app.route("/v1/demand-signals", demandSignalsRoute);
 app.route("/v1/admin", adminRoute);
+app.route("/v1/ops-read", opsReadRoute);
 app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/solutions", solutionExecuteRoute);
 app.route("/v1/web3-assurance", web3AssuranceRoute);
@@ -637,6 +665,8 @@ app.route("/v1/public/ops/trust", publicTrustRoute);
 // `Authorization: Bearer $ADMIN_SECRET` — enforced at the mount, not by
 // each handler. The per-handler isValidAdminAuth checks inside the route
 // files are kept as defence-in-depth but are no longer load-bearing.
+// Dedicated narrow onboarding auth; these exact handlers terminate before the admin wall.
+app.route("/v1/internal/onboarding", onboardingRunRoute);
 app.use("/v1/internal/*", adminOnly);
 
 // /v1/internal/quality and /v1/internal/trust retired with the SQS engine
@@ -665,6 +695,9 @@ export { warmCatalog } from "./lib/suggest.js";
 
 // MCP Streamable HTTP transport (remote MCP access)
 app.route("/mcp", mcpRoute);
+// OAuth for the Claude connector at /mcp/connector (distribution D4).
+app.route("/oauth", oauthRoute);
+app.route("/.well-known", oauthWellKnownRoute);
 
 // A2A protocol — Agent Card discovery + JSON-RPC task endpoint
 app.route("/.well-known/agent-card.json", agentCardRoute);

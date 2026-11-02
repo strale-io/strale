@@ -51,7 +51,7 @@ export function toolSnippets(opts: { slug: string; inputs: Record<string, unknow
       label: "API",
       lang: "shell",
       code: [
-        free ? "# Free tool: works without a key, a few times a day. Add your key for more." : "# Needs an API key. max_price_cents caps what this call may cost.",
+        free ? "# Free tool: works without a key, within a monthly allowance. Add your key for more." : "# Needs an API key. max_price_cents caps what this call may cost.",
         `curl -X POST ${API_BASE}/v1/do \\`,
         ...(free ? [] : [`  -H "Authorization: Bearer $STRALE_API_KEY" \\`]),
         `  -H 'Content-Type: application/json' \\`,

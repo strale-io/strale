@@ -1,0 +1,44 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f9c98049a754d7182256c24d5b6445c1f4ad0759"
+  },
+  "at": "2026-10-27T12:15:16.324Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "package_docs_passed": 90,
+    "vendor_terms_passed": 94,
+    "data_access_manifests_passed": 6,
+    "targeted_total_passed": 190,
+    "package_docs_and_probe_passed": 99,
+    "api_passed": 6046,
+    "api_failed": 0,
+    "api_skipped": 346,
+    "api_files_passed": 343,
+    "api_files_skipped": 33,
+    "typecheck_passed": true,
+    "manifest_authoring_errors": 0,
+    "live_checks_passed": 4
+  },
+  "topic": "package-docs-round-2",
+  "raw": {
+    "ok": true,
+    "package_docs_passed": 90,
+    "vendor_terms_passed": 94,
+    "data_access_manifests_passed": 6,
+    "targeted_total_passed": 190,
+    "package_docs_and_probe_passed": 99,
+    "api_passed": 6046,
+    "api_failed": 0,
+    "api_skipped": 346,
+    "api_files_passed": 343,
+    "api_files_skipped": 33,
+    "typecheck_passed": true,
+    "manifest_authoring_errors": 0,
+    "live_checks_passed": 4
+  }
+}

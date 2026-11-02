@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { ALL_ISO_IDENTIFIERS, resolveCountryOrThrow } from "./lib/iso-3166.js";
 
 // TED (Tenders Electronic Daily) — EU public procurement data
 // Uses the TED v3 search API with expert query syntax
@@ -22,6 +23,15 @@ interface TedSearchParams {
   cpv_code?: string;
 }
 
+/** Any ISO form or English name the shared resolver accepts, as TED's alpha-3. */
+export function tedCountryCode(raw: string): string {
+  // "EL" is the EU's own code for Greece and common among TED users.
+  const alpha2 = raw.trim().toUpperCase() === "EL" ? "GR" : resolveCountryOrThrow(raw);
+  const alpha3 = ALL_ISO_IDENTIFIERS.find((c) => c.alpha_2 === alpha2)?.alpha_3;
+  if (!alpha3) throw new Error(`'country' ${JSON.stringify(raw)} has no ISO alpha-3 code TED can filter on.`);
+  return alpha3;
+}
+
 function buildExpertQuery(params: TedSearchParams): string {
   const parts: string[] = [];
 
@@ -30,7 +40,9 @@ function buildExpertQuery(params: TedSearchParams): string {
   parts.push(`title-proc ~ "${kw}" OR description-proc ~ "${kw}"`);
 
   if (params.country) {
-    parts.push(`organisation-country-buyer = "${params.country.toUpperCase()}"`);
+    // TED stores the buyer country as ISO alpha-3 ("SWE"). An alpha-2 value
+    // ("SE") matches nothing and the search silently returns zero notices.
+    parts.push(`organisation-country-buyer = "${tedCountryCode(params.country)}"`);
   }
 
   if (params.cpv_code) {

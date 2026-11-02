@@ -28,7 +28,6 @@ export interface PlatformActivity {
 export interface PlatformHealth {
   circuitBreakers: Array<{ slug: string; state: string; consecutiveFailures: number; lastFailureAt: string | null }>;
   testPassRate: { passed: number; failed: number; total: number; rate: number };
-  sqsChanges: Array<{ slug: string; oldGrade: string; newGrade: string; direction: "up" | "down" }>;
 }
 
 export interface NotionActivity {

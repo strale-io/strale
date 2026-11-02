@@ -1,5 +1,6 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
@@ -180,7 +181,7 @@ registerCapability("company-enrich", async (input: CapabilityInput) => {
     ? combinedText.slice(0, 80000)
     : combinedText;
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const parsed = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

@@ -1,0 +1,789 @@
+{
+  "uk-company-data": {
+    "input": {
+      "type": "object",
+      "anyOf": [
+        {
+          "required": [
+            "company_number"
+          ]
+        },
+        {
+          "required": [
+            "company_name"
+          ]
+        }
+      ],
+      "properties": {
+        "company_number": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "ubo_availability": {
+          "type": "string"
+        },
+        "ubo_availability_reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "business_type": {
+          "type": "string"
+        },
+        "company_number": {
+          "type": "string"
+        },
+        "incorporation_date": {
+          "type": "string"
+        },
+        "jurisdiction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sic_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "has_charges": {
+          "type": "boolean"
+        },
+        "legal_representatives": {
+          "type": "array"
+        },
+        "total_legal_representatives": {
+          "type": "integer"
+        },
+        "tier_2_available": {
+          "type": "boolean"
+        },
+        "tier_2_available_reason": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "swedish-company-data": {
+    "input": {
+      "type": "object",
+      "required": [
+        "org_number"
+      ],
+      "properties": {
+        "org_number": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "deregistered",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "is_active": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sni_codes": {
+          "type": "array"
+        },
+        "legal_form": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "org_number": {
+          "type": "string"
+        },
+        "vat_number": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "company_type": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string"
+        },
+        "legal_form_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registered_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternative_names": {
+          "type": "array"
+        },
+        "company_type_code": {
+          "type": "string"
+        },
+        "deregistered_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ongoing_procedures": {
+          "type": "array"
+        },
+        "registered_address": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "business_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deregistration_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "norwegian-company-data": {
+    "input": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "org_number": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "company_number": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "org_number"
+          ]
+        },
+        {
+          "required": [
+            "company_number"
+          ]
+        },
+        {
+          "required": [
+            "company_name"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "query"
+          ]
+        },
+        {
+          "required": [
+            "task"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "ubo_availability": {
+          "type": "string"
+        },
+        "ubo_availability_reason": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "bankrupt",
+            "dissolving",
+            "compulsory_dissolution",
+            "deleted"
+          ]
+        },
+        "address": {
+          "type": "string"
+        },
+        "org_number": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "business_type": {
+          "type": "string"
+        },
+        "industry_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "industry_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "employee_count": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "registration_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vat_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "legal_representatives": {
+          "type": "array"
+        },
+        "total_legal_representatives": {
+          "type": "integer"
+        },
+        "tier_2_available": {
+          "type": "boolean"
+        },
+        "tier_2_available_reason": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "finnish-company-data": {
+    "input": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "business_id": {
+          "type": "string"
+        },
+        "org_number": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "business_id"
+          ]
+        },
+        {
+          "required": [
+            "org_number"
+          ]
+        },
+        {
+          "required": [
+            "company_name"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "query"
+          ]
+        },
+        {
+          "required": [
+            "task"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "inactive",
+            "bankrupt",
+            "liquidation",
+            "restructuring",
+            "pending",
+            "unknown"
+          ]
+        },
+        "address": {
+          "type": "string"
+        },
+        "business_id": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "business_type": {
+          "type": "string"
+        },
+        "industry_code": {
+          "type": "string"
+        },
+        "industry_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registration_date": {
+          "type": "string"
+        },
+        "vat_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "vat-validate": {
+    "input": {
+      "type": "object",
+      "required": [
+        "vat_number"
+      ],
+      "properties": {
+        "vat_number": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "vat_number": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string"
+        },
+        "company_address": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "sanctions-check": {
+    "input": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "person",
+            "company"
+          ]
+        },
+        "birth_date": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string",
+          "enum": [
+            "Person",
+            "Company"
+          ]
+        },
+        "country_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "birth_date_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_sanctioned": {
+          "type": "boolean"
+        },
+        "match_count": {
+          "type": "integer"
+        },
+        "total_results": {
+          "type": "integer"
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "entity_id": {
+                "type": "string"
+              },
+              "datasets": {
+                "type": "array"
+              },
+              "countries": {
+                "type": "array"
+              },
+              "sanction_details": {
+                "type": "array"
+              },
+              "last_updated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "lists_queried": {
+          "type": "object",
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "source_count": {
+              "type": "integer"
+            },
+            "major_lists": {
+              "type": "array"
+            },
+            "freshness_note": {
+              "type": "string"
+            },
+            "source_catalog_url": {
+              "type": "string"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_updated_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "dilisense"
+          ]
+        },
+        "queried_at": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "pep-check": {
+    "input": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "date_of_birth": {
+          "type": "string",
+          "format": "date"
+        },
+        "birth_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "country": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "country_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "birth_date_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_pep": {
+          "type": "boolean"
+        },
+        "match_count": {
+          "type": "integer"
+        },
+        "total_results": {
+          "type": "integer"
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "entity_id": {
+                "type": "string"
+              },
+              "classification": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "positions": {
+                "type": "array"
+              },
+              "countries": {
+                "type": "array"
+              },
+              "datasets": {
+                "type": "array"
+              },
+              "last_updated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "lists_queried": {
+          "type": "object",
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "source_count": {
+              "type": "integer"
+            },
+            "major_lists": {
+              "type": "array"
+            },
+            "freshness_note": {
+              "type": "string"
+            },
+            "source_catalog_url": {
+              "type": "string"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_updated_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "dilisense"
+          ]
+        },
+        "screened_at": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "iban-validate": {
+    "input": {
+      "type": "object",
+      "required": [
+        "iban"
+      ],
+      "properties": {
+        "iban": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "bank_code": {
+          "type": "string"
+        },
+        "branch_code": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "email-validate": {
+    "input": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "is_disposable": {
+          "type": "boolean"
+        },
+        "has_mx_records": {
+          "type": "boolean"
+        },
+        "is_role_address": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
