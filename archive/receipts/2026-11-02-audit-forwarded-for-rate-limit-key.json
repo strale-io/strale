@@ -1,0 +1,125 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "curl against https://api.strale.io/llms.txt (cloud session, 2026-11-02)",
+    "commit": "5a1d62d492f2b2834dcb32e5cabc9123a91cd113"
+  },
+  "at": "2026-11-02T09:39:15.189Z",
+  "inputs": [
+    "GET https://api.strale.io/llms.txt with forged X-Forwarded-For, X-Real-IP and CF-Connecting-IP headers, 16 requests per series"
+  ],
+  "summary": {
+    "ok": true,
+    "forged_value_used_as_rate_limit_key": false,
+    "series": 5,
+    "requests_per_series": 16,
+    "max_fresh_bucket_responses_with_forged_header": 1,
+    "fresh_bucket_responses_without_forged_header": 2
+  },
+  "topic": "forwarded-for-rate-limit-key",
+  "raw": {
+    "ok": true,
+    "endpoint": "GET https://api.strale.io/llms.txt (rateLimitByIp 120/min, in-memory per replica)",
+    "method": "Each request carries a different forged client-IP header. If the server keyed its rate limit on the forged value, every response would show a fresh bucket (x-ratelimit-remaining 119). Counts below 119 mean the forged value was not used as the key. Noise comes from several egress IPs and API replicas, so the control series without any forged header is shown alongside.",
+    "x_ratelimit_remaining": {
+      "no_forged_header": [
+        119,
+        114,
+        114,
+        114,
+        119,
+        113,
+        113,
+        118,
+        115,
+        112,
+        118,
+        113,
+        111,
+        117,
+        112,
+        112
+      ],
+      "distinct_x_forwarded_for": [
+        111,
+        113,
+        110,
+        117,
+        119,
+        110,
+        109,
+        114,
+        113,
+        116,
+        112,
+        110,
+        118,
+        112,
+        112,
+        111
+      ],
+      "distinct_x_forwarded_for_with_junk_first": [
+        112,
+        117,
+        112,
+        118,
+        111,
+        119,
+        111,
+        109,
+        111,
+        116,
+        117,
+        110,
+        118,
+        115,
+        117,
+        113
+      ],
+      "distinct_x_real_ip": [
+        110,
+        109,
+        112,
+        110,
+        116,
+        114,
+        114,
+        109,
+        111,
+        113,
+        110,
+        118,
+        108,
+        112,
+        111,
+        107
+      ],
+      "distinct_cf_connecting_ip": [
+        115,
+        108,
+        109,
+        116,
+        111,
+        106,
+        110,
+        113,
+        105,
+        112,
+        114,
+        109,
+        108,
+        107,
+        113,
+        111
+      ]
+    },
+    "fresh_bucket_responses": {
+      "no_forged_header": 2,
+      "distinct_x_forwarded_for": 1,
+      "distinct_x_forwarded_for_with_junk_first": 1,
+      "distinct_x_real_ip": 0,
+      "distinct_cf_connecting_ip": 0
+    },
+    "at": "2026-11-02T09:17:32.158607Z"
+  }
+}
