@@ -37,6 +37,7 @@ import {
 import { trustIndexRoute as web3AssuranceTrustIndexRoute } from "./web3-assurance/trust-index.js";
 import { suggestRoute } from "./routes/suggest.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
+import { opsReadRoute } from "./routes/ops-read.js";
 import { internalLimitationsRoute } from "./routes/internal-limitations.js";
 import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
@@ -319,6 +320,9 @@ app.use("/v1/public/ops/*", publicCors);
 app.use("/v1/public/ops/*", rateLimitByIp(120, 60_000));
 app.use("/v1/internal/*", restrictedCors);
 app.use("/v1/internal/*", rateLimitByIp(120, 60_000));
+// Read-only operator checks (routes/ops-read.ts): own token, answers 404
+// without it, and a tighter limit than the dashboards.
+app.use("/v1/ops-read/*", rateLimitByIp(30, 60_000, "ops-read"));
 app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 app.use("/SKILL.md", publicCors);
@@ -532,6 +536,7 @@ app.post(
 );
 app.route("/v1/demand-signals", demandSignalsRoute);
 app.route("/v1/admin", adminRoute);
+app.route("/v1/ops-read", opsReadRoute);
 app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/solutions", solutionExecuteRoute);
 app.route("/v1/web3-assurance", web3AssuranceRoute);
