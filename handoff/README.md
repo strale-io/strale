@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-360 files (333 with a recorded intent, 27 without).
+361 files (334 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-11-02 | [`handoff/_general/from-code/2026-11-02-website-centred-hero.md`](_general/from-code/2026-11-02-website-centred-hero.md) | rebuild the home hero to Petter's 2026-11-02 brief: centred text with the switchboard animation below it, impressive... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md`](_general/from-code/2026-10-26-website-homepage-catalogue-and-account-switch.md) | Carry out the 2026-10-25 visual review's fix order on apps/web (homepage first, then the catalogue), and leave the wo... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-fix-registry-status-dead-entities.md`](_general/from-code/2026-10-26-fix-registry-status-dead-entities.md) | make live registry lookups report deleted, deregistered and liquidating companies correctly (NO, PL, CZ, FI, GR), and... |
 | 2026-10-26 | [`handoff/_general/from-code/2026-10-26-feat-search-rebuild.md`](_general/from-code/2026-10-26-feat-search-rebuild.md) | Rebuilt catalogue search locally on feat/search-rebuild from origin/main 42e71dcc; orchestrator reviews, pushes, open... |

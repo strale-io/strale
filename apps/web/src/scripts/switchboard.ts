@@ -6,11 +6,11 @@
 // - The automatic cycle is silent to screen readers (aria-live="off"); a call the visitor chose is
 //   announced. It holds while the pointer or keyboard focus is on a tool, and the Pause button stops
 //   it until pressed again (WCAG 2.2.2).
-// - From 1024px it fits the board to the space the hero leaves (--_s on the board wrap: the console and
-//   tiles scale together) and places each tile's label clear of the console (--_dx on the label).
-//   Every line, dot and label is computed in one pass from the same numbers the CSS places the tiles
-//   with (a tile's centre is x·width, y·height of the board), so they cannot drift apart; the pass
-//   reruns whenever the board field or the console changes size.
+// - Two layouts, both drawn. From 1024px ("band") it fits the board to the space the hero leaves
+//   (--_s on the board wrap: console and tiles scale together) and routes each tile around to its side
+//   of the console; a tile's centre is x·width, y·height of the board, the same numbers the CSS uses.
+//   Below 1024px ("stack") the tiles sit in one row and each wire drops straight into the console top,
+//   measured from the rendered tiles. Either pass reruns whenever the board or the console resizes.
 // Sets those two custom properties and SVG geometry attributes, and toggles classes; the Web
 // Animations it runs are the line draw, the packet, and the progress bar.
 interface PortData { slug: string; x: number; y: number; ask: string; input: Record<string, unknown>; out: Record<string, unknown>; src: string; price: string; charged: string }
@@ -69,21 +69,22 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
   const nodes = data.map(() => mk("circle", { class: "node", r: "3.5" }));
   const wire = mk("path", { class: "live" }) as SVGPathElement;
   const packet = mk("circle", { class: "packet", r: "4", opacity: "0" });
-  const tags = buttons.map((b) => b.querySelector<HTMLElement>(".sb-tag"));
 
   const drawn = () => getComputedStyle(svg).display !== "none";
   const px = (name: string) => parseFloat(css.getPropertyValue(name)) || 0;
   // Board units, before scaling: the tile size, the corner radius, the bus offset from the console and the
   // spacing between buses, the clear gap a label keeps from the console, and the design console height.
-  const U = { tile: px("--space-48") + px("--space-8"), r: px("--space-12"), bus: px("--space-32") + px("--space-2"), step: px("--space-12") + px("--space-2"), gap: px("--space-12"), wide: px("--space-160") * 4 + px("--space-20"), high: px("--space-160") * 3 + px("--space-80") };
+  const U = { tile: px("--space-48") + px("--space-4"), r: px("--space-12"), bus: px("--space-32") + px("--space-2"), step: px("--space-12") + px("--space-2"), gap: px("--space-12"), wide: px("--space-160") * 7, high: px("--space-160") * 2 - px("--space-20") };
+  const band = window.matchMedia("(min-width: 1024px)");
   // Where each side's routes enter the console, as fractions of its height, top to bottom.
   const ENTRY = [0.32, 0.5, 0.68];
   let scale = 1;
   let routes: { d: string; out: string; node: [number, number] }[] = [];
 
-  // Fit the complete diagram to the right column. Tiles remain at least 44px at 1024px.
+  // Fit the band to the space under the copy. At 1270x686 (the measured Surface Pro window) this is
+  // about 0.9; it grows with the window up to 1.35, past which the band would dwarf the headline.
   function fit() {
-    const s = Math.min(wrap!.clientHeight / U.high, wrap!.clientWidth / U.wide, 1.6);
+    const s = Math.min(wrap!.clientHeight / U.high, wrap!.clientWidth / U.wide, 1.35);
     scale = Math.floor(s * 1000) / 1000;
     wrap!.style.setProperty("--_s", String(scale));
   }
@@ -102,27 +103,6 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
     if (Math.abs(ey - cy) < R * 2) return { d: `M${sx} ${cy} H ${ex}`, node: [(sx + ex) / 2, cy] as [number, number], out };
     return { d: `M${sx} ${cy} H ${bus - dir * R} Q ${bus} ${cy} ${bus} ${cy + v * R} V ${ey - v * R} Q ${bus} ${ey} ${bus + dir * R} ${ey} H ${ex}`, node, out };
   }
-  // Labels above the outer tiles can span the board. A middle label wraps inside its
-  // side channel, keeping it near its tool and clear of both the console and upper tiles.
-  function placeTag(i: number, W: number, H: number, d: { left: number; right: number; top: number; height: number }) {
-    const tag = tags[i];
-    if (!tag) return;
-    tag.style.removeProperty("--_max");
-    const s = scale, cx = data[i].x * W, L = data[i].x < 0.5;
-    const bb = board!.getBoundingClientRect(), wb = wrap!.getBoundingClientRect();
-    const lo = wb.left - bb.left + U.gap, hi = wb.right - bb.left - U.gap;
-    let w = tag.offsetWidth * s;
-    const tagH = tag.offsetHeight * s;
-    const top = data[i].y * H - (U.tile / 2 + U.gap) * s - tagH;
-    let left = Math.min(Math.max(cx - w / 2, lo), hi - w);
-    if (top + tagH > d.top - U.gap * s && top < d.top + d.height + U.gap * s) {
-      const edge = L ? d.left - U.gap * s : d.right + U.gap * s;
-      tag.style.setProperty("--_max", `${(L ? edge - lo : hi - edge) / s}px`);
-      w = tag.offsetWidth * s;
-      left = L ? Math.min(Math.max(cx - w / 2, lo), edge - w) : Math.max(Math.min(cx - w / 2, hi - w), edge);
-    }
-    tag.style.setProperty("--_dx", `${(left + w / 2 - cx) / s}px`);
-  }
   let cur = Math.max(0, buttons.findIndex((b) => b.classList.contains("on")));
   function setWire(i: number) {
     wire.setAttribute("d", routes[i]?.d ?? "");
@@ -130,22 +110,61 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
     wire.setAttribute("stroke-dasharray", String(len));
     return len;
   }
-  function layout() {
-    if (!drawn()) { wrap!.style.removeProperty("--_s"); tags.forEach((t) => { t?.style.removeProperty("--_dx"); t?.style.removeProperty("--_max"); }); return; }
-    fit();
+  // Below 1024px each tile drops a wire straight into the console top; the dot sits halfway.
+  function stackRoutes() {
     const b = board!.getBoundingClientRect(), dr = desk!.getBoundingClientRect();
-    const W = b.width, H = b.height, d = { left: dr.left - b.left, right: dr.right - b.left, top: dr.top - b.top, height: dr.height };
-    routes = data.map((_, i) => route(i, W, H, d));
+    const top = dr.top - b.top, inset = U.r * 2;
+    return buttons.map((btn) => {
+      const g = (btn.querySelector(".sb-glyph") ?? btn).getBoundingClientRect();
+      const cx = Math.min(Math.max(g.left + g.width / 2 - b.left, dr.left - b.left + inset), dr.right - b.left - inset);
+      const y0 = g.bottom - b.top;
+      const label = btn.querySelector<HTMLElement>(".sb-name");
+      const y1 = label && label.offsetParent ? label.getBoundingClientRect().bottom - b.top + U.gap / 2 : y0;
+      return { d: `M${cx} ${y1} V ${top}`, out: `M${cx} ${g.top - b.top} V 0`, node: [cx, (y1 + top) / 2] as [number, number] };
+    });
+  }
+  // Below 1024px the console is as wide as the phone, so a result can wrap to more lines than the CSS
+  // height allows. Size the rows once per layout to the tallest of the six examples, so nothing spills
+  // and the page below never jumps as the calls change.
+  function sizeRows() {
+    const box = desk!.querySelector<HTMLElement>(".sb-rows")!;
+    box.style.removeProperty("height");
+    if (band.matches) return;
+    const pres = Object.values(rows).map((r) => r.querySelector("pre")!);
+    const saved = pres.map((pre) => pre.innerHTML);
+    box.style.height = "auto";
+    let tallest = 0;
+    for (const p of data) {
+      pres[0].innerHTML = esc(p.ask);
+      pres[1].innerHTML = `<span class="tk-s">${esc(p.slug)}</span> · ${esc(p.price)}\n${tint(p.input)}`;
+      pres[2].innerHTML = tint(p.out);
+      tallest = Math.max(tallest, box.scrollHeight);
+    }
+    pres.forEach((pre, k) => { pre.innerHTML = saved[k]; });
+    box.style.height = `${Math.max(tallest, box.clientHeight)}px`;
+  }
+  function layout() {
+    sizeRows();
+    if (band.matches) {
+      fit();
+      const b = board!.getBoundingClientRect(), dr = desk!.getBoundingClientRect();
+      const W = b.width, H = b.height, d = { left: dr.left - b.left, right: dr.right - b.left, top: dr.top - b.top, height: dr.height };
+      routes = data.map((_, i) => route(i, W, H, d));
+    } else {
+      wrap!.style.removeProperty("--_s");
+      scale = 1;
+      routes = stackRoutes();
+    }
     routes.forEach((r, i) => {
       restIn[i].setAttribute("d", r.d);
       restOut[i].setAttribute("d", r.out);
       nodes[i].setAttribute("cx", String(r.node[0]));
       nodes[i].setAttribute("cy", String(r.node[1]));
-      placeTag(i, W, H, d);
       nodes[i].classList.toggle("on", i === cur);
     });
     setWire(cur);
   }
+  band.addEventListener("change", () => layout());
   // The field changes with the window; the console with its fonts. Scaling changes neither, so this cannot loop.
   const ro = new ResizeObserver(() => layout());
   ro.observe(wrap);

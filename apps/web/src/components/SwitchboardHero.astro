@@ -4,8 +4,11 @@
 // route; the console shows the agent's question, the call with its live price, and the tool's
 // published example result. Server-rendered with the first call complete, so the page reads
 // the same with no script, with reduced motion, and in a thumbnail; switchboard.ts animates it.
-// From 1024px copy and board sit in two columns. The board scales from its own field;
-// below that the text is followed by the existing tool-grid and console variant.
+// Layout (Petter, 2026-11-02): the copy is centred and the switchboard runs below it at every width.
+// From 1024px the board is a wide band: three tools either side, wired into the console between them,
+// sized so the whole hero fits a 1270x686 laptop window (the measured Surface Pro browser). Below
+// 1024px the six tools sit in one row and drop their wires straight into the console, so the routes
+// and the travelling packet are kept on tablets and phones instead of collapsing to a button grid.
 import type { Tool } from "../lib/site-data";
 import { formatEur, plural } from "../lib/format";
 
@@ -19,12 +22,12 @@ interface Port { slug: string; label: string; x: number; y: number; glyph: Glyph
 // Wherever the published example echoes an input key, the example's own value is used, so question, call and result always agree.
 // x, y place the port on the board (fractions); fields pick which keys of the published example to show.
 const PORTS: Port[] = [
-  { slug: "swedish-company-data", label: "Swedish companies", x: 0.2, y: 0.16, glyph: "company", ask: "Is {org_number} an active company?", input: { org_number: "556703-7485" }, fields: ["company_name", "status", "registered_date"], src: "Bolagsverket" },
-  { slug: "vat-validate", label: "VAT check", x: 0.1, y: 0.5, glyph: "check", ask: "Check this VAT number before we invoice.", input: { vat_number: "SE556703748501" }, fields: ["valid", "company_name", "country_code"], src: "EU VIES" },
-  { slug: "iban-validate", label: "IBAN check", x: 0.22, y: 0.88, glyph: "card", ask: "Is this IBAN well formed?", input: { iban: "SE4550000000058398257466" }, fields: ["valid", "country_code", "bank_code"], src: "ISO 13616 check" },
-  { slug: "url-to-markdown", label: "Web page to text", x: 0.8, y: 0.16, glyph: "web", ask: "Read {url} for me.", input: { url: "https://example.com" }, fields: ["title", "word_count"], src: "fetched live" },
-  { slug: "exchange-rate", label: "Exchange rates", x: 0.9, y: 0.5, glyph: "ref", ask: "What is 1 {from} in {to}?", input: { from: "USD", to: "EUR" }, fields: ["rate", "date"], src: "ECB reference rates" },
-  { slug: "dns-lookup", label: "DNS lookup", x: 0.78, y: 0.88, glyph: "dev", ask: "Does {domain} publish SPF and DMARC?", input: { domain: "google.com" }, fields: ["has_spf", "has_dmarc"], src: "DNS" },
+  { slug: "swedish-company-data", label: "Swedish companies", x: 0.07, y: 0.2, glyph: "company", ask: "Is {org_number} an active company?", input: { org_number: "556703-7485" }, fields: ["company_name", "status", "registered_date"], src: "Bolagsverket" },
+  { slug: "vat-validate", label: "VAT check", x: 0.16, y: 0.5, glyph: "check", ask: "Check this VAT number before we invoice.", input: { vat_number: "SE556703748501" }, fields: ["valid", "company_name", "country_code"], src: "EU VIES" },
+  { slug: "iban-validate", label: "IBAN check", x: 0.07, y: 0.8, glyph: "card", ask: "Is this IBAN well formed?", input: { iban: "SE4550000000058398257466" }, fields: ["valid", "country_code", "bank_code"], src: "ISO 13616 check" },
+  { slug: "url-to-markdown", label: "Web page to text", x: 0.93, y: 0.2, glyph: "web", ask: "Read {url} for me.", input: { url: "https://example.com" }, fields: ["title", "word_count"], src: "fetched live" },
+  { slug: "exchange-rate", label: "Exchange rates", x: 0.84, y: 0.5, glyph: "ref", ask: "What is 1 {from} in {to}?", input: { from: "USD", to: "EUR" }, fields: ["rate", "date"], src: "ECB reference rates" },
+  { slug: "dns-lookup", label: "DNS lookup", x: 0.93, y: 0.8, glyph: "dev", ask: "Does {domain} publish SPF and DMARC?", input: { domain: "google.com" }, fields: ["has_spf", "has_dmarc"], src: "DNS" },
 ];
 
 // A port is shown only when its tool is live and publishes an example carrying every field shown.
@@ -123,56 +126,56 @@ const words = headline.split(/\s+/).filter(Boolean);
 
 <style>
   .sb { --_s: 1; position: relative; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
-  .sb-layout { display: grid; align-content: center; min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width)); padding-block: var(--space-32); }
-  .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-16); padding: 0; }
+  .sb-layout { display: flex; flex-direction: column; align-items: center; gap: var(--space-24); padding-block: var(--space-32); }
+
+  /* Copy: centred at every width. */
+  .sb-copy { display: grid; justify-items: center; text-align: center; gap: var(--space-12); }
   .sb-eyebrow { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--space-32); padding: var(--space-4) var(--space-12); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); font-size: var(--type-small-size); box-shadow: var(--shadow-1); }
   .sb-eyebrow strong { color: var(--text); font-weight: var(--type-ui-weight); }
   .sb-pulse { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--success); box-shadow: 0 0 0 0 var(--success-bg); animation: sb-ping var(--duration-reveal-atmosphere) var(--ease-standard) infinite; }
   @keyframes sb-ping { 70% { box-shadow: 0 0 0 var(--space-8) var(--success-bg); } 100% { box-shadow: 0 0 0 0 var(--success-bg); } }
-  .sb-title { font-family: var(--type-hero-family); font-weight: var(--type-hero-weight); letter-spacing: var(--type-hero-tracking); line-height: var(--type-section-line); font-size: var(--type-campaign-size); max-width: 26ch; text-wrap: balance; }
+  .sb-title { font-family: var(--type-hero-family); font-weight: var(--type-hero-weight); letter-spacing: var(--type-hero-tracking); line-height: var(--type-home-hero-line); font-size: var(--type-campaign-size); max-width: 24ch; text-wrap: balance; }
   .sb-word { --_i: 0; display: inline-block; animation: sb-rise var(--duration-reveal-signature) var(--ease-enter) both; animation-delay: calc(var(--_i) * var(--duration-fast) / 2); }
   @keyframes sb-rise { from { opacity: 0; transform: translateY(var(--space-12)); filter: blur(var(--space-4)); } to { opacity: 1; transform: none; filter: none; } }
-  .sb-lead { color: var(--text-muted); max-width: 64ch; }
-  .sb-actions { display: grid; justify-items: center; gap: var(--space-12) var(--space-16); margin-top: var(--space-4); width: 100%; }
+  .sb-lead { color: var(--text-muted); max-width: var(--type-lead-measure); text-wrap: balance; }
+  .sb-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-12) var(--space-24); margin-top: var(--space-4); width: 100%; }
   .sb-search { position: relative; width: 100%; max-width: calc(var(--space-160) * 2 + var(--space-80)); }
   .sb-search .input { min-height: var(--control-h-lg); padding-right: calc(var(--control-h-lg) + var(--space-4)); box-shadow: var(--shadow-1); }
   .sb-go { position: absolute; right: var(--space-4); top: 50%; translate: 0 -50%; display: grid; place-items: center; width: calc(var(--control-h-lg) - var(--space-8)); height: calc(var(--control-h-lg) - var(--space-8)); border: 0; border-radius: var(--radius-control); background: var(--action-subtle); color: var(--link); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard); }
   .sb-go:hover { background: var(--action); color: var(--text-on-action); }
 
-  /* Board: a quiet surface with a faint grid and a glow behind the console. */
-  /* The grid sits behind the connectors: hairlines in --circuit-grid, a step off the board colour, while the
-     connectors are --circuit, which meets 3:1 on the board (CONTRAST.md). */
-  .sb-board-wrap { position: relative; flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; margin-top: var(--space-32); background: var(--surface-sunken); isolation: isolate; }
+  /* Board: a quiet surface with a faint grid and a glow behind the console. The grid sits behind the
+     connectors: hairlines in --circuit-grid, a step off the board colour, while the connectors are
+     --circuit, which meets 3:1 on the board (CONTRAST.md). */
+  .sb-board-wrap { position: relative; width: 100%; background: var(--surface-sunken); border-radius: var(--radius-media); isolation: isolate; overflow: hidden; }
   .sb-board-wrap::before { content: ""; position: absolute; inset: 0; z-index: -1;
     background-image: repeating-linear-gradient(0deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4))),
       repeating-linear-gradient(90deg, transparent 0 calc(var(--space-32) + var(--space-4) - var(--border-width)), var(--circuit-grid) 0 calc(var(--space-32) + var(--space-4)));
     mask-image: radial-gradient(ellipse, black 30%, transparent 75%); }
   .sb-board-wrap::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 40% 60% at 50% 55%, var(--action-subtle), transparent 70%); opacity: 0.7; }
-  .sb-board { position: relative; width: 100%; margin-inline: auto; max-width: var(--container-wide); padding: var(--space-24) var(--gutter); display: grid; gap: var(--space-16); }
-  .sb-lines { display: none; }
-  .sb-ports { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); max-width: calc(var(--space-160) * 3); margin-inline: auto; width: 100%; }
-  @media (min-width: 768px) {
-    .sb-ports { grid-template-columns: repeat(6, minmax(0, 1fr)); max-width: none; }
-  }
-  .sb-port { --_x: 50%; --_y: 50%; position: relative; display: grid; justify-items: center; align-content: center; gap: var(--space-4); padding: var(--space-8) var(--space-4); color: var(--text); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); cursor: pointer; transition: border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard); }
-  .sb-port:hover { transform: translateY(calc(-1 * var(--space-2))); border-color: var(--border-strong); }
-  .sb-port.on { border-color: var(--action); box-shadow: 0 0 0 var(--space-4) var(--action-subtle), var(--shadow-2); }
-  .sb-glyph { display: grid; place-items: center; width: calc(var(--space-32) + var(--space-4)); height: calc(var(--space-32) + var(--space-4)); border-radius: var(--radius-8); color: var(--brand-paper); }
+  .sb-board { position: relative; display: grid; gap: var(--space-48); padding: var(--space-24) var(--space-12); }
+  .sb-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+
+  /* Below 1024px: one row of tools, each wired straight down into the console. */
+  .sb-ports { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-8); width: 100%; max-width: calc(var(--space-160) * 4); margin-inline: auto; }
+  .sb-port { --_x: 50%; --_y: 50%; position: relative; display: grid; justify-items: center; align-content: start; gap: var(--space-8); padding: 0; color: var(--text); background: transparent; border: 0; cursor: pointer; font: inherit; }
+  .sb-glyph { display: grid; place-items: center; width: calc(var(--space-40) + var(--space-4)); height: calc(var(--space-40) + var(--space-4)); border-radius: var(--radius-card); color: var(--brand-paper); border: var(--border-width) solid transparent; box-shadow: var(--shadow-1); transition: box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard); }
   .sb-glyph svg { width: var(--icon-md); height: var(--icon-md); fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .sb-port:hover .sb-glyph { transform: translateY(calc(-1 * var(--space-2))); }
+  .sb-port.on .sb-glyph { box-shadow: 0 0 0 var(--space-4) var(--action-subtle), 0 0 0 calc(var(--space-4) + var(--border-width)) var(--action), var(--shadow-2); }
+  .sb-port:focus-visible { outline: none; }
+  .sb-port:focus-visible .sb-glyph { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
   .g-company { background: var(--brand-deep-violet); }
   .g-check { background: var(--brand-teal); }
   .g-card { background: var(--brand-blue); }
   .g-web { background: var(--brand-blue); }
   .g-ref { background: var(--brand-violet); }
   .g-dev { background: var(--brand-ink); }
-  .sb-tag { --_dx: 0px; --_max: calc(var(--space-160) + var(--space-32)); position: absolute; bottom: calc(100% + var(--space-12)); left: 50%; translate: calc(-50% + var(--_dx)) var(--space-4); width: max-content; max-width: var(--_max); white-space: normal; text-align: center; padding: var(--space-4) var(--space-12); border-radius: var(--radius-8); background: var(--surface-inverse); color: var(--text-inverse); font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard), translate var(--duration-base) var(--ease-standard); z-index: 3; }
-  .sb-tag small { display: block; margin: 0; font-family: var(--type-code-family); font-weight: var(--type-body-weight); opacity: 0.75; }
-  .sb-name { font-family: var(--type-ui-family); font-size: var(--type-ui-size); line-height: var(--type-label-line); text-align: center; }
-  .sb-tag::after { content: ""; position: absolute; top: 100%; left: calc(50% - var(--_dx)); margin-left: calc(-1 * var(--space-4)); border: var(--space-4) solid transparent; border-top-color: var(--surface-inverse); }
+  .sb-name { display: none; font-family: var(--type-ui-family); font-size: var(--type-label-size); line-height: var(--type-label-line); color: var(--text-muted); text-align: center; }
+  .sb-port.on .sb-name { color: var(--text); }
   .sb-tag { display: none; }
-  .sb-port.on .sb-tag, .sb-port:hover .sb-tag, .sb-port:focus-visible .sb-tag { opacity: 1; translate: calc(-50% + var(--_dx)) 0; }
 
-  .sb-desk { position: relative; z-index: 2; width: min(100%, calc(var(--space-160) * 3 + var(--space-48))); margin-inline: auto; background: var(--code-bg); color: var(--code-text); border: var(--border-width) solid var(--code-border); border-radius: var(--radius-card); box-shadow: var(--shadow-3); overflow: hidden; font-family: var(--type-code-family); font-size: var(--type-small-size); line-height: var(--type-code-line); text-align: left; }
+  .sb-desk { position: relative; z-index: 2; width: 100%; max-width: calc(var(--space-160) * 3 + var(--space-80)); margin-inline: auto; background: var(--code-bg); color: var(--code-text); border: var(--border-width) solid var(--code-border); border-radius: var(--radius-card); box-shadow: var(--shadow-3); overflow: hidden; font-family: var(--type-code-family); font-size: var(--type-small-size); line-height: var(--type-code-line); text-align: left; }
   .sb-bar { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8) var(--space-16); border-bottom: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
   .sb-bar i { width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--code-border); }
   .sb-bar span { margin-left: auto; }
@@ -180,35 +183,43 @@ const words = headline.split(/\s+/).filter(Boolean);
   .sb-pause[hidden] { display: none; }
   .sb-pause:hover { color: var(--code-text); border-color: var(--code-muted); }
   .sb-pause:focus-visible { outline: var(--focus-width) solid var(--focus-code); outline-offset: var(--focus-offset); }
-  .sb-rows { display: grid; align-content: start; gap: var(--space-8); padding: var(--space-16) var(--space-20) var(--space-8); min-height: calc(var(--space-160) + var(--space-8)); }
+  /* A fixed console height keeps the routes still while the calls change. */
+  .sb-rows { display: grid; align-content: start; gap: var(--space-8); padding: var(--space-12) var(--space-16) var(--space-8); height: var(--space-160); }
   .sb-r { display: grid; grid-template-columns: calc(var(--space-48) + var(--space-8)) minmax(0, 1fr); gap: var(--space-12); opacity: 0; translate: 0 var(--space-4); transition: opacity var(--duration-slow) var(--ease-enter), translate var(--duration-slow) var(--ease-enter); }
   .sb-r.show { opacity: 1; translate: 0 0; }
   .sb-r em { font-style: normal; color: var(--code-muted); font-size: var(--type-label-size); letter-spacing: var(--type-label-tracking); text-transform: uppercase; padding-top: var(--space-2); }
   .sb-r pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
   .sb-progress { height: var(--space-2); background: var(--code-border); }
   .sb-progress i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--brand-blue), var(--brand-violet), var(--brand-teal)); }
-  .sb-foot { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-8) var(--space-20); border-top: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
+  .sb-foot { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-8) var(--space-16); border-top: var(--border-width) solid var(--code-border); color: var(--code-muted); font-size: var(--type-label-size); }
   .sb-foot b { color: var(--code-string); font-weight: var(--type-body-weight); }
 
-  /* A minimum board height lets short windows scroll instead of squeezing the diagram. */
-  @media (min-width: 1024px) {
-    .sb-layout { grid-template-columns: minmax(0, 0.43fr) minmax(0, 0.57fr); align-items: center; gap: var(--space-32); padding-block: var(--space-32); }
-    .sb-copy { justify-items: start; text-align: left; gap: var(--space-24); }
-    .sb-title { font-size: clamp(calc(var(--space-40) + var(--space-4)), calc(var(--viewport-height) * 0.075), var(--type-home-hero-size)); line-height: var(--type-home-hero-line); max-width: var(--type-home-hero-measure); }
-    .sb-lead { max-width: var(--type-lead-measure); }
-    .sb-actions { justify-items: start; }
-    .sb-search { max-width: none; }
-    .sb-board-wrap { margin: 0; min-width: 0; height: clamp(calc(var(--space-160) * 2 + var(--space-128)), calc(var(--viewport-height) - var(--nav-h) - var(--space-80) - var(--border-width)), calc(var(--space-160) * 4)); border-radius: var(--radius-media); }
-    .sb-board { display: block; position: absolute; inset: 0; margin: auto; padding: 0; width: 100%; height: min(100%, calc((var(--space-160) * 3 + var(--space-80)) * var(--_s))); max-width: none; }
-    .sb-lines { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
-    .sb-ports { display: contents; }
-    .sb-name { display: none; }
-    .sb-port { position: absolute; left: var(--_x); top: var(--_y); width: calc(var(--space-48) + var(--space-8)); height: calc(var(--space-48) + var(--space-8)); padding: 0; margin: calc(-1 * (var(--space-24) + var(--space-4))) 0 0 calc(-1 * (var(--space-24) + var(--space-4))); z-index: 2; scale: var(--_s); }
-    .sb-desk { width: calc(var(--space-160) * 2 + var(--space-80)); position: absolute; left: 50%; top: 50%; translate: -50% -50%; scale: var(--_s); }
-    /* A fixed console height keeps every route's end still while the calls change. */
-    .sb-rows { height: calc(var(--space-160) + var(--space-64)); min-height: 0; }
-    .sb-tag { display: block; }
+  @media (min-width: 768px) {
+    .sb-layout { gap: var(--space-32); padding-block: var(--space-40) var(--space-32); }
+    .sb-search { width: calc(var(--space-160) * 2 + var(--space-80)); }
+    .sb-board { padding: var(--space-32) var(--space-24); gap: var(--space-64); }
+    .sb-ports { gap: var(--space-16); }
+    .sb-name { display: block; }
+    .sb-glyph { width: calc(var(--space-48) + var(--space-4)); height: calc(var(--space-48) + var(--space-4)); }
   }
+
+  /* From 1024px the hero fills the window: the copy on top, the band takes what is left. The band is a
+     fixed design field (switchboard.ts U.wide x U.high) scaled as one piece, so tools, wires and console
+     never move relative to each other. Title size follows the window height as well as its width, so the
+     two-line headline and the whole band share a short laptop window. */
+  @media (min-width: 1024px) {
+    .sb-layout { min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width)); justify-content: center; gap: var(--space-24); padding-block: var(--space-24); }
+    .sb-copy { gap: var(--space-12); }
+    .sb-lead { max-width: none; }
+    .sb-title { font-size: max(calc(var(--space-32) + var(--space-4)), min(var(--type-hero-size), calc(var(--viewport-height) * 0.068))); max-width: 30ch; }
+    .sb-board-wrap { flex: 1 1 auto; min-height: calc(var(--space-160) * 2 - var(--space-20)); max-height: calc(var(--space-160) * 4); }
+    .sb-board { position: absolute; inset: 0; display: block; padding: 0; }
+    .sb-ports { position: absolute; inset: 0; display: block; max-width: none; z-index: 2; }
+    .sb-port { position: absolute; left: var(--_x); top: var(--_y); translate: -50% -50%; scale: var(--_s); }
+    .sb-name { position: absolute; top: calc(100% + var(--space-4)); left: 50%; translate: -50% 0; white-space: nowrap; }
+    .sb-desk { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: calc(var(--space-160) * 3 + var(--space-80)); max-width: none; margin: 0; scale: var(--_s); }
+  }
+
   .sb-lines :global(.rest) { fill: none; stroke: var(--circuit); stroke-width: 1.5; }
   .sb-lines :global(.rest.out) { opacity: 0.5; }
   .sb-lines :global(.node) { fill: var(--surface-sunken); stroke: var(--circuit); stroke-width: 1.5; }
@@ -218,7 +229,7 @@ const words = headline.split(/\s+/).filter(Boolean);
 
   @media (prefers-reduced-motion: reduce) {
     .sb-pulse { animation: none; }
-    .sb-port, .sb-r, .sb-tag { transition: none; }
-    .sb-port:hover { transform: none; }
+    .sb-glyph, .sb-r { transition: none; }
+    .sb-port:hover .sb-glyph { transform: none; }
   }
 </style>
