@@ -193,6 +193,7 @@ export async function resolveSerperLinks(
   const errors: string[] = [];
   let failedRequests = 0;
   let budgetExhausted = 0;
+  let rewriteFailed = 0;
 
   for (let i = 0; i < wrapped.length; i += MAX_RESOLVE_LINKS_PER_CALL) {
     // Capped as well as bounded: a caller that left plenty of wall should
@@ -269,6 +270,7 @@ export async function resolveSerperLinks(
     // would throw on assignment, and this function is documented as never
     // throwing. The links simply stay wrapped, which every caller handles.
     errors.push(err instanceof Error ? `rewrite failed: ${err.message}` : String(err));
+    rewriteFailed = 1;
   }
 
   // Read back what the response now HOLDS rather than what the mapping says
@@ -291,6 +293,7 @@ export async function resolveSerperLinks(
     unresolved: unresolved.length,
     failed_requests: failedRequests,
     budget_exhausted: budgetExhausted,
+    rewrite_failed: rewriteFailed,
   });
 
   if (unresolved.length > 0) {

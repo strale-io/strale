@@ -43,6 +43,8 @@ export interface LinkResolutionCounts {
   budget_exhausted: number;
   /** Attempts skipped because no API key was configured. */
   no_key: number;
+  /** Resolved links that could not be written back into the response. */
+  rewrite_failed: number;
 }
 const scope = new AsyncLocalStorage<CallCost>();
 export function withCallCost<T>(run: () => T, usdPerEur: number): T {
@@ -144,7 +146,7 @@ export function recordLinkResolution(outcome: Partial<LinkResolutionCounts>): vo
   const cost = scope.getStore();
   if (!cost) return;
   const counts = (cost.link_resolution ??= {
-    attempts: 0, links: 0, resolved: 0, unresolved: 0, failed_requests: 0, budget_exhausted: 0, no_key: 0,
+    attempts: 0, links: 0, resolved: 0, unresolved: 0, failed_requests: 0, budget_exhausted: 0, no_key: 0, rewrite_failed: 0,
   });
   for (const key of Object.keys(counts) as Array<keyof LinkResolutionCounts>) {
     const value = outcome[key];

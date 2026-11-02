@@ -411,6 +411,14 @@ describe("serper-links — round-2 review findings", () => {
   });
 });
 
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object") {
+    for (const child of Object.values(value as object)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
 describe("serper-links — /resolve outcome is recorded as counts", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   beforeEach(() => {
@@ -435,6 +443,7 @@ describe("serper-links — /resolve outcome is recorded as counts", () => {
     const breakdown = await resolveInScope();
     expect(breakdown.link_resolution).toEqual({
       attempts: 1, links: 2, resolved: 2, unresolved: 0, failed_requests: 0, budget_exhausted: 0, no_key: 0,
+      rewrite_failed: 0,
     });
     // Zero units, so no vendor cost line: the counts are the only record.
     expect(breakdown.vendors).toEqual([]);
@@ -450,6 +459,15 @@ describe("serper-links — /resolve outcome is recorded as counts", () => {
     const breakdown = await resolveInScope("");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(breakdown.link_resolution).toMatchObject({ attempts: 1, links: 2, unresolved: 2, no_key: 1 });
+  });
+
+  it("counts a refused rewrite apart from links Google would not release", async () => {
+    fetchMock.mockResolvedValue(okJson({ organic: [{ link: REAL_4 }, { link: REAL_5 }], credits: 0 }));
+    const breakdown = await withCallCost(async () => {
+      await resolveSerperLinks(deepFreeze(searchResponse()), "test-key");
+      return snapshotCallCost().cost_breakdown;
+    }, 1.08);
+    expect(breakdown.link_resolution).toMatchObject({ resolved: 0, unresolved: 2, failed_requests: 0, rewrite_failed: 1 });
   });
 
   it("records nothing when no link was wrapped", async () => {
