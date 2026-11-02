@@ -273,32 +273,45 @@ export function pickByName(query: string, candidates: CaNameCandidate[]): CaName
  * Resolve a company name to a corpId.
  *
  * A caller-supplied `company_name` is already a name, so it goes straight to
- * the free Corporations Canada search. Only when that search yields no
- * confident match (no candidates, or a refusal from pickByName) does the paid
- * Claude extraction step run, the path free text in `task` always takes.
+ * the free Corporations Canada search first. Only an EXACT match is accepted
+ * there: a `high` (fuzzy) match on raw caller text could land on a different
+ * corporation when the caller added a city or descriptor ("Shopify Ottawa"
+ * vs a registered "OTTAWA SHOPIFY SERVICES INC."), which the Claude
+ * extraction step would have stripped. Anything short of exact (a fuzzy
+ * match, a refusal, no candidates) takes the previous path: Claude extracts
+ * the name, then search and pick as before. Free text in `task` always takes
+ * that path.
  *
  * Why (2026-11-02): this used to call Claude first for every name. That made
  * the only live name-path test ("Shopify", required by Gate 5,
  * DEC-20260411-B) a paid call on every scheduled run, which Strale's own
  * tests may not make (lib/paid-call-guard.ts). Searching first keeps that
  * test live and free, and saves customers the extraction call when they send
- * a plain name. When the direct search refuses, the fallback reproduces the
- * previous behaviour exactly.
+ * a plain registered name.
  */
 async function resolveByName(text: string, isStructuredName: boolean): Promise<CaNameResolution> {
+  let direct: CaNameCandidate[] | null = null;
   if (isStructuredName) {
-    const direct = await searchByName(text, { allowEmpty: true });
-    if (direct.length > 0) {
-      try {
-        return pickByName(text, direct);
-      } catch (err) {
-        if (!(err instanceof CapabilityRefusalError)) throw err;
-        // No confident match on the raw text: let the extraction step try.
-      }
-    }
+    direct = await searchByName(text, { allowEmpty: true });
+    const exact = exactMatchOrNull(text, direct);
+    if (exact) return exact;
   }
   const name = await extractCompanyName(text, "Canadian");
-  return pickByName(name, await searchByName(name));
+  // Claude often returns the text unchanged ("Bank"); don't repeat the search.
+  const candidates = direct !== null && direct.length > 0 && name === text ? direct : await searchByName(name);
+  return pickByName(name, candidates);
+}
+
+/** pickByName's answer when it is an exact match; null when fuzzy or refused. */
+function exactMatchOrNull(text: string, candidates: CaNameCandidate[]): CaNameResolution | null {
+  if (candidates.length === 0) return null;
+  try {
+    const r = pickByName(text, candidates);
+    return r.matchConfidence === "exact" ? r : null;
+  } catch (err) {
+    if (err instanceof CapabilityRefusalError) return null;
+    throw err;
+  }
 }
 
 registerCapability("canadian-company-data", async (input: CapabilityInput) => {

@@ -87,6 +87,37 @@ describe("canadian-company-data name path", () => {
     expect(searchQueries).toEqual(["the e-commerce company Shopify", "Shopify"]);
   });
 
+  // Review of PR #888: a fuzzy (`high`) match on raw caller text could name a
+  // different corporation, so the direct path accepts exact matches only.
+  it("a fuzzy direct match is not accepted: it falls back to extraction", async () => {
+    // "Shopify Commerce Services" is a `high` match for "Shopify Commerce Inc."
+    // (dissolved) and only a partial for SHOPIFY INC.
+    const result = await run({ company_name: "Shopify Commerce Services" });
+    expect(extractCompanyName).toHaveBeenCalledTimes(1);
+    expect(searchQueries).toEqual(["Shopify Commerce Services", "Shopify"]);
+    expect(result.output).toMatchObject({ corporation_number: "4261607", match_confidence: "exact" });
+  });
+
+  it("candidates that pickByName refuses on the raw text fall back to extraction", async () => {
+    const result = await run({ company_name: "Shopify Ottawa" });
+    expect(extractCompanyName).toHaveBeenCalledTimes(1);
+    expect(searchQueries).toEqual(["Shopify Ottawa", "Shopify"]);
+    expect(result.output).toMatchObject({ corporation_number: "4261607" });
+  });
+
+  it("when extraction returns the text unchanged, the direct candidates are reused (no second search)", async () => {
+    extractCompanyName.mockImplementationOnce(async (text: string) => text);
+    const result = await run({ company_name: "Shopify Commerce Services" });
+    expect(searchQueries).toEqual(["Shopify Commerce Services"]);
+    // Same answer the pre-change path gave for this input: the fuzzy match.
+    expect(result.output).toMatchObject({ match_confidence: "high" });
+  });
+
+  it("a non-numeric corporation_number is not treated as a structured name", async () => {
+    await run({ corporation_number: "shopify", company_name: "Shopify" }).catch(() => undefined);
+    expect(extractCompanyName).toHaveBeenCalledTimes(1);
+  });
+
   it("a corporation number never reaches either the search or Claude", async () => {
     const result = await run({ corporation_number: "4261607" });
     expect(extractCompanyName).not.toHaveBeenCalled();
