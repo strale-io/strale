@@ -1,5 +1,13 @@
 # Production verification from cloud sessions: a GitHub Action (proposal)
 
+**Superseded on 2026-11-02 by `GET /v1/ops-read/:check`** (`apps/api/src/routes/ops-read.ts`, `apps/api/src/lib/ops-read.ts`). Petter confirmed it in the Strale session that day.
+- The API already holds database access. It answers a fixed list of read-only checks to anyone holding `STRALE_OPS_READ_TOKEN`, so no database credential goes into GitHub.
+- It can also read the test tables `strale_verify` withholds, as aggregates and identifiers only.
+- Cloud sessions call it through `bws run`.
+- The PC-only `strale_verify` route stays for anything the endpoint does not cover.
+
+Nothing below is to be built.
+
 **Status: deferred, do not build (Petter, 2026-11-01).** A main-only environment
 in the private `strale-ops` repository needs GitHub Team, which is a spend
 decision, and Petter declined it for now. Production verification stays on the
