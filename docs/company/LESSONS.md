@@ -1338,7 +1338,7 @@ those is dead:
 |---|---|---|
 | `eu-trademark-search` | €0.50 | its only path; every call refuses. DQ-42 — a revenue earner, so delist-or-build is the founder's |
 | `customs-duty-lookup` | €0.20 | EU TARIC primary disallowed; the Access2Markets fallback is allowed, so it still answers from a narrower source than its provenance implies |
-| `container-track` | €0.05 | Maersk (`MAEU`, the largest carrier) disallowed, so those containers return "tracking unavailable"; the other twelve carriers are unaffected |
+| `container-track` | €0.05 | Maersk (`MAEU`, the largest carrier) disallowed, so those containers return "tracking unavailable". HMM (`hmm21.com`) was flapping on 10-30 (503, then a Disallow); a re-run on 2026-11-02 got the Disallow, so count two carriers out, not one |
 
 So the rollout's blast radius on listed capabilities is one outage and two
 quiet degradations — and the sweep finding exactly the two already known
