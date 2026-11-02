@@ -30,7 +30,10 @@ Intent: Make sure Strale's own test traffic never pays an upstream vendor (Pette
   - Without parking, a skipped suite would be due again every hour and use a free_quota test slot each time (second review round).
   - To unpark: a person moves the suite to a free input, then resets test_status.
 - Customer calls (`/v1/do`, x402, solutions) never enter the scope and are unchanged.
-- Independent review (fresh same-provider agent, separate context): PASS WITH FIXES. Its findings 1-4 and 7 are fixed. Findings 5 (a capability that swallows the block) and 6 (a blocked free_quota run still uses a test-budget slot) are noted and not fixed.
+- Independent review (fresh same-provider agent, separate context), three rounds:
+  1. PASS WITH FIXES. Findings 1-4 and 7 fixed; 5 (a capability that swallows the block) noted, not fixed.
+  2. FAIL. Blocked suites retried hourly and used test-budget slots; fixed by parking.
+  3. PASS on 16d685f5.
 
 ## Evidence
 
@@ -42,3 +45,6 @@ Intent: Make sure Strale's own test traffic never pays an upstream vendor (Pette
 ## Next
 
 - Next authorised action: after merge and deploy, list parked suites with `SELECT capability_slug, test_type, input FROM test_suites WHERE quarantine_reason LIKE 'paid_call_blocked:%'` (or the `test-runner-skip-paid-call-blocked` log line); then point those suites at registration-number inputs or move them to fixture mode | Owner: Strale orchestrator | Blocker: the production DB read is PC-only.
+- Follow-ups from review round 3 (non-blocking):
+  - A parked suite's last result from before the guard (a paid pass) stays on public trust pages until the suite is moved to a free input.
+  - `selectRecalibrationBestSuite` (`lib/recalibration-eligibility.ts`) can still pick a parked suite. The guard blocks the spend, but recalibration gets no output; exclude PAID_CALL_QUARANTINE_MARKER there.
