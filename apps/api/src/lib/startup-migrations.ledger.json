@@ -1108,6 +1108,18 @@
       "added": "2026-10-30",
       "columns_written": [],
       "sha256": "757841ef2061862a3a60ed77f307d179ea47876598e0b5d56edbe7b75335fd5e"
+    },
+    {
+      "id": "M085",
+      "function": "runMigration0142_canadianPaidCallSuites",
+      "title": "settle the two canadian-company-data suites the paid-call guard parked",
+      "added": "2026-11-02",
+      "columns_written": [
+        "test_suites.active",
+        "test_suites.quarantine_reason",
+        "test_suites.test_status"
+      ],
+      "sha256": "df69c9b3b47e58c404ee686e667ae18dc26d2b7523a5daad5420dea866f3883a"
     }
   ],
   "known_overlaps": [
@@ -1513,17 +1525,19 @@
       "column": "test_suites.quarantine_reason",
       "blocks": [
         "M056",
-        "M057"
+        "M057",
+        "M085"
       ],
-      "note": "M056 (0113, 2026-09-12) clears quarantine_reason only for the 32 rows matching test_type IN (negative, edge_case, known_bad) AND the fixture_recapture_exhausted marker AND capability_slug IN its 12 target capabilities. M057 (0114, 2026-09-12) clears it only for the 3 rows matching test_type = 'dependency_health' AND the same marker AND capability_slug IN (irish-company-data, lithuanian-company-data, swiss-company-data). Disjoint by construction: no row can satisfy both test_type predicates at once (dependency_health is not in M056's IN list), so the two blocks never contend for the same row."
+      "note": "M056 (0113, 2026-09-12) clears quarantine_reason only for the 32 rows matching test_type IN (negative, edge_case, known_bad) AND the fixture_recapture_exhausted marker AND capability_slug IN its 12 target capabilities. M057 (0114, 2026-09-12) clears it only for the 3 rows matching test_type = 'dependency_health' AND the same marker AND capability_slug IN (irish-company-data, lithuanian-company-data, swiss-company-data). Disjoint by construction: no row can satisfy both test_type predicates at once (dependency_health is not in M056's IN list), so the two blocks never contend for the same row. M085 (0142, 2026-11-02) clears it only for one row: id c3743322-48d9-41ac-80bf-c623b9bd17a2, canadian-company-data known_answer, while its reason starts with the paid_call_blocked: marker. Disjoint from M056/M057 by marker (theirs is fixture_recapture_exhausted:) and by test_type."
     },
     {
       "column": "test_suites.test_status",
       "blocks": [
         "M056",
-        "M057"
+        "M057",
+        "M085"
       ],
-      "note": "Same predicate pair as test_suites.quarantine_reason immediately above: M056 resets test_status to 'normal' only for its 32 negative/edge_case/known_bad rows, M057 only for its 3 dependency_health rows. Disjoint by the same test_type argument."
+      "note": "Same predicate pair as test_suites.quarantine_reason immediately above: M056 resets test_status to 'normal' only for its 32 negative/edge_case/known_bad rows, M057 only for its 3 dependency_health rows. Disjoint by the same test_type argument. M085 (0142) resets test_status only for the same single paid_call_blocked: known_answer row named in the test_suites.quarantine_reason entry; disjoint by marker and test_type."
     },
     {
       "column": "capabilities.output_field_reliability",
@@ -1622,6 +1636,14 @@
         "M083"
       ],
       "note": "M049 (0089) deactivates only us-court-search; M083 (0140, 2026-10-30) deactivates only price-compare. Both only ever set is_active = false, each on a single named slug (0089 guarded on is_active = true; 0140 on any flag still true or its deactivation_reason not yet recorded), so they are disjoint and cannot fight."
+    },
+    {
+      "column": "test_suites.active",
+      "blocks": [
+        "M040",
+        "M085"
+      ],
+      "note": "M040 (0111, vendor control tower) sets active = false only for screenshot-url and html-to-pdf schema_check suites in live mode. M085 (0142, 2026-11-02) sets active = false only for one row: id f4bba1a4-afc3-4019-ad6c-da22f11d0cdd, canadian-company-data known_bad. Disjoint by capability_slug; both only ever write false, so they cannot fight."
     }
   ]
 }
