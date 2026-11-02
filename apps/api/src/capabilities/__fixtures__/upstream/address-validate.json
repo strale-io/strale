@@ -1,0 +1,37 @@
+{
+  "slug": "address-validate",
+  "recorded_at": "2026-10-28T22:20:03.585Z",
+  "input": {
+    "address": "10 Downing Street, London, UK"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://nominatim.openstreetmap.org/search?q=10+Downing+Street%2C+London%2C+UK&format=jsonv2&addressdetails=1&limit=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "accept-ranges": "bytes",
+          "age": "716",
+          "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 28 Oct 2026 22:20:03 GMT",
+          "server": "gunicorn/asgi",
+          "strict-transport-security": "max-age=300",
+          "vary": "accept-language, Accept-Encoding",
+          "via": "1.1 varnish",
+          "x-cache": "HIT",
+          "x-cache-hits": "0",
+          "x-nominatim-server": "vhagar.openstreetmap.org",
+          "x-served-by": "cache-iad-kcgs7200034-IAD",
+          "x-timer": "S1793226004.682129,VS0,VE2"
+        },
+        "body": "[{\"place_id\":280235979,\"licence\":\"Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright\",\"osm_type\":\"relation\",\"osm_id\":1879842,\"lat\":\"51.5034878\",\"lon\":\"-0.1276965\",\"category\":\"office\",\"type\":\"government\",\"place_rank\":30,\"importance\":0.5505744539169398,\"addresstype\":\"office\",\"name\":\"10 Downing Street\",\"display_name\":\"10 Downing Street, 10, Downing Street, Westminster, Covent Garden, City of Westminster, Greater London, England, SW1A 2AA, United Kingdom\",\"address\":{\"office\":\"10 Downing Street\",\"house_number\":\"10\",\"road\":\"Downing Street\",\"quarter\":\"Westminster\",\"suburb\":\"Covent Garden\",\"city\":\"City of Westminster\",\"ISO3166-2-lvl8\":\"GB-WSM\",\"state\":\"England\",\"ISO3166-2-lvl4\":\"GB-ENG\",\"postcode\":\"SW1A 2AA\",\"country\":\"United Kingdom\",\"country_code\":\"gb\"},\"boundingbox\":[\"51.5033074\",\"51.5036913\",\"-0.1277991\",\"-0.1273088\"]}]",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

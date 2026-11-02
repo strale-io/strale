@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatFR } from "../lib/vat-derivation.js";
 import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
@@ -130,7 +131,7 @@ async function lookupByName(query: string): Promise<{ output: Record<string, unk
 registerCapability("french-company-data", async (input: CapabilityInput) => {
   const raw = (input.siren as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'siren' or 'company_name' is required. Provide a SIREN (9 digits), SIRET (14 digits), or company name.");
+    throw inputRefusal("'siren' or 'company_name' is required. Provide a SIREN (9 digits), SIRET (14 digits), or company name.", "siren", "Send 'siren' as a 9-digit SIREN or 14-digit SIRET, or 'company_name' as a company name.");
   }
 
   const trimmed = raw.trim();

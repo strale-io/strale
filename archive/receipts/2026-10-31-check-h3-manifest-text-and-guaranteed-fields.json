@@ -1,0 +1,193 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "df0475244c1b04aadd73bd4b4368c67d23bb5364"
+  },
+  "at": "2026-10-31T00:08:39.218Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale--claude-worktrees-wow-review-cfe380/bd9f1a90-bcce-4570-94ae-a58bd8a18bf5/scratchpad/h3-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "what": "H3 (platform-hardening T3) post-deploy verification, the step PR #776 left open. DEC-20260504-C, read at the effect level.",
+    "deployed_commit": "df0475244c1b",
+    "method": "the strict drift sweep and read-only queries against the production database (root .env DATABASE_URL, strale_ro), the real isReportOnly predicate evaluated over live rows and manifest files, four static guards, and one public HTTP read",
+    "proposed_and_skipped_not_waived": "the 2026-10-27 handoff also asked for the first run's duration, rows and WAL/space impact. The boot log is gone (Railway keeps logs per deployment) and WAL/space was not reconstructed from Postgres statistics, though it approximately could be. None of the three appears in T3's exit criteria, so T3 closes on its stated criteria."
+  },
+  "topic": "h3-manifest-text-and-guaranteed-fields",
+  "raw": {
+    "ok": true,
+    "what": "H3 (platform-hardening T3) post-deploy verification, the step PR #776 left open. DEC-20260504-C, read at the effect level.",
+    "deployed_commit": "df0475244c1b",
+    "method": "the strict drift sweep and read-only queries against the production database (root .env DATABASE_URL, strale_ro), the real isReportOnly predicate evaluated over live rows and manifest files, four static guards, and one public HTTP read",
+    "exit_criterion_1_deploy_text_and_drift_agree": {
+      "sweep": {
+        "command": "cd apps/api && npx tsx scripts/sweep-manifest-drift.ts --strict",
+        "exit_code": 0,
+        "examined": 350,
+        "sync_writable_differences": 0,
+        "missing": 8,
+        "failed": 0
+      },
+      "served_limitation_check": {
+        "endpoint": "GET /v1/public/ops/limitations/capabilities/iban-validate",
+        "first_title": "IBAN checks do not confirm an active account",
+        "matches_expected": true,
+        "db_sort_order": [
+          0,
+          1
+        ]
+      },
+      "manifest_text_hash_column": {
+        "present": true,
+        "type": "text",
+        "nullable": true,
+        "block": "runMigration0128_manifestTextHash, first = last applied 2026-10-29T01:21:42.740Z"
+      },
+      "checkpoint_populations": {
+        "db_rows": 362,
+        "manifest_files": 358,
+        "checkpointed": 326,
+        "not_checkpointed": 36,
+        "derived_how": "by running isReportOnly from apps/api/src/lib/manifest-publication-policy.ts over the live rows and the manifest files, NOT by matching the 24-slug snapshot quoted in the 2026-10-27 handoff",
+        "breakdown": {
+          "manifest_less": 12,
+          "report_only_by_predicate": 24,
+          "other_unexplained": 0
+        },
+        "report_only_rows_in_whole_catalogue": 24,
+        "report_only_rows_that_are_unchecked": 24,
+        "reading": "every report-only row is unwritten and no non-report-only row is skipped, so the publication guard is observed working rather than inferred from an absence"
+      },
+      "correction_to_an_earlier_draft": "an earlier draft attributed the 12 to being deactivated. That was wrong: manifest-text-sync.ts selects capabilities with no is_active filter, so a deactivated tool with a manifest is still checkpointed. The 12 are manifest-less; all 12 also happen to be deactivated, which is coincidence, not cause.",
+      "the_8_missing_manifests_named": [
+        "bulgarian-company-data",
+        "cypriot-company-data",
+        "hungarian-company-data",
+        "luxembourgish-company-data",
+        "maltese-company-data",
+        "romanian-company-data",
+        "package-docs",
+        "secure-random"
+      ],
+      "claim_and_fetch_guards": {
+        "check-fetch-timeout-coverage.mjs --strict": "4 offenders, 0 outside the allowlist",
+        "lint:no-unguarded-user-fetch": "pass",
+        "check-ssrf-inventory.mjs": "pass",
+        "claims:check": "ok"
+      },
+      "disposable_postgres_integration_test": "PR #776's integration-db job passed (actions run 40555886853) and ci.yml runs `vitest run --no-file-parallelism integration.test.ts`, which selects manifest-text-sync.integration.test.ts. Whether it executed or skipped inside that job is NOT established by the job's pass."
+    },
+    "exit_criterion_2_guaranteed_fields_measured_on_served_traffic": {
+      "window": "calls since the first recorded miss, 2026-10-29T13:38:12Z — not a 30-day window, which would inflate the denominators",
+      "since_deploy_2026_10_27": {
+        "piggyback_rows": 795,
+        "distinct_tools": 290,
+        "rows_recording_a_miss": 29
+      },
+      "traffic_scope": "served /v1/do calls via recordPiggybackResult on the dispatch and batch paths. That path does not distinguish the harness from customers, and roughly 98 percent of /v1/do volume is the harness sweep, so most of these are harness calls. Real traffic here means served production traffic, not customer traffic.",
+      "pass_attribution": "the sampled miss rows carry passed = true, so on those rows the misses are measure-and-alert only — a sample, not a proven invariant",
+      "tools_with_at_least_one_miss": [
+        {
+          "slug": "google-search",
+          "calls": 3,
+          "misses": 3
+        },
+        {
+          "slug": "dangerous-goods-classify",
+          "calls": 3,
+          "misses": 3
+        },
+        {
+          "slug": "container-track",
+          "calls": 3,
+          "misses": 3
+        },
+        {
+          "slug": "sql-explain",
+          "calls": 3,
+          "misses": 3
+        },
+        {
+          "slug": "timezone-lookup",
+          "calls": 3,
+          "misses": 2
+        },
+        {
+          "slug": "crontab-generate",
+          "calls": 3,
+          "misses": 2
+        },
+        {
+          "slug": "robots-txt-parse",
+          "calls": 3,
+          "misses": 2
+        },
+        {
+          "slug": "sql-optimize",
+          "calls": 2,
+          "misses": 2
+        },
+        {
+          "slug": "tech-stack-detect",
+          "calls": 2,
+          "misses": 2
+        },
+        {
+          "slug": "phone-normalize",
+          "calls": 3,
+          "misses": 1
+        },
+        {
+          "slug": "credit-score-band",
+          "calls": 3,
+          "misses": 1
+        },
+        {
+          "slug": "date-parse",
+          "calls": 3,
+          "misses": 1
+        },
+        {
+          "slug": "cz-birth-number-validate",
+          "calls": 2,
+          "misses": 1
+        },
+        {
+          "slug": "incoterms-explain",
+          "calls": 2,
+          "misses": 1
+        },
+        {
+          "slug": "cz-bank-account-validate",
+          "calls": 2,
+          "misses": 1
+        },
+        {
+          "slug": "schema-migration-generate",
+          "calls": 1,
+          "misses": 1
+        }
+      ],
+      "cause_not_diagnosed": "checkGuaranteedFieldsPresent returns every guaranteed field as missing when the output root is not a plain object, so a multi-field miss has the shape of a root-level or early-return branch rather than independently absent fields. What is established is that the declaration and the response disagreed on a served call.",
+      "why_it_matters": "only 2 of the 16 (credit-score-band, timezone-lookup) appear in apps/api/scripts/manifest-consistency-allowlist.txt, the static checker's 22 known inconsistencies. The other 14 are invisible to static analysis and were found only by watching served responses — which is what H3's monitoring was built to do, and the concrete case for the weekly persisted-miss check the H3 handoff proposed, since at these volumes the live alert (more than 10 percent missing after at least 20 calls in one hour) will essentially never fire."
+    },
+    "proposed_and_skipped_not_waived": "the 2026-10-27 handoff also asked for the first run's duration, rows and WAL/space impact. The boot log is gone (Railway keeps logs per deployment) and WAL/space was not reconstructed from Postgres statistics, though it approximately could be. None of the three appears in T3's exit criteria, so T3 closes on its stated criteria.",
+    "independent_review": {
+      "reviewer": "fresh read-only Claude context, not the author (founder review policy 2026-09-07)",
+      "verdict": "PASS WITH NITS",
+      "findings_fixed": [
+        "the report-only population was derived from a stale 24-slug snapshot instead of the isReportOnly predicate, and the 12 manifest-less rows were wrongly attributed to deactivation",
+        "the claim/fetch-guards half of T3's second exit bullet was unaddressed while the track was marked done",
+        "the guaranteed-field denominators spanned 30 days while misses only began on 10-29, overstating tech-stack-detect as 23 calls when it is 2",
+        "real traffic was unqualified although the piggyback path does not exclude the harness",
+        "the miss cause was presented as executor over-promise when the sentinel's non-object-root behaviour is an untested alternative",
+        "the 8 missing manifests were never named",
+        "the Serper note omitted backlink-check as a wrong-domain tool and conflated People-Also-Ask and answerBox links with organic and news links",
+        "the PC-only inventory omitted Notion, the auto-memory directory and the parked production write grant, and drew an orchestrator-wide conclusion from a lane-scoped list",
+        "PROGRAM.md Resume here still described H3 as active"
+      ]
+    }
+  }
+}

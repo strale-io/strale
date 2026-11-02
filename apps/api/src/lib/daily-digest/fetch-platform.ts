@@ -204,9 +204,6 @@ export async function getPlatformHealth(): Promise<PlatformHealth> {
   const testRow = toRows(testRaw)[0] ?? { passed: 0, failed: 0, total: 0 };
   const testTotal = testRow.total || 1;
 
-  // Grade-change deltas retired with the SQS engine (DEC-20260503-B);
-  // sqs_daily_snapshot table dropped in PR2.
-  const sqsChanges: Array<{ slug: string; oldGrade: string; newGrade: string; direction: "up" | "down" }> = [];
 
   return {
     circuitBreakers: openBreakers.map((h) => ({
@@ -221,6 +218,5 @@ export async function getPlatformHealth(): Promise<PlatformHealth> {
       total: testRow.total,
       rate: Math.round((testRow.passed / testTotal) * 100),
     },
-    sqsChanges,
   };
 }

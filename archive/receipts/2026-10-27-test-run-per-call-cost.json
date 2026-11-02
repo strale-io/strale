@@ -1,0 +1,753 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "npm test",
+    "commit": "11eae6950fb060930ba0306d5474d8149a29d806"
+  },
+  "at": "2026-10-27T18:11:42.789Z",
+  "inputs": {
+    "branch": "feat/per-call-cost",
+    "candidate_state": "uncommitted, explicitly requested",
+    "changed_paths": [
+      ".github/workflows/ci.yml",
+      "apps/api/scripts/ceo-dashboard.ts",
+      "apps/api/scripts/check-anthropic-client.mjs",
+      "apps/api/scripts/check-anthropic-client.test.mjs",
+      "apps/api/scripts/commercial-brief.ts",
+      "apps/api/scripts/margin-per-tool.ts",
+      "apps/api/src/capabilities/address-parse.ts",
+      "apps/api/src/capabilities/agent-trace-analyze.ts",
+      "apps/api/src/capabilities/annual-report-extract.ts",
+      "apps/api/src/capabilities/api-docs-generate.ts",
+      "apps/api/src/capabilities/api-mock-response.ts",
+      "apps/api/src/capabilities/blog-post-outline.ts",
+      "apps/api/src/capabilities/brand-mention-search.ts",
+      "apps/api/src/capabilities/business-license-check-se.ts",
+      "apps/api/src/capabilities/changelog-generate.ts",
+      "apps/api/src/capabilities/classify-text.ts",
+      "apps/api/src/capabilities/code-convert.ts",
+      "apps/api/src/capabilities/code-review.ts",
+      "apps/api/src/capabilities/commit-message-generate.ts",
+      "apps/api/src/capabilities/company-enrich.ts",
+      "apps/api/src/capabilities/company-industry-classify.ts",
+      "apps/api/src/capabilities/company-tech-stack.ts",
+      "apps/api/src/capabilities/competitor-compare.ts",
+      "apps/api/src/capabilities/container-track.ts",
+      "apps/api/src/capabilities/context-window-optimize.ts",
+      "apps/api/src/capabilities/contract-extract.ts",
+      "apps/api/src/capabilities/cookie-scan.ts",
+      "apps/api/src/capabilities/crontab-generate.ts",
+      "apps/api/src/capabilities/curl-to-code.ts",
+      "apps/api/src/capabilities/customs-duty-lookup.ts",
+      "apps/api/src/capabilities/cz-company-data.ts",
+      "apps/api/src/capabilities/danish-company-data.ts",
+      "apps/api/src/capabilities/diff-review.ts",
+      "apps/api/src/capabilities/dockerfile-generate.ts",
+      "apps/api/src/capabilities/docstring-generate.ts",
+      "apps/api/src/capabilities/email-draft.ts",
+      "apps/api/src/capabilities/employer-review-summary.ts",
+      "apps/api/src/capabilities/env-template-generate.ts",
+      "apps/api/src/capabilities/error-explain.ts",
+      "apps/api/src/capabilities/estonian-company-data.ts",
+      "apps/api/src/capabilities/eu-court-case-search.ts",
+      "apps/api/src/capabilities/eu-trademark-search.ts",
+      "apps/api/src/capabilities/fake-data-generate.ts",
+      "apps/api/src/capabilities/finnish-company-data.ts",
+      "apps/api/src/capabilities/gdpr-fine-lookup.ts",
+      "apps/api/src/capabilities/github-actions-generate.ts",
+      "apps/api/src/capabilities/github-repo-analyze.ts",
+      "apps/api/src/capabilities/hs-code-lookup.ts",
+      "apps/api/src/capabilities/image-to-text.ts",
+      "apps/api/src/capabilities/index.ts",
+      "apps/api/src/capabilities/invoice-extract.ts",
+      "apps/api/src/capabilities/job-posting-analyze.ts",
+      "apps/api/src/capabilities/jsdoc-generate.ts",
+      "apps/api/src/capabilities/landing-page-roast.ts",
+      "apps/api/src/capabilities/lib/browserless-extract.ts",
+      "apps/api/src/capabilities/lib/name-resolver.ts",
+      "apps/api/src/capabilities/meeting-notes-extract.ts",
+      "apps/api/src/capabilities/nginx-config-generate.ts",
+      "apps/api/src/capabilities/norwegian-company-data.ts",
+      "apps/api/src/capabilities/openapi-generate.ts",
+      "apps/api/src/capabilities/patent-search.ts",
+      "apps/api/src/capabilities/pdf-extract.ts",
+      "apps/api/src/capabilities/pii-redact-truncation.test.ts",
+      "apps/api/src/capabilities/pii-redact.ts",
+      "apps/api/src/capabilities/pr-description-generate.ts",
+      "apps/api/src/capabilities/price-compare-truncation.test.ts",
+      "apps/api/src/capabilities/price-compare.ts",
+      "apps/api/src/capabilities/pricing-page-extract.ts",
+      "apps/api/src/capabilities/privacy-policy-analyze.ts",
+      "apps/api/src/capabilities/product-reviews-extract-truncation.test.ts",
+      "apps/api/src/capabilities/product-reviews-extract.ts",
+      "apps/api/src/capabilities/product-search.ts",
+      "apps/api/src/capabilities/prompt-compress.ts",
+      "apps/api/src/capabilities/prompt-optimize.ts",
+      "apps/api/src/capabilities/readme-generate.ts",
+      "apps/api/src/capabilities/receipt-categorize.ts",
+      "apps/api/src/capabilities/regex-explain.ts",
+      "apps/api/src/capabilities/regex-generate.ts",
+      "apps/api/src/capabilities/release-notes-generate.ts",
+      "apps/api/src/capabilities/resume-parse.ts",
+      "apps/api/src/capabilities/return-policy-extract.ts",
+      "apps/api/src/capabilities/risk-narrative-generate.ts",
+      "apps/api/src/capabilities/salary-benchmark.ts",
+      "apps/api/src/capabilities/schema-migration-generate.ts",
+      "apps/api/src/capabilities/sentiment-analyze.ts",
+      "apps/api/src/capabilities/social-post-generate.ts",
+      "apps/api/src/capabilities/sql-explain.ts",
+      "apps/api/src/capabilities/sql-generate.ts",
+      "apps/api/src/capabilities/sql-optimize.ts",
+      "apps/api/src/capabilities/structured-scrape.ts",
+      "apps/api/src/capabilities/summarize.ts",
+      "apps/api/src/capabilities/terms-of-service-extract.ts",
+      "apps/api/src/capabilities/test-case-generate.ts",
+      "apps/api/src/capabilities/translate-truncation.test.ts",
+      "apps/api/src/capabilities/translate.ts",
+      "apps/api/src/capabilities/trustpilot-score.ts",
+      "apps/api/src/capabilities/us-company-data.ts",
+      "apps/api/src/capabilities/web-extract-truncation.test.ts",
+      "apps/api/src/capabilities/web-extract.ts",
+      "apps/api/src/capabilities/webhook-test-payload.ts",
+      "apps/api/src/capabilities/website-to-company.ts",
+      "apps/api/src/capabilities/youtube-summarize.ts",
+      "apps/api/src/db/schema.ts",
+      "apps/api/src/lib/anthropic-client.ts",
+      "apps/api/src/lib/anthropic-dependency-drift.test.ts",
+      "apps/api/src/lib/call-cost-settlement.test.ts",
+      "apps/api/src/lib/call-cost.test.ts",
+      "apps/api/src/lib/call-cost.ts",
+      "apps/api/src/lib/currency.ts",
+      "apps/api/src/lib/daily-digest/analyze.ts",
+      "apps/api/src/lib/metered-vendor-fetch.ts",
+      "apps/api/src/lib/metrics/commercial.ts",
+      "apps/api/src/lib/metrics/margin.test.ts",
+      "apps/api/src/lib/models.ts",
+      "apps/api/src/lib/persist-call-cost.test.ts",
+      "apps/api/src/lib/persist-call-cost.ts",
+      "apps/api/src/lib/search/smart.ts",
+      "apps/api/src/lib/startup-migrations.ledger.json",
+      "apps/api/src/lib/startup-migrations.test.ts",
+      "apps/api/src/lib/startup-migrations.ts",
+      "apps/api/src/lib/x402-gateway.ts",
+      "apps/api/src/middleware/request-context.ts",
+      "apps/api/src/routes/do.ts",
+      "apps/api/src/routes/solution-execute.ts",
+      "apps/api/src/routes/x402-gateway-v2.ts",
+      "config/env-manifest.yaml",
+      "docs/company/DAILY-RUN.md",
+      "handoff/_general/from-code/2026-10-27-per-call-cost.md",
+      "package.json"
+    ],
+    "changed_file_sha256": {
+      ".github/workflows/ci.yml": "74ff9fc40f7c05cdb39b351a758b425d4a95acb55427b217569315c567123794",
+      "apps/api/scripts/ceo-dashboard.ts": "2b62dac20d5000929850f935f3863915e25b8ef4db071f90fde27557b62c18cd",
+      "apps/api/scripts/check-anthropic-client.mjs": "e3b699e67c1112d5561c99605c1a80306cafd5cddc2aa5cb4c81a53ee3e97b95",
+      "apps/api/scripts/check-anthropic-client.test.mjs": "e929cf96c1c549dfc31f2bebd4cc180833bcfd922424f69a1cb4ef988cc6899b",
+      "apps/api/scripts/commercial-brief.ts": "1c9a16e3859e9ece9cb9db0de256fc277b263eddf2f3004d3682bce9e4adb77f",
+      "apps/api/scripts/margin-per-tool.ts": "d99307033ce439c9f999891f43dd3203f7185695dcaec991787fd9a24d2f32ec",
+      "apps/api/src/capabilities/address-parse.ts": "4c33a9bd6437dd8c4aee31841f811243c7a9006d17248ceccc22d41076045ecb",
+      "apps/api/src/capabilities/agent-trace-analyze.ts": "ac0e35edf5b9a1976c94c3ca3e748586326eb3d0ede12ee31a8f0de7ad7ff894",
+      "apps/api/src/capabilities/annual-report-extract.ts": "67dadc86c9dd6d4b58cb9f23e09da9363512ee2d69edd605183677ef12ac6242",
+      "apps/api/src/capabilities/api-docs-generate.ts": "12315b0a369734be8b4a9cd7d051512182ebd333a1d2d4fed80243dada986766",
+      "apps/api/src/capabilities/api-mock-response.ts": "33568d1c62b2636d96fb0e460577b6fa0846f9acb4506e29f4f75046993707fc",
+      "apps/api/src/capabilities/blog-post-outline.ts": "b0098286229a770592e904d13baad267694f8bfd063acd6d1d924db46eb30a0f",
+      "apps/api/src/capabilities/brand-mention-search.ts": "f5a6400722bfe7d606b8399b0ecbb259360478fb9ac774b697e0fe2d3e22d568",
+      "apps/api/src/capabilities/business-license-check-se.ts": "6c34d505c4de52a878dd8e80405ae7a033648dd48996e92e689f7ac46685eecb",
+      "apps/api/src/capabilities/changelog-generate.ts": "d33a9f79b399070d13eb1528fe2224699e145d2c26d26641706846e5f5a57287",
+      "apps/api/src/capabilities/classify-text.ts": "f6933211d08e669cb0be63042fe98d4e9d7c2a59552902e9fce5cd9e3e3f2872",
+      "apps/api/src/capabilities/code-convert.ts": "e031816802a35bfa5a3a354bae0acb93311fac3db065c39d3668823c9c14b0f5",
+      "apps/api/src/capabilities/code-review.ts": "48d7f46903ed7db466cd5c9650e7c80ada7c367b48addaa5becbe410292a7660",
+      "apps/api/src/capabilities/commit-message-generate.ts": "bbf43f28657ef8cd185140ad16902edd0d8c621a15c5349cacf69349a7772e0a",
+      "apps/api/src/capabilities/company-enrich.ts": "fcc42779de84d155e0f18b5c206577d9f0615bfbe3b5ec0b4c658d1aefe5feb8",
+      "apps/api/src/capabilities/company-industry-classify.ts": "3e1b6af5520062c6020c05c7769f60003711208397d9176912b0e881f52482e7",
+      "apps/api/src/capabilities/company-tech-stack.ts": "2602f56e4c17200d64292e4eb99f3b5582f56bab54c16961e95cd272734aa724",
+      "apps/api/src/capabilities/competitor-compare.ts": "8fd554a1f49d4fc9f9288d03d49b67f46f226fb86e2024bfe1253ee95cb994b4",
+      "apps/api/src/capabilities/container-track.ts": "bafd33ce5d588fa69d213ebd50cb661978e25ce63aa49f9722f062ba3f5b2e29",
+      "apps/api/src/capabilities/context-window-optimize.ts": "0ad8bb4ecd2786dcf4b53d525f76374ff4648561711ba3932b340af72cd16437",
+      "apps/api/src/capabilities/contract-extract.ts": "25ec465bf2c5d9b9a67542d6f6fa75ccd7d231807b60497b77aa8ccd25ecaea9",
+      "apps/api/src/capabilities/cookie-scan.ts": "0b1dacbcb6461fb7616bf9da57f03d4a326d6c6fb9a107c9b0aff52949c86dfb",
+      "apps/api/src/capabilities/crontab-generate.ts": "cb05f027feff4582af20b2860528aee8caf6002897d597cff126d8f21a0095db",
+      "apps/api/src/capabilities/curl-to-code.ts": "b1ab4477d4550626ecb5f646446d5d1e167b0628c7cec9e33fdac337ba042813",
+      "apps/api/src/capabilities/customs-duty-lookup.ts": "53f55894003843f59e211ca98cefc2ed5f015b07b5dde895ea77dc2521b5984d",
+      "apps/api/src/capabilities/cz-company-data.ts": "bf6b435596bb41bc43f92691fe5704e8fcaf0f5225413ac867f9a63dc700af79",
+      "apps/api/src/capabilities/danish-company-data.ts": "8ce103f0e40aea3725d4aecc8b5b26f0e4a4676c6924c4918d46366543766e90",
+      "apps/api/src/capabilities/diff-review.ts": "cd47a026c9b34562500b64822deb6e8f2045c48d64ca5581bad782c4cea9ba74",
+      "apps/api/src/capabilities/dockerfile-generate.ts": "410afa5f52c39a765e5081dce37503fe7910d24479e2f7c1d23cbb5111b81490",
+      "apps/api/src/capabilities/docstring-generate.ts": "cbd581779ce3c0cb72a61da42164ea6811b0e19ac802cee80277cfc1a9bf6ee6",
+      "apps/api/src/capabilities/email-draft.ts": "25a95330068d1d2a9dedeff412957b3dbdbf72fb7083e6259f956af48f9861c1",
+      "apps/api/src/capabilities/employer-review-summary.ts": "02c8af106d35ddb6fcec86b4e62e4450edf70302397ec105a1cb61d867df3ff1",
+      "apps/api/src/capabilities/env-template-generate.ts": "e12a0af120a2ac0949b711814e0b96b2f00d388d904c4cdd878131ac6fee87c7",
+      "apps/api/src/capabilities/error-explain.ts": "8d5b63c49b62f93a7f3e0478a04f9d806f33c868177e05f8198a93a665675ce6",
+      "apps/api/src/capabilities/estonian-company-data.ts": "c2467cf81dfac6df2fbdf2e5e9f07f28b8444e8fea44fe87f14cfe2e362f2d0f",
+      "apps/api/src/capabilities/eu-court-case-search.ts": "ed0bdf2a5943b5811fa54e3adf1a000747c4a67e9f379952d02c03f59b993411",
+      "apps/api/src/capabilities/eu-trademark-search.ts": "42d4654fead825cb8f71bfaa6980a081a5854466e7ce0227fe801d7f24431e15",
+      "apps/api/src/capabilities/fake-data-generate.ts": "952b3720f101321b3a51af3df8dc4bc2a046a15feb493726b0d359dcaf25e59f",
+      "apps/api/src/capabilities/finnish-company-data.ts": "f18ffc9c637b949f60482648decfb0fb977a535ce896d76f3ee082ffacbc1097",
+      "apps/api/src/capabilities/gdpr-fine-lookup.ts": "3e07831fb8eb1d0c440e9bfc3434127674f03acc3c4d7e6420668ca454fc1be4",
+      "apps/api/src/capabilities/github-actions-generate.ts": "054035ef0416fb894acc32f91f0daffe37cf89dc55d0ed37fe6ac834a8aa5210",
+      "apps/api/src/capabilities/github-repo-analyze.ts": "19258be334d31ca7b87f22f8599804138fc1b322047ad948f41ac0fed35f6486",
+      "apps/api/src/capabilities/hs-code-lookup.ts": "bf2e3c5680e2ba34e4cf1940fca0a8d08ef77c572be85816a39d0f04653eefe1",
+      "apps/api/src/capabilities/image-to-text.ts": "015ba64bd19d106c153fcf7fe87b9c2e383f32d5c472e9274c0f1229fd520df0",
+      "apps/api/src/capabilities/index.ts": "52de21b32a0df64f8fd5b81e1ee1fbfae808c7699c688aa9419b3cda09ea680c",
+      "apps/api/src/capabilities/invoice-extract.ts": "5de0e29e98b1ac3a905315193588c278fc891a4381b5dd0fbe4da5febeb08f14",
+      "apps/api/src/capabilities/job-posting-analyze.ts": "1c6716c62004c76444775d43bbc66ca84295f59b459195cf760981e3220848bb",
+      "apps/api/src/capabilities/jsdoc-generate.ts": "ee8c5ad0507e0d34f333b69488d4536cc9796fbc04d487d3f9f9a6b05c1eedd2",
+      "apps/api/src/capabilities/landing-page-roast.ts": "8cfba0e6994c8b9c5ddc141c9aa3824d456e4773ae4c11ea6abd68602430749d",
+      "apps/api/src/capabilities/lib/browserless-extract.ts": "3a693dee0ce518547765d9bd01cce7e1aca99457b4927e09c9a091a8c3ebb3db",
+      "apps/api/src/capabilities/lib/name-resolver.ts": "62ef8a67b7c13700b01918b4dc49d64f585d0adbdbdb3bc8560cf575011bfde6",
+      "apps/api/src/capabilities/meeting-notes-extract.ts": "97dfef21574d62d70ae1f0e2175dd80ee1babaff7ba01bde78514039ee359590",
+      "apps/api/src/capabilities/nginx-config-generate.ts": "8c765417573ca8ed746a9d2f9ff67f0dcc4b7c1a38688df6240367328f33d817",
+      "apps/api/src/capabilities/norwegian-company-data.ts": "f1867c81583eded391b3c1522ce22ff4b6849c4d6675f389fbfb59474c7418b4",
+      "apps/api/src/capabilities/openapi-generate.ts": "8536f749da588a2ae440b868c7118f65fc29eedab0794a77eddc302d74811daf",
+      "apps/api/src/capabilities/patent-search.ts": "d81e3beb98270815bc2fd5b0360a06f49e0916fe38fdc54c7276d146f88b5058",
+      "apps/api/src/capabilities/pdf-extract.ts": "3956c47ca2f3b5f9f0ff6aefca84c0e741ab0a8943a9e445dc98555cdb0c8083",
+      "apps/api/src/capabilities/pii-redact-truncation.test.ts": "587ac41593ac0b692cc2cac51ffd65f67d395a6fcb147987bd4ac2bba99c04a3",
+      "apps/api/src/capabilities/pii-redact.ts": "7ab6463af1ac166d2dae0c427cec67e76237bd6b07217b78408a1295dbb98a1b",
+      "apps/api/src/capabilities/pr-description-generate.ts": "461f3de0dc8151ead463990444d53fef11685de0aa5eb65e09a367dfcaa1f3e4",
+      "apps/api/src/capabilities/price-compare-truncation.test.ts": "6a836d0c18799bfda40880f255d196ac1b1174b8caa9129fd4d7b846d942e8f8",
+      "apps/api/src/capabilities/price-compare.ts": "07ba613521949c65cab4f79c044605c81d2a919bd8c64f813debc59c060f3a0b",
+      "apps/api/src/capabilities/pricing-page-extract.ts": "ae2b151fcdcfaf0d8d9cb29642caf03f4193d542b5e44bf7e45c29e0b2a3bbdc",
+      "apps/api/src/capabilities/privacy-policy-analyze.ts": "1b1880bcb55b306dd70020f63f68cd35c2e6e4d0a3cedf6c6bec150a6090c816",
+      "apps/api/src/capabilities/product-reviews-extract-truncation.test.ts": "a27b179535e9ddbf275fbddeb67567fbe41eaa3ebc14a2e79bda523423efbe7a",
+      "apps/api/src/capabilities/product-reviews-extract.ts": "96b95769cd5a9c6396f6c081f4bc21769e1db85cfd856784a170ac6ef654bdcf",
+      "apps/api/src/capabilities/product-search.ts": "437c63c6fa2daf871e9e2df43840565a433aea17dfef87bdd6d4e7ddd7bbe078",
+      "apps/api/src/capabilities/prompt-compress.ts": "f0190cb96ab57836db4f2f9381d54b2af27ea1ebdf6d7e0fb0197f129d1aa51b",
+      "apps/api/src/capabilities/prompt-optimize.ts": "77b2b604d2a0fc02ea7fcbc47d264fece95dcb229e7457202c444dbfc96ae75a",
+      "apps/api/src/capabilities/readme-generate.ts": "dc7913abcc0ddb7c6fa289025d81237b7eefde174ac9e0bd4f8656063b179a27",
+      "apps/api/src/capabilities/receipt-categorize.ts": "831466290fbf4ee18605dab8737358863b8844f84daf77040b136f40acd460a3",
+      "apps/api/src/capabilities/regex-explain.ts": "e28c0e17ed7549fcad482ca142d1a871b5b9c0ea5d28aa723bd7c70e114e4888",
+      "apps/api/src/capabilities/regex-generate.ts": "d4627dc3dc8d8341f507566025e3f33affc4bca5cc066541b1474066b0c6d843",
+      "apps/api/src/capabilities/release-notes-generate.ts": "819e408d4affa20c5d42ca1c0724180d8ff04d0cf02d389a313a0e04adc79f20",
+      "apps/api/src/capabilities/resume-parse.ts": "3a125f5feb72840cc607523fe07054142132f1a695cabe4bf967a8e0effddbfe",
+      "apps/api/src/capabilities/return-policy-extract.ts": "220ec05b556dda686ba338858ee31cebe0bd0e877794782aa610512c8d795a43",
+      "apps/api/src/capabilities/risk-narrative-generate.ts": "1152d0e54388af49fba61d3941cacf74f648625b65e57a05ab18e02128835700",
+      "apps/api/src/capabilities/salary-benchmark.ts": "1b855be9c39819d4cd86a19fb039a64f1383785a7921b91a559ef95ea411b435",
+      "apps/api/src/capabilities/schema-migration-generate.ts": "4acb2c5729a7048ba1eeeae49b57a9211a95b087ca31c4d1966e9b53a1484b93",
+      "apps/api/src/capabilities/sentiment-analyze.ts": "d928aa11050bda3b72c4de90b1b39275ea2353bd0c07c5aa512c344d7045d710",
+      "apps/api/src/capabilities/social-post-generate.ts": "680e4c9d5ea6f04f0e6805baded290c897279d9e7b216f7cff18d4994c957640",
+      "apps/api/src/capabilities/sql-explain.ts": "d370c18f9fd36f1f1eae3cbafdcf9f2e031cf68251b60fc907b3b96fc95fc5ca",
+      "apps/api/src/capabilities/sql-generate.ts": "a6dc5098604988f73af7ef4d1dc56393834cb5f0d9e4c224c2998c72366bf9e3",
+      "apps/api/src/capabilities/sql-optimize.ts": "6e3a76cfa05b90ee76a0458f68c72b1865b9f4d73654542322dac21feef6f5f4",
+      "apps/api/src/capabilities/structured-scrape.ts": "6d3e3987c4d0602f26a3c30503e3996c3f859c816868544a3485e4284b72ce57",
+      "apps/api/src/capabilities/summarize.ts": "abb89d56de9505c38703c3f64d247c9eb39c64b776b6d7b75212ed19a4cd525f",
+      "apps/api/src/capabilities/terms-of-service-extract.ts": "246517a4b1ade93df975e7aa26a990a9e83b84a82c3c6c85128577f7e269ef12",
+      "apps/api/src/capabilities/test-case-generate.ts": "326584a017990d52f56eb7bbb35047bb1d99b51baf19ec230a3a01d4ff6e2f35",
+      "apps/api/src/capabilities/translate-truncation.test.ts": "f9e4c393fca038200a971ad23155985171949fbbe34224c7ff79e1870a6d8fd5",
+      "apps/api/src/capabilities/translate.ts": "b6559d8001b7d8d01338913347eb73afe4e7cae5e73258353c034d683492ae3e",
+      "apps/api/src/capabilities/trustpilot-score.ts": "134f300d36818dd2f8096e29085eecb40558156b3b4fd5d3b383fdc1e9911bfb",
+      "apps/api/src/capabilities/us-company-data.ts": "f061759fc329fad05f22fff7eb48eda50353ba43201427b5b38ccd1f3fd78987",
+      "apps/api/src/capabilities/web-extract-truncation.test.ts": "577c3495d73fbbcda06c58a535df815a6b25a68478931452a2ecebdb070595df",
+      "apps/api/src/capabilities/web-extract.ts": "75c0891cf559baf61d32d9f3c4e93fac20ce646790542ded69ab50aac02fc902",
+      "apps/api/src/capabilities/webhook-test-payload.ts": "9717a040e9880365e4c6ce75bafe412b079b73b97bb1d69b0c8edaa86ec6fe63",
+      "apps/api/src/capabilities/website-to-company.ts": "8a7aaf0304430fb592836c0fdcda30a7369ebe247aec1f84bd42e12d96a877c1",
+      "apps/api/src/capabilities/youtube-summarize.ts": "7b180da1f55ef6e1d1569d551acbf9eedce4bae0a3804b592063861fe79540c3",
+      "apps/api/src/db/schema.ts": "ef9e305474cca6272fd1bd6304d385763db01e2d292cf10f2aa86b019a1d7c70",
+      "apps/api/src/lib/anthropic-client.ts": "8afd9f391e2462cc2e5719bc86edb267cd6e0ff67d8d2fa515edd4799d827b8e",
+      "apps/api/src/lib/anthropic-dependency-drift.test.ts": "9f07c459aa5b5e641af21bd0d03ca60382760751c2d7412f0c00ffb365735909",
+      "apps/api/src/lib/call-cost-settlement.test.ts": "362a54f52b7706cfe995a8fb5fb1a2cf3f30fdd38b80da6c7a6139ce70dd34c5",
+      "apps/api/src/lib/call-cost.test.ts": "5866fd899f92dbbe1c7b17de2f81977d546d4036f579254a6e57af573b81821d",
+      "apps/api/src/lib/call-cost.ts": "733a8c50a891463b85ca3b948c3f2e7bf28729d23c660d3d81c4fdd98d31d1b1",
+      "apps/api/src/lib/currency.ts": "26a15f8835b89ece688bdeb2bea8efcaa5a25b5d925380358d9250b83c8b6fd1",
+      "apps/api/src/lib/daily-digest/analyze.ts": "803caf8834476d9cfc2506ba143fa0e7e93d888b39be5ca0212b0e7c2994d0dc",
+      "apps/api/src/lib/metered-vendor-fetch.ts": "e8d16e356683fd7198675fd511107313aa9c98e797347775f0c989fc24cbab7d",
+      "apps/api/src/lib/metrics/commercial.ts": "50f00e550e5bdadc197b69ae1b1a9510f5587b66ccfb730302a4b28824e0146e",
+      "apps/api/src/lib/metrics/margin.test.ts": "51c60073215db83898ce20b0c71b48e8ce909d99876140cdbb9ba20f77b6c55d",
+      "apps/api/src/lib/models.ts": "223a26f9ef3af1acb713033cb95c8c5f33308ab798670fa3997c9165624c4344",
+      "apps/api/src/lib/persist-call-cost.test.ts": "291bf6bb0f1ec19afe3a24011602d40c52922d4767699a20601e5bc916f62723",
+      "apps/api/src/lib/persist-call-cost.ts": "97003a2231ecae3ccc1178a1b25cfa73eae83ce780e8a02dc71fd61b7639e2e6",
+      "apps/api/src/lib/search/smart.ts": "ae4bb6df509d23021248443da709052f2861a7e14e3695f57edc5b4aebc60566",
+      "apps/api/src/lib/startup-migrations.ledger.json": "dea2a2024f1afe7dd062448b3bd48b48e7c85d992c5ddee6a059f623432a8a2c",
+      "apps/api/src/lib/startup-migrations.test.ts": "318bafb40bfa704f164328734c26f73644b484b4b65702fb0fc8b909dca71da0",
+      "apps/api/src/lib/startup-migrations.ts": "41c79bba9a5035062703098f6911c5f0fed4803a21a9c1a7f7dff664953b88eb",
+      "apps/api/src/lib/x402-gateway.ts": "119e0a897588125e7c9fe90a3a6d72ecf4ca3912486318d180a3ca64f586466a",
+      "apps/api/src/middleware/request-context.ts": "ff2f55d1e835d4eb17821a909afad1ab769c907528a4c4322e5a67f69269b43a",
+      "apps/api/src/routes/do.ts": "cc5b16162e58ef6f2fc07bb1f6f32b4fca0cbacc401c1abf0e62010001a232e7",
+      "apps/api/src/routes/solution-execute.ts": "76199fed4838ffbcff7a3bf7cd2bd5a0b314c342ab0f661629067737d31ff731",
+      "apps/api/src/routes/x402-gateway-v2.ts": "437f9441ba3455368c9cf419c83a8de405c746f794bf8914502233745e3b9ce7",
+      "config/env-manifest.yaml": "6f94feba3eb48c8691e0597e49d0d234812de8c6289d0f3838500b4d7e27201e",
+      "docs/company/DAILY-RUN.md": "fa8d0548a93131644be45e7a2aec8acf6a932014c58363383d82f4224dea109b",
+      "handoff/_general/from-code/2026-10-27-per-call-cost.md": "270637c3380cb441b06ebc800aef5ec43667ea054abedfa5336dc43bad6673cc",
+      "package.json": "031f8f617b6f5e683f7cf0172a96acfe2e341d62b32b31e31ca945dd3fd4d996"
+    }
+  },
+  "summary": {
+    "passed": 6498,
+    "failed": 0,
+    "skipped": 346,
+    "total": 6844,
+    "test_files_passed": 355,
+    "test_files_skipped": 33,
+    "sites_migrated": 95,
+    "consumer_files_migrated": 93,
+    "root_ci_local_commands_passed": 61,
+    "root_ci_github_dependency_check_unavailable": 1,
+    "context_tests_passed": 180,
+    "paid_calls": 0,
+    "independent_review": "GO technical and product; 2 rounds",
+    "postgres_verified": false,
+    "margin_cli_database_verified": false,
+    "handoff_gate_passed": false
+  },
+  "topic": "per-call-cost",
+  "raw": {
+    "root_ci_commands": [
+      {
+        "command": "set -euo pipefail\nif [[ \"$CLASSIFY_RESULT\" != success ]]; then\n  echo \"::error::Change classification did not succeed\"\n  exit 1\nfi\nif [[ \"$SMOKE_RESULT\" == success || ( \"$DOCS_ONLY\" == true && \"$SMOKE_RESULT\" == skipped ) ]]; then\n  exit 0\nfi\necho \"::error::Image boot smoke did not succeed ($SMOKE_RESULT)\"\nexit 1\n",
+        "exit_code": 1
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          26
+        ]
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          30
+        ]
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          31
+        ]
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          55,
+          9,
+          4,
+          1,
+          15
+        ]
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          24
+        ]
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          78
+        ]
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          15
+        ]
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          20
+        ]
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          3
+        ]
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          12
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          16
+        ]
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          43
+        ]
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          24
+        ]
+      },
+      {
+        "command": "npm run anthropic:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run anthropic:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          1
+        ]
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          14
+        ]
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          33
+        ]
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          6
+        ]
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          12
+        ]
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          25
+        ]
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          24
+        ]
+      },
+      {
+        "command": "npm run gates:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          65
+        ]
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          46
+        ]
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "test_counts_per_runner": [
+          180
+        ]
+      }
+    ],
+    "final_api_suite": {
+      "command": "npm test",
+      "exit_code": 0,
+      "passed": 6498,
+      "skipped": 346,
+      "failed": 0,
+      "files_passed": 355,
+      "files_skipped": 33
+    },
+    "final_extra_checks": [
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run anthropic:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run anthropic:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      }
+    ],
+    "history": [
+      {
+        "command": "initial full API vitest",
+        "passed": 6485,
+        "failed": 7,
+        "skipped": 346,
+        "result": "fixed SDK options assertions and appended migration expectations"
+      },
+      {
+        "command": "targeted run from repository root",
+        "passed": 251,
+        "failed": 1,
+        "result": "fixed x402 returning overload assertion"
+      },
+      {
+        "command": "targeted 10-file rerun",
+        "passed": 252,
+        "failed": 0
+      },
+      {
+        "command": "second full npm test before standalone cases",
+        "passed": 6496,
+        "failed": 0,
+        "skipped": 346
+      },
+      {
+        "command": "temporary program resume update checks",
+        "result": "reverted own optional program edit; final programs and context checks pass"
+      },
+      {
+        "command": "npm run context:generate",
+        "exit_code": 1,
+        "result": "CLI refuses a primary checkout; no generated-file change was needed after removing optional program edit"
+      }
+    ],
+    "unavailable_checks": [
+      {
+        "command": "runuser -u postgres -- psql -c 'SELECT version();'",
+        "result": "cannot set groups: Operation not permitted"
+      },
+      {
+        "command": "psql -w -U postgres -h localhost -d postgres -c SELECT1; local socket probe",
+        "result": "connection refused / no socket"
+      },
+      {
+        "command": "setpriv --reuid=postgres --regid=postgres --keep-groups -- id",
+        "result": "setresuid failed: Invalid argument"
+      },
+      {
+        "command": "docker info --format '{{.ServerVersion}}'",
+        "result": "Docker daemon socket unavailable"
+      },
+      {
+        "command": "npx tsx apps/api/scripts/margin-per-tool.ts 7",
+        "exit_code": 1,
+        "result": "DATABASE_URL environment variable is required"
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit_code": 1,
+        "result": "expected dirty, feature-branch trunk, no upstream and existing merged-branch findings; resume surface supplied"
+      },
+      {
+        "command": "apps/api/scripts/mutation-test.mjs",
+        "result": "not run: requires a clean committed candidate; task prohibits commit"
+      }
+    ],
+    "review": {
+      "technical": "GO working diff, base 11eae695, rounds 2; 17 focused tests passed",
+      "product": "GO working diff, round 2; 5 margin/settlement tests passed"
+    },
+    "scope": "marginal upstream costs; EUR uses recorded reporting FX estimate; fixed infrastructure, tax and payment processing excluded"
+  }
+}

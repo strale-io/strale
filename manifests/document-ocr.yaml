@@ -1,0 +1,196 @@
+slug: document-ocr
+name: "Scanned Document OCR"
+description: "Read the text of a scanned PDF or a set of page images, up to 50 pages per call, with per-page confidence, a text file and an optional searchable PDF."
+category: file-conversion
+# Self-hosted Tesseract in Strale's own container: no upstream bill per call.
+cost_class: free_unlimited
+quota_window: none
+is_free_tier: false
+external_cost_cents: 0
+# €0.10 a call for up to 50 pages: €0.002 a page on a full window. A 500-page
+# document is ten calls (first_page 1, 51, 101 …), €1.00. Compute measured at
+# about €0.025 per 1,000 pages (docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md).
+price_cents: 10
+# Above the 10 s async threshold: the call returns 202 with a poll URL, the
+# price is reserved and captured only when the job succeeds, and the files
+# come back as signed URLs on the poll (portfolio 2.11).
+avg_latency_ms: 30000
+input_schema:
+  type: object
+  properties:
+    url:
+      type: string
+      description: URL of a PDF or of one image (PNG, JPEG, WebP, or TIFF, multi-page TIFF included). Up to 8 MB.
+    base64:
+      type: string
+      description: The PDF or image itself, base64-encoded. The request body limit of 1 MB applies, so use url for larger files.
+    image_urls:
+      type: array
+      items:
+        type: string
+      description: One image URL per page, in page order (up to 500). Only the images inside the page window are fetched; at most 4 MB each and 8 MB in total per call.
+    languages:
+      type: string
+      description: "Up to three of eng, swe, dan, nor, fin, deu, fra, spa, ita, nld, joined with + (for example deu+eng). Default eng+swe."
+    first_page:
+      type: integer
+      description: First page to read (1-based). Default 1. To read a long document, call again with next_first_page from the previous result.
+    max_pages:
+      type: integer
+      description: Pages to read in this call, 1 to 50. Default 50.
+    output_file:
+      type: string
+      enum: [text, pdf, both, none]
+      description: "Files returned with the job: text (default, one .txt with every page), pdf (a searchable PDF, image plus invisible text layer, split into parts of up to 10 MB), both, or none."
+  anyOf:
+    - required: [url]
+    - required: [base64]
+    - required: [image_urls]
+output_schema:
+  type: object
+  properties:
+    pages:
+      type: array
+      description: One entry per page read, in order, with page_number, status (ok or failed), text, mean_confidence (0-100), word_count and an error for a failed page.
+    total_pages:
+      type: integer
+      description: Pages in the whole document.
+    first_page:
+      type: integer
+    last_page:
+      type: integer
+      description: Last page read in this call.
+    pages_processed:
+      type: integer
+    pages_failed:
+      type: integer
+    next_first_page:
+      type: integer
+      description: Where the next call should start, or null when the document is finished.
+    complete:
+      type: boolean
+    stopped_early_reason:
+      type: string
+      description: time_budget when the call stopped before its window to stay inside the job time limit; null otherwise.
+    mean_confidence:
+      type: number
+      description: Word-weighted mean Tesseract confidence over the pages read, 0-100.
+    low_confidence_pages:
+      type: array
+      description: Pages whose mean confidence is under 70; check these by eye or with image-to-text.
+    word_count:
+      type: integer
+    languages:
+      type: array
+    engine:
+      type: string
+    output_files:
+      type: array
+      description: Names of the files attached to the job; download them from the signed URLs in the poll response.
+    searchable_pdf_omitted_reason:
+      type: string
+      description: Set when pages are missing from the searchable PDF (file or time limits, or pages that could not be read), naming the first page left out.
+data_source: Tesseract OCR 5 (self-hosted, Apache-2.0)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+gdpr_art_22_classification: data_lookup
+# Scanned documents routinely carry names, addresses and account details.
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - financial
+geography: global
+# The document is fetched once from the URL the caller named; the OCR itself
+# runs in Strale's container and sends nothing to a third party.
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+test_fixtures:
+  # A real 200 dpi scan: Riksdagen motion 1975:36, two pages, Swedish, from
+  # the Riksdag's open data (the same file is committed for the image probe
+  # at apps/api/src/capabilities/lib/ocr/fixtures/riksdagen-mot-1975-36.pdf).
+  known_answer:
+    input:
+      url: https://data.riksdagen.se/fil/F31689BF-1E58-4A1F-A577-0B29A22B363B
+      languages: swe+eng
+      output_file: none
+    expected_fields:
+      - field: total_pages
+        operator: equals
+        value: 2
+        reliability: guaranteed
+      - field: pages_processed
+        operator: equals
+        value: 2
+        reliability: guaranteed
+      - field: complete
+        operator: is_true
+        reliability: guaranteed
+      - field: pages.0.text
+        operator: contains
+        value: arbetarskyddslagen
+        reliability: guaranteed
+      - field: pages.1.status
+        operator: equals
+        value: ok
+        reliability: guaranteed
+      - field: mean_confidence
+        operator: gt
+        value: 80
+        reliability: guaranteed
+      - field: engine
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://data.riksdagen.se/fil/F31689BF-1E58-4A1F-A577-0B29A22B363B
+    languages: swe+eng
+    max_pages: 1
+    output_file: none
+output_field_reliability:
+  pages: guaranteed
+  total_pages: guaranteed
+  first_page: guaranteed
+  last_page: guaranteed
+  pages_processed: guaranteed
+  pages_failed: guaranteed
+  next_first_page: common
+  complete: guaranteed
+  stopped_early_reason: rare
+  mean_confidence: common
+  low_confidence_pages: guaranteed
+  word_count: guaranteed
+  languages: guaranteed
+  engine: guaranteed
+  output_files: guaranteed
+  searchable_pdf_omitted_reason: rare
+limitations:
+  - title: Printed text only
+    text: Tesseract reads printed and typed text. It does not read handwriting, and stamps, signatures, faded print, tables and multi-column layouts lower accuracy. Pages under 70 mean confidence are listed in low_confidence_pages.
+    category: accuracy
+    severity: warning
+    workaround: Send the pages listed in low_confidence_pages to image-to-text, which uses a vision model.
+  - title: Accuracy measured for Swedish and English
+    text: Measured on Swedish and English scans (about 0.07% character error on scan-like pages, 0.5% on poor scans, and mean confidence 93 on the 1975 Riksdag scan in the test). The other eight languages use the standard Tesseract models and were not measured here.
+    category: accuracy
+    severity: info
+  - title: 50 pages per call
+    text: Each call reads at most 50 pages and costs €0.10 however few pages it reads, so a one-page document costs €0.10. Longer documents are read in windows with first_page; the result gives next_first_page until complete is true.
+    category: scope
+    severity: info
+    workaround: For a single photo or screenshot, image-to-text (€0.05) is cheaper.
+  - title: Asynchronous, with a time limit
+    text: The call returns a job to poll. A job stops starting new pages about three and a half minutes after the call and returns what it read, with stopped_early_reason time_budget and next_first_page set. One document is read at a time; a call is refused, uncharged, when another document is already waiting or it waited too long to start.
+    category: performance
+    severity: info
+  - title: Size limits
+    text: A PDF or image by URL may be up to 8 MB, a base64 upload is bounded by the 1 MB request body, and an image set may total 8 MB per call. PDFs that need a password to open are refused. The searchable PDF comes in parts of at most 10 MB and 25 MB per job; pages beyond that are left out of the PDF and named in searchable_pdf_omitted_reason, and a call asking only for a PDF that gets none fails uncharged.
+    category: coverage
+    severity: info
+  - title: No layout or structure
+    text: Output is plain text per page in reading order. Tables, form fields, fonts and positions are not returned; use invoice-extract or pdf-extract for structured fields.
+    category: scope
+    severity: info

@@ -44,6 +44,7 @@
 //       guarded-executor import, or invokes it without a marker + (for
 //       invoking files) the matching allowlist entry.
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, relative } from "node:path";
 import ts from "typescript";
@@ -61,6 +62,10 @@ const OPERATOR_TOOL_ALLOWLIST = new Set([
   "sweep-paid-fixtures.ts",
   "capture-tier-fixtures.ts",
   "smoke-openapi-resolver.ts",
+  // H7c batch 2: invokes through src/test-helpers/known-answer-contract.ts,
+  // which this checker does not trace; listed so the exemption is on record.
+  // Free cost classes only, one live call per slug per run, no DB.
+  "record-upstream.ts",
 ]);
 
 const CAPABILITIES_INDEX_RE = /^(\.\.\/)+src\/capabilities\/index(\.js)?$/;
@@ -227,7 +232,7 @@ function analyzeFile(filePath, content) {
 const offenders = [];      // imports getExecutor, no clearing path at all
 const unlistedInvokers = []; // marker present, invokes, but not on the allowlist
 
-for (const file of listSourceFiles(SCRIPTS_DIR)) {
+for (const file of requireInputs(listSourceFiles(SCRIPTS_DIR), "executor guard: script sources")) {
   const content = readFileSync(file, "utf8");
   const { hasGetExecutorImport, hasGuardedImport, invokes } = analyzeFile(file, content);
   if (!hasGetExecutorImport) continue;

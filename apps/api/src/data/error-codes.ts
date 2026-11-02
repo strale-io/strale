@@ -86,7 +86,7 @@ const SCRAPING_SLUGS = [
   "employer-review-summary", "eu-court-case-search", "eu-regulation-search",
   "eu-trademark-search", "gdpr-fine-lookup", "german-company-data",
   "html-to-pdf", "irish-company-data",
-  "italian-company-data", "japanese-company-data", "landing-page-roast",
+  "italian-company-data", "landing-page-roast",
   "latvian-company-data", "lithuanian-company-data", "patent-search",
   "portuguese-company-data", "price-compare", "pricing-page-extract",
   "privacy-policy-analyze", "product-reviews-extract", "product-search",

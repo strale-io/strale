@@ -1,10 +1,15 @@
+import { CLIENT_ID } from "./package-version.js";
 import type {
+  ApiKey, ApiKeyUsage, ApiKeyCreated, ApiKeyCreateOptions, ApiKeyUpdateOptions,
   StraleOptions,
   DoRequest,
   DoResponse,
   DoResult,
   DoMeta,
   DryRunResponse,
+  DoBatchRequest,
+  DoBatchResponse,
+  DoBatchDryRunResponse,
   Capability,
   BalanceResponse,
   Transaction,
@@ -33,8 +38,11 @@ const DEFAULT_BASE_URL = "https://api.strale.io";
 const DEFAULT_TIMEOUT = 60_000;
 const DEFAULT_POLL_INTERVAL = 2_000;
 const DEFAULT_MAX_POLL_WAIT = 120_000;
+/** The API gives a batch up to 90s; leave room for the response. */
+const MIN_BATCH_TIMEOUT = 120_000;
 
 export class Strale {
+  private readonly clientHeader: string;
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeout: number;
@@ -47,6 +55,7 @@ export class Strale {
       throw new Error("apiKey is required");
     }
     this.apiKey = options.apiKey;
+    this.clientHeader = options.clientHeader ?? CLIENT_ID;
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.timeout = options.timeout ?? DEFAULT_TIMEOUT;
     this.pollInterval = options.pollInterval ?? DEFAULT_POLL_INTERVAL;
@@ -107,6 +116,28 @@ export class Strale {
     return doResponse;
   }
 
+  /**
+   * Run one paid capability over many inputs: one quote, the whole quote held
+   * once, results in input order, and a charge only for items that succeed.
+   * Item failures are reported in `results`, not thrown.
+   */
+  async doBatch(request: DoBatchRequest & { dry_run: true }): Promise<DoBatchDryRunResponse>;
+  async doBatch(request: DoBatchRequest): Promise<DoBatchResponse>;
+  async doBatch(request: DoBatchRequest): Promise<DoBatchResponse | DoBatchDryRunResponse> {
+    const body: Record<string, unknown> = {
+      capability_slug: request.capability_slug,
+      inputs: request.inputs,
+      max_total_price_cents: request.max_total_price_cents,
+    };
+    if (request.timeout_seconds !== undefined) body.timeout_seconds = request.timeout_seconds;
+    if (request.dry_run !== undefined) body.dry_run = request.dry_run;
+    const headers: Record<string, string> = {};
+    if (request.idempotency_key) headers["Idempotency-Key"] = request.idempotency_key;
+    return this.request<DoBatchResponse | DoBatchDryRunResponse>(
+      "POST", "/v1/do/batch", body, headers, Math.max(this.timeout, MIN_BATCH_TIMEOUT),
+    );
+  }
+
   // ─── Capabilities ──────────────────────────────────────────────────────────
 
   /** List all available capabilities */
@@ -128,6 +159,26 @@ export class Strale {
   /** Get current wallet balance */
   async balance(): Promise<BalanceResponse> {
     return this.request<BalanceResponse>("GET", "/v1/wallet/balance");
+  }
+
+  /** Primary key required. Create an additional key (maximum 25 active). Save api_key securely: it is returned once. */
+  async createApiKey(options: ApiKeyCreateOptions): Promise<ApiKeyCreated> {
+    return this.request("POST", "/v1/api-keys", { ...options });
+  }
+
+  /** Primary key required. List up to 25 active keys and their ledger-derived spending. */
+  async apiKeys(): Promise<ApiKeyUsage[]> {
+    return (await this.request<{ keys: ApiKeyUsage[] }>("GET", "/v1/api-keys")).keys;
+  }
+
+  /** Primary key required. null removes a cap; zero prevents paid calls. */
+  async updateApiKey(id: string, options: ApiKeyUpdateOptions): Promise<ApiKey> {
+    return this.request("PATCH", `/v1/api-keys/${encodeURIComponent(id)}`, { ...options });
+  }
+
+  /** Primary key required. Revoke an additional key. The account's primary key remains available. */
+  async revokeApiKey(id: string): Promise<ApiKey> {
+    return this.request("DELETE", `/v1/api-keys/${encodeURIComponent(id)}`);
   }
 
   // ─── Transactions ──────────────────────────────────────────────────────────
@@ -200,7 +251,7 @@ export class Strale {
           "execution_failed",
           detail.error ?? "Capability execution failed",
           500,
-          { transaction_id: detail.id },
+          { ...detail.details, transaction_id: detail.id },
         );
       }
 
@@ -223,23 +274,24 @@ export class Strale {
   // ─── HTTP layer ────────────────────────────────────────────────────────────
 
   private async request<T>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     body?: Record<string, unknown>,
     extraHeaders?: Record<string, string>,
+    timeoutMs: number = this.timeout,
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
       // Channel attribution: identifies this SDK on the API side.
-      "X-Strale-Client": "straleio-js/0.1.3",
+      "X-Strale-Client": this.clientHeader,
       ...extraHeaders,
     };
 
     const init: RequestInit = {
       method,
       headers,
-      signal: AbortSignal.timeout(this.timeout),
+      signal: AbortSignal.timeout(timeoutMs),
     };
 
     if (body !== undefined) {
@@ -254,7 +306,7 @@ export class Strale {
       if (err instanceof DOMException && err.name === "AbortError") {
         throw new StraleError(
           "timeout_exceeded",
-          `Request timed out after ${this.timeout}ms`,
+          `Request timed out after ${timeoutMs}ms`,
           408,
         );
       }

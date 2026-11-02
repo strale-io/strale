@@ -1,0 +1,19 @@
+{
+	"node": "n8n-nodes-strale.strale",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Utility", "Productivity"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/strale-io/strale/tree/main/packages/n8n-nodes-strale#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/strale-io/strale/tree/main/packages/n8n-nodes-strale#readme"
+			}
+		]
+	},
+	"alias": ["company", "registry", "VAT", "VIES", "name screening"]
+}

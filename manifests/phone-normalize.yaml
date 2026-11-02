@@ -91,13 +91,19 @@ output_field_reliability:
   national_format: guaranteed
   international_format: guaranteed
 limitations:
-  - title: Country code detection relies on input hints when the phone number does not include a + prefix
+  - title: A valid result does not prove the number is in service
     text: >-
-      Normalizes to E.164 format — country code detection relies on input hints when the number doesn't include a
-      +prefix
+      Valid means the number fits the country's numbering plan. It does not show that
+      the number is assigned or in service.
+    category: accuracy
+    severity: info
+  - title: Numbers without a + prefix need country hints
+    text: >-
+      Normalises to E.164 format — country code detection relies on input hints when the number
+      doesn't include a +prefix
     category: coverage
     severity: info
-    workaround: Always include the country code or specify the default_country parameter to avoid ambiguous normalization
+    workaround: Always include the country code or specify the default_country parameter to avoid ambiguous normalisation
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

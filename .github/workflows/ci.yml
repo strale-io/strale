@@ -19,7 +19,8 @@ name: CI
 # receipts, migrations, context, handoff, and the
 # check-shape-contracts.mjs drift check, plus the content scanners that
 # read docs/ and handoff/ or manifest data: check-no-committed-secrets,
-# check-pii, check-manifest-guaranteed-consistency) runs
+# check-pii, check-manifest-guaranteed-consistency,
+# guard-production-write-access) runs
 # unconditionally on every PR,
 # in the same order as before this change, because those scripts read
 # docs/config content that a docs-only PR can itself change and none of
@@ -42,6 +43,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # GitHub merge queue. A queued PR is tested as the exact merge commit it
+  # will become, so the queue needs every required check to run on this
+  # event, or it waits forever. classify treats it like a push to main (not a
+  # pull_request event), so the full gate runs: no docs-only fast path in the
+  # queue.
+  merge_group:
 
 jobs:
   # ─── Change classification ──────────────────────────────────────────────
@@ -64,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # main always runs everything — never soften the gate on trunk.
+          # main and the merge queue always run everything — never soften the gate on trunk.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "Not a pull_request event (${{ github.event_name }}); docs_only=false, briefs_changed=true"
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
@@ -81,49 +88,35 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          is_docs_path() {
-            local f="$1"
-            case "$f" in
-              docs/*|archive/*|handoff/*) return 0 ;;
-              CLAUDE.md|AGENTS.md|WORKTREES.md|README.md) return 0 ;;
-            esac
-            # A root-level *.md file only (no "/" in the path) — nested .md
-            # files under application code are not covered by this branch.
-            if [[ "$f" =~ ^[^/]+\.md$ ]]; then
-              return 0
-            fi
-            return 1
-          }
+          node scripts/production-watch/classify.mjs "$MERGE_BASE" "$HEAD_SHA" "$GITHUB_OUTPUT" pull_request
 
-          # A brief, the brief linter, its rules or this workflow: the CEO-brief
-          # lint runs. Anything else cannot change its verdict.
-          is_brief_path() {
-            case "$1" in
-              docs/company/briefs/*) return 0 ;;
-              apps/api/scripts/check-ceo-brief.ts) return 0 ;;
-              apps/api/src/lib/ceo-brief-lint*) return 0 ;;
-              .github/workflows/ci.yml) return 0 ;;
-            esac
-            return 1
-          }
-
-          DOCS_ONLY=true
-          BRIEFS_CHANGED=false
-          while IFS= read -r f; do
-            [ -z "$f" ] && continue
-            if ! is_docs_path "$f"; then
-              echo "Non-docs file changed: $f"
-              DOCS_ONLY=false
-            fi
-            if is_brief_path "$f"; then
-              BRIEFS_CHANGED=true
-            fi
-          done <<< "$CHANGED"
-
-          echo "docs_only=$DOCS_ONLY"
-          echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
-          echo "briefs_changed=$BRIEFS_CHANGED"
-          echo "briefs_changed=$BRIEFS_CHANGED" >> "$GITHUB_OUTPUT"
+  # ─── langchain-strale offline suite (distribution T12) ──────────────────
+  #
+  # Drives the Python LangChain package's tools through langchain-core's own
+  # primitives (a fake chat model with bind_tools, ToolCall -> ToolMessage)
+  # with HTTP mocked, so it needs no key and no network. Runs on the
+  # langchain-core floor the package declares and on the latest 1.x, so a
+  # new langchain-core release that breaks the package shows up here.
+  langchain-strale:
+    needs: classify
+    if: needs.classify.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.10'
+            langchain_core: 'langchain-core==1.0.0'
+          - python: '3.13'
+            langchain_core: 'langchain-core>=1,<2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "${{ matrix.langchain_core }}" -e "packages/langchain-strale[test]"
+      - run: python -m pytest packages/langchain-strale/tests -q -rs
 
   # ─── Ephemeral-Postgres integration lane (WP1) ──────────────────────────
   #
@@ -238,8 +231,97 @@ jobs:
           STRALE_REQUIRE_INTEGRATION_DB: "1"
         run: npx vitest run --no-file-parallelism integration.test.ts
 
-  check:
+  image-boot-smoke:
     needs: classify
+    if: needs.classify.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: strale_boot_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgresql://postgres:test@localhost:5432/strale_boot_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - uses: docker/setup-buildx-action@v3
+      # Real Dockerfile, loaded into Actions' Docker daemon. Layer cache keeps
+      # unchanged dependency/build layers between runs (target: <6 min).
+      - name: Build production image
+        timeout-minutes: 6
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: strale-boot-smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # Production inherited its base schema from the original Drizzle push
+      # (WP11); startup migrations alter existing tables, not an empty DB.
+      # Push is TEST ONLY (drizzle.config.ts); subsequent deploys run only CMD.
+      - name: Guard the disposable database
+        working-directory: apps/api
+        run: node scripts/assert-disposable-test-db.mjs
+      - name: Bootstrap base schema and offline catalogue fixture
+        working-directory: apps/api
+        run: |
+          npx drizzle-kit push --force
+          node scripts/seed-boot-smoke.mjs
+      - name: Boot real image with database-only networking
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          docker network create --internal boot-smoke
+          docker network connect --alias postgres boot-smoke "$POSTGRES_CONTAINER"
+          docker run --detach --name strale-boot-smoke --network boot-smoke \
+            -e DATABASE_URL=postgresql://postgres:test@postgres:5432/strale_boot_test \
+            -e AUDIT_HMAC_SECRET="$(openssl rand -hex 32)" -e FRONTEND_URL=http://localhost:3000 \
+            -e NODE_ENV=production -e RAILWAY_GIT_COMMIT_SHA="$GITHUB_SHA" strale-boot-smoke
+          started_at=$(docker inspect --format '{{.State.StartedAt}}' strale-boot-smoke)
+          docker exec -i strale-boot-smoke node --input-type=module - "$started_at" "$GITHUB_SHA" \
+            < scripts/ci/boot-probe.mjs | tee boot-result.json
+          node --input-type=module -e 'import fs from "node:fs"; const {boot_ms} = JSON.parse(fs.readFileSync("boot-result.json", "utf8")); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `boot_ms: ${boot_ms}\n`); if (boot_ms > 12000) console.log(`::warning::Boot took ${boot_ms}ms (warning threshold 12000ms)`);'
+          docker exec strale-boot-smoke node -e "fetch('https://example.com',{signal:AbortSignal.timeout(10000)}).then(()=>process.exit(1),()=>process.exit(0))"
+          # index.ts enforces the executor minimum before listen. Also prove
+          # that this boot traversed registration, not just a catalogue fixture.
+          docker logs strale-boot-smoke > boot-container.log 2>&1
+          grep -E 'Health gate passed: [0-9]+ executors registered' boot-container.log
+          if grep -q 'Fatal startup error' boot-container.log; then exit 1; fi
+      # document-ocr runs tesseract and poppler from the image; prove the
+      # compiled engine reads a real scan with the image's binaries and packs.
+      - name: OCR engine runs in the image
+        run: |
+          set -euo pipefail
+          docker exec -i strale-boot-smoke node --input-type=module - < scripts/ci/ocr-probe.mjs | tee ocr-probe.json
+          echo "ocr_probe: $(cat ocr-probe.json)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Logs and cleanup
+        if: always()
+        run: |
+          docker logs strale-boot-smoke || true
+          docker rm -f strale-boot-smoke || true
+          docker network rm boot-smoke || true
+
+  check:
+    needs: [classify, image-boot-smoke]
+    # A skipped required job can count as successful. Always run check and
+    # explicitly fail its first step when a required dependency did not pass.
+    # !cancelled() rather than always(): a cancelled run stays cancelled.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     env:
       # Required by apps/api/src/lib/audit-token.ts (F-0-001). Not secret —
@@ -252,6 +334,22 @@ jobs:
       # request-level test) fails at module load.
       FRONTEND_URL: https://strale.dev
     steps:
+      - name: Require successful image boot (or intentional docs-only skip)
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          DOCS_ONLY: ${{ needs.classify.outputs.docs_only }}
+          SMOKE_RESULT: ${{ needs.image-boot-smoke.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$CLASSIFY_RESULT" != success ]]; then
+            echo "::error::Change classification did not succeed"
+            exit 1
+          fi
+          if [[ "$SMOKE_RESULT" == success || ( "$DOCS_ONLY" == true && "$SMOKE_RESULT" == skipped ) ]]; then
+            exit 0
+          fi
+          echo "::error::Image boot smoke did not succeed ($SMOKE_RESULT)"
+          exit 1
       - uses: actions/checkout@v4
         with:
           # The project-context checks compare against origin/main (operator-action
@@ -335,6 +433,23 @@ jobs:
       # CODE (scans packages/*-strale source).
       - if: needs.classify.outputs.docs_only == 'false'
         run: node apps/api/scripts/check-framework-packages.mjs
+      # Always runs: app.test.js reads docs/company/claims.yaml, so a
+      # docs-only PR can break it (scripts/ci/docs-only-scanner-gate.test.mjs).
+      - run: npm test --workspace=packages/zapier-strale
+      # D8: the n8n node is built, linted with n8n's own rules and driven
+      # through n8n-workflow's primitives offline (no paid calls).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node scripts/ci/run-without-docs-reads.mjs npm run lint --workspace=packages/n8n-nodes-strale
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node scripts/ci/run-without-docs-reads.mjs npm test --workspace=packages/n8n-nodes-strale
+      # D6: the AI SDK package's offline tool-loop test (mock model, mocked API).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node scripts/ci/run-without-docs-reads.mjs npm test --workspace=packages/ai-sdk-strale
+      # Portfolio Phase 3 item 3: the agent-safe CLI, offline (mocked HTTP).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node scripts/ci/run-without-docs-reads.mjs npm test --workspace=packages/cli
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node scripts/ci/run-without-docs-reads.mjs node --test apps/api/scripts/check-framework-packages.test.mjs
       # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
       # Prose drifts back toward its author's frame, and the daily report had
       # already become an engineering activity log once. This lints every brief
@@ -458,9 +573,15 @@ jobs:
       # any other file can read it, a writable connection can be opened with no
       # authority attached and the model is decorative. That property is a grep,
       # so it is checked by one, on every change, rather than trusted.
-      # CODE (scans apps/api/src for the production-write credential).
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: node scripts/guard-production-write-access.mjs
+      # REGISTER-class, not CODE, despite the incident it comes from: the guard
+      # greps `git ls-files -- *.ts *.mjs *.js *.md *.yaml *.yml *.json` over the
+      # whole repository, so a docs-only PR can introduce the very reference it
+      # exists to refuse. It was gated on docs_only until 2026-10-31, when PR
+      # #857 — a receipt, a handoff and two register files — went green on the
+      # PR and was then rejected by the merge queue, which classifies as
+      # not-docs-only and so ran the guard. Held ungated by
+      # scripts/ci/docs-only-scanner-gate.test.mjs.
+      - run: node scripts/guard-production-write-access.mjs
 
       # Program track registers (docs/programs/*/tracks.yaml) are the resume
       # surface for multi-batch work on both AI tools. A register that fails
@@ -468,6 +589,7 @@ jobs:
       # checked here rather than trusted. Tests cover the checker itself.
       # REGISTER (programs:*) — always runs.
       - run: npm run programs:check
+      - run: node --test scripts/production-watch/*.test.mjs
       - run: npm run programs:test
       # Research contract (T12, docs/research/*.md): one current file per
       # topic, reciprocal acyclic supersession, resolvable links/sources,
@@ -501,6 +623,9 @@ jobs:
       # cross-checked (dependency-manifest.ts PROVIDERS, coverage-matrix,
       # env-manifest, decision-record links, history against the base
       # branch) the same way the other cheap-extras registers are.
+      # Founder-accepted permissions: validate evidence and reject silent downgrades.
+      - run: npm run vendor-terms:check
+      - run: npm run vendor-terms:test
       - run: npm run vendors:check
       - run: npm run vendors:test
       # Shadow distribution-surfaces register (M3 batch 3, T6,
@@ -510,6 +635,9 @@ jobs:
       # the future) the same way the other cheap-extras registers are.
       - run: npm run distribution:check
       - run: npm run distribution:test
+      # Clay HTTP template (distribution D9): recipes match the tools'
+      # documented inputs and outputs, and the sample table maps.
+      - run: npm run clay:test
       # Repo-native digest priority readers (M3 batch 2, T6). Pure-function
       # tests only here (parser, 14-day split, handoff window, comparison,
       # workflow reachability) -- the shadow comparison itself runs daily
@@ -576,6 +704,8 @@ jobs:
       # apps/api/src (outside *.test.ts), or a registry entry missing
       # pinned_at/decision.
       # REGISTER (models:*) — always runs.
+      - run: npm run anthropic:check
+      - run: npm run anthropic:test
       - run: npm run models:check
       - run: npm run models:test
       # Claims register (T14, docs/company/claims.yaml): validates the
@@ -604,7 +734,7 @@ jobs:
           status=0
           node scripts/generate-archive-index.mjs --check || status=$?
           if [ "$status" -eq 2 ]; then
-            echo "::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it."
+            echo "::warning title=Stale archive/handoff index::Stable directory navigation is missing or stale; run npm run archive:index locally. Detailed listings: npm run archive:index -- --detail."
           elif [ "$status" -ne 0 ]; then
             exit "$status"
           fi
@@ -620,7 +750,7 @@ jobs:
       - run: npm run receipts:check
       - run: npm run receipts:test
       # Schema-migration ledger (T15, apps/api/src/lib/startup-migrations.ledger.json):
-      # every runMigrationNNNN_* block in startup-migrations.ts is ledgered
+      # every runMigrationNNNN_* block in src/startup-migrations/blocks/ is ledgered
       # with a content hash (append-only — an edited block needs a new
       # block, not a silent rewrite) and columns_written, so two blocks
       # writing the same table.column fail the build unless allowlisted in
@@ -630,6 +760,7 @@ jobs:
       # REGISTER (migrations:*) — always runs.
       - run: npm run migrations:check
       - run: npm run migrations:test
+      - run: npm run gates:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.
@@ -643,9 +774,17 @@ jobs:
       - run: npm run context:check
       - run: npm run context:test
 
-      # CODE — the full apps/api suite. Skipped on a documentation-only PR.
+      # CODE — the apps/api suite minus the tests that read documentation.
+      # Skipped on a documentation-only PR, and run under
+      # run-without-docs-reads.mjs, which fails it if any test reads a path
+      # such a PR can change: that test belongs in DOCS_READERS
+      # (apps/api/vitest.config.ts) instead.
       - if: needs.classify.outputs.docs_only == 'false'
-        run: npm test
+        run: node scripts/ci/run-without-docs-reads.mjs npm run test:code --workspace=apps/api
+      # The apps/api tests that read docs/, archive/, a root *.md or the whole
+      # tree (DOCS_READERS). Always runs: a documentation-only PR can break
+      # them. No build needed.
+      - run: npm run test:docs --workspace=apps/api
 
   # ─── Website (apps/web, DEC-20260902-A) ─────────────────────────────────
   #

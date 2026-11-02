@@ -1,0 +1,280 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "8a80d3075178c62aa2cfa6b1fa9d27a939946b1b"
+  },
+  "at": "2026-10-27T16:39:34.381Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "verification_ok": true,
+    "api_passed": 6438,
+    "api_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "focused_passed": 20,
+    "script_passed": 26,
+    "api_final_exit_code": 0,
+    "api_typecheck_exit_code": 0,
+    "archive_index_exit_code": 0,
+    "coverage_matrix_exit_code": 0,
+    "handoff_gate_ok": false,
+    "production_verified": false
+  },
+  "topic": "production-watch-round3",
+  "raw": {
+    "verification_ok": true,
+    "api_passed": 6438,
+    "api_skipped": 346,
+    "api_files_passed": 348,
+    "api_files_skipped": 33,
+    "focused_passed": 20,
+    "script_passed": 26,
+    "root_ci_checks": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm test",
+        "exit_code": 1
+      }
+    ],
+    "api_final_exit_code": 0,
+    "api_typecheck_exit_code": 0,
+    "earlier_full_run_failures": [
+      "domain-contact-extract timing assertion under concurrent runs",
+      "no-sqs-keys smoke test timed out under concurrent runs"
+    ],
+    "archive_index_exit_code": 0,
+    "coverage_matrix_exit_code": 0,
+    "handoff_gate_ok": false,
+    "production_verified": false
+  }
+}

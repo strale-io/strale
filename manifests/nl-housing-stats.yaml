@@ -93,7 +93,7 @@ output_field_reliability:
   note: guaranteed
 limitations:
   - title: Municipality-level aggregates
-    text: Statistics are aggregated at municipality level, not individual property or neighborhood.
+    text: Statistics are aggregated at municipality level, not individual property or neighbourhood.
     category: coverage
     severity: info
   - title: Annual publication cycle

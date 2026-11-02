@@ -96,7 +96,7 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
   },
   output_field_reliability: {
     category: "manifest",
-    reason: "Field-level reliability map; informs test assertions and SQS.",
+    reason: "Field-level reliability map for test assertions.",
   },
 
   // ── db-canonical: operator or runtime writes; backfill preserves ────
@@ -155,26 +155,6 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
     category: "db",
     reason: "Measured at runtime by test runner.",
   },
-  qp_score: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  rp_score: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  matrix_sqs: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  matrix_sqs_raw: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
-  trend: {
-    category: "db",
-    reason: "Retired with SQS engine (DEC-20260503-B); column drop in PR2.",
-  },
   freshness_level: {
     category: "db",
     reason: "Computed by staleness-refresh job.",
@@ -194,18 +174,6 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
   dataset_last_updated: {
     category: "db",
     reason: "Runtime-tracked dataset update timestamp.",
-  },
-  guidance_usable: {
-    category: "db",
-    reason: "Retired with execution-guidance (DEC-20260503-B); column drop in PR2.",
-  },
-  guidance_strategy: {
-    category: "db",
-    reason: "Retired with execution-guidance (DEC-20260503-B); column drop in PR2.",
-  },
-  guidance_confidence: {
-    category: "db",
-    reason: "Retired with execution-guidance (DEC-20260503-B); column drop in PR2.",
   },
   fallback_capability_slug: {
     category: "db",
@@ -391,6 +359,20 @@ export function decideFieldAuthority(
     return { action: "keep-hybrid-dbnull" };
   }
   return { action: "strip-hybrid-dbset" };
+}
+
+/**
+ * `output_schema.example` has a second writer: the test runner stores a real
+ * response there when the stored schema has none (`captureExampleOutput` in
+ * test-runner.ts). When the manifest declares no example, the stored one is
+ * runtime-owned: keep it on write and do not count it as drift. A manifest
+ * that declares an example still wins.
+ */
+export function withRuntimeExample(manifestSchema: unknown, storedSchema: unknown): unknown {
+  const isObject = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
+  if (!isObject(manifestSchema) || "example" in manifestSchema) return manifestSchema;
+  if (!isObject(storedSchema) || storedSchema.example === undefined) return manifestSchema;
+  return { ...manifestSchema, example: storedSchema.example };
 }
 
 export function valuesEqual(a: unknown, b: unknown): boolean {

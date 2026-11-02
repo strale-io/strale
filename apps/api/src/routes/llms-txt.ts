@@ -45,27 +45,27 @@ Strale is a library of ${capCount} tools for AI agents, paid per call with no su
 ## Quick Start
 
 ### MCP (recommended for Claude, Cursor, Windsurf)
-Endpoint: https://api.strale.io/mcp
+Endpoint: https://api.strale.io/mcp?src=llms-txt
 Transport: Streamable HTTP
-Auth: Bearer token (API key from https://strale.dev)
+Auth: Bearer token (API key from https://strale.dev?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1)
 Free tool: strale_search works without auth
 
 ### A2A (Agent-to-Agent)
-Agent Card: https://api.strale.io/.well-known/agent-card.json
-Task endpoint: https://api.strale.io/a2a
+Agent Card: https://api.strale.io/.well-known/agent-card.json?src=llms-txt
+Task endpoint: https://api.strale.io/a2a?src=llms-txt
 
 ### REST API
-POST https://api.strale.io/v1/do
+POST https://api.strale.io/v1/do?src=llms-txt
 Body: { "capability_slug": "iban-validate", "inputs": { "iban": "DE89370400440532013000" }, "max_price_cents": 10 }
 
 ### x402 (pay-per-request, no API key needed)
-GET https://api.strale.io/x402/iban-validate?iban=DE89370400440532013000
+GET https://api.strale.io/x402/v2/iban-validate?iban=DE89370400440532013000&src=llms-txt
 Pay with USDC on Base
 
 ## Free Tier
 
 ${facts.capability_counts.free_tier_slugs.length} free tools: ${facts.capability_counts.free_tier_slugs.join(", ") || "none currently listed"}.
-Use POST /v1/do without an API key for eligible free tools, subject to the per-IP daily limit.
+Use POST /v1/do without an API key for eligible free tools, with ${facts.static.free_tier_monthly_limit} calls per calendar month (UTC) per IP and an hourly anti-abuse guard.
 
 ## Discovery
 
@@ -73,8 +73,8 @@ Browse inputs, output fields, prices and limitations at /v1/capabilities. Search
 
 ## Links
 
-- Homepage: https://strale.dev
-- Docs: https://strale.dev/docs
+- Homepage: https://strale.dev?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
+- Docs: https://strale.dev/docs?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
 - Agent skill: https://api.strale.io/SKILL.md
 - MCP Server Card: https://api.strale.io/.well-known/mcp.json
 - AI Catalog: https://api.strale.io/.well-known/ai-catalog.json

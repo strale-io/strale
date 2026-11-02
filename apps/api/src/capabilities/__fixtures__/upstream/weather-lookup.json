@@ -1,0 +1,27 @@
+{
+  "slug": "weather-lookup",
+  "recorded_at": "2026-10-29T16:05:18.339Z",
+  "input": {
+    "city": "Stockholm",
+    "latitude": 59.3293,
+    "longitude": 18.0686
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=59.3293&longitude=18.0686&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&forecast_days=7"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:18 GMT"
+        },
+        "body": "{\"latitude\":59.3289,\"longitude\":18.072357,\"generationtime_ms\":6.75201416015625,\"utc_offset_seconds\":3600,\"timezone\":\"Europe/Stockholm\",\"timezone_abbreviation\":\"GMT+1\",\"elevation\":24.0,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\",\"relative_humidity_2m\":\"%\",\"apparent_temperature\":\"°C\",\"precipitation\":\"mm\",\"wind_speed_10m\":\"km/h\",\"wind_direction_10m\":\"°\",\"weather_code\":\"wmo code\"},\"current\":{\"time\":\"2026-10-29T17:00\",\"interval\":900,\"temperature_2m\":9.6,\"relative_humidity_2m\":91,\"apparent_temperature\":7.6,\"precipitation\":0.00,\"wind_speed_10m\":10.8,\"wind_direction_10m\":229,\"weather_code\":2},\"daily_units\":{\"time\":\"iso8601\",\"temperature_2m_max\":\"°C\",\"temperature_2m_min\":\"°C\",\"precipitation_sum\":\"mm\",\"weather_code\":\"wmo code\"},\"daily\":{\"time\":[\"2026-10-29\",\"2026-10-30\",\"2026-10-31\",\"2026-11-01\",\"2026-11-02\",\"2026-11-03\",\"2026-11-04\"],\"temperature_2m_max\":[9.8,10.2,8.4,9.0,7.6,9.1,4.6],\"temperature_2m_min\":[6.3,6.2,5.9,5.6,2.5,2.5,1.6],\"precipitation_sum\":[0.00,0.00,0.00,0.60,2.30,0.00,0.00],\"weather_code\":[3,3,3,51,51,3,3]}}",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

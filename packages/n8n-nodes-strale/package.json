@@ -1,0 +1,61 @@
+{
+  "name": "n8n-nodes-strale",
+  "version": "1.0.0",
+  "description": "Strale for n8n: look up companies in official registries, check EU VAT numbers and screen names, paid per call with your Strale API key.",
+  "license": "MIT",
+  "homepage": "https://github.com/strale-io/strale/tree/main/packages/n8n-nodes-strale#readme",
+  "keywords": [
+    "n8n-community-node-package",
+    "strale",
+    "company-lookup",
+    "vat"
+  ],
+  "author": {
+    "name": "Strale",
+    "email": "hello@strale.io",
+    "url": "https://strale.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/n8n-nodes-strale"
+  },
+  "bugs": {
+    "url": "https://github.com/strale-io/strale/issues"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/copy-static.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/node.test.js test/zapier-parity.test.js",
+    "scan": "npx -y @n8n/scan-community-package@0.41.1 n8n-nodes-strale@1.0.0",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "files": [
+    "dist",
+    "!dist/tsconfig.tsbuildinfo"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/StraleApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Strale/Strale.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "9.29.0",
+    "@n8n/eslint-plugin-community-nodes": "0.38.1",
+    "eslint": "9.29.0",
+    "eslint-plugin-n8n-nodes-base": "2.0.0",
+    "n8n-workflow": "2.11.1",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.70.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

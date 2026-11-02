@@ -83,7 +83,7 @@ output_field_reliability:
   detected_carriers: guaranteed
   universal_tracking_urls: guaranteed
 limitations:
-  - title: Tracking is scraped from carrier websites and some regional carriers may not be supported
+  - title: Some regional carriers are not covered
     text: Tracking via carrier websites — supported carriers may vary and some regional carriers are not covered
     category: coverage
     severity: info

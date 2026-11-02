@@ -109,7 +109,7 @@ output_field_reliability:
   status_code: guaranteed
   content_type: guaranteed
 limitations:
-  - title: Mock values are schema-based and may not satisfy complex cross-field validation rules
+  - title: Mock values may fail rules spanning several fields
     text: Generates plausible mock data based on schema — mock values may not satisfy complex cross-field validation rules
     category: accuracy
     severity: info

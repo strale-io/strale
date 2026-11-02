@@ -25,12 +25,25 @@ import {
   fetchTrustBatch,
   fetchSolutionTrust,
   registerStraleTools,
+  readPackageVersion,
+  isConnectorExcluded,
   type Capability,
   type Solution,
   type TrustBatchEntry,
   type SolutionTrustEntry,
   type McpFunnelEvent,
 } from "strale-mcp/tools";
+import { findEntryPoint, registerEntryPointTools, type EntryPoint } from "strale-mcp/entry-points";
+import {
+  CONNECTOR_PATH,
+  CONNECTOR_RESOURCE,
+  OAUTH_SCOPE,
+  PROTECTED_RESOURCE_METADATA_URL,
+  authenticateOAuthAccessToken,
+  isOAuthAccessToken,
+} from "../lib/oauth.js";
+import { authenticateApiKey } from "../lib/api-keys.js";
+import { readBearer } from "../lib/bearer-placeholder.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -42,6 +55,10 @@ const PORT = process.env.PORT ?? "3000";
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
   `http://localhost:${PORT}`;
+// URLs handed to callers (x402 hand-off, poll and top-up links) must be
+// reachable from outside the container, unlike STRALE_BASE_URL's localhost
+// default above.
+const PUBLIC_BASE_URL = process.env.STRALE_BASE_URL ?? "https://api.strale.io";
 const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",
   10,
@@ -178,6 +195,7 @@ interface McpPeekBody {
  */
 export function classifyMcpRequest(
   peek: McpPeekBody | null,
+  prefix = "/mcp",
 ): { endpoint: string; uaOverride?: string } | null {
   if (!peek?.method) return null;
 
@@ -187,23 +205,117 @@ export function classifyMcpRequest(
     // often generic (undici, node-fetch) or absent entirely.
     const ci = peek.params?.clientInfo;
     const uaOverride = ci?.name ? `${ci.name}/${ci.version ?? "?"}` : undefined;
-    return { endpoint: "/mcp:initialize", uaOverride };
+    return { endpoint: `${prefix}:initialize`, uaOverride };
   }
 
   if (peek.method === "tools/list") {
-    return { endpoint: "/mcp:tools/list" };
+    return { endpoint: `${prefix}:tools/list` };
   }
 
   if (peek.method === "tools/call") {
-    return { endpoint: `/mcp:tools/call:${sanitizeFunnelToken(peek.params?.name)}` };
+    return { endpoint: `${prefix}:tools/call:${sanitizeFunnelToken(peek.params?.name)}` };
   }
 
   return null;
 }
 
 /** Endpoint label for an auth-or-payment rejection surfaced during tool execution. */
-export function funnelEventEndpoint(event: McpFunnelEvent): string {
-  return `/mcp:reject:${event.type}:${sanitizeFunnelToken(event.tool)}`;
+export function funnelEventEndpoint(event: McpFunnelEvent, prefix = "/mcp"): string {
+  return `${prefix}:reject:${event.type}:${sanitizeFunnelToken(event.tool)}`;
+}
+
+/**
+ * discovery_hits endpoint prefix for a request. The broad server keeps
+ * `/mcp`; a narrow entry point (D7) gets `/mcp/<id>`, so the weekly rollup
+ * can compare each entry point's funnel with the broad server's, and the
+ * existing `LIKE '/mcp:%'` queries keep counting only the broad server.
+ */
+export function funnelPrefix(entry?: EntryPoint, connector = false): string {
+  if (connector) return CONNECTOR_PATH;
+  return entry ? `/mcp/${entry.id}` : "/mcp";
+}
+
+// ─── Claude connector (distribution D4): lazy authentication ────────────────
+//
+// /mcp/connector is the URL submitted to Claude's connector directory. It
+// serves the broad tool set in connector mode (strale-mcp/tools): no x402
+// hand-off, no crypto tools. Anyone can connect, list tools, search and run
+// free tools. A call that needs the user's account (strale_balance, or
+// strale_execute on a paid tool or bundle) without a token is refused with
+// HTTP 401 and a WWW-Authenticate challenge BEFORE the MCP SDK runs: Claude
+// starts sign-in only on a transport-level 401, never on a 200 tool error.
+// After sign-in Claude retries the same call with the access token, which
+// /v1/do accepts as the grant's additional key (lib/middleware.ts).
+
+interface PeekedCall {
+  method?: unknown;
+  params?: { name?: unknown; arguments?: { slug?: unknown } };
+}
+
+/**
+ * The first tools/call in a JSON-RPC body (or batch) that needs a signed-in
+ * user, or null. A slug the catalog does not know is not protected: the tool
+ * answers it with its own not-found error. Pure, for unit tests.
+ */
+export function connectorProtectedCall(
+  body: unknown,
+  capabilities: Pick<Capability, "slug" | "category" | "is_free_tier">[],
+  solutions: Pick<Solution, "slug" | "category">[],
+): string | null {
+  const messages = Array.isArray(body) ? body : [body];
+  for (const raw of messages) {
+    const msg = raw as PeekedCall | null;
+    if (!msg || typeof msg !== "object" || msg.method !== "tools/call") continue;
+    const name = msg.params?.name;
+    if (name === "strale_balance") return name;
+    if (name !== "strale_execute") continue;
+    const slug = msg.params?.arguments?.slug;
+    if (typeof slug !== "string") continue;
+    const cap = capabilities.find((c) => c.slug === slug);
+    if (cap) {
+      if (!cap.is_free_tier && !isConnectorExcluded(cap.slug, cap.category)) return name;
+      continue;
+    }
+    const sol = solutions.find((s) => s.slug === slug);
+    if (sol && !isConnectorExcluded(sol.slug, sol.category)) return name;
+  }
+  return null;
+}
+
+export function connectorChallenge(error?: "invalid_token"): Response {
+  const parts = [
+    ...(error ? [`error="${error}"`, `error_description="The access token is invalid or expired"`] : []),
+    `resource_metadata="${PROTECTED_RESOURCE_METADATA_URL}"`,
+    `scope="${OAUTH_SCOPE}"`,
+  ];
+  return new Response(
+    JSON.stringify({
+      error: error ?? "unauthorized",
+      error_description: error ? "The access token is invalid or expired." : "This tool needs a connected Strale account.",
+    }),
+    { status: 401, headers: { "Content-Type": "application/json", "WWW-Authenticate": `Bearer ${parts.join(", ")}` } },
+  );
+}
+
+/** A 401 to send instead of running the request, or null to run it. */
+async function connectorAuthGate(req: Request, bearer: string, clientIp: string): Promise<Response | null> {
+  if (bearer) {
+    // An API key works here as on /mcp; a dead one gets the challenge, so
+    // Claude offers to reconnect instead of showing a tool error.
+    if (bearer.startsWith("sk_live_")) return (await authenticateApiKey(bearer)) ? null : connectorChallenge("invalid_token");
+    if (!isOAuthAccessToken(bearer)) return connectorChallenge("invalid_token");
+    const identity = await authenticateOAuthAccessToken(bearer);
+    if (!identity || identity.resource !== CONNECTOR_RESOURCE) return connectorChallenge("invalid_token");
+    return null;
+  }
+  const body = await req.clone().json().catch(() => null);
+  const { capabilities, solutions } = await getCatalog();
+  const tool = connectorProtectedCall(body, capabilities, solutions);
+  if (!tool) return null;
+  recordDiscoveryHit(`${CONNECTOR_PATH}:reject:auth_challenge:${sanitizeFunnelToken(tool)}`,
+    { header: (n: string) => req.headers.get(n) ?? undefined },
+    { ip: clientIp ?? undefined, src: new URL(req.url).searchParams.get("src") ?? undefined });
+  return connectorChallenge();
 }
 
 // ─── Create a stateless MCP handler ─────────────────────────────────────────
@@ -212,9 +324,11 @@ async function handleStatelessRequest(
   req: Request,
   apiKey: string,
   clientIp: string,
+  entry?: EntryPoint,
+  connector = false,
 ): Promise<Response> {
   const server = new McpServer(
-    { name: "strale", version: "0.1.0" },
+    { name: entry?.serverName ?? "strale", version: readPackageVersion() },
     { capabilities: { tools: {} } },
   );
 
@@ -226,16 +340,29 @@ async function handleStatelessRequest(
   // forward through).
   const headerReader: HeaderReader = { header: (n: string) => req.headers.get(n) ?? undefined };
 
-  registerStraleTools(server, capabilities, solutions, {
+  const venueSrc = new URL(req.url).searchParams.get("src") ?? undefined;
+  const clientOpts = {
     baseUrl: STRALE_BASE_URL,
+    publicBaseUrl: PUBLIC_BASE_URL,
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-    version: "0.2.4", // matches strale-mcp npm version — update on publish
-    onFunnelEvent: (event) => {
-      recordDiscoveryHit(funnelEventEndpoint(event), headerReader, { ip: clientIp ?? undefined });
+    version: readPackageVersion(),
+    src: venueSrc,
+    connector,
+    onFunnelEvent: (event: McpFunnelEvent) => {
+      recordDiscoveryHit(funnelEventEndpoint(event, funnelPrefix(entry, connector)), headerReader, { ip: clientIp ?? undefined, src: venueSrc });
     },
-  }, trustData, solutionTrustData);
+  };
+
+  if (entry) {
+    // Forwarded calls carry the entry point's own tag (mcp-<id>) as src, so
+    // transactions and x402 payers are attributable per entry point; the
+    // venue the client came from stays on this request's discovery rows.
+    registerEntryPointTools(server, entry, capabilities, clientOpts);
+  } else {
+    registerStraleTools(server, capabilities, solutions, clientOpts, trustData, solutionTrustData);
+  }
 
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless — no session tracking
@@ -269,12 +396,10 @@ async function handleStatelessRequest(
 
 // ─── Extract API key from request ───────────────────────────────────────────
 
+// An unexpanded placeholder (`Bearer ${STRALE_API_KEY}`) reads as no key, so
+// free tools and x402 still work from a config that ships the header.
 function extractApiKey(req: Request): string {
-  const authHeader = req.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.slice(7);
-  }
-  return "";
+  return readBearer(req.headers.get("Authorization"), new URL(req.url).pathname) ?? "";
 }
 
 // ─── Extract client IP for free-tier rate limiting ──────────────────────────
@@ -292,7 +417,7 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
     "Authorization, Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version",
-  "Access-Control-Expose-Headers": "Mcp-Session-Id",
+  "Access-Control-Expose-Headers": "Mcp-Session-Id, WWW-Authenticate",
 };
 
 function addCorsHeaders(response: Response): Response {
@@ -311,18 +436,53 @@ function addCorsHeaders(response: Response): Response {
 
 export const mcpRoute = new Hono();
 
-// IP rate limiting for MCP endpoint — 60 requests/minute per IP
-mcpRoute.use("*", rateLimitByIp(60, 60_000));
+// IP rate limiting for MCP endpoint — 60 requests/minute per IP. Claude
+// reaches the connector from one small IP range (160.79.104.0/21) for every
+// Claude user, so it gets its own, wider bucket; /v1/do keeps its per-key
+// limits behind it.
+const broadMcpLimit = rateLimitByIp(60, 60_000);
+const connectorMcpLimit = rateLimitByIp(600, 60_000, "mcp-connector");
+mcpRoute.use("*", (c, next) =>
+  c.req.path.endsWith(CONNECTOR_PATH) ? connectorMcpLimit(c, next) : broadMcpLimit(c, next));
 
 // CORS preflight
 mcpRoute.options("/", (c) => {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 });
 
-// All MCP methods on the root path
-mcpRoute.all("/", async (c) => {
-  const req = c.req.raw;
+// All MCP methods on the root path (the broad server) and on /<entry> (the
+// narrow D7 entry points in strale-mcp/entry-points).
+mcpRoute.all("/", (c) => handleMcp(c.req.raw));
+
+// The Claude connector. Registered before /:entry so it never resolves as a
+// narrow entry point.
+mcpRoute.options("/connector", () => new Response(null, { status: 204, headers: CORS_HEADERS }));
+mcpRoute.all("/connector", (c) => handleMcp(c.req.raw, undefined, true));
+
+mcpRoute.options("/:entry", (c) => {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+});
+
+mcpRoute.all("/:entry", (c) => {
+  const entry = findEntryPoint(c.req.param("entry"));
+  if (!entry) {
+    return addCorsHeaders(
+      new Response(
+        JSON.stringify({
+          error_code: "not_found",
+          message: "Unknown MCP entry point.",
+          details: { fix: "Connect to /mcp for the full library." },
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+  return handleMcp(c.req.raw, entry);
+});
+
+async function handleMcp(req: Request, entry?: EntryPoint, connector = false): Promise<Response> {
   const method = req.method;
+  const path = funnelPrefix(entry, connector);
 
   if (method === "POST") {
     const apiKey = extractApiKey(req);
@@ -335,19 +495,23 @@ mcpRoute.all("/", async (c) => {
     // handleStatelessRequest instead).
     try {
       const peek = (await req.clone().json().catch(() => null)) as McpPeekBody | null;
-      const classified = classifyMcpRequest(peek);
+      const classified = classifyMcpRequest(peek, funnelPrefix(entry, connector));
       if (classified) {
         recordDiscoveryHit(classified.endpoint, {
           header: (n: string) =>
             n.toLowerCase() === "user-agent" && classified.uaOverride
               ? classified.uaOverride
               : req.headers.get(n) ?? undefined,
-        }, { ip: clientIp ?? undefined });
+        }, { ip: clientIp ?? undefined, src: new URL(req.url).searchParams.get("src") ?? undefined });
       }
     } catch {
       // best-effort only
     }
-    const response = await handleStatelessRequest(req, apiKey, clientIp);
+    if (connector) {
+      const challenge = await connectorAuthGate(req, apiKey, clientIp);
+      if (challenge) return addCorsHeaders(challenge);
+    }
+    const response = await handleStatelessRequest(req, apiKey, clientIp, entry, connector);
     return addCorsHeaders(response);
   }
 
@@ -358,10 +522,10 @@ mcpRoute.all("/", async (c) => {
       new Response(
         JSON.stringify({
           jsonrpc: "2.0",
-          error: {
+          error: { data: { details: { fix: `Send each MCP request as a new POST to ${path}.` } },
             code: -32000,
             message:
-              "This MCP endpoint is stateless. Send each request as a new POST to /mcp.",
+              `This MCP endpoint is stateless. Send each request as a new POST to ${path}.`,
           },
         }),
         {
@@ -373,9 +537,9 @@ mcpRoute.all("/", async (c) => {
   }
 
   return addCorsHeaders(
-    new Response(null, {
+    new Response(JSON.stringify({ details: { fix: `Send each MCP request as a new POST to ${path}.` } }), {
       status: 405,
-      headers: { Allow: "GET, POST, DELETE, OPTIONS" },
+      headers: { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json" },
     }),
   );
-});
+}

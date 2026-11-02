@@ -56,10 +56,22 @@ run the commercial pack (`npx tsx scripts/commercial-brief.ts`). The commercial
 pack is not optional and is not a nice-to-have — the commercial-intelligence
 list below is the minimum the run must be able to answer.
 
+**A2. Inbox (DEC-20261027-A).** Search petter@strale.io, including Junk Email, for replies to every `awaiting_reply` row in `docs/company/OUTBOX.yaml`, and sweep both folders for new mail about Strale's tools, sources, vendors, registries, accounts or listings. Ignore marketing and resellers.
+- Record each reply on its row.
+- Act on it if the action is within delegated authority; otherwise raise it.
+- Send one follow-up when a row's `follow_up_by` has passed, then set the next date. After two unanswered follow-ups, put it to Petter.
+- Close finished rows.
+
+Procedure: `docs/operations/accounts-and-email.md`. Under DEC-20261027-C this step runs only in the one Strale inbox routine, the only session with the Microsoft 365 connector switched on; until that routine exists and a probe confirms no other session sees the connector, the local "Strale checkin morning" session on the PC runs it. It sends any rows other sessions left as `draft`. Any other run skips A2 in one line and carries on.
+
 **B. Overnight health.** First run the Vendor Control Tower report
 (`cd apps/api && npm run vendor:status`, production read-only). Treat every
 `CRITICAL`, `WARNING`, stale balance reading, prepaid-credit expiry, inventory
-gap, and automatic vendor suspension as an overnight-health finding. Then check
+gap, and automatic vendor suspension as an overnight-health finding. Read open GitHub issues labelled `deploy-not-live`, `production-watch` and
+`package-contract` for deploy, background-job and published-package failures;
+these automated checks replace the manual production/main SHA comparison.
+Pending first failures carry `production-watch-pending` and are not confirmed
+alarms. Keep the CEO brief format below. Then check
 open breakers, newly quarantined capabilities, failing CI on main, and invariant
 alerts. For each: is it a defect, a correct refusal, or an instrument fault —
 **and who it actually happened to**? Answering those questions is the run's job,
@@ -157,8 +169,8 @@ durable because the vendor provides no zero-cost evidence.
 **B2. Stale-work sweep.** Every open PR, every branch ahead of main, every
 uncommitted tracked change. Dispose of each *now*: merge if gates pass and it is
 not `approval_required`-gated, finish it if close, close it if dead, otherwise
-write owner and deadline into the record. Confirm the deployed commit equals
-main's tip (`GET /health` against `git log origin/main -1`). "Still open" is not
+write owner and deadline into the record. Read the open `deploy-not-live`, `production-watch` and `package-contract`
+issues and resolve their confirmed findings. "Still open" is not
 an allowed end state — merging and deploying are execution, never questions for
 Petter.
 
@@ -414,3 +426,5 @@ what is queued for Petter, and what the next session should pick up — at
 proactivity level 5 (solved, contingency stated, next step proposed).
 
 Into the brief: the five sections above, and nothing else.
+
+Per-tool margin is included in `apps/api/scripts/commercial-brief.ts` (`margins` in JSON), and available separately via `apps/api/scripts/margin-per-tool.ts`. Read unknown-cost share alongside margin: margin uses only the matched fully known-cost cohort; flags require 20 known-cost calls and fire below 30%. Costs are marginal upstream costs in EUR using the recorded reporting FX, excluding fixed infrastructure, tax and payment processing; they are not invoice reconciliation.

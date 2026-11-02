@@ -68,7 +68,7 @@ limitations:
       system or held by any specific entity.
     category: accuracy
     severity: info
-    workaround: ISDS lookup requires authenticated access not available via public APIs.
+    workaround: Ask the entity to confirm its data box identifier, or check it through ISDS with authorised access.
 output_field_reliability:
   input: guaranteed
   normalized: guaranteed

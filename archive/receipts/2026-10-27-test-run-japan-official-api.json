@@ -1,0 +1,44 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "10f71df81716e981c5969f5690ce4f93a6c20a54"
+  },
+  "at": "2026-10-27T09:21:45.024Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "result": "pass",
+    "scope": "feat/japan-official-corporate-api"
+  },
+  "topic": "japan-official-api",
+  "raw": {
+    "apps_api_vitest": {
+      "test_files_passed": 337,
+      "test_files_skipped": 31,
+      "tests_passed": 5858,
+      "tests_skipped": 321,
+      "tests_failed": 0
+    },
+    "japanese_company_data_test": {
+      "tests_passed": 55
+    },
+    "root_checks_passed": [
+      "env:check",
+      "vendors:check",
+      "claims:check",
+      "docs:check",
+      "receipts:check",
+      "migrations:check",
+      "design:check"
+    ],
+    "typecheck": "pass",
+    "live_smoke": {
+      "api": "NTA Corporate Number Web-API v4",
+      "number_lookup": "1180301018771 resolved, status active",
+      "exact_name_lookup": "resolved to 1180301018771",
+      "invalid_check_digit": "refused before any call"
+    }
+  }
+}

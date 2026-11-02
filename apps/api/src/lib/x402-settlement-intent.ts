@@ -212,6 +212,17 @@ export async function openIntent(
   // this row cannot represent two settlements — its uniqueness on payment_hash
   // caps the durable record at one. Surfaced rather than swallowed; markSettled's
   // zero-row path is what actually preserves the second settlement.
+  if (row.state === "failed") {
+    // A unique pre-execution payment claim owns this retry. Only a confirmed
+    // decline can be retried; ambiguous/settled intents remain closed to reuse.
+    const [reopened] = await db.update(x402SettlementIntents).set({
+      state: "settling", failureReason: null, updatedAt: new Date(),
+    }).where(and(eq(x402SettlementIntents.id, row.id), eq(x402SettlementIntents.state, "failed")))
+      .returning({ id: x402SettlementIntents.id, paymentHash: x402SettlementIntents.paymentHash,
+        state: x402SettlementIntents.state, settlementId: x402SettlementIntents.settlementId });
+    if (!reopened) throw new Error("Settlement intent retry lost ownership");
+    return reopened;
+  }
   if (row.state !== "settling") {
     logError(
       "x402-intent-reopened-on-terminal-state",
@@ -225,6 +236,7 @@ export async function openIntent(
         existing_settlement_id: row.settlementId,
       },
     );
+    throw new Error("Payment settlement already attempted");
   }
 
   return row;

@@ -92,6 +92,86 @@ non_vendor_sentinels:
   - Other
   - internal
 vendors:
+  - id: npm
+    name: npm
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-10-27
+        decision: unknown
+        reason: Existing package-info API plus portfolio plan 2.7 package-docs; terms recorded before implementation.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      pricing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      licensing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      redistribution:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+    authorization:
+      status: unknown
+  - id: pypi
+    name: PyPI
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-10-27
+        decision: unknown
+        reason: Existing package-info API plus portfolio plan 2.7 package-docs; terms recorded before implementation.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      pricing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      licensing:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+      redistribution:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Public API only, reasonable load, honour blocks, preserve attribution and each package licence; no blanket rights to author content.
+    authorization:
+      status: unknown
   - id: browserless
     name: Browserless (Chromium)
     aliases:
@@ -1544,6 +1624,32 @@ vendors:
         status: unknown
     authorization:
       status: unknown
+  - id: bitwarden
+    name: Bitwarden
+    aliases:
+      - Bitwarden
+    lifecycle:
+      - state: active
+        date: 2026-10-31
+        decision: unknown
+        reason: Secrets store for the fleet (EU region, project strale), per the
+          2026-10-27 security decision recorded in CLAUDE.md rather than as a record
+          file. Named as the provider of BWS_WRITE_TOKEN, the PC-only write token the
+          verify-role provisioning script uses. Registered as infrastructure, as Railway
+          is, rather than waved through as a sentinel - it is an external party holding
+          credentials.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
   - id: railway
     name: Railway
     aliases:
@@ -2060,5 +2166,462 @@ vendors:
         evidence: apps/api/src/lib/vendor-terms.ts
         outcome: conditional
         note: See Eurostat terms record and executor restrictions; dataset-specific metadata may expose additional rights limitations.
+    authorization:
+      status: unknown
+
+  - id: nta-houjin
+    name: NTA Corporate Number Web-API
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-10-27
+        decision: unknown
+        reason: Official free registry API replacement authorised by orchestrator; credential setup, backfill and live verification pending.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: permitted
+        note: API Article 7 incorporates PDL1.0 via the content terms; preserve Article 6 credit, source and processing notice. No heavy bursts or ID disclosure.
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-27
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: permitted
+        note: PDL1.0 section 1 permits reproduction, public transmission and commercial use with attribution and modification notice.
+    authorization:
+      status: unknown
+  - id: registercheck
+    name: registercheck.de (Openlaw GmbH)
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Under evaluation as a second German commercial-register source beside OpenRegister, under the vendor-data lane of DEC-20261023-A (no record file under docs/decisions/records/, so decision stays unknown; text in docs/strategy/2026-10-23-data-access-risk-rule-proposal.md). Not in use: no account, no API key, no calls. Openlaw's terms were unreadable behind a bot check, and its docs say register entries are re-read on a cycle, so how the register copy is obtained is the open question. No vendor-terms record yet: that register holds vendors in use or removed, and one is added when Openlaw answers. Questions drafted in docs/company/OUTBOX.yaml row registercheck-terms-provenance; comparison plan in docs/research/2026-10-29-registercheck-coverage-comparison.md."
+    reevaluation_triggers:
+      - kind: licensing
+        condition: Openlaw answers the OUTBOX row registercheck-terms-provenance in writing on resale with attribution and on how the register copy is obtained.
+        source: docs/company/OUTBOX.yaml
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: overture-maps
+    name: Overture Maps Foundation (places theme)
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.5 (places search from open places data, approved under DEC-20261024-B): licences read before any code; research in docs/research/2026-10-29-open-places-data-licences.md."
+      - state: active
+        date: 2026-10-29
+        decision: unknown
+        reason: "Resale permitted: the places theme contains no OpenStreetMap data and each row is CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0, none share-alike. Read anonymously from the public AWS Open Data bucket (no account). Serves places-search."
+    reevaluation_triggers:
+      - kind: licensing
+        condition: A release adds a places source under a licence other than CDLA-Permissive-2.0, Apache-2.0 or CC0-1.0 (places-search withholds such rows and counts them), or the places theme starts carrying OpenStreetMap-derived data.
+        source: docs/research/2026-10-29-open-places-data-licences.md
+    verification:
+      terms:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Ship the licence text (CDLA-Permissive-2.0 §2.1) or licence and NOTICE (Apache-2.0) with shared rows, plus Overture's per-provider attribution lines; places-search returns both on every answer.
+      pricing:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: permitted
+        note: Free; public bucket on the AWS Open Data programme, anonymous reads, no account.
+      licensing:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Per-row licence (CDLA-Permissive-2.0, Apache-2.0, CC0-1.0); no share-alike; licence texts and attribution travel with the data.
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: apps/api/src/lib/vendor-terms.ts
+        outcome: conditional
+        note: Commercial redistribution permitted with the licence texts and attribution lines attached.
+    authorization:
+      status: unknown
+  - id: foursquare-os-places
+    name: Foursquare Open Source Places
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.5, evaluated beside Overture; research in docs/research/2026-10-29-open-places-data-licences.md."
+      - state: held
+        date: 2026-10-29
+        decision: unknown
+        reason: "Apache-2.0 permits commercial resale, but direct access goes through the Places Portal, which needs an account and access token, and sessions do not create accounts (DEC-20261027-C). Not needed: Overture's places theme already carries Foursquare rows under Apache-2.0, and places-search returns them with Foursquare's attribution line. No direct calls."
+    reevaluation_triggers:
+      - kind: other
+        condition: Foursquare rows leave the Overture places theme, or a need arises for Foursquare-only fields; then Petter decides on a Places Portal account.
+        source: docs/research/2026-10-29-open-places-data-licences.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-open-places-data-licences.md
+        outcome: permitted
+        note: Apache-2.0; keep the licence and NOTICE with redistributed data.
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: speechmatics
+    name: Speechmatics
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Reserve vendor for 2.3 if self-hosted Whisper fails a real-audio check: integrated-product clause, self-serve EU endpoint, no training by default."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Terms §3.1.1 permit Integrated Products; §4.4 bars sale as a standalone product and §4.3 bars a similar or competing product; confirm in writing that a per-call capability is an Integrated Product before use."
+    authorization:
+      status: unknown
+  - id: deepgram
+    name: Deepgram
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.3; not recommended: trains on content by default and its competing-services clause sits close to a transcription endpoint."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Terms §2.4(4) allow integration only where the application contributes material independent functionality; §2.4(9) bars competing products or services."
+    authorization:
+      status: unknown
+  - id: openai-api
+    name: OpenAI API (speech-to-text)
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.3; terms permit, but EU processing needs sales approval and zero retention approval."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: permitted
+        note: "Services Agreement §2.2 permits making Customer Applications available to End Users; §3.1 bars reselling account access."
+    authorization:
+      status: unknown
+  - id: groq
+    name: Groq
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.3 (hosted Whisper); resale needs Groq's approval and a similar-or-competing clause applies."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Services Agreement §6.3(c) bars resale except as expressly approved by Groq; §6.3(e) bars similar or competing products."
+    authorization:
+      status: unknown
+  - id: mistral
+    name: Mistral AI
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3, 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Reserve vendor for 2.4 (Mistral OCR) if self-hosted Tesseract fails a real-scan check: licence sublicensable to End Users of a Customer Offering, EU hosting by default. Voxtral does not list Swedish, so not for 2.3."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: permitted
+        note: "Commercial Terms §2.1 licence is sublicensable to End Users; §1.4 defines Customer Offering as products made available to third parties."
+    authorization:
+      status: unknown
+  - id: azure-document-intelligence
+    name: Azure AI Document Intelligence
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.4; Customer Solution clause requires primary and significant functionality, not a substitute."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Product Terms permit third-party use only through a Customer Solution that is not primarily a substitute for the Azure service; Foundry Tools bar competing products."
+    authorization:
+      status: unknown
+  - id: google-document-ai
+    name: Google Cloud Document AI
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md. Compared for 2.4; the only OCR vendor documenting Swedish handwriting."
+    reevaluation_triggers:
+      - kind: other
+        condition: "A real-sample quality check of the self-hosted engine fails, or a requirement it cannot meet appears (diarization, handwriting); then this vendor is re-read and Petter decides the sign-up."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Cloud Terms §1.1 require a Customer Application with material value independent of the Services; §3.3(c) bars resale."
+    authorization:
+      status: unknown
+  - id: assemblyai
+    name: AssemblyAI
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Self-serve licence is for internal business purposes and bars making the Services available to any third party (§2.1, §2.4(d))."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: prohibited
+        note: "Terms §2.4(d) bar use for the benefit of a third party."
+    authorization:
+      status: unknown
+  - id: gladia
+    name: Gladia
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Terms bar transferring the API for valuable consideration and any sublicence (§4.1); trains on content by default."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: prohibited
+        note: "Conservative reading (low confidence): Terms §4.1 bar transfer for consideration and sublicensing, read as not permitting resale; written confirmation would be needed to reopen."
+    authorization:
+      status: unknown
+  - id: elevenlabs
+    name: ElevenLabs
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.3 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Making Scribe available to third parties needs the OEM terms on a Scale plan or higher, a spend decision not taken."
+    reevaluation_triggers:
+      - kind: other
+        condition: "The vendor publishes terms that permit use inside a third-party product on a no-spend plan."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "OEM Terms permit Making Available only on Scale, Business or Enterprise plans."
+    authorization:
+      status: unknown
+  - id: aws-textract
+    name: AWS Textract
+    aliases: []
+    lifecycle:
+      - state: evaluating
+        date: 2026-10-29
+        decision: unknown
+        reason: "Portfolio plan item 2.4 (approved under DEC-20261024-B), compared on 2026-10-29 from public pages only; no account, no key, no calls. Comparison and quotes in docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md."
+      - state: rejected
+        date: 2026-10-29
+        decision: unknown
+        reason: "Swedish is not supported (no å in its character list) and AWS may use content to improve the service by default."
+    reevaluation_triggers:
+      - kind: other
+        condition: "Textract adds Swedish text detection and its default use of content to improve the service changes."
+        source: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-10-29
+        verified_by: build-agent
+        evidence: docs/research/2026-10-29-transcription-and-bulk-ocr-vendors.md
+        outcome: conditional
+        note: "Customer Agreement §6.4(c) bars resale of the Services; use by End Users is contemplated (§2.5), not expressly granted."
     authorization:
       status: unknown

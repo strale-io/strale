@@ -167,7 +167,7 @@ output_field_reliability:
   warnings: guaranteed
   eu_compliant: guaranteed
 limitations:
-  - title: Validates invoice structure and arithmetic only — cannot verify items were delivered or prices match contracts
+  - title: Delivery and contract prices are not verified
     text: >-
       Validates invoice structure and arithmetic — cannot verify that billed items were actually delivered or that
       prices match contracts

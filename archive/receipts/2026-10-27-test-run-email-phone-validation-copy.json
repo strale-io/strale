@@ -1,0 +1,32 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "388b35b39ef130be6b1d7ed5b333cab796c37fbb"
+  },
+  "at": "2026-10-27T09:30:16.513Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "result": "pass"
+  },
+  "topic": "email-phone-validation-copy",
+  "raw": {
+    "apps_api_vitest": {
+      "test_files_passed": 337,
+      "test_files_skipped": 32,
+      "tests_passed": 5799,
+      "tests_skipped": 322,
+      "tests_failed": 0
+    },
+    "root_checks_passed": [
+      "claims:check",
+      "docs:check",
+      "migrations:check",
+      "design:check",
+      "env:check"
+    ],
+    "scope": "limitation text in email-validate, phone-validate, phone-type-detect, phone-normalize; no executor, schema or block change"
+  }
+}

@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 import { extractCompanyName } from "./lib/browserless-extract.js";
@@ -176,7 +177,7 @@ async function fetchCompany(companyNumber: string): Promise<Record<string, unkno
 registerCapability("uk-company-data", async (input: CapabilityInput) => {
   const raw = (input.company_number as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'company_number' or 'company_name' is required. Provide a UK Companies House number (8 digits) or company name.");
+    throw inputRefusal("'company_number' or 'company_name' is required. Provide a UK Companies House number (8 digits) or company name.", "company_number", "Send 'company_number' as an 8-character UK Companies House number, or 'company_name' as a company name.");
   }
 
   const trimmed = raw.trim();

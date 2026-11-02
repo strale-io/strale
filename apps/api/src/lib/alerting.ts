@@ -9,13 +9,14 @@
  * dedicated PagerDuty / Better Stack incident webhook address).
  *
  * Cert-audit C11: a startup check (assertAlertingConfigured) lets
- * index.ts fail-loud when production lacks BETTER_STACK_SOURCE_TOKEN
+ * index.ts fail-loud when production lacks the Better Stack log sink
  * AND the alerting backend, so we don't silently route critical pages
  * into stdout-only.
  */
 
 import { Resend } from "resend";
 import { log, logError, logWarn } from "./log.js";
+import { deliverToBusInBackground } from "./alert-bus.js";
 
 let _resend: Resend | null = null;
 
@@ -49,22 +50,21 @@ export function assertAlertingConfigured(): void {
   const isProd = (process.env.NODE_ENV ?? "").toLowerCase() === "production";
   if (!isProd) return;
   const hasResend = !!process.env.RESEND_API_KEY;
-  const hasBetterStack = !!process.env.BETTER_STACK_SOURCE_TOKEN;
+  // Both vars are needed to ship (log-sink.ts); log.ts announces the sink state itself.
+  const hasBetterStack = !!process.env.BETTERSTACK_SOURCE_TOKEN && !!process.env.BETTERSTACK_INGEST_HOST;
   if (!hasResend && !hasBetterStack) {
     log.error(
       {
         label: "alerting.unconfigured",
         severity: "critical",
         hint:
-          "Production deploy has neither RESEND_API_KEY (email alerts) nor BETTER_STACK_SOURCE_TOKEN " +
-          "(log shipping). Critical events will only land in stdout. Set both before relying on alerts.",
+          "Production deploy has neither RESEND_API_KEY (email alerts) nor BETTERSTACK_SOURCE_TOKEN " +
+          "with BETTERSTACK_INGEST_HOST (log shipping). Critical events will only land in stdout. Set both before relying on alerts.",
       },
       "alerting.unconfigured",
     );
   } else if (!hasResend) {
     logWarn("alerting.no-email-backend", "RESEND_API_KEY unset — email alerts disabled in production");
-  } else if (!hasBetterStack) {
-    logWarn("alerting.no-log-sink", "BETTER_STACK_SOURCE_TOKEN unset — log shipping disabled in production");
   }
 }
 
@@ -188,6 +188,13 @@ export async function sendAlert(opts: {
     );
     return false;
   }
+
+  // Second channel (incident 2026-10-28: a CRITICAL sat unseen in the inbox
+  // for 14 hours). Fire-and-forget: the delivery never throws and is not
+  // awaited, so a slow or failing GitHub cannot delay or fail the email.
+  // It sits after both gates above, so tests never reach it, and INFO is
+  // email-only even when ALERT_INFO_EMAIL restores it.
+  if (severity !== "info") deliverToBusInBackground({ subject, body, severity });
 
   const resend = getResend();
   if (!resend) {

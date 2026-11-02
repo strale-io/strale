@@ -105,7 +105,7 @@ limitations:
     category: availability
     severity: info
     workaround: Space calls out or batch several terms into one query.
-  - title: Relevance ranking is arXiv's own and is weakest on very short queries
+  - title: Short queries can return loosely ranked results
     text: One- or two-word queries return large, loosely ranked result sets; total_results is arXiv's estimate.
     category: accuracy
     severity: info

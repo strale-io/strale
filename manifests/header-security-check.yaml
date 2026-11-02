@@ -84,7 +84,7 @@ output_field_reliability:
   missing: guaranteed
   present: guaranteed
 limitations:
-  - title: Checks HTTP security headers only, not server configuration, TLS settings, or application vulnerabilities
+  - title: Only HTTP security headers are checked
     text: >-
       Checks HTTP security headers only — does not assess server configuration, TLS settings, or application-level
       vulnerabilities

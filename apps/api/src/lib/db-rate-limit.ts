@@ -174,6 +174,7 @@ export function rateLimitByIpDb(opts: DbRateLimitOptions) {
           apiError(
             "rate_limited",
             "Unable to determine client IP for rate limiting. Retry with a standard HTTP client.",
+            { retryable: false, fix: "Send the request through a standard HTTP client that exposes the client IP." },
           ),
           429,
         );

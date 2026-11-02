@@ -1,0 +1,468 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0e7c0b2be0d219e2b44e3bff9c4e5a7d69e7776b"
+  },
+  "at": "2026-10-27T17:54:17.702Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "api_suite_ok": true,
+    "api_tests_passed": 6509,
+    "api_tests_skipped": 349,
+    "api_tests_failed": 0,
+    "api_files_passed": 356,
+    "api_files_skipped": 34,
+    "focused_tests_passed": 252,
+    "focused_tests_skipped": 3,
+    "typecheck_exit": 0,
+    "preexisting_pii_guard_exit": 1,
+    "handoff_gate_exit": 1,
+    "working_tree_uncommitted": true,
+    "real_local_db_run": false,
+    "initial_full_suite_failure": "integration-lane safety test rejected this session's type-only top-level DB import; removed the import; focused lane tests, API typecheck and full suite rerun passed",
+    "review": "Scoped post-round-2 confirmation found unsupported Drizzle use of reserved postgres-js handle. Removed adapter and masking mock; reviewer confirmed dedicated advisory-lock session and original pooled row transactions."
+  },
+  "topic": "manifest-text-sync-round-2",
+  "raw": {
+    "ok": false,
+    "api_suite_ok": true,
+    "api_tests_passed": 6509,
+    "api_tests_skipped": 349,
+    "api_tests_failed": 0,
+    "api_files_passed": 356,
+    "api_files_skipped": 34,
+    "focused_tests_passed": 252,
+    "focused_tests_skipped": 3,
+    "typecheck_exit": 0,
+    "preexisting_pii_guard_exit": 1,
+    "handoff_gate_exit": 1,
+    "working_tree_uncommitted": true,
+    "real_local_db_run": false,
+    "checks": [
+      {
+        "command": "npm ci",
+        "exit": 0,
+        "duration_ms": 19350,
+        "log": "audit-output/round2-verification/00.log"
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit": 0,
+        "duration_ms": 2076,
+        "log": "audit-output/round2-verification/01.log"
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit": 0,
+        "duration_ms": 1180,
+        "log": "audit-output/round2-verification/02.log"
+      },
+      {
+        "command": "npm run typecheck",
+        "exit": 0,
+        "duration_ms": 31392,
+        "log": "audit-output/round2-verification/03.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit": 0,
+        "duration_ms": 1289,
+        "log": "audit-output/round2-verification/04.log"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit": 0,
+        "duration_ms": 383,
+        "log": "audit-output/round2-verification/05.log"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit": 0,
+        "duration_ms": 228,
+        "log": "audit-output/round2-verification/06.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit": 0,
+        "duration_ms": 60,
+        "log": "audit-output/round2-verification/07.log"
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit": 0,
+        "duration_ms": 334,
+        "log": "audit-output/round2-verification/08.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit": 0,
+        "duration_ms": 211,
+        "log": "audit-output/round2-verification/09.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit": 0,
+        "duration_ms": 55,
+        "log": "audit-output/round2-verification/10.log"
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit": 0,
+        "duration_ms": 737,
+        "log": "audit-output/round2-verification/11.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit": 0,
+        "duration_ms": 1559,
+        "log": "audit-output/round2-verification/12.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit": 0,
+        "duration_ms": 552,
+        "log": "audit-output/round2-verification/13.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit": 0,
+        "duration_ms": 125,
+        "log": "audit-output/round2-verification/14.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit": 0,
+        "duration_ms": 211,
+        "log": "audit-output/round2-verification/15.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit": 1,
+        "duration_ms": 715,
+        "log": "audit-output/round2-verification/16.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit": 0,
+        "duration_ms": 257,
+        "log": "audit-output/round2-verification/17.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit": 0,
+        "duration_ms": 261,
+        "log": "audit-output/round2-verification/18.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit": 0,
+        "duration_ms": 44,
+        "log": "audit-output/round2-verification/19.log"
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit": 0,
+        "duration_ms": 334,
+        "log": "audit-output/round2-verification/20.log"
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit": 0,
+        "duration_ms": 149,
+        "log": "audit-output/round2-verification/21.log"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit": 0,
+        "duration_ms": 450,
+        "log": "audit-output/round2-verification/22.log"
+      },
+      {
+        "command": "node --test scripts/production-watch/*.test.mjs",
+        "exit": 0,
+        "duration_ms": 338,
+        "log": "audit-output/round2-verification/23.log"
+      },
+      {
+        "command": "npm run programs:test",
+        "exit": 0,
+        "duration_ms": 2588,
+        "log": "audit-output/round2-verification/24.log"
+      },
+      {
+        "command": "npm run research:check",
+        "exit": 0,
+        "duration_ms": 1199,
+        "log": "audit-output/round2-verification/25.log"
+      },
+      {
+        "command": "npm run research:test",
+        "exit": 0,
+        "duration_ms": 4176,
+        "log": "audit-output/round2-verification/26.log"
+      },
+      {
+        "command": "npm run design:check",
+        "exit": 0,
+        "duration_ms": 1314,
+        "log": "audit-output/round2-verification/27.log"
+      },
+      {
+        "command": "npm run design:test",
+        "exit": 0,
+        "duration_ms": 9775,
+        "log": "audit-output/round2-verification/28.log"
+      },
+      {
+        "command": "npm run env:check",
+        "exit": 0,
+        "duration_ms": 705,
+        "log": "audit-output/round2-verification/29.log"
+      },
+      {
+        "command": "npm run env:test",
+        "exit": 0,
+        "duration_ms": 1157,
+        "log": "audit-output/round2-verification/30.log"
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit": 0,
+        "duration_ms": 1106,
+        "log": "audit-output/round2-verification/31.log"
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit": 0,
+        "duration_ms": 3173,
+        "log": "audit-output/round2-verification/32.log"
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit": 0,
+        "duration_ms": 381,
+        "log": "audit-output/round2-verification/33.log"
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit": 0,
+        "duration_ms": 517,
+        "log": "audit-output/round2-verification/34.log"
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit": 0,
+        "duration_ms": 414,
+        "log": "audit-output/round2-verification/35.log"
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit": 0,
+        "duration_ms": 318,
+        "log": "audit-output/round2-verification/36.log"
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit": 0,
+        "duration_ms": 263,
+        "log": "audit-output/round2-verification/37.log"
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit": 0,
+        "duration_ms": 380,
+        "log": "audit-output/round2-verification/38.log"
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit": 0,
+        "duration_ms": 457,
+        "log": "audit-output/round2-verification/39.log"
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit": 0,
+        "duration_ms": 810,
+        "log": "audit-output/round2-verification/40.log"
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit": 0,
+        "duration_ms": 364,
+        "log": "audit-output/round2-verification/41.log"
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit": 0,
+        "duration_ms": 791,
+        "log": "audit-output/round2-verification/42.log"
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit": 0,
+        "duration_ms": 1275,
+        "log": "audit-output/round2-verification/43.log"
+      },
+      {
+        "command": "npm run models:check",
+        "exit": 0,
+        "duration_ms": 326,
+        "log": "audit-output/round2-verification/44.log"
+      },
+      {
+        "command": "npm run models:test",
+        "exit": 0,
+        "duration_ms": 481,
+        "log": "audit-output/round2-verification/45.log"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit": 0,
+        "duration_ms": 2308,
+        "log": "audit-output/round2-verification/46.log"
+      },
+      {
+        "command": "npm run claims:test",
+        "exit": 0,
+        "duration_ms": 2538,
+        "log": "audit-output/round2-verification/47.log"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit": 0,
+        "duration_ms": 177,
+        "log": "audit-output/round2-verification/48.log"
+      },
+      {
+        "command": "npm run docs:test",
+        "exit": 0,
+        "duration_ms": 246,
+        "log": "audit-output/round2-verification/49.log"
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit": 0,
+        "duration_ms": 314,
+        "log": "audit-output/round2-verification/50.log"
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit": 0,
+        "duration_ms": 20098,
+        "log": "audit-output/round2-verification/51.log"
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit": 0,
+        "duration_ms": 4253,
+        "log": "audit-output/round2-verification/52.log"
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit": 0,
+        "duration_ms": 215,
+        "log": "audit-output/round2-verification/53.log"
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit": 0,
+        "duration_ms": 339,
+        "log": "audit-output/round2-verification/54.log"
+      },
+      {
+        "command": "npm run gates:test",
+        "exit": 0,
+        "duration_ms": 11713,
+        "log": "audit-output/round2-verification/55.log"
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit": 0,
+        "duration_ms": 11133,
+        "log": "audit-output/round2-verification/56.log"
+      },
+      {
+        "command": "npm run context:check",
+        "exit": 0,
+        "duration_ms": 5528,
+        "log": "audit-output/round2-verification/57.log"
+      },
+      {
+        "command": "npm run context:test",
+        "exit": 0,
+        "duration_ms": 123617,
+        "log": "audit-output/round2-verification/58.log"
+      },
+      {
+        "command": "npm test",
+        "exit": 1,
+        "duration_ms": 123752,
+        "log": "audit-output/round2-verification/59.log"
+      },
+      {
+        "command": "node scripts/generate-archive-index.mjs --check",
+        "exit": 0,
+        "duration_ms": 109,
+        "log": "audit-output/round2-verification/60.log"
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit": 0,
+        "duration_ms": 14508,
+        "log": "audit-output/round2-verification/61.log"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/manifest-text-sync.test.ts src/lib/manifest-text-sync.integration.test.ts src/lib/manifest-drift.test.ts src/lib/piggyback-monitor.test.ts src/lib/startup-migrations.test.ts src/lib/onboarding-pipeline.test.ts src/lib/guaranteed-fields-sentinel.test.ts src/lib/nested-value.test.ts src/lib/capability-field-authority.test.ts src/openapi-routes.test.ts",
+        "exit": 0,
+        "duration_ms": 7866,
+        "log": "audit-output/round2-verification/62.log"
+      },
+      {
+        "command": "npm run handoff:check",
+        "exit": 1,
+        "duration_ms": 2680,
+        "log": "audit-output/round2-verification/63.log"
+      },
+      {
+        "command": "cd apps/api && npx vitest run src/lib/manifest-text-sync.test.ts src/lib/manifest-text-sync.integration.test.ts src/lib/manifest-drift.test.ts src/lib/piggyback-monitor.test.ts src/lib/startup-migrations.test.ts src/lib/limitations-sync.test.ts src/test-support/integration-lane.test.ts",
+        "exit": 0,
+        "duration_ms": 7733,
+        "log": "audit-output/round2-verification/64.log"
+      },
+      {
+        "command": "cd apps/api && npx tsc --noEmit",
+        "exit": 0,
+        "duration_ms": 14407,
+        "log": "audit-output/round2-verification/65.log"
+      },
+      {
+        "command": "npm test",
+        "exit": 0,
+        "duration_ms": 122505,
+        "log": "audit-output/round2-verification/66.log"
+      }
+    ],
+    "initial_full_suite_failure": "integration-lane safety test rejected this session's type-only top-level DB import; removed the import; focused lane tests, API typecheck and full suite rerun passed",
+    "review": "Scoped post-round-2 confirmation found unsupported Drizzle use of reserved postgres-js handle. Removed adapter and masking mock; reviewer confirmed dedicated advisory-lock session and original pooled row transactions.",
+    "limitations": [
+      "No production database, settings or live checks used in Round 2.",
+      "Three manifest sync integration cases skipped without disposable DATABASE_URL_TEST.",
+      "PII guard fails on pre-existing ignored audit-output/empty-gates-5tqZyP snapshot.",
+      "Handoff Git-state findings intentionally remain under orchestrator instructions."
+    ],
+    "full_api_summary": [
+      " Test Files  356 passed | 34 skipped (390)",
+      "      Tests  6509 passed | 349 skipped (6858)",
+      "   Duration  121.61s (transform 13.35s, setup 3.01s, import 152.89s, tests 133.96s, environment 52ms)"
+    ],
+    "focused_summary": [
+      " Test Files  6 passed | 1 skipped (7)",
+      "      Tests  252 passed | 3 skipped (255)",
+      "   Duration  6.96s (transform 2.32s, setup 121ms, import 6.44s, tests 5.63s, environment 1ms)"
+    ]
+  }
+}

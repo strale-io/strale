@@ -1,3 +1,4 @@
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
@@ -313,6 +314,7 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
       content_length: contentLength,
     });
   } catch (err: unknown) {
+    if (isCapabilityRefusal(err)) throw err;
     const message = err instanceof Error ? err.message : String(err);
 
     // SSRF refusals on redirect hops (url-validator's "restricted address"

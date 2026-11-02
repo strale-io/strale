@@ -1,8 +1,9 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 
 // Price comparison via PriceRunner (Nordic) / Google Shopping + Claude extraction
 
@@ -51,7 +52,7 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
   }
   const prTld = getPriceRunnerTld(country);
   if (!prTld) {
-    throw new Error(`No PriceRunner site for country "${country}". Supported: SE, NO, DK, FI.`);
+    throw new Error(`No PriceRunner site for country "${country}". Supported: SE, DK.`);
   }
   const prUrl = `https://www.pricerunner.${prTld}/search?q=${encodeURIComponent(product)}`;
   const html = await fetchRenderedHtml(prUrl, { source: "strale" });
@@ -61,7 +62,7 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   // Truncation surfaced as "Unterminated string in JSON" via the naive
   // parser (production incident, 2026-06-17→24). extractJsonWithLlm's
   // stop_reason check catches it before the parse and throws a

@@ -44,7 +44,7 @@ describe("x402-gateway-v2 — x402_payer_hash wiring", () => {
 
   it("recordX402Transaction's INSERT sets x402PayerHash from hashX402Payer(...), never the raw address", () => {
     expect(source, "recordX402Transaction INSERT must exist").toContain(
-      "await db.insert(transactions).values({",
+      "await db.insert(transactions).values(values)",
     );
     // A single anchored regex is enough here (unlike settlement-order.test.ts,
     // which needs handler-body scoping to check RELATIVE ORDERING of several

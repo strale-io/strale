@@ -9,18 +9,22 @@
  * pattern as the MCP server.
  */
 
+import type { ErrorCode } from "../lib/errors.js";
+import { recoveryDetails } from "../lib/errors.js";
+
 import { Hono } from "hono";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { X402_PAYABLE_LIFECYCLE_STATES } from "../lib/x402-eligibility.js";
 import { recordDiscoveryHit } from "../lib/attribution.js";
 import { eq, and, isNull } from "drizzle-orm";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, transactions, users } from "../db/schema.js";
-import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
+import { capabilities, solutions, transactions } from "../db/schema.js";
+import { authenticateApiKey } from "../lib/api-keys.js";
 import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { getClientIp } from "../lib/middleware.js";
+import { readBearer } from "../lib/bearer-placeholder.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import type { AppEnv } from "../types.js";
@@ -162,7 +166,7 @@ function payableViaX402(row: {
  * 404'd, and logged a false `x402_unknown_slug` demand row.
  */
 function solutionEndpoint(slug: string): string {
-  return `${PUBLIC_API_BASE}/x402/v2/solutions/${slug}`;
+  return `${PUBLIC_API_BASE}/x402/v2/solutions/${slug}?src=a2a-card`;
 }
 
 export async function buildAgentCard(): Promise<{ card: object; etag: string }> {
@@ -239,7 +243,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         ? " FREE — no API key, no payment, no signup."
         : payable
           ? ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call — pay per use` +
-            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}, no signup needed.`
+            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/v2/${cap.slug}?src=a2a-card, no signup needed.`
           : ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call via API key.` +
             ` Pay-per-call is not available for this one.`;
       return {
@@ -251,7 +255,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         // Extension fields (ignored by strict A2A parsers, actionable by the rest)
         price_cents: cap.isFreeTier ? 0 : cap.priceCents ?? 0,
         currency: "EUR",
-        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/${cap.slug}` : undefined,
+        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/v2/${cap.slug}?src=a2a-card` : undefined,
       };
     });
 
@@ -285,7 +289,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       id: "product-web3-assurance",
       name: "Web3 Assurance",
       description:
-        "Decision-ready answer about an on-chain counterparty (wallet, contract, token, DeFi protocol, or bridge) in a single call. Returns verdict (proceed/review/block/insufficient_evidence), reason_codes (UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, audit firms, EAS, ERC-8004, more), and a sidecar audit_url. Two modes: outbound (agent vetting recipient pre-payment, 8s budget) or reverse-call (x402 service publisher gating an inbound buyer, sub-second SLA).",
+        "Decision-ready answer about an on-chain counterparty (wallet, contract, token, DeFi protocol, or bridge) in a single call. Returns verdict (proceed/review/block/insufficient_evidence), reason_codes (UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, audit firms, EAS, ERC-8004, more), and a sidecar audit_url. Two modes: outbound (agent vetting recipient pre-payment, 8s budget) or reverse-call (x402 service publisher gating an inbound buyer, limited evaluator set).",
       tags: [
         "web3",
         "defi",
@@ -340,13 +344,13 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
   const card = {
     name: "Strale",
     description:
-      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Every call returns an audit record.`,
-    url: `${BASE_URL}/a2a`,
+      "A library of pay-per-call tools for agents: company records, sanctions and PEP screening, email, phone, IBAN and VAT checks, web page reading and document extraction. Pay with an API key or, on eligible tools, an x402 wallet with no signup. Live counts: https://api.strale.io/v1/platform/facts",
+    url: `${BASE_URL}/a2a?src=a2a-card`,
     version: "1.0.0",
-    documentationUrl: "https://strale.dev/docs",
+    documentationUrl: "https://strale.dev/docs?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
     provider: {
       organization: "Strale",
-      url: "https://strale.io",
+      url: "https://strale.dev",
     },
     capabilities: {
       streaming: false,
@@ -364,11 +368,11 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       x402: {
         network: "base",
         currency: "USDC",
-        catalog: `${PUBLIC_API_BASE}/x402/catalog`,
+        catalog: `${PUBLIC_API_BASE}/x402/catalog?src=a2a-card`,
         discovery: `${PUBLIC_API_BASE}/.well-known/x402.json`,
         how: "POST the skill's x402_endpoint, settle the 402 challenge in USDC on Base, replay. Payment is the authentication — no signup.",
       },
-      api_key: { signup: "https://strale.dev/signup", trial_credits_eur: 2 },
+      api_key: { signup: "https://strale.dev/signup?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1" },
     },
     defaultInputModes: ["application/json", "text/plain"],
     defaultOutputModes: ["application/json"],
@@ -431,7 +435,7 @@ a2aRoute.post("/", async (c) => {
     return c.json(
       {
         jsonrpc: "2.0",
-        error: { code: -32600, message: "Invalid JSON-RPC request" },
+        error: { data: { details: {"fix":"Send a JSON object with jsonrpc set to \"2.0\", an id, a supported method and params."} }, code: -32600, message: "Invalid JSON-RPC request" },
         id: body?.id ?? null,
       },
       400,
@@ -450,7 +454,7 @@ a2aRoute.post("/", async (c) => {
     case "tasks/cancel":
       return c.json({
         jsonrpc: "2.0",
-        error: {
+        error: { data: { details: {"fix":"Use the message/send or tasks/get method; tasks/cancel is not supported."} },
           code: -32601,
           message:
             "tasks/cancel is not supported. Strale capabilities are atomic operations.",
@@ -461,7 +465,7 @@ a2aRoute.post("/", async (c) => {
       return c.json(
         {
           jsonrpc: "2.0",
-          error: {
+          error: { data: { details: {"fix":"Use the message/send or tasks/get method; tasks/cancel is not supported."} },
             code: -32601,
             message: `Method '${method}' not found. Supported: message/send, tasks/get`,
           },
@@ -488,7 +492,7 @@ async function handleMessageSend(
   if (!message || !message.parts || !Array.isArray(message.parts)) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"fix":"Send params.message.parts as an array of text or data parts."} },
         code: -32602,
         message: "Invalid params: message with parts array is required",
       },
@@ -517,7 +521,7 @@ async function handleMessageSend(
   if (!skillId && task && task.length > MAX_SUGGEST_QUERY_CHARS) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"fix":"Shorten the text part to the limit in the message or send params.skillId explicitly."} },
         code: -32602,
         message:
           `Invalid params: text part must be under ${MAX_SUGGEST_QUERY_CHARS} characters ` +
@@ -547,6 +551,7 @@ async function handleMessageSend(
         id: `task-${Date.now()}`,
         status: {
           state: "failed",
+          details: { fix: "Send params.skillId from the agent card skills list or a more specific text part in params.message.parts." },
           message: {
             role: "agent",
             parts: [{
@@ -562,10 +567,11 @@ async function handleMessageSend(
   }
 
   // Auth: pass through if present, or omit for free-tier
-  const authHeader = c.req.header("Authorization");
+  // An unexpanded placeholder is not forwarded, so it reads as no key.
+  const bearer = readBearer(c.req.header("Authorization"), c.req.path);
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (authHeader?.startsWith("Bearer ")) {
-    headers.Authorization = authHeader;
+  if (bearer !== null) {
+    headers.Authorization = `Bearer ${bearer}`;
   }
   // WP6: forward the caller's idempotency key. This rail proxies to /v1/do,
   // which supports idempotency — but only Content-Type and Authorization were
@@ -604,7 +610,10 @@ async function handleMessageSend(
     // Cert-audit C6: bound the inner /v1/do call. A2A is meant for slow
     // capabilities, so 90s gives async-friendly room without leaving
     // a request stuck if the inner handler hangs.
-    const resp = await fetch(`${BASE_URL}/v1/do`, {
+    const executionUrl = new URL(`${BASE_URL}/v1/do`);
+    const src = c.req.query("src");
+    if (src) executionUrl.searchParams.set("src", src);
+    const resp = await fetch(executionUrl.toString(), {
       method: "POST",
       headers,
       body: JSON.stringify(doBody),
@@ -640,8 +649,10 @@ async function handleMessageSend(
 
       // Helpful message for unauthenticated users hitting paid capabilities
       let helpText = String(errorMsg);
-      if (errorCode === "unauthorized" && !authHeader) {
-        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, get an API key with €2 free credits at https://strale.dev";
+      const fix = (data.details as Record<string, unknown> | undefined)?.fix;
+      if (typeof fix === "string") helpText += ` ${fix}`;
+      if (errorCode === "unauthorized" && bearer === null) {
+        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, create an account; trial credits are available where eligible at https://strale.dev";
       }
 
       return c.json({
@@ -650,6 +661,7 @@ async function handleMessageSend(
           id: `task-${Date.now()}`,
           status: {
             state,
+            details: data.details ?? recoveryDetails(errorCode as ErrorCode, String(errorMsg)),
             message: {
               role: "agent",
               parts: [{ kind: "text", text: helpText }],
@@ -713,7 +725,7 @@ async function handleMessageSend(
     );
     return c.json({
       jsonrpc: "2.0",
-      error: { code: -32603, message: "Internal error processing request." },
+      error: { data: { details: {"retryable":true,"next_step":"Retry with exponential backoff; contact support if the failure continues."} }, code: -32603, message: "Internal error processing request." },
       id,
     });
   }
@@ -722,23 +734,7 @@ async function handleMessageSend(
 // ─── Resolve API key to user ─────────────────────────────────────────────────
 
 async function resolveApiKeyToUser(apiKey: string) {
-  const db = getDb();
-  const prefix = getKeyPrefix(apiKey);
-  const hash = hashApiKey(apiKey);
-  const hashBuffer = Buffer.from(hash, "utf-8");
-
-  const candidates = await db
-    .select()
-    .from(users)
-    .where(eq(users.keyPrefix, prefix));
-
-  return candidates.find((u) => {
-    const stored = Buffer.from(u.apiKeyHash, "utf-8");
-    return (
-      stored.length === hashBuffer.length &&
-      timingSafeEqual(stored, hashBuffer)
-    );
-  }) ?? null;
+  return (await authenticateApiKey(apiKey))?.user ?? null;
 }
 
 // ─── tasks/get handler ──────────────────────────────────────────────────────
@@ -752,17 +748,17 @@ async function handleTasksGet(
   if (!taskId) {
     return c.json({
       jsonrpc: "2.0",
-      error: { code: -32602, message: "Invalid params: id is required" },
+      error: { data: { details: {"fix":"Send params.id as the transaction_id returned by message/send."} }, code: -32602, message: "Invalid params: id is required" },
       id,
     });
   }
 
   // Auth required
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const apiKey = readBearer(c.req.header("Authorization"), c.req.path);
+  if (apiKey === null) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"fix":"Send a valid API key in the Authorization: Bearer <api_key> header."} },
         code: -32000,
         message:
           "Authentication required. Pass Authorization: Bearer sk_live_... header.",
@@ -772,12 +768,11 @@ async function handleTasksGet(
   }
 
   // Resolve API key to user for ownership check
-  const apiKey = authHeader.slice(7);
   const user = await resolveApiKeyToUser(apiKey);
   if (!user) {
     return c.json({
       jsonrpc: "2.0",
-      error: { code: -32000, message: "Invalid API key." },
+      error: { data: { details: {"fix":"Send a valid API key in the Authorization: Bearer <api_key> header."} }, code: -32000, message: "Invalid API key." },
       id,
     });
   }
@@ -794,7 +789,7 @@ async function handleTasksGet(
     if (!txn) {
       return c.json({
         jsonrpc: "2.0",
-        error: { code: -32602, message: `Task '${taskId}' not found` },
+        error: { data: { details: {"fix":"Send params.id as a transaction_id belonging to the authenticated account."} }, code: -32602, message: `Task '${taskId}' not found` },
         id,
       });
     }
@@ -849,6 +844,8 @@ async function handleTasksGet(
     }
 
     if (state === "failed" && txn.error) {
+      const failureMessage = sanitizeFailureReason(txn.error);
+      const failureDetails = recoveryDetails("execution_failed", "", { error: failureMessage });
       result.status.message = {
         role: "agent",
         // SANITISED, like every other customer-facing error surface.
@@ -865,7 +862,10 @@ async function handleTasksGet(
         // form -- 14.3% -- window 2026-05-25 to 2026-08-24. The rail shows no
         // usage yet, so this is a live path that has not been exercised rather
         // than an active leak.
-        parts: [{ type: "text", text: sanitizeFailureReason(txn.error) }],
+        // The text stays the sanitised failure alone; the advice travels
+        // in metadata.details, as on every other rail.
+        parts: [{ type: "text", text: failureMessage }],
+        metadata: { details: failureDetails },
       };
     }
 
@@ -877,7 +877,7 @@ async function handleTasksGet(
     );
     return c.json({
       jsonrpc: "2.0",
-      error: {
+      error: { data: { details: {"retryable":true,"next_step":"Retry with exponential backoff; contact support if the failure continues."} },
         code: -32603,
         message: "Internal error processing request.",
       },

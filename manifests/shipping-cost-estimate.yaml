@@ -125,7 +125,7 @@ output_field_reliability:
   cheapest: guaranteed
   estimates: guaranteed
 limitations:
-  - title: Shipping cost estimates are AI-generated — actual costs depend on account-specific rates and surcharges
+  - title: Actual shipping rates can differ from estimates
     text: >-
       AI-generated estimates based on general carrier pricing — actual costs depend on account-specific rates,
       surcharges, and seasonal adjustments

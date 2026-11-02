@@ -1,5 +1,5 @@
 #!/bin/sh
-# Regenerate the generated indexes from the staged tree and stage them
+# Repair stable navigation indexes from the staged tree and stage them
 # (archive/README.md, handoff/README.md, and the legacy-authority inventory
 # when an inventory target is staged), then the fast structural handoff checks.
 # Installed by `npm run hooks:install` (also `npm ci` via prepare): git config core.hooksPath .githooks

@@ -1,3 +1,4 @@
+import { isValidAdminAuth } from "../lib/admin-auth.js";
 /**
  * Internal Health Monitor routes.
  *
@@ -37,7 +38,6 @@
 
 import { Hono } from "hono";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
-import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
@@ -50,15 +50,8 @@ import { sendExternalOutageDigest } from "../lib/external-outage-digest.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
-function isValidAdminAuth(auth: string | undefined): boolean {
-  if (!auth || !ADMIN_SECRET) return false;
-  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
-  const provided = Buffer.from(auth, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
+
 
 export const internalHealthMonitorRoute = new Hono<AppEnv>();
 
@@ -69,7 +62,7 @@ export const internalHealthMonitorRoute = new Hono<AppEnv>();
 internalHealthMonitorRoute.post("/capabilities/:slug/restore", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const slug = c.req.param("slug");
@@ -182,7 +175,7 @@ internalHealthMonitorRoute.get("/events", async (c) => {
 internalHealthMonitorRoute.post("/health-sweep", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const report = await runWeeklyHealthSweep();
@@ -207,7 +200,7 @@ internalHealthMonitorRoute.post("/health-sweep", async (c) => {
 internalHealthMonitorRoute.post("/health-monitor/send-digest", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const body = await c.req.json().catch(() => ({}));
@@ -263,7 +256,7 @@ internalHealthMonitorRoute.post("/health-monitor/send-digest", async (c) => {
 internalHealthMonitorRoute.post("/health-monitor/send-external-outage-digest", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const body = await c.req.json().catch(() => ({}));
@@ -279,7 +272,7 @@ internalHealthMonitorRoute.post("/health-monitor/send-external-outage-digest", a
 internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const slug = c.req.param("slug");
@@ -346,7 +339,7 @@ internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
 internalHealthMonitorRoute.post("/capabilities/:slug/unpublish", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const slug = c.req.param("slug");
@@ -393,7 +386,7 @@ internalHealthMonitorRoute.post("/capabilities/:slug/unpublish", async (c) => {
 internalHealthMonitorRoute.post("/capabilities/:slug/suspend", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const slug = c.req.param("slug");
@@ -447,7 +440,7 @@ internalHealthMonitorRoute.post("/capabilities/:slug/suspend", async (c) => {
 internalHealthMonitorRoute.post("/capabilities/:slug/revalidate", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const slug = c.req.param("slug");
@@ -503,7 +496,7 @@ internalHealthMonitorRoute.post("/capabilities/:slug/revalidate", async (c) => {
 internalHealthMonitorRoute.get("/platform-status", async (c) => {
   const auth = c.req.header("Authorization");
   if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+    return c.json(apiError("unauthorized", "Admin credentials required.", { retryable: false, next_step: "Obtain valid admin credentials from the service operator and send them in the Authorization: Bearer <admin_secret> header." }), 401);
   }
 
   const db = getDb();

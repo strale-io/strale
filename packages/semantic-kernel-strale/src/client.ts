@@ -1,3 +1,4 @@
+import { CLIENT_ID } from "./client-id.js";
 /**
  * Lightweight HTTP client for the Strale API.
  */
@@ -47,7 +48,7 @@ export class StraleClient {
   }
 
   async listCapabilities(): Promise<Capability[]> {
-    const resp = await fetch(`${this.baseUrl}/v1/capabilities`);
+    const resp = await fetch(`${this.baseUrl}/v1/capabilities`, { headers: { "X-Strale-Client": CLIENT_ID } });
     if (!resp.ok) throw new Error(`Failed to list capabilities: ${resp.status}`);
     const data = (await resp.json()) as { capabilities: Capability[] };
     return data.capabilities;
@@ -70,6 +71,7 @@ export class StraleClient {
     const resp = await fetch(`${this.baseUrl}/v1/do`, {
       method: "POST",
       headers: {
+        "X-Strale-Client": CLIENT_ID,
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
       },
@@ -80,7 +82,7 @@ export class StraleClient {
 
   async getBalance(): Promise<BalanceResult> {
     const resp = await fetch(`${this.baseUrl}/v1/wallet/balance`, {
-      headers: { Authorization: `Bearer ${this.apiKey}` },
+      headers: { "X-Strale-Client": CLIENT_ID, Authorization: `Bearer ${this.apiKey}` },
     });
     if (!resp.ok) throw new Error(`Failed to get balance: ${resp.status}`);
     return (await resp.json()) as BalanceResult;

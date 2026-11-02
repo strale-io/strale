@@ -90,7 +90,7 @@ output_field_reliability:
   row_count: guaranteed
   detected_delimiter: guaranteed
 limitations:
-  - title: Expects consistent column counts — multi-line cell values or mixed delimiters may cause parse errors
+  - title: Mixed delimiters or multiline cells can cause errors
     text: >-
       Expects well-formed CSV with consistent column counts — multi-line cell values or mixed delimiters may cause parse
       errors

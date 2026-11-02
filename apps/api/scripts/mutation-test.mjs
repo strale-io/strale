@@ -123,6 +123,18 @@ if (!original.includes(find)) {
   );
 }
 
+// String.replace mutates only the FIRST match. With several, the mutation can
+// land in unrelated code and turn the result into a false SURVIVED (or, worse,
+// a false CAUGHT from breaking something else) — 2026-10-28, meta-monitoring.ts,
+// where one guard line appeared seven times. Make the target unique instead.
+const occurrences = original.split(find).length - 1;
+if (occurrences > 1) {
+  refuse(
+    `the --find text occurs ${occurrences} times in ${file}; only the first would be mutated.\n` +
+      "Widen --find with surrounding lines until it matches exactly once.",
+  );
+}
+
 console.log(`candidate commit: ${candidateSha}`);
 
 // ── Step 1: BASELINE MUST BE GREEN ──────────────────────────────────────────

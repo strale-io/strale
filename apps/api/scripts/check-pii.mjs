@@ -86,13 +86,16 @@
  * officers, UBOs) are a real but genuinely ambiguous case this script does
  * NOT try to adjudicate — see the 2026-08-14 session report for the
  * archive/sessions/bosch-kyb-response-final*.json finding, flagged to a
- * human rather than auto-scrubbed.
+ * human rather than auto-scrubbed. Petter chose to scrub on 2026-11-01
+ * (DEC-20261101-A precondition): the directors and transaction ids are
+ * redacted in the current files; git history keeps the originals.
  *
  * Usage:
  *   node apps/api/scripts/check-pii.mjs           # report, exit 0
  *   node apps/api/scripts/check-pii.mjs --strict   # exit 1 on any finding
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, dirname, basename, relative, extname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -168,7 +171,7 @@ function walkPiiFields(node, path, out) {
 
 function runDetector1() {
   const findings = [];
-  for (const file of readdirSync(MANIFEST_DIR).filter((f) => f.endsWith(".yaml"))) {
+  for (const file of requireInputs(readdirSync(MANIFEST_DIR).filter((f) => f.endsWith(".yaml")), "PII guard: manifests/*.yaml")) {
     let doc;
     try {
       doc = yaml.load(readFileSync(join(MANIFEST_DIR, file), "utf8"));
@@ -325,6 +328,9 @@ function runDetector2() {
 
   for (const scanDir of IDENTIFIER_SCAN_DIRS) {
     const files = listFiles(join(REPO_ROOT, scanDir));
+    // audit-output is ignored local scratch: absent/empty on a clean CI
+    // checkout is valid. Tracked scan roots must contain candidate files.
+    if (scanDir !== "audit-output") requireInputs(files, `PII guard: ${scanDir}`);
     for (const filePath of files) {
       let text;
       try {

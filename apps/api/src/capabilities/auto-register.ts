@@ -9,7 +9,8 @@
  *
  * Distinct outcomes are logged with distinct labels so a real failure
  * is never confused with an expected skip:
- *   - auto-register-skip-deactivated  — manifest in DEACTIVATED, intentional
+ *   - auto-register-skip-deactivated  — manifest in DEACTIVATED, intentional;
+ *     emitted once with every skipped slug, not once per slug (log volume)
  *   - auto-register-no-executor-after-import — manifest exists, file imported,
  *     but no registerCapability(slug, ...) call was made (real bug)
  *   - auto-register-executor-file-missing — manifest references slug with no
@@ -356,6 +357,10 @@ const DEACTIVATED = new Map<string, string>([
     "us-court-search",
     "CourtListener API token rejected (HTTP 403), deactivated per DQ-4 (block 0089); to reactivate, restore COURTLISTENER_API_TOKEN, remove this entry, and set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
   ],
+  [
+    "price-compare",
+    "deactivated 2026-10-30: price-compare reads www.pricerunner.<tld>/search, which redirects to /results, and PriceRunner's robots.txt has Disallow: /results for User-agent: * — since PR #786 (2026-10-28) every call fails the robots.txt check, so the source cannot be read under DEC-20261023-A. Reactivate only on a price source whose terms and robots.txt permit per-call automated reads (an official/affiliate product API); also set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21
@@ -465,13 +470,18 @@ export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
   let registered = 0;
   let skipped = 0;
   let errors = 0;
+  // One line per deactivated slug, each carrying its full reason, is ~30 lines
+  // of boot log whose content is already in DEACTIVATED above and never
+  // changes between boots. That volume helped cross Railway's
+  // 500-logs/sec-per-replica limit, which drops messages silently and took
+  // real error lines with it (2026-10-30). Collect the slugs and log them
+  // once; the real-failure labels below stay per-slug, so an expected skip is
+  // still never confused with a bug.
+  const skippedSlugs: string[] = [];
 
   for (const slug of slugs) {
     if (DEACTIVATED.has(slug)) {
-      log.info(
-        { label: "auto-register-skip-deactivated", capability_slug: slug, reason: DEACTIVATED.get(slug) },
-        "auto-register-skip-deactivated",
-      );
+      skippedSlugs.push(slug);
       skipped++;
       continue;
     }
@@ -534,6 +544,17 @@ export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
       logError("auto-register-provider-import-failed", err, { provider: name });
       errors++;
     }
+  }
+
+  if (skippedSlugs.length > 0) {
+    log.info(
+      {
+        label: "auto-register-skip-deactivated",
+        count: skippedSlugs.length,
+        capability_slugs: skippedSlugs,
+      },
+      "auto-register-skip-deactivated",
+    );
   }
 
   log.info(

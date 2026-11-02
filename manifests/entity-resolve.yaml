@@ -138,15 +138,15 @@ limitations:
     category: coverage
     severity: info
   - title: VAT matches are probable
-    text: EU and XI VAT inputs use VIES. DE and ES VAT inputs are refused because VIES suppresses trader names; send a registry number with country and type registry instead. Other names can be unavailable; only a unique matching legal name and country resolves, always probable. Stale validation is rejected.
+    text: EU and XI VAT inputs use VIES, but DE and ES inputs are refused because trader names are unavailable there; use a registry number with country and type registry instead. Other VAT inputs resolve only on a unique legal-name and country match, marked probable, and stale validation is rejected.
     category: coverage
     severity: info
   - title: Registry authority and number
-    text: Registry numbers need country and an identifiable GLEIF registration authority. Number formatting must match GLEIF. Multiple candidates are not automatically selected.
+    text: Registry inputs need a country, an identifiable GLEIF registration authority and number formatting matching GLEIF. Multiple candidates are not automatically selected.
     category: coverage
     severity: info
-  - title: GLEIF terms and mapping coverage
-    text: GLEIF Access Service terms section II permits individual API lookups and CC0 commercial reuse. Terms are available at https://www.gleif.org/en/meta/lei-data-terms-of-use. No endorsement is implied; BIC and ISIN mappings can be incomplete.
+  - title: BIC and ISIN mappings can be incomplete
+    text: GLEIF BIC and ISIN mappings can be incomplete. Source data does not imply endorsement by GLEIF.
     category: coverage
     severity: info
   - title: VIES availability and latency
@@ -154,6 +154,6 @@ limitations:
     category: freshness
     severity: info
   - title: BIC mapping and output limits
-    text: An 11-character BIC with no GLEIF match is retried once using its first eight characters plus XXX, identifying the main office rather than the requested branch. The matched BIC is returned as bic_matched. At most 25 BICs are returned in identifiers.bic; bic_count gives the full number published by GLEIF.
+    text: An unmatched 11-character BIC is retried once with its first eight characters plus XXX, which identifies the main office rather than the branch; `bic_matched` records the matched code. At most 25 entries appear in `identifiers.bic`, while `bic_count` gives the full source count.
     category: coverage
     severity: info

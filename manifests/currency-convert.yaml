@@ -94,6 +94,22 @@ test_fixtures:
         operator: gt
         reliability: guaranteed
         value: -1
+      - field: rate
+        operator: gt
+        reliability: guaranteed
+        value: 0.5
+      - field: rate
+        operator: lt
+        reliability: guaranteed
+        value: 2
+      - field: converted_amount
+        operator: gt
+        reliability: guaranteed
+        value: 50
+      - field: converted_amount
+        operator: lt
+        reliability: guaranteed
+        value: 200
   health_check_input:
     to: EUR
     from: USD
@@ -106,7 +122,7 @@ output_field_reliability:
   amount: guaranteed
   converted_amount: guaranteed
 limitations:
-  - title: Uses mid-market exchange rates — actual bank and payment processor conversion rates include spread and fees
+  - title: Bank rates include spreads and fees
     text: Uses mid-market exchange rates — actual conversion rates from banks and payment processors include spread and fees
     category: accuracy
     severity: info

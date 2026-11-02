@@ -110,7 +110,7 @@ limitations:
     severity: warning
   - title: Registration record, not results
     text: >-
-      The response describes what the sponsor registered — design, enrollment target and status. It
+      The response describes what the sponsor registered — design, enrolment target and status. It
       carries no outcome data, and a large share of registered trials never post results.
     category: coverage
     severity: info
@@ -121,10 +121,10 @@ limitations:
       are frequently left as recruiting for months.
     category: accuracy
     severity: warning
-  - title: Enrollment counts mix estimates with actuals
+  - title: Enrolment counts mix estimates with actuals
     text: >-
       enrollment_type distinguishes ESTIMATED (a target) from ACTUAL (what was reached). Treating an
-      estimated figure as achieved enrollment overstates a trial's size.
+      estimated figure as achieved enrolment overstates a trial's size.
     category: accuracy
     severity: info
 

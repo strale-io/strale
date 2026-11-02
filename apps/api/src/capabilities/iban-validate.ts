@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // ─── IBAN validation — pure algorithmic, no external API ──────────────────────
@@ -110,7 +111,7 @@ function validateIban(iban: string): {
 registerCapability("iban-validate", async (input: CapabilityInput) => {
   const rawIban = (input.iban as string) ?? "";
   if (typeof rawIban !== "string" || !rawIban.trim()) {
-    throw new Error("'iban' is required. Provide an IBAN to validate (e.g. SE3550000000054910000003).");
+    throw inputRefusal("'iban' is required. Provide an IBAN to validate (e.g. SE3550000000054910000003).", "iban", "Send 'iban' as an IBAN string including its two-letter country prefix and check digits.");
   }
 
   // Extract IBAN from input — only use regex if input looks like free text

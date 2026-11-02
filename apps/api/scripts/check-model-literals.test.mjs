@@ -174,3 +174,10 @@ test("real repo: model registry is currently clean", () => {
   const { findings } = checkAllModels(realRoot);
   assert.deepEqual(findings, []);
 });
+
+test("scripts are scanned for model literals too", () => {
+  const dir = makeFixture({ "apps/api/scripts/foo.ts": 'const model = "claude-haiku-4-5-20251001";' });
+  try {
+    assert.ok(checkAllModels(dir).findings.some(f => f.file === "apps/api/scripts/foo.ts" && f.code === "LITERAL_OUTSIDE_REGISTRY"));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

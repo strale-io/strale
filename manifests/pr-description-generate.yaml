@@ -107,7 +107,7 @@ output_field_reliability:
   testing: guaranteed
   markdown: guaranteed
 limitations:
-  - title: AI-generated PR descriptions may not capture business motivation or link to relevant issues automatically
+  - title: Motivation and related issues can be missed
     text: AI-generated from diff content — may not capture the business motivation or link to relevant issues automatically
     category: accuracy
     severity: info

@@ -138,6 +138,21 @@ mechanisms:
       ({"0":"{","1":"\"",...}), the signature of a JS string getting
       JSON.stringify'd twice on some write path.
 
+  - id: weekly-drift-upstream-recordings
+    workflow: .github/workflows/weekly-drift.yml
+    trigger: schedule
+    step:
+      match: id
+      value: upstream-recordings
+    runs: apps/api/scripts/record-upstream.ts
+    secrets: {}
+    purpose: >
+      Re-runs each executor recorded under
+      apps/api/src/capabilities/__fixtures__/upstream/ live once (free cost
+      classes only) and reports what the offline replay test cannot see: a
+      live contract failure, a request the executor no longer makes, a moved
+      status, or a recording older than 90 days.
+
   - id: m3-digest-shadow-comparison
     workflow: .github/workflows/m3-digest-shadow.yml
     trigger: schedule

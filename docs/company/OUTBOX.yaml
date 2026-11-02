@@ -1,0 +1,210 @@
+# External email threads awaiting a reply. Procedure: docs/operations/accounts-and-email.md
+# (DEC-20261027-A, narrowed by DEC-20261027-C). Every email drafted or sent for Strale gets
+# a row here in the same session. Other sessions write rows with status: draft; only the
+# Strale inbox routine (until it exists, the local "Strale checkin morning" session) sends
+# them and checks the inbox (Junk included) for replies. Statuses: draft | awaiting_reply | closed.
+# Dates are calendar dates in Swedish local time.
+threads:
+  - id: nta-invoice-app-id
+    to: invoice-web-api@nta.go.jp
+    subject: Request for the invoice-system (T-number) Web-API application ID
+    asked: Whether an invoice-use application ID can be issued on the existing registration, and which usage document to submit
+    unblocks: Japan qualified-invoice-issuer (T-number) check, portfolio plan 1.13
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-10
+    status: closed
+    reply: 2026-10-29 03:25 CET (inbox), NTA invoice-system office. Yes — the invoice Web-API permission can be added to the existing corporate-number application ID, same email address, via the application-ID change notification (provisional registration at https://www.invoice-kohyo.nta.go.jp/web-api/pre-change; leave the email-change fields empty). The usage document is the text of our 2026-10-27 email pasted into a Word file and uploaded on that form. Next step is a form submission for Moonlighter AB, raised as DQ-43 (2026-10-30 morning run).
+  - id: hmrc-production-cns433
+    to: softwaredevelopersupport@service.hmrc.gov.uk
+    subject: Chase on production credentials, support ref 2026-CNS433
+    asked: Status of the production credential request, and whether the sandbox app's deletion affects it
+    unblocks: UK VAT number check and GB EORI, portfolio plan 1.11 and 1.15
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-07
+    status: awaiting_reply
+    note: The sandbox application is due for deletion around 2026-11-12 unless it makes an API call.
+  - id: datacircle-benchmark
+    to: wayne@datacircle.dev
+    subject: Benchmark of Strale on GTM API lists
+    asked: Move email and phone validation out of verification lists; finish company-enrichment and tech-stack runs over x402
+    unblocks: Accurate public benchmark listing
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-10
+    status: closed
+    reply: 2026-10-27 18:23 CET (inbox). They kept email and phone calls on the Cached lists (no syntax-and-domain category exists) and kept the scores, but added a "What it checks" column naming exactly what our calls test. Company enrichment and tech stack were rerun over x402 (company enrichment Data 33, Performance 14; tech stack Data 56, Performance 66). They asked whether the lists look right and invited us to a provider WhatsApp group. No reply needed to close the thread; the low company-enrichment score is a product follow-up in the 2026-10-28 operating record.
+  - id: probe402-refusals
+    to: zach@probe402.com
+    subject: Paid x402 calls refused before settlement
+    asked: The routes and request bodies of the six refused September calls
+    unblocks: Diagnosis of the refusals and probe402's public grade
+    sent: 2026-10-27
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-10
+    status: awaiting_reply
+  - id: serper-resale-terms
+    to: hello@serper.dev
+    subject: Whether Serper's terms permit per-call resale
+    asked: Written permission for per-call resale of search results
+    unblocks: DQ-39; eight Serper-backed tools run under an exception that ends 2026-11-09
+    sent: 2026-10-26
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-02
+    status: closed
+    reply: 2026-10-27 19:40 CET (inbox, from support@serper.dev). Using Serper as an upstream source within a value-added commercial service, including returning processed results through our own per-call API, is permitted under its standard terms; reselling API access without added value is not. No separate reseller agreement; standard prepaid tiers. The permission does not grant third-party (Google) rights. Recorded on DQ-39, which stays with Petter.
+  - id: swiss-uid-reuse
+    to: uid@bfs.admin.ch
+    subject: Per-call commercial reuse of public UID register data
+    asked: Whether per-call reuse with attribution is permitted
+    unblocks: DQ-40; Swiss UID inside vat-validate and portfolio plan 1.12
+    sent: 2026-10-26
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-09
+    status: awaiting_reply
+  - id: czech-ares-reuse
+    to: ares@mfcr.cz
+    subject: Reuse licence for ARES register data
+    asked: Whether per-call commercial reuse with attribution is permitted
+    unblocks: DQ-40; cz-company-data terms record
+    sent: 2026-10-26
+    sent_by: petter (drafted by session)
+    follow_up_by: 2026-11-09
+    status: closed
+    reply: 2026-10-29 08:52 CET (inbox), Jan Sadlik, ICT, Czech Ministry of Finance. Information published through ARES may be reused under the ARES operating conditions and the Czech law on free access to information (open data); the Ministry gives no individual legal assessment and the user is responsible for compliance. Linked ares.gov.cz/stranky/vyvojar-info and ares.gov.cz/stranky/open-data. Recorded in vendor-terms.data.json (resale permitted, published terms) and DQ-40.
+  - id: czech-ares-reuse-thanks
+    to: ares@mfcr.cz (reply in the czech-ares-reuse thread, to Jan Sadlik, ICT, MF ČR; from petter@strale.io)
+    subject: "Re: Reuse licence for ARES register data"
+    asked: Nothing; optional thank-you, no reply expected
+    unblocks: Nothing; courtesy only
+    sent:
+    follow_up_by:
+    status: draft
+    body: |
+      Dear Mr Sadlik,
+
+      Thank you for your reply and for the links to the ARES developer and open-data pages.
+      We will use ARES within its operating conditions and name ARES and the Ministry of
+      Finance as the source of the data.
+
+      Kind regards,
+      Petter
+  - id: cdp-bazaar-curation
+    to: "CDP support (address open: the x402 docs publish no support email and route help to Discord, checked 2026-10-29; D3 rules out Discord and forum posts. The sender uses CDP's official support contact, or asks Petter)"
+    subject: "Request for x402 Bazaar curation review: Strale (api.strale.io)"
+    asked: Whether Strale's x402 endpoints can be reviewed for the curated (featured) Bazaar tier, the right channel for that, and anything in our metadata or availability that would stop them qualifying
+    unblocks: Distribution track D3 (tracks.yaml T4, DEC-20261027-B §9 item 1)
+    sent:
+    sent_by:
+    follow_up_by:
+    status: draft
+    note: D3 follow-up rule, which replaces the usual two follow-ups. Set follow_up_by to 45 days after sending; if no answer by then, send one follow-up, then close the row as dropped. Before sending, re-run Coinbase's validator on /x402/v2/vat-validate (POST https://api.cdp.coinbase.com/platform/v2/x402/validate) and send only if it still returns valid true. Earlier contact checked, docs/company/coinbase-bazaar-email.md, a draft to Coinbase about indexing withdrawn unsent on 2026-08-15 because its premise was wrong; this row asks about curation, a different question.
+    body: |
+      Hello CDP team,
+
+      I run Strale, a library of tools that AI agents call and pay for per call over x402 on
+      Base mainnet. Your "Get discovered" guide describes a curated tier of the x402 Bazaar.
+      I would like to ask for Strale's endpoints to be reviewed for it.
+
+      - Endpoints: https://api.strale.io/x402/v2/<tool>, with the full list at
+        https://api.strale.io/x402/catalog
+      - Receiving address: 0x66D7C2F952362BFB24FD7F02a9beC9c754ea83bC (Base)
+      - Our 402 responses carry serviceName, tags, iconUrl, an input schema and an example
+        input in extensions.bazaar. Your validation endpoint returns valid: true
+        for, for example, https://api.strale.io/x402/v2/vat-validate.
+      - Our flagship category is official-source company and VAT data; each answer
+        names its source and when it was fetched.
+
+      Two questions:
+      1. Is there a process for requesting a curation review, and is this the right place
+         to ask?
+      2. Is there anything in our metadata or availability that would keep these endpoints
+         from qualifying?
+
+      Thank you,
+      Petter
+      Strale (Moonlighter AB, Sweden)
+      petter@strale.io
+  - id: registercheck-terms-provenance
+    to: info@registercheck.de (Openlaw GmbH, Munich; address from the registercheck.de imprint as indexed by search on 2026-10-29, the page itself rate-limited the session; confirm on the imprint before sending; from petter@strale.io)
+    subject: "registercheck.de API: licence for resale, data provenance and pricing"
+    asked: Whether per-call results may be resold inside another API product with attribution; how the register copy is obtained and whether that can be documented; caching and retention limits; SLA and support; pricing currency, credit cost, volume terms and pay-per-call without commitment
+    unblocks: Vendor evaluation of registercheck (config/vendors.yaml id registercheck) and the coverage comparison in docs/research/2026-10-29-registercheck-coverage-comparison.md
+    sent:
+    sent_by:
+    follow_up_by:
+    status: draft
+    note: Openlaw sells to AI agents too, so it is also a potential competitor; the body says no more about Strale than the opening line. No account exists and none is to be created before a written answer to questions 1 and 2.
+    body: |
+      Hello,
+
+      I run Strale, a library of tools that AI agents call and pay for per call. We are
+      looking at registercheck.de as a source of German commercial-register data and have
+      a few questions before we create an account. Your terms page was not readable for us,
+      so please point me to the current terms if they answer any of these.
+
+      1. Licence: may we resell per-call results from your API inside our own API product,
+         with registercheck.de and the commercial register named as the source? If yes,
+         under which terms or plan?
+      2. Provenance: how is your copy of the register obtained, for example through an
+         official licence or bulk channel, per-document purchases, or automated retrieval
+         from handelsregister.de? Can you document this in writing?
+      3. Storage: are there limits on caching or retaining results on our side? We remove
+         stored response content (inputs and outputs) after 90 days.
+      4. Service: do you offer an SLA or uptime commitment, and what support channel and
+         response times apply?
+      5. Pricing: what currency are prices in, what does one credit cost on each plan, are
+         there volume terms, and can we pay per call without a monthly commitment?
+
+      Thank you,
+      Petter
+      Strale (Moonlighter AB, Sweden)
+      petter@strale.io
+  - id: rik-open-data-403
+    to: RIK Ariregister open-data contact (unverified: confirm the address on rik.ee before sending; from petter@strale.io)
+    subject: "Automated access to the Ariregister open-data file from our server"
+    asked: Whether our server may download the daily open-data file, and if so what we should do to be allowed
+    unblocks: Estonian directors in estonian-company-data (production-watch issue 856)
+    sent:
+    follow_up_by:
+    status: draft
+    note: Written 2026-10-31 by the morning run. The server's outbound address is not stated; add it from Railway if RIK asks. Do not route around the block in the meantime (DEC-20261023-A).
+    body: |
+      Hello,
+
+      Moonlighter AB runs Strale, an API service that gives business customers company
+      information from official registers. We would like to use the Ariregister open-data file
+      ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip under its CC BY 4.0 licence, naming
+      the Estonian Centre of Registers and Information Systems as the source.
+
+      Requests from our server, hosted in the United States, receive HTTP 403 from
+      avaandmed.ariregister.rik.ee, while the same request from a computer in Sweden succeeds.
+      We download the file at most once a day and identify ourselves as Strale.
+
+      Is automated download from a hosted server permitted? If it is, what do we need to do for
+      our server to be allowed? If you prefer another route, such as a contract for the
+      register's services, please tell us which one.
+
+      Kind regards,
+      Petter Lindstrom
+      Moonlighter AB (Strale)
+  - id: serper-credit-rollover
+    to: support@serper.dev (from petter@strale.io)
+    subject: "Unused credits when renewing the Starter pack"
+    asked: Whether unused credits carry over if we renew before they expire on 8 November
+    unblocks: DQ-44
+    sent:
+    follow_up_by:
+    status: draft
+    note: Written 2026-10-31 by the morning run. Needed by 2026-11-06. If unanswered by then, DQ-44 is decided without it.
+    body: |
+      Hello,
+
+      Our Starter credits expire on 8 November with most of the 50,000 unused. If we renew
+      before then, do the unused credits carry over to the new pack? If not, is there another
+      way to keep them?
+
+      Kind regards,
+      Petter Lindstrom
+      Moonlighter AB (Strale)

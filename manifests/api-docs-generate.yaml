@@ -109,16 +109,16 @@ output_field_reliability:
   total_endpoints: guaranteed
   endpoints_documented: guaranteed
 limitations:
-  - title: Generated documentation reflects only the provided API spec — undocumented behavior is not inferred
-    text: Generated documentation reflects the provided API spec — undocumented behavior and edge cases are not inferred
+  - title: Undocumented API behaviour is not inferred
+    text: Generated documentation reflects the provided API spec — undocumented behaviour and edge cases are not inferred
     category: accuracy
     severity: info
-    workaround: Review generated docs against actual API behavior and add examples for complex endpoints
+    workaround: Review generated docs against actual API behaviour and add examples for complex endpoints
   - title: Output size cap per call
     text: >-
-      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
-      rather than returned truncated — for example a large OpenAPI spec covering many endpoints.
-      Retrying the identical request will not help.
+      Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
+      are refused rather than returned truncated. Requests with large results can exceed this limit,
+      and repeating the same request does not help.
     category: coverage
     severity: info
     workaround: Provide a smaller spec or split it into fewer endpoints per call

@@ -135,6 +135,36 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-10-31 — the week in progress looks like a record, but about
+  €64 of its €139.57 (day 6) is one-off.** The largest x402 payer ran 1,055
+  `mx-lookup` calls in one day on 2026-10-30 (€21.10; two calls in the prior
+  nine days), and two registered accounts ran catalogue-wide sweeps (€39.18 and
+  €3.33). What remains is about €76, level with the prior two completed weeks.
+  Second-sourced: `commercial-brief` largest-payer movement (+€39.51 since the
+  previous run) against that payer's `transactions` (+€39.25, 1,435 calls).
+  The same payer repeatedly asks `exchange-rate` and `forex-history` for
+  currencies our ECB-based sources lack (NGN 17, KES 5 and others; 28 and 14
+  failures in two days): unserved demand from the buyer we most depend on.
+- **Measured 2026-10-30 — a registered account at an agent-integration
+  platform is buying across almost the whole catalogue with its own money.**
+  The account (signed up 2026-09-02, €100 card top-up on 2026-09-24) made 339
+  paid wallet calls between 2026-10-29T12:36Z and 2026-10-30T06:46Z across 283
+  distinct tools, €19.78 captured; its inputs ("QA Fixture Cafe", an
+  `example.com/qa-fixture` URL) are not ours (repo grep: no match), so this
+  reads as the platform's own automated quality check of a Strale toolkit.
+  Second-sourced: wallet holds (314 captured / 49 released across the three
+  wallet payers, zero invariant violations) against `transactions` status
+  (295 completed, 44 failed for this account). This is also the first real
+  traffic through the H4 hold path. Of the 44 failures, most are its own test
+  inputs hitting 404s or empty registries (correct refusals); two were our
+  bugs (`openapi-validate` crashing on an object spec, `prompt-compress` failing
+  on an unreadable model reply, most likely raw newlines, cause unconfirmed — both
+  patched in #845), two were the
+  robots.txt-refused tools (DQ-42, `price-compare`). One week in progress
+  (day 5): €77.08 across 11 payers, top share 63.1% — no verdict drawn.
+  Whether it becomes recurring use is the question; no outreach derives from
+  this (CHARTER customer-data boundary).
+
 - **Measured 2026-09-11 — revenue fell for the first time in five completed
   weeks, and nine-tenths of the fall is the smaller buyers not coming back.**
   Week of
@@ -1250,6 +1280,16 @@ conversion.
   payers bought on more than one day (was 2). Still above M1's 60% bar, but
   this is the first week a second recurring buyer is measurable. No outreach
   (DQ-21 and the charter's customer-data boundary).
+
+- **Week of 10-26 will close as the largest on record, read before its last
+  day ended, and the repeatable part is larger than the 10-31 estimate**
+  (measured 2026-11-01 ~07:10Z; commercial pack, and `payerFacts` by UTC day).
+  **€165.51 so far**, 12 payers, **68.9% one buyer** (€113.99 vs €51.52). About
+  €64 is one-off (the €21.10 `mx-lookup` job, a €43 catalogue sweep by two
+  accounts), leaving about €101, not the €76 read on 10-31. The rise is the
+  largest buyer's daily spend: €16.60 on 10-31 and €18.65 by 07:10Z on 11-01,
+  against about €8 a day the week before, across more tools. Two days of
+  evidence. M1's concentration bar is still missed. No outreach.
 
 ## Active experiments (M1)
 

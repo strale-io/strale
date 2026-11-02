@@ -1,0 +1,43 @@
+{
+  "slug": "usgs-earthquake-search",
+  "recorded_at": "2026-10-29T16:05:17.427Z",
+  "input": {
+    "min_magnitude": 5,
+    "limit": 5
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&limit=5&orderby=time&minmagnitude=5&starttime=2026-09-29"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-headers": "*",
+          "access-control-allow-methods": "GET, OPTIONS",
+          "access-control-allow-origin": "*",
+          "access-control-max-age": "86400",
+          "cache-control": "public, max-age=60",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Thu, 29 Oct 2026 16:05:17 GMT",
+          "expires": "Thu, 29 Oct 2026 16:06:17 GMT",
+          "last-modified": "Thu, 29 Oct 2026 16:05:17 GMT",
+          "server": "nginx",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Accept-Encoding",
+          "via": "1.1 ed4ce0240c41ad69d73d160831b6e026.cloudfront.net (CloudFront)",
+          "x-amz-cf-id": "L0zFiW9LYiw1tBJpYsMqWASxrXmyAEKeDhKXFrkxdTtzToBowBhFPg==",
+          "x-amz-cf-pop": "ATL58-P11",
+          "x-cache": "Miss from cloudfront",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "1; mode=block"
+        },
+        "body": "{\"type\":\"FeatureCollection\",\"metadata\":{\"generated\":1793289917000,\"url\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&limit=5&orderby=time&minmagnitude=5&starttime=2026-09-29\",\"title\":\"USGS Earthquakes\",\"status\":200,\"api\":\"2.8.2\",\"limit\":5,\"offset\":1},\"features\":[{\"type\":\"Feature\",\"properties\":{\"mag\":5.1,\"place\":\"218 km NNW of Bamboo Flat, India\",\"time\":1793263782448,\"updated\":1793264668040,\"tz\":null,\"url\":\"https://earthquake.usgs.gov/earthquakes/eventpage/us7000tty7\",\"detail\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us7000tty7&format=geojson\",\"felt\":null,\"cdi\":null,\"mmi\":null,\"alert\":null,\"status\":\"reviewed\",\"tsunami\":0,\"sig\":400,\"net\":\"us\",\"code\":\"7000tty7\",\"ids\":\",us7000tty7,\",\"sources\":\",us,\",\"types\":\",origin,phase-data,\",\"nst\":74,\"dmin\":7.316,\"rms\":0.79,\"gap\":61,\"magType\":\"mb\",\"type\":\"earthquake\",\"title\":\"M 5.1 - 218 km NNW of Bamboo Flat, India\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[91.6593,13.3785,10]},\"id\":\"us7000tty7\"},\n{\"type\":\"Feature\",\"properties\":{\"mag\":6.4,\"place\":\"southeast of Easter Island\",\"time\":1793260190928,\"updated\":1793267727274,\"tz\":null,\"url\":\"https://earthquake.usgs.gov/earthquakes/eventpage/us7000ttxz\",\"detail\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us7000ttxz&format=geojson\",\"felt\":null,\"cdi\":null,\"mmi\":0,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":0,\"sig\":630,\"net\":\"us\",\"code\":\"7000ttxz\",\"ids\":\",usauto7000ttxz,us7000ttxz,\",\"sources\":\",usauto,us,\",\"types\":\",internal-moment-tensor,losspager,moment-tensor,origin,phase-data,shakemap,\",\"nst\":83,\"dmin\":13.321,\"rms\":1.32,\"gap\":39,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 6.4 - southeast of Easter Island\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[-98.0489,-36.4058,10]},\"id\":\"us7000ttxz\"},\n{\"type\":\"Feature\",\"properties\":{\"mag\":5.4,\"place\":\"114 km ENE of Barcelona, Philippines\",\"time\":1793259090432,\"updated\":1793266642302,\"tz\":null,\"url\":\"https://earthquake.usgs.gov/earthquakes/eventpage/us7000ttxn\",\"detail\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us7000ttxn&format=geojson\",\"felt\":null,\"cdi\":null,\"mmi\":3.225,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":0,\"sig\":449,\"net\":\"us\",\"code\":\"7000ttxn\",\"ids\":\",us7000ttxn,\",\"sources\":\",us,\",\"types\":\",losspager,moment-tensor,origin,phase-data,shakemap,\",\"nst\":90,\"dmin\":2.298,\"rms\":0.81,\"gap\":43,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 5.4 - 114 km ENE of Barcelona, Philippines\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[127.4269,8.4677,10]},\"id\":\"us7000ttxn\"},\n{\"type\":\"Feature\",\"properties\":{\"mag\":5.1,\"place\":\"Balleny Islands region\",\"time\":1793252016298,\"updated\":1793252972040,\"tz\":null,\"url\":\"https://earthquake.usgs.gov/earthquakes/eventpage/us7000ttx8\",\"detail\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us7000ttx8&format=geojson\",\"felt\":null,\"cdi\":null,\"mmi\":null,\"alert\":null,\"status\":\"reviewed\",\"tsunami\":0,\"sig\":400,\"net\":\"us\",\"code\":\"7000ttx8\",\"ids\":\",us7000ttx8,\",\"sources\":\",us,\",\"types\":\",origin,phase-data,\",\"nst\":34,\"dmin\":16.276,\"rms\":0.68,\"gap\":121,\"magType\":\"mb\",\"type\":\"earthquake\",\"title\":\"M 5.1 - Balleny Islands region\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[161.1643,-61.3277,10]},\"id\":\"us7000ttx8\"},\n{\"type\":\"Feature\",\"properties\":{\"mag\":5.4,\"place\":\"South Sandwich Islands region\",\"time\":1793250408289,\"updated\":1793262464209,\"tz\":null,\"url\":\"https://earthquake.usgs.gov/earthquakes/eventpage/us7000ttx0\",\"detail\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us7000ttx0&format=geojson\",\"felt\":null,\"cdi\":null,\"mmi\":3.04,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":0,\"sig\":449,\"net\":\"us\",\"code\":\"7000ttx0\",\"ids\":\",us7000ttx0,\",\"sources\":\",us,\",\"types\":\",losspager,moment-tensor,origin,phase-data,shakemap,\",\"nst\":54,\"dmin\":7.525,\"rms\":1.2,\"gap\":81,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 5.4 - South Sandwich Islands region\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[-27.9532,-60.2079,8.561]},\"id\":\"us7000ttx0\"}],\"bbox\":[-98.0489,-61.3277,8.561,161.1643,13.3785,10]}",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

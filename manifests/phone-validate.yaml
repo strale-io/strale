@@ -1,6 +1,6 @@
 slug: phone-validate
 name: "Phone Validation"
-description: "Validate a phone number in 200+ countries. Returns the E.164 form, country, and whether it is mobile, landline or VoIP."
+description: "Check a phone number's format and numbering-plan rules. Returns its E.164 form, country and available line type without confirming activity."
 category: validation
 cost_class: free_unlimited
 quota_window: none
@@ -75,6 +75,12 @@ output_field_reliability:
   is_possible: guaranteed
   input: guaranteed
 limitations:
+  - title: A valid result does not prove the number is in service
+    text: >-
+      Valid means the number fits the country's numbering plan. It does not show that
+      the number is assigned or in service.
+    category: accuracy
+    severity: info
   - title: Carrier detection not available
     text: Carrier/operator name detection requires a paid service — returns null
     category: coverage

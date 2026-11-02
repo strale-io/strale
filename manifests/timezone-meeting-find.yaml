@@ -94,7 +94,7 @@ output_field_reliability:
   optimal_slots: guaranteed
   total_viable_slots: guaranteed
 limitations:
-  - title: Suggests meeting times based on timezone offsets only — individual calendar availability is not considered
+  - title: Calendar availability is not considered
     text: >-
       Suggests meeting times based on timezone offsets — does not account for individual calendar availability or local
       business hour customs

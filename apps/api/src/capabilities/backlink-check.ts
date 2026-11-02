@@ -6,6 +6,13 @@ import {
   readTextWithLimit,
 } from "../lib/resource-limits.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  deriveResultDomain,
+  isGotoLink,
+  resolveSerperLinks,
+  startSerperBudget,
+  usableResultUrl,
+} from "../lib/serper-links.js";
 
 // F-0-006 Bucket D (preemptive migration): user domain is embedded in the
 // query string to hardcoded third-party APIs (index.commoncrawl.org,
@@ -14,6 +21,12 @@ import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 // if either hostname is ever swapped to a user-provided value, the guard
 // is already in place.
 registerCapability("backlink-check", async (input: CapabilityInput) => {
+  // One budget for the whole Serper leg, taken before any input work.
+  // Round-2 review: the search used to ask for the entire 15 s
+  // SYNC_TRANSACTION_WALL_MS and resolution then added its own slice on
+  // top, so a slow pair could exceed the wall and the caller would get an
+  // infrastructure error instead of this capability's designed answer.
+  const budget = startSerperBudget();
   const raw = (
     (input.domain as string) ??
     (input.url as string) ??
@@ -31,6 +44,9 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     .toLowerCase();
 
   let source = "commoncrawl.org";
+  // Google redirect links that stayed opaque, so a dropped row is a reported
+  // absence rather than a silent one.
+  let unresolvedLinkCount = 0;
   const backlinks: Array<{
     source_url: string;
     source_domain: string;
@@ -43,7 +59,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${encodeURIComponent(domain)}&output=json&limit=50`;
     const ccResp = await safeFetch(ccUrl, {
       headers: { "User-Agent": "Strale/1.0" },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(budget.searchTimeoutMs),
     });
 
     if (ccResp.ok) {
@@ -87,7 +103,10 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
           method: "POST",
           headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
           body: JSON.stringify({ q: query, num: 10 }),
-          signal: AbortSignal.timeout(10000),
+          // Capped by what Common Crawl left of the shared budget, so the two
+          // legs together stay inside SYNC_TRANSACTION_WALL_MS (round-2
+          // review: each used to get its own full slice).
+          signal: AbortSignal.timeout(Math.max(1_000, Math.min(budget.searchTimeoutMs, budget.resolveDeadline - Date.now()))),
         }, 1, safeFetch);
 
         if (resp.ok) {
@@ -97,20 +116,44 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
             MAX_FETCHED_API_RESPONSE_BYTES,
             "domain",
           );
+          // Google wraps every organic link past the top three in an opaque
+          // `google.com/goto` redirect (2026-10-30). Unresolved, the old
+          // `extractDomain` read `google.com` off each wrapper and pushed it
+          // into `backlinks` — so `referring_domains_count` counted Google as
+          // a site linking to the caller, and `source_url` was unopenable.
+          await resolveSerperLinks(data, serperKey, safeFetch, budget.resolveDeadline);
           const organic = (data.organic as any[]) ?? [];
           for (const item of organic) {
             const sourceUrl = item.link ?? item.url ?? "";
-            const sourceDomain = extractDomain(sourceUrl);
-            if (sourceDomain && sourceDomain !== domain) {
-              // Check if already in list
-              if (!backlinks.some((b) => b.source_url === sourceUrl)) {
-                backlinks.push({
-                  source_url: sourceUrl,
-                  source_domain: sourceDomain,
-                  anchor_text: item.title ?? null,
-                  first_seen: null,
-                });
-              }
+            // A link whose real URL is unknown is dropped, not guessed at.
+            // A backlink list is a list of addresses; an entry without one is
+            // not a weaker row, it is a wrong row. `unresolved_link_count`
+            // makes the absence visible rather than silent.
+            //
+            // The wrapper test comes first on purpose: it must count even
+            // when no host could be derived at all, which is the ordinary
+            // case for a wrapper with no `displayedLink` breadcrumb.
+            // Round-2 review: test the URL, not just the wrapper. An
+            // organic entry with no `link` at all but a `displayedLink`
+            // breadcrumb used to be skipped (`extractDomain("")` was `""`);
+            // deriving the host from the breadcrumb would now admit it with
+            // `source_url: ""`, inflating `total_backlinks` and
+            // `referring_domains_count` with an address nobody can open —
+            // exactly the wrong row the comment above refuses.
+            if (!usableResultUrl(sourceUrl)) {
+              if (isGotoLink(sourceUrl)) unresolvedLinkCount += 1;
+              continue;
+            }
+            const sourceDomain = deriveResultDomain(sourceUrl, item.displayedLink);
+            if (!sourceDomain || sourceDomain === domain) continue;
+            // Check if already in list
+            if (!backlinks.some((b) => b.source_url === sourceUrl)) {
+              backlinks.push({
+                source_url: sourceUrl,
+                source_domain: sourceDomain,
+                anchor_text: item.title ?? null,
+                first_seen: null,
+              });
             }
           }
         }
@@ -142,6 +185,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
       backlinks,
       total_backlinks: backlinks.length,
       referring_domains_count: referringDomains.size,
+      unresolved_link_count: unresolvedLinkCount,
       top_anchors: topAnchors,
       dofollow_estimate: null,
       nofollow_estimate: null,

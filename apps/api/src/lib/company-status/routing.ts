@@ -201,7 +201,7 @@ export const EXCLUDED_COUNTRIES: Readonly<Record<string, string>> = {
   CH: "the Zefix status vocabulary could not be verified in this build; Zefix needs credentials that were not available to test against",
   DE: "data-access checks for the German source (OpenRegister, a vendor register API) are recorded as pending, and its free tier is a small monthly quota that a composite call would spend",
   ES: "data-access checks for the Spanish source (a vendor aggregation of BORME) are recorded as pending",
-  JP: "the Japanese source is a page scrape with checks recorded as pending",
+  JP: "the official NTA API credential and live status verification are pending; enable Japan routing after the orchestrator verifies the replacement",
   GR: "the status field in the underlying executor does not report deleted / deregistered / liquidating entities (deriveStatus tests the Greek word for active before the one for inactive, so an inactive company is reported active); fix tracked separately",
   SI: "the Slovenian open dataset carries no status column",
   SK: "the Slovak register publishes no status flag; the executor infers one from validity dates",

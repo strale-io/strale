@@ -84,7 +84,7 @@ async function main() {
   await server.connect(transport);
 
   console.error(
-    `[strale-mcp] Server running on stdio (6 meta-tools, ${capabilities.length} capabilities, ${solutions.length} solutions)`,
+    `[strale-mcp] Server running on stdio (${capabilities.length} capabilities, ${solutions.length} solutions)`,
   );
 }
 

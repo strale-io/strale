@@ -26,6 +26,7 @@
 // per-call responses) + c:/tmp/openapi-coverage-probe-v3-2026-05-15.json
 // (ES/PT-Advanced response shapes verified).
 
+import { assertPaidCallAllowed } from "../../lib/paid-call-guard.js";
 import { log } from "../../lib/log.js";
 
 export type OpenapiProduct =
@@ -539,6 +540,7 @@ async function callProduct<T>(
   url: string,
   bearer: string,
 ): Promise<CallResult<T>> {
+  assertPaidCallAllowed("openapi"); // billed per call; never from Strale's own tests
   const r = await fetch(url, {
     headers: { Authorization: `Bearer ${bearer}` },
     signal: AbortSignal.timeout(15_000),

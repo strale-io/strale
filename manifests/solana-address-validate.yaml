@@ -85,9 +85,8 @@ output_field_reliability:
 limitations:
   - title: Format only — no on-chain check, no checksum
     text: >-
-      Solana addresses have no checksum (unlike Bitcoin/Ethereum). A single-character typo will produce a different but
-      still structurally-valid address. Validation cannot detect typos — it can only confirm the input decodes to 32
-      bytes via base58.
+      Checks only that the base58 input decodes to 32 bytes; Solana addresses have no checksum.
+      Single-character typos can remain structurally valid and are not detected.
     category: accuracy
     severity: warning
     workaround: For high-stakes flows, verify the address controls funds via an on-chain lookup before sending.

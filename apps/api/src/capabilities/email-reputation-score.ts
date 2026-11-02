@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // Disposable email domain list (subset — comprehensive enough for scoring)
@@ -35,7 +36,7 @@ const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0
 
 registerCapability("email-reputation-score", async (input: CapabilityInput) => {
   const email = ((input.email as string) ?? (input.task as string) ?? "").trim().toLowerCase();
-  if (!email) throw new Error("'email' is required.");
+  if (!email) throw inputRefusal("'email' is required.", "email", "Send 'email' as an email address such as person@example.com.");
 
   const emailValid = EMAIL_RE.test(email) && email.length <= 254;
   if (!emailValid) {

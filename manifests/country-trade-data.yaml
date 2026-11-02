@@ -148,7 +148,7 @@ output_field_reliability:
   total_imports_usd: guaranteed
   trade_balance_usd: guaranteed
 limitations:
-  - title: Trade statistics are based on AI knowledge and may lag 6-12 months behind actual trade flows
+  - title: Trade figures can lag by 6–12 months
     text: Trade statistics based on AI knowledge — most recent data may lag 6-12 months behind actual trade flows
     category: freshness
     severity: info

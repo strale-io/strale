@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.strale-io/company-check",
+  "title": "Strale Company Check",
+  "description": "Look up companies in official business registers by country, with LEI, VAT and name screening.",
+  "repository": {
+    "url": "https://github.com/strale-io/strale",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.strale.io/mcp/company-check?src=mcp-registry"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { createConnection } from "node:net";
 
@@ -64,7 +65,7 @@ function extractDates(whoisText: string): { created: Date | null; expires: Date 
 
 registerCapability("domain-age-check", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-  if (!domain) throw new Error("'domain' is required.");
+  if (!domain) throw inputRefusal("'domain' is required.", "domain", "Send 'domain' as a DNS hostname such as example.com.");
 
   const tld = domain.split(".").pop() ?? "";
   const server = TLD_SERVERS[tld];

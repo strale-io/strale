@@ -31,6 +31,7 @@
  * or none do.
  */
 
+import { normaliseSignupSource } from "./signup-source.js";
 import { eq } from "drizzle-orm";
 
 import { users } from "../db/schema.js";
@@ -88,6 +89,7 @@ export async function createAccount(
   params: {
     email: string;
     name?: string | null;
+    signupSrc?: string | null;
     /** Exact-address hash, stored on the users row for abuse investigation. */
     ipHash: string | null;
     /** Bucketed hash (IPv6 counted by /64) the trial cap measures against. */
@@ -115,6 +117,7 @@ export async function createAccount(
           apiKeyHash,
           keyPrefix,
           signupIpHash: params.ipHash,
+          signupSrc: normaliseSignupSource(params.signupSrc),
           // Cert-audit G7: account creation is acceptance of the in-force
           // Terms version, recorded at the moment the row is written.
           tosAcceptedAt: acceptedAt,

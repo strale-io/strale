@@ -1,6 +1,6 @@
 slug: credit-score-band
 name: "Credit Score Band"
-description: "Translate a FICO, VantageScore, Experian or Equifax score into a common risk band with an estimated percentile."
+description: "Map a supplied credit score to a risk band using supported scoring systems. Returns the band, estimated percentile and interpretation."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none
@@ -85,7 +85,7 @@ limitations:
     category: accuracy
     severity: info
   - title: US and UK systems only
-    text: "Supports FICO, VantageScore (US), Experian, Equifax (UK) — other national credit systems not covered"
+    text: "The `system` input supports fico and vantagescore for the US, and experian and equifax for the UK. Other national credit systems are not covered."
     category: coverage
     severity: info
 

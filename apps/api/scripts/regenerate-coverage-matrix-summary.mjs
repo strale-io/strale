@@ -12,6 +12,7 @@
  * structural-enforcement layer per DEC-20260517-A.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -109,7 +110,7 @@ function render(rows) {
   ].join("\n");
 }
 
-const rows = loadRows();
+const rows = requireInputs(loadRows(), "coverage summary: matrix rows");
 const content = render(rows) + "\n";
 
 if (check) {

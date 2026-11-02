@@ -136,8 +136,8 @@ describe("outages and transient failures still count against the capability", ()
 
   it("no per-country marker exists in the breaker, so the manifest says one registry can pause the check for all", () => {
     const m = yaml.load(readFileSync(resolve(import.meta.dirname, "..", "..", "..", "..", "..", "manifests", "company-status-check.yaml"), "utf8")) as any;
-    const lim = m.limitations.find((l: any) => l.title === "A failing registry can pause the check for every country");
-    expect(lim.text).toMatch(/pause the check\s+for all countries/);
+    const lim = m.limitations.find((l: any) => l.title === "One registry outage can pause all country checks");
+    expect(lim.text).toMatch(/pause checks for every\s+country/);
   });
 });
 

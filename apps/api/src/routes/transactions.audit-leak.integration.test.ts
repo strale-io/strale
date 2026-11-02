@@ -1,3 +1,4 @@
+import { walletReservations } from "../db/schema.js";
 /**
  * The response must not hand the caller a redacted string and an un-redacted
  * one in the same body.
@@ -91,6 +92,7 @@ describeMaybe("GET /v1/transactions/:id does not leak the raw error", () => {
     }
     seededSolutions.length = 0;
     for (const { userId, walletId } of seeded) {
+      await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
       await db.delete(transactions).where(eq(transactions.userId, userId));
       await db.delete(walletTransactions).where(eq(walletTransactions.walletId, walletId));
       await db.delete(wallets).where(eq(wallets.id, walletId));

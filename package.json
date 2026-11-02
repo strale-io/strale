@@ -14,7 +14,7 @@
     "mcp:build": "npm run build --workspace=packages/mcp-server",
     "mcp:dev": "npm run dev --workspace=packages/mcp-server",
     "test": "npm run test --workspace=apps/api",
-    "typecheck": "npm run typecheck --workspace=apps/api && npm run typecheck:scripts --workspace=apps/api && npm run typecheck --workspace=packages/sdk-typescript && npm run typecheck --workspace=packages/langchain && npm run typecheck --workspace=packages/semantic-kernel-strale && npm run typecheck --workspace=packages/mcp-server",
+    "typecheck": "npm run typecheck --workspace=apps/api && npm run typecheck:scripts --workspace=apps/api && npm run typecheck --workspace=packages/sdk-typescript && npm run typecheck --workspace=packages/langchain && npm run typecheck --workspace=packages/semantic-kernel-strale && npm run typecheck --workspace=packages/mcp-server && npm run typecheck --workspace=packages/ai-sdk-strale && npm run typecheck --workspace=packages/cli",
     "validate:coverage-matrix": "node apps/api/scripts/validate-coverage-matrix.mjs",
     "coverage-matrix:summary": "node apps/api/scripts/regenerate-coverage-matrix-summary.mjs",
     "coverage-matrix:check": "npm run validate:coverage-matrix && npm run coverage-matrix:summary -- --check",
@@ -33,6 +33,8 @@
     "env:check": "node scripts/check-env.mjs",
     "env:test": "node --test scripts/env.test.mjs",
     "env:example": "node scripts/generate-env-example.mjs",
+    "vendor-terms:check": "node scripts/check-vendor-terms.mjs",
+    "vendor-terms:test": "node --test scripts/check-vendor-terms.test.mjs",
     "vendors:check": "node scripts/check-vendors.mjs",
     "vendors:test": "node --test scripts/vendors.test.mjs",
     "vendors:view": "node scripts/generate-vendor-view.mjs",
@@ -49,6 +51,7 @@
     "scheduled:outcomes:test": "node --test scripts/scheduled-outcomes.test.mjs",
     "distribution:check": "node scripts/check-distribution.mjs",
     "distribution:test": "node --test scripts/distribution.test.mjs",
+    "clay:test": "node --test examples/clay-enrichment/template.test.mjs",
     "models:check": "node apps/api/scripts/check-model-literals.mjs",
     "models:test": "node --test apps/api/scripts/check-model-literals.test.mjs",
     "claims:check": "node scripts/check-claims.mjs",
@@ -67,7 +70,11 @@
     "handoff:orient": "node scripts/handoff/orient.mjs",
     "handoff:baseline": "node scripts/handoff/handoff-check.mjs baseline",
     "hooks:install": "node scripts/handoff/install-hooks.mjs",
-    "prepare": "node scripts/handoff/install-hooks.mjs || exit 0"
+    "prepare": "node scripts/handoff/install-hooks.mjs || exit 0",
+    "gates:test": "node --test scripts/empty-inputs.test.mjs scripts/ci/boot-probe.test.mjs scripts/ci/boot-workflow.test.mjs scripts/ci/docs-only-scanner-gate.test.mjs scripts/provision-verify-role.test.mjs",
+    "verify-role:check": "node scripts/provision-verify-role.mjs --check",
+    "anthropic:check": "node apps/api/scripts/check-anthropic-client.mjs",
+    "anthropic:test": "node --test apps/api/scripts/check-anthropic-client.test.mjs"
   },
   "license": "MIT",
   "engines": {

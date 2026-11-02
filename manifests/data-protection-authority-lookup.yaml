@@ -61,7 +61,7 @@ output_field_reliability:
   contact_email: guaranteed
   authority_name: guaranteed
 limitations:
-  - title: Covers EU/EEA national DPAs only — sub-national authorities like German Länder DPAs are not included
+  - title: Sub-national data protection authorities are excluded
     text: Covers all EU/EEA member state DPAs — does not include sub-national authorities (e.g., German Länder DPAs)
     category: coverage
     severity: info

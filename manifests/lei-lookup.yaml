@@ -102,7 +102,7 @@ output_field_reliability:
   jurisdiction: guaranteed
   legal_address: guaranteed
 limitations:
-  - title: Only approximately 2.5 million entities worldwide have LEIs via GLEIF, primarily financial institutions
+  - title: Only entities registered for an LEI are covered
     text: >-
       Covers entities with LEI registration via GLEIF — only ~2.5 million entities worldwide have LEIs, primarily
       financial institutions

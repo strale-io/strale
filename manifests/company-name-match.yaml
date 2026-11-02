@@ -1,6 +1,6 @@
 slug: company-name-match
 name: "Company Name Match"
-description: "Tell whether two company names are the same company, allowing for Ltd and Limited, AB and Aktiebolag, Inc, GmbH and the like. Returns a match confidence."
+description: "Compare two company names, allowing for common legal suffixes and spelling differences. Returns similarity scores and normalised names."
 category: data-processing
 cost_class: free_unlimited
 quota_window: none

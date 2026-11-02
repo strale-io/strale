@@ -1,0 +1,79 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "8178f2d8ba97da951434be0d2b04756bedf7aea3"
+  },
+  "at": "2026-10-29T00:04:59.911Z",
+  "inputs": {
+    "source": "/var/tmp/d7receipt.json"
+  },
+  "summary": {
+    "commit": "8178f2d8",
+    "independent_review": "fresh read-only Claude agent, GO WITH NITS; should-fix items fixed in this branch"
+  },
+  "topic": "d7-narrow-mcp-entry-points",
+  "raw": {
+    "commit": "8178f2d8",
+    "api_vitest": {
+      "files_passed": 380,
+      "files_skipped": 37,
+      "tests_passed": 7727,
+      "tests_skipped": 363,
+      "failed": 0
+    },
+    "mcp_server_node_test": {
+      "passed": 4,
+      "failed": 0
+    },
+    "mutation_tests": [
+      {
+        "file": "packages/mcp-server/src/entry-points.ts",
+        "mutation": "drop src=mcp-<id> override",
+        "result": "caught"
+      },
+      {
+        "file": "apps/api/src/routes/mcp.ts",
+        "mutation": "funnelPrefix always /mcp",
+        "result": "caught"
+      },
+      {
+        "file": "packages/mcp-server/src/tools.ts",
+        "mutation": "always emit next_steps",
+        "result": "caught"
+      },
+      {
+        "file": "packages/mcp-server/src/entry-points.ts",
+        "mutation": "register missing slugs",
+        "result": "caught"
+      },
+      {
+        "file": "apps/api/src/app.ts",
+        "mutation": "remove /mcp/* body limit",
+        "result": "caught"
+      },
+      {
+        "file": "apps/api/src/routes/mcp.ts",
+        "mutation": "drop publicBaseUrl",
+        "result": "caught"
+      },
+      {
+        "file": "apps/api/src/lib/metrics/metrics.ts",
+        "mutation": "funnel ignores /mcp/<id> rows",
+        "result": "caught"
+      }
+    ],
+    "checks": {
+      "typecheck": 0,
+      "claims_check": 0,
+      "programs_check": 0,
+      "check_framework_packages": 0
+    },
+    "registry_validate": {
+      "company-check": "valid",
+      "eu-vat-check": "valid",
+      "web-reader": "valid"
+    },
+    "independent_review": "fresh read-only Claude agent, GO WITH NITS; should-fix items fixed in this branch"
+  }
+}

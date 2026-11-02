@@ -283,6 +283,7 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
     // the streaming core's own bodyless fallback (also class B)
     "lib/resource-limits.ts": 1,
     // internal operations — our schedule, our accounts, no caller involved
+    "lib/alert-bus.ts": 1, // api.github.com, our bus repo, ≤5 pages of ≤100 channel issues
     "lib/daily-digest/fetch-beacon.ts": 2,
     "lib/daily-digest/fetch-ecosystem.ts": 4,
     "lib/daily-digest/fetch-notion.ts": 4,

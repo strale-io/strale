@@ -1,8 +1,6 @@
 slug: google-news-search
 name: Google News Search
-description: >-
-  Search Google News via a licensed SERP API. Returns ranked news results with source, relative
-  publish time, snippet and image, with optional country/language scoping and time-range filters.
+description: "Search Google News results by query, country, language and time range. Returns headlines, sources, snippets and relative publication times."
 category: web-scraping
 cost_class: paid_prepaid
 quota_window: none
@@ -73,6 +71,10 @@ output_schema:
     results:
       type: array
       description: Ranked news results (title, url, source, relative publish time, snippet, image_url)
+    unresolved_url_count:
+      type: number
+    link_resolution_attempted:
+      type: boolean
 test_fixtures:
   known_answer:
     input:
@@ -92,6 +94,13 @@ output_field_reliability:
   country: guaranteed
   result_count: guaranteed
   results: guaranteed
+  # Google's `/goto` redirect wrapper (2026-10-30): links past the top
+  # three come back opaque and are resolved through Serper's free
+  # `/resolve`. These say what resolution could not open, so a caller
+  # never has to read an absent link as an absent result.
+  unresolved_url_count: guaranteed
+  link_resolution_attempted: guaranteed
+
 limitations:
   - title: Publish times are relative strings, not timestamps
     text: >-
@@ -100,7 +109,7 @@ limitations:
       article.
     category: accuracy
     severity: info
-  - title: Result mix depends on Google News ranking, not a stable corpus
+  - title: Results vary with Google News rankings
     text: >-
       Coverage and ordering follow Google News's own ranking for the query/locale; re-running the
       same query can return different results. This is a discovery surface, not an archive.
@@ -112,5 +121,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: serper
-  checks: pending
-  checks_note: "Pending DQ-39: Serper.dev's terms are not yet recorded as permitting resale (apps/api/src/lib/vendor-terms.ts)."
+  checks: recorded
+  checks_note: "Serper.dev (google.serper.dev) per-call search API. Serper confirmed in writing on 2026-10-27 that use as an upstream source within a value-added per-call API is permitted under its standard terms (DQ-39, accepted 2026-10-28; recorded in apps/api/src/lib/vendor-terms.ts). Results are processed into Strale's own schema, one search per request, never passed through as-is; Google's own rights are not granted by Serper."

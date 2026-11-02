@@ -29,16 +29,44 @@
 import { describe, expect, it, vi } from "vitest";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { dbErrorMessage } from "./db-error.js";
 
 // Mock the DB layer so the orchestrator-level test below can inject a
 // stub executor via getDb(). Per-block tests pass their stub directly
 // into the per-block function and don't touch getDb, so they're not
 // affected by this mock.
 const mockGetDb = vi.fn();
+// vi.mock is hoisted above module init, so the handler the db mock returns
+// has to be hoisted with it.
+const { noticeHandler } = vi.hoisted(() => ({ noticeHandler: vi.fn() }));
+vi.mock("../db/pg-notice.js", () => ({ handlePgNotice: noticeHandler }));
 vi.mock("../db/index.js", () => ({
-  getDb: () => mockGetDb(),
+  getDb: () => ({ ...mockGetDb(), $client: { options: { connection: { statement_timeout: 30_000 } } } }),
   closeDbPool: () => Promise.resolve(),
 }));
+
+// Every options object the runner builds a client with, so a test can prove
+// the notice handler is actually wired. On 2026-10-30 it was added to
+// getDb()'s pool only, which emits almost no notices — the DDL burst comes
+// from these two runner-owned clients, so the boot log did not get quieter.
+const { clientOptions } = vi.hoisted(() => ({
+  clientOptions: [] as Array<Record<string, unknown>>,
+}));
+
+// The runner uses a dedicated lock session; per-block tests stay DB-free.
+vi.mock("postgres", () => ({ default: (_url: string, options: { connection: { statement_timeout: number } }) => (
+  clientOptions.push(options as unknown as Record<string, unknown>), {
+  options: { parsers: {}, serializers: {} },
+  reserve: async () => ({
+    unsafe: async (text: string) => {
+      if (options.connection.statement_timeout === 5_000) return [{ acquired: true }];
+      if (text.startsWith("SELECT set_config") || text === "RESET lock_timeout") return [];
+      return mockGetDb.mock.results.at(-1)!.value.execute(sql.raw(text));
+    },
+    release() {},
+  }),
+  end: async () => {},
+}) }));
 
 import {
   BLOCKS,
@@ -81,6 +109,7 @@ import {
   runMigration0121_phase0CatalogueRepairs,
   runMigration0122_correctSanctionsSourceCopy,
   runMigration0123_catalogueCopy,
+  runMigration0124_publicDescriptions,
   DQ36_OLD_SANCTIONS_DESCRIPTION,
   DQ36_NEW_SANCTIONS_DESCRIPTION,
   DQ36_OLD_SANCTIONS_DATA_SOURCE,
@@ -93,12 +122,21 @@ import {
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
-import { BLOCK_0064_SLUGS } from "./llm-capability-costs.js";
+import { BLOCK_0064_SLUGS } from "../startup-migrations/data/llm-capability-costs.js";
 import {
   CATALOGUE_COPY_0123_CAPABILITIES,
   CATALOGUE_COPY_0123_SOLUTIONS,
-} from "./catalogue-copy-0123.js";
+} from "../startup-migrations/data/catalogue-copy-0123.js";
 
+import { PUBLIC_DESCRIPTIONS_0124, UNLISTED_DESCRIPTIONS_0124 } from "../startup-migrations/data/public-descriptions-0124.js";
+
+const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124].map((r) => [r.slug, r.description]));
+// Tools delisted after blocks 0123/0124 froze their copy. Their manifests gain
+// the "Currently unavailable. " prefix that public-descriptions.test.ts
+// requires of every DEACTIVATED slug; the frozen block data does not change.
+const DELISTED_AFTER_0124 = new Set(["price-compare"]);
+const pinnedManifestDescription = (slug: string, description: string) =>
+  DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description;
 const dialect = new PgDialect();
 
 /** Capture SQL chunks issued through the stub. Returns canned values
@@ -124,7 +162,7 @@ function makeStub(canned: { default?: unknown; queue?: unknown[] }) {
 }
 
 // Block 0028 (sqs_daily_snapshot) tests retired with the SQS engine
-// (DEC-20260503-B). The table is dropped in PR2.
+// (DEC-20260503-B). The table was dropped by block 0132.
 
 describe("startup-migrations — block 0029 (actual_cost_cents)", () => {
   it("first run: adds column when information_schema reports absence", async () => {
@@ -703,19 +741,19 @@ describe("startup-migrations — phase-b1-free-unlimited-slugs list", () => {
     // count was 180 on 2026-05-12. A future audit refresh might add or
     // remove a few caps; the test stays green within reason but flags
     // a wholesale loss (e.g., empty list or 300+ caps surprise).
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     expect(PHASE_B1_FREE_UNLIMITED_SLUGS.length).toBeGreaterThan(150);
     expect(PHASE_B1_FREE_UNLIMITED_SLUGS.length).toBeLessThan(220);
   });
 
   it("list is alphabetically sorted (audit-trail discipline)", async () => {
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const sorted = [...PHASE_B1_FREE_UNLIMITED_SLUGS].sort();
     expect(PHASE_B1_FREE_UNLIMITED_SLUGS).toEqual(sorted);
   });
 
   it("list has no duplicates", async () => {
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const unique = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     expect(unique.size).toBe(PHASE_B1_FREE_UNLIMITED_SLUGS.length);
   });
@@ -828,7 +866,7 @@ describe("startup-migrations — phase-b2 slug lists (audit-trail invariants)", 
 
   it("B.2 slug lists do not overlap with B.1 free_unlimited", async () => {
     const { PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const b1Set = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     for (const cap of PHASE_B2_FREE_QUOTA_HIGH_CONF) {
       expect(b1Set.has(cap.slug), `${cap.slug} appears in BOTH B.1 and B.2 free_quota`).toBe(false);
@@ -887,26 +925,26 @@ describe("startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)
     // LLM-backed fleet means this number is naturally ~80; a future
     // audit refresh might add or remove a few. Bounds match the chat-
     // approved 50-100 range from Phase B.3 prompt.
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
     expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeGreaterThan(50);
     expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeLessThan(100);
   });
 
   it("list is alphabetically sorted (audit-trail discipline)", async () => {
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
     const sorted = [...PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS].sort();
     expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS).toEqual(sorted);
   });
 
   it("list has no duplicates", async () => {
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
     const unique = new Set(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS);
     expect(unique.size).toBe(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length);
   });
 
   it("does not overlap with B.1 free_unlimited or B.2 free_quota/free_unlimited", async () => {
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
     const { PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
 
     const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
@@ -1011,8 +1049,8 @@ describe("startup-migrations — phase-b4 low-conf free_quota cap list (invarian
 
   it("does not overlap with B.1 / B.2 / B.3 slug lists", async () => {
     const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS, PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
 
     const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
@@ -1205,8 +1243,8 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
     const { PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS, PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS,
             PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF,
             PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
-    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("../startup-migrations/data/phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
 
     const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
     const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
@@ -1385,7 +1423,7 @@ describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 57 blocks in historical order", () => {
+  it("exports the expected ledgered blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1459,7 +1497,44 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0121_phase0CatalogueRepairs",
       "runMigration0122_correctSanctionsSourceCopy",
       "runMigration0123_catalogueCopy",
+      "runMigration0124_publicDescriptions",
+      "runMigration0125_apiKeys",
+      "runMigration0126_signupSource",
+      "runMigration0127_integrityHashIndex",
+      "runMigration0128_manifestTextHash",
+      "runMigration0129_transactionCost",
+      "runMigration0130_syncWalletHolds",
+      "runMigration0131_startupMigrationApplied",
+      "runMigration0132_dropSqsResidualSchema",
+      "runMigration0133_oauthConnector",
+      "runMigration0134_renameCapabilityHealthToSourceHealth",
+      "runMigration0135_batchOrders",
+      "runMigration0136_asyncJobFiles",
+      "runMigration0137_completeComplianceColumns",
+      "runMigration0138_redactedRowDeletionReason",
+      "runMigration0139_redeleteCustomerDeletedRedactedRows",
+      "runMigration0140_deactivatePriceCompare",
+      "runMigration0141_dropCapabilityHealthCompatView",
+      "runMigration0142_canadianPaidCallSuites",
     ]);
+  });
+});
+
+describe("startup-migrations — block 0135 (batch orders)", () => {
+  it("creates the table and the per-account key index idempotently", async () => {
+    const { runMigration0135_batchOrders } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{}, {}] });
+    const result = await runMigration0135_batchOrders(stub);
+    const [tableSql, indexSql] = stub.renderedSql.map((s) => s.toLowerCase());
+    expect(tableSql).toContain("create table if not exists batch_orders");
+    expect(tableSql).toContain("item_reservation_ids jsonb not null");
+    expect(indexSql).toContain("create unique index if not exists batch_orders_user_idempotency_key_unique");
+    expect(indexSql).toContain("where idempotency_key is not null");
+    expect(result.block).toBe("0135_batchOrders");
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
   });
 });
 
@@ -1586,7 +1661,7 @@ describe("startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invaria
       PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS,
       PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS,
     } = await import("./startup-migrations.js");
-    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("../startup-migrations/data/phase-b3-anthropic-paid-prepaid-slugs.js");
 
     const others = new Set<string>([
       ...PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug),
@@ -1743,6 +1818,41 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
   // fix: if a future engineer wraps the BLOCKS for-loop in a try/catch
   // (turning the orchestrator into catch-and-continue), this test fails.
 
+  it("wires the pg notice handler onto every client it builds", async () => {
+    // The boot blocks are idempotent DDL, so each boot emits a burst of
+    // "already exists, skipping" notices. Unhandled, postgres-js prints each
+    // as a raw multi-line console object, which crossed Railway's
+    // 500-logs/sec-per-replica limit and made it drop real log lines —
+    // including the one error that would have explained an unrelated
+    // production failure. Handling it on getDb()'s pool alone did nothing,
+    // because these runner-owned clients are what emit them.
+    clientOptions.length = 0;
+    // mockReturnValue, not ...Once: this file has no beforeEach reset, so a
+    // single queued value is consumed by whichever test runs first and the
+    // run then carries on into real blocks. CI proved that — it reached block
+    // 0062 and failed on its post-condition instead of here. Every getDb()
+    // must throw for the first block to abort deterministically, and the mock
+    // is reset afterwards so later tests still see the bare default.
+    mockGetDb.mockReturnValue({
+      async execute() {
+        throw new Error("stop after the clients are built");
+      },
+    });
+    try {
+      await expect(runStartupMigrations()).rejects.toThrow(
+        /stop after the clients are built/
+      );
+    } finally {
+      mockGetDb.mockReset();
+    }
+    expect(clientOptions.length).toBeGreaterThan(0);
+    for (const options of clientOptions) {
+      expect(options.onnotice, "every runner client needs onnotice").toBe(
+        noticeHandler
+      );
+    }
+  });
+
   it("propagates a throw from a block (executor-level failure on first query)", async () => {
     // Stub getDb() to return an executor whose every execute() throws.
     // Block 0028 runs first; its information_schema check is the very
@@ -1754,9 +1864,10 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
       },
     });
 
-    await expect(runStartupMigrations()).rejects.toThrow(
-      /simulated executor failure on first query/,
-    );
+    await expect(runStartupMigrations().catch((err) => {
+      // The reserved executor preserves drizzle's wrapper; inspect its cause.
+      throw new Error(dbErrorMessage(err));
+    })).rejects.toThrow(/simulated executor failure on first query/);
   });
 
   it("propagates a post-condition violation thrown by a later block", async () => {
@@ -1776,6 +1887,7 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
     //   0062: UPDATE risk-narrative-generate → {count: 0}      [7]
     //   0062: SELECT remaining_zero → 1 → THROWS               [8]
     const queue: unknown[] = [
+      [{ present: false }], // runner: startup_migration_applied not created yet
       [{ cnt: "1" }],
       [{ cnt: "1" }],
       undefined,
@@ -2271,9 +2383,8 @@ describe("startup-migrations — block identity is unique, not just the function
   const BLOCK_ID_RE = /const BLOCK = "([^"]+)"/g;
 
   it("no two blocks share a ledger id", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const { readMigrationsSourceText } = await import("./migration-artifact-audit.js");
+    const src = readMigrationsSourceText();
     const ids = [...src.matchAll(BLOCK_ID_RE)].map((m) => m[1]);
     expect(ids.length).toBeGreaterThanOrEqual(2);
     expect(new Set(ids).size, `duplicate ledger ids: ${ids.join(", ")}`).toBe(ids.length);
@@ -2283,9 +2394,8 @@ describe("startup-migrations — block identity is unique, not just the function
     // The label is what the deploy log and the admin endpoint report. Distinct
     // ledger ids with duplicate labels would make the log ambiguous about which
     // migration ran, which is the same failure one layer out.
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const { readMigrationsSourceText } = await import("./migration-artifact-audit.js");
+    const src = readMigrationsSourceText();
     // Resolved, not just literal. Four return sites write `block: BLOCK,` where
     // BLOCK is a const -- and one of those four is
     // runMigration0100_relistUrlToMarkdown, the exact block the collision was
@@ -2304,7 +2414,10 @@ describe("startup-migrations — block identity is unique, not just the function
     // had already run -- the ledger collision, arriving through the query
     // instead of through the id. Production's ledger holds 0100 today, so this
     // is not hypothetical.
-    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{BLOCK\}/g)];
+    // Exact on the block's own id, or on one of block 0132's two named
+    // retirement keys (exact keys, written by the build that removed the SQS
+    // fields).
+    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{(?:BLOCK|SQS_RETIREMENT_MARKER|SQS_RETIREMENT_LAST_BEAT)\}/g)];
     const anyLedgerRead = [...src.matchAll(/FROM startup_migration_ledger WHERE /g)];
     expect(lookups.length).toBe(anyLedgerRead.length);
     expect(lookups.length).toBeGreaterThanOrEqual(2);
@@ -2342,7 +2455,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(123);
+    expect(Math.max(...numbers)).toBe(142);
   });
 });
 
@@ -2448,11 +2561,9 @@ describe("startup-migrations — block 0101 runs its one-shot work exactly once"
     // future boot would skip the purge gate with the unprotected era intact.
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
-    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
-    const block = src.slice(
-      src.indexOf("export async function runMigration0101_capabilityInvocations"),
-      src.indexOf("export const BLOCKS"),
-    );
+    const src = readFileSync(
+      resolve(import.meta.dirname, "../startup-migrations/blocks/0101-capability-invocations.ts"), "utf8");
+    const block = src.slice(src.indexOf("export async function runMigration0101_capabilityInvocations"));
     const verify = block.indexOf("if (triggerCount !== 1)");
     const ledger = block.indexOf("INSERT INTO startup_migration_ledger");
     expect(verify).toBeGreaterThan(-1);
@@ -3186,7 +3297,7 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     ) as { description: string; data_source: string };
     const row0123 = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.slug === "sanctions-check")!;
     expect(row0123.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
-    expect(manifest.description).toBe(row0123.description);
+    expect(manifest.description).toBe(latestDescriptions.get("sanctions-check") ?? row0123.description);
     expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
   });
 
@@ -3373,7 +3484,7 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
         readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8"),
       ) as { name: string; description: string };
       expect(manifest.name, r.slug).toBe(r.name);
-      expect(manifest.description, r.slug).toBe(r.description);
+      expect(manifest.description, r.slug).toBe(pinnedManifestDescription(r.slug, latestDescriptions.get(r.slug) ?? r.description));
     }
     expect(CATALOGUE_COPY_0123_CAPABILITIES.length).toBe(296);
     // password-strength's offered copy says the password is never stored; inputs are kept 90 days.
@@ -3439,5 +3550,249 @@ describe("startup-migrations: block 0123 (catalogue copy)", () => {
     // The seed generator no longer produces the old templates either.
     const seed = readFileSync(new URL("../../scripts/seed-kyb-solutions.ts", import.meta.url), "utf8");
     expect(seed).not.toMatch(/verification for \$\{c\.name\}|fraud detection for \$\{c\.name\}|checks for \$\{c\.name\} companies|invoices from \$\{c\.name\}/);
+  });
+});
+
+// Block 0123's SQL remains frozen; only the latest manifest target advances.
+describe("startup-migrations: block 0124 (public descriptions)", () => {
+  it("runs after 0123 and skips all writes on a later boot", async () => {
+    expect(BLOCKS.indexOf(runMigration0124_publicDescriptions)).toBe(BLOCKS.indexOf(runMigration0123_catalogueCopy) + 1);
+    const stub = makeStub({ queue: [{}, [{ block: "0124_publicDescriptions" }]] });
+    const result = await runMigration0124_publicDescriptions(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("already applied once");
+    expect(stub.captured).toHaveLength(2);
+  });
+
+  it("updates description only, matching both slug and exact production text with scalar binds", async () => {
+    const stub = makeStub({ queue: [{}, [], [{ slug: "one" }], []] });
+    const result = await runMigration0124_publicDescriptions(stub);
+    expect(stub.captured).toHaveLength(4);
+    const update = dialect.sqlToQuery(stub.captured[2]);
+    expect(update.sql).toMatch(/UPDATE capabilities AS c\s+SET description = v\.new_value\s+FROM \(VALUES /);
+    expect(update.sql).toMatch(/WHERE c\.slug = v\.slug\s+AND c\.description = v\.old_value\s+RETURNING c\.slug/);
+    expect(update.sql.match(/\bSET\b([\s\S]+?)\bFROM\b/i)?.[1].trim()).toBe("description = v.new_value");
+    expect(update.sql).not.toMatch(/updated_at|\bANY\s*\(/i);
+    expect(update.params).toEqual(PUBLIC_DESCRIPTIONS_0124.flatMap((r) => [r.slug, r.old_description, r.description]));
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(typeof p === "string" || typeof p === "number").toBe(true);
+        expect(Array.isArray(p) || p instanceof Date || Buffer.isBuffer(p)).toBe(false);
+      }
+    }
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toContain(`${PUBLIC_DESCRIPTIONS_0124.length - 1} left alone`);
+    expect(dialect.sqlToQuery(stub.captured[3]).params).toEqual(["0124_publicDescriptions", 1]);
+  });
+
+  it("records zero matching rows and skips an empty change set without invalid VALUES SQL", async () => {
+    const stub = makeStub({ queue: [{}, [], [], []] });
+    expect((await runMigration0124_publicDescriptions(stub)).rows_affected).toBe(0);
+    const empty = makeStub({ queue: [{}, [], []] });
+    expect((await runMigration0124_publicDescriptions(empty, [])).rows_affected).toBe(0);
+    expect(empty.captured).toHaveLength(3);
+    expect(empty.renderedSql.some((q) => /UPDATE capabilities/i.test(q))).toBe(false);
+  });
+
+  it("propagates update errors without recording success", async () => {
+    const stub = makeStub({ queue: [{}, []] });
+    const error = new Error("copy update failed");
+    const original = stub.execute;
+    stub.execute = async (q) => {
+      if (/UPDATE capabilities/.test(dialect.sqlToQuery(q).sql)) throw error;
+      return original(q);
+    };
+    await expect(runMigration0124_publicDescriptions(stub)).rejects.toBe(error);
+    expect(stub.renderedSql.some((q) => /INSERT INTO startup_migration_ledger/i.test(q))).toBe(false);
+  });
+
+  it("pins every changed manifest, keeps frozen 0123 history, and gives unlisted tools no guessed guard", async () => {
+    const { readFileSync } = await import("node:fs");
+    const yaml = (await import("js-yaml")).default;
+    const seen = new Set<string>();
+    for (const r of [...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DESCRIPTIONS_0124]) {
+      expect(seen.has(r.slug), r.slug).toBe(false);
+      seen.add(r.slug);
+      const manifest = yaml.load(readFileSync(new URL(`../../../../manifests/${r.slug}.yaml`, import.meta.url), "utf8")) as { description: string };
+      expect(manifest.description, r.slug).toBe(pinnedManifestDescription(r.slug, r.description));
+      expect(r.description.length, r.slug).toBeGreaterThanOrEqual(50);
+      expect(r.description.length, r.slug).toBeLessThanOrEqual(160);
+    }
+    expect(PUBLIC_DESCRIPTIONS_0124.length).toBeGreaterThan(0);
+    for (const r of UNLISTED_DESCRIPTIONS_0124) expect(r).not.toHaveProperty("old_description");
+    for (const r of PUBLIC_DESCRIPTIONS_0124) {
+      expect(r.old_description, r.slug).not.toBe(r.description);
+      const previous = CATALOGUE_COPY_0123_CAPABILITIES.find((p) => p.slug === r.slug);
+      if (previous) expect(r.old_description, r.slug).toBe(previous.description);
+    }
+  });
+});
+
+
+describe("startup-migrations — manifest text checkpoint", () => {
+  it("adds only a bare nullable column with an existence guard and safe bind parameters", async () => {
+    const { runMigration0128_manifestTextHash } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: [] });
+    await runMigration0128_manifestTextHash(stub);
+    const statement = stub.renderedSql.join("\n").toLowerCase();
+    expect(statement).toContain("if not exists");
+    expect(statement).toContain("add column manifest_text_hash text;");
+    expect(statement).toContain("set_config('lock_timeout', '3s', true)");
+    expect(statement).not.toMatch(/default|not null|update capabilities/);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter(c => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations — block 0129 (marginal transaction costs)", () => {
+  it("adds only bare nullable columns under schema guards, with no backfill or unsafe binds", async () => {
+    const { runMigration0129_transactionCost } = await import("./startup-migrations.js");
+    const statements: SQL[] = [];
+    await runMigration0129_transactionCost({ execute: async (q: SQL) => { statements.push(q); return []; } });
+    expect(statements).toHaveLength(1);
+    const q = new PgDialect().sqlToQuery(statements[0]!);
+    expect(q.sql).toContain("ADD COLUMN cost_cents numeric(24,9)");
+    expect(q.sql).toContain("ADD COLUMN cost_breakdown jsonb");
+    expect(q.sql.match(/IF NOT EXISTS/g)).toHaveLength(2);
+    expect(q.sql.match(/set_config\('lock_timeout', '3s', true\)/g)).toHaveLength(2);
+    expect(q.sql).not.toMatch(/DEFAULT|NOT NULL|UPDATE transactions/i);
+    expect(q.params.some((v) => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
+  });
+});
+
+
+describe("H4 startup-migrations — block 0130", () => {
+  it("adds hold mode and key attribution with branch-local lock limits, no backfill and scalar binds", async () => {
+    const { runMigration0130_syncWalletHolds } = await import("./startup-migrations.js");
+    const statements: SQL[] = [];
+    await runMigration0130_syncWalletHolds({ execute: async (q: SQL) => { statements.push(q); return []; } });
+    expect(statements).toHaveLength(8);
+    const q = new PgDialect().sqlToQuery(statements[0]!);
+    const branches = q.sql.split("IF NOT EXISTS").slice(1);
+    expect(branches).toHaveLength(3);
+    for (const branch of branches) {
+      expect(branch.indexOf("set_config('lock_timeout', '3s', true)")).toBeGreaterThan(0);
+      expect(branch.indexOf("ALTER TABLE")).toBeGreaterThan(branch.indexOf("set_config"));
+    }
+    expect(q.sql).toContain("ADD COLUMN mode varchar(8) NOT NULL DEFAULT 'debit'");
+    expect(q.sql).toContain("ADD COLUMN api_key_id uuid");
+    expect(q.sql).toContain("ADD COLUMN x402_execution_attempts jsonb");
+    expect(q.sql).not.toMatch(/UPDATE transactions/i);
+    const ddl = statements.map(s => new PgDialect().sqlToQuery(s).sql).join("\n");
+    expect(ddl).toContain("CREATE INDEX CONCURRENTLY IF NOT EXISTS transactions_x402_execution_attempt_hash_idx");
+    expect(ddl).toContain("WHERE x402_execution_attempts IS NOT NULL");
+    expect(ddl).toContain("NOT i.indisvalid");
+    expect(ddl).toContain("RESET lock_timeout");
+    expect(q.sql).not.toMatch(/UPDATE wallet_reservations/i);
+    expect(q.params.some(v => v instanceof Date || Buffer.isBuffer(v))).toBe(false);
+  });
+
+  it("skips all index DDL when the index is already valid", async () => {
+    const { runMigration0130_syncWalletHolds } = await import("./startup-migrations.js");
+    const statements: SQL[] = [];
+    await runMigration0130_syncWalletHolds({ execute: async (q: SQL) => {
+      statements.push(q);
+      return new PgDialect().sqlToQuery(q).sql.includes("indisvalid") ? [{ indisvalid: true }] : [];
+    } });
+    const ddl = statements.map(st => new PgDialect().sqlToQuery(st).sql).join("\n");
+    expect(statements).toHaveLength(2);
+    expect(ddl).not.toContain("CREATE INDEX");
+    expect(ddl).not.toContain("SET lock_timeout");
+  });
+});
+
+describe("startup-migrations — block 0134 (capability_health → source_health)", () => {
+  it("renames and creates the old-name view in one statement, so the old name never resolves to nothing", async () => {
+    const { runMigration0134_renameCapabilityHealthToSourceHealth } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [[{ old_kind: "r", new_present: false }], [{ row_count: 312, bytes: "98304" }], []] });
+    const result = await runMigration0134_renameCapabilityHealthToSourceHealth(stub);
+    expect(result.outcome).toBe("renamed capability_health to source_health (312 rows, 98304 bytes) and left a capability_health view");
+    expect(stub.renderedSql).toHaveLength(3);
+    const ddl = stub.renderedSql[2];
+    expect(ddl).toMatch(/^\s*DO \$rename\$/);
+    const rename = ddl.indexOf("ALTER TABLE capability_health RENAME TO source_health");
+    const view = ddl.indexOf("CREATE VIEW capability_health AS SELECT * FROM source_health");
+    expect(rename).toBeGreaterThan(-1);
+    expect(view).toBeGreaterThan(rename);
+    // Re-checked inside the statement, so a second runner cannot rename twice.
+    expect(ddl).toContain("IF (SELECT relkind FROM pg_class WHERE oid = to_regclass('capability_health')) = 'r' THEN");
+  });
+
+  it("skips once capability_health is the view, and on a fresh database", async () => {
+    const { runMigration0134_renameCapabilityHealthToSourceHealth } = await import("./startup-migrations.js");
+    for (const [kind, outcome] of [
+      ["v", "skipped (capability_health is relkind v; source_health present)"],
+      [null, "skipped (capability_health is absent; source_health present)"],
+    ] as const) {
+      const stub = makeStub({ queue: [[{ old_kind: kind, new_present: true }]] });
+      const result = await runMigration0134_renameCapabilityHealthToSourceHealth(stub);
+      expect(result.outcome).toBe(outcome);
+      expect(stub.renderedSql).toHaveLength(1);
+    }
+  });
+
+  it("refuses to rename when source_health already exists beside the table", async () => {
+    const { runMigration0134_renameCapabilityHealthToSourceHealth } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [[{ old_kind: "r", new_present: true }]] });
+    await expect(runMigration0134_renameCapabilityHealthToSourceHealth(stub)).rejects.toThrow(/both exist/);
+    expect(stub.renderedSql).toHaveLength(1);
+  });
+});
+
+describe("startup-migrations: block 0140 (deactivate price-compare)", () => {
+  it("delists exactly price-compare from every surface and records the reason", async () => {
+    const { runMigration0140_deactivatePriceCompare, PRICE_COMPARE_DEACTIVATION_REASON } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    const result = await runMigration0140_deactivatePriceCompare(stub);
+
+    expect(stub.renderedSql).toHaveLength(1);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("update capabilities");
+    expect(rendered).toContain("is_active = false");
+    expect(rendered).toContain("visible = false");
+    expect(rendered).toContain("x402_enabled = false");
+    expect(rendered).toContain("where slug = 'price-compare'");
+    expect(rendered).not.toMatch(/slug (in|like|<>|!=)/);
+    expect(PRICE_COMPARE_DEACTIVATION_REASON).toContain("DEC-20261023-A");
+    expect(dialect.sqlToQuery(stub.captured[0]).params).toContain(PRICE_COMPARE_DEACTIVATION_REASON);
+    expect(result.block).toBe("0140_deactivatePriceCompare");
+    expect(result.rows_affected).toBe(1);
+  });
+
+  it("still records the reason after the boot sync has cleared the flags", async () => {
+    // auto-register's DEACTIVATED sync runs before startup migrations and
+    // clears the three flags without writing a reason; a flags-only guard
+    // would match nothing and the once-policy would then retire the block.
+    const { runMigration0140_deactivatePriceCompare, PRICE_COMPARE_DEACTIVATION_REASON } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0140_deactivatePriceCompare(stub);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("or deactivation_reason is distinct from");
+    const params = dialect.sqlToQuery(stub.captured[0]).params;
+    expect(params.filter((p) => p === PRICE_COMPARE_DEACTIVATION_REASON)).toHaveLength(2);
+  });
+
+  it("is idempotent: only a row still listed or missing its reason matches", async () => {
+    const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0140_deactivatePriceCompare(stub);
+    const rendered = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(rendered).toContain("and (is_active = true or visible = true or x402_enabled = true or deactivation_reason is distinct from");
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("binds no Date or Buffer parameter (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0140_deactivatePriceCompare } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0140_deactivatePriceCompare(stub);
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(p instanceof Date).toBe(false);
+        expect(Buffer.isBuffer(p)).toBe(false);
+      }
+    }
   });
 });

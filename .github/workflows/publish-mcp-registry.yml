@@ -1,0 +1,116 @@
+name: Publish (MCP registry)
+
+# Keeps Strale's entry in the official MCP registry
+# (registry.modelcontextprotocol.io, name io.github.strale-io/strale) in step
+# with the strale-mcp package on npm. The entry is server.json at the repo root.
+#
+# Runs after a successful "Release (npm)" run for a strale-mcp@<version> tag,
+# and on demand. It publishes only a version that is already on npm, that
+# server.json names, and that the registry does not already have, so a rerun
+# is a no-op. Authentication is GitHub OIDC: the registry accepts it for the
+# io.github.strale-io/* namespace because this workflow runs in strale-io.
+# No token is stored. See docs/release/npm-publishing.md.
+
+on:
+  workflow_run:
+    workflows: ["Release (npm)"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # On workflow_run, head_branch is the tag that triggered the release.
+    # A manual run publishes only from main. The registry trusts any workflow
+    # in the strale-io organization, so this keeps an accidental dispatch
+    # from a feature branch from publishing that branch's server.json.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'strale-mcp@'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required: the registry login exchanges this OIDC identity
+    env:
+      # Pinned on purpose; upgrade deliberately, never via releases/latest.
+      MCP_PUBLISHER_VERSION: v1.8.1
+      RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      # Default branch: server.json for a release is bumped on main before the tag.
+      - uses: actions/checkout@v4
+
+      - name: Decide what to publish
+        id: plan
+        run: |
+          set -euo pipefail
+          version=$(jq -r '.version' server.json)
+          pkg_version=$(jq -r '.packages[] | select(.identifier == "strale-mcp") | .version' server.json)
+          if [ "$version" != "$pkg_version" ]; then
+            echo "::error::server.json version $version does not match its strale-mcp package version $pkg_version"
+            exit 1
+          fi
+          if ! cmp -s server.json packages/mcp-server/server.json; then
+            echo "::error::server.json and packages/mcp-server/server.json differ; keep the two copies identical"
+            exit 1
+          fi
+          if [ -n "${RELEASE_TAG}" ] && [ "${RELEASE_TAG}" != "strale-mcp@${version}" ]; then
+            echo "::error::Released ${RELEASE_TAG} but server.json on main says ${version}. Bump both server.json copies on main, then run this workflow by hand."
+            exit 1
+          fi
+          # Right after a release npm can lag a little; give it a minute.
+          on_npm=false
+          for attempt in 1 2 3 4 5; do
+            if npm view "strale-mcp@${version}" version >/dev/null 2>&1; then on_npm=true; break; fi
+            sleep 15
+          done
+          if [ "$on_npm" != true ]; then
+            echo "::error::strale-mcp@${version} is not on npm; the registry would reject it"
+            exit 1
+          fi
+          listed=$(curl --fail --silent --show-error --get \
+            --data-urlencode "search=io.github.strale-io/strale" --data-urlencode "limit=100" \
+            "https://registry.modelcontextprotocol.io/v0/servers" \
+            | jq -r --arg v "$version" '[(.servers // [])[] | select(.server.name == "io.github.strale-io/strale" and .server.version == $v)] | length')
+          if [ "$listed" != "0" ]; then
+            echo "Registry already lists ${version}; nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishing ${version} to the MCP registry."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install cosign
+        if: steps.plan.outputs.publish == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        if: steps.plan.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+
+      - name: Authenticate to the MCP registry
+        if: steps.plan.outputs.publish == 'true'
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        if: steps.plan.outputs.publish == 'true'
+        run: ./mcp-publisher publish

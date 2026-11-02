@@ -105,9 +105,9 @@ limitations:
     text: Insolvency checks currently only available for UK companies via Companies House
     category: coverage
     severity: warning
-    workaround: For other jurisdictions, use the relevant country's company registry data capability
-  - title: Requires Companies House API key
-    text: UK insolvency checks require COMPANIES_HOUSE_API_KEY environment variable
+    workaround: Check the relevant national insolvency register directly for companies outside the UK.
+  - title: UK checks depend on registry access
+    text: UK checks require access to the Companies House API and are unavailable if that connection is not configured.
     category: dependency
     severity: info
 

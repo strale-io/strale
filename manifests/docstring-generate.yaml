@@ -76,8 +76,8 @@ output_field_reliability:
   documented_code: guaranteed
   functions_documented: guaranteed
 limitations:
-  - title: AI-generated docstrings may not capture non-obvious side effects, thread safety, or exception behavior
-    text: AI-generated docstrings — may not capture non-obvious side effects, thread safety, or exception behavior
+  - title: Side effects and exception details can be missed
+    text: AI-generated docstrings — may not capture non-obvious side effects, thread safety, or exception behaviour
     category: accuracy
     severity: info
     workaround: Review generated docstrings for accuracy and add implementation-specific warnings or notes manually

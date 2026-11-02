@@ -1,6 +1,7 @@
+import { runWithoutPaidCalls } from "../lib/paid-call-guard.js";
+import { isValidAdminAuth } from "../lib/admin-auth.js";
 import { Hono } from "hono";
 import { eq, and, desc, sql, asc, inArray } from "drizzle-orm";
-import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -48,13 +49,7 @@ function setCache<T>(key: string, data: T): void {
 }
 
 /** Constant-time comparison for admin auth to prevent timing attacks. */
-function isValidAdminAuth(auth: string | undefined): boolean {
-  if (!auth || !ADMIN_SECRET) return false;
-  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
-  const provided = Buffer.from(auth, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
+
 
 // ─── Schedule intervals for next_scheduled_run computation ──────────────────
 const TIER_INTERVAL_MS: Record<string, number> = {
@@ -1138,7 +1133,7 @@ internalTestsRoute.post("/recalibrate", async (c) => {
           executionError = gateError.slice(0, 200);
         } else {
           try {
-            const result = await executor(resolution.input);
+            const result = await runWithoutPaidCalls("internal_test", () => executor(resolution.input));
             if (result?.output && Object.keys(result.output).length > 0) {
               realOutput = result.output;
             }
@@ -1383,7 +1378,8 @@ internalTestsRoute.post("/admin/apply-migrations", async (c) => {
   const { runStartupMigrations } = await import("../lib/startup-migrations.js");
 
   try {
-    const blocks = await runStartupMigrations();
+    // Emergency re-run: every block, including ones recorded as applied.
+    const blocks = await runStartupMigrations({ force: true });
     return c.json({
       ok: true as const,
       block_count: blocks.length,

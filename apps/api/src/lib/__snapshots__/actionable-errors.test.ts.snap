@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`common error envelopes remain stable with additive advice 1`] = `
+[
+  {
+    "details": {
+      "docs_url": "https://strale.dev/docs",
+      "fix": "Top up the wallet at https://strale.dev/dashboard or pay per call over x402 using a URL from /x402/catalog.",
+      "required_cents": 5,
+      "wallet_balance_cents": 0,
+    },
+    "error_code": "insufficient_balance",
+    "message": "Wallet balance is too low.",
+  },
+  {
+    "details": {
+      "fix": "Send 'inputs' with the required fields: email.",
+      "missing_fields": [
+        "email",
+      ],
+      "required_fields": [
+        "email",
+      ],
+    },
+    "error_code": "invalid_request",
+    "message": "Missing required input fields: email",
+  },
+  {
+    "details": {
+      "fix": "Retry after 2026-10-27T12:00:10.000Z.",
+      "retry_after_seconds": 10,
+      "retryable": true,
+    },
+    "error_code": "rate_limited",
+    "message": "Rate limit exceeded.",
+  },
+  {
+    "details": {
+      "fix": "Choose a 'capability_slug' from GET /v1/capabilities and set 'max_price_cents' to at least its 'price_cents', or describe the task more specifically.",
+    },
+    "error_code": "no_matching_capability",
+    "message": "No capability found matching your request within budget.",
+  },
+  {
+    "details": {
+      "fix": "Send a valid API key in the Authorization: Bearer <api_key> header; recover a lost key with POST /v1/auth/recover.",
+    },
+    "error_code": "unauthorized",
+    "message": "Invalid API key.",
+  },
+  {
+    "details": {
+      "fix": "Ask the account owner to raise 'max_spend_total_cents' with PATCH /v1/api-keys/:id using the primary key, or use another key.",
+      "limit_cents": 10,
+      "requested_cents": 5,
+      "retryable": false,
+      "spent_cents": 10,
+    },
+    "error_code": "key_total_cap_exceeded",
+    "message": "This key's total spend limit would be exceeded.",
+  },
+]
+`;

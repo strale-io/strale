@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.strale-io/eu-vat-check",
+  "title": "Strale EU VAT Check",
+  "description": "Check EU VAT numbers with official services, plus VAT rates, EORI numbers and IBANs.",
+  "repository": {
+    "url": "https://github.com/strale-io/strale",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.strale.io/mcp/eu-vat-check?src=mcp-registry"
+    }
+  ]
+}

@@ -1,15 +1,17 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import * as dns from "node:dns/promises";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim();
-  if (!domain) throw new Error("'domain' is required.");
+  if (!domain) throw inputRefusal("'domain' is required.", "domain", "Send 'domain' as a DNS hostname such as example.com.");
 
   const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   const fullUrl = `https://${cleanDomain}`;
@@ -73,7 +75,7 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

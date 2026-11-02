@@ -115,13 +115,13 @@ output_field_reliability:
   overall_score: guaranteed
   security_flags: guaranteed
 limitations:
-  - title: AI review may miss subtle logic errors that require full codebase context to identify
+  - title: Subtle or context-dependent bugs can be missed
     text: AI-powered review may miss subtle logic errors or context-dependent bugs that require full codebase understanding
     category: accuracy
     severity: warning
     workaround: Use as a first-pass filter to catch common issues, then follow up with human review for critical code paths
-  - title: Reviews individual code snippets only — cannot analyze cross-file dependencies or architecture
-    text: Reviews individual code snippets — cannot analyze cross-file dependencies or architectural patterns
+  - title: Cross-file dependencies and architecture are not reviewed
+    text: Reviews individual code snippets — cannot analyse cross-file dependencies or architectural patterns
     category: coverage
     severity: info
     workaround: Provide surrounding context or interface definitions in the input to improve review accuracy for coupled code

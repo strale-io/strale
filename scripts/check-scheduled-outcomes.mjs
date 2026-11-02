@@ -32,6 +32,7 @@
 //       check that found nothing. An individual workflow that cannot be read
 //       is exit 1 and a named finding, never a blanket exit 2 — one renamed
 //       workflow must not hide every other workflow's result.
+import { requireInputs } from "./require-inputs.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
@@ -72,6 +73,7 @@ if (runsJsonFlag.present && runsJsonFlag.value === null) {
 
 const root = repoRootFrom(import.meta.url);
 const { workflows, unreadable: discoveryFindings } = scheduledWorkflows(root);
+requireInputs(workflows.length + discoveryFindings.length, "scheduled outcomes: scheduled workflows");
 
 let runsByWorkflow;
 let fetchFindings = [];

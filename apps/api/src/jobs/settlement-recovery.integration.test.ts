@@ -122,6 +122,20 @@ describeMaybe("a crashed x402 settlement is recoverable", () => {
     expect(intent!.state).toBe("recorded");
   }, 120_000);
 
+  it.each(["v1_do", "x402"] as const)("preserves the %s receipt rail on a stranded claim", async (rail) => {
+    const settlementId = `wp5-set-${randomUUID().slice(0, 8)}`;
+    const { paymentHash } = await seedIntent({ state: "settled", settlementId });
+    const [claim] = await db.insert(transactions).values({
+      userId: null, capabilityId: null, status: "executing", input: {}, priceCents: 0,
+      paymentMethod: "x402", x402PaymentHash: paymentHash, receiptRail: rail,
+    }).returning({ id: transactions.id });
+
+    await reconcile();
+    const [row] = await db.select({ id: transactions.id, rail: transactions.receiptRail, status: transactions.status })
+      .from(transactions).where(eq(transactions.x402SettlementId, settlementId));
+    expect(row).toEqual({ id: claim!.id, rail, status: "failed" });
+  }, 120_000);
+
   it("does not recover it twice when the discharge itself was lost", async () => {
     // Review finding: the first version of this test ran reconcile() twice and
     // claimed to prove idempotent recovery. It could not — after the first tick

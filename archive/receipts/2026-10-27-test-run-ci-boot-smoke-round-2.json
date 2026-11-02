@@ -1,0 +1,490 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b45057945565d4e317696d52799e115b9632f959"
+  },
+  "at": "2026-10-27T16:31:00.442Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "tests_ok": true,
+    "api_passed": 6459,
+    "api_skipped": 346,
+    "api_failed": 0,
+    "api_duration_seconds": 284.78,
+    "api_files_passed": 349,
+    "api_files_skipped": 33,
+    "root_tests_passed": 785,
+    "touched_migration_tests_passed": 213,
+    "probe_workflow_tests_passed": 17,
+    "root_commands_run": 60,
+    "actionlint_passed": true,
+    "explicit_api_tsc_passed": true,
+    "real_boot_verified": false,
+    "egress_execution_verified": false,
+    "handoff_gate_passed": false
+  },
+  "topic": "ci-boot-smoke-round-2",
+  "raw": {
+    "tests_ok": true,
+    "api_passed": 6459,
+    "api_skipped": 346,
+    "api_failed": 0,
+    "api_duration_seconds": 284.78,
+    "api_files_passed": 349,
+    "api_files_skipped": 33,
+    "root_tests_passed": 785,
+    "touched_migration_tests_passed": 213,
+    "probe_workflow_tests_passed": 17,
+    "root_commands_run": 60,
+    "actionlint_passed": true,
+    "explicit_api_tsc_passed": true,
+    "real_boot_verified": false,
+    "egress_execution_verified": false,
+    "handoff_gate_passed": false,
+    "inputs": {
+      "branch": "feat/ci-boot-smoke",
+      "state": "uncommitted Round 2",
+      "review": "archive/sessions/2026-10-27-ci-boot-smoke-review.md"
+    },
+    "raw": {
+      "root_commands": [
+        {
+          "command": "npm --workspace=packages/mcp-server run build",
+          "exit_code": 0,
+          "duration_ms": 3736,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm --workspace=packages/sdk-typescript run build",
+          "exit_code": 0,
+          "duration_ms": 2651,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run typecheck",
+          "exit_code": 0,
+          "duration_ms": 62471,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+          "exit_code": 0,
+          "duration_ms": 1476,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-bare-catch",
+          "exit_code": 0,
+          "duration_ms": 392,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+          "exit_code": 0,
+          "duration_ms": 258,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+          "exit_code": 0,
+          "duration_ms": 85,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run lint:no-new-console",
+          "exit_code": 0,
+          "duration_ms": 430,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+          "exit_code": 0,
+          "duration_ms": 250,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-framework-packages.mjs",
+          "exit_code": 0,
+          "duration_ms": 44,
+          "tests_passed": 0
+        },
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit_code": 1,
+          "duration_ms": 749,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+          "exit_code": 0,
+          "duration_ms": 1621,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+          "exit_code": 0,
+          "duration_ms": 819,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+          "exit_code": 0,
+          "duration_ms": 129,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+          "exit_code": 0,
+          "duration_ms": 374,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-pii.mjs --strict",
+          "exit_code": 0,
+          "duration_ms": 520,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+          "exit_code": 0,
+          "duration_ms": 494,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+          "exit_code": 0,
+          "duration_ms": 416,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-shape-contracts.mjs",
+          "exit_code": 0,
+          "duration_ms": 78,
+          "tests_passed": 0
+        },
+        {
+          "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+          "exit_code": 0,
+          "duration_ms": 481,
+          "tests_passed": 0
+        },
+        {
+          "command": "node scripts/guard-production-write-access.mjs",
+          "exit_code": 0,
+          "duration_ms": 302,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run programs:check",
+          "exit_code": 0,
+          "duration_ms": 664,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run programs:test",
+          "exit_code": 0,
+          "duration_ms": 4175,
+          "tests_passed": 30
+        },
+        {
+          "command": "npm run research:check",
+          "exit_code": 0,
+          "duration_ms": 1639,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run research:test",
+          "exit_code": 0,
+          "duration_ms": 8668,
+          "tests_passed": 31
+        },
+        {
+          "command": "npm run design:check",
+          "exit_code": 0,
+          "duration_ms": 2221,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run design:test",
+          "exit_code": 0,
+          "duration_ms": 12892,
+          "tests_passed": 84
+        },
+        {
+          "command": "npm run env:check",
+          "exit_code": 0,
+          "duration_ms": 1009,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run env:test",
+          "exit_code": 0,
+          "duration_ms": 1759,
+          "tests_passed": 24
+        },
+        {
+          "command": "npm run vendors:check",
+          "exit_code": 0,
+          "duration_ms": 1626,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run vendors:test",
+          "exit_code": 0,
+          "duration_ms": 4631,
+          "tests_passed": 78
+        },
+        {
+          "command": "npm run distribution:check",
+          "exit_code": 0,
+          "duration_ms": 497,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run distribution:test",
+          "exit_code": 0,
+          "duration_ms": 618,
+          "tests_passed": 15
+        },
+        {
+          "command": "npm run digest:shadow:test",
+          "exit_code": 0,
+          "duration_ms": 431,
+          "tests_passed": 20
+        },
+        {
+          "command": "npm run candidates:test",
+          "exit_code": 0,
+          "duration_ms": 384,
+          "tests_passed": 3
+        },
+        {
+          "command": "npm run protocols:check",
+          "exit_code": 0,
+          "duration_ms": 380,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run protocols:test",
+          "exit_code": 0,
+          "duration_ms": 525,
+          "tests_passed": 12
+        },
+        {
+          "command": "npm run protocols:coverage",
+          "exit_code": 0,
+          "duration_ms": 504,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run protocols:coverage:test",
+          "exit_code": 0,
+          "duration_ms": 1370,
+          "tests_passed": 16
+        },
+        {
+          "command": "npm run scheduled:check",
+          "exit_code": 0,
+          "duration_ms": 476,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run scheduled:test",
+          "exit_code": 0,
+          "duration_ms": 1180,
+          "tests_passed": 43
+        },
+        {
+          "command": "npm run scheduled:outcomes:test",
+          "exit_code": 0,
+          "duration_ms": 1712,
+          "tests_passed": 24
+        },
+        {
+          "command": "npm run models:check",
+          "exit_code": 0,
+          "duration_ms": 445,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run models:test",
+          "exit_code": 0,
+          "duration_ms": 534,
+          "tests_passed": 14
+        },
+        {
+          "command": "npm run claims:check",
+          "exit_code": 0,
+          "duration_ms": 2766,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run claims:test",
+          "exit_code": 0,
+          "duration_ms": 4136,
+          "tests_passed": 33
+        },
+        {
+          "command": "npm run docs:check",
+          "exit_code": 0,
+          "duration_ms": 321,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run docs:test",
+          "exit_code": 0,
+          "duration_ms": 662,
+          "tests_passed": 6
+        },
+        {
+          "command": "npm run archive:index:test",
+          "exit_code": 0,
+          "duration_ms": 796,
+          "tests_passed": 12
+        },
+        {
+          "command": "npm run receipts:check",
+          "exit_code": 0,
+          "duration_ms": 29305,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run receipts:test",
+          "exit_code": 0,
+          "duration_ms": 11343,
+          "tests_passed": 25
+        },
+        {
+          "command": "npm run migrations:check",
+          "exit_code": 0,
+          "duration_ms": 486,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run migrations:test",
+          "exit_code": 0,
+          "duration_ms": 1236,
+          "tests_passed": 24
+        },
+        {
+          "command": "npm run gates:test",
+          "exit_code": 0,
+          "duration_ms": 33151,
+          "tests_passed": 65
+        },
+        {
+          "command": "npm run handoff:test",
+          "exit_code": 0,
+          "duration_ms": 42493,
+          "tests_passed": 46
+        },
+        {
+          "command": "npm run context:check",
+          "exit_code": 0,
+          "duration_ms": 12799,
+          "tests_passed": 0
+        },
+        {
+          "command": "npm run context:test",
+          "exit_code": 0,
+          "duration_ms": 196759,
+          "tests_passed": 180
+        },
+        {
+          "command": "npm run handoff:check",
+          "exit_code": 1,
+          "duration_ms": 2636,
+          "tests_passed": 0
+        },
+        {
+          "command": "audit-output/ci-boot-smoke/actionlint .github/workflows/ci.yml",
+          "exit_code": 0,
+          "duration_ms": 9,
+          "tests_passed": 0
+        },
+        {
+          "command": "git diff --check",
+          "exit_code": 0,
+          "duration_ms": 63,
+          "tests_passed": 0
+        }
+      ],
+      "additional_checks": [
+        {
+          "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+          "result": "passed retry with relative TMPDIR; initial absolute TMPDIR exceeded Unix socket path limit"
+        },
+        {
+          "command": "node --import tsx apps/api/scripts/check-ceo-brief.ts",
+          "exit_code": 0
+        },
+        {
+          "command": "node scripts/generate-archive-index.mjs --check",
+          "exit_code": 0
+        },
+        {
+          "command": "npm --workspace=apps/api run build",
+          "exit_code": 0
+        },
+        {
+          "command": "cd apps/api && npx tsc --noEmit",
+          "exit_code": 0
+        },
+        {
+          "command": "cd apps/api && npx vitest run src/lib/startup-integrity-index.test.ts src/lib/startup-migrations.test.ts",
+          "exit_code": 0,
+          "passed": 213
+        },
+        {
+          "command": "node --test scripts/ci/boot-probe.test.mjs scripts/ci/boot-workflow.test.mjs",
+          "exit_code": 0,
+          "passed": 17
+        },
+        {
+          "command": "cd apps/api && npx vitest run --maxWorkers=2",
+          "exit_code": 1,
+          "passed": 6458,
+          "skipped": 346,
+          "failed": 1,
+          "duration_seconds": 297.76,
+          "reason": "author supplied localhost FRONTEND_URL; existing URL fixture requires CI test URL"
+        },
+        {
+          "command": "cd apps/api && npx vitest run --maxWorkers=2",
+          "exit_code": 0,
+          "passed": 6459,
+          "skipped": 346,
+          "failed": 0,
+          "duration_seconds": 284.78,
+          "environment": "CI test FRONTEND_URL=https://strale.dev"
+        },
+        {
+          "command": "npm run context:test (redundant repeat)",
+          "exit_code": 130,
+          "result": "cancelled after original finished with 180 passing tests"
+        }
+      ],
+      "local_boot_attempt": {
+        "postgres_version": 16,
+        "initdb": "blocked: runuser cannot set groups; UID/GID maps contain only root",
+        "disposable_db_guard": "failed: ECONNREFUSED",
+        "drizzle_push": "attempted; no live database; incomplete",
+        "seed_dist_boot_probe": "not executed after DB initialization failure",
+        "docker": "local daemon socket unavailable",
+        "boot_ms": "unavailable",
+        "database_directories_removed": true
+      },
+      "handoff_findings": [
+        "dirty checkout",
+        "trunk branch topology",
+        "no feature upstream",
+        "existing merged local/remote branches",
+        "fetch unavailable; remote findings may be stale"
+      ],
+      "branch_protection": "not read; require check if not already required; no list change needed when check is already required"
+    }
+  }
+}

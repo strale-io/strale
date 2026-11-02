@@ -475,13 +475,13 @@ adminRoute.get("/platform-status", async (c) => {
     // Circuit breakers
     db.execute(sql`
       SELECT ch.state, ch.capability_slug AS slug, ch.opened_at, ch.consecutive_failures, ch.next_retry_at
-      FROM capability_health ch
+      FROM source_health ch
     `),
     // Free tier with breaker state
     db.execute(sql`
       SELECT c.slug, ch.state, ch.opened_at
       FROM capabilities c
-      LEFT JOIN capability_health ch ON ch.capability_slug = c.slug
+      LEFT JOIN source_health ch ON ch.capability_slug = c.slug
       WHERE c.is_active = true AND c.is_free_tier = true
     `),
     // Suspended details
@@ -667,7 +667,7 @@ adminRoute.post("/reset-circuit-breaker", async (c) => {
 
   const db = getDb();
   const result = await db.execute(sql`
-    UPDATE capability_health
+    UPDATE source_health
     SET state = 'closed', consecutive_failures = 0, updated_at = NOW()
     WHERE capability_slug = ${body.slug}
     RETURNING capability_slug, state, consecutive_failures

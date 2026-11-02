@@ -97,7 +97,7 @@ output_field_reliability:
   key_points: guaranteed
   word_count: guaranteed
 limitations:
-  - title: AI-generated summaries may omit nuances or context-dependent details from long or technical documents
+  - title: Summaries can omit nuances and important details
     text: AI-generated summaries may omit nuances or context-dependent details from very long or technical documents
     category: accuracy
     severity: info

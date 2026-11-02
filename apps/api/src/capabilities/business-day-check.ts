@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getHolidays } from "./holiday-calendar.js";
 
@@ -26,17 +27,17 @@ function addDays(d: Date, n: number): Date {
 registerCapability("business-day-check", async (input: CapabilityInput) => {
   const dateStr = ((input.date as string) ?? (input.task as string) ?? "").trim();
   if (!dateStr) {
-    throw new Error("'date' is required (YYYY-MM-DD format).");
+    throw inputRefusal("'date' is required (YYYY-MM-DD format).", "date", "Send 'date' as a date in YYYY-MM-DD format.");
   }
 
   const countryCode = ((input.country_code as string) ?? (input.country as string) ?? "").trim().toUpperCase();
   if (!countryCode || countryCode.length !== 2) {
-    throw new Error("'country_code' is required (ISO 2-letter code).");
+    throw inputRefusal("'country_code' is required (ISO 2-letter code).", "country_code", "Send 'country_code' as a 2-letter ISO country code such as SE.");
   }
 
   const date = new Date(dateStr + "T00:00:00Z");
   if (isNaN(date.getTime())) {
-    throw new Error("Invalid date format. Use YYYY-MM-DD.");
+    throw inputRefusal("Invalid date format. Use YYYY-MM-DD.", "date", "Send 'date' as a valid calendar date in YYYY-MM-DD format.");
   }
 
   const year = date.getFullYear();

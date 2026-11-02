@@ -4,12 +4,14 @@
 // the contract) never fail the build.
 //
 // Usage: node scripts/check-research.mjs [--json]
+import { requireInputs } from "./require-inputs.mjs";
 import { checkAllResearch, repoRootFrom, README_PATH } from "./research-lib.mjs";
 import { generateIndex } from "./generate-research-index.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { failures, warnings, records } = checkAllResearch(root);
+requireInputs(records, "research: docs/research/*.md");
 
 const indexResult = generateIndex(root, { check: true });
 if (indexResult.stale) {

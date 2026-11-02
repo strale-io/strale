@@ -109,17 +109,15 @@ output_field_reliability:
   company_name: guaranteed
   activity_codes: guaranteed
 limitations:
-  - title: Sourced via the ReceitaWS vendor wrapper, not directly from Receita Federal
+  - title: Data comes through a third-party provider
     text: >-
-      This capability uses ReceitaWS, a third-party JSON wrapper of the Brazilian Receita Federal CNPJ register.
-      Underlying records are statutory public records, but a first-party ingest of the official Receita Federal CNPJ
-      open-data files (dados.gov.br) is the longer-term target.
+      This tool reads Receita Federal CNPJ public-register records through ReceitaWS rather than
+      directly from Receita Federal.
     category: provenance
     severity: info
-  - title: ReceitaWS free tier rate-limits aggressively
+  - title: Rate limit is about 3 requests per minute
     text: >-
-      ReceitaWS's free tier limits unauthenticated calls to roughly 3 per minute. Bursty traffic may receive HTTP 429.
-      Higher limits require a paid ReceitaWS plan or migration to direct Receita Federal CNPJ open data.
+      ReceitaWS limits these calls to roughly 3 per minute. Bursts can receive HTTP 429.
     category: reliability
     severity: warning
   - title: Personal-name data should not be used for direct marketing

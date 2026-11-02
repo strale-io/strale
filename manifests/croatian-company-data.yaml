@@ -145,7 +145,7 @@ output_field_reliability:
   short_name: common
   email: rare
 limitations:
-  - title: Board members and ownership require paid extract from Sudski registar
+  - title: Board and ownership details require a paid extract
     text: >-
       Public OAuth2 API returns entity profile, addresses, legal form, activity codes, and registered capital, but does
       not expose board members (uprava) or shareholders. Board composition and beneficial ownership require the paid
@@ -155,12 +155,11 @@ limitations:
     workaround: Use the MBS/OIB to order a certified extract from sudreg.pravosudje.hr
   - title: Lookup requires OIB or MBS (no name search)
     text: >-
-      The capability dispatches on OIB (11 digits) or MBS (numeric court registry number). Name-based search is not
-      offered because the upstream /subjekti endpoint is a case-sensitive SQL LIKE match — unsuitable for production
-      fuzzy lookup.
+      Lookup requires an OIB (11 digits) or MBS (numeric court registry number). Company-name search
+      is not supported.
     category: coverage
     severity: info
-    workaround: Resolve the company to an OIB via an upstream name-resolver, then pass the OIB.
+    workaround: Find the OIB or MBS on an official company document or in the Croatian Court Register.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

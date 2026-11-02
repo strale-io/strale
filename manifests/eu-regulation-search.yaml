@@ -80,15 +80,14 @@ output_field_reliability:
   result_count: guaranteed
   regulations: guaranteed
 limitations:
-  - title: Title-based matching — legislation whose title doesn't name the topic may be missed
+  - title: Topics absent from legislation titles can be missed
     text: >-
-      Queries are matched against official English titles (all words must appear). Legislation known by an abbreviation
-      not present in its title (e.g. "AI" for the Artificial Intelligence Act) or covering a topic not named in the
-      title will not be found. Query with the spelled-out subject matter.
+      All query words must appear in the official English title. Abbreviations or topics absent from
+      that title are missed, so spell out the subject in full.
     category: coverage
     severity: warning
     workaround: Use full subject words ("artificial intelligence", not "AI"); add the year filter to narrow results
-  - title: Covers adopted sector-3 legislation only — proposals, corrigenda, and consolidated texts are excluded
+  - title: Only adopted sector-3 legislation is covered
     text: >-
       Results are restricted to adopted regulations, directives, and decisions (CELEX sector 3). Draft proposals (COM
       documents), corrigenda, communications, and consolidated versions are excluded by design.

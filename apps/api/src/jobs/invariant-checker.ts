@@ -1,3 +1,4 @@
+import { noteJobFailure } from "../lib/job-run-context.js";
 /**
  * Self-Healing Invariant Checker
  *
@@ -14,7 +15,7 @@
 
 import { sql, eq, and, or, inArray, asc, isNull, isNotNull, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, solutionSteps, testResults, testSuites, capabilityHealth, healthMonitorEvents } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps, testResults, testSuites, sourceHealth, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { sendAlert } from "../lib/alerting.js";
 import { alertOnce } from "../lib/alert-once.js";
@@ -64,6 +65,7 @@ export async function runInvariantChecks(): Promise<void> {
       }
     }
   } catch (err) {
+    noteJobFailure();
     jobLog.warn(
       { label: "invariant-provider-health-fetch-failed", err: err instanceof Error ? err.message : String(err) },
       "invariant-provider-health-fetch-failed",
@@ -80,6 +82,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r3.alerts;
     checked += r3.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-3-failed", check: "orphaned-steps", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-3-failed");
   }
 
@@ -88,6 +91,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r6.alerts;
     checked += r6.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-6-failed", check: "partial-quarantine", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-6-failed");
   }
 
@@ -100,6 +104,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r5.alerts;
     checked += r5.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-5-failed", check: "algorithmic-correctness-floor", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-5-failed");
   }
 
@@ -108,6 +113,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r6.alerts;
     checked += r6.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-6-failed", check: "broken-solution-integrity", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-6-failed");
   }
 
@@ -116,6 +122,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r7.alerts;
     checked += r7.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-7-failed", check: "migration-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-7-failed");
   }
 
@@ -124,6 +131,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r8.alerts;
     checked += r8.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-8-failed", check: "data-source-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-8-failed");
   }
 
@@ -132,6 +140,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r9.alerts;
     checked += r9.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-9-failed", check: "free-tier-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-9-failed");
   }
 
@@ -141,6 +150,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r10.alerts;
     checked += r10.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-10-failed", check: "suspended-ttl", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-10-failed");
   }
 
@@ -149,6 +159,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r11.alerts;
     checked += r11.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-11-failed", check: "fixture-quality", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-11-failed");
   }
 
@@ -157,6 +168,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r12.alerts;
     checked += r12.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-12-failed", check: "compliance-profile-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-12-failed");
   }
 
@@ -165,6 +177,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r13.alerts;
     checked += r13.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-13-failed", check: "lying-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-13-failed");
   }
 
@@ -173,6 +186,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r14.alerts;
     checked += r14.checked;
   } catch (err) {
+    noteJobFailure();
     jobLog.error({ label: "invariant-check-14-failed", check: "fixture-input-drift", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-14-failed");
   }
 
@@ -375,6 +389,11 @@ export const ENVIRONMENTAL_FAILURE_CLASSES: ReadonlySet<TransactionFailureClass>
 >(["upstream", "config", "timeout"]);
 
 export function isEnvironmentalFailure(reason: string | null | undefined): boolean {
+  // The cost-control gate refused to run a paid tool for a test, so the tool
+  // never executed. Not a class of its own: cost-control-refusal-accounting.test.ts
+  // pins the taxonomy result on purpose. On 2026-10-31 one test run raised
+  // "correctness 0%" twelve times across two working search tools this way.
+  if (reason?.includes("refuses invocation from context kind")) return true;
   return ENVIRONMENTAL_FAILURE_CLASSES.has(classifyTransactionFailure(reason));
 }
 
@@ -889,18 +908,18 @@ async function checkFreeTierCircuitBreakers(): Promise<{ alerts: number; checked
   const degraded = await db
     .select({
       slug: capabilities.slug,
-      state: capabilityHealth.state,
-      consecutiveFailures: capabilityHealth.consecutiveFailures,
-      openedAt: capabilityHealth.openedAt,
-      nextRetryAt: capabilityHealth.nextRetryAt,
+      state: sourceHealth.state,
+      consecutiveFailures: sourceHealth.consecutiveFailures,
+      openedAt: sourceHealth.openedAt,
+      nextRetryAt: sourceHealth.nextRetryAt,
     })
     .from(capabilities)
-    .innerJoin(capabilityHealth, eq(capabilityHealth.capabilitySlug, capabilities.slug))
+    .innerJoin(sourceHealth, eq(sourceHealth.capabilitySlug, capabilities.slug))
     .where(
       and(
         eq(capabilities.isActive, true),
         eq(capabilities.isFreeTier, true),
-        or(eq(capabilityHealth.state, "open"), eq(capabilityHealth.state, "half_open")),
+        or(eq(sourceHealth.state, "open"), eq(sourceHealth.state, "half_open")),
       ),
     );
 
@@ -1004,6 +1023,7 @@ async function checkSuspendedCapabilityTTL(): Promise<{ healed: number; alerts: 
         );
         healed++;
       } catch (err) {
+        noteJobFailure();
         logError("invariant-check-10-deactivation-failed", err, { capability_slug: cap.slug });
       }
 
@@ -1170,7 +1190,7 @@ async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; c
 }
 
 // ─── CHECK 13: Lying breaker (Tier 2 — ALERT ONLY) ──────────────────────────
-// A capability_health row in state='closed' with last_success_at set but
+// A source_health row in state='closed' with last_success_at set but
 // total_successes=0 is structurally incoherent: the only writer that produces
 // that combination is `recordTestEvidence` (sets lastSuccessAt without
 // incrementing totalSuccesses). If recordSuccess had ever fired for the slug,
@@ -1190,7 +1210,7 @@ async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; c
 // either choice has trade-offs that warrant a human eye.
 
 /**
- * Pure predicate: does this capability_health row shape match the
+ * Pure predicate: does this source_health row shape match the
  * lying-breaker pattern? Exported for unit testing.
  */
 export function isLyingBreakerRow(row: {
@@ -1210,7 +1230,7 @@ export function isLyingBreakerRow(row: {
  */
 export const LYING_BREAKER_REMEDIATION =
   "Null only the false value, through a ledgered startup-migration block (never by hand): " +
-  "UPDATE capability_health SET last_success_at = NULL WHERE capability_slug = '<slug>' " +
+  "UPDATE source_health SET last_success_at = NULL WHERE capability_slug = '<slug>' " +
   "AND state = 'closed' AND total_successes = 0 AND last_success_at within one second of the false timestamp. " +
   "Leave every failure field as it is: the row's failures are real, and adding one would record " +
   "a failure that never happened. First confirm no customer-path success exists for the slug at " +
@@ -1221,20 +1241,20 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
 
   const lying = await db
     .select({
-      slug: capabilityHealth.capabilitySlug,
-      state: capabilityHealth.state,
-      lastSuccessAt: capabilityHealth.lastSuccessAt,
-      totalSuccesses: capabilityHealth.totalSuccesses,
-      totalFailures: capabilityHealth.totalFailures,
-      lastFailureAt: capabilityHealth.lastFailureAt,
-      updatedAt: capabilityHealth.updatedAt,
+      slug: sourceHealth.capabilitySlug,
+      state: sourceHealth.state,
+      lastSuccessAt: sourceHealth.lastSuccessAt,
+      totalSuccesses: sourceHealth.totalSuccesses,
+      totalFailures: sourceHealth.totalFailures,
+      lastFailureAt: sourceHealth.lastFailureAt,
+      updatedAt: sourceHealth.updatedAt,
     })
-    .from(capabilityHealth)
+    .from(sourceHealth)
     .where(
       and(
-        eq(capabilityHealth.state, "closed"),
-        isNotNull(capabilityHealth.lastSuccessAt),
-        eq(capabilityHealth.totalSuccesses, 0),
+        eq(sourceHealth.state, "closed"),
+        isNotNull(sourceHealth.lastSuccessAt),
+        eq(sourceHealth.totalSuccesses, 0),
       ),
     );
 
@@ -1244,7 +1264,7 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
 
   logWarn(
     "invariant-check-13-lying-breaker",
-    "capability_health rows have lying-breaker shape (closed + last_success_at set + total_successes=0)",
+    "source_health rows have lying-breaker shape (closed + last_success_at set + total_successes=0)",
     {
       count: lying.length,
       slugs,
@@ -1255,7 +1275,7 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
   await logHealthEvent({
     eventType: "invariant_alert",
     tier: 2,
-    actionTaken: `${lying.length} capability_health row(s) have lying-breaker shape (closed + last_success_at set + total_successes=0): ${slugs.join(", ")}`,
+    actionTaken: `${lying.length} source_health row(s) have lying-breaker shape (closed + last_success_at set + total_successes=0): ${slugs.join(", ")}`,
     details: {
       check: "lying_breaker",
       slugs,
@@ -1337,6 +1357,7 @@ export async function checkPartialQuarantineState(
       details: { slugs, count: rows.length, invariant: "no_half_quarantine" },
     });
   } catch (err) {
+    noteJobFailure();
     jobLog.error(
       { label: "invariant-partial-quarantine-event-failed", err },
       "invariant-partial-quarantine-event-failed",

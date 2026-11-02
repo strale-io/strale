@@ -3,7 +3,7 @@
 
 slug: keyword-suggest
 name: Keyword Suggest
-description: Get keyword suggestions from Google Autocomplete. Returns suggestions, questions, comparisons, long-tail keywords.
+description: "Currently unavailable. Find keyword suggestions, questions and related search phrases for a query."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -286,7 +286,7 @@ output_field_reliability:
   suggestions: guaranteed
   total_suggestions: guaranteed
 limitations:
-  - title: Google Autocomplete suggestions reflect search popularity, not commercial intent or conversion potential
+  - title: Suggestions do not measure commercial intent
     text: >-
       Uses Google Autocomplete API — suggestions reflect search popularity, not commercial intent or conversion
       potential

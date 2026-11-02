@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "strale": {
+      "type": "http",
+      "url": "https://api.strale.io/mcp?src=cursor"
+    }
+  }
+}

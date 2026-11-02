@@ -1,6 +1,6 @@
 slug: academic-paper-search
 name: "Academic Paper Search"
-description: "Search 250M+ scholarly works in OpenAlex: title, DOI, authors, venue, citations, open-access PDF and abstract. Filter by year and open access."
+description: "Search scholarly works by keyword, year and open-access status. Returns titles, authors, citations, abstracts and available publication links."
 category: data-extraction
 cost_class: free_quota
 quota_window: daily
@@ -106,14 +106,14 @@ output_field_reliability:
   returned: guaranteed
   papers: guaranteed
 limitations:
-  - title: Abstracts are only returned when the publisher supplies them to OpenAlex
+  - title: Abstracts may be missing or shortened
     text: >-
-      OpenAlex stores abstracts as an inverted index and many publishers withhold them, so `abstract` is null
-      for a large share of works. The reconstruction is truncated at 800 characters.
+      Many publishers do not supply abstracts to OpenAlex, so `abstract` is often null. Returned
+      abstracts are limited to 800 characters.
     category: coverage
     severity: info
     workaround: Use paper-details with the DOI, or follow landing_page_url / open_access_url for the full text.
-  - title: Citation counts and open-access links lag the source systems by days to weeks
+  - title: Recent papers and citation counts may lag
     text: >-
       OpenAlex refreshes from Crossref, PubMed and repositories on a rolling basis; very recent papers may be
       missing or under-cited.

@@ -1,0 +1,42 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api (npx vitest run)",
+    "commit": "725412772c2ada3a47a27857ddbb370cd6b95fe4"
+  },
+  "at": "2026-10-31T00:53:44.387Z",
+  "inputs": [
+    "apps/api/src/lib/serper-links.test.ts",
+    "apps/api/src/capabilities/serper-goto-links.test.ts",
+    "apps/api/src/lib/failure-classifier.test.ts",
+    "apps/api/src/lib/metered-vendor-fetch.test.ts",
+    "apps/api/src/capabilities/adverse-media-check.provenance.test.ts"
+  ],
+  "summary": {
+    "ok": true,
+    "total": 47,
+    "passed": 47,
+    "failed": 0,
+    "test_files": 5,
+    "regression_tests": 12,
+    "regression_tests_failing_against_prefix_code": 11,
+    "live_serper_search_calls": 1,
+    "live_serper_resolve_calls": 4,
+    "serper_credits_spent": 1,
+    "resolve_credits_observed": 0
+  },
+  "topic": "serper-goto-link-repair",
+  "raw": {
+    "ok": true,
+    "total": 47,
+    "passed": 47,
+    "failed": 0,
+    "test_files": 5,
+    "regression_tests": 12,
+    "regression_tests_failing_against_prefix_code": 11,
+    "live_serper_search_calls": 1,
+    "live_serper_resolve_calls": 4,
+    "serper_credits_spent": 1,
+    "resolve_credits_observed": 0
+  }
+}

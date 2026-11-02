@@ -1,7 +1,8 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { SourceBlockedError } from "../lib/site-access.js";
 
@@ -278,7 +279,7 @@ registerCapability("container-track", async (input: CapabilityInput) => {
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-      const client = new Anthropic({ apiKey });
+      const client = createAnthropicClient({ apiKey });
       // Note: a truncation refusal or parse failure from the helper is
       // caught by this function's own outer catch below, same as before —
       // this LLM step is best-effort and falls back to "tracking_unavailable"

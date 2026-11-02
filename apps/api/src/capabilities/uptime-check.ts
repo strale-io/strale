@@ -1,5 +1,6 @@
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("uptime-check", async (input: CapabilityInput) => {
@@ -15,19 +16,17 @@ registerCapability("uptime-check", async (input: CapabilityInput) => {
   const start = Date.now();
 
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-
     const response = await safeFetch(url, {
+      purpose: "availability_probe",
       maxRedirects: 10,
       method: (input.method as string)?.toUpperCase() ?? "GET",
-      signal: controller.signal,
+      signal: AbortSignal.timeout(timeout),
       // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
     });
 
-    clearTimeout(timer);
     const latencyMs = Date.now() - start;
 
+    await discardBody(response, "uptime-check: status and headers only");
     const headers: Record<string, string> = {};
     response.headers.forEach((v, k) => { headers[k] = v; });
 
@@ -53,6 +52,7 @@ registerCapability("uptime-check", async (input: CapabilityInput) => {
       provenance: { source: "http-check", fetched_at: new Date().toISOString() },
     };
   } catch (err: unknown) {
+    if (isCapabilityRefusal(err)) throw err;
     const latencyMs = Date.now() - start;
     const message = err instanceof Error ? err.message : String(err);
     const isTimeout = message.includes("abort");

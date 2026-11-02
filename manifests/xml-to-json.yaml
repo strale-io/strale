@@ -78,7 +78,7 @@ output_field_reliability:
   element_count: guaranteed
   attributes_preserved: guaranteed
 limitations:
-  - title: XML with mixed content — text interleaved with elements — may lose text ordering during conversion
+  - title: Mixed content can lose its text ordering
     text: >-
       Converts standard XML — XML with mixed content (text interleaved with elements) may lose text ordering during
       conversion

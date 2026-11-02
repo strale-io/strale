@@ -1,0 +1,33 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "3244dd141ae0242bf51c804a32aed5e9667e1028"
+  },
+  "at": "2026-10-29T16:34:41.043Z",
+  "inputs": {
+    "source": "/tmp/claude-0/rb2.json"
+  },
+  "summary": {
+    "ok": true,
+    "round": 2,
+    "review": "fresh read-only Claude context: PASS WITH NITS; fixed output_schema example keyword, dropped order-dependent food-safety and TED country checks, moved page-exists and base64-encode-url to strale.dev, cve-details reference reducer, api-health-check health_check_input",
+    "live_check": "32/32 without drift"
+  },
+  "topic": "h7c-known-answer-tightening-review",
+  "raw": {
+    "ok": true,
+    "round": 2,
+    "review": "fresh read-only Claude context: PASS WITH NITS; fixed output_schema example keyword, dropped order-dependent food-safety and TED country checks, moved page-exists and base64-encode-url to strale.dev, cve-details reference reducer, api-health-check health_check_input",
+    "replay_and_ted_tests": {
+      "tests_passed": 70,
+      "failed": 0
+    },
+    "live_check": "32/32 without drift",
+    "api_suite": {
+      "files_passed": 389,
+      "tests_passed": 7866,
+      "failed": 0
+    }
+  }
+}

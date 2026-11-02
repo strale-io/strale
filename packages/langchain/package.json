@@ -1,7 +1,7 @@
 {
   "name": "straleio-langchain",
-  "version": "0.1.0",
-  "description": "LangChain tool integration for Strale — let AI agents buy capabilities at runtime",
+  "version": "0.1.1",
+  "description": "LangChain tool integration for Strale \u2014 let AI agents buy capabilities at runtime",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "tsx --test tests/*.test.ts"
   },
   "keywords": [
     "strale",
@@ -33,7 +34,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "straleio": "^0.1.0"
+    "straleio": "^0.1.4"
   },
   "peerDependencies": {
     "@langchain/core": ">=0.2.0"

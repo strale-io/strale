@@ -226,6 +226,8 @@ function main() {
       console.log(`  WARN ${item.code} ${item.path}${item.detail ? ` — ${item.detail}` : ""}`);
     }
   }
+  // Empty candidate inventories are also report-only until M4, under the
+  // same M1 contract. This command is deliberately not a blocking gate.
   // M1 contract: findings are reports, never a blocking exit code.
   process.exitCode = 0;
 }

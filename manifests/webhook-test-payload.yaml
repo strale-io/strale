@@ -111,7 +111,7 @@ output_field_reliability:
   event_type: guaranteed
   documentation_url: guaranteed
 limitations:
-  - title: Generated payloads match common webhook schemas — provider-specific fields or versioned formats may differ
+  - title: Provider-specific or versioned fields can differ
     text: Generated payloads match common webhook schemas — provider-specific fields or versioned payload formats may differ
     category: accuracy
     severity: info

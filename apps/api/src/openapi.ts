@@ -1,3 +1,5 @@
+import { STATIC_FACTS } from "./lib/platform-facts.js";
+import { additionalPublicPaths } from "./openapi-public-paths.js";
 /**
  * OpenAPI 3.1.0 specification for the Strale API.
  *
@@ -8,9 +10,26 @@
 const errorSchema = {
   type: "object" as const,
   properties: {
-    error_code: { type: "string" as const },
+    error_code: { type: "string" as const, enum: ["insufficient_balance", "no_matching_capability", "capability_unavailable", "execution_failed", "timeout_exceeded", "invalid_request", "rate_limited", "spend_cap_exceeded", "key_hourly_cap_exceeded", "key_total_cap_exceeded", "primary_key_required", "active_key_limit_exceeded", "unauthorized", "not_found", "capability_degraded", "below_quality_threshold", "freshness_check_failed", "latency_threshold_exceeded", "budget_exceeded", "locked", "token_expired", "legacy_token_sunset", "transaction_finalization_failed", "idempotency_key_reused", "request_in_progress", "payment_failed", "payment_already_used", "migration_failed"] },
     message: { type: "string" as const },
-    details: { type: "object" as const },
+    details: {
+      type: "object" as const,
+      description: "Additive recovery guidance; stable error_code and HTTP status are unchanged. Caller-fixable errors include fix. Service failures include retryable and next_step. Key caps are not automatically retryable.",
+      additionalProperties: true,
+      properties: {
+        fix: { type: "string", minLength: 1, description: "One imperative sentence naming the field, limit or next step to correct before retrying." },
+        field: { type: "string", description: "Input field to correct, when known." },
+        retryable: { type: "boolean", description: "Whether retrying unchanged input after backoff can help; false means an explicit change is needed." },
+        next_step: { type: "string", description: "Safe next step for a failure outside the caller's control." },
+        retry_after_seconds: { type: "integer", minimum: 0 },
+        required_fields: { type: "array", items: { type: "string" }, description: "Only fields actually required by the failed constraint; optional fields are not inferred as required." },
+        any_of: { type: "array", items: { type: "object", additionalProperties: true }, description: "Alternative input-schema groups; at least one must match." },
+        one_of: { type: "array", items: { type: "object", additionalProperties: true }, description: "Alternative input-schema groups; exactly one must match." },
+        min_topup_cents: { type: "integer", minimum: 0 },
+        docs_url: { type: "string", format: "uri" },
+        spent_cents: { type: "integer" }, requested_cents: { type: "integer" }, limit_cents: { type: "integer" },
+      },
+    },
   },
   required: ["error_code", "message"],
 };
@@ -56,10 +75,34 @@ const suggestRecommendationSchema = {
   },
 };
 
+const keyCapSchema = { type: ["integer", "null"], minimum: 0, maximum: 2147483647 };
+const keyInputSchema = {
+  type: "object", additionalProperties: false,
+  properties: { label: { type: "string", minLength: 1, maxLength: 64, pattern: "^[^\\u0000-\\u001f\\u007f-\\u009f]*$", description: "Trimmed; 1–64 characters after trimming; control characters rejected before trimming." }, max_spend_per_hour_cents: keyCapSchema, max_spend_total_cents: keyCapSchema },
+};
+const keyMetadataSchema = {
+  type: "object", required: ["id", "key_prefix", "label", "max_spend_per_hour_cents", "max_spend_total_cents", "created_at", "revoked_at", "last_used_at"],
+  properties: {
+    id: { type: "string", format: "uuid" }, key_prefix: { type: "string" }, label: { type: "string" },
+    max_spend_per_hour_cents: keyCapSchema, max_spend_total_cents: keyCapSchema,
+    created_at: { type: "string", format: "date-time" },
+    revoked_at: { type: ["string", "null"], format: "date-time" }, last_used_at: { type: ["string", "null"], format: "date-time" },
+  },
+};
+const keyResponse = (description: string, schema: object) => ({ description, content: { "application/json": { schema } } });
+const primaryKeyError = { "403": errorResponse("primary_key_required", "Use the account's primary key for this action") };
+const keyErrors = {
+  ...primaryKeyError,
+  "400": errorResponse("invalid_request", "Supply a valid label and non-negative integer caps in cents, or null to remove a cap."),
+  "401": errorResponse("unauthorized", "Invalid API key."),
+  "429": errorResponse("rate_limited", "Key management is limited to 5 requests per second per account."),
+};
+
 export const openApiSpec = {
   openapi: "3.1.0",
   info: {
     title: "Strale API",
+    "x-guidance": "Browse x402 endpoints below and send the required input; payment is requested per call.",
     version: "1.0.0",
     description:
       "Give your agent a new tool without opening another provider account. Search and read the web, read documents, check details and look up companies through one connection. Pay per call with an API key or, on eligible tools, an x402 wallet. Browse /v1/platform/facts for live coverage.",
@@ -147,8 +190,9 @@ export const openApiSpec = {
           capability_slug: { type: "string" as const, description: "Direct capability slug to execute.", example: "iban-validate" },
           inputs: { type: "object" as const, description: "Capability-specific input fields.", example: { iban: "DE89370400440532013000" } },
           max_price_cents: { type: "integer" as const, description: "Maximum price willing to pay (EUR cents). Required for authenticated requests to paid capabilities." },
-          timeout_seconds: { type: "integer" as const, description: "Max execution time (1-60, default 30)." },
+          timeout_seconds: { type: "integer" as const, description: "Execution budget for synchronous paid wallet calls, in seconds (default 30; effective minimum 5 and maximum 60). Positive values below 5, including fractional values from existing clients, are clamped to 5; values above 60 are clamped to 60. Starts immediately before execution, including retries, and also bounds Anthropic SDK calls. On expiry: HTTP 503 timeout_exceeded, no wallet charge, reservation released. Late executor completion cannot charge. Does not change free-tier, async or solution execution. An executing Idempotency-Key returns HTTP 409 request_in_progress with details.retryable=true and details.retry_after_seconds=2; a completed key replays HTTP 200 with meta.idempotency_replay=true; use a new key to attempt execution again." },
           dry_run: { type: "boolean" as const, description: "If true, returns matched capability without executing.", default: false },
+          callback_url: { type: "string" as const, format: "uri", description: "Optional public https URL that receives one signed POST when an async execution (HTTP 202) reaches a terminal state. Body: {event: job.completed|job.failed, transaction_id, status, capability_slug, completed_at, poll_url}; no output is sent, read it from poll_url. Headers: Strale-Signature (t=<unix seconds>,v1=<hex HMAC-SHA256 of '<t>.<raw body>'> keyed by the secret from GET /v1/jobs/webhook-secret) and Strale-Event-Id (the transaction id, stable across retries). Up to 6 attempts over about 7 hours on a non-2xx answer; redirects are not followed. Ignored when the capability executes synchronously, since the result is in the response. An invalid or non-public URL is HTTP 400 before any charge." },
         },
       },
       DoResponse: {
@@ -182,7 +226,7 @@ export const openApiSpec = {
               audit: { type: "object" as const, description: "EU AI Act compliant audit trail." },
             },
           },
-          free_tier: { type: "boolean" as const, description: "True for unauthenticated free-tier calls." },
+          free_tier: { type: "boolean" as const, description: `True for unauthenticated free-tier calls. Anonymous allowance: ${STATIC_FACTS.free_tier_monthly_limit} calls per calendar month (UTC) per IP, with an hourly anti-abuse guard. Authenticated free tools have no wallet debit and retain normal rate limits. Monthly usage is returned as calls_this_month, monthly_limit and resets_at; X-RateLimit-Limit/Remaining/Reset describe the allowance (Reset is Unix seconds).` },
           usage: { type: "object" as const, description: "Free-tier usage counter (unauthenticated only)." },
           upgrade: { type: "object" as const, description: "Upgrade prompt with paid capability examples (free-tier only)." },
         },
@@ -190,6 +234,41 @@ export const openApiSpec = {
     },
   },
   paths: {
+    ...additionalPublicPaths,
+    "/v1/api-keys": {
+      post: {
+        tags: ["auth"], summary: "Create an additional API key",
+        description: "The primary key remains unchanged. api_key is returned once; store it securely. Null/omitted caps are unlimited; zero blocks paid calls. Primary key required. Additional keys may spend and read, but cannot manage the account. At most 25 active additional keys per account.",
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { ...keyInputSchema, required: ["label"] } } } },
+        responses: { ...keyErrors, "409": errorResponse("active_key_limit_exceeded", "At most 25 active additional keys are allowed. Revoke an unused key first"), "201": keyResponse("Key created; response has Cache-Control: no-store", { ...keyMetadataSchema, required: [...keyMetadataSchema.required, "api_key"], properties: { ...keyMetadataSchema.properties, api_key: { type: "string", description: "Shown once" } } }), "404": errorResponse("not_found", "Wallet not found.") },
+      },
+      get: {
+        tags: ["auth"], summary: "List additional keys and their spending",
+        description: "Primary key required. Bounded at 25 active (non-revoked) keys; revoked keys are excluded. Never includes plaintext keys or hashes. Spending is net ledger purchases, including open reservations, less refunds linked to the original purchase; the rolling hour uses purchase time. Last-used writes occur at most once per minute per key.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...keyErrors, "200": keyResponse("Additional keys", { type: "object", required: ["keys"], properties: { keys: { type: "array", maxItems: 25, items: { ...keyMetadataSchema, required: [...keyMetadataSchema.required, "spent_hour_cents", "spent_total_cents"], properties: { ...keyMetadataSchema.properties, spent_hour_cents: { type: "integer" }, spent_total_cents: { type: "integer" } } } } } }) },
+      },
+    },
+    "/v1/api-keys/{id}": {
+      patch: {
+        tags: ["auth"], summary: "Update additional key label or caps",
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+
+        description: "Primary key required. Omitted fields stay unchanged; null removes a cap. Lowering below existing spending blocks subsequent paid calls. Revoked keys stay revoked.",
+        security: [{ BearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { ...keyInputSchema, minProperties: 1 } } } },
+        responses: { ...keyErrors, "200": keyResponse("Updated key metadata", keyMetadataSchema), "404": errorResponse("not_found", "Key not found.") },
+      },
+      delete: {
+        tags: ["auth"], summary: "Revoke an additional key",
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+
+        description: "Primary key required. Idempotent. The primary key cannot be revoked through this API and remains usable/recoverable. A call already holding the wallet lock may finish first. Revoked keys return the same 401 as unknown keys.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...keyErrors, "200": keyResponse("Revoked key metadata", keyMetadataSchema), "404": errorResponse("not_found", "Key not found.") },
+      },
+    },
     // ─── Capabilities ──────────────────────────────────────────────────
     "/v1/capabilities": {
       get: {
@@ -313,8 +392,116 @@ export const openApiSpec = {
           "401": errorResponse("unauthorized", "Authentication required for paid capabilities."),
           "402": errorResponse("insufficient_balance", "Insufficient wallet balance. Top up at the included checkout URL."),
           "404": errorResponse("no_matching_capability", "No capability matches the task within budget."),
+          "409": {
+            description: "The original request is still running, or the key identifies different work.",
+            content: { "application/json": { schema: errorSchema, examples: {
+              in_progress: { value: { error_code: "request_in_progress", message: "The original request is still running.",
+                details: { retryable: true, retry_after_seconds: 2, fix: "The original request is still running; retry with the same Idempotency-Key after 2 seconds." } } },
+              different_request: { value: { error_code: "idempotency_key_reused", message: "This Idempotency-Key was already used for a different request.",
+                details: { fix: "Send a new Idempotency-Key for different inputs or a different capability." } } },
+            } } },
+          },
           "429": errorResponse("rate_limited", "Rate limit exceeded."),
           "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable (circuit breaker open)."),
+        },
+      },
+    },
+
+    "/v1/do/batch": {
+      post: {
+        tags: ["capabilities"],
+        summary: "Run one capability over many inputs",
+        description:
+          "Run one paid capability over up to 100 inputs in one request: one quote, one reservation of the whole quote, results per item in input order.\n\n" +
+          "The quote is `price_cents × number of inputs` and must not exceed `max_total_price_cents`. The whole quote is held on the wallet before anything runs; each item is then charged only if it succeeds. Failed items, and items not started because the batch's 90-second budget ran out (`status: \"not_run\"`), are not charged.\n\n" +
+          "Every input is validated first; one invalid input refuses the whole batch with its index, and nothing is charged. Free tools and tools that run asynchronously cannot be batched.\n\n" +
+          "Limits count items, not requests: 300 items per minute per API key, and the hourly spend cap and per-key spend limits count the whole quote. One `Idempotency-Key` covers the whole batch; a retry with the same key returns the recorded results without charging again. API key and wallet only for now; x402 batches are not available.",
+        security: [{ BearerAuth: [] }],
+        "x-ratelimit": { limit: 300, window: "1m", scope: "items per API key" },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object" as const,
+                required: ["capability_slug", "inputs", "max_total_price_cents"],
+                properties: {
+                  capability_slug: { type: "string" as const, example: "vat-validate" },
+                  inputs: {
+                    type: "array" as const, minItems: 1, maxItems: 100,
+                    description: "One object of the tool's parameters per item, as `inputs` on POST /v1/do.",
+                    items: { type: "object" as const, additionalProperties: true },
+                    example: [{ vat_number: "SE556703748501" }, { vat_number: "DE811569869" }],
+                  },
+                  max_total_price_cents: { type: "integer" as const, minimum: 1, maximum: 10000, description: "The most the whole batch may cost, in EUR cents." },
+                  timeout_seconds: { type: "number" as const, exclusiveMinimum: 0, default: 30, description: "Time budget per item in seconds; values are clamped to 5–60." },
+                  dry_run: { type: "boolean" as const, description: "Validate and quote without reserving or running anything." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "The batch ran. Check `status` and each item's `status`; only completed items were charged. With `dry_run: true`, the body is instead `{dry_run, would_execute, item_count, unit_price_cents, quoted_total_cents, wallet_balance_cents, wallet_sufficient}` and nothing is reserved.",
+            headers: {
+              "X-Credits-Remaining": { description: "Wallet balance in EUR cents after the batch", schema: { type: "integer" as const } },
+              "X-Cost-Cents": { description: "What the batch was charged in EUR cents", schema: { type: "integer" as const } },
+            },
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    batch_id: { type: "string" as const, format: "uuid" },
+                    status: { type: "string" as const, enum: ["completed", "partial", "failed"] },
+                    capability_used: { type: "string" as const },
+                    item_count: { type: "integer" as const },
+                    succeeded: { type: "integer" as const },
+                    failed: { type: "integer" as const },
+                    not_run: { type: "integer" as const },
+                    unit_price_cents: { type: "integer" as const },
+                    quoted_total_cents: { type: "integer" as const },
+                    charged_cents: { type: "integer" as const },
+                    released_cents: { type: "integer" as const, description: "Held but not charged: quoted_total_cents − charged_cents." },
+                    wallet_balance_cents: { type: "integer" as const },
+                    results: {
+                      type: "array" as const,
+                      items: {
+                        type: "object" as const,
+                        properties: {
+                          index: { type: "integer" as const },
+                          status: { type: "string" as const, enum: ["completed", "failed", "not_run"] },
+                          transaction_id: { type: ["string", "null"], format: "uuid" },
+                          price_cents: { type: "integer" as const, description: "Charged for this item: the unit price if completed, else 0." },
+                          latency_ms: { type: ["integer", "null"] },
+                          output: { description: "The tool's output, as on POST /v1/do." },
+                          provenance: { description: "Source and fetch time, as on POST /v1/do." },
+                          error: {
+                            type: "object" as const,
+                            properties: {
+                              error_code: { type: "string" as const },
+                              message: { type: "string" as const },
+                              retryable: { type: "boolean" as const },
+                              detail: { type: "string" as const },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    meta: { type: "object" as const, properties: { idempotency_replay: { type: "boolean" as const } } },
+                  },
+                },
+              },
+            },
+          },
+          "400": errorResponse("invalid_request", "1 of 3 inputs are invalid; nothing was run or charged."),
+          "401": errorResponse("unauthorized", "An API key is required for batches."),
+          "402": errorResponse("insufficient_balance", "The wallet cannot fund the whole quote, or the quote exceeds max_total_price_cents (budget_exceeded)."),
+          "404": errorResponse("no_matching_capability", "No servable capability with this slug."),
+          "409": errorResponse("idempotency_key_reused", "The Idempotency-Key was used for other work, or the original batch is still running (request_in_progress)."),
+          "429": errorResponse("rate_limited", "Item rate limit, hourly spend cap or key spend limit would be exceeded."),
+          "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable, or the wallet was busy and nothing was reserved (timeout_exceeded)."),
         },
       },
     },
@@ -497,7 +684,7 @@ export const openApiSpec = {
         tags: ["auth"],
         summary: "Redeem a recovery code and rotate the API key",
         description:
-          "Redeems the single-use code sent by /v1/auth/recover. The previous API key stops working the moment this returns 200. Codes expire 30 minutes after issue. Requesting another does NOT invalidate an outstanding one — several can be live at once, each single-use — because an unauthenticated endpoint that invalidates a code on request lets anyone who knows the address keep cancelling a recovery in progress.",
+          "Redeems the single-use code sent by /v1/auth/recover. Only the primary key rotates; additional keys survive and can still spend up to their caps. Use the new primary key to review GET /v1/api-keys and revoke unused or unrecognized keys with DELETE /v1/api-keys/{id}. The previous primary key stops working the moment this returns 200. Codes expire 30 minutes after issue. Requesting another does NOT invalidate an outstanding one — several can be live at once, each single-use — because an unauthenticated endpoint that invalidates a code on request lets anyone who knows the address keep cancelling a recovery in progress.",
         "x-ratelimit": { limit: 10, window: "5m", scope: "per IP" },
         requestBody: {
           required: true,
@@ -535,13 +722,22 @@ export const openApiSpec = {
         },
       },
     },
+    "/v1/auth/me": {
+      delete: {
+        tags: ["auth"], summary: "Close and redact your account",
+        description: "Primary key required. Irreversible: revokes all keys, clears customer content except legal holds, and forfeits the wallet balance. Processing records and integrity hashes are retained.",
+        security: [{ BearerAuth: [] }],
+        responses: { ...primaryKeyError, "200": keyResponse("Account redacted", {type: "object"}), "401": errorResponse("unauthorized", "Invalid API key.") },
+      },
+    },
     "/v1/auth/api-key": {
       post: {
         tags: ["auth"],
         summary: "Regenerate API key",
-        description: "Generates a new API key and invalidates the current one.",
+        description: "Primary key required. Generates a new primary key and invalidates the current primary key. Additional keys survive rotation; review and revoke unused or unrecognized keys.",
         security: [{ BearerAuth: [] }],
         responses: {
+          ...primaryKeyError,
           "200": {
             description: "New API key",
             content: {
@@ -589,7 +785,7 @@ export const openApiSpec = {
       post: {
         tags: ["wallet"],
         summary: "Create a top-up checkout session",
-        description: "Creates a Stripe Checkout session for wallet top-up. Minimum €10.00.",
+        description: "Primary key required. Creates a Stripe Checkout session for wallet top-up. Minimum €10.00.",
         security: [{ BearerAuth: [] }],
         "x-ratelimit": { limit: 5, window: "1s", scope: "per API key" },
         requestBody: {
@@ -607,6 +803,7 @@ export const openApiSpec = {
           },
         },
         responses: {
+          ...primaryKeyError,
           "200": {
             description: "Checkout session created",
             content: {
@@ -702,12 +899,30 @@ export const openApiSpec = {
         },
       },
     },
+    "/v1/transactions/{id}/dispute": {
+      get: {
+        summary: "Read a transaction dispute",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Current dispute status" } },
+      },
+      post: {
+        tags: ["transactions"], summary: "Submit a dispute for human review",
+        description: "Account-holder submissions require the primary key. Anonymous data subjects may instead use a signed audit token with expires_at and a contact email; that path does not require an account key.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: {type: "string", format: "uuid"} },
+          { name: "token", in: "query", required: false, schema: {type: "string"} },
+          { name: "expires_at", in: "query", required: false, schema: {type: "integer"} },
+        ],
+        requestBody: {required: true, content: {"application/json": {schema: {type: "object", required: ["reason"], properties: {reason: {type: "string"}, affected_field: {type: "string"}, contact_email: {type: "string", format: "email"}}}}}},
+        responses: { ...primaryKeyError, "202": keyResponse("Dispute received", {type: "object"}), "400": errorResponse("invalid_request", "Supply a reason and contact email for token-only submissions."), "401": errorResponse("unauthorized", "Authorization or signed audit token required."), "404": errorResponse("not_found", "Transaction not found.") },
+      },
+    },
     "/v1/transactions/{id}/audit-token": {
       post: {
         tags: ["transactions"],
         summary: "Re-issue audit token",
         description:
-          "Issue a new HMAC-signed audit URL for a transaction you own. " +
+          "Primary key required. Issue a new HMAC-signed audit URL for a transaction you own. " +
           "Replaces the previous token for the caller's convenience; previous tokens remain valid until their own expires_at (stateless). " +
           "Default TTL 90 days (F-A-006). Caller must own the transaction (same 404 for unknown / cross-user / deleted).",
         security: [{ BearerAuth: [] }],
@@ -732,6 +947,7 @@ export const openApiSpec = {
           },
         },
         responses: {
+          ...primaryKeyError,
           "200": {
             description: "Audit token re-issued.",
             content: {
@@ -756,6 +972,13 @@ export const openApiSpec = {
       },
     },
     "/v1/transactions/{id}": {
+      delete: {
+        tags: ["transactions"], summary: "Redact a transaction",
+        description: "Primary key required. Clears customer content and hides the transaction; integrity hashes remain. Legal holds prevent deletion.",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { ...primaryKeyError, "200": keyResponse("Transaction redacted", {type: "object"}), "401": errorResponse("unauthorized", "Invalid API key."), "404": errorResponse("not_found", "Transaction not found."), "423": errorResponse("locked", "Transaction under legal hold.") },
+      },
       get: {
         tags: ["transactions"],
         summary: "Get transaction detail",
@@ -787,6 +1010,33 @@ export const openApiSpec = {
                     created_at: { type: "string" as const, format: "date-time" },
                     completed_at: { type: "string" as const, format: "date-time", nullable: true },
                     body_redacted: { type: "boolean" as const, description: "Present and true on unauth free-tier lookups; indicates body fields are redacted." },
+                    files: {
+                      type: "array" as const,
+                      description: "Present when an async execution produced files. Each url is signed, needs no API key, and expires an hour after this read; poll again for a fresh one. Files are deleted with the transaction's content (90 days, or on DELETE).",
+                      items: {
+                        type: "object" as const,
+                        properties: {
+                          file_id: { type: "string" as const, format: "uuid" },
+                          name: { type: "string" as const },
+                          content_type: { type: "string" as const },
+                          size_bytes: { type: "integer" as const },
+                          sha256: { type: "string" as const },
+                          url: { type: "string" as const, format: "uri" },
+                          url_expires_at: { type: "string" as const, format: "date-time" },
+                        },
+                      },
+                    },
+                    callback: {
+                      type: "object" as const,
+                      description: "Present when the request set callback_url. state is pending, delivered or failed.",
+                      properties: {
+                        state: { type: "string" as const, enum: ["pending", "delivered", "failed"] },
+                        attempts: { type: "integer" as const },
+                        next_attempt_at: { type: "string" as const, format: "date-time", nullable: true },
+                        last_status_code: { type: "integer" as const, nullable: true },
+                        delivered_at: { type: "string" as const, format: "date-time", nullable: true },
+                      },
+                    },
                     body_redacted_reason: { type: "string" as const, description: "Human-readable explanation of why the body is redacted." },
                   },
                 },
@@ -794,6 +1044,39 @@ export const openApiSpec = {
             },
           },
           "404": errorResponse("not_found", "Transaction not found."),
+        },
+      },
+    },
+
+    // ─── Async jobs (portfolio plan 2.11) ─────────────────────────────
+    "/v1/files/{id}": {
+      get: {
+        tags: ["transactions"],
+        summary: "Download an async job's output file",
+        description: "Signed, expiring link minted by GET /v1/transactions/{id}. The signature is the credential: no API key. 403 for an invalid signature, 410 for an expired link (poll for a fresh one), 404 once the file is deleted under the retention policy.",
+        parameters: [
+          { name: "id", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } },
+          { name: "expires", in: "query" as const, required: true, schema: { type: "integer" as const } },
+          { name: "sig", in: "query" as const, required: true, schema: { type: "string" as const } },
+        ],
+        responses: {
+          "200": { description: "The file bytes, with its content type and an attachment filename.", content: { "application/octet-stream": { schema: { type: "string" as const, format: "binary" } } } },
+          "403": errorResponse("unauthorized", "This file link is not valid."),
+          "404": errorResponse("not_found", "File not found."),
+          "410": errorResponse("token_expired", "This file link has expired."),
+        },
+      },
+    },
+    "/v1/jobs/webhook-secret": {
+      get: {
+        tags: ["transactions"],
+        summary: "Get the callback signing secret",
+        description: "Primary key required. The secret that signs completion callbacks (Strale-Signature) for this account.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          ...primaryKeyError,
+          "200": keyResponse("Signing secret and format", { type: "object", properties: { secret: { type: "string" }, signature_header: { type: "string" }, signature_format: { type: "string" }, event_id_header: { type: "string" } } }),
+          "401": errorResponse("unauthorized", "Invalid API key."),
         },
       },
     },

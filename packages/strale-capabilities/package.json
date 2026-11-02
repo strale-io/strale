@@ -1,7 +1,7 @@
 {
   "name": "strale-capabilities",
-  "version": "0.1.0",
-  "description": "Catalog of 250+ Strale capabilities — IBAN validation, VAT checks, company data across 27 countries, sanctions screening, and more. Use with strale-mcp or the Strale REST API.",
+  "version": "0.1.1",
+  "description": "Catalog of available Strale capabilities \u2014 IBAN validation, VAT checks, company data across supported countries, sanctions screening, and more. Use with strale-mcp or the Strale REST API.",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
@@ -24,12 +24,11 @@
     "business-data",
     "kyb",
     "aml",
-    "gdpr",
-    "trust-scoring"
+    "gdpr"
   ],
   "author": "Strale <hello@strale.io>",
   "license": "MIT",
-  "homepage": "https://strale.dev",
+  "homepage": "https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/strale-io/strale.git",

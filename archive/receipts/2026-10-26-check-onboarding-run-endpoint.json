@@ -1,0 +1,844 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4391f45047d62f41d826de5e8e607d3a096410b0"
+  },
+  "at": "2026-10-26T22:26:47.418Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "root_ci_checks_passed": 55,
+    "root_ci_checks_failed": 0,
+    "focused_tests_passed": 85,
+    "api_tests_passed": 5724,
+    "api_tests_skipped": 321,
+    "api_tests_failed": 0,
+    "production_writes": 0,
+    "deployed": false
+  },
+  "topic": "onboarding-run-endpoint",
+  "raw": {
+    "inputs": {
+      "base_commit": "4391f45047d62f41d826de5e8e607d3a096410b0",
+      "working_tree_diff_sha256": "4c89be59317e44b56f4720aa45059ceadd797d6259554bed64713a3fb17f3ce6",
+      "root_ci_workflow": ".github/workflows/ci.yml"
+    },
+    "summary": {
+      "root_ci_checks_passed": 55,
+      "root_ci_checks_failed": 0,
+      "focused_test_files_passed": 8,
+      "focused_tests_passed": 85,
+      "api_tests_passed": 5724,
+      "api_tests_skipped": 321,
+      "api_tests_failed": 0,
+      "db_integration_job_run": false,
+      "reviews_go": 2,
+      "production_writes": 0,
+      "deployed": false
+    },
+    "root_ci": [
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "output_sha256": "7e183b6b437e37506fa965221a26539762a8598fe39de4f5ef9a16b1e2edc419",
+        "output_tail": [
+          "> strale-semantic-kernel@0.1.4 typecheck",
+          "> tsc --noEmit",
+          "",
+          "",
+          "> strale-mcp@0.2.8 typecheck",
+          "> tsc --noEmit",
+          ""
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "output_sha256": "aa3f63c06e4ffbeda7746fbf666cce61be14245340927a08ac2dd35c544c567b",
+        "output_tail": [
+          "[check-mjs-syntax] 36 .mjs file(s) checked (syntax-only — see script header for scope).",
+          "[check-mjs-syntax] All clean."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "output_sha256": "0b62c317e91b01715e627e61445b6a711ea36a4da1448da0a34268328f3e287b",
+        "output_tail": [
+          "",
+          "> @strale/api@0.1.0 lint:no-bare-catch",
+          "> node scripts/check-no-bare-catch.mjs src",
+          "",
+          "F-0-009 guard: no bare `.catch(() => {})` found."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "output_sha256": "ce3d7ecec6be264aff23c97c6c04876b234f8a8c3e3dce86b146e766dc6cf24a",
+        "output_tail": [
+          "",
+          "> @strale/api@0.1.0 lint:no-unguarded-user-fetch",
+          "> node scripts/check-no-unguarded-user-fetch.mjs",
+          "",
+          "[lint] user-URL fetch guard: every raw fetch in caller-URL capabilities is guarded or marked."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "output_sha256": "0e96162c9937a97fd56f8d74f07933d6cea3ad7623ededce4379317adac915b0",
+        "output_tail": [
+          "F-0-006 guard: every URL-accepting capability is either protected or has an acknowledging comment."
+        ]
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "output_sha256": "be5e1ce8e79a42818b2a052f602619fe48cdbc03211056ad91c3ca9b3376da0b",
+        "output_tail": [
+          "",
+          "> @strale/api@0.1.0 lint:no-new-console",
+          "> node scripts/check-no-new-console.mjs",
+          "",
+          "F-0-014 guard: no new `console.*` calls."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "output_sha256": "807be70b60fe57b1e393417e15a02f7a39c6d1e8d9c4c9421df22f48ed3560fb",
+        "output_tail": [
+          "SCF-3 guard: no API access to integrity_hash_status found."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "output_sha256": "ff166fc4821598aa8edc1c91cc7ede8322fb1a4685a9b8699c9eaeade6da4a98",
+        "output_tail": [
+          "skip  google-adk-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "ok    langchain-strale  (import found in packages/langchain-strale/langchain_strale/toolkit.py)",
+          "skip  openai-agents-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "skip  pydantic-ai-strale  (DEPRECATED.md present — yanked, forwarding only)",
+          "ok    semantic-kernel-strale  (import found in packages/semantic-kernel-strale/src/plugin.ts)",
+          "",
+          "framework-packages check: 4 package(s) verified, 3 deprecated (skipped) — every active framework-named package imports from the framework it claims."
+        ]
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "output_sha256": "565906a972445909eee9f66e78e880b1af46b2a29d6aaf73e61a18e047bc2415",
+        "output_tail": [
+          "2026-10-10.md: clean (557 words)",
+          "2026-10-17.md: clean (463 words)",
+          "2026-10-18.md: clean (371 words)",
+          "2026-10-19.md: clean (357 words)",
+          "2026-10-26.md: clean (589 words)",
+          "",
+          "checked 28 brief(s): 0 error(s), 15 warning(s)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "output_sha256": "44f497b282820b77e336abe026150e3d5e50c10f90fd8102d497e17e47812ca2",
+        "output_tail": [
+          "check-no-committed-secrets: clean (3622 tracked files scanned)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "output_sha256": "49dbf78642f2c3e85041449e38c39a123eba6b112b2f990ecd82cdaaf0ecff61",
+        "output_tail": [
+          "[lint] No scripts bypass the dispatcher gate."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "output_sha256": "5267e778115f5e85f3058c5f972ac9299170b75cc0d9a202fec7a5fd324c73c5",
+        "output_tail": [
+          "fetch-timeout coverage: 4 total offenders, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "output_sha256": "12b852cede02c558fc7136cfcbac0d8e79e0117ccb6655c78e1fe6c75815ecd5",
+        "output_tail": [
+          "manifest guaranteed-field consistency: 22 total, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "output_sha256": "8742d0bebc7e964c4fc129d3b225ce8cabb40c240ea3f94e222f550f4ec85f2d",
+        "output_tail": [
+          "PII guard: clean — no unredacted person names or checksum-valid identifiers found."
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "output_sha256": "21fb12f67bb183a99bf6514b3919c6e136a8cbda084281691361dc0d555f67aa",
+        "output_tail": [
+          "GUARANTEED_EMPTY (4):",
+          "  estonian-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [historical_names]",
+          "  swedish-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [alternative_names, ongoing_procedures]",
+          "  uk-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [tier_2_available, tier_2_available_reason, ubo_availability, ubo_availability_reason]",
+          "  us-company-data [allowlisted]: manifest declares guaranteed but fixture is null/empty: [match_confidence, is_exact_match, resolution_method]",
+          "",
+          "STRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. Re-capture a fixture after fixing its manifest with: npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "output_sha256": "9bd454e0f8c743c6e010f7a9b2b7ac8dd3d2ebd78b6f419a7f3b6f61b2e8a574",
+        "output_tail": [
+          "identity fixture-shape sentinel: 0 total, 0 not in allowlist"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "output_sha256": "30f82c9a17aee41f4f2ddcf06f39e2de0073c9fb8b86fd90d39e5b39fc7653f5",
+        "output_tail": [
+          "Skipping shape-contract check: frontend repo not present at <local>",
+          "  (Set STRALE_FRONTEND_PATH or run from a checkout with both repos.)"
+        ]
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "output_sha256": "99d9e23cb3e22b6fc7a29f113655855458a15bfae4ed4c9906b61dccd145a0c8",
+        "output_tail": [
+          "[lint] cost_class coherence: all classified capabilities OK."
+        ]
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "output_sha256": "d91a2f6532a808143549013bb08d0c3f8e5818b52c393d55609fd0fa1f740938",
+        "output_tail": [
+          "production write credential: 1 authorised reader, 0 unauthorised references"
+        ]
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "output_sha256": "e1c1a78c590218752e0bc9ae7f24ee5643e9fcc0506d121f0d4257b7795051f2",
+        "output_tail": [
+          "",
+          "> programs:check",
+          "> node scripts/check-program-tracks.mjs",
+          "",
+          "ok   docs/programs/brand-website/tracks.yaml",
+          "ok   docs/programs/cto-readiness/tracks.yaml"
+        ]
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "output_sha256": "ace0688dd5e9e7d3ae0d7cdd24a1409d797e24e8f61260cd75a130b74f169a55",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 30",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2760.589357"
+        ]
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "output_sha256": "b22c4364686d4e315316a4e45de74ae930e1e0e881469d8b59ef683a1d3d750e",
+        "output_tail": [
+          "ok   research contract",
+          "warn (5) — research-looking files outside docs/research:",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract",
+          "  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract"
+        ]
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "output_sha256": "aabba7628bc67067e8b19bd8e7d9667dafab61adbca415eba3d7e63279a8c0e1",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 31",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 6927.62273"
+        ]
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "output_sha256": "93829f0fb3fd118d4e78f9e6ce4de54f5f2a09cc22ee6961cb3834269b6b3165",
+        "output_tail": [
+          "Controls source, output and evidence bindings pass",
+          "Patterns inputs, outputs and evidence pass",
+          "Shared-access illustration sources, outputs and evidence pass",
+          "Homepage generated outputs are current.",
+          "Hero comparison sources and generated outputs agree.",
+          "Opening study sources and outputs agree.",
+          "ok   open-flow design system: 122 contrast pairs pass, specimen on-token, assets match provenance"
+        ]
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "output_sha256": "5d149785037ca569079ef65008581a08f8783247c2a932eb34ff78e7a14a9813",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 206.465923"
+        ]
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "output_sha256": "b390d20cd52a29bde5b367d3ae9216a942b9ada7a1f37c84cab29c28cf32192f",
+        "output_tail": [
+          "",
+          "> env:check",
+          "> node scripts/check-env.mjs",
+          "",
+          "checked 129 process.env names against 134 rows in config/env-manifest.yaml",
+          "example files: .env.example, apps/api/.env.example",
+          "ok   environment manifest contract"
+        ]
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "output_sha256": "df082917bdfc2128a2779c618c95a3bf8ef1f878cae0fcd110f04ed877ba8fe3",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2537.687532"
+        ]
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "output_sha256": "a9d9477b73ca61296349ddfec704f3f5c4d0ff3b9efcf1b7224b5876909379b5",
+        "output_tail": [
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-edgar: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sec-ticker-index: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: nvd: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: usgs-earthquake: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: alchemy-eth: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "  warn DEPENDENCY_SYNC_SKIPPED apps/api/src/lib/dependency-manifest.ts: sourcify: tier \"free\" is not paid or self-hosted, so the boot-time sync in apps/api/src/lib/startup-migrations.ts never writes its vendor_capability_dependencies rows",
+          "ok   vendor register contract"
+        ]
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "output_sha256": "4bf4e7d9da7502ebbfa2ce3e32cca4ef8a8acfee416dc2120b54543ba38f324c",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 78",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 6703.273284"
+        ]
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "output_sha256": "274334e808caf2bc11b6fb8b0a063a63fbf1b179b981ca454aea700578361bea",
+        "output_tail": [
+          "",
+          "> distribution:check",
+          "> node scripts/check-distribution.mjs",
+          "",
+          "checked 59 surfaces in docs/operations/distribution-registry.yaml",
+          "ok   distribution register contract"
+        ]
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "output_sha256": "24d89c05731430a4a8908e566108d156823a1e14d70c58c08d0fe7bee35e883e",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 15",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 562.52005"
+        ]
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "output_sha256": "405676626dcf50c333df2bdf480feb28dd28e5c7b5643794a02dd1c1416d91c8",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 20",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 255.568911"
+        ]
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "output_sha256": "a4c6e85717b22ab7347c6ebb5b9db0bafabe3628147b7bea199b8a3036c38731",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 3",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 221.025733"
+        ]
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "output_sha256": "27cb2403502b36ff2d54439bb1a7c42cedc651abedfed4a8ceab261ef1c9382e",
+        "output_tail": [
+          "",
+          "> protocols:check",
+          "> node scripts/check-protocol-extraction.mjs",
+          "",
+          "checked 19 candidate protocol mirror(s) under docs/governance/protocols",
+          "ok   protocol extraction"
+        ]
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "output_sha256": "659a092063286f0f4f29a9c5de595e7c6459f617e231d141cb44ebac6e002a42",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 12",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 423.232015"
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "output_sha256": "79c6c1a59e32ba1d16dc62256a910ccedc7a396262e4b77dbcb7898f630d02be",
+        "output_tail": [
+          "> protocols:coverage",
+          "> node scripts/check-protocol-coverage.mjs",
+          "",
+          "checked 20 protocol row(s) in docs/project/protocol-coverage.yaml",
+          "  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20260910-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision",
+          "  warn DECISION_ID_UNCOVERED CLAUDE.md: decision id \"DEC-20261024-A\" is named next to a protocol but no docs/project/protocol-coverage.yaml row cites it as its decision",
+          "ok   protocol coverage"
+        ]
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "output_sha256": "a38a7229905b05c4fe74876cc4f6be2710e6eabceeafb5025fca2f2c2230dd13",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 16",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1077.917536"
+        ]
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "output_sha256": "80c0a1b5573ff7914b8320f01be3da34be1e07d32f31ef2c4ee7f269c4de12d3",
+        "output_tail": [
+          "",
+          "> scheduled:check",
+          "> node scripts/check-scheduled-reachability.mjs",
+          "",
+          "checked 9 scheduled mechanisms in config/scheduled-mechanisms.yaml",
+          "ok   scheduled mechanism reachability"
+        ]
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "output_sha256": "460799c33645710c9287c5d81e190c9ce64d649af6f4b95272520292a936580d",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 43",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 780.079174"
+        ]
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "output_sha256": "071567ca21bccbef7bb72c8df69d5a73a1a36b5188a2f0742407395575b4441b",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 24",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1220.04136"
+        ]
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "output_sha256": "9bf2a9baf35ffa8b6ecb6c9d4a8798e098b0678b1573f88bad24f54194fd83a5",
+        "output_tail": [
+          "",
+          "> models:check",
+          "> node apps/api/scripts/check-model-literals.mjs",
+          "",
+          "checked 723 files under apps/api/src (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)",
+          "ok   model registry contract"
+        ]
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "output_sha256": "99a1a52caa58ae0184a72abf10da98a64bb14befbb9f3f8994102a4e35b07574",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 14",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 326.454783"
+        ]
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output_sha256": "1d997d1f1d6f00dab198d3ed305b31e75b649094765d488950c0339b0aca6d8f",
+        "output_tail": [
+          "",
+          "> claims:check",
+          "> node scripts/check-claims.mjs",
+          "",
+          "checked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present",
+          "ok   claims register contract"
+        ]
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "output_sha256": "306d5e43991f83304ca4f37e3c3ab0bd431990e08dbda0f04f14a98133af33a8",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 18",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1841.375579"
+        ]
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "output_sha256": "09fa0b728ac4ccb15a2482e7a8af95140cdcc2b0035195ef62b7b5353fbb093e",
+        "output_tail": [
+          "",
+          "> docs:check",
+          "> node scripts/check-docs-index.mjs",
+          "",
+          "checked 18 docs/ subtrees against docs/README.md",
+          "ok   docs/README.md index"
+        ]
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "output_sha256": "6504c11a4274ebebeca37b8b01eda6cb2d03a92b20cd75ac2de27cbda8cca544",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 6",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 216.754468"
+        ]
+      },
+      {
+        "command": "# Exit 2 means stale: warn. Any other non-zero exit is a crash: fail.\nstatus=0\nnode scripts/generate-archive-index.mjs --check || status=$?\nif [ \"$status\" -eq 2 ]; then\n  echo \"::warning title=Stale archive/handoff index::Regenerated by the pre-commit hook; run npm run archive:index locally or let the next commit touching archive/ or handoff/ fix it.\"\nelif [ \"$status\" -ne 0 ]; then\n  exit \"$status\"\nfi\n",
+        "exit_code": 0,
+        "output_sha256": "defafeb7337cb5ee191ba82dc06943c6c533c6d70bd2b04007dea87a23a5a31c",
+        "output_tail": [
+          "archive/README.md and handoff/README.md up to date"
+        ]
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "output_sha256": "1e6a373f4fb01796643fb34b239952b97f68dbe36c72c9606f4c59acb1a8e4ab",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 12",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 191.810819"
+        ]
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "output_sha256": "2620195d63419f7c96a40e8bfd61e79c67cfedcf28c31873f437af678b4907e0",
+        "output_tail": [
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-24-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it",
+          "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-26-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it"
+        ]
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "output_sha256": "5ae579274ec7dd1ca62cb8ba5880d947ed8f15e477ffb8be8864854aea337068",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 25",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 6040.047165"
+        ]
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "output_sha256": "43fbc4828157c64855323071651a541ff7ac2935013e2922901441dd3899d790",
+        "output_tail": [
+          "",
+          "> migrations:check",
+          "> node apps/api/scripts/check-migration-ledger.mjs",
+          "",
+          "checked 66 migration blocks in apps/api/src/lib/startup-migrations.ts",
+          "ok   migration ledger"
+        ]
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "output_sha256": "5edebd667bcb008a895f077ee9a87a263c91a212e978e2c4589db36fa0289b36",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 23",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 431.757996"
+        ]
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "output_sha256": "7fec047e9693a5adc4b53b821195b84e23fe3f473af927f7c8de777882d39660",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 46",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 15935.182778"
+        ]
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "output_sha256": "8e6d48268d03aeda171a935a3250ceae0ae046712e0a178ca51446bf342faee0",
+        "output_tail": [
+          "",
+          "> context:check",
+          "> node scripts/check-project-context.mjs",
+          "",
+          "project context check: warning-only (M2 candidate foundation)",
+          "  no warnings"
+        ]
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "output_sha256": "60a4fca536c3e7fb39302d6e06a8853c0fc3ebf50be7a298dbbf5ccb9a20d4b3",
+        "output_tail": [
+          "ℹ suites 0",
+          "ℹ pass 180",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 127368.243019"
+        ]
+      }
+    ],
+    "full_api": {
+      "command": "cd apps/api && npx vitest run --maxWorkers=2",
+      "exit_code": 0,
+      "output_tail": [
+        "{\"level\":30,\"time\":1793053245878,\"env\":\"test\",\"label\":\"health-sweep-start\",\"msg\":\"health-sweep-start\"}",
+        "{\"level\":30,\"time\":1793053245878,\"env\":\"test\",\"label\":\"health-sweep-meta-all-passed\",\"checks_passed\":0,\"msg\":\"health-sweep-meta-all-passed\"}",
+        "{\"level\":30,\"time\":1793053245878,\"env\":\"test\",\"label\":\"health-sweep-report\",\"suites_scanned\":0,\"remediations_applied\":0,\"remediations_proposed\":0,\"stale_date_fixes\":0,\"dead_urls_found\":0,\"quarantine_released\":[],\"upstream_recovered\":[],\"classification_summary\":{},\"msg\":\"health-sweep-report\"}",
+        "",
+        " Test Files  330 passed | 31 skipped (361)",
+        "      Tests  5724 passed | 321 skipped (6045)",
+        "   Start at  22:18:55",
+        "   Duration  132.01s (transform 10.74s, setup 2.08s, import 100.52s, tests 106.66s, environment 42ms)",
+        ""
+      ]
+    },
+    "focused": {
+      "command": "cd apps/api && npx vitest run src/routes/internal-onboarding-run.test.ts src/lib/onboarding-pipeline.test.ts src/lib/onboarding-cli.test.ts src/lib/onboarding-workflow.test.ts src/lib/onboarding-limitations.test.ts src/lib/known-answer-checks.test.ts src/lib/x402-eligibility.guard.test.ts src/lib/capability-persistence.test.ts",
+      "exit_code": 0,
+      "output_tail": [
+        "",
+        "{\"level\":50,\"time\":1793052925847,\"env\":\"test\",\"label\":\"onboarding-pipeline-failed\",\"slug\":\"sample-tool\",\"stage\":\"verification\",\"code\":\"verification_failed\",\"msg\":\"onboarding-pipeline-failed\"}",
+        "",
+        " Test Files  8 passed (8)",
+        "      Tests  85 passed (85)",
+        "   Start at  22:15:22",
+        "   Duration  5.05s (transform 1.29s, setup 295ms, import 8.13s, tests 1.79s, environment 1ms)",
+        ""
+      ]
+    },
+    "additional_checks": [
+      {
+        "command": "npm ci",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsc --noEmit -p apps/api/tsconfig.json",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run env:example",
+        "exit_code": 0,
+        "note": "No example diff; production-only optional secret is deliberately excluded from local templates."
+      },
+      {
+        "command": "npm run context:generate",
+        "exit_code": 0
+      },
+      {
+        "command": "node --check .github/scripts/onboard-capability.mjs",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "npx tsx apps/api/scripts/onboard.ts --manifest manifests/eurostat-data.yaml --dry-run",
+        "exit_code": 1,
+        "expected_boundary": "No operator write credential available; no writes performed."
+      },
+      {
+        "command": "npx vitest run src/capabilities/domain-contact-extract.test.ts",
+        "exit_code": 0,
+        "note": "25 passed; unchanged timing test failed once under concurrent full-suite load."
+      }
+    ],
+    "earlier_runs": [
+      {
+        "command": "cd apps/api && npx vitest run",
+        "exit_code": 1,
+        "failures": [
+          "legacy route auth regression fixed",
+          "lifecycle scanner extraction classification fixed"
+        ]
+      },
+      {
+        "command": "npm test",
+        "exit_code": 1,
+        "failures": [
+          "unchanged domain-contact-extract linear-scaling timing assertion; isolated rerun and final full suite passed"
+        ]
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 1,
+        "failures": [
+          "source inventory stale after extraction; regenerated and final run passed"
+        ]
+      }
+    ],
+    "live_checks": [
+      {
+        "request": "no-secret",
+        "output": [
+          "HTTP/2 401 ",
+          "{\"error_code\":\"unauthorized\",\"message\":\"Admin authentication required.\"}"
+        ],
+        "interpretation": "Existing admin wall before deployment; does not verify the new runner."
+      },
+      {
+        "request": "wrong-secret",
+        "output": [
+          "HTTP/2 401 ",
+          "{\"error_code\":\"unauthorized\",\"message\":\"Admin authentication required.\"}"
+        ],
+        "interpretation": "Existing admin wall before deployment; does not verify the new runner."
+      }
+    ],
+    "limitations": [
+      "DB-integration job not run: disposable PostgreSQL unavailable and Docker managed socket is absent.",
+      "No deploy or production onboarding. Post-deploy 503 then onboarding-specific 401 verification remains.",
+      "Branch deliberately unpushed under build-agent instruction; handoff push gate cannot pass."
+    ]
+  }
+}

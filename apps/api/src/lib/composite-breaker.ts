@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilityHealth } from "../db/schema.js";
+import { sourceHealth } from "../db/schema.js";
 import { logWarn } from "./log.js";
 
 /**
@@ -13,9 +13,9 @@ import { logWarn } from "./log.js";
 export async function isCircuitOpen(slug: string): Promise<boolean> {
   try {
     const [row] = await getDb()
-      .select({ state: capabilityHealth.state, nextRetryAt: capabilityHealth.nextRetryAt })
-      .from(capabilityHealth)
-      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .select({ state: sourceHealth.state, nextRetryAt: sourceHealth.nextRetryAt })
+      .from(sourceHealth)
+      .where(eq(sourceHealth.capabilitySlug, slug))
       .limit(1);
     return row?.state === "open" && !!row.nextRetryAt && row.nextRetryAt.getTime() > Date.now();
   } catch (err) {

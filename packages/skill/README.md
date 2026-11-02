@@ -1,6 +1,6 @@
 # Strale Agent Skill
 
-Agent skill file for [Strale](https://strale.dev) — teaches AI coding agents when and how to use Strale's 250+ capabilities.
+Agent skill file for [Strale](https://strale.dev?src=skill&utm_source=skill&utm_medium=listing&utm_campaign=distribution-d0-d1) — teaches AI coding agents when and how to use Strale tools.
 
 ## What is this?
 
@@ -51,4 +51,4 @@ Reference the skill directory in your agent's adapter config:
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 trial credits, no card required.
+Sign up at [strale.dev](https://strale.dev?src=skill&utm_source=skill&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.

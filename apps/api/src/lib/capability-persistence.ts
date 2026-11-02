@@ -23,7 +23,7 @@
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import {
   capabilities,
   testSuites,
@@ -48,8 +48,16 @@ export interface PersistCapabilityInput {
   limitations?: Omit<CapabilityLimitationInsert, "capabilitySlug">[];
 }
 
+export type LimitationChangeObserver = (action: "created" | "updated" | "deleted", names: string[]) => void;
+
 export interface PersistCapabilityOpts {
+  /** Called after commit, before the hook, with actual limitation changes. */
+  onLimitationsChanged?: LimitationChangeObserver;
   mode: PersistMode;
+  /** Backfill never changes existing serving controls, including on hook failure. */
+  backfill?: boolean;
+  db?: Database;
+  signal?: AbortSignal;
   /** Optional. On upsert, columns to refresh when a row already exists
    *  (`onConflictDoUpdate.set`). If omitted, defaults to spreading the
    *  full normalized payload — matches seed.ts's current semantics. */
@@ -59,9 +67,9 @@ export interface PersistCapabilityOpts {
 export interface PersistCapabilityResult {
   slug: string;
   mode: PersistMode;
-  /** True iff the post-insert hook failed. When true, the row was
-   *  committed with `lifecycle_state: 'hook_failed'`. */
+  /** Failed creates are marked hook_failed; backfills keep their lifecycle. */
   hookFailed: boolean;
+  hookFailureReason?: "gate_rejected" | "hook_error";
 }
 
 /**
@@ -203,6 +211,7 @@ export async function diffAndUpdateLimitations(
   queryable: DrizzleQueryable,
   capabilitySlug: string,
   manifestLimitations: ReadonlyArray<Omit<CapabilityLimitationInsert, "capabilitySlug">>,
+  onChange?: LimitationChangeObserver,
 ): Promise<DiffLimitationsResult> {
   // 0. Sanitize titles before anything else touches them — the hash, the
   //    diff, and the eventual INSERT/UPDATE all read from this sanitized
@@ -257,6 +266,7 @@ export async function diffAndUpdateLimitations(
     await (queryable as ReturnType<typeof getDb>)
       .delete(capabilityLimitations)
       .where(inArray(capabilityLimitations.id, orphanIds));
+    onChange?.("deleted", existing.filter(row => orphanIds.includes(row.id)).map(row => row.title ?? row.limitationText));
   }
 
   // 4. INSERT new + UPDATE sort_order on moved rows.
@@ -273,12 +283,14 @@ export async function diffAndUpdateLimitations(
           sortOrder: index,
         });
       inserted++;
+      onChange?.("created", [lim.title ?? lim.limitationText]);
     } else if (existingRow.sortOrder !== index) {
       await (queryable as ReturnType<typeof getDb>)
         .update(capabilityLimitations)
         .set({ sortOrder: index, updatedAt: new Date() })
         .where(eq(capabilityLimitations.id, existingRow.id));
       reordered++;
+      onChange?.("updated", [lim.title ?? lim.limitationText]);
     }
   }
 
@@ -321,20 +333,31 @@ function normalizePiiFields(row: CapabilityRowInsert): CapabilityRowInsert {
  *   - `update`: UPDATE capability row by slug with normalized fields
  *   - `upsert`: INSERT ... ON CONFLICT DO UPDATE (seed.ts path)
  *
- * Note: the hook (`onCapabilityCreated`) still takes only a slug. The
- * `mode` value is logged + returned but not forwarded to the hook. Future
- * phases may extend the hook signature; C2 keeps it narrow.
+ * Backfill update mode preserves serving controls and never writes the failure
+ * lifecycle marker. API callers pass a bounded handle through the hook graph.
  */
 export async function persistCapability(
   input: PersistCapabilityInput,
   opts: PersistCapabilityOpts,
 ): Promise<PersistCapabilityResult> {
-  const db = getDb();
+  const db = opts.db ?? getDb();
+  opts.signal?.throwIfAborted();
   const normalized = normalizePiiFields(input.capability);
+  if (opts.backfill) {
+    if (opts.mode !== "update") throw new Error("Backfill requires update mode");
+    // Even authority overrides cannot turn a metadata backfill into a serving change.
+    delete normalized.visible;
+    delete normalized.x402Enabled;
+    delete normalized.isActive;
+    delete normalized.lifecycleState;
+  }
   const slug = normalized.slug;
   if (!slug) {
     throw new Error("persistCapability: capability.slug is required");
   }
+
+  const limitationChanges: Array<Parameters<LimitationChangeObserver>> = [];
+  const observe: LimitationChangeObserver = (...change) => { limitationChanges.push(change); };
 
   // ── Phase 1: transactional write ────────────────────────────────────────
   await db.transaction(async (tx) => {
@@ -360,7 +383,7 @@ export async function persistCapability(
       // idempotency parity. If the capability row already has limitations
       // (e.g. prior aborted create), the diff handles orphan cleanup.
       if (input.limitations) {
-        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations);
+        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations, observe);
       }
     } else if (opts.mode === "update") {
       // Deliberately does not touch capability_limitations: `input.limitations`
@@ -398,17 +421,24 @@ export async function persistCapability(
       // Previously INSERTed each row without an existence check, creating
       // duplicates on re-seed. Diff helper no-ops when content matches.
       if (input.limitations) {
-        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations);
+        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations, observe);
       }
     }
   });
 
+  for (const [action, names] of limitationChanges) opts.onLimitationsChanged?.(action, names);
+
   // ── Phase 2: post-commit hook (outside the transaction) ─────────────────
   let hookFailed = false;
+  let hookFailureReason: PersistCapabilityResult["hookFailureReason"];
   try {
-    await onCapabilityCreated(slug);
+    opts.signal?.throwIfAborted();
+    await onCapabilityCreated(slug, { db, signal: opts.signal });
   } catch (err) {
     hookFailed = true;
+    // Public diagnostics classify the failure without exposing driver/vendor data.
+    hookFailureReason = err instanceof Error && err.message.startsWith("Onboarding gate")
+      ? "gate_rejected" : "hook_error";
     logError(
       "capability-persistence-hook-failed",
       err,
@@ -420,7 +450,7 @@ export async function persistCapability(
     // retry scheduler sweeps hook_failed + any row whose post-commit
     // state looks incomplete.
     try {
-      await db
+      if (!opts.backfill) await db
         .update(capabilities)
         .set({ lifecycleState: "hook_failed", updatedAt: new Date() })
         .where(eq(capabilities.slug, slug));
@@ -443,5 +473,5 @@ export async function persistCapability(
     "capability-persistence-done",
   );
 
-  return { slug, mode: opts.mode, hookFailed };
+  return { slug, mode: opts.mode, hookFailed, ...(hookFailureReason ? { hookFailureReason } : {}) };
 }

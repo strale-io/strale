@@ -3,6 +3,8 @@
 export interface StraleOptions {
   /** API key (starts with sk_) */
   apiKey: string;
+  /** Identify a framework wrapper instead of the underlying SDK. */
+  clientHeader?: string;
   /** Base URL of the Strale API. Defaults to https://api.strale.io */
   baseUrl?: string;
   /** Default max_price_cents for do() calls */
@@ -56,10 +58,10 @@ export interface DoMeta {
 export interface DoResponse extends DoResult {
   /** Full result block as returned by the API. */
   _result: DoResult;
-  /** Trust layer metadata (quality scores, execution guidance, audit trail). */
+  /** Execution metadata (execution guidance and audit context). */
   meta: DoMeta;
   free_tier?: boolean;
-  usage?: { calls_today: number; daily_limit: number; resets_at: string };
+  usage?: { calls_this_month: number; monthly_limit: number; resets_at: string };
   upgrade?: Record<string, unknown>;
 }
 
@@ -67,6 +69,63 @@ export interface DryRunResponse {
   dry_run: true;
   would_execute: string;
   price_cents: number;
+  wallet_balance_cents: number;
+  wallet_sufficient: boolean;
+}
+
+// ─── POST /v1/do/batch ─────────────────────────────────────────────────────────
+
+export interface DoBatchRequest {
+  /** The tool to run over every input (batches do not match on a task) */
+  capability_slug: string;
+  /** One object of the tool's parameters per item; 1 to 100 items */
+  inputs: Record<string, unknown>[];
+  /** The most the whole batch may cost, in EUR cents (price × items must fit) */
+  max_total_price_cents: number;
+  /** Time budget per item in seconds (5 to 60) */
+  timeout_seconds?: number;
+  /** If true, validates and quotes without reserving or running anything */
+  dry_run?: boolean;
+  /** One key for the whole batch; a retry returns the recorded results */
+  idempotency_key?: string;
+}
+
+export interface DoBatchItemResult {
+  index: number;
+  status: "completed" | "failed" | "not_run";
+  transaction_id: string | null;
+  /** Charged for this item: the unit price if completed, else 0 */
+  price_cents: number;
+  latency_ms: number | null;
+  output: Record<string, unknown> | null;
+  provenance: Provenance | null;
+  error?: { error_code: string; message: string; retryable: boolean; detail?: string };
+}
+
+export interface DoBatchResponse {
+  batch_id: string;
+  status: "completed" | "partial" | "failed";
+  capability_used: string;
+  item_count: number;
+  succeeded: number;
+  failed: number;
+  not_run: number;
+  unit_price_cents: number;
+  quoted_total_cents: number;
+  charged_cents: number;
+  released_cents: number;
+  wallet_balance_cents: number;
+  /** In input order */
+  results: DoBatchItemResult[];
+  meta: { idempotency_replay?: boolean };
+}
+
+export interface DoBatchDryRunResponse {
+  dry_run: true;
+  would_execute: string;
+  item_count: number;
+  unit_price_cents: number;
+  quoted_total_cents: number;
   wallet_balance_cents: number;
   wallet_sufficient: boolean;
 }
@@ -136,6 +195,7 @@ export interface TransactionDetail {
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
   error: string | null;
+  details?: Record<string, unknown>;
   price_cents: number;
   latency_ms: number;
   provenance: Provenance | null;
@@ -150,6 +210,29 @@ export interface TransactionDetail {
 
 // ─── Error response shape ──────────────────────────────────────────────────────
 
+/** Additional key metadata; plaintext is returned only by createApiKey. */
+export interface ApiKey {
+  id: string;
+  key_prefix: string;
+  label: string;
+  max_spend_per_hour_cents: number | null;
+  max_spend_total_cents: number | null;
+  created_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+}
+export interface ApiKeyUsage extends ApiKey {
+  spent_hour_cents: number;
+  spent_total_cents: number;
+}
+export interface ApiKeyCreateOptions {
+  label: string;
+  max_spend_per_hour_cents?: number | null;
+  max_spend_total_cents?: number | null;
+}
+export type ApiKeyUpdateOptions = Partial<ApiKeyCreateOptions>;
+export interface ApiKeyCreated extends ApiKey { api_key: string }
+
 export type ErrorCode =
   | "insufficient_balance"
   | "no_matching_capability"
@@ -158,6 +241,11 @@ export type ErrorCode =
   | "timeout_exceeded"
   | "invalid_request"
   | "rate_limited"
+  | "spend_cap_exceeded"
+  | "key_hourly_cap_exceeded"
+  | "key_total_cap_exceeded"
+  | "primary_key_required"
+  | "active_key_limit_exceeded"
   | "unauthorized"
   | "not_found";
 

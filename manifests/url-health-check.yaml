@@ -94,7 +94,7 @@ output_field_reliability:
   redirect_chain: guaranteed
   response_time_ms: guaranteed
 limitations:
-  - title: Checks HTTP response status and basic connectivity only — content correctness and page rendering are not assessed
+  - title: Page content and rendering are not checked
     text: Checks HTTP response status and basic connectivity — does not assess content correctness or page rendering
     category: coverage
     severity: info

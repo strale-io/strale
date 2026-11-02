@@ -14,6 +14,53 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-44** · `your_call` · owner Petter · raised 2026-10-31 · needed by 2026-11-06 — **our Google search credit expires on 8 November; renewing costs about $62.50 for six months, and not renewing takes seven tools off sale**
+
+*The choice:* renew the Serper Starter pack, or let it lapse and retire the tools that depend on it.
+
+*What is established:* every Serper tier expires after six months, and $50 for 50,000 credits is the smallest (serper.dev, read 2026-10-31). That price is before VAT: the last pack, bought 2026-05-08, was charged $62.50 through Paddle, which is $50 plus 25 %. We use about 430 credits a month, so a pack is roughly 5 % used when it expires. Eight tools need the key; seven stop without it, and `adverse-media-check` loses its fallback. Outside buyers made 16 calls on them in October and 19 in September, though the largest buyer's 38 `google-search` calls on 10-30 sit inside the x402 figures. Serper's account endpoint reports 47,497 credits left on 2026-10-31, so almost all of the pack would expire unused; that handoff's "46,900 consumed, ~3,100 remaining" reads the same number backwards, and its 10x under-costing inference falls with it. Evidence: `handoff/_general/from-code/2026-10-31-serper-goto-link-repair.md`, from PR #859; OUTBOX `serper-credit-rollover` asks whether unused credits can carry over; on 2026-11-01 it was still a draft, not sent, and only the local inbox session can send it.
+
+*Options:* renew (about $62.50 charged); or let it lapse and take the seven tools off sale on 8 November ourselves, so buyers get a clear "not available" rather than failed calls.
+
+*Recommendation:* renew, after the rollover question gets its answer if it comes by 6 November. It is inside the weekly envelope and the catalogue's breadth is the positioning (DEC-20261023-B).
+
+*Consequence:* renewing costs about $10.40 a month including VAT, against a few euros of income from these tools today. Longer term, another search provider sells a $50 balance that never expires, which at our volume would last years instead of six months; that needs their written permission to resell first, and is a separate decision. Lapsing saves that and removes web search from the catalogue on 8 November.
+
+**DQ-43** · `your_call` · owner Petter · raised 2026-10-30 · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+
+*Settled:* the Japan qualified-invoice-issuer check is portfolio plan item 1.13, approved under DEC-20261024-B. The NTA invoice-system office replied on 2026-10-29 (OUTBOX row `nta-invoice-app-id`): the invoice Web-API permission can be added to the corporate-number application ID we already hold, through the application-ID change notification (`https://www.invoice-kohyo.nta.go.jp/web-api/pre-change`, email-change fields left empty), with our 2026-10-27 email text uploaded as a Word file as the usage document.
+
+*Why it is not mine:* it is a registration filed with a government agency on behalf of Moonlighter AB. Under DEC-20261027-C a session may fill a sign-up form only once Petter has said go for that specific form, and he clicks the final button.
+
+*What I need:* your go for this form. A local session then fills it up to the final button and prepares the Word file; you submit.
+
+**DQ-42** · `your_call` · owner Petter · raised 2026-10-30 — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+
+*What is established (2026-10-30 morning run, production read-only):*
+- Since the 2026-10-28 fetch-hardening deploy, tools that read a public page as their source check its robots.txt (DEC-20261023-A adoption work). `eu-trademark-search` renders `euipo.europa.eu/eSearch/`, and EUIPO's robots.txt has `disallow: /eSearch/` for every agent. The production parser refuses it; a registered account's paid call failed with exactly that on 2026-10-29 13:40Z and was not charged.
+- It earned €5.50 from x402 buyers between 10-16 and 10-22 (11 calls, all completed). It cannot earn anything now, and it is still listed for sale. The harness cannot see this: the tool is paid-prepaid and refuses internal test calls.
+- Second source: EUIPO's robots.txt fetched directly the same morning, and the integration account's QA sweep on 10-29/30 hit the same refusal.
+- EUIPO offers an official Trademark Search API on its developer portal (dev.euipo.europa.eu): free registration, a sandbox, then production approval (third-party documentation; the portal's own terms not yet read).
+
+*Options:*
+1. **Open an EUIPO developer account** (free) and let a session rebuild the tool on the official API — the preferred lane under DEC-20261023-A.
+2. **Delist the tool** until 1 is done, so buyers stop finding a tool that always refuses.
+3. Both: delist now, rebuild on 1.
+
+*I recommend* 3. Delisting changes no revenue (it earns nothing while refused) and stops buyers meeting a dead tool; the official API is the durable fix. Delisting a tool that earned money last week is founder-gated (CHARTER § founder-gated: "deactivating revenue earners"), so I have not done it.
+
+*The consequence:* 3 costs nothing and recovers the ~€2–3/week the tool was earning once the API is in; doing nothing leaves it listed and failing. The sister case `price-compare` (pricerunner redirects to a disallowed `/results` path; no non-harness revenue in 14 days) is delisted by this run as policy-determined, not a revenue earner.
+
+**DQ-41** · `your_call` · owner Petter · raised 2026-10-27 · authorization, not judgement — **four new tools and the rewritten public limitation texts are merged but not live, because the onboarding button has no key yet**
+
+*Settled:* `company-status-check`, `entity-resolve`, `eurostat-data` and `invoice-counterparty-check` (PRs #742, #744, #749, #752) and the 558 rewritten limitation texts (#756) were merged on 2026-10-26 and need onboarding to reach production. The button built for that (#755, #757: Actions → Onboard capability) runs inside the deployed API and was reviewed and merged. Evidence, 2026-10-27 ~07:30Z: none of the four slugs is in the production `capabilities` table; `GET /v1/capabilities/entity-resolve` → 404; `POST /v1/internal/onboarding/run` without credentials → 503 `not_configured` ("Set ONBOARDING_RUN_SECRET … in Railway"); the workflow has never run and the `production-onboarding` GitHub environment does not exist. Six further manifests (bulgarian, cypriot, hungarian, luxembourgish, maltese, romanian company data) are also not in the table; all six were added on 2026-05-16 and are not part of this request.
+
+*Why it is not mine:* the key is a production credential held by Petter (`config/env-manifest.yaml`, `ONBOARDING_RUN_SECRET`, holder petter); it is set in Railway and in a GitHub environment secret, and no autonomous session holds write access to either. The runbook's design keeps it that way on purpose.
+
+*What I need:* the one-time key set in both places. After that, running the onboarding (mode `onboard` for the four slugs, then mode `limitations`, slugs `all`) is a delegated `capability_onboarding` action the next session can trigger and verify.
+
+**Update 2026-10-28 (morning run):** still blocked — `POST /v1/internal/onboarding/run` → 503 `not_configured`; `GET /v1/capabilities/entity-resolve` → 404. **The ask has narrowed to the four new tools.** #776 (merged 2026-10-27) applies reviewed manifest text after every deploy; it ran on the deployed tip `f2270a61` (322 of 356 rows carry its hash) and the strict drift sweep shows no limitation drift on any writable tool. Not applied, by design: the 22 compliance/risk-synthesis tools the sync treats as report-only (their rewritten wording stays with Petter under CHARTER.md), the four new tools, and the six 2026-05-16 manifests not in the table. **Note for the session that runs the button:** its `limitations` mode has no report-only guard, so run it for named non-compliance slugs only, never `all`, unless Petter has approved publishing the compliance wording.
+
 **DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · answered 2026-10-26, open until the registers reply — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
 
 Under the data-access rule (DEC-20261023-A), a per-call read of a public source is allowed when its terms permit it. Building the Swiss company-ID and VAT check (portfolio plan 1.12), the build stopped at that test, and it applies to two live tools too.
@@ -42,7 +89,9 @@ Under the data-access rule (DEC-20261023-A), a per-call read of a public source 
 - **Zefix is settled without a new request.** On 2026-03-20 the Federal Commercial Registry Office (zefix@bj.admin.ch) opened Strale's Zefix REST API account and stated its terms, which Petter accepted in writing the same day: use is free of charge, and "If the data is further used, its origin must be indicated and any modification of the data must be indicated." That is a written grant of further use with attribution, so `swiss-company-data` meets DEC-20261023-A's condition. Its `vendor-terms.ts` record is still to be added; per the register note above, that goes in the PR that adjusts the shared-client test.
 - **Emails sent by Petter on 2026-10-26:** the Swiss UID register (uid@bfs.admin.ch, now asking about UID only, citing the Zefix terms as precedent) and the Czech ARES register (ares@mfcr.cz). Neither had been contacted before.
 
-**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · answered 2026-10-26, open until Serper replies or the exception ends 2026-11-09 — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
+**Update 2026-10-29: the Czech part is resolved.** The Czech Ministry of Finance answered at 08:52 (MF ČR reply of 2026-10-29 to petter@strale.io, from its ICT department): information published through ARES may be reused under the ARES operating conditions and the Czech law on free access to information, as open data. The Ministry gives no individual legal assessment, and the user is responsible for compliance. The ARES open-data page it links lists the company-register data published as open data, quoting the definition in Act 106/1999 § 3 ("whose manner and purpose of further use is not restricted"), to be used within the operating conditions (rate limits, no evasion) and not altered in a way that distorts its meaning without saying so. No page asks for a specific attribution wording; the tool names ARES and the Ministry as the source anyway. `cz-company-data`'s record in `vendor-terms.data.json` is now `resale: "permitted"` on published terms, and its provenance note and public limitation say so. Still open: the Swiss UID register, which has not replied (follow-up due per `OUTBOX.yaml`). This entry stays `your_call` until it does.
+
+**DQ-39** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-26 · closed 2026-10-28 (Serper's written permission accepted) — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
 
 Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
 vendor's data only when the vendor's terms permit resale, checked and written
@@ -132,6 +181,18 @@ switch-off is one line in the deactivation list.
 - Petter emailed hello@serper.dev at 22:12 CET. His mailbox shows no earlier contact with Serper about terms, only payment receipts.
 - Option 2 research is in `docs/research/2026-10-26-serp-vendor-replacement.md`. None of the prepaid Google-results vendors explicitly permits resale. DataForSEO fits best, but it would need its own written yes. Scrapingdog's terms do permit redistribution, but only on a subscription from about $40 a month, which is a supplier contract and so Petter's call. Without either, google-search, serp-analyze, keyword-rank-check and serp-related-questions would switch off.
 - Petter decided on 2026-10-26 to hold off on contacting DataForSEO.
+
+**Update 2026-10-28 (morning run): Serper replied in writing.** support@serper.dev, 2026-10-27 19:40 CET, to Petter's email: "Using Serper as an upstream source within a value-added commercial service is permitted under our standard terms. This includes returning processed results through your own per-call API." Reselling API access without added value is not permitted. No separate reseller or partner agreement is needed; standard prepaid tiers apply. The permission does not cover third-party rights and they suggest reviewing Google's terms. Read from the inbox on 2026-10-28; recorded in `docs/company/OUTBOX.yaml`.
+- What this settles: the condition DEC-20261023-A sets for the vendor lane ("vendor data whose terms permit resale, SERP search data included") is now met in writing for the use we described (processed results from one search per request). The Google caveat is the vendor-lane case the rule already allows for search data.
+- What stays with Petter: relying on the permission (the reason this item is his). The entry stays open until he accepts or declines. **Recommendation: accept**; then the 2026-11-09 exception ends, `vendor-terms.ts` moves the Serper row from `resale: "unverified"` to permitted, citing this reply, and option 2 stops.
+- Separate, coming: the prepaid allowance (46,890 of 50,000 queries left on 2026-10-28) expires 2026-11-08. Renewing is a purchase, so it is his; it will be brought with usage figures before then.
+
+**Accepted 2026-10-28 by Petter, in session:** "accept Serper".
+- The time-boxed exception ending 2026-11-09 is over: the eight tools run on terms that now permit the use.
+- `vendor-terms.ts` records Serper as `resale: "permitted"`, citing the reply and its condition. The use must be value-added, returning processed results through our own per-call API, never resold raw API access. The record names the third-party (Google) caveat.
+- Option 2 (vendor replacement) stops.
+- `google-search`, the plainest of the eight, meets the condition: it maps Serper's response into Strale's own result schema, with provenance and an audit trail, one search per request. It does not pass Serper's response through as it comes.
+- Still open, separately: renewing the prepaid allowance before 2026-11-08 is a purchase, so it is Petter's.
 
 **DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology
@@ -952,6 +1013,46 @@ one I would not leave indefinitely.
 > without authority, pointing the other way — LESSONS.md family F10, incident 3.
 
 ## DECIDED — visible so you can reverse them
+
+**DEC-20261027-C loosened** · `decided` · owner Petter · 2026-10-28
+Petter loosened the fleet security rule in three ways. He agreed them on 2026-10-27 in the wow-core Infrastructure session (moonlighter-ab/wow-core#146, merged), and confirmed them in a Strale session on 2026-10-28: "confirm the three loosenings".
+*What changed:*
+- **Email.** Sending to registries, vendors and data providers returns to sessions, through one Strale inbox routine, the only session with Microsoft 365. Until that routine exists, the local morning session does it.
+- **Emailed keys.** Keys that arrive by email are stored by the local PC session with a PC-only write token (read- and test-tier only).
+- **Sign-up forms.** Sessions fill a sign-up form up to its final button after Petter says go for that form. Petter still clicks it, accepts the terms and does 2FA.
+*What remains:* setting up the inbox routine and the probe that confirms no other session sees the connector.
+*How you'd reverse it:* a new founder decision.
+
+**DEC-20261027-C** · `decided` · owner Petter · 2026-10-27
+Accounts, secrets and email now follow the fleet security rule (wow-core SECURITY_CORE §1a).
+*What happened:* Petter agreed the rule in the wow-core Infrastructure session. It was relayed on the agent bus (moonlighter-ab/agent-bus#2), and Petter told this session to act on it.
+*What changed:*
+- Sessions prepare sign-ups and secret names. Petter does the sign-up, the terms, the 2FA and the Bitwarden paste.
+- The Bitwarden project is `strale`, and cloud sessions read it with a read-only token.
+- Secret names are `STRALE_<PROVIDER>_<WHAT>`. Only read- and test-tier keys go in the store; production keys stay in Railway.
+- Mail is read and sent only by the local PC session. Cloud sessions draft OUTBOX rows.
+- DEC-20261027-A, CHARTER.md item 2, DAILY-RUN.md A2 and `docs/operations/accounts-and-email.md` are updated to match.
+*What remains:* Petter adds the keys on the list in `handoff/_general/from-code/2026-10-27-fleet-credentials-email.md`.
+*How you'd reverse it:* a new founder decision. The platform rule against sessions signing up or setting up TOTP stays either way.
+
+**Old daily digest retired** · `decided` · owner Petter · 2026-10-27
+The old daily-digest email (`apps/api/src/jobs/daily-digest.ts`) is retired rather than restored.
+*What happened:* the new production watch (`/health/jobs`, PR #774) reported on its first run that the digest had last succeeded 196 days earlier, on 2026-04-14. That matches DEC-20260511-F, which in May decided to restore the pipeline; the restoration never happened. Petter decided in session ("retire the old digest"): the CEO morning brief (DEC-20260822-A) already does this job, and restoring it would give him two overlapping morning emails.
+*What changed:* `daily-digest` is removed from `apps/api/src/lib/job-watch-contract.json` and from the freshness query, so the watch no longer expects it. The script and `lib/daily-digest/` stay, because the M3 digest shadow (`m3-digest-shadow.yml`) and the M4 repo-native digest reuse them.
+*What remains:* nothing. DEC-20260511-F's restoration is closed by this decision.
+*How you'd reverse it:* say so. The job script still exists; restoring it means scheduling it and adding it back to the watch contract.
+
+**DEC-20261027-B** · `decided` · owner Petter · 2026-10-27
+Petter approved the platform hardening and distribution plan, with its scoped
+publish and pricing grants.
+*What happened:* in session, Petter answered "all as recommended, go ahead" to
+the distribution strategy §9 and the combined implementation plan.
+*What changed:* [the adoption record](../strategy/2026-10-27-platform-and-distribution-adoption.md)
+records the nine recommendations and retained gates; two program registers now
+provide the execution pointers. This records approval, not completed rollout.
+*What remains:* the log sink and Railway auto-redeploy token stay with Petter.
+DQ-41 remains open; the onboarding key is still not set.
+*How you'd reverse it:* a new founder decision naming the scope to change.
 
 **DQ-26** · `decided` · owner Claude · 2026-08-25
 Our quality system no longer assumes a failed call is our fault when it cannot

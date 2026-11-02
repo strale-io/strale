@@ -1,8 +1,6 @@
 slug: ecb-interest-rates
 name: ECB Interest Rates
-description: >-
-  Fetch current ECB key interest rates (main refinancing, deposit facility, marginal lending). Sourced from FRED
-  (Federal Reserve Economic Data), which mirrors the ECB Statistical Data Warehouse.
+description: "Currently unavailable. Read ECB refinancing, deposit facility and marginal lending rates with an effective date."
 category: finance
 price_cents: 2
 is_free_tier: false
@@ -70,8 +68,8 @@ output_field_reliability:
 limitations:
   - title: Data routed through FRED mirror
     text: >-
-      Values come from FRED, which mirrors ECB publications. FRED's update cadence (typically same-day) introduces
-      a small lag versus fetching directly from ECB. Authoritative source remains the European Central Bank.
+      Values come from FRED’s mirror of ECB publications, typically updated the same day, which can
+      introduce a small delay. The European Central Bank remains the authoritative source.
     category: dependency
     severity: info
   - title: Data freshness tied to ECB publication schedule

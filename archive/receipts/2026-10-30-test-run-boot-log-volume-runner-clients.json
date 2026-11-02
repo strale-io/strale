@@ -1,0 +1,41 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b25466e7bec330f47376b6fb4b66cb7e30d3fb92"
+  },
+  "at": "2026-10-30T11:29:51.133Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "kind": "test-run",
+    "topic": "boot-log-volume-runner-clients",
+    "at": "2026-10-30T11:32:00Z"
+  },
+  "topic": "boot-log-volume-runner-clients",
+  "raw": {
+    "kind": "test-run",
+    "topic": "boot-log-volume-runner-clients",
+    "produced_by": {
+      "script": "npx vitest run src/lib/startup-migrations.test.ts",
+      "commit": "b25466e7"
+    },
+    "at": "2026-10-30T11:32:00Z",
+    "inputs": {
+      "files": [
+        "apps/api/src/lib/startup-migrations.test.ts"
+      ]
+    },
+    "summary": {
+      "tests_passed": 222,
+      "tests_failed": 0,
+      "new_tests": 1,
+      "mutant_applied": "onnotice removed from both runner-owned clients, which is the exact defect shipped in PR 851",
+      "mutant_caught": true,
+      "measured_after_851": "35 pg NOTICE objects and 251 raw object lines still in a 500-line window, 0 pg-notice structured lines, so the handler was never reached",
+      "measured_auto_register": "0 per-slug skip lines after 851, down from about 30 a boot",
+      "root_typecheck": "clean apart from the pre-existing @duckdb/node-api resolution error"
+    }
+  }
+}

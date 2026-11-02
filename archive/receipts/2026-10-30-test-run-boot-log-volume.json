@@ -1,0 +1,42 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "928513ffc4c5bc5545d1d753bd4662802cd538aa"
+  },
+  "at": "2026-10-30T11:04:00.230Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "kind": "test-run",
+    "topic": "boot-log-volume",
+    "at": "2026-10-30T11:05:00Z"
+  },
+  "topic": "boot-log-volume",
+  "raw": {
+    "kind": "test-run",
+    "topic": "boot-log-volume",
+    "produced_by": {
+      "script": "npx vitest run src/db/pg-notice.test.ts src/capabilities/auto-register-data-access.test.ts",
+      "commit": "928513ff"
+    },
+    "at": "2026-10-30T11:05:00Z",
+    "inputs": {
+      "files": [
+        "apps/api/src/db/pg-notice.test.ts",
+        "apps/api/src/capabilities/auto-register-data-access.test.ts"
+      ]
+    },
+    "summary": {
+      "tests_passed": 7,
+      "tests_failed": 0,
+      "mutant_drop_everything_caught_by": 3,
+      "mutant_keep_everything_caught_by": 1,
+      "discrimination_proven": "the filter is pinned from both sides: dropping every notice fails 3 tests, keeping every notice fails 1",
+      "measured_before": "12 pg NOTICE objects cost 90 of 500 captured log lines, about 7.5 lines each",
+      "railway_limit": "500 logs/sec per replica; observed 'Messages dropped: 137'",
+      "root_typecheck": "clean apart from the pre-existing @duckdb/node-api resolution error"
+    }
+  }
+}

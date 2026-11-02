@@ -135,23 +135,23 @@ limitations:
     text: "Status uses Business ID status and dissolution endDate, not Trade Register membership. Current KONK, SELTILA and SANE situations distinguish bankruptcy, liquidation and restructuring; ended situations are ignored."
     category: coverage
     severity: info
-  - title: Does not cover sole traders without a separate business ID — about 10%
-    text: Does not cover sole traders (toiminimi) without separate business ID
+  - title: Sole traders without a business ID are not covered
+    text: Does not cover sole traders (toiminimi) without a separate business ID, a coverage gap of about 10%.
     category: coverage
     severity: info
     workaround: Search the YTJ register (ytj.fi) by the trader's personal name to find toiminimi entries without a Y-tunnus
-  - title: Financial data comes from annual reports and can be up to 12 months old
+  - title: Financial figures can be up to 12 months old
     text: Financial data from annual reports — can be up to 12 months old
     category: freshness
     severity: info
     workaround: Check the report_date field and query PRH's financial statement database for the most recent filing
-  - title: Name search requires native Finnish spelling (diacritics are significant)
+  - title: Name search requires the registered Finnish spelling
     text: PRH's name search does not fold diacritics — "Mehilainen" finds nothing while "Mehiläinen" matches. ASCII-typed names for companies with ä/ö/å in their registered name will be refused rather than resolved.
     category: coverage
     severity: info
     workaround: Type the company name with its native spelling, or provide the Business ID directly (e.g. 0112038-9)
-  - title: Bare brand names only resolve when they equal the registered name minus its legal form
-    text: Name matching is deliberately conservative — a single-word query only resolves when the registered name normalizes to exactly that word ("Nokia" → Nokia Oyj works; "Nordea" is refused because the registered name is "Nordea Bank Abp"). Companies whose legal name carries descriptive words beyond the brand are refused from a bare brand query rather than guessed.
+  - title: Bare brands may not match the full registered name
+    text: Name matching is deliberately conservative — a single-word query only resolves when the registered name normalises to exactly that word ("Nokia" → Nokia Oyj works; "Nordea" is refused because the registered name is "Nordea Bank Abp"). Companies whose legal name carries descriptive words beyond the brand are refused from a bare brand query rather than guessed.
     category: coverage
     severity: info
     workaround: Provide more of the legal name ("Nordea Bank") or the Business ID directly

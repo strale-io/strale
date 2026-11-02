@@ -115,7 +115,7 @@ output_field_reliability:
   duplicates_found: guaranteed
   deduplicated_count: guaranteed
 limitations:
-  - title: Exact and fuzzy matching may miss records that are semantic duplicates but structurally different
+  - title: Structurally different duplicates can be missed
     text: >-
       Uses exact and fuzzy matching — records that are semantically duplicates but structurally different may not be
       caught

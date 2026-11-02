@@ -1,4 +1,4 @@
-"""composio-strale — 270+ Strale capabilities as Composio custom tools."""
+"""composio-strale — available Strale capabilities as Composio custom tools."""
 
 from .toolkit import register_strale_tools, StraleToolkit
 

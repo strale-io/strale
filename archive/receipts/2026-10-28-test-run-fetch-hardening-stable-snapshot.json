@@ -1,0 +1,62 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e40b1f699342bc699d44b304fe1c4d914f03ca99"
+  },
+  "at": "2026-10-28T10:41:27.539Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "api_test_files": 405,
+    "api_tests_passed": 7512,
+    "api_tests_failed": 0,
+    "api_tests_pending": 358,
+    "source_unchanged": true,
+    "command": "npm --workspace=apps/api exec -- vitest run --reporter=json",
+    "base_receipt": "archive/receipts/2026-10-28-test-run-fetch-hardening.json",
+    "uncommitted_worktree": true,
+    "note": "Full suite started after all source edits, with sources held unchanged for entire run. No isolated flaky reruns needed."
+  },
+  "topic": "fetch-hardening-stable-snapshot",
+  "raw": {
+    "ok": true,
+    "api_test_files": 405,
+    "api_tests_passed": 7512,
+    "api_tests_failed": 0,
+    "api_tests_pending": 358,
+    "source_unchanged": true,
+    "command": "npm --workspace=apps/api exec -- vitest run --reporter=json",
+    "base_receipt": "archive/receipts/2026-10-28-test-run-fetch-hardening.json",
+    "source_sha256": {
+      "apps/api/src/capabilities/fetch-context.test.ts": "5f870c1e2e263ebd76b4f91a637ce151ce5e8a46993fb6ee76c39895ce515433",
+      "apps/api/src/capabilities/index.ts": "4b0775e890b9816b1b6c539d92273dd1d219287dff5a5f37a98e4af243c1fa2a",
+      "apps/api/src/lib/capability-refusal.ts": "70a79fe73658a88c4a44a4c359878362b933768dcaeb7d56aaed63ed6d034e2c",
+      "apps/api/src/lib/data-access.ts": "a3bd3784d738e92aa5c6076512f021f2a0708ed35084abb3209ed4d48b60d597",
+      "apps/api/src/lib/errors.ts": "ff261f3d8b9604f9c861b7665b905ffb8b4bdcde77fd9d1c07fd825f420421a3",
+      "apps/api/src/lib/input-validation.test.ts": "a12b6938a1d541d549b2afd126e26c7032337305bfaa36845967148ca6b206f3",
+      "apps/api/src/lib/input-validation.ts": "44748b4936c8be101c9bfeb6a19dad19cfbf5b20bc46fbcd8034180ff864562e",
+      "apps/api/src/lib/log-redaction.test.ts": "f21767781f33bcde53638c1286ff00de5b939324fc19aa3269c3902b00bd4431",
+      "apps/api/src/lib/log.ts": "e7fd8be5f72a1518be2fcd9ad1d40c43fa019cd48849a2839a1dc696f3673db4",
+      "apps/api/src/lib/robots-txt.test.ts": "530da32658b49caa4392dd5ed4ad7f57aa5b95c4c515f13ca691f9ffecf40e76",
+      "apps/api/src/lib/robots-txt.ts": "bb7ee3e69ab9f75ba3fe912b9f07a18a34b439a35b503827eacfd02fc9d7e87d",
+      "apps/api/src/lib/safe-fetch-hardening.test.ts": "810aa43f06525a430a3058fb06fc750de40e90b02847306e479f41a395fa6451",
+      "apps/api/src/lib/safe-fetch.ts": "a804e40df135c42caade73a3eefb0fc07ba9f96defa82e78c097d2396d911488",
+      "apps/api/src/lib/site-access.ts": "cf0130cc597f14c8ac1c99cb1cfb415784717983c8ba73d9718e08981cb7457a",
+      "apps/api/src/lib/url-validator.ts": "628a38a4d5e7477a1e7971d9205bbde7a202c01902b8d03ca568c3447e1406a1",
+      "apps/api/src/routes/admin-shared-auth.test.ts": "6d8258350e25cad526fa2076f09113be997f0c6f74e514403227e94f7fc72960",
+      "apps/api/src/routes/do.core.test.ts": "d93d39686dd7f208f5fc996c2d6c763a56c29f37e82ace3285587b5baea42235",
+      "apps/api/src/routes/do.ts": "c4c5aa523857e6e09bd6797b94a6a3d11d26843cb7a3838ab5020be95dbc09e2",
+      "apps/api/src/routes/internal-health-monitor.ts": "d105bfe89bcc0a6696403eb16e118908532ca9d5aa350d965fa4b9b92afc3339",
+      "apps/api/src/routes/internal-onboarding.ts": "f7bde0f7a604155afeb5db334bf5637daf3ca122dd2c057ad88c0936ba37867c",
+      "apps/api/src/routes/internal-tests.ts": "d6387d55936768e20140057eeb9d5672636ab01eaa4802033295abd7f128cca7",
+      "apps/api/src/routes/x402-body-limit.route.test.ts": "fb9e33ad3bff81fe6ac33a8cf37a106a47020ff1c6a117827cabd7c220068677",
+      "apps/api/src/routes/x402-gateway-v2.ts": "e508601b8a577b9ba5a12d1c97d09217d584ed8b8d39f4a8a26c0b70bb85192d",
+      "apps/api/src/routes/x402-money-path.test.ts": "c7caf5b093470356bac414b64ee2424890bd8f7fce48ad37e706a164ac70627b"
+    },
+    "uncommitted_worktree": true,
+    "note": "Full suite started after all source edits, with sources held unchanged for entire run. No isolated flaky reruns needed."
+  }
+}

@@ -208,6 +208,9 @@ export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
  */
 export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 
+/** Package packuments include every release; refuse above 20 MiB (portfolio plan 2.7). */
+export const MAX_PACKAGE_REGISTRY_RESPONSE_BYTES = 20 * 1024 * 1024;
+
 /**
  * Largest PageSpeed Insights report the platform will buffer (#434).
  *
@@ -892,7 +895,8 @@ async function consumeBody(
     // fix for 3xx bodies; #412 review found it here).
     await response.body
       ?.cancel()
-      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
+      // Cancellation exceptions can contain credential-bearing request URLs.
+      .catch(() => logError("image-limit-declared-cancel", new Error("Response body cancellation failed."), { maxBytes, declared }));
     throw new ResourceLimitError(
       `'${field}' must be ${phrase} (it declared ${mib(declared)}).`,
     );
@@ -933,7 +937,7 @@ async function consumeBody(
         // invisible.
         await reader
           .cancel()
-          .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
+          .catch(() => logError("image-limit-reader-cancel", new Error("Response body cancellation failed."), { maxBytes }));
         if (limitMode === "refuse") {
           throw new ResourceLimitError(`'${field}' must be ${phrase}.`);
         }

@@ -19,7 +19,8 @@ const { messagesCreate, resolveByTicker, resolveByTitle } = vi.hoisted(() => ({
   resolveByTitle: vi.fn(),
 }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
+vi.mock("@anthropic-ai/sdk", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@anthropic-ai/sdk")>(),
   default: class {
     messages = { create: messagesCreate };
   },

@@ -1,0 +1,53 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "136a952e9649dbb6f4ddba40295366d64f492051"
+  },
+  "at": "2026-10-29T00:55:53.216Z",
+  "inputs": {
+    "source": "/tmp/claude-0/r2.json"
+  },
+  "summary": {
+    "integration_tests": 363,
+    "failed": 0,
+    "second_boot_skipped": 38,
+    "recorded_rows": 74
+  },
+  "topic": "h7d-applied-block-skip",
+  "raw": {
+    "ok": true,
+    "postgres": "16.15",
+    "integration_lane": {
+      "test_files_passed": 38,
+      "tests_passed": 363,
+      "failed": 0
+    },
+    "applied_skip_integration_tests": 4,
+    "dist_boots_same_db": [
+      {
+        "boot": 1,
+        "skipped_count": 0,
+        "total_duration_ms": 407
+      },
+      {
+        "boot": 2,
+        "skipped_count": 38,
+        "total_duration_ms": 319,
+        "schema_artifacts_checked": 88,
+        "recorded_rows": 74
+      }
+    ],
+    "mutations_caught": [
+      "skip disabled",
+      "hash mismatch check removed",
+      "pre-0131 blocks not recorded",
+      "force ignored"
+    ],
+    "api_suite": {
+      "files_passed": 381,
+      "tests_passed": 7740,
+      "failed": 0
+    }
+  }
+}

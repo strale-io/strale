@@ -109,7 +109,7 @@ output_field_reliability:
   fee_percent: guaranteed
   net_revenue: guaranteed
 limitations:
-  - title: Fee structures based on AI knowledge — marketplaces update fees periodically and actual fees vary by seller tier
+  - title: Actual fees vary by category and seller tier
     text: >-
       Fee structures based on AI knowledge — marketplaces update fees periodically and actual fees depend on seller tier
       and category

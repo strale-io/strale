@@ -99,10 +99,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { DrizzleQueryError } from "drizzle-orm/errors";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
-import { users, wallets, transactions, walletTransactions, failedRequests } from "../db/schema.js";
+import { users, wallets, transactions, walletTransactions, walletReservations, failedRequests } from "../db/schema.js";
 
 // ─── Hoisted mutable mock state (referenced from vi.mock factories) ───────────
 
@@ -111,6 +112,10 @@ const mocks = vi.hoisted(() => ({
   recordedSelects: [] as Array<{ table: unknown; cond: unknown }>,
   outerInserts: [] as Array<{ table: unknown; vals: unknown }>,
   dbTransactionCalls: 0,
+  activeTransactions: 0,
+  txTail: Promise.resolve() as Promise<unknown>,
+  costEvents: [] as string[],
+  failCostWrite: false,
   // Set per-test before the request; consumed by db.transaction(cb).
   txRef: { current: null as unknown },
 }));
@@ -131,19 +136,40 @@ vi.mock("../db/index.js", () => {
       insert: (table: unknown) => ({
         values: (vals: unknown) => {
           mocks.outerInserts.push({ table, vals });
-          return Promise.resolve([]);
+          const result = Promise.resolve([]) as any;
+          result.returning = async () => [{ id: "33333333-3333-3333-3333-333333333333" }];
+          return result;
         },
       }),
-      execute: async () => [],
+      update: () => ({ set: () => ({ where: async () => [] }) }),
+      execute: async (query: any) => {
+        if (new PgDialect().sqlToQuery(query).sql.includes("SET cost_cents")) {
+          mocks.costEvents.push("cost-write");
+          if (mocks.failCostWrite) throw new Error("cost db unavailable");
+        }
+        return [];
+      },
       transaction: async (cb: (tx: unknown) => unknown) => {
         mocks.dbTransactionCalls++;
-        return cb(mocks.txRef.current);
+        const previous = mocks.txTail;
+        let unlock!: () => void;
+        mocks.txTail = new Promise<void>(resolve => { unlock = resolve; });
+        await previous;
+        mocks.activeTransactions++;
+        try {
+          const result = await cb(mocks.txRef.current);
+          mocks.costEvents.push("debit-commit");
+          return result;
+        } finally { mocks.activeTransactions--; unlock(); }
       },
     }),
   };
 });
 
 vi.mock("../lib/matching.js", () => ({ matchCapability: vi.fn() }));
+// The free-tier allowance's DB counters are not modelled here; the anonymous
+// free-tier tests assert only that the request reached that branch unkeyed.
+vi.mock("../lib/free-tier-allowance.js", () => ({ enforceFreeTierAllowance: vi.fn(async () => undefined) }));
 
 vi.mock("../capabilities/index.js", () => ({
   getExecutor: vi.fn(),
@@ -304,17 +330,36 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
   // exercised code path uses — see the file-header note on the FOR-UPDATE
   // gating this select provides).
   const selectCalls: Array<{ table: unknown; cond: unknown; mode: string }> = [];
+  let balance = Number(opts.walletRow?.balanceCents ?? 0);
+  const reservationRows: any[] = [];
+  const transactionRows: any[] = [];
   return {
     __insertCalls: insertCalls,
     __updateCalls: updateCalls,
     __selectCalls: selectCalls,
-    execute: vi.fn(async () => []),
+    __reservationRows: reservationRows,
+    __transactionRows: transactionRows,
+    execute: vi.fn(async (query: any) => {
+      const compiled = new PgDialect().sqlToQuery(query);
+      expect(compiled.params.every(p => !(p instanceof Date) && !Buffer.isBuffer(p))).toBe(true);
+      if (compiled.sql.includes("pg_try_advisory_xact_lock")) return [{ acquired: true }];
+      if (compiled.sql.includes("SUM(amount_cents)")) return [{ cents: reservationRows.filter(r => r.mode === "hold" && ["reserved", "executing"].includes(r.state)).reduce((n, r) => n + r.amountCents, 0) }];
+      return [];
+    }),
     select: vi.fn(() => ({
       from: vi.fn((table: unknown) => ({
         where: vi.fn((cond: unknown) => ({
+          then: table === transactions ? (resolve: any) => Promise.resolve([{ total: transactionRows.filter(r => ["executing", "completed"].includes(r.status)).reduce((sum, r) => sum + r.priceCents, 0) }]).then(resolve)
+            // spendCapWouldExceed's second read: open holds with no transaction row (batch items not yet started).
+            : table === walletReservations ? (resolve: any) => Promise.resolve([{ total: reservationRows.filter(r => r.mode === "hold" && ["reserved", "executing"].includes(r.state) && r.transactionId == null).reduce((sum, r) => sum + r.amountCents, 0) }]).then(resolve)
+            : undefined,
+          orderBy: () => ({ limit: async (n: number) => reservationRows.filter(r => ["reserved", "executing"].includes(r.state) && r.deadlineAt < new Date()).slice(0, n) }),
+          limit: async () => table === transactions
+            ? transactionRows.filter(r => whereReferences(cond, transactions, "idempotency_key", { eq: r.idempotencyKey }))
+            : opts.walletRow ? [{ balanceCents: balance }] : [],
           for: vi.fn((mode: string) => {
             selectCalls.push({ table, cond, mode });
-            return Promise.resolve(opts.walletRow ? [opts.walletRow] : []);
+            return Promise.resolve(opts.walletRow ? [{ ...opts.walletRow, balanceCents: balance }] : []);
           }),
         })),
       })),
@@ -323,14 +368,23 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
       values: vi.fn((vals: unknown) => {
         insertCalls.push({ table, vals });
         const p = Promise.resolve([]) as any;
-        p.returning = () => Promise.resolve([{ id: opts.transactionId }]);
+        const row = { ...(vals as object), id: table === walletReservations ? `hold-${reservationRows.length}` : opts.transactionId };
+        if (table === walletReservations) reservationRows.push(row);
+        if (table === transactions) transactionRows.push(row);
+        p.returning = () => Promise.resolve([{ id: row.id }]);
         return p;
       }),
     })),
     update: vi.fn((table: unknown) => ({
       set: vi.fn((vals: unknown) => ({
-        where: vi.fn(() => {
+        where: vi.fn((cond: unknown) => {
           updateCalls.push({ table, vals });
+          if (table === walletReservations) {
+            const matched = reservationRows.filter(r => whereReferences(cond, walletReservations, "id", { eq: r.id }) && ["reserved", "executing"].includes(r.state));
+            matched.forEach(r => Object.assign(r, vals));
+            return Object.assign(Promise.resolve(matched), { returning: async () => matched });
+          }
+          if (table === transactions) transactionRows.forEach(r => Object.assign(r, vals));
           // WP2: the wallet debit is now a conditional UPDATE ... RETURNING,
           // so the result has to be awaitable AND expose .returning(). An
           // empty returning() would read as "the balance predicate did not
@@ -346,9 +400,10 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
           // bound amount out of the SQL delta. The route returns this value
           // as wallet_balance_cents, so echoing the pre-debit balance would
           // make the response assertion vacuous.
-          const before = (opts.walletRow?.balanceCents as number) ?? 0;
+          const before = balance;
           const chunks = (vals as any)?.balanceCents?.queryChunks ?? [];
           const amount = chunks.find((c: unknown) => typeof c === "number");
+          if (table === wallets && typeof amount === "number") balance -= amount;
           const settled: any = Promise.resolve([]);
           settled.returning = vi.fn(async () => [
             { balanceCents: typeof amount === "number" ? before - amount : before },
@@ -401,6 +456,7 @@ import { doRoute } from "./do.js";
 import { matchCapability } from "../lib/matching.js";
 import { isX402Configured, build402Response } from "../lib/x402-gateway.js";
 import { resetFreeTierCache } from "../lib/free-tier.js";
+import { enforceFreeTierAllowance } from "../lib/free-tier-allowance.js";
 import { getExecutor } from "../capabilities/index.js";
 
 const mockMatchCapability = matchCapability as unknown as ReturnType<typeof vi.fn>;
@@ -411,6 +467,10 @@ beforeEach(() => {
   mocks.recordedSelects = [];
   mocks.outerInserts = [];
   mocks.dbTransactionCalls = 0;
+  mocks.activeTransactions = 0;
+  mocks.txTail = Promise.resolve();
+  mocks.costEvents = [];
+  mocks.failCostWrite = false;
   mocks.txRef.current = null;
   mockMatchCapability.mockReset();
   mockGetExecutor.mockReset();
@@ -420,8 +480,29 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe("POST /v1/do — required NTA credential", () => {
+  it("returns capability_unavailable before execution or transaction when the ID is unset", async () => {
+    vi.stubEnv("NTA_HOUJIN_APP_ID", "");
+    try {
+      mocks.outerSelectQueue.push([buildUserRow()]);
+      const executor = vi.fn();
+      mockGetExecutor.mockReturnValue(executor);
+      mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, slug: "japanese-company-data" } });
+      const res = await makeApp().request("/v1/do", {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ capability_slug: "japanese-company-data", inputs: { corporate_number: "1180301018771" }, max_price_cents: 100 }),
+      });
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ error_code: "capability_unavailable" });
+      expect(executor).not.toHaveBeenCalled();
+      expect(mocks.dbTransactionCalls).toBe(0);
+      expect(mocks.outerInserts.filter(x => x.table === transactions)).toEqual([]);
+    } finally { vi.unstubAllEnvs(); }
+  });
+});
+
 describe("POST /v1/do — happy path (authenticated, paid capability, sync)", () => {
-  it("debits the wallet, executes the capability, and returns {result:{output,...}} with wallet_balance_cents", async () => {
+  it("records query src on the paid transaction while executing and debiting the wallet", async () => {
     const user = buildUserRow();
     const startingBalance = 10_000; // €100.00 — well above LOW_BALANCE_THRESHOLD after debit
     mocks.outerSelectQueue.push([user]); // optionalAuthMiddleware lookup
@@ -441,7 +522,7 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     });
 
     const app = makeApp();
-    const res = await app.request("/v1/do", {
+    const res = await app.request("/v1/do?src=context7", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({
@@ -478,10 +559,12 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     // MAJOR 4 (DEC-8), residual fix: the wallet row was read under FOR
     // UPDATE, exactly once, AND the lock targeted the `wallets` table
     // scoped to THIS user's id — not just "some FOR UPDATE call happened".
-    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls).toHaveLength(body.error_code ? 1 : 2);
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
+    const transactionInsert = tx.__insertCalls.find(call => call.table === transactions);
+    expect((transactionInsert!.vals as any).clientMeta.src).toBe("context7");
     // Wallet debited by exactly the capability price.
     //
     // WP2 changed the shape here deliberately: the debit is now an in-database
@@ -538,6 +621,7 @@ describe("POST /v1/do — no matching capability", () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error_code).toBe("no_matching_capability");
+    expect(body.details.fix).toContain("GET /v1/capabilities");
     expect(typeof body.message).toBe("string");
     expect(body.details).toMatchObject({ task: "do something nobody offers", max_price_cents: 100 });
     // Pin the documented failure shape: no top-level `error` key.
@@ -585,6 +669,7 @@ describe("POST /v1/do — insufficient balance", () => {
     expect(res.status).toBe(402);
     const body = await res.json();
     expect(body.error_code).toBe("insufficient_balance");
+    expect(body.details.fix).toContain("https://strale.dev/dashboard");
     expect(body.details.wallet_balance_cents).toBe(2);
     expect(body.details.required_cents).toBe(CAPABILITY_FIXTURE.priceCents);
     expect(body.error).toBeUndefined();
@@ -594,7 +679,7 @@ describe("POST /v1/do — insufficient balance", () => {
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
     // The lock is still taken to read the balance, and targets THIS
     // user's wallet row — not just "a FOR UPDATE call happened".
-    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls).toHaveLength(body.error_code ? 1 : 2);
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
@@ -731,6 +816,8 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     // Pin the exact documented shape (MEMORY.md: three false alarms on
     // 2026-08-14 traced to assuming a top-level `error` key on failure).
     expect(body.error_code).toBe("execution_failed");
+    expect(body.details.retryable).toBe(true);
+    expect(body.details.next_step).toContain("Retry");
     expect(typeof body.message).toBe("string");
     expect(body.error).toBeUndefined();
     expect(body.details.error).toBe("mock executor rejected the request");
@@ -739,7 +826,7 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     // DEC-8: the wallet was still read under FOR UPDATE before anything
     // else happened, scoped to THIS user's wallet row.
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
-    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls).toHaveLength(body.error_code ? 1 : 2);
     expect(tx.__selectCalls[0].mode).toBe("update");
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
@@ -903,4 +990,557 @@ describe("POST /v1/do — anonymous, task-based, paid capability", () => {
     expect(executorSpy).not.toHaveBeenCalled();
     expect(mocks.dbTransactionCalls).toBe(0);
   });
+});
+
+// ─── Unexpanded placeholder Authorization header ───────────────────────────
+//
+// Directory and integration configs ship `Authorization: Bearer
+// ${STRALE_API_KEY}`. A caller without a key sent the template as written and
+// was refused with "Invalid API key format" before the route could serve a free
+// tool or quote an x402 price. Each case below compares the placeholder request
+// with the same request carrying no Authorization header.
+
+const PLACEHOLDER_HEADERS = ["Bearer ${STRALE_API_KEY}", "Bearer <your-key>", "Bearer YOUR_API_KEY"];
+
+describe("POST /v1/do — placeholder Authorization reads as no key", () => {
+  async function anonymousCall(header: string | undefined, body: Record<string, unknown>) {
+    const headers: Record<string, string> = { "content-type": "application/json", "x-forwarded-for": "203.0.113.9" };
+    if (header !== undefined) headers.Authorization = header;
+    const res = await makeApp().request("/v1/do", { method: "POST", headers, body: JSON.stringify(body) });
+    return { status: res.status, body: await res.json() };
+  }
+
+  it.each(PLACEHOLDER_HEADERS)("serves a free-tier capability anonymously with %j", async (header) => {
+    resetFreeTierCache();
+    const free = { ...CAPABILITY_FIXTURE, slug: "iban-validate", priceCents: 0, isFreeTier: true };
+    mocks.outerSelectQueue.push([{ isFreeTier: true, isActive: true, priceCents: 0, name: free.name, x402Enabled: false, marketplaceEligible: true, visible: true, lifecycleState: "active" }]);
+    mockMatchCapability.mockResolvedValue({ capability: free });
+    const executorFn = vi.fn(async () => ({ output: { valid: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+    mockGetExecutor.mockReturnValue(executorFn);
+
+    const res = await anonymousCall(header, { capability_slug: "iban-validate", inputs: { iban: "x" } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.result.output).toEqual({ valid: true });
+    expect(executorFn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(enforceFreeTierAllowance)).toHaveBeenCalled();
+    // No key lookup: the users table was never read.
+    expect(mocks.recordedSelects.some((r) => r.table === users)).toBe(false);
+    expect(mocks.dbTransactionCalls).toBe(0);
+  });
+
+  it.each(PLACEHOLDER_HEADERS)("quotes the same x402 402 as no header for a paid capability with %j", async (header) => {
+    const payable = { ...CAPABILITY_FIXTURE, x402Enabled: true, marketplaceEligible: true };
+    const body = { task: "do the paid thing", inputs: { value: "x" }, max_price_cents: 100 };
+    const run = async (h: string | undefined) => {
+      resetFreeTierCache();
+      mockMatchCapability.mockResolvedValue({ capability: payable });
+      mockGetExecutor.mockReturnValue(vi.fn());
+      vi.mocked(isX402Configured).mockReturnValue(true);
+      vi.mocked(build402Response).mockReturnValue({ body: { x402Version: 1, error: "Payment required." } } as any);
+      return anonymousCall(h, body);
+    };
+    const none = await run(undefined);
+    const placeholder = await run(header);
+    expect(none.status).toBe(402);
+    expect(placeholder).toEqual(none);
+    expect(mocks.dbTransactionCalls).toBe(0);
+  });
+
+  it.each(PLACEHOLDER_HEADERS)("answers the same 401 as no header when x402 is off, with %j", async (header) => {
+    const body = { task: "do the paid thing", inputs: { value: "x" }, max_price_cents: 100 };
+    const freeRows = [{ slug: "dns-lookup", priceCents: 0, description: "d", isActive: true, visible: true, lifecycleState: "active" }];
+    const run = async (h: string | undefined) => {
+      resetFreeTierCache();
+      mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+      mockGetExecutor.mockReturnValue(vi.fn());
+      vi.mocked(isX402Configured).mockReturnValue(false);
+      mocks.outerSelectQueue.push(freeRows);
+      return anonymousCall(h, body);
+    };
+    const none = await run(undefined);
+    const placeholder = await run(header);
+    expect(none.status).toBe(401);
+    expect(placeholder).toEqual(none);
+  });
+
+  it("still refuses a malformed non-placeholder key", async () => {
+    const res = await anonymousCall("Bearer not-a-key", { capability_slug: "iban-validate", inputs: { iban: "x" } });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe("Invalid API key format.");
+  });
+});
+
+// ─── Never-persisted inputs (password-strength) ─────────────────────────────
+//
+// password-strength's public description says the password is not stored.
+// Before lib/never-persist-inputs.ts that was false three ways: the raw value
+// went into transactions.input, an unsalted sha256 of it into the audit
+// trail's input_hash, and another into the idempotency fingerprint column.
+// These tests drive the real executeSync insert path and search EVERY value
+// the route hands the database for the password, while asserting the executor
+// still received it.
+
+import { createHash } from "node:crypto";
+import { computeIdempotencyFingerprint } from "../lib/idempotency-fingerprint.js";
+import { NOT_STORED_MARKER } from "../lib/never-persist-inputs.js";
+
+/** JSON.stringify that survives drizzle's cyclic column/table references. */
+function stringifyForSearch(value: unknown): string {
+  const seen = new WeakSet<object>();
+  return (
+    JSON.stringify(value, (_k, v) => {
+      if (v && typeof v === "object") {
+        if (seen.has(v)) return "[cycle]";
+        seen.add(v);
+      }
+      return v;
+    }) ?? ""
+  );
+}
+
+/** Every Date / Buffer reachable from a bound value (postgres-js bind-shape rule). */
+function findUnbindable(value: unknown, path = "$", seen = new WeakSet<object>()): string[] {
+  if (value instanceof Date) return [path];
+  if (Buffer.isBuffer(value)) return [path];
+  if (!value || typeof value !== "object" || seen.has(value)) return [];
+  seen.add(value);
+  return Object.entries(value).flatMap(([k, v]) => findUnbindable(v, `${path}.${k}`, seen));
+}
+
+const PASSWORD_FIXTURE = {
+  ...CAPABILITY_FIXTURE,
+  id: "22222222-2222-2222-2222-222222222222",
+  slug: "password-strength",
+  name: "Password Strength",
+  priceCents: 2,
+  inputSchema: { type: "object", properties: { password: { type: "string" } }, required: ["password"] },
+};
+
+// Distinctive so a substring hit is unambiguous.
+const SECRET = "Tr0ub4dor&3-never-store-me";
+
+function rawInputHash(input: Record<string, unknown>): string {
+  return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
+}
+
+async function runPasswordStrength(executorFn: ReturnType<typeof vi.fn>) {
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user]); // auth
+  mocks.outerSelectQueue.push([]); // idempotency lookup: no prior row
+  mockGetExecutor.mockReturnValue(executorFn);
+  mockMatchCapability.mockResolvedValue({ capability: PASSWORD_FIXTURE });
+  mocks.txRef.current = buildMockTx({
+    walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10_000 },
+    transactionId: randomUUID(),
+  });
+  const res = await makeApp().request("/v1/do", {
+    method: "POST",
+    headers: authHeaders({ "Idempotency-Key": `pw-${randomUUID()}` }),
+    body: JSON.stringify({
+      capability_slug: "password-strength",
+      inputs: { password: SECRET },
+      max_price_cents: 100,
+    }),
+  });
+  await flushMicrotasks();
+  const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+  return { res, tx };
+}
+
+function assertNothingPersistedTheSecret(tx: ReturnType<typeof buildMockTx>) {
+  const txnInsert = tx.__insertCalls.find((c) => c.table === transactions);
+  expect(txnInsert).toBeTruthy();
+  const vals = txnInsert!.vals as Record<string, unknown>;
+
+  // The row's input carries the marker, not the password.
+  expect(vals.input).toEqual({ password: NOT_STORED_MARKER });
+
+  // The fingerprint is the marker-form fingerprint, not one of the raw value.
+  const fingerprintOf = (password: string) =>
+    computeIdempotencyFingerprint({
+      rail: "capability",
+      capabilitySlug: "password-strength",
+      inputs: { password },
+      dryRun: false,
+      requireFresh: false,
+    });
+  expect(vals.idempotencyFingerprint).toBeTruthy();
+  expect(vals.idempotencyFingerprint).not.toBe(fingerprintOf(SECRET));
+  expect(vals.idempotencyFingerprint).toBe(fingerprintOf(NOT_STORED_MARKER));
+
+  // Bind-shape rule: nothing in the insert is a Date or Buffer.
+  expect(findUnbindable(vals)).toEqual([]);
+
+  // Every write the route made, outer db and tx alike: no password anywhere.
+  const everyWrite = [...tx.__insertCalls, ...tx.__updateCalls, ...mocks.outerInserts]
+    .map((c) => stringifyForSearch(c.vals))
+    .join("\n");
+  expect(everyWrite).not.toContain(SECRET);
+
+  // The audit trail's input_hash is of the marker form, never of the raw input.
+  const audits = tx.__updateCalls
+    .filter((c) => c.table === transactions)
+    .map((c) => (c.vals as { auditTrail?: { input_hash?: string } }).auditTrail)
+    .filter((a): a is { input_hash?: string } => !!a);
+  expect(audits.length).toBeGreaterThan(0);
+  for (const audit of audits) {
+    expect(audit.input_hash).toBeTruthy();
+    expect(audit.input_hash).not.toBe(rawInputHash({ password: SECRET }));
+    expect(audit.input_hash).toBe(rawInputHash({ password: NOT_STORED_MARKER }));
+  }
+}
+
+describe("POST /v1/do — password-strength never persists the password", () => {
+  it("success path: executor gets the real password; row, audit hash and fingerprint never do", async () => {
+    const executorFn = vi.fn(async () => ({
+      output: { score: 80, strength: "strong" },
+      provenance: { source: "algorithmic", fetched_at: new Date().toISOString() },
+    }));
+    const { res, tx } = await runPasswordStrength(executorFn);
+
+    expect(res.status).toBe(200);
+    expect(executorFn).toHaveBeenCalledWith({ password: SECRET });
+    assertNothingPersistedTheSecret(tx);
+
+    // The response's audit block is built from the same helper.
+    const body = await res.json();
+    expect(stringifyForSearch(body)).not.toContain(SECRET);
+  });
+
+  it("failure path: the failure audit's input_hash is of the marker form too", async () => {
+    const executorFn = vi.fn(async () => {
+      throw new Error("mock executor rejected the request");
+    });
+    const { res, tx } = await runPasswordStrength(executorFn);
+
+    expect(res.status).toBe(500);
+    expect(executorFn).toHaveBeenCalledWith({ password: SECRET });
+    assertNothingPersistedTheSecret(tx);
+  });
+});
+
+it("returns exact field advice from a paid executor refusal without billing or changing the code", async () => {
+  const { inputRefusal } = await import("../lib/capability-refusal.js");
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user]);
+  mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+  mockGetExecutor.mockReturnValue(async () => { throw inputRefusal("'value' must be 13 digits.", "value", "Send 'value' as 13 digits."); });
+  mocks.txRef.current = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10_000 }, transactionId: randomUUID() });
+  const response = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(), body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "x" }, max_price_cents: 100 }) });
+  expect(response.status).toBe(500);
+  expect(await response.json()).toMatchObject({ error_code: "execution_failed", details: { field: "value", fix: "Send 'value' as 13 digits.", retryable: false, wallet_balance_cents: 10_000 } });
+  const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+  expect(tx.__updateCalls.filter(c => c.table === wallets)).toHaveLength(0);
+  expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+});
+
+describe("POST /v1/do — cost bookkeeping cannot affect settlement", () => {
+  it.each([false, true])("writes cost only after debit commit; failing cost=%s preserves the paid response", async (failCost) => {
+    const user = buildUserRow();
+    mocks.outerSelectQueue.push([user]);
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    mockGetExecutor.mockReturnValue(vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: "2026-10-27T00:00:00Z" } })));
+    const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10_000 }, transactionId: randomUUID() });
+    mocks.txRef.current = tx;
+    mocks.failCostWrite = failCost;
+    const res = await makeApp().request("/v1/do", {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "hello" }, max_price_cents: 100 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.result).toMatchObject({ price_cents: 5, wallet_balance_cents: 9995 });
+    await flushMicrotasks();
+    expect(mocks.costEvents).toEqual(["debit-commit", "debit-commit", "cost-write"]);
+    expect(tx.__insertCalls.filter((entry: any) => entry.table === walletTransactions)).toHaveLength(1);
+  });
+});
+
+
+it.each([false, true])("free-tier: cost failure=%s preserves the response without a wallet debit", async (failCost) => {
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user], [{ balanceCents: 10_000 }]);
+  mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, isFreeTier: true } });
+  mockGetExecutor.mockReturnValue(vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test" } })));
+  mocks.failCostWrite = failCost;
+  const response = await makeApp().request("/v1/do", {
+    method: "POST", headers: authHeaders(),
+    body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "hello" }, max_price_cents: 100 }),
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    result: { transaction_id: "33333333-3333-3333-3333-333333333333", status: "completed", price_cents: 0, output: { ok: true } },
+  });
+  await flushMicrotasks();
+  expect(mocks.costEvents).toEqual(["cost-write"]);
+  expect(mocks.dbTransactionCalls).toBe(0);
+});
+
+// H4: exercise the real route + wallet/reservation primitives. The DB boundary
+// serializes transaction callbacks and evaluates the persisted open holds.
+// This does not substitute for the Postgres integration lane's row-lock proof.
+describe("H4 sync money path", () => {
+  function setup(balance = 5, cap: number | null = null) {
+    const user = buildUserRow({ maxSpendPerHourCents: cap });
+    const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: balance }, transactionId: randomUUID() });
+    mocks.txRef.current = tx;
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    const app = makeApp();
+    const call = (extra: Record<string, unknown> = {}, key?: string) => {
+      mocks.outerSelectQueue.push([user]);
+      if (key) mocks.outerSelectQueue.push([]);
+      if (cap) mocks.outerSelectQueue.push([{ total: "0" }]);
+      return app.request("/v1/do", { method: "POST", headers: authHeaders(key ? { "Idempotency-Key": key } : {}),
+        body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "hello" }, max_price_cents: 100, ...extra }) });
+    };
+    return { tx, call };
+  }
+  const output = () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } });
+  it("commits a hold before running the executor with no transaction/connection held; captures once with scalar raw binds", async () => {
+    const { tx, call } = setup();
+    let activeAtExecutor: number | undefined;
+    mockGetExecutor.mockReturnValue(async () => {
+      activeAtExecutor = mocks.activeTransactions;
+      expect(mocks.activeTransactions).toBe(0);
+      expect(mocks.costEvents).toEqual(["debit-commit"]);
+      expect(tx.__reservationRows).toMatchObject([{ state: "reserved", mode: "hold", amountCents: 5 }]);
+      expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+      return output();
+    });
+    const response = await call();
+    expect(activeAtExecutor).toBe(0);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ result: { wallet_balance_cents: 0 } });
+    expect(tx.__reservationRows[0].state).toBe("captured");
+    expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(1);
+    expect(tx.execute).toHaveBeenCalled(); // every raw query was checked in execute
+  });
+  it("rejects a concurrent over-commit while the first executor is still running", async () => {
+    const { tx, call } = setup();
+    let finish!: () => void;
+    const gate = new Promise<void>(r => { finish = r; });
+    const executor = vi.fn(async () => { await gate; return output(); });
+    mockGetExecutor.mockReturnValue(executor);
+    const first = call();
+    try {
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+      const second = await Promise.race([call(), new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("second request blocked behind vendor")), 250))]);
+      expect(second.status).toBe(402);
+      expect(await second.json()).toMatchObject({ error_code: "insufficient_balance" });
+      expect(tx.__reservationRows).toHaveLength(1);
+    } finally { finish(); await first; }
+    expect(executor).toHaveBeenCalledTimes(1);
+  });
+  it("counts an open sync reservation against the user hourly cap", async () => {
+    const { call } = setup(10, 5);
+    let finish!: () => void;
+    const gate = new Promise<void>(r => { finish = r; });
+    const executor = vi.fn(async () => { await gate; return output(); });
+    mockGetExecutor.mockReturnValue(executor);
+    const first = call();
+    try {
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+      const second = await Promise.race([call(), new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("cap request blocked behind vendor")), 250))]);
+      expect(second.status).toBe(429);
+      expect(await second.json()).toMatchObject({ error_code: "spend_cap_exceeded", details: { spent_cents: 5 } });
+    } finally { finish(); await first; }
+    expect(executor).toHaveBeenCalledTimes(1);
+  });
+  it("releases a failed hold without a debit or refund", async () => {
+    const { tx, call } = setup();
+    mockGetExecutor.mockReturnValue(async () => { throw new Error("executor failed"); });
+    expect((await call()).status).toBe(500);
+    expect(tx.__reservationRows).toMatchObject([{ state: "released" }]);
+    expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+  });
+  it("clamps timeout_seconds 0.01 to 5 seconds at the same H5 deadline and ignores late success", async () => {
+    vi.useFakeTimers();
+    const { withCallCost, currentCallCost } = await import("../lib/call-cost.js");
+    const { tx, call } = setup();
+    let finish!: (value: any) => void;
+    const executor = vi.fn(() => {
+      expect(currentCallCost()?.deadline).toBe(Date.now() + 5000);
+      return new Promise(r => { finish = r; });
+    });
+    mockGetExecutor.mockReturnValue(executor);
+    try {
+      let settled = false;
+      const pending = withCallCost(() => call({ timeout_seconds: 0.01 }), 1).then(response => { settled = true; return response; });
+      for (let i = 0; i < 200 && executor.mock.calls.length === 0; i++) await Promise.resolve();
+      expect(executor).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled, "the HTTP timeout response must settle at its deadline").toBe(true);
+      const response = await pending;
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ error_code: "timeout_exceeded", details: { retryable: true, fix: expect.any(String), wallet_balance_cents: 5 } });
+      expect(tx.__reservationRows[0].state).toBe("released");
+      const { recordFailure } = await import("../lib/circuit-breaker.js");
+      const { triggerOnFailure } = await import("../lib/event-triggers.js");
+      expect(recordFailure).not.toHaveBeenCalled();
+      expect(triggerOnFailure).not.toHaveBeenCalled();
+      const writes = tx.__updateCalls.length;
+      finish(output());
+      await vi.advanceTimersByTimeAsync(1);
+      expect(tx.__updateCalls).toHaveLength(writes);
+      expect(tx.__transactionRows).toHaveLength(1);
+      expect(tx.__transactionRows[0].status).toBe("failed");
+      expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+    } finally { finish?.(output()); vi.useRealTimers(); }
+  });
+  it("normalizes an executor rejection at the deadline before the watchdog fires, without penalizing health", async () => {
+    vi.useFakeTimers();
+    const { tx, call } = setup();
+    const executor = vi.fn(() => new Promise((_resolve, reject) => {
+      setTimeout(() => reject(new Error("SDK request timeout")), 5000);
+    }));
+    mockGetExecutor.mockReturnValue(executor);
+    try {
+      let settled = false;
+      const pending = call({ timeout_seconds: 0.01 }).then(response => { settled = true; return response; });
+      for (let i = 0; i < 200 && executor.mock.calls.length === 0; i++) await Promise.resolve();
+      expect(executor).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(settled, "deadline rejection must settle the HTTP response immediately").toBe(true);
+      const response = await pending;
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ error_code: "timeout_exceeded" });
+      expect(tx.__reservationRows[0].state).toBe("released");
+      expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(0);
+      const { recordFailure } = await import("../lib/circuit-breaker.js");
+      const { triggerOnFailure } = await import("../lib/event-triggers.js");
+      expect(recordFailure).not.toHaveBeenCalled();
+      expect(triggerOnFailure).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+  it.each([{ solutionSlug: "legacy-solution" }, { deletedAt: new Date() }])("rejects an excluded legacy idempotency row without replaying its output (%j)", async excluded => {
+    const { tx, call } = setup();
+    tx.__transactionRows.push({ id: "excluded-row", idempotencyKey: "old-key", idempotencyFingerprint: null,
+      status: "completed", output: { secret: "old output" }, ...excluded });
+    const executor = vi.fn(async () => output()); mockGetExecutor.mockReturnValue(executor);
+    const response = await call({}, "old-key");
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error_code: "idempotency_key_reused" });
+    expect(executor).not.toHaveBeenCalled();
+    expect(tx.__reservationRows).toHaveLength(0);
+  });
+  it("a concurrent same-key retry returns retryable 409 without a second executor, before checking available funds", async () => {
+    const { call } = setup();
+    let finish!: () => void;
+    const gate = new Promise<void>(r => { finish = r; });
+    const executor = vi.fn(async () => { await gate; return output(); });
+    mockGetExecutor.mockReturnValue(executor);
+    const first = call({}, "one-work-item");
+    try {
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+      const second = await Promise.race([call({}, "one-work-item"), new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("retry blocked behind vendor")), 250))]);
+      expect(second.status).toBe(409);
+      expect(await second.json()).toMatchObject({ error_code: "request_in_progress", details: { retryable: true, retry_after_seconds: 2, transaction_id: expect.any(String), fix: expect.stringContaining("same Idempotency-Key") } });
+    } finally { finish(); await first; }
+    expect(executor).toHaveBeenCalledTimes(1);
+  });
+  it("rejects mismatched concurrent key reuse", async () => {
+    const { call } = setup(10);
+    mockGetExecutor.mockReturnValue(async () => output());
+    expect((await call({}, "one-key")).status).toBe(200);
+    const response = await call({ inputs: { value: "different" } }, "one-key");
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error_code: "idempotency_key_reused" });
+  });
+});
+
+it.each(["hold", "debit"])("H4 reconciler releases a stale %s reservation with accurate money wording", async mode => {
+  const { DEFAULT_RESERVATION_TTL_MS } = await import("../lib/wallet-reservations.js");
+  expect(DEFAULT_RESERVATION_TTL_MS).toBeGreaterThan(60_000);
+  const tx = buildMockTx({ walletRow: { id: "wallet", balanceCents: 5 }, transactionId: "transaction" });
+  mocks.txRef.current = tx;
+  tx.__reservationRows.push({ id: "hold", walletId: "wallet", userId: "user", amountCents: 5, mode, state: "reserved", transactionId: "transaction", deadlineAt: new Date(Date.now() - 1) });
+  tx.__transactionRows.push({ id: "transaction", status: "executing", complianceHashState: "deferred" });
+  const { runReservationReconcilerOnce } = await import("../jobs/reservation-reconciler.js");
+  const summary = await runReservationReconcilerOnce();
+  expect(summary).toMatchObject({ examined: 1, released: 1, failed: 0 });
+  expect(tx.__reservationRows[0].state).toBe("released");
+  expect(tx.__transactionRows[0]).toMatchObject({ status: "failed", complianceHashState: "pending" });
+  expect(tx.__transactionRows[0].error).toContain(mode === "hold" ? "released automatically" : "refunded automatically");
+  expect(tx.__insertCalls.filter(c => c.table === walletTransactions)).toHaveLength(mode === "hold" ? 0 : 1);
+});
+
+
+describe("H6 dispatch schema validation before reservation", () => {
+  it.each(["enforce", "report"])("%s handles a type mismatch before any wallet hold", async mode => {
+    vi.stubEnv("INPUT_VALIDATION_MODE", mode);
+    const { log } = await import("../lib/log.js");
+    const warn = vi.spyOn(log, "warn");
+    const user = buildUserRow();
+    mocks.outerSelectQueue.push([user]);
+    const executor = vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+    mockGetExecutor.mockReturnValue(executor);
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10000 }, transactionId: randomUUID() });
+    mocks.txRef.current = tx;
+    try {
+      const res = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: 81726354 }, max_price_cents: 100 }) });
+      expect(res.status).toBe(mode === "enforce" ? 400 : 200);
+      if (mode === "enforce") {
+        expect(await res.json()).toMatchObject({ error_code: "invalid_input", details: { fix: expect.any(String), paths: ["/value"] } });
+        expect(executor).not.toHaveBeenCalled();
+        expect(mocks.dbTransactionCalls).toBe(0);
+        expect(tx.__reservationRows).toEqual([]);
+      } else expect(executor).toHaveBeenCalledWith({ value: 81726354 });
+      expect(warn).toHaveBeenCalledWith(expect.objectContaining({ label: "input-schema-mismatch", slug: "test-capability", rail: "wallet", paths: ["/value"] }), expect.any(String));
+      expect(JSON.stringify(warn.mock.calls)).not.toContain("81726354");
+    } finally { warn.mockRestore(); vi.unstubAllEnvs(); }
+  });
+});
+
+it.each([{ type: "foo" }, { $ref: "round2-do-missing" }, { type: "string", pattern: "[" }, { type: "object", properties: { a: { type: "string" } }, required: "a" }, []])("Round 2 malformed schema %j executes twice in report and refuses before hold in enforce", async schema => {
+  const { log } = await import("../lib/log.js");
+  const warn = vi.spyOn(log, "warn");
+  const executor = vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+  mockGetExecutor.mockReturnValue(executor);
+  mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, inputSchema: schema } });
+  try {
+    for (const mode of ["report", "report", "enforce"]) {
+      vi.stubEnv("INPUT_VALIDATION_MODE", mode);
+      const user = buildUserRow();
+      mocks.outerSelectQueue.push([user]);
+      const tx = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10000 }, transactionId: randomUUID() });
+      mocks.txRef.current = tx;
+      const before = mocks.dbTransactionCalls;
+      const res = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(), body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: "ok" }, max_price_cents: 100 }) });
+      expect(res.status).toBe(mode === "enforce" ? 503 : 200);
+      if (mode === "enforce") {
+        expect(await res.json()).toMatchObject({ error_code: "capability_unavailable", details: { fix: expect.any(String) } });
+        expect(mocks.dbTransactionCalls).toBe(before);
+        expect(tx.__reservationRows).toEqual([]);
+      }
+    }
+    expect(executor).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls.filter(([ctx]) => ctx.label === "input-schema-compile-failed")).toHaveLength(1);
+  } finally { warn.mockRestore(); vi.unstubAllEnvs(); }
+});
+
+it("Round 2 a 10000-item bad array executes in report with bounded logged paths", async () => {
+  vi.stubEnv("INPUT_VALIDATION_MODE", "report");
+  const { log } = await import("../lib/log.js");
+  const warn = vi.spyOn(log, "warn");
+  const user = buildUserRow();
+  mocks.outerSelectQueue.push([user]);
+  const executor = vi.fn(async () => ({ output: { ok: true }, provenance: { source: "test", fetched_at: new Date().toISOString() } }));
+  mockGetExecutor.mockReturnValue(executor);
+  mockMatchCapability.mockResolvedValue({ capability: { ...CAPABILITY_FIXTURE, inputSchema: { type: "object", properties: { value: { type: "array", items: { type: "integer" } } } } } });
+  mocks.txRef.current = buildMockTx({ walletRow: { id: randomUUID(), userId: user.id, balanceCents: 10000 }, transactionId: randomUUID() });
+  try {
+    const res = await makeApp().request("/v1/do", { method: "POST", headers: authHeaders(), body: JSON.stringify({ capability_slug: "test-capability", inputs: { value: Array(10000).fill("bad") }, max_price_cents: 100 }) });
+    expect(res.status).toBe(200);
+    expect(executor).toHaveBeenCalledOnce();
+    const warning = warn.mock.calls.find(([ctx]) => ctx.label === "input-schema-mismatch");
+    expect(warning).toBeDefined();
+    const paths = warning![0].paths as string[];
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.length).toBeLessThanOrEqual(20);
+  } finally { warn.mockRestore(); vi.unstubAllEnvs(); }
 });

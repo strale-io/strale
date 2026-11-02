@@ -45,7 +45,7 @@ class DoResponse:
     """Response from POST /v1/do (completed or executing).
 
     Result fields are available directly (e.g., response.output, response.transaction_id).
-    Trust metadata is in response.meta (quality scores, execution guidance, audit trail).
+    Execution metadata is in response.meta (execution guidance and audit context).
     """
 
     transaction_id: str

@@ -1,6 +1,7 @@
+import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("env-template-generate", async (input: CapabilityInput) => {
@@ -74,7 +75,7 @@ registerCapability("env-template-generate", async (input: CapabilityInput) => {
     ? `Source code (env vars found: ${uniqueVars.map((v) => v.name).join(", ")}):\n${code.slice(0, 6000)}`
     : `Project description:\n${projectDescription.slice(0, 3000)}`;
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient({ apiKey });
   const parsed = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,

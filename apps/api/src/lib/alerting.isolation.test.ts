@@ -115,7 +115,8 @@ describe("the suite holds no live alerting credential", () => {
     // NOT `toBeUndefined()` on a value we just set in the other describe —
     // this reads the pristine process env captured at setup time.
     expect(process.env.RESEND_API_KEY).toBeUndefined();
-    expect(process.env.BETTER_STACK_SOURCE_TOKEN).toBeUndefined();
+    expect(process.env.BETTERSTACK_SOURCE_TOKEN).toBeUndefined();
+    expect(process.env.BETTERSTACK_INGEST_HOST).toBeUndefined();
     expect(process.env.NODE_ENV).toBe("test");
   });
 });

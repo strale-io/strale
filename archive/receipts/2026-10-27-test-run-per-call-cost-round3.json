@@ -1,0 +1,65 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "11eae6950fb060930ba0306d5474d8149a29d806"
+  },
+  "at": "2026-10-27T18:48:40.399Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "passed": 6532,
+    "failed": 0,
+    "skipped": 346,
+    "total": 6878,
+    "test_files_passed": 358,
+    "test_files_skipped": 33,
+    "test_files_total": 391,
+    "phase": "pre-merge; Git metadata mounted read-only"
+  },
+  "topic": "per-call-cost-round3",
+  "raw": {
+    "ok": true,
+    "passed": 6532,
+    "failed": 0,
+    "skipped": 346,
+    "total": 6878,
+    "test_files_passed": 358,
+    "test_files_skipped": 33,
+    "test_files_total": 391,
+    "phase": "pre-merge; Git metadata mounted read-only",
+    "checks": {
+      "targeted_vitest": {
+        "passed": 303,
+        "skipped": 4,
+        "files": 10
+      },
+      "node_tests": {
+        "passed": 65,
+        "failed": 0
+      },
+      "mcp_build": "pass",
+      "api_typecheck": "pass",
+      "migrations_check": "pass",
+      "receipts_check": "pass with historical warnings",
+      "programs_check": "pass",
+      "claims_check": "pass",
+      "models_check": "pass",
+      "env_check": "pass",
+      "docs_check": "pass",
+      "diff_check": "pass",
+      "handoff_check": "expected fail: dirty, branch/upstream, existing merged branches",
+      "context_generate": "refused primary worktree",
+      "commit": "blocked: read-only Git metadata",
+      "merge_and_renumber": "not performed; blocked at first commit",
+      "fail_before_mutation": "not run; safe mutation runner requires clean committed tree",
+      "independent_confirmation": "GO; no blocking or should-fix findings"
+    },
+    "live_health": {
+      "status": "ok",
+      "commit": "1d7bba99331d"
+    }
+  }
+}

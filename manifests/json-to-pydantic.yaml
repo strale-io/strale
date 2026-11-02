@@ -82,7 +82,7 @@ output_field_reliability:
   model_count: guaranteed
   pydantic_model: guaranteed
 limitations:
-  - title: Optional fields may be marked as required if they appear in every sample provided to the model inferrer
+  - title: Optional fields can be inferred as required
     text: >-
       Infers Pydantic models from JSON samples — optional fields may be marked as required if always present in the
       sample

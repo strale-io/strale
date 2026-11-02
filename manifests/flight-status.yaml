@@ -3,9 +3,7 @@
 
 slug: flight-status
 name: Flight Status
-description: >-
-  Look up flight status by flight number (e.g. LH400, BA117). Returns departure/arrival times, delays, gates. Requires
-  AVIATIONSTACK_API_KEY for live data.
+description: "Currently unavailable. Look up a flight number's reported status, departure and arrival times, delays and gates."
 category: data-extraction
 cost_class: free_quota
 quota_window: monthly
@@ -95,14 +93,13 @@ output_field_reliability:
   departure: guaranteed
   flight_number: guaranteed
 limitations:
-  - title: AviationStack free tier has limited requests and may not include real-time gate or delay information
+  - title: Live gate and delay details may be missing
     text: Uses AviationStack API — free tier has limited requests and may not include real-time gate or delay information
     category: availability
     severity: info
-    workaround: For real-time gate changes, check the airline's official app or FlightAware directly
+    workaround: Check the airline’s official website or app for current gate and delay information.
   - title: >-
-      Coverage is best for major airlines and international routes — regional carriers and charters may have limited
-      data
+      Regional and charter flight coverage is limited
     text: >-
       Coverage best for major airlines and international routes — regional carriers and charter flights may have limited
       data

@@ -1,3 +1,4 @@
+import { getNestedValue as getPath } from "../src/lib/nested-value.js";
 /**
  * Operator sweep: execute every paid capability's known_answer fixture and
  * check it against its declared assertions.
@@ -24,7 +25,7 @@
  * trademark, and product-reviews-extract returned status=completed with every
  * review field null while still billing the caller.
  *
- * Nothing here writes test_results or capability_health — direct getExecutor
+ * Nothing here writes test_results or source_health — direct getExecutor
  * calls bypass the test runner entirely.
  */
 import { config } from "dotenv";
@@ -58,9 +59,6 @@ interface Row {
   ms?: number;
 }
 
-function getPath(o: any, p: string): any {
-  return p.split(".").reduce((a, k) => (a == null ? undefined : a[k]), o);
-}
 
 function classifyError(msg: string): Outcome {
   const m = msg.toLowerCase();

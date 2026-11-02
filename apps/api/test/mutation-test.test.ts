@@ -124,6 +124,15 @@ describe("the guard refuses what it cannot restore", () => {
     expect(r.code).not.toBe(0);
     expect(r.out).toMatch(/not present/i);
   });
+
+  it("refuses an ambiguous find text, and leaves the file untouched", () => {
+    writeFileSync(join(repo, "src.txt"), "GUARD one\nGUARD two\n");
+    git("commit", "-qam", "two matches");
+    const r = runGuard({ file: "src.txt", find: "GUARD", replace: "X", test: PASS_CMD });
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/occurs 2 times/);
+    expect(readFileSync(join(repo, "src.txt"), "utf8")).toBe("GUARD one\nGUARD two\n");
+  });
 });
 
 describe("a result only counts as green → red → green", () => {

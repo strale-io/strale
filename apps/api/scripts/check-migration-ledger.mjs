@@ -18,6 +18,7 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   addedDateForLine,
+  BLOCKS_DIR,
   checkLedger,
   computeCurrentBlocks,
   isDirectInvocation,
@@ -41,7 +42,7 @@ function runUpdate(root) {
     if (existingFunctions.has(block.functionName)) continue;
     const id = `M${String(nextIdNumber).padStart(3, "0")}`;
     nextIdNumber++;
-    const addedDate = addedDateForLine(root, SOURCE_PATH, block.startLine + 1) ?? new Date().toISOString().slice(0, 10);
+    const addedDate = addedDateForLine(root, block.file, block.startLine + 1) ?? new Date().toISOString().slice(0, 10);
     const row = {
       id,
       function: block.functionName,
@@ -79,7 +80,7 @@ if (isDirectInvocation(import.meta.url)) {
   if (json) {
     console.log(JSON.stringify({ ok: findings.length === 0, findings, block_count: current.length }, null, 2));
   } else {
-    console.log(`checked ${current.length} migration blocks in ${SOURCE_PATH}`);
+    console.log(`checked ${current.length} migration blocks in ${SOURCE_PATH} and ${BLOCKS_DIR}`);
     if (findings.length === 0) {
       console.log("ok   migration ledger");
     } else {

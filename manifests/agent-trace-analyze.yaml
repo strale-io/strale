@@ -3,7 +3,7 @@
 
 slug: agent-trace-analyze
 name: "Agent Trace Analysis"
-description: "Analyse an AI agent's run trace from LangChain, CrewAI or AutoGen: where it failed, why, wasted tokens, and suggested fixes."
+description: "Analyse an AI agent's run trace for potential failures and token waste. Returns findings, likely causes and suggested fixes."
 category: developer-tools
 cost_class: paid_prepaid
 quota_window: none
@@ -107,7 +107,7 @@ output_field_reliability:
   failure_point: guaranteed
   suggested_fix: guaranteed
 limitations:
-  - title: AI trace analysis may not identify all performance bottlenecks in complex multi-agent orchestrations
+  - title: Complex trace bottlenecks can be missed
     text: AI analysis of agent traces — may not identify all performance bottlenecks in complex multi-agent orchestrations
     category: accuracy
     severity: info

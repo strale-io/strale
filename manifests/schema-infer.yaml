@@ -117,7 +117,7 @@ output_field_reliability:
   total_fields: guaranteed
   format_detected: guaranteed
 limitations:
-  - title: Schema is inferred from sample data — optional fields or rare value types may not appear in the output
+  - title: Samples can omit optional fields and rare types
     text: Infers schema from sample data — optional fields or rare value types may not appear in the inferred schema
     category: accuracy
     severity: info

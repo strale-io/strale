@@ -33,6 +33,7 @@ import {
 } from "./execution-outcome.js";
 import { recordPaidInvocation } from "./invocation-facts.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
+import { executeWithTransientRetry } from "./retry.js";
 import { logWarn } from "./log.js";
 
 /**
@@ -464,6 +465,7 @@ export async function executeSolution(
     const freshRows = await db
       .select({
         slug: capabilities.slug,
+        capabilityType: capabilities.capabilityType,
         isActive: capabilities.isActive,
         lifecycleState: capabilities.lifecycleState,
         visible: capabilities.visible,
@@ -593,7 +595,9 @@ export async function executeSolution(
         }
 
         phase = "executor";
-        const result = await executor(stepInput);
+        const result = await executeWithTransientRetry(executor, stepInput, {
+          slug: step.capabilitySlug, capabilityType: fresh?.capabilityType,
+        });
         phase = "enrich";
         // Enrich company data outputs with derived fields (e.g., vat_number)
         const output = enrichCompanyOutput(

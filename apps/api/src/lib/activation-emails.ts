@@ -60,7 +60,7 @@ export async function sendDay2NudgeEmail(email: string): Promise<void> {
 
   const text = `Hey,
 
-You signed up for Strale a couple of days ago but haven't made your first API call yet. Your account has EUR 2.00 in free credits waiting.
+You signed up for Strale a couple of days ago but haven't made your first API call yet. Trial credits are available where eligible.
 
 Here's the fastest way to test it — paste this into a terminal:
 
@@ -70,9 +70,9 @@ curl -X POST https://api.strale.io/v1/do \\
 
 That validates a German IBAN. It's free — no credits used, no API key needed.
 
-When you're ready for paid capabilities (company lookups, sanctions screening, web extraction), your API key and EUR 2.00 credits are waiting in your account.
+When you're ready for paid capabilities (company lookups, sanctions screening, web extraction), use your API key; trial credits are available where eligible.
 
-Browse all 250+ capabilities: https://strale.dev/capabilities
+Browse available capabilities: https://strale.dev/capabilities
 
 Questions? Reply to this email — it goes straight to me.
 
@@ -85,13 +85,13 @@ https://strale.dev
   const html = [
     '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:600px;">',
     "<p>Hey,</p>",
-    "<p>You signed up for Strale a couple of days ago but haven't made your first API call yet. Your account has <strong>EUR 2.00 in free credits</strong> waiting.</p>",
+    "<p>You signed up for Strale a couple of days ago but haven't made your first API call yet. Trial credits are available where eligible.</p>",
     "<p>Here's the fastest way to test it — paste this into a terminal:</p>",
     `<pre style="${preStyle}">curl -X POST https://api.strale.io/v1/do \\`,
     `  -H "Content-Type: application/json" \\`,
     `  -d '{"capability_slug": "iban-validate", "inputs": {"iban": "DE89370400440532013000"}}'</pre>`,
     "<p>That validates a German IBAN. It's free — no credits used, no API key needed.</p>",
-    '<p>Browse all 250+ capabilities: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
+    '<p>Browse available capabilities: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
     "<p>Questions? Reply to this email — it goes straight to me.</p>",
     '<p>— Petter<br>Founder, Strale<br><a href="https://strale.dev" style="color:#2563eb;">strale.dev</a></p>',
     "</div>",
@@ -103,11 +103,11 @@ https://strale.dev
 // ── Day 5: Reminder (120h after signup, still no API call) ────────────────────
 
 export async function sendDay5ReminderEmail(email: string): Promise<void> {
-  const subject = "5 capabilities you can try for free";
+  const subject = "Free tools to try";
 
   const text = `Hey,
 
-Your Strale account still has EUR 2.00 in unused credits. Here are 5 capabilities you can try right now — all free, no API key needed:
+Explore Strale with a free tool. Try these free tools — no API key needed:
 
 1. iban-validate — Validate any IBAN (checksum, bank name, country)
 2. email-validate — Check if an email address can receive mail
@@ -123,7 +123,7 @@ curl -X POST https://api.strale.io/v1/do \\
 
 No credit card, no setup. Just paste and run.
 
-For paid capabilities (sanctions screening, company registries, web scraping), your EUR 2.00 credits cover dozens of calls.
+For paid capabilities (sanctions screening, company registries, web scraping), use your API key and check your wallet balance before calling.
 
 Browse everything: https://strale.dev/capabilities
 
@@ -135,7 +135,7 @@ Founder, Strale
   const html = [
     '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:600px;">',
     "<p>Hey,</p>",
-    "<p>Your Strale account still has <strong>EUR 2.00 in unused credits</strong>. Here are 5 capabilities you can try right now — all free, no API key needed:</p>",
+    "<p>Explore Strale with a free tool. Try these free tools — no API key needed:</p>",
     '<ol style="padding-left:20px;">',
     "<li><strong>iban-validate</strong> — Validate any IBAN (checksum, bank name, country)</li>",
     "<li><strong>email-validate</strong> — Check if an email address can receive mail</li>",
@@ -177,7 +177,7 @@ Your first Strale API call just went through — ${capabilitySlug}.
 Here are a few related capabilities you might find useful:
 ${related.map((s) => `- ${s}`).join("\n")}
 
-Browse all 250+ capabilities: https://strale.dev/capabilities
+Browse available capabilities: https://strale.dev/capabilities
 Or try a bundled solution (multi-step workflow): https://strale.dev/solutions
 
 — Petter
@@ -192,7 +192,7 @@ Founder, Strale
     "<ul>",
     ...related.map((s) => `<li><code style="font-size:13px;">${s}</code></li>`),
     "</ul>",
-    '<p>Browse all 250+ capabilities: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
+    '<p>Browse available capabilities: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
     '<p>Or try a bundled solution: <a href="https://strale.dev/solutions" style="color:#2563eb;">strale.dev/solutions</a></p>',
     '<p>— Petter<br>Founder, Strale<br><a href="https://strale.dev" style="color:#2563eb;">strale.dev</a></p>',
     "</div>",

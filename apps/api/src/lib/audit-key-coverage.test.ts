@@ -39,8 +39,8 @@ const ROOT = join(import.meta.dirname, "..");
  * one people learn to override.
  */
 const BUILDERS: Array<{ file: string; fn: string }> = [
-  { file: "routes/do.ts", fn: "buildFullAudit" },
-  { file: "routes/do.ts", fn: "buildFailureAudit" },
+  { file: "lib/do/audit.ts", fn: "buildFullAudit" },
+  { file: "lib/do/audit.ts", fn: "buildFailureAudit" },
   { file: "routes/solution-execute.ts", fn: "buildInlineAudit" },
   { file: "routes/x402-gateway-v2.ts", fn: "buildX402AuditTrail" },
 ];

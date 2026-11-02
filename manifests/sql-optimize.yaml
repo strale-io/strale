@@ -85,13 +85,13 @@ output_field_reliability:
   estimated_improvement: guaranteed
   index_recommendations: guaranteed
 limitations:
-  - title: SQL optimization suggestions are generic — actual gains depend on your database engine, data size, and indexes
+  - title: Performance gains depend on your database
     text: >-
-      Optimization suggestions are generic — actual performance gains depend on your database engine, data size, and
-      index configuration
+      Optimisation suggestions are generic — actual performance gains depend on your database engine,
+      data size, and index configuration
     category: accuracy
     severity: info
-    workaround: Benchmark optimized queries with EXPLAIN ANALYZE against your actual data to measure real improvement
+    workaround: Benchmark the suggested queries with EXPLAIN ANALYZE against your own data.
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

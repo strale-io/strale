@@ -15,7 +15,7 @@
  */
 
 import { eq, and, sql } from "drizzle-orm";
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import { capabilities, testSuites } from "../db/schema.js";
 
 // Input field name patterns that indicate PRIMARY (ID-based) entry points.
@@ -238,8 +238,8 @@ function classifyFixtureInput(
 export async function traceFixtureCoverage(
   slug: string,
   entryPoints: EntryPoint[],
+  db: Database = getDb(),
 ): Promise<CoverageResult[]> {
-  const db = getDb();
 
   const fixtures = await db
     .select({ input: testSuites.input, testType: testSuites.testType })
@@ -287,8 +287,7 @@ export async function traceFixtureCoverage(
  *
  * Single-path capabilities (only one entry point type) always pass.
  */
-export async function runGate5(slug: string): Promise<Gate5Result> {
-  const db = getDb();
+export async function runGate5(slug: string, db: Database = getDb()): Promise<Gate5Result> {
 
   // Load capability input schema
   const [cap] = await db
@@ -335,7 +334,7 @@ export async function runGate5(slug: string): Promise<Gate5Result> {
   }
 
   // Multi-path: check coverage
-  const coverageMap = await traceFixtureCoverage(slug, entryPoints);
+  const coverageMap = await traceFixtureCoverage(slug, entryPoints, db);
 
   const uncoveredPrimary = coverageMap
     .filter((c) => c.entryPoint.pathType === "PRIMARY" && !c.covered)

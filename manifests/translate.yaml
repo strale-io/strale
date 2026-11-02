@@ -92,7 +92,7 @@ output_field_reliability:
   target_language: guaranteed
   translated_text: guaranteed
 limitations:
-  - title: AI translation may render technical terminology, legal language, and domain-specific jargon imprecisely
+  - title: Specialist terminology can be translated imprecisely
     text: AI translation — technical terminology, legal language, and domain-specific jargon may be translated imprecisely
     category: accuracy
     severity: info

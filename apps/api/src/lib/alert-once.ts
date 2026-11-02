@@ -18,17 +18,17 @@
  */
 
 import { sql } from "drizzle-orm";
-import { getDb } from "../db/index.js";
+import { getDb, type Database } from "../db/index.js";
 import { sendAlert } from "./alerting.js";
 import { log, logError } from "./log.js";
 
 const EVENT_TYPE = "alert_sent";
 
 /** Has this alert key been sent inside the cooldown window? */
-async function recentlyAlerted(key: string, cooldownMs: number): Promise<boolean> {
+async function recentlyAlerted(key: string, cooldownMs: number, db: Database | undefined, signal?: AbortSignal): Promise<boolean> {
   try {
     const seconds = Math.max(1, Math.round(cooldownMs / 1000));
-    const rows = await getDb().execute(sql`
+    const rows = await (db ?? getDb()).execute(sql`
       SELECT 1
         FROM health_monitor_events
        WHERE event_type = ${EVENT_TYPE}
@@ -38,15 +38,16 @@ async function recentlyAlerted(key: string, cooldownMs: number): Promise<boolean
     `);
     return (rows as unknown as unknown[]).length > 0;
   } catch (err) {
+    signal?.throwIfAborted();
     // Fail open — see the module note.
     logError("alert-once-cooldown-check-failed", err, { alert_key: key });
     return false;
   }
 }
 
-async function recordAlert(key: string, subject: string, severity: string): Promise<void> {
+async function recordAlert(key: string, subject: string, severity: string, db: Database | undefined): Promise<void> {
   try {
-    await getDb().execute(sql`
+    await (db ?? getDb()).execute(sql`
       INSERT INTO health_monitor_events (event_type, capability_slug, tier, action_taken, details)
       VALUES (
         ${EVENT_TYPE},
@@ -71,9 +72,11 @@ async function recordAlert(key: string, subject: string, severity: string): Prom
 export async function alertOnce(
   key: string,
   cooldownMs: number,
-  opts: { subject: string; body: string; severity: "info" | "warning" | "critical" },
+  opts: { subject: string; body: string; severity: "info" | "warning" | "critical"; db?: Database; signal?: AbortSignal },
 ): Promise<boolean> {
-  if (await recentlyAlerted(key, cooldownMs)) {
+  opts.signal?.throwIfAborted();
+  const db = opts.db;
+  if (await recentlyAlerted(key, cooldownMs, db, opts.signal)) {
     log.info(
       { label: "alert-suppressed-cooldown", alert_key: key, severity: opts.severity },
       "alert-suppressed-cooldown",
@@ -81,9 +84,11 @@ export async function alertOnce(
     return false;
   }
 
-  const sent = await sendAlert(opts);
+  opts.signal?.throwIfAborted();
+  const sent = await sendAlert({ subject: opts.subject, body: opts.body, severity: opts.severity });
+  opts.signal?.throwIfAborted();
   // Record on attempt, not only on success: a Resend outage would otherwise
   // let every subsequent tick retry the send and re-page once it recovers.
-  await recordAlert(key, opts.subject, opts.severity);
+  await recordAlert(key, opts.subject, opts.severity, db);
   return sent;
 }

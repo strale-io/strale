@@ -1,3 +1,4 @@
+import { noteJobFailure } from "../lib/job-run-context.js";
 /**
  * Revenue heartbeat — notice when the money stops.
  *
@@ -218,6 +219,7 @@ export async function tick(): Promise<void> {
       });
     }
   } catch (err) {
+    noteJobFailure();
     // A monitoring job must never take the process down, but a silent monitor
     // is worse than none — so the swallow is always logged (DEC-20260504-A).
     logWarn("revenue-heartbeat-failed", "heartbeat check failed", { err: String(err) });

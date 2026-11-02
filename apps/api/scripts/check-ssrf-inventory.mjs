@@ -19,6 +19,7 @@
  * Usage:  node apps/api/scripts/check-ssrf-inventory.mjs
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -44,7 +45,7 @@ function walk(dir) {
   return out;
 }
 
-const files = walk(CAPS);
+const files = requireInputs(walk(CAPS), "SSRF inventory: capabilities/**/*.ts");
 const unguarded = [];
 
 for (const file of files) {

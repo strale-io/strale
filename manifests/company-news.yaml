@@ -1,6 +1,6 @@
 slug: company-news
 name: "Company News"
-description: "Search news about a company in 100+ languages, updated every 15 minutes. Returns recent articles with source, date and sentiment."
+description: "Search news about a company. Returns matching articles with headlines, sources, dates and sentiment estimates."
 category: company-data
 cost_class: free_quota
 quota_window: daily
@@ -81,8 +81,8 @@ limitations:
     severity: info
   - title: Company name matching
     text: >-
-      Uses exact phrase matching on the company name. Short or generic names (e.g. 'Apple') may return unrelated
-      articles. Use the full legal name for best results.
+      Uses exact phrase matching, so short or generic company names can return unrelated articles. Use
+      the full legal name for a more specific search.
     category: accuracy
     severity: info
 

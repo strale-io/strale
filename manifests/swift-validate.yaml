@@ -88,7 +88,7 @@ output_field_reliability:
   country_code: guaranteed
   is_head_office: guaranteed
 limitations:
-  - title: Validates SWIFT/BIC code format only — does not verify the code is active or assigned to an operating institution
+  - title: Code format does not confirm an active institution
     text: >-
       Validates SWIFT/BIC code format — does not verify the code is currently active or assigned to an operating
       institution

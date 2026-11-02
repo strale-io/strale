@@ -18,6 +18,7 @@
  * Exit 0 = clean, exit 1 = at least one package fails the contract.
  */
 
+import { requireInputs } from "../../../scripts/require-inputs.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -43,6 +44,16 @@ function isDeprecated(pkgDir) {
 // packages had the framework import inside the module's module-level
 // docstring — visually present but not executable.
 const FRAMEWORK_RULES = [
+  {
+    dirMatch: /^zapier-strale$/,
+    imports: [/^const\s+zapier\s*=\s*require\(['"]zapier-platform-core['"]\)/m],
+    label: "zapier-platform-core with defineApp and defineCreate actions",
+  },
+  {
+    dirMatch: /^n8n-nodes-strale$/,
+    imports: [/^import\s[\s\S]{0,300}?from\s+['"]n8n-workflow['"]/m],
+    label: "n8n-workflow with an INodeType node (execute), an ICredentialType credential and a test on n8n-workflow",
+  },
   {
     dirMatch: /^langchain-strale$/,
     imports: [/^from\s+langchain(?:_core|_community)?[\.\w]*\s+import/m],
@@ -78,6 +89,13 @@ const FRAMEWORK_RULES = [
     dirMatch: /^openai-agents-strale$/,
     imports: [/^from\s+openai_agents[\.\w]*\s+import/m, /^from\s+agents[\.\w]*\s+import/m],
     label: "openai-agents (top-level 'from openai_agents... import' or 'from agents... import')",
+  },
+  {
+    // Vercel AI SDK (distribution D6): tool() from "ai" with an input schema
+    // and an execute function, checked on the entry module below.
+    dirMatch: /^ai-sdk-strale$/,
+    imports: [/^import\s*\{[^}]*\btool\b[^}]*\}\s*from\s*["']ai["']/m],
+    label: "Vercel AI SDK (top-level import { tool } from 'ai', tool({ inputSchema, execute }))",
   },
   {
     dirMatch: /^semantic-kernel-strale$/,
@@ -141,7 +159,7 @@ try {
 }
 
 let skippedDeprecated = 0;
-for (const pkg of packages) {
+for (const pkg of requireInputs(packages.filter((pkg) => FRAMEWORK_RULES.some((rule) => rule.dirMatch.test(pkg))), "framework packages: matching package directories")) {
   const rule = FRAMEWORK_RULES.find((r) => r.dirMatch.test(pkg));
   if (!rule) continue;
   const pkgDir = join(ROOT, pkg);
@@ -171,6 +189,45 @@ for (const pkg of packages) {
         break outer;
       }
     }
+  }
+  if (matched && pkg === "zapier-strale") {
+    const entryPath = join(pkgDir, "index.js");
+    const entry = existsSync(entryPath) ? readFileSync(entryPath, "utf8") : "";
+    matched = rule.imports.some((pattern) => pattern.test(entry))
+      && /zapier\.defineApp\(/.test(entry)
+      && /zapier\.defineCreate\(/.test(entry)
+      && /authentication:/.test(entry) && /inputFields:/.test(entry)
+      && /outputFields:/.test(entry) && /perform:/.test(entry)
+      && /creates,/.test(entry);
+  }
+  if (matched && pkg === "n8n-nodes-strale") {
+    // The node and credential files are the shipped entry points; an import
+    // of n8n-workflow elsewhere (a helper, a test) does not make a node.
+    const read = (file) => {
+      const path = join(pkgDir, file);
+      return existsSync(path) ? readFileSync(path, "utf8") : "";
+    };
+    const nodeSrc = read("nodes/Strale/Strale.node.ts");
+    const credSrc = read("credentials/StraleApi.credentials.ts");
+    const manifest = JSON.parse(read("package.json") || "{}");
+    matched = rule.imports.some((pattern) => pattern.test(nodeSrc))
+      && /export class \w+ implements INodeType\b/.test(nodeSrc)
+      && /description: INodeTypeDescription = \{/.test(nodeSrc)
+      && /async execute\(this: IExecuteFunctions\)/.test(nodeSrc)
+      && /properties: \[/.test(nodeSrc)
+      && rule.imports.some((pattern) => pattern.test(credSrc))
+      && /export class \w+ implements ICredentialType\b/.test(credSrc)
+      && manifest.n8n?.nodes?.includes("dist/nodes/Strale/Strale.node.js")
+      && manifest.n8n?.credentials?.includes("dist/credentials/StraleApi.credentials.js")
+      && manifest.dependencies === undefined
+      // DEC-20260422-A step 4b: a test that drives n8n's own primitives.
+      && /require\(['"]n8n-workflow['"]\)/.test(read("test/node.test.js"));
+  }
+  if (matched && pkg === "ai-sdk-strale") {
+    const entryPath = join(pkgDir, "src", "index.ts");
+    const entry = existsSync(entryPath) ? readFileSync(entryPath, "utf8") : "";
+    matched = rule.imports.some((pattern) => pattern.test(entry))
+      && /\btool\(\{/.test(entry) && /inputSchema:/.test(entry) && /execute:/.test(entry);
   }
   if (matched) {
     console.log(`ok    ${pkg}  (import found in ${matchedFile.replace(/\\/g, "/")})`);

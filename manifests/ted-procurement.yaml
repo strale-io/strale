@@ -51,7 +51,7 @@ test_fixtures:
   known_answer:
     input:
       country: SE
-      keyword: artificial intelligence
+      keyword: software
     expected_fields:
       - field: query
         operator: not_null
@@ -78,6 +78,14 @@ test_fixtures:
         operator: gt
         reliability: guaranteed
         value: -1
+      - field: result_count
+        operator: gt
+        reliability: guaranteed
+        value: 0
+      - field: tenders.0.link
+        operator: contains
+        reliability: guaranteed
+        value: 'ted.europa.eu'
   health_check_input:
     country: US
     keyword: test
@@ -86,7 +94,7 @@ output_field_reliability:
   tenders: guaranteed
   result_count: guaranteed
 limitations:
-  - title: Covers EU public procurement above threshold values only — below-threshold tenders are on national portals
+  - title: Below-threshold tenders are not covered
     text: >-
       Covers EU public procurement above threshold values — below-threshold national tenders are published on
       country-specific portals

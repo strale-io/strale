@@ -1,0 +1,18 @@
+{
+  "name": "strale",
+  "displayName": "Strale",
+  "version": "0.1.0",
+  "description": "Pay-per-call tools for agents: company records, EU VAT checks, sanctions and PEP screening, validation and web page reading.",
+  "author": {
+    "name": "Strale",
+    "email": "hello@strale.io"
+  },
+  "homepage": "https://strale.dev?src=cursor&utm_source=cursor&utm_medium=listing&utm_campaign=distribution-t12",
+  "repository": "https://github.com/strale-io/strale",
+  "license": "MIT",
+  "logo": "assets/logo.png",
+  "keywords": ["strale", "company-data", "vat", "kyb", "sanctions", "validation", "mcp"],
+  "category": "integrations",
+  "tags": ["strale", "company-data", "compliance", "mcp"],
+  "mcpServers": "./mcp.json"
+}

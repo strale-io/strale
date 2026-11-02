@@ -119,26 +119,21 @@ test_fixtures:
 limitations:
   - title: Source dataset refreshes twice monthly
     text: >-
-      AJPES publishes the Poslovni register Slovenije open-data CSV every two weeks (dvotedensko). Sub-fortnightly
-      registrations, address changes, name changes, or dissolutions will not be reflected in API responses until the
-      next snapshot. Other identity capabilities on Strale (IE, LV) refresh daily; SI does not. Customers requiring
-      real-time data must use the paid AJPES restPrsInfo service directly (not redistributable per AJPES ToU §7).
+      AJPES refreshes the open dataset every two weeks. More recent registrations, address or name
+      changes and dissolutions do not appear until the next snapshot.
     category: freshness
     severity: info
-  - title: Open-data subset omits status, registration date, NACE, directors, and VAT
+  - title: Status, officers, tax and financial fields are absent
     text: >-
-      The data.gov.si open-data dataset contains only the statutory open subset: matična številka, popolno ime,
-      pravnoorganizacijska oblika, registrski organ, and address. Active/dissolved status, registration date, SKD/NACE
-      activity codes, statutory representatives (directors), and VAT number are NOT in the open feed. Solutions that
-      filter on status or require those fields cannot meaningfully gate on SI output. Reactivation trigger: paid AJPES
-      restPrsInfo contract with redistribution rights, or a future EU High-Value-Dataset expansion.
+      Returns the registration number, full name, legal form, registering authority and address only.
+      Active or dissolved status, registration date, SKD/NACE codes, directors and VAT numbers are
+      absent, so this result cannot support decisions requiring those fields.
     category: coverage
     severity: info
-  - title: Keyword search is unranked beyond CKAN relevance
+  - title: Name search does not favour active companies
     text: >-
-      When resolving a Slovenian company name (rather than matična številka), the CKAN datastore_search keyword endpoint
-      returns the top relevance-ranked match with no further sorting. The source has no status or activity column to
-      prefer active entities over dissolved ones. Pass matična številka directly when the entity is known.
+      Name search returns the top source-ranked keyword match without additional ranking. The dataset
+      has no status or activity field to distinguish active from dissolved companies.
     category: accuracy
     severity: info
     workaround: Pass matična številka (7 or 10 digits) directly when known.

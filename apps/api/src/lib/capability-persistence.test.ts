@@ -209,6 +209,21 @@ function findUpdates(inTx: boolean, table: string) {
 }
 
 describe("persistCapability (Cluster 2 Phase 3 C2)", () => {
+  it.each(["active", "probation"])("backfill hook failure preserves %s and all serving controls", async (lifecycleState) => {
+    const row = { ...baseCapability(), visible: true, x402Enabled: true, isActive: true, lifecycleState };
+    state.hookImpl = async () => { throw new Error("Onboarding gate check failed: simulated gate"); };
+    const { persistCapability } = await importPersist();
+    const result = await persistCapability({ capability: {
+      ...row, visible: false, x402Enabled: false, isActive: false, lifecycleState: "validating",
+    } as never }, { mode: "update", backfill: true });
+    for (const event of findUpdates(true, "capabilities")) {
+      for (const field of ["visible", "x402Enabled", "isActive", "lifecycleState"]) expect(event.set).not.toHaveProperty(field);
+      Object.assign(row, event.set);
+    }
+    expect(findUpdates(false, "capabilities")).toHaveLength(0);
+    expect(row).toMatchObject({ visible: true, x402Enabled: true, isActive: true, lifecycleState });
+    expect(result).toMatchObject({ hookFailed: true, hookFailureReason: "gate_rejected" });
+  });
   // ── mode='create' ────────────────────────────────────────────────────────
 
   it("mode=create: tx commits with inserts, hook fires AFTER tx-end, no hook_failed marker", async () => {

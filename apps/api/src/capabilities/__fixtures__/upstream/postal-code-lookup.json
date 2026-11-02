@@ -1,0 +1,38 @@
+{
+  "slug": "postal-code-lookup",
+  "recorded_at": "2026-10-29T16:05:14.081Z",
+  "input": {
+    "postal_code": "10001",
+    "country_code": "US"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.zippopotam.us/us/10001"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "age": "6903",
+          "cache-control": "max-age=14400",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a5236bac689b591f-ATL",
+          "charset": "UTF-8",
+          "content-type": "application/json",
+          "date": "Thu, 29 Oct 2026 16:05:14 GMT",
+          "last-modified": "Thu, 29 Oct 2026 14:10:36 GMT",
+          "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=%2FDEv2a4nDamc%2F2aZ5G3PzWtxwlBxOnXdaAvSIIR5hOjNnefV%2BzIE2zQ7NDxCTkMT3JWXfYP4%2BsvIfEpo0cbBPo1CDFn%2BvDwr47cDMMdpp4xdSmox1LUcDQYFgMeaLSZovzkV\"}]}",
+          "server": "cloudflare",
+          "vary": "Accept-Encoding",
+          "x-cache": "hit"
+        },
+        "body": "{\"country\": \"United States\", \"country abbreviation\": \"US\", \"post code\": \"10001\", \"places\": [{\"place name\": \"New York City\", \"longitude\": \"-73.9967\", \"latitude\": \"40.7484\", \"state\": \"New York\", \"state abbreviation\": \"NY\"}]}",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

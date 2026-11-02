@@ -1,3 +1,4 @@
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { connect, type TLSSocket } from "node:tls";
 import { validateHost } from "../lib/url-validator.js";
@@ -5,7 +6,7 @@ import { validateHost } from "../lib/url-validator.js";
 registerCapability("ssl-check", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
   if (!domain) {
-    throw new Error("'domain' is required. Provide a domain name (e.g. example.com).");
+    throw inputRefusal("'domain' is required. Provide a domain name (e.g. example.com).", "domain", "Send 'domain' as a DNS hostname such as example.com.");
   }
 
   const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");

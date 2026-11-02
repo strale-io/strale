@@ -3,7 +3,7 @@
 
 slug: public-holiday-lookup
 name: "Public Holiday Lookup"
-description: "Get a country's public holidays for a year, for 200+ countries, with the next one coming up."
+description: "Look up public holidays for a supported country and year. Returns holiday names and dates, with the next upcoming holiday."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -161,6 +161,14 @@ test_fixtures:
         operator: gt
         reliability: guaranteed
         value: -1
+      - field: holidays.0.date
+        operator: equals
+        reliability: guaranteed
+        value: '2027-01-01'
+      - field: holidays.0.name
+        operator: equals
+        reliability: guaranteed
+        value: 'New Year''s Day'
   health_check_input:
     year: 2025
     country_code: US
@@ -169,7 +177,7 @@ output_field_reliability:
   next_upcoming: guaranteed
   total_holidays: guaranteed
 limitations:
-  - title: Covers national public holidays via Nager.Date — regional, state, and bank holidays may not be included
+  - title: Regional and bank holidays may be missing
     text: Covers national public holidays via Nager.Date API — regional/state holidays and bank holidays may not be included
     category: coverage
     severity: info

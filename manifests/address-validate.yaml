@@ -1,6 +1,6 @@
 slug: address-validate
 name: "Address Validation"
-description: "Validate and standardise a postal address in 200+ countries. Returns structured components, a confidence level and suggested corrections, from OpenStreetMap."
+description: "Match a postal address to map records and suggest a standardised form. Returns address components, coordinates and a confidence estimate."
 category: validation
 cost_class: free_quota
 quota_window: daily

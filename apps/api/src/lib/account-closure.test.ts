@@ -181,7 +181,7 @@ describe("the plan derives its column lists rather than retyping them", () => {
     // rounds of this package were spent on the inverse (writers whose shapes
     // the plan did not name); this is the direction that produced a receipt
     // pointing at a field with no writer at all.
-    const sources = ["src/routes/do.ts", "src/routes/solution-execute.ts"]
+    const sources = ["src/lib/do/audit.ts", "src/routes/solution-execute.ts"]
       .map((f) => readFileSync(resolve(process.cwd(), f), "utf8"))
       .join("\n");
     const jsonbPaths = CLOSURE_PLAN.filter((r) => r.table.includes("audit_trail"))

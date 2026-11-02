@@ -1,0 +1,37 @@
+{
+  "slug": "address-geocode",
+  "recorded_at": "2026-10-28T22:20:02.804Z",
+  "input": {
+    "address": "Eiffel Tower, Paris"
+  },
+  "redactions": [],
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://nominatim.openstreetmap.org/search?q=Eiffel+Tower%2C+Paris&format=jsonv2&addressdetails=1&limit=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "accept-ranges": "bytes",
+          "age": "709",
+          "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 28 Oct 2026 22:20:02 GMT",
+          "server": "gunicorn/asgi",
+          "strict-transport-security": "max-age=300",
+          "vary": "accept-language, Accept-Encoding",
+          "via": "1.1 varnish",
+          "x-cache": "HIT",
+          "x-cache-hits": "0",
+          "x-nominatim-server": "vhagar.openstreetmap.org",
+          "x-served-by": "cache-iad-kcgs7200101-IAD",
+          "x-timer": "S1793226003.944735,VS0,VE2"
+        },
+        "body": "[{\"place_id\":97665530,\"licence\":\"Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright\",\"osm_type\":\"way\",\"osm_id\":5013364,\"lat\":\"48.8582599\",\"lon\":\"2.2945006\",\"category\":\"man_made\",\"type\":\"tower\",\"place_rank\":30,\"importance\":0.6205937724353116,\"addresstype\":\"man_made\",\"name\":\"Tour Eiffel\",\"display_name\":\"Tour Eiffel, 5, Avenue Anatole France, Quartier du Gros-Caillou, Paris 7e Arrondissement, Paris, Île-de-France, France métropolitaine, 75007, France\",\"address\":{\"man_made\":\"Tour Eiffel\",\"house_number\":\"5\",\"road\":\"Avenue Anatole France\",\"quarter\":\"Quartier du Gros-Caillou\",\"suburb\":\"Paris 7e Arrondissement\",\"city_district\":\"Paris\",\"city\":\"Paris\",\"ISO3166-2-lvl6\":\"FR-75C\",\"state\":\"Île-de-France\",\"ISO3166-2-lvl4\":\"FR-IDF\",\"region\":\"France métropolitaine\",\"postcode\":\"75007\",\"country\":\"France\",\"country_code\":\"fr\"},\"boundingbox\":[\"48.8574753\",\"48.8590453\",\"2.2933119\",\"2.2956897\"]}]",
+        "body_encoding": "utf8"
+      }
+    }
+  ]
+}

@@ -1,0 +1,358 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "npm test + .github/workflows/ci.yml",
+    "commit": "80d289e8eea3d1a5b7607a9fe71a60dd719ef845"
+  },
+  "at": "2026-10-27T08:37:09.260Z",
+  "inputs": {
+    "base_commit": "10f71df8",
+    "code_commit": "80d289e8",
+    "branch": "docs/public-descriptions-copy"
+  },
+  "summary": {
+    "ok": true,
+    "manifest_descriptions_changed": 124,
+    "live_guard_rows": 75,
+    "root_ci_commands_passed": 56,
+    "root_ci_warning_only": 1,
+    "api_test_files_passed": 337,
+    "api_test_files_skipped": 32,
+    "api_tests_passed": 5799,
+    "api_tests_skipped": 322,
+    "api_tests_failed": 0,
+    "api_typecheck_passed": true,
+    "db_integration_locally_verified": false
+  },
+  "topic": "public-descriptions-copy",
+  "raw": {
+    "root_ci": [
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "exit_code": 0,
+        "seconds": 2.8
+      },
+      {
+        "command": "npm --workspace=packages/sdk-typescript run build",
+        "exit_code": 0,
+        "seconds": 2.7
+      },
+      {
+        "command": "npm run typecheck",
+        "exit_code": 0,
+        "seconds": 124.2
+      },
+      {
+        "command": "node apps/api/scripts/check-mjs-syntax.mjs",
+        "exit_code": 0,
+        "seconds": 8
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-bare-catch",
+        "exit_code": 0,
+        "seconds": 1.3
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-unguarded-user-fetch",
+        "exit_code": 0,
+        "seconds": 1.1
+      },
+      {
+        "command": "node apps/api/scripts/check-ssrf-inventory.mjs",
+        "exit_code": 0,
+        "seconds": 0.1
+      },
+      {
+        "command": "npm --workspace=apps/api run lint:no-new-console",
+        "exit_code": 0,
+        "seconds": 0.9
+      },
+      {
+        "command": "node apps/api/scripts/check-no-external-column-access.mjs",
+        "exit_code": 0,
+        "seconds": 0.5
+      },
+      {
+        "command": "node apps/api/scripts/check-framework-packages.mjs",
+        "exit_code": 0,
+        "seconds": 0.4
+      },
+      {
+        "command": "npx tsx apps/api/scripts/check-ceo-brief.ts",
+        "exit_code": 0,
+        "seconds": 3.8
+      },
+      {
+        "command": "node apps/api/scripts/check-no-committed-secrets.mjs",
+        "exit_code": 0,
+        "seconds": 10.8
+      },
+      {
+        "command": "node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs",
+        "exit_code": 0,
+        "seconds": 3
+      },
+      {
+        "command": "node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict",
+        "exit_code": 0,
+        "seconds": 0.3
+      },
+      {
+        "command": "node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict",
+        "exit_code": 0,
+        "seconds": 0.5
+      },
+      {
+        "command": "node apps/api/scripts/check-pii.mjs --strict",
+        "exit_code": 0,
+        "seconds": 1.4
+      },
+      {
+        "command": "node apps/api/scripts/check-tier-coverage.mjs --strict",
+        "exit_code": 0,
+        "seconds": 0.8
+      },
+      {
+        "command": "node apps/api/scripts/check-identity-fixture-shape.mjs --strict",
+        "exit_code": 0,
+        "seconds": 0.8
+      },
+      {
+        "command": "node apps/api/scripts/check-shape-contracts.mjs",
+        "exit_code": 0,
+        "seconds": 0.1
+      },
+      {
+        "command": "node apps/api/scripts/check-cost-class-coherence.mjs",
+        "exit_code": 0,
+        "seconds": 0.8
+      },
+      {
+        "command": "node scripts/guard-production-write-access.mjs",
+        "exit_code": 0,
+        "seconds": 0.5
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "seconds": 1.3
+      },
+      {
+        "command": "npm run programs:test",
+        "exit_code": 0,
+        "seconds": 8.3
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "seconds": 2.6
+      },
+      {
+        "command": "npm run research:test",
+        "exit_code": 0,
+        "seconds": 17.2
+      },
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "seconds": 8.8
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "seconds": 50.3
+      },
+      {
+        "command": "npm run env:check",
+        "exit_code": 0,
+        "seconds": 1.3
+      },
+      {
+        "command": "npm run env:test",
+        "exit_code": 0,
+        "seconds": 4.2
+      },
+      {
+        "command": "npm run vendors:check",
+        "exit_code": 0,
+        "seconds": 3.8
+      },
+      {
+        "command": "npm run vendors:test",
+        "exit_code": 0,
+        "seconds": 12.1
+      },
+      {
+        "command": "npm run distribution:check",
+        "exit_code": 0,
+        "seconds": 0.9
+      },
+      {
+        "command": "npm run distribution:test",
+        "exit_code": 0,
+        "seconds": 1.9
+      },
+      {
+        "command": "npm run digest:shadow:test",
+        "exit_code": 0,
+        "seconds": 1.4
+      },
+      {
+        "command": "npm run candidates:test",
+        "exit_code": 0,
+        "seconds": 1
+      },
+      {
+        "command": "npm run protocols:check",
+        "exit_code": 0,
+        "seconds": 0.6
+      },
+      {
+        "command": "npm run protocols:test",
+        "exit_code": 0,
+        "seconds": 1.1
+      },
+      {
+        "command": "npm run protocols:coverage",
+        "exit_code": 0,
+        "seconds": 1
+      },
+      {
+        "command": "npm run protocols:coverage:test",
+        "exit_code": 0,
+        "seconds": 4
+      },
+      {
+        "command": "npm run scheduled:check",
+        "exit_code": 0,
+        "seconds": 0.9
+      },
+      {
+        "command": "npm run scheduled:test",
+        "exit_code": 0,
+        "seconds": 3.2
+      },
+      {
+        "command": "npm run scheduled:outcomes:test",
+        "exit_code": 0,
+        "seconds": 3.2
+      },
+      {
+        "command": "npm run models:check",
+        "exit_code": 0,
+        "seconds": 0.8
+      },
+      {
+        "command": "npm run models:test",
+        "exit_code": 0,
+        "seconds": 1.5
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "seconds": 2.7
+      },
+      {
+        "command": "npm run claims:test",
+        "exit_code": 0,
+        "seconds": 4.6
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "seconds": 0.9
+      },
+      {
+        "command": "npm run docs:test",
+        "exit_code": 0,
+        "seconds": 0.9
+      },
+      {
+        "command": "npm run archive:index:test",
+        "exit_code": 0,
+        "seconds": 0.9
+      },
+      {
+        "command": "npm run receipts:check",
+        "exit_code": 0,
+        "seconds": 57.5
+      },
+      {
+        "command": "npm run receipts:test",
+        "exit_code": 0,
+        "seconds": 15.6
+      },
+      {
+        "command": "npm run migrations:check",
+        "exit_code": 0,
+        "seconds": 0.7
+      },
+      {
+        "command": "npm run migrations:test",
+        "exit_code": 0,
+        "seconds": 1.8
+      },
+      {
+        "command": "npm run handoff:test",
+        "exit_code": 0,
+        "seconds": 80.7
+      },
+      {
+        "command": "npm run context:check",
+        "exit_code": 0,
+        "seconds": 20.1
+      },
+      {
+        "command": "npm run context:test",
+        "exit_code": 0,
+        "seconds": 179.7
+      },
+      {
+        "command": "node scripts/generate-archive-index.mjs --check",
+        "exit_code": 2,
+        "seconds": 0.6
+      }
+    ],
+    "full_api": {
+      "command": "npm test",
+      "exit_code": 0,
+      "files_passed": 337,
+      "files_skipped": 32,
+      "tests_passed": 5799,
+      "tests_skipped": 322,
+      "tests_failed": 0
+    },
+    "targeted": {
+      "command": "cd apps/api && npx vitest run src/test-support/integration-lane.test.ts src/lib/search/search-quality.test.ts src/lib/public-descriptions.test.ts src/lib/startup-migrations.test.ts src/lib/public-descriptions-0124.integration.test.ts",
+      "exit_code": 0,
+      "tests_passed": 230,
+      "tests_skipped": 1
+    },
+    "additional": {
+      "npm_ci": "PASS",
+      "opening_build": "PASS",
+      "opening_browser_verify": "PASS",
+      "git_diff_check": "PASS",
+      "onboarding_dry_run": "BLOCKED: production-write authority unavailable",
+      "db_validation": "BLOCKED: DATABASE_URL required",
+      "db_smoke_dry_run": "BLOCKED: DATABASE_URL required",
+      "docker": "UNAVAILABLE: no daemon socket",
+      "handoff_session": "FAIL: read-only git metadata, clone layout, no upstream and existing remote-branch findings",
+      "api_tsc": "PASS: cd apps/api && npx tsc --noEmit, exit 0"
+    },
+    "live": {
+      "url": "https://api.strale.io/v1/capabilities",
+      "http_status": 200,
+      "tools": 298,
+      "exact_guard_rows": 75,
+      "unlisted_fixture_rows": 49
+    },
+    "initial_full_run": {
+      "tests_failed": 2,
+      "issues": [
+        "Noncanonical skip declaration in new integration test; fixed to existing sanctioned pattern",
+        "Unchanged search benchmark exceeded two-second threshold under concurrent checks; passed targeted and final full reruns"
+      ]
+    }
+  }
+}

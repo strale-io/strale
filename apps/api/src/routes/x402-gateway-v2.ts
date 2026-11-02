@@ -1,3 +1,9 @@
+import { captureX402RecordingFailure } from "../lib/x402-recording.js";
+import { assertNoFilesOffAsyncPath } from "../lib/jobs/files.js";
+import { settleX402Execution } from "../lib/x402-settle.js";
+import { validateDispatchInput } from "../lib/input-validation.js";
+import { claimX402Payment, beginX402Execution, releaseX402Claim, findCachedX402Response, x402PaymentBoundElsewhere } from "../lib/x402-payment-claims.js";
+import { persistCallCost } from "../lib/persist-call-cost.js";
 /**
  * x402 Scalable Gateway — DB-driven capability exposure via USDC payments.
  *
@@ -9,14 +15,18 @@
  * Route: /x402/catalog  — discover all available x402 capabilities
  */
 
+import { refusalDetails } from "../lib/capability-refusal.js";
+
 import { Hono } from "hono";
 import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { cors } from "hono/cors";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
+import { capabilities, solutions, transactions } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
+import { hasMissingRequiredCredential } from "../lib/dependency-manifest.js";
+import { apiError, recoveryDetails } from "../lib/errors.js";
 import {
   assertGuardedAllow,
   CapabilityInvocationRefusedError,
@@ -27,7 +37,6 @@ import {
   isX402Configured,
   verifyX402PaymentOnly,
   hashPaymentHeader,
-  settleX402Payment,
   extractPaymentHeader,
   extractPayerAddress,
   eurCentsToUsd,
@@ -40,6 +49,7 @@ import {
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { discoverySchema, exampleFailure, getDiscoveryMetadata, type DiscoveryMetadata } from "../lib/x402-discovery-metadata.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
@@ -55,7 +65,7 @@ import {
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
 import { recordPaidInvocation } from "../lib/invocation-facts.js";
-import { logError } from "../lib/log.js";
+import { logError, logWarn } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
 import { getShareableUrl } from "../lib/audit-token.js";
@@ -64,6 +74,7 @@ import { validateX402Input } from "../lib/x402-input-validation.js";
 import { recordX402Miss } from "../lib/x402-demand.js";
 import { executeWithTransientRetry } from "../lib/retry.js";
 import { createHash } from "node:crypto";
+import { inputForPersistence } from "../lib/never-persist-inputs.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -315,7 +326,8 @@ export async function extractInputs(
   }
 
   // GET or fallback: extract from query params with type coercion
-  const query = c.req.query() as Record<string, string>;
+  const query = Object.fromEntries(Object.entries(c.req.query() as Record<string, string>)
+    .filter(([key]) => key !== "src" && !key.startsWith("utm_")));
   if (!schema) return query;
 
   const props = (schema as any).properties ?? {};
@@ -337,7 +349,8 @@ export async function extractInputs(
 
 /**
  * Generate an example input object from a JSON Schema's properties.
- * Used by the bazaar extension to show agents what a typical request looks like.
+ * Used by schema-error responses. Public challenge examples instead come from
+ * screened manifest health inputs via x402-discovery-metadata.ts.
  */
 function generateExampleFromSchema(
   schema: Record<string, unknown> | null,
@@ -443,15 +456,26 @@ function buildBazaarDiscovery(
   method: string,
   inputSchema: Record<string, unknown> | null,
   outputSchema: Record<string, unknown> | null,
+  metadata?: DiscoveryMetadata,
 ): { v2Extensions: Record<string, unknown>; v1OutputSchema: Record<string, unknown> } {
   const httpMethod = method.toUpperCase();
   const isBodyMethod = ["POST", "PUT", "PATCH"].includes(httpMethod);
-  const example = generateExampleFromSchema(inputSchema);
+  const example = metadata?.inputExample ?? (isBodyMethod && !(inputSchema?.required as unknown[] | undefined)?.length && !exampleFailure(inputSchema ?? {}, {}) ? {} : undefined);
+  // Bazaar requires both info and schema; POST info requires body. Do not
+  // advertise an incomplete extension when no safe required-body example exists.
+  if (isBodyMethod && example === undefined) return { v2Extensions: {}, v1OutputSchema: {} };
+  const outputExample = metadata?.outputExample;
+  // Primary sources (read 2026-10-27):
+  // https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md
+  // https://docs.cdp.coinbase.com/x402/seller/get-discovered
+  // resource carries provider metadata; info.input.body/queryParams are examples,
+  // schema.properties.input carries the actual input contract. Omitted examples
+  // stay absent (privacy/invalid fixture), never fabricated placeholder objects.
 
   const config: Record<string, unknown> = {
     input: example,
-    ...(inputSchema ? { inputSchema } : {}),
-    ...(outputSchema ? { output: { schema: outputSchema } } : {}),
+    ...(inputSchema ? { inputSchema: discoverySchema(inputSchema) } : {}),
+    ...(outputSchema ? { output: { schema: discoverySchema(outputSchema), example: outputExample } } : {}),
   };
   if (isBodyMethod) config.bodyType = "json";
 
@@ -463,6 +487,15 @@ function buildBazaarDiscovery(
     ...extension.info,
     input: { ...extension.info.input, method: httpMethod },
   };
+  const inputProperty = isBodyMethod ? "body" : "queryParams";
+  if (example === undefined) {
+    delete enrichedInfo.input[inputProperty];
+  }
+  // Output format and contract remain useful when its example is withheld.
+  enrichedInfo.output = { type: "json", ...(outputExample !== undefined ? { example: outputExample } : {}) };
+  extension.schema.properties.output = {
+    type: "object", properties: { type: { const: "json" }, example: discoverySchema(outputSchema ?? {}) }, required: ["type"],
+  };
   const enrichedExtension = { ...extension, info: enrichedInfo };
 
   // v1 outputSchema: match the shape of working indexed entries in the live
@@ -472,7 +505,7 @@ function buildBazaarDiscovery(
   // survive CDP's indexing pipeline on Base mainnet all use the descriptor
   // shape. Cheap hedge while #1982 (CDP drops v2 extensions on mainnet) is
   // unresolved upstream.
-  const fieldDescriptors = toBazaarFields(inputSchema);
+  const fieldDescriptors = toBazaarFields(discoverySchema(inputSchema));
   const v1Input: Record<string, unknown> = {
     type: "http",
     method: httpMethod,
@@ -484,7 +517,7 @@ function buildBazaarDiscovery(
   } else {
     v1Input.queryParams = fieldDescriptors;
   }
-  const v1Output = outputSchema ? toBazaarFields(outputSchema) : undefined;
+  const v1Output = outputSchema ? toBazaarFields(discoverySchema(outputSchema)) : undefined;
   const v1OutputSchema: Record<string, unknown> = {
     input: v1Input,
     ...(v1Output ? { output: v1Output } : {}),
@@ -498,6 +531,39 @@ function buildBazaarDiscovery(
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
 
+const oversizedDiscoverySlugs = new Set<string>();
+
+/** Apply the budget to the final challenge, including verification failures. */
+export function encodeBudgetedPaymentRequiredHeader(body: Record<string, any>, slug: string): string {
+  const encode = () => encodePaymentRequiredHeader(body as never);
+  const fits = () => Buffer.byteLength(encode()) <= 8192;
+  const bazaar = body.extensions?.bazaar;
+  if (!fits() && bazaar?.info?.output) delete bazaar.info.output.example;
+  if (!fits() && bazaar?.info?.input) {
+    const input = bazaar.info.input;
+    if (["POST", "PUT", "PATCH"].includes(input.method)) {
+      const schema = bazaar.schema?.properties?.input?.properties?.body;
+      if (!exampleFailure(schema ?? {}, {})) input.body = {};
+      else delete body.extensions.bazaar;
+    } else delete input.queryParams;
+  }
+  if (!fits()) {
+    // These are discovery-only legacy mirrors, never payment fields.
+    for (const requirement of [...(body.accepts ?? []), ...(body.paymentRequirements ?? [])]) requirement.outputSchema = {};
+  }
+  if (!fits()) {
+    if (!oversizedDiscoverySlugs.has(slug)) {
+      oversizedDiscoverySlugs.add(slug);
+      logWarn("x402-discovery-header-budget", "Discovery schemas exceed the header budget; serving payment without discovery examples", { slug });
+    }
+    body.extensions = {};
+  }
+  // Facilitator diagnostics can be arbitrarily long. Keep the actionable
+  // retry instructions in details, without reflecting an oversized reason.
+  if (!fits()) body.error = "Payment required. Sign a fresh payment matching accepts and retry.";
+  return encode();
+}
+
 export function build402(
   name: string,
   description: string,
@@ -507,8 +573,16 @@ export function build402(
   method?: string,
   outputSchema?: Record<string, unknown> | null,
   challengeVersion?: 1 | 2,
+  identity?: { kind: "capability" | "solution"; slug: string },
 ) {
   const version = challengeVersion ?? x402ChallengeVersion();
+  const source = identity ? getDiscoveryMetadata(identity.kind, identity.slug) : undefined;
+  // Check against the runtime published schemas too: DB and manifests can drift.
+  const metadata = source ? {
+    ...source,
+    inputExample: exampleFailure(inputSchema ?? undefined, source.inputExample) ? undefined : source.inputExample,
+    outputExample: exampleFailure(outputSchema ?? undefined, source.outputExample) ? undefined : source.outputExample,
+  } : undefined;
   const maxAmount = usdToUsdcAtomic(priceUsd);
 
   const httpMethod = (method ?? "POST").toUpperCase();
@@ -516,6 +590,7 @@ export function build402(
     httpMethod,
     inputSchema ?? null,
     outputSchema ?? null,
+    metadata,
   );
 
   // CDP facilitator rejects PaymentRequirements whose description is too long
@@ -549,8 +624,12 @@ export function build402(
   const error = `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`;
   const resourceInfo = {
     url: resourceUrl,
-    description: finalDescription,
     mimeType: "application/json",
+    serviceName: "Strale",
+    tags: metadata?.tags ?? [],
+    iconUrl: "https://strale.dev/favicon-32x32.png",
+    // Tool name belongs in the description; serviceName identifies the provider.
+    ...(metadata ? { description: `${metadata.name}: ${metadata.description}` } : { description: `${name}: ${finalDescription}` }),
   };
 
   // Challenge body. The /x402/v2/* alias paths always get the v2 shape
@@ -601,6 +680,9 @@ export function build402(
           extensions: v2Extensions,
         };
 
+  Object.assign(body, { details: { fix: "Sign a fresh x402 payment matching 'accepts' and resend it in the PAYMENT-SIGNATURE header (or X-PAYMENT for v1)." } });
+  encodeBudgetedPaymentRequiredHeader(body, identity?.slug ?? new URL(resourceUrl).pathname);
+
   // v1 backward-compat header
   const headerPayload = Buffer.from(
     JSON.stringify({ x402Version: 1, accepts: [paymentRequirement] }),
@@ -623,16 +705,27 @@ export function build402(
 // failed — retry with backoff instead of mutating the request. `charged` is
 // always false here: these 400s happen after verify but before settle, so
 // the signed authorization expires unused (DEC-14).
-function schemaBadRequest(
+export function schemaBadRequest(
   c: any,
   error: string | undefined,
   inputSchema: Record<string, unknown> | null,
   errorCode: "invalid_request" | "execution_failed" = "invalid_request",
+  refusal?: Record<string, unknown>,
 ) {
   return c.json(
     {
       error,
       error_code: errorCode,
+      details: recoveryDetails(errorCode, "", {
+        ...(errorCode === "invalid_request" ? {
+          fix: `Send a JSON body matching 'input_schema': ${(error ?? "use the declared field types and anyOf/oneOf alternatives").replace(/[.]+\s*$/, "")}.`,
+          ...(Array.isArray(inputSchema?.required) ? { required_fields: inputSchema.required } : {}),
+          ...(inputSchema?.anyOf ? { any_of: inputSchema.anyOf } : {}),
+          ...(inputSchema?.oneOf ? { one_of: inputSchema.oneOf } : {}),
+          docs_url: `${BASE_URL}/x402/catalog`,
+        } : {}),
+        ...refusal,
+      }),
       charged: false,
       input_schema: inputSchema,
       example: generateExampleFromSchema(inputSchema),
@@ -656,24 +749,23 @@ function schemaBadRequest(
 // row is `completed`, return its output as the cached response. If found
 // and `failed`, return its error.
 
-async function findCachedX402Response(
-  paymentHash: string,
-): Promise<{ status: string; output: unknown; latencyMs: number | null; settlementId: string | null } | null> {
-  const db = getDb();
-  const rows = await db
-    .select({
-      status: transactions.status,
-      output: transactions.output,
-      latencyMs: transactions.latencyMs,
-      settlementId: transactions.x402SettlementId,
-    })
-    .from(transactions)
-    .where(eq(transactions.x402PaymentHash, paymentHash))
-    .limit(1);
-  return rows[0] ?? null;
+//
+// A verified payment is bound to the capability or solution it was claimed
+// for. Two capabilities at the same price verify the same signed authorization,
+// so a replay presented for different work is refused, never served.
+function paymentBoundElsewhereBody(kind: "capability" | "solution", slug: string) {
+  return {
+    error_code: "payment_already_used",
+    error: `This payment was already used for a different capability or solution. It was not applied to this ${kind}.`,
+    details: { retryable: false, fix: `Sign a fresh x402 payment authorization for '${slug}'; a payment is valid only for the capability or solution it was first presented to.` },
+    [kind]: slug,
+    _meta: { replayed: true },
+  };
 }
 
+
 interface RecordX402Args {
+  claimId?: string | null;
   // Exactly one of capabilityId / solutionSlug is set.
   capabilityId: string | null;
   solutionSlug: string | null;
@@ -730,7 +822,9 @@ function buildX402AuditTrail(args: {
     : marker === "hybrid"
       ? "Mixed — LLM-assisted with algorithmic validation"
       : "Fully AI — LLM generates or transforms output";
-  const inputHash = `sha256:${createHash("sha256").update(JSON.stringify(inputs)).digest("hex")}`;
+  // Hash of the PERSISTENCE form: a never-persisted field (lib/never-persist-inputs.ts)
+  // is masked first, because an unsalted hash of a weak password is crackable.
+  const inputHash = `sha256:${createHash("sha256").update(JSON.stringify(inputForPersistence(cap.slug, inputs))).digest("hex")}`;
   // schema_validated: same minimal "object + required fields present" check
   // do.ts uses. False when we can't verify (no schema, or output null on
   // failure path).
@@ -802,6 +896,11 @@ function buildX402AuditTrail(args: {
   };
 }
 
+/** Test seam: the insert values are only observable through this function. */
+export function __recordX402TransactionForTests(args: RecordX402Args): Promise<string | null> {
+  return recordX402Transaction(args);
+}
+
 async function recordX402Transaction(args: RecordX402Args): Promise<string | null> {
   // F-AUDIT-01 / CCO #3: dataJurisdiction is the actual processing region(s),
   // computed from Strale's region + LLM provider region based on transparencyTag.
@@ -842,7 +941,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         ...(args.error ? { error: sanitizeFailureReason(args.error).substring(0, 500) } : {}),
       };
   try {
-    const [row] = await db.insert(transactions).values({
+    const values = {
                                                  // Captured at INSERT because neither is recoverable later:
                                                  // the rail is not a property of the row, and the deploy commit
                                                  // drifts the moment anything redeploys (block 0110).
@@ -853,7 +952,8 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       solutionSlug: args.solutionSlug,
       status: args.error ? "failed" : "completed",
       clientMeta: args.clientMeta ?? null,
-      input: args.inputs,
+      // Never the raw value of a never-persisted field (lib/never-persist-inputs.ts).
+      input: inputForPersistence(args.slug, args.inputs),
       output: args.output ?? undefined,
       error: args.error ?? null,
       priceCents: args.priceCents,
@@ -864,7 +964,8 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       isFreeTier: false,
       paymentMethod: "x402",
       x402SettlementId: args.settlementId ?? null,
-      x402PaymentHash: args.paymentHash ?? null,
+      x402PaymentHash: args.error ? null : args.paymentHash ?? null,
+      complianceHashState: "pending",
       // MCP funnel P0: stable pseudonymous payer identity for distinct-payer
       // / repeat-rate analytics — see hashX402Payer's docstring. The raw
       // address stays in auditTrail.payer_address (above) for refund/
@@ -872,7 +973,12 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       x402PayerHash: hashX402Payer(args.payerAddress) ?? null,
       priceUsd: args.priceUsd.toFixed(4),
       completedAt: new Date(),
-    }).returning({ id: transactions.id });
+    };
+    const [row] = args.claimId
+      ? await db.update(transactions).set(values).where(and(eq(transactions.id, args.claimId),
+          eq(transactions.status, "executing"))).returning({ id: transactions.id })
+      : await db.insert(transactions).values(values).returning({ id: transactions.id });
+    if (!row) throw new Error("x402 claim finalization matched no row");
     const insertedId = row?.id ?? null;
     // CRIT-8 follow-up: now that we have the row's id, rebuild the audit
     // with the shareable_url / endpoint fields populated and overwrite.
@@ -906,6 +1012,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
     // customer-facing record must never fail to land because bookkeeping did,
     // and a missed mark leaves an intent the reconciler resolves as
     // already-recorded.
+    persistCallCost(insertedId);
     if (args.settlementId) {
       try {
         await settlementIntent.markRecordedBySettlement(db, {
@@ -934,41 +1041,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
 
     return insertedId;
   } catch (err) {
-    logError("x402-transaction-recording-failed", err);
-    // CCO P0 #12: settlement preceded this INSERT and is irreversible.
-    // Capture the orphan in a dedicated table so operations can reconcile
-    // (recreate the transactions row OR refund the customer at payer_address).
-    // Best-effort; if the orphan write also fails, we log and the only
-    // remaining recovery is on-chain reconciliation against our wallet.
-    if (args.settlementId) {
-      try {
-        await db.insert(x402OrphanSettlements).values({
-          settlementId: args.settlementId,
-          capabilitySlug: args.capabilityId ? args.slug : null,
-          solutionSlug: args.solutionSlug,
-          payerAddress: args.payerAddress ?? null,
-          priceUsd: args.priceUsd.toFixed(4),
-          priceCents: args.priceCents,
-          rawArgs: args as unknown as Record<string, unknown>,
-          failureReason: err instanceof Error ? err.message.slice(0, 500) : String(err).slice(0, 500),
-        });
-        logError("x402-orphan-settlement-recorded", new Error(
-          `Settlement ${args.settlementId} captured in x402_orphan_settlements for manual reconciliation`,
-        ), { settlementId: args.settlementId });
-      } catch (orphanErr) {
-        // Both writes failed. This is a rare double-failure that
-        // requires on-chain reconciliation. Log loudly with all the
-        // context we have so an operator can manually recover.
-        logError("x402-orphan-settlement-write-also-failed", orphanErr, {
-          settlementId: args.settlementId,
-          payerAddress: args.payerAddress,
-          priceUsd: args.priceUsd,
-          slug: args.slug,
-          capabilityId: args.capabilityId,
-          solutionSlug: args.solutionSlug,
-        });
-      }
-    }
+    await captureX402RecordingFailure(db, args, err);
     return null;
   }
 }
@@ -1034,7 +1107,7 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
     description: cap.description,
     price_usd: cap.x402PriceUsd,
     method: cap.x402Method,
-    endpoint: `${BASE_URL}/x402/${cap.slug}`,
+    endpoint: `${BASE_URL}/x402/v2/${cap.slug}`,
     input_schema: cap.inputSchema,
     // Solutions deliberately never gain this key: the solutions table has no
     // output_schema column (see ensureCache), so an absent contract must stay
@@ -1048,7 +1121,7 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
     description: sol.description,
     price_usd: sol.x402PriceUsd,
     method: "POST",
-    endpoint: `${BASE_URL}/x402/solutions/${sol.slug}`,
+    endpoint: `${BASE_URL}/x402/v2/solutions/${sol.slug}`,
     input_schema: sol.inputSchema,
   }));
 
@@ -1128,7 +1201,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     if (!live?.isActive || !live.x402Enabled) {
       _solCache.delete(slug);
       return c.json(
-        {
+        { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
           error: "Solution is no longer available via x402. No payment was taken.",
           hint: `${BASE_URL}/x402/catalog`,
         },
@@ -1145,7 +1218,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
           ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
-      { error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
+      { details: { fix: "Choose an enabled slug from GET /x402/catalog and use its x402 URL.", docs_url: `${BASE_URL}/x402/catalog` }, error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
     );
   }
@@ -1158,18 +1231,22 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   // not charged.
   let verified: X402VerifiedPayment | undefined;
   let paymentHash: string | null = null;
+  let claimId: string | null = null;
+  let releaseClaim = true;
+  let executionStarted = false;
   if (sol.x402PriceUsd > 0) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
     if (!paymentHeader) {
       if (!isX402Configured()) {
-        return c.json({ error: "x402 payments not configured on this server." }, 503);
+        return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured on this server." }, 503);
       }
       const { body } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
         resourceUrl,
         sol.inputSchema, "POST", sol.outputSchema,
         challengeVersion,
+        { kind: "solution", slug: sol.slug },
       );
       // Legacy paths: no Payment-Required header — the v1 body is the
       // canonical source, and a v1-encoded header trips v2-only header
@@ -1181,13 +1258,13 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       // template, 2026-08-13). A v2-encoded header doesn't retrigger the
       // @agentcash issue: that decoder chokes on v1 encodings, not v2.
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(body, sol.slug));
       }
       return c.json(body, 402);
     }
 
     if (!isX402Configured()) {
-      return c.json({ error: "x402 payments not configured." }, 503);
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured." }, 503);
     }
 
     const solRebuild = build402(
@@ -1195,6 +1272,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       resourceUrl,
       sol.inputSchema, "POST", sol.outputSchema,
       challengeVersion,
+      { kind: "solution", slug: sol.slug },
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,
@@ -1214,7 +1292,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       const failBody = { ...solRebuild.body } as Record<string, unknown>;
       failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(failBody as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(failBody, sol.slug));
       }
       return c.json(failBody, 402);
     }
@@ -1224,10 +1302,26 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // processed and recorded, return the cached row instead of re-running.
     // Only safe AFTER verify so an unverified replay can't probe for the
     // existence of cached rows.
+    let schemaInputs: Record<string, unknown>;
+    try {
+      schemaInputs = await extractInputs(c, sol.inputSchema);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "BodyLimitError") throw err;
+      return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
+    }
+    const schemaFailure = validateDispatchInput(sol.slug, "x402", sol.inputSchema, schemaInputs);
+    if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
     paymentHash = hashPaymentHeader(paymentHeader);
-    const cached = await findCachedX402Response(paymentHash);
-    if (cached) {
-      if (cached.status === "completed") {
+    let cached = await findCachedX402Response(paymentHash);
+    if (!cached) {
+      claimId = await claimX402Payment(paymentHash, null, sol.slug);
+      if (!claimId) cached = await findCachedX402Response(paymentHash);
+    }
+    if (cached && x402PaymentBoundElsewhere(cached, { capabilityId: null, solutionSlug: sol.slug })) {
+      return c.json(paymentBoundElsewhereBody("solution", sol.slug), 409);
+    }
+    if (!claimId) {
+      if (cached?.status === "completed") {
         return c.json({
           solution: sol.slug,
           steps: (cached.output as { steps?: unknown })?.steps ?? cached.output,
@@ -1243,12 +1337,13 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         });
       }
       return c.json(
-        { error: "Prior request with this payment header failed.", solution: sol.slug, _meta: { replayed: true } },
+        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "A request with this payment is already in progress or has failed", solution: sol.slug, _meta: { replayed: true } },
         502,
       );
     }
   }
 
+  try {
   // Extract inputs (after verify, before settle — bad input returns 4xx without charging)
   let inputs: Record<string, unknown>;
   try {
@@ -1260,19 +1355,25 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // emits its 413 only when the error reaches `c.error`, so a handler that
     // absorbs it defeats the middleware no matter what extractInputs does.
     if ((err as { name?: string })?.name === "BodyLimitError") throw err;
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
+    return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
   }
 
   // Same input-validation guard as the wildcard capability handler. The
   // solutions handler previously had NO input validation at all — a bad
   // or empty body ran straight into executeSolution() and surfaced
   // whichever step's raw error came back first.
+  if (sol.x402PriceUsd <= 0) {
+    const failure = validateDispatchInput(sol.slug, "x402", sol.inputSchema, inputs);
+    if (failure) return c.json(failure, failure.error_code === "capability_unavailable" ? 503 : 400);
+  }
   const solValidation = validateX402Input(inputs, sol.inputSchema);
   if (!solValidation.ok) {
     return schemaBadRequest(c, solValidation.error, sol.inputSchema);
   }
 
   // Execute solution steps via shared orchestration module
+  if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
+  executionStarted = true;
   const result = await executeSolution(sol.id, inputs, {
     // x402 callers have no account — payment IS the auth. Null here is the
     // honest value, and it matches how x402 transaction rows already record
@@ -1281,7 +1382,8 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   });
 
   if (!result) {
-    return c.json({ error: "Solution has no steps configured." }, 503);
+    executionStarted = false; // No configured step reached an executor.
+    return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "Solution has no steps configured." }, 503);
   }
 
   // WP4: billability comes from the canonical outcome, not from a predicate
@@ -1317,6 +1419,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // carries no payment.
     try {
       await recordX402Transaction({
+        claimId,
         clientMeta: extractClientMeta(c.req, {
           src: c.req.query("src"),
           ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1343,7 +1446,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     }
 
     return c.json(
-      {
+      { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
         error:
           outcome.failure_class === "gate_tripped"
             ? `Solution could not run: ${outcome.error_message}. No payment was taken.`
@@ -1359,39 +1462,14 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
 
   let settlementId: string | undefined;
   if (verified) {
-    // WP5: durable intent BEFORE the facilitator is called. That ordering is
-    // the whole point — the orphan capture below is a catch block in this
-    // process, so it handles "the INSERT threw" and cannot handle "the process
-    // died", when it never runs either. A settlement is irreversible, so the
-    // window between it succeeding and the row landing is the one place on the
-    // platform where a crash costs a customer money with no record at all.
-    const intent = paymentHash
-      ? await settlementIntent.openIntent(getDb(), {
-          paymentHash,
-          slug: sol.slug,
-          solutionSlug: sol.slug,
-          priceCents: sol.priceCents,
-          priceUsd: sol.x402PriceUsd,
-        })
-      : null;
-
-    const settled = await settleX402Payment(verified);
-    if (intent) {
-      if (settled.valid && settled.settlementId) {
-        await settlementIntent.markSettled(getDb(), {
-          intentId: intent.id,
-          settlementId: settled.settlementId,
-        });
-      } else {
-        await settlementIntent.markFailed(getDb(), {
-          intentId: intent.id,
-          reason: settled.error ?? "settlement returned invalid",
-        });
-      }
-    }
+    const settled = await settleX402Execution({
+      verified, paymentHash,
+      intent: { slug: sol.slug, solutionSlug: sol.slug, priceCents: sol.priceCents, priceUsd: sol.x402PriceUsd },
+      policy: { claimId, setReleaseClaim: (release) => { releaseClaim = release; } },
+    });
     if (!settled.valid) {
       return c.json(
-        { error: "Payment settlement failed", detail: settled.error },
+        { details: { retryable: false, fix: "Check the payment status with your wallet before signing a fresh x402 payment matching the current accepts requirements." }, error: "Payment settlement failed", detail: settled.error },
         402,
       );
     }
@@ -1410,6 +1488,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   // LLM reach derived from transparencyTag.
   const solPayerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
+        claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
       ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1441,6 +1520,9 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         : { method: "x402", price_usd: sol.x402PriceUsd },
     },
   });
+  } finally {
+    if (claimId && paymentHash && releaseClaim) await releaseX402Claim(claimId, paymentHash, executionStarted);
+  }
 });
 
 // ─── Wildcard capability handler: /x402/:slug ───────────────────────────────
@@ -1458,6 +1540,10 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   await ensureCache();
 
   const cap = _capCache.get(slug);
+
+  if (cap && hasMissingRequiredCredential(cap.slug)) {
+    return c.json(apiError("capability_unavailable", "This capability is temporarily unavailable. Contact Strale support."), 503);
+  }
 
   // WP8: the cache is a ROUTING HINT, not an eligibility authority.
   //
@@ -1489,7 +1575,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       // lookup, and answer as the catalogue would once it refreshes.
       _capCache.delete(slug);
       return c.json(
-        {
+        { details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." },
           error: "Capability is no longer available via x402. No payment was taken.",
           hint: `${BASE_URL}/x402/catalog`,
         },
@@ -1509,7 +1595,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
           ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
-      { error: "Capability not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
+      { details: { fix: "Choose an enabled slug from GET /x402/catalog and use its x402 URL.", docs_url: `${BASE_URL}/x402/catalog` }, error: "Capability not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
     );
   }
@@ -1518,6 +1604,9 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   const isFree = cap.x402PriceUsd === 0;
   let verified: X402VerifiedPayment | undefined;
   let paymentHash: string | null = null;
+  let claimId: string | null = null;
+  let releaseClaim = true;
+  let executionStarted = false;
 
   // Payment check FIRST — before any input validation. CDP's Bazaar crawler
   // sends an empty request to discover endpoints and requires HTTP 402 back.
@@ -1535,23 +1624,24 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
 
     if (!paymentHeader) {
       if (!isX402Configured()) {
-        return c.json({ error: "x402 payments not configured on this server." }, 503);
+        return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured on this server." }, 503);
       }
       const { body } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
         resourceUrl,
         cap.inputSchema, cap.x402Method, cap.outputSchema,
         challengeVersion,
+        { kind: "capability", slug: cap.slug },
       );
       // See the solutions handler note: header only on v2 paths.
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(body, cap.slug));
       }
       return c.json(body, 402);
     }
 
     if (!isX402Configured()) {
-      return c.json({ error: "x402 payments not configured." }, 503);
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "x402 payments not configured." }, 503);
     }
 
     // Rebuild the same requirement so verify carries the discovery
@@ -1562,6 +1652,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       resourceUrl,
       cap.inputSchema, cap.x402Method, cap.outputSchema,
       challengeVersion,
+      { kind: "capability", slug: cap.slug },
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,
@@ -1578,7 +1669,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       const failBody = { ...capRebuild.body } as Record<string, unknown>;
       failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
       if (challengeVersion === 2) {
-        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(failBody as never));
+        c.header("PAYMENT-REQUIRED", encodeBudgetedPaymentRequiredHeader(failBody, cap.slug));
       }
       return c.json(failBody, 402);
     }
@@ -1587,10 +1678,26 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // Cert-audit C9: replay dedup. Same logic as the solutions handler —
     // if this exact payment header already produced a recorded transaction,
     // return the cached output and don't re-execute or re-settle.
+    let schemaInputs: Record<string, unknown>;
+    try {
+      schemaInputs = await extractInputs(c, cap.inputSchema);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "BodyLimitError") throw err;
+      return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
+    }
+    const schemaFailure = validateDispatchInput(cap.slug, "x402", cap.inputSchema, schemaInputs);
+    if (schemaFailure) return c.json(schemaFailure, schemaFailure.error_code === "capability_unavailable" ? 503 : 400);
     paymentHash = hashPaymentHeader(paymentHeader);
-    const cached = await findCachedX402Response(paymentHash);
-    if (cached) {
-      if (cached.status === "completed") {
+    let cached = await findCachedX402Response(paymentHash);
+    if (!cached) {
+      claimId = await claimX402Payment(paymentHash, cap.id, null);
+      if (!claimId) cached = await findCachedX402Response(paymentHash);
+    }
+    if (cached && x402PaymentBoundElsewhere(cached, { capabilityId: cap.id, solutionSlug: null })) {
+      return c.json(paymentBoundElsewhereBody("capability", cap.slug), 409);
+    }
+    if (!claimId) {
+      if (cached?.status === "completed") {
         return c.json({
           ...((cached.output as Record<string, unknown>) ?? {}),
           _meta: {
@@ -1605,16 +1712,17 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         });
       }
       return c.json(
-        { error: "Prior request with this payment header failed.", capability: cap.slug, _meta: { replayed: true } },
+        { details: { retryable: false, fix: "Check the prior transaction, then sign a fresh payment authorization before retrying this work." }, error: "A request with this payment is already in progress or has failed", capability: cap.slug, _meta: { replayed: true } },
         502,
       );
     }
   }
 
+  try {
   // Method check (after verify — crawler hits with any method)
   if (c.req.method === "GET" && !isSimpleSchema(cap.inputSchema)) {
     return c.json(
-      { error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
+      { details: { fix: "Send a POST request with Content-Type: application/json and the tool parameters in the JSON body." }, error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
       405,
     );
   }
@@ -1630,7 +1738,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // emits its 413 only when the error reaches `c.error`, so a handler that
     // absorbs it defeats the middleware no matter what extractInputs does.
     if ((err as { name?: string })?.name === "BodyLimitError") throw err;
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
+    return c.json({ details: { fix: "Send a valid JSON object with Content-Type: application/json." }, error: "Invalid request body. Expected JSON." }, 400);
   }
 
   // validateX402Input handles classic `required: [...]`, anyOf/oneOf
@@ -1640,6 +1748,10 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // lib/x402-input-validation.ts for the full rationale. Runs after verify
   // (per the Bazaar-indexing constraint above) and before settle (bad
   // input never costs the caller).
+  if (cap.x402PriceUsd <= 0) {
+    const failure = validateDispatchInput(cap.slug, "x402", cap.inputSchema, inputs);
+    if (failure) return c.json(failure, failure.error_code === "capability_unavailable" ? 503 : 400);
+  }
   const validation = validateX402Input(inputs, cap.inputSchema);
   if (!validation.ok) {
     // Distinct from the unknown-slug case: we sell this and they could not use
@@ -1654,7 +1766,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // Execute capability
   const executor = getExecutor(cap.slug);
   if (!executor) {
-    return c.json({ error: "Capability executor unavailable. Try again later." }, 503);
+    return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: "Capability executor unavailable. Try again later." }, 503);
   }
 
   // Phase A0b dispatcher gate. x402 callers are paying via USDC settlement,
@@ -1671,7 +1783,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       err instanceof CapabilityNotClassifiedError ||
       err instanceof BudgetExhaustedError
     ) {
-      return c.json({ error: err.message }, 503);
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff or choose another enabled tool from GET /x402/catalog." }, error: err.message }, 503);
     }
     throw err;
   }
@@ -1688,7 +1800,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // Same transient-retry policy as POST /v1/do (lib/retry.ts). Inside the
     // try and before settle, so a retry that still fails takes the unpaid
     // failure path below; the 300 s authorization window absorbs the ~1 s wait.
-    result = await executeWithTransientRetry(executor, inputs, cap);
+    result = await executeWithTransientRetry(async input => {
+      if (claimId && paymentHash) await beginX402Execution(claimId, paymentHash);
+      executionStarted = true;
+      return executor(input);
+    }, inputs, cap);
     await recordPaidInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",
@@ -1708,7 +1824,13 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // failed x402 transaction and deliberately does not settle (CRIT-9,
     // DEC-14), which is exactly the handling an unusable output needs.
     assertBillableOutput(cap.slug, result.output);
+    assertNoFilesOffAsyncPath(cap.slug, (result as { files?: unknown }).files);
   } catch (err) {
+    if (!executionStarted) {
+      logError("x402-execution-admission-failed", err, { slug: cap.slug });
+      return c.json({ details: { retryable: true, next_step: "Retry with exponential backoff." },
+        error: "Execution could not start. No payment was taken." }, 503);
+    }
     // CRIT-9: executor failure was previously logged-only — no transactions
     // row, no audit record, no compliance evidence the call ever happened.
     // Now record a 'failed' x402 transaction with no settlement so failed
@@ -1729,6 +1851,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     }
     try {
       await recordX402Transaction({
+        claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
       ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1770,7 +1893,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // the agent this may be an upstream failure, not necessarily bad input
     // — so it can back off instead of mutating a valid request and paying
     // to retry it.
-    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed");
+    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed", refusalDetails(err));
   }
 
   const latencyMs = Date.now() - startMs;
@@ -1779,39 +1902,14 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // already passed) surface a clear error; the client can retry the paid call.
   let settlementId: string | undefined;
   if (verified) {
-    // WP5: durable intent BEFORE the facilitator is called. That ordering is
-    // the whole point — the orphan capture below is a catch block in this
-    // process, so it handles "the INSERT threw" and cannot handle "the process
-    // died", when it never runs either. A settlement is irreversible, so the
-    // window between it succeeding and the row landing is the one place on the
-    // platform where a crash costs a customer money with no record at all.
-    const intent = paymentHash
-      ? await settlementIntent.openIntent(getDb(), {
-          paymentHash,
-          slug: cap.slug,
-          solutionSlug: null,
-          priceCents: cap.priceCents,
-          priceUsd: cap.x402PriceUsd,
-        })
-      : null;
-
-    const settled = await settleX402Payment(verified);
-    if (intent) {
-      if (settled.valid && settled.settlementId) {
-        await settlementIntent.markSettled(getDb(), {
-          intentId: intent.id,
-          settlementId: settled.settlementId,
-        });
-      } else {
-        await settlementIntent.markFailed(getDb(), {
-          intentId: intent.id,
-          reason: settled.error ?? "settlement returned invalid",
-        });
-      }
-    }
+    const settled = await settleX402Execution({
+      verified, paymentHash,
+      intent: { slug: cap.slug, solutionSlug: null, priceCents: cap.priceCents, priceUsd: cap.x402PriceUsd },
+      policy: { claimId, setReleaseClaim: (release) => { releaseClaim = release; } },
+    });
     if (!settled.valid) {
       return c.json(
-        { error: "Payment settlement failed", detail: settled.error },
+        { details: { retryable: false, fix: "Check the payment status with your wallet before signing a fresh x402 payment matching the current accepts requirements." }, error: "Payment settlement failed", detail: settled.error },
         402,
       );
     }
@@ -1828,6 +1926,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // compliance shape (was a 7-field stub previously).
   const payerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
+        claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
       ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -1866,6 +1965,9 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         : { method: "free" },
     },
   });
+  } finally {
+    if (claimId && paymentHash && releaseClaim) await releaseX402Claim(claimId, paymentHash, executionStarted);
+  }
 });
 
 // ─── Exported for .well-known/x402.json ─────────────────────────────────────

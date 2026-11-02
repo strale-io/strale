@@ -1,0 +1,67 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "79e40d54f29f8413369c644b976456452e830859"
+  },
+  "at": "2026-10-29T23:03:56.842Z",
+  "inputs": {
+    "source": "/tmp/claude-0/scratch/ocr-evidence-2.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 1,
+    "capability": "document-ocr",
+    "after": "independent review fixes"
+  },
+  "topic": "document-ocr-review-fixes",
+  "raw": {
+    "ok": true,
+    "capability": "document-ocr",
+    "after": "independent review fixes",
+    "runs": [
+      {
+        "name": "scripts/ci/ocr-probe.mjs in node:20-slim + this Dockerfile's apt and useradd lines",
+        "exit": 0,
+        "output": {
+          "engine": "tesseract 5.3.0",
+          "child_uid": 999,
+          "ms": 5362,
+          "confidence": [
+            92.9,
+            91.7
+          ],
+          "words": [
+            363,
+            62
+          ],
+          "searchable_pdf_bytes": 284412
+        }
+      },
+      {
+        "name": "engine, 20 noisy JPEG scan pages (547 KB each), searchable PDF",
+        "ms": 45190,
+        "pages_ok": 20,
+        "mean_confidence_page1": 93.3,
+        "pdf_parts": [
+          [
+            1,
+            20,
+            6731
+          ]
+        ],
+        "pdf_kb_per_page": 336
+      },
+      {
+        "name": "vitest document-ocr, actionable-errors-round2, offline-contract, capability-promotion (lib and job)",
+        "tests_passed": 255,
+        "tests_failed": 0
+      }
+    ],
+    "failures": [],
+    "warnings": [
+      "Full image build still not completed locally (npm ci inside docker fails on this sandbox's network); CI image-boot-smoke builds the full image"
+    ]
+  }
+}

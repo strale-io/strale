@@ -52,6 +52,7 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
     let response: Response;
     try {
       response = await safeFetch(currentUrl, {
+        purpose: "availability_probe",
         method: "GET",
         maxRedirects: 0,
         returnOnRedirectCap: true,

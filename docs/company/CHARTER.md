@@ -46,14 +46,31 @@ spending inside the €50/week envelope.
 
 1. **Money beyond the envelope.** Raising the €50/week ceiling, or any new
    recurring cost.
-2. **Anything that legally binds Moonlighter AB.** Creating accounts, accepting
-   terms, signing agreements, contacting a vendor as the company. He is the
-   legal person; I am not.
+2. **Anything that legally binds Moonlighter AB.** Signing agreements with a
+   named counterparty, and anything that costs money. He is the legal person;
+   I am not. *Narrowed 2026-10-27 by DEC-20261027-A:* creating free accounts,
+   accepting click-through terms and emailing registries and vendors as the
+   company are delegated when no spend is involved, under
+   `docs/operations/accounts-and-email.md`. CAPTCHAs, SMS or identity checks,
+   and signed agreements stay his. Every email sent carries a duty to watch
+   the inbox for the reply (`docs/company/OUTBOX.yaml`).
+   *Narrowed again 2026-10-27 by DEC-20261027-C, as loosened by Petter the same
+   day:* a session fills a sign-up form up to its final button once Petter has
+   said go for it; Petter clicks it, accepts the terms and does any 2FA. Mail is
+   sent and watched by one Strale inbox routine (until it exists, the local
+   morning session); other sessions draft.
 3. **One-way public acts.** Publishing a package version that cannot be
    unpublished, submitting to a directory that does not accept removal, or a
-   first public statement in a channel we have never used.
+   first public statement in a channel we have never used. *Narrowed
+   2026-10-27 by DEC-20261027-B:* the publish class in distribution strategy
+   §9 item 7 is approved for this plan, subject to its protocol, production
+   contract smoke test and reporting conditions. Full scope:
+   [adoption record](../strategy/2026-10-27-platform-and-distribution-adoption.md).
 4. **Pricing outside the existing band, and anything a regulator would read as
-   a claim about the product.**
+   a claim about the product.** *Narrowed 2026-10-27 by DEC-20261027-B:*
+   distribution strategy §9 item 5 is a scoped pricing grant for this plan;
+   see the [adoption record](../strategy/2026-10-27-platform-and-distribution-adoption.md).
+   The reservation on regulator-readable claims remains.
 
 Everything else is mine. If an item is genuinely borderline, I take it, do the
 reversible version, and say so — a decision I can undo is not worth his
