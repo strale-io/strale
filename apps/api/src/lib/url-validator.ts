@@ -53,9 +53,9 @@ const BLOCKED_V4: Array<[string, number]> = [
   ["240.0.0.0", 4],      // reserved, broadcast
 ];
 const BLOCKED_V6: Array<[string, number]> = [
-  ["::", 96],            // unspecified, loopback, IPv4-compatible (deprecated)
-  ["64:ff9b::", 96],     // NAT64
-  ["64:ff9b:1::", 48],   // local-use NAT64
+  ["::", 8],             // reserved 0000::/8: unspecified, loopback, IPv4-compatible,
+                         // IPv4-translated ::ffff:0:0:0/96 (mapped is judged first, by IPv4)
+  ["64:ff9b::", 32],     // NAT64, well-known and local-use, incl. non-standard prefixes
   ["100::", 64],         // discard-only
   ["2001::", 23],        // IETF protocol assignments, incl. Teredo 2001::/32
   ["2001:db8::", 32],    // documentation
@@ -116,6 +116,7 @@ function splitHostPort(raw: string): string | null {
   if (net.isIP(s)) return s;
   const colons = s.split(":").length - 1;
   if (colons === 0) return s;
+  if (s.startsWith(":")) return null; // ":443": a port with no host
   if (colons === 1 && /:\d+$/.test(s)) return s.replace(/:\d+$/, "");
   return null;
 }
@@ -236,5 +237,20 @@ export async function validateHost(hostname: string): Promise<void> {
     }
   } catch (err) {
     if (err instanceof Error && err.message.includes("restricted")) throw err;
+  }
+  // c-ares (dns.resolve*) is not what a raw socket uses. net.connect resolves
+  // with getaddrinfo, which also accepts shorthand IPv4 (`127.1`,
+  // `2130706433`) and /etc/hosts names. Both fail resolve4 and passed above,
+  // then connected to 127.0.0.1. Check what the connection will actually use.
+  let looked: Array<{ address: string }> = [];
+  try {
+    looked = await dns.lookup(clean, { all: true, verbatim: true });
+  } catch {
+    // Unresolvable: the connection fails too.
+  }
+  for (const { address } of looked) {
+    if (isBlockedIp(address)) {
+      throw new UrlValidationError("This host resolves to a restricted address.");
+    }
   }
 }

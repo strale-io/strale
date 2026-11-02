@@ -23,7 +23,9 @@ describe("isBlockedIp — CIDR table", () => {
     ["::ffff:7f00:1"], ["0:0:0:0:0:ffff:127.0.0.1"], ["::ffff:169.254.169.254"],
     ["127.0.0.1"], ["10.1.2.3"], ["172.31.255.255"], ["100.64.0.1"], ["169.254.169.254"],
     ["198.18.0.1"], ["224.0.0.1"], ["240.0.0.1"], ["255.255.255.255"], ["0.1.2.3"],
-    ["64:ff9b::a00:1"], ["2002:a00:1::"], ["2001:db8::1"], ["ff02::1"],
+    ["64:ff9b::a00:1"], ["64:ff9b::1:0:0:1"], ["64:ff9b:2::1"],
+    // IPv4-translated ::ffff:0:0:0/96 (SIIT), which the prefix version blocked
+    ["::ffff:0:7f00:1"], ["::ffff:0:127.0.0.1"], ["::ffff:0:0:1"], ["2002:a00:1::"], ["2001:db8::1"], ["ff02::1"],
   ])("blocks %s", (addr) => {
     expect(isBlockedIp(addr)).toBe(true);
   });
@@ -68,6 +70,17 @@ describe("validateHost — IPv6 literal forms (raw-socket capabilities)", () => 
   it("accepts a public IPv6 literal, bare or bracketed with a port", async () => {
     await expect(validateHost("2606:4700::1111")).resolves.toBeUndefined();
     await expect(validateHost("[2606:4700::1111]:443")).resolves.toBeUndefined();
+  });
+
+  it("refuses shorthand IPv4 that getaddrinfo resolves to loopback (127.1, 2130706433)", async () => {
+    // Not IPs to net.isIP and unknown to dns.resolve4, so the pre-resolve
+    // check passed them; net.connect then reached 127.0.0.1.
+    await expect(validateHost("127.1")).rejects.toThrow(/restricted/);
+    await expect(validateHost("2130706433")).rejects.toThrow(/restricted/);
+  });
+
+  it("refuses a port with no host", async () => {
+    await expect(validateHost(":443")).rejects.toThrow();
   });
 
   it("refuses a malformed host with stray colons instead of resolving it", async () => {
