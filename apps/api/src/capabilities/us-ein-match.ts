@@ -1,3 +1,4 @@
+import { assertPaidCallAllowed } from "../lib/paid-call-guard.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 /**
@@ -57,6 +58,7 @@ registerCapability("us-ein-match", async (input: CapabilityInput) => {
     if (!EIN_RE.test(einInput) || ein.length !== 9) {
       throw new Error(`Invalid ein: "${einInput}". US EINs are 9 digits, optionally formatted XX-XXXXXXX.`);
     }
+    assertPaidCallAllowed("einsearch"); // billed per call; never from Strale's own tests
     const res = await fetch(`${EINSEARCH_API}/ein/${ein}`, {
       headers,
       signal: AbortSignal.timeout(10000),
@@ -105,6 +107,7 @@ registerCapability("us-ein-match", async (input: CapabilityInput) => {
   });
   if (state && state.length === 2) params.set("state", state);
 
+  assertPaidCallAllowed("einsearch"); // billed per call; never from Strale's own tests
   const res = await fetch(`${EINSEARCH_API}/search?${params.toString()}`, {
     headers,
     signal: AbortSignal.timeout(10000),

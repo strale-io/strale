@@ -1,3 +1,4 @@
+import { runWithoutPaidCalls } from "../lib/paid-call-guard.js";
 import { getNestedValue } from "../lib/nested-value.js";
 /**
  * Test Suite Audit: Find structurally broken validation rules.
@@ -117,7 +118,7 @@ async function executeWithTimeout(
       resolve({ result: null, error: null, timedOut: true });
     }, timeoutMs);
 
-    executor(input)
+    runWithoutPaidCalls("internal_test", () => executor(input))
       .then((result) => {
         clearTimeout(timer);
         resolve({ result, error: null, timedOut: false });

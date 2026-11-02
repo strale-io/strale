@@ -1,3 +1,4 @@
+import { runWithoutPaidCalls } from "../lib/paid-call-guard.js";
 import { isValidAdminAuth } from "../lib/admin-auth.js";
 import { Hono } from "hono";
 import { eq, and, desc, sql, asc, inArray } from "drizzle-orm";
@@ -1132,7 +1133,7 @@ internalTestsRoute.post("/recalibrate", async (c) => {
           executionError = gateError.slice(0, 200);
         } else {
           try {
-            const result = await executor(resolution.input);
+            const result = await runWithoutPaidCalls("internal_test", () => executor(resolution.input));
             if (result?.output && Object.keys(result.output).length > 0) {
               realOutput = result.output;
             }

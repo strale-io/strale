@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { EUR_USD_RATE } from "./currency.js";
 import { log, logError } from "./log.js";
 import { MODELS } from "./models.js";
+import { assertPaidCallAllowed } from "./paid-call-guard.js";
 import { currentCallCost, withCallCost, snapshotCallCost, noteUnknownCost, recordLlmUsage, remainingCallMs, startLlmRequest } from "./call-cost.js";
 
 /** Accounting must never replace the SDK result/error. Jobs and CLI calls
@@ -27,6 +28,9 @@ export function createAnthropicClient(options: ConstructorParameters<typeof Anth
   const create = client.messages.create.bind(client.messages);
   client.messages.create = ((params: Anthropic.Messages.MessageCreateParamsNonStreaming, requestOptions?: Parameters<typeof create>[1]) => {
     if (!Object.values(MODELS).some((entry) => entry.id === params.model)) throw new Error("Use a MODELS role for Anthropic requests");
+    // Every Anthropic call bills; Strale's own test traffic may not make one
+    // (lib/paid-call-guard.ts). Thrown before the request, so nothing is spent.
+    assertPaidCallAllowed("anthropic");
     if (params.stream) throw new Error("Streaming cost recording is not supported");
     const timeout = remainingCallMs(Math.min(options?.timeout ?? Infinity, requestOptions?.timeout ?? options?.timeout ?? 30_000));
     const settled = startLlmRequest();

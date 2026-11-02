@@ -19,6 +19,7 @@ import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
 import { FIXTURE_RECAPTURE_QUARANTINE_MARKER } from "./test-runner.js";
+import { PAID_CALL_QUARANTINE_MARKER } from "./paid-call-guard.js";
 // Lifecycle automatic sweep removed with the SQS engine (DEC-20260503-B).
 import { runWeeklyChecks } from "./meta-monitoring.js";
 import { log, logWarn } from "./log.js";
@@ -133,7 +134,10 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     // fragile if either threshold changes independently later, and it
     // doesn't document the "needs human" intent anywhere a future reader
     // of THIS sweep would see it.
-    if (suite.quarantineReason?.startsWith(FIXTURE_RECAPTURE_QUARANTINE_MARKER)) {
+    if (
+      suite.quarantineReason?.startsWith(FIXTURE_RECAPTURE_QUARANTINE_MARKER)
+      || suite.quarantineReason?.startsWith(PAID_CALL_QUARANTINE_MARKER)
+    ) {
       report.quarantineSkippedNeedsHuman.push(suite.capabilitySlug);
       continue;
     }

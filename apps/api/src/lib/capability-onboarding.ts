@@ -4,6 +4,7 @@
  * and detects the transparency tag.
  */
 
+import { runWithoutPaidCalls } from "./paid-call-guard.js";
 import { withinOnboardingBudget } from "./onboarding-budget.js";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
 import { getDb, type Database } from "../db/index.js";
@@ -462,7 +463,7 @@ export async function validateTestFixtures(
   }
 
   try {
-    const result = await executor(execInput);
+    const result = await runWithoutPaidCalls("internal_test", () => executor(execInput));
     if (!result?.output || Object.keys(result.output).length === 0) {
       logWarn(
         "onboarding-no-output-skip",
@@ -612,7 +613,7 @@ async function generateAlgorithmicRegressionTest(
   let result: Awaited<ReturnType<typeof executor>> | null = null;
   try {
     signal?.throwIfAborted();
-    const execution = executor(testInput);
+    const execution = runWithoutPaidCalls("internal_test", () => executor(testInput));
     result = signal ? await withinOnboardingBudget(execution, signal) : await execution;
     signal?.throwIfAborted();
   } catch (err) {

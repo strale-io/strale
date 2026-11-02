@@ -38,6 +38,7 @@ import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
 import { consumeDueSlot } from "../lib/job-coordinator.js";
+import { PAID_CALL_QUARANTINE_MARKER } from "../lib/paid-call-guard.js";
 
 // ─── Solution quality gate (auto-activate when all steps are scored) ────────
 
@@ -408,6 +409,7 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
     WHERE c.is_active = true
       AND ts.scheduled_testing_eligible = TRUE
       AND ts.test_type <> 'piggyback'
+      AND NOT (ts.test_status = 'quarantined' AND COALESCE(ts.quarantine_reason, '') LIKE ${PAID_CALL_QUARANTINE_MARKER + '%'})
       AND (abs(hashtext(c.slug || ':' || ts.test_type)) % 60) = EXTRACT(MINUTE FROM NOW())::int
       AND (
         (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) IS NULL
@@ -512,6 +514,7 @@ async function countOverdueCapabilities(): Promise<number> {
     WHERE c.is_active = true
       AND ts.scheduled_testing_eligible = TRUE
       AND ts.test_type <> 'piggyback'
+      AND NOT (ts.test_status = 'quarantined' AND COALESCE(ts.quarantine_reason, '') LIKE ${PAID_CALL_QUARANTINE_MARKER + '%'})
       AND (
         (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) IS NULL
         OR (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id)
