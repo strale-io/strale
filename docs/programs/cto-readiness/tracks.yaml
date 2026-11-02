@@ -1013,7 +1013,7 @@ tracks:
     depends_on: [T4]
     owner: session
     next_action: >
-      WP12 was unblocked on 2026-09-02 (VERIFY-IP: one proxy hop, client
+      WP12 batch 1 of 4 done on 2026-11-02 (branch fix/wp12-cidr-outbound-guard): isBlockedIp is CIDR arithmetic over the IANA special-purpose tables via net.BlockList, closing ::/96, 100::/64, 2001::/23, 192.0.0.0/24, 192.88.99.0/24 and fec0::/10, refusing zone IDs and no longer blocking hostnames by their first letters; validateHost parses [v6]:port and refuses stray-colon hosts, which had let ::1, fe80::1 and fd00::1 through to the four live raw-socket tools. Next: batch 2, a connect-time re-check for raw-socket fetches so DNS rebinding cannot pass the pre-resolve check (CR-12); then (3) byte and pixel caps through apps/api/src/lib/resource-limits.ts; then (4) the trusted-hop rule for forwarded IPs as code and test from the VERIFY-IP receipt. Each batch: plant the failure first, then the guard, then the discriminating test.
       X-Forwarded-For never reaches the app) and has not started. Four exit
       items, one batch each in this order: (1) a CIDR-based outbound guard
       that closes the IPv6 gaps the audit named (CR-11), tested against
