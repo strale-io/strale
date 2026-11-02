@@ -249,6 +249,7 @@ async function querySerper(
     });
   }
 
+  const emittedArticles = topArticles.slice(0, 10);
   const totalHits = results.length;
   const categoriesFound = Object.entries(categories).filter(([, v]) => v > 0).map(([k]) => k);
 
@@ -262,7 +263,7 @@ async function querySerper(
       categories,
       categories_found: categoriesFound,
       severe_categories: SEVERE_CATEGORIES,
-      top_articles: topArticles.slice(0, 10),
+      top_articles: emittedArticles,
       lists_queried: SERPER_LISTS_QUERIED,
       screened_at: now,
       period: "last 12 months",
@@ -272,7 +273,7 @@ async function querySerper(
       // Nonzero means some `top_articles[].source_link` are null; the hits
       // themselves are still counted. Round-2 review: counted over the
       // articles this output emits, not over every wrapper in the response.
-      unresolved_source_links: topArticles.filter((a) => a.source_link_unresolved).length,
+      unresolved_source_links: emittedArticles.filter((a) => a.source_link_unresolved).length,
       link_resolution_attempted: resolution.attempted,
     },
     provenance: { source: "google-serper", fetched_at: now, acquisition_method: "vendor_api", upstream_vendor: "serper" },

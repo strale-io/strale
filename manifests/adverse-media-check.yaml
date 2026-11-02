@@ -94,7 +94,11 @@ output_schema:
           headline:
             type: string
           source_link:
-            type: string
+            type:
+              - string
+              - "null"
+          source_link_unresolved:
+            type: boolean
           timestamp:
             type:
               - string
@@ -128,6 +132,10 @@ output_schema:
       type: string
     source:
       type: string
+    unresolved_source_links:
+      type: integer
+    link_resolution_attempted:
+      type: boolean
       enum:
         - dilisense
         - serper

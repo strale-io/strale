@@ -90,3 +90,30 @@ months (Starter, 50,000 credits), which is the pack price rather than the usage.
 Letting the key lapse delists seven live tools. The purchase is Petter's.
 
 Credits spent across both rounds: **1** (one search; four `/resolve` calls at 0).
+
+## Update, 2026-11-02 afternoon (orchestrator takeover)
+
+The orchestrator took #877 over, merged `main` and ran the full gate set:
+root typecheck clean; the full `apps/api` suite green on Linux (410 files).
+The snapshot change no longer differs from `main`. A fresh read-only review
+of round 2 found no blockers. It found five should-fix items, all fixed on
+this branch, each with a test that fails without the fix:
+
+- `adverse-media-check` counted unresolved links over all 20 results, not
+  the 10 it emits (claim 6 still open on that path).
+- `adverse-media-check` manifest: the two new fields declared in
+  `output_schema`, `source_link` nullable, `source_link_unresolved` declared.
+- `brand-mention-search`: `unresolved_url_count` is emitted on the
+  no-results path the manifest guarantees it on. `ANTHROPIC_API_KEY` is now
+  checked before the paid search (Principle B). A test covers the served-URL
+  check.
+- `backlink-check`: the Serper search is capped by what Common Crawl left of
+  the shared budget.
+
+The reviewer's nits were left as they are: the unbounded Anthropic leg in
+brand-mention, exact-match URL comparison, the null-link flag, and the
+serp-analyze featured-snippet count.
+
+**Next:** merge on green CI, then verify in production (DEC-20260504-C) with
+one `google-search` call, reading `knowledge_graph.website` and
+`sitelinks[].link`.

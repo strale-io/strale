@@ -29,6 +29,10 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   if (!serperKey) {
     throw new Error("SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).");
   }
+  // Checked before the paid search (Principle B): a call that cannot reach
+  // the model must not spend a Serper credit first.
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   // Build search query
   let query = `"${brandName}"`;
@@ -68,6 +72,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
         mentions: [],
         total_results_found: 0,
         summary: "No mentions found for this brand.",
+        unresolved_url_count: 0,
       },
       provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
     };
@@ -79,9 +84,6 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   const resultsText = organic.map((r, i) =>
     `${i + 1}. ${r.title}\n   URL: ${usableResultUrl(r.link) ?? "(unavailable)"}\n   ${r.snippet ?? ""}`
   ).join("\n\n");
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = createAnthropicClient({ apiKey });
   // extractJsonWithLlm's stop_reason check now catches the truncation case

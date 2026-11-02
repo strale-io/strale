@@ -364,6 +364,30 @@ describe("Google /goto links never become a google.com answer", () => {
         if (dilisense !== undefined) process.env.DILISENSE_API_KEY = dilisense;
       }
     });
+
+    it("adverse-media-check counts unresolved links over the ten articles it emits", async () => {
+      // The search asks for 20 results and the output keeps 10. Wrappers in
+      // results 11-20 are never shown, so they must not be counted.
+      const dilisense = process.env.DILISENSE_API_KEY;
+      delete process.env.DILISENSE_API_KEY;
+      try {
+        const organic = Array.from({ length: 20 }, (_, i) => ({
+          title: `Acme fraud ${i}`,
+          link: i < 10 ? `https://news.example/${i}` : GOTO(i),
+          snippet: "fraud",
+        }));
+        stubSearchThenResolve({ organic }, "fail");
+
+        const out = (await getDirectExecutor("adverse-media-check")!({ name: "Acme Ltd" }))
+          .output as any;
+
+        expect(out.top_articles).toHaveLength(10);
+        expect(out.top_articles.every((a: any) => a.source_link !== null)).toBe(true);
+        expect(out.unresolved_source_links).toBe(0);
+      } finally {
+        if (dilisense !== undefined) process.env.DILISENSE_API_KEY = dilisense;
+      }
+    });
   });
 
   describe("round-2 review findings", () => {

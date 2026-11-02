@@ -103,7 +103,10 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
           method: "POST",
           headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
           body: JSON.stringify({ q: query, num: 10 }),
-          signal: AbortSignal.timeout(budget.searchTimeoutMs),
+          // Capped by what Common Crawl left of the shared budget, so the two
+          // legs together stay inside SYNC_TRANSACTION_WALL_MS (round-2
+          // review: each used to get its own full slice).
+          signal: AbortSignal.timeout(Math.max(1_000, Math.min(budget.searchTimeoutMs, budget.resolveDeadline - Date.now()))),
         }, 1, safeFetch);
 
         if (resp.ok) {
