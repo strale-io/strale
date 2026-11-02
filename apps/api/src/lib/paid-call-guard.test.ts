@@ -87,7 +87,9 @@ describe("paid-call guard", () => {
 // Incident 2026-11-02: canadian-company-data is classified free_unlimited, so
 // the scheduler runs it, but its name path calls Claude Haiku. Its second
 // known_answer suite looks up "Shopify" by name, so every scheduled run paid
-// Anthropic.
+// Anthropic. Since then a plain company_name goes to the free registry
+// search first (canadian-company-data.name-path.test.ts); free text in `task`
+// still reaches the Claude extraction step, so that is what this pins.
 describe("canadian-company-data name lookup inside a non-customer scope", () => {
   const savedKey = process.env.ANTHROPIC_API_KEY;
   const fetchSpy = vi.fn();
@@ -106,7 +108,7 @@ describe("canadian-company-data name lookup inside a non-customer scope", () => 
     const executor = getExecutor("canadian-company-data");
     expect(executor).toBeDefined();
     await expect(
-      runWithoutPaidCalls("internal_test", () => executor!({ company_name: "Shopify" })),
+      runWithoutPaidCalls("internal_test", () => executor!({ task: "look up Shopify" })),
     ).rejects.toBeInstanceOf(PaidCallBlockedError);
     expect(fetchSpy).not.toHaveBeenCalled();
   });

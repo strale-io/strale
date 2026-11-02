@@ -7,6 +7,7 @@ import {
 import { extractCompanyName } from "./lib/browserless-extract.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 
 // Canada — Corporations Canada (ISED)
 //
@@ -219,7 +220,7 @@ export function buildNameSearchBody(query: string): URLSearchParams {
   });
 }
 
-async function searchByName(query: string): Promise<CaNameCandidate[]> {
+async function searchByName(query: string, opts: { allowEmpty?: boolean } = {}): Promise<CaNameCandidate[]> {
   const response = await safeFetch(NAME_SEARCH_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -233,6 +234,7 @@ async function searchByName(query: string): Promise<CaNameCandidate[]> {
   const html = await readPageHtml(response, "company_name");
   const candidates = parseNameSearchResults(html);
   if (candidates.length === 0) {
+    if (opts.allowEmpty) return candidates;
     throw new Error(`No Canadian company found matching "${query}".`);
   }
   return candidates;
@@ -267,6 +269,38 @@ export function pickByName(query: string, candidates: CaNameCandidate[]): CaName
   return { corpId: resolved.id, matchedName: resolved.matchedName, matchConfidence: resolved.matchConfidence };
 }
 
+/**
+ * Resolve a company name to a corpId.
+ *
+ * A caller-supplied `company_name` is already a name, so it goes straight to
+ * the free Corporations Canada search. Only when that search yields no
+ * confident match (no candidates, or a refusal from pickByName) does the paid
+ * Claude extraction step run, the path free text in `task` always takes.
+ *
+ * Why (2026-11-02): this used to call Claude first for every name. That made
+ * the only live name-path test ("Shopify", required by Gate 5,
+ * DEC-20260411-B) a paid call on every scheduled run, which Strale's own
+ * tests may not make (lib/paid-call-guard.ts). Searching first keeps that
+ * test live and free, and saves customers the extraction call when they send
+ * a plain name. When the direct search refuses, the fallback reproduces the
+ * previous behaviour exactly.
+ */
+async function resolveByName(text: string, isStructuredName: boolean): Promise<CaNameResolution> {
+  if (isStructuredName) {
+    const direct = await searchByName(text, { allowEmpty: true });
+    if (direct.length > 0) {
+      try {
+        return pickByName(text, direct);
+      } catch (err) {
+        if (!(err instanceof CapabilityRefusalError)) throw err;
+        // No confident match on the raw text: let the extraction step try.
+      }
+    }
+  }
+  const name = await extractCompanyName(text, "Canadian");
+  return pickByName(name, await searchByName(name));
+}
+
 registerCapability("canadian-company-data", async (input: CapabilityInput) => {
   const raw = (input.corporation_number as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
@@ -281,9 +315,8 @@ registerCapability("canadian-company-data", async (input: CapabilityInput) => {
   let registryNumber = findRegistryNumber(trimmed);
   let nameResolution: CaNameResolution | null = null;
   if (!registryNumber) {
-    const name = await extractCompanyName(trimmed, "Canadian");
-    const candidates = await searchByName(name);
-    nameResolution = pickByName(name, candidates);
+    const isStructuredName = input.corporation_number == null && typeof input.company_name === "string";
+    nameResolution = await resolveByName(trimmed, isStructuredName);
     registryNumber = nameResolution.corpId;
   }
 
