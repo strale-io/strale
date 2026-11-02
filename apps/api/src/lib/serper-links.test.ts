@@ -7,6 +7,7 @@ import {
   stripUnresolvedGotoLinks,
   usableResultUrl,
 } from "./serper-links.js";
+import { snapshotCallCost, withCallCost } from "./call-cost.js";
 
 const GOTO_4 = "https://www.google.com/goto?url=CAESdwHrOzAV-gwNrhN26N3NEoW";
 const GOTO_5 = "https://www.google.com/goto?url=CAESdAHrOzAVeh-GSWBYjHdMTv9";
@@ -407,5 +408,63 @@ describe("serper-links — round-2 review findings", () => {
 
     expect(result.resolved).toBe(1);
     expect(result.unresolved).toEqual([GOTO_5]);
+  });
+});
+
+describe("serper-links — /resolve outcome is recorded as counts", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  /** Runs one resolution inside a real call-cost scope and returns its snapshot. */
+  async function resolveInScope(serperKey = "test-key") {
+    return withCallCost(async () => {
+      await resolveSerperLinks(searchResponse(), serperKey);
+      return snapshotCallCost().cost_breakdown;
+    }, 1.08);
+  }
+
+  it("records a successful resolution, which costs nothing and otherwise leaves no trace", async () => {
+    fetchMock.mockResolvedValue(okJson({ organic: [{ link: REAL_4 }, { link: REAL_5 }], credits: 0 }));
+    const breakdown = await resolveInScope();
+    expect(breakdown.link_resolution).toEqual({
+      attempts: 1, links: 2, resolved: 2, unresolved: 0, failed_requests: 0, budget_exhausted: 0, no_key: 0,
+    });
+    // Zero units, so no vendor cost line: the counts are the only record.
+    expect(breakdown.vendors).toEqual([]);
+  });
+
+  it("records a failed /resolve request and the links it left unresolved", async () => {
+    fetchMock.mockResolvedValue(new Response("upstream down", { status: 502 }));
+    const breakdown = await resolveInScope();
+    expect(breakdown.link_resolution).toMatchObject({ attempts: 1, links: 2, resolved: 0, unresolved: 2, failed_requests: 1 });
+  });
+
+  it("records an attempt skipped for a missing key", async () => {
+    const breakdown = await resolveInScope("");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(breakdown.link_resolution).toMatchObject({ attempts: 1, links: 2, unresolved: 2, no_key: 1 });
+  });
+
+  it("records nothing when no link was wrapped", async () => {
+    const breakdown = await withCallCost(async () => {
+      const response = searchResponse();
+      response.organic = response.organic.slice(0, 3);
+      await resolveSerperLinks(response, "test-key");
+      return snapshotCallCost().cost_breakdown;
+    }, 1.08);
+    expect(breakdown.link_resolution).toBeUndefined();
+  });
+
+  it("carries no URL or other content into the cost breakdown", async () => {
+    fetchMock.mockResolvedValue(new Response("upstream down", { status: 502 }));
+    const serialized = JSON.stringify(await resolveInScope());
+    expect(serialized).not.toMatch(/https?:|goto|upstream down/);
   });
 });

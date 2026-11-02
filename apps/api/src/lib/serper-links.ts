@@ -47,6 +47,7 @@
  */
 import { meteredVendorFetch } from "./metered-vendor-fetch.js";
 import { logWarn } from "./log.js";
+import { recordLinkResolution } from "./call-cost.js";
 import { MAX_FETCHED_API_RESPONSE_BYTES, readJsonWithLimit } from "./resource-limits.js";
 import { GOOGLE_HOST_RE } from "./tos-blocklist.js";
 
@@ -179,6 +180,7 @@ export async function resolveSerperLinks(
   if (wrapped.length === 0) return { attempted: false, resolved: 0, unresolved: [] };
 
   if (!serperKey) {
+    recordLinkResolution({ attempts: 1, links: wrapped.length, unresolved: wrapped.length, no_key: 1 });
     return {
       attempted: false,
       resolved: 0,
@@ -189,6 +191,8 @@ export async function resolveSerperLinks(
 
   const mapping = new Map<string, string>();
   const errors: string[] = [];
+  let failedRequests = 0;
+  let budgetExhausted = 0;
 
   for (let i = 0; i < wrapped.length; i += MAX_RESOLVE_LINKS_PER_CALL) {
     // Capped as well as bounded: a caller that left plenty of wall should
@@ -198,6 +202,7 @@ export async function resolveSerperLinks(
       // The budget is shared, so a slow first batch must not let later ones
       // push the request past the sync wall one slice at a time.
       errors.push("the resolution budget ran out before every link was sent");
+      budgetExhausted = 1;
       break;
     }
     const batch = wrapped.slice(i, i + MAX_RESOLVE_LINKS_PER_CALL);
@@ -223,6 +228,7 @@ export async function resolveSerperLinks(
       );
       if (!res.ok) {
         errors.push(`Serper /resolve returned HTTP ${res.status}`);
+        failedRequests += 1;
         continue;
       }
       const body = await readJsonWithLimit<{ organic?: Array<{ link?: unknown }> }>(
@@ -236,6 +242,7 @@ export async function resolveSerperLinks(
       const returned = Array.isArray(body?.organic) ? body.organic : [];
       if (returned.length !== batch.length) {
         errors.push(`Serper /resolve returned ${returned.length} entries for ${batch.length} links`);
+        failedRequests += 1;
         continue;
       }
       batch.forEach((original, index) => {
@@ -251,6 +258,7 @@ export async function resolveSerperLinks(
       });
     } catch (err) {
       errors.push(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+      failedRequests += 1;
     }
   }
 
@@ -273,6 +281,17 @@ export async function resolveSerperLinks(
   // Every batch's failure, not just the last one: `unresolved` lists them all,
   // so the explanation must too.
   const error = errors.length > 0 ? [...new Set(errors)].join("; ") : undefined;
+
+  // Counts only, into the call's cost breakdown: `/resolve` is metered at 0
+  // units, so this is the only trace real traffic leaves of whether it works.
+  recordLinkResolution({
+    attempts: 1,
+    links: wrapped.length,
+    resolved,
+    unresolved: unresolved.length,
+    failed_requests: failedRequests,
+    budget_exhausted: budgetExhausted,
+  });
 
   if (unresolved.length > 0) {
     logWarn("serper-links-unresolved", "Google redirect links could not be resolved", {
