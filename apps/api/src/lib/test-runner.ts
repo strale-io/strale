@@ -1,3 +1,4 @@
+import { runWithoutPaidCalls, isPaidCallBlockedMessage } from "./paid-call-guard.js";
 import { isCheckEnforced, runKnownAnswerCheck } from "./known-answer-checks.js";
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
 import { deployCommitOrNull } from "./receipt/deploy-identity.js";
@@ -787,11 +788,11 @@ async function runSingleTest(
     try {
       if (shouldRetry) {
         capResult = await withRetry(
-          () => executor(suite.input as Record<string, unknown>),
+          () => runWithoutPaidCalls("internal_test", () => executor(suite.input as Record<string, unknown>)),
           { maxRetries: 1, baseDelayMs: 2000, slug: suite.capabilitySlug },
         );
       } else {
-        capResult = await executor(suite.input as Record<string, unknown>);
+        capResult = await runWithoutPaidCalls("internal_test", () => executor(suite.input as Record<string, unknown>));
       }
       responseTimeMs = Date.now() - startTime;
     } catch (err) {
@@ -1276,7 +1277,7 @@ async function runRegressionTest(
     responseTimeMs = 0;
   } else {
     try {
-      const result = await executor(suite.input as Record<string, unknown>);
+      const result = await runWithoutPaidCalls("internal_test", () => executor(suite.input as Record<string, unknown>));
       responseTimeMs = Date.now() - startTime;
       currentOutput = result?.output ?? null;
     } catch (err) {
@@ -1762,6 +1763,15 @@ function validateResult(
   outputSchema?: Record<string, unknown> | null,
 ): { passed: boolean; failureReason: string | null } {
   const rules = suite.validationRules as ValidationRules;
+
+  // A test that tried to spend money upstream was stopped by
+  // lib/paid-call-guard.ts. That is neither the refusal a negative /
+  // edge_case / known_bad test expects nor a capability failure; it is
+  // recorded as a failed run that the classifier files as
+  // test_infrastructure, the same treatment as an exhausted test budget.
+  if (isPaidCallBlockedMessage(executionError)) {
+    return { passed: false, failureReason: executionError };
+  }
 
   if (suite.testType === "negative") {
     if (executionError || !capResult) {

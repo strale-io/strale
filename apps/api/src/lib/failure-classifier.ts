@@ -1,3 +1,4 @@
+import { isPaidCallBlockedMessage } from "./paid-call-guard.js";
 /**
  * Failure Classification Engine — Adaptive Test Intelligence
  *
@@ -247,6 +248,16 @@ export function classifyFailure(
 
   // ── 1. TEST_INFRASTRUCTURE ─────────────────────────────────────────────
   // Missing env vars, quota, geo-restriction, Browserless infra issues
+  // The paid-call guard (lib/paid-call-guard.ts) stopped Strale's own test
+  // before it spent money upstream: our infrastructure, not a capability signal.
+  if (isPaidCallBlockedMessage(reason)) {
+    return {
+      verdict: "test_infrastructure",
+      confidence: "high",
+      reason: `Test stopped before a paid upstream call: ${truncate(reason, 120)}`,
+    };
+  }
+
   if (matchesAny(reason, INFRA_ENV_PATTERNS)) {
     return {
       verdict: "test_infrastructure",
