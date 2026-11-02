@@ -60,6 +60,14 @@ function save(file, value) {
   try { mkdirSync(path.dirname(file), { recursive: true }); writeFileSync(temp, `${JSON.stringify(value)}\n`, { encoding: 'utf8', mode: 0o600 }); renameSync(temp, file); }
   catch { try { rmSync(temp, { force: true }); } catch {} }
 }
+// Keep GitHub's own reason (for example the cloud proxy's "not enabled for this session") on one capped line.
+function failure(result) {
+  let reason;
+  try { const message = JSON.parse(result.body || '')?.message; reason = typeof message === 'string' ? message : ''; }
+  catch { reason = String(result.body || '').split(/\r?\n/).find((line) => line.trim() && !/^\s*</.test(line)) || ''; }
+  reason = [...reason.replace(/[\u0000-\u001f\u007f-\u009f\p{Zl}\p{Zp}]+/gu, ' ').trim()].slice(0, 200).join('');
+  return new GitHubApiError(`GitHub API returned HTTP ${result.status}${reason ? `: ${reason}` : ''}`);
+}
 function json(body) { try { return JSON.parse(body); } catch { throw new GitHubApiError('GitHub API returned invalid JSON'); } }
 function limited(result) {
   return result.status === 429 || (result.status === 403 && (result.headers['x-ratelimit-remaining'] === '0' ||
@@ -102,7 +110,7 @@ export async function ghGet(endpoint, options = {}) {
     if (!old || !Object.hasOwn(old, 'body')) throw new GitHubApiError('GitHub returned 304 without a cached body');
     return old.body;
   }
-  if (result.status < 200 || result.status >= 300) throw new GitHubApiError(`GitHub API returned HTTP ${result.status}`);
+  if (result.status < 200 || result.status >= 300) throw failure(result);
   const body = json(result.body); const etag = result.headers.etag;
   if (etag) save(file, { etag, body });
   return body;
@@ -116,6 +124,6 @@ export async function ghWrite(endpoint, method, body, options = {}) {
     // A successful write consumed the last call but already took effect; never duplicate it.
     if ([403, 429].includes(result.status)) result = response(invoke(args, { ...options, input: JSON.stringify(body) }));
   }
-  if (result.status < 200 || result.status >= 300) throw new GitHubApiError(`GitHub API returned HTTP ${result.status}`);
+  if (result.status < 200 || result.status >= 300) throw failure(result);
   return json(result.body);
 }
