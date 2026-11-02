@@ -34,6 +34,27 @@ export interface SourceCandidate {
   host: string;
   /** Path and query only: robots.txt matching ignores the fragment (RFC 9309 §2.2.2). */
   pathAndQuery: string;
+  /**
+   * The host is built from a closed set Strale chose, not from input: a
+   * placeholder sits beside a literal registrable name, as in
+   * `www.pricerunner.${tld}`. Strale chose the source, but which origin is
+   * fetched is decided per call, so the sweep cannot check it statically and
+   * reports it as unverified rather than skipping it.
+   */
+  templatedHost?: true;
+}
+
+/**
+ * A host with a placeholder is caller-directed when nothing literal names the
+ * site: `${url}`, `${domain}`, `${sub}.${domain}`. It is Strale's choice when
+ * a literal label of at least three characters other than `www` is present.
+ * Review of #855 (2026-11-02): skipping every templated host hid
+ * `price-compare`, one of the two incidents the sweep was built for.
+ */
+function hasLiteralSiteLabel(host: string): boolean {
+  return host
+    .split(".")
+    .some((label) => !label.toUpperCase().includes(PLACEHOLDER) && label !== "www" && label.length >= 3);
 }
 
 /**
@@ -58,12 +79,14 @@ export function sourceCandidates(text: string): SourceCandidate[] {
     }
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
     // URL lower-cases the host, so compare case-insensitively.
-    if (parsed.host.toUpperCase().includes(PLACEHOLDER)) continue;
+    const templated = parsed.host.toUpperCase().includes(PLACEHOLDER);
+    if (templated && !hasLiteralSiteLabel(parsed.host)) continue;
     if (NOT_A_SOURCE.test(parsed.host)) continue;
     out.set(u, {
       url: u,
       host: parsed.host,
       pathAndQuery: `${parsed.pathname}${parsed.search}`,
+      ...(templated ? { templatedHost: true as const } : {}),
     });
   }
   return [...out.values()];

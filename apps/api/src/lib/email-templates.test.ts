@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -26,7 +26,7 @@ const LIB = dirname(fileURLToPath(import.meta.url));
 /** Every module that composes mail, including the daily-digest renderers. */
 function emailSourceFiles(): string[] {
   const files = readdirSync(LIB)
-    .filter((f) => /(email|digest|interrupt)/.test(f) && f.endsWith(".ts") && !f.endsWith(".test.ts"))
+    .filter((f) => /(email|digest|interrupt|alert)/.test(f) && f.endsWith(".ts") && !f.endsWith(".test.ts"))
     .map((f) => join(LIB, f));
   const dailyDigest = join(LIB, "daily-digest");
   for (const f of readdirSync(dailyDigest)) {
@@ -37,24 +37,27 @@ function emailSourceFiles(): string[] {
 
 describe("email templates", () => {
   it("covers the modules that compose mail", () => {
-    const names = emailSourceFiles().map((f) => f.replace(`${LIB}/`, ""));
+    const names = emailSourceFiles().map((f) => basename(f));
     // If this ever reads zero files the assertion below would pass vacuously.
     expect(names).toContain("email-templates.ts");
     expect(names).toContain("interrupt-sender.ts");
     expect(names).toContain("digest-formatter.ts");
+    expect(names).toContain("alerting.ts");
+    expect(names).toContain("render-email.ts");
     expect(names.length).toBeGreaterThan(5);
   });
 
-  it("links to no admin-walled route, which answers 401 to a reader", () => {
+  it("names no admin-walled route anywhere, which answers 401 to a reader", () => {
+    // Any literal URL under the admin prefix, not only an `href="…"`: a link
+    // built by a helper (daily-digest's `link(text, url)`), held in a constant,
+    // single-quoted, or written into a plain-text part is the same dead link.
+    // Review of #855 on 2026-11-02 showed the href-only rule missed all four.
     const offenders: string[] = [];
     for (const file of emailSourceFiles()) {
       const text = readFileSync(file, "utf8");
       for (const [i, line] of text.split("\n").entries()) {
-        // Only an href: a comment or a POST example in a curl snippet is not a
-        // link a reader clicks. welcome-email.ts legitimately shows
-        // `curl -X POST https://api.strale.io/v1/auth/recover/confirm`.
-        if (/href="[^"]*\/v1\/internal\//.test(line)) {
-          offenders.push(`${file.replace(`${LIB}/`, "")}:${i + 1}`);
+        if (/https:\/\/api\.strale\.io\/v1\/internal\//.test(line)) {
+          offenders.push(`${basename(file)}:${i + 1}`);
         }
       }
     }

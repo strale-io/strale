@@ -38,9 +38,11 @@
  * the transient case (hmm21.com answered 503 during the 2026-10-30 sweep), so
  * it is reported separately and never fails `--strict`.
  *
- * Verdicts come from production's own parser and matcher, so this cannot drift
+ * Verdicts come from production's own parser and matcher, so the rule cannot drift
  * from what `assertRobotsAllowed` decides on the fetch path:
- * `parseRobotsTxt` → `rulesFor(STRALE_ROBOTS_TOKEN)` → `isPathAllowed`.
+ * `parseRobotsTxt` → `rulesFor(STRALE_ROBOTS_TOKEN)` → `isPathAllowed`. The
+ * fetch itself does not match production's: plain `fetch` from this runner,
+ * not `safeFetch` from Railway, so redirects, caps and egress can differ.
  *
  * Two modes:
  *   default  — print findings + exit 0 (informational)
@@ -70,7 +72,12 @@ const EXECUTORS = join(REPO, "apps", "api", "src", "capabilities");
 
 const ROBOTS_TIMEOUT_MS = 20_000;
 
-export type Verdict = "allowed" | "disallowed" | "robots_unavailable";
+export type Verdict =
+  | "allowed"
+  | "disallowed"
+  | "robots_unavailable"
+  | "robots_4xx_unverified"
+  | "host_templated";
 
 type OriginVerdict =
   | { kind: "rules"; rules: RobotsRule[] }
@@ -175,8 +182,29 @@ async function main() {
     }
 
     for (const c of candidates.values()) {
+      if (c.templatedHost) {
+        // Strale chose the site, but the origin is picked per call from a
+        // closed set (a TLD, a carrier map). Not checkable statically.
+        findings.push({
+          slug, priceCents, isFreeTier, url: c.url,
+          verdict: "host_templated",
+          detail: "host is built per call from a fixed set; check each origin by hand",
+        });
+        continue;
+      }
       const v = await verdictForOrigin(new URL(c.url).origin);
-      if (v.kind === "allow_all") continue;
+      if (v.kind === "allow_all") {
+        // RFC 9309 makes a 4xx an allow-all, and production follows it. But
+        // this runner's egress is not Railway's: a bot wall may answer this
+        // IP 403 while production gets 200 with Disallow rules. Never report
+        // that as clean.
+        findings.push({
+          slug, priceCents, isFreeTier, url: c.url,
+          verdict: "robots_4xx_unverified",
+          detail: `robots.txt HTTP ${v.status} from this runner — allow-all under RFC 9309, but production's egress may see rules`,
+        });
+        continue;
+      }
       if (v.kind === "unavailable") {
         findings.push({
           slug, priceCents, isFreeTier, url: c.url,
@@ -218,6 +246,16 @@ async function main() {
       console.log(`  ${f.slug.padEnd(26)} price=${f.priceCents.padEnd(4)} free=${f.isFreeTier.padEnd(6)} [${status(f.slug)}]`);
       console.log(`  ${" ".repeat(26)} ${f.url}`);
       console.log(`  ${" ".repeat(26)} robots.txt disallows ${f.detail} — read apps/api/src/capabilities/${f.slug}.ts to see whether this is its only path`);
+    }
+  }
+
+  const unverified = findings.filter(
+    (f) => f.verdict === "robots_4xx_unverified" || f.verdict === "host_templated",
+  );
+  if (unverified.length > 0) {
+    console.log(`\nUNVERIFIED FROM THIS RUNNER — ${unverified.length} URL(s); never fails --strict, never read as clean:`);
+    for (const f of unverified) {
+      console.log(`  ${f.slug.padEnd(26)} ${f.url}  [${f.detail}] [${status(f.slug)}]`);
     }
   }
 

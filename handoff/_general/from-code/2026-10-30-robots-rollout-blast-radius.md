@@ -37,7 +37,10 @@ degradations**, and the outage was already known. Nothing new is bleeding.
 
 Receipt: `archive/receipts/2026-10-30-check-source-robots-access.json`.
 
-**Why believe the clean part of that answer.** `price-compare`, delisted
+**Why believe the clean part of that answer.** *(Corrected 2026-11-02: the
+next sentence was false. The sweep skipped `price-compare`'s templated host
+entirely, so it never reported it. See LESSONS.md F7 incident 14; the sweep now
+lists templated hosts and robots.txt 4xx answers as unverified.)* `price-compare`, delisted
 yesterday for this exact reason, is reported unlisted — the sweep agrees with a
 fact established independently of it. The 24 unflagged scrape capabilities
 include allabolag, ABR, curia, enforcementtracker and eleven container carriers

@@ -17,8 +17,15 @@ describe("sourceCandidates", () => {
     // How a caller-directed executor is written: the host comes from input.
     expect(sourceCandidates("const html = await fetchRenderedHtml(`https://${url}`);")).toEqual([]);
     expect(sourceCandidates("`https://${domain}/robots.txt`")).toEqual([]);
-    // A placeholder TLD is still a dynamic host (price-compare's pricerunner.${tld}).
-    expect(sourceCandidates("`https://www.pricerunner.${tld}/search?q=${q}`")).toEqual([]);
+    expect(sourceCandidates("`https://${sub}.${domain}/x`")).toEqual([]);
+  });
+
+  it("keeps a host Strale templates from a closed set, marked as such (price-compare)", () => {
+    // pricerunner.${tld} picks a Nordic TLD from a fixed map: Strale chose the
+    // site. Skipping it hid one of the two incidents this sweep exists for.
+    const [c] = sourceCandidates("`https://www.pricerunner.${tld}/search?q=${q}`");
+    expect(c.templatedHost).toBe(true);
+    expect(c.pathAndQuery).toBe("/search?q=STRALEPLACEHOLDER");
   });
 
   it("keeps a Strale-chosen source even when the path is built from input", () => {

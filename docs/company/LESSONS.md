@@ -1341,9 +1341,21 @@ those is dead:
 | `container-track` | €0.05 | Maersk (`MAEU`, the largest carrier) disallowed, so those containers return "tracking unavailable". HMM (`hmm21.com`) was flapping on 10-30 (503, then a Disallow); a re-run on 2026-11-02 got the Disallow, so count two carriers out, not one |
 
 So the rollout's blast radius on listed capabilities is one outage and two
-quiet degradations — and the sweep finding exactly the two already known
-(`price-compare` is correctly reported unlisted, having been delisted on 10-30)
-is the reason to believe the rest of the answer.
+quiet degradations.
+
+**Correction, 2026-11-02.** The first version of this entry said the sweep
+"correctly reported `price-compare` unlisted" and called that the reason to
+believe the rest of the answer. It never reported `price-compare` at all: its
+host is `www.pricerunner.${tld}`, and the sweep skipped every templated host as
+caller-directed. So the claimed negative control did not run, and the receipt
+(write-once) still carries it. The independent review of #855 found it. The
+sweep now keeps a host templated from a closed set and reports it, with every
+robots.txt that answered this runner 4xx, under "unverified from this runner",
+never as clean. On 2026-11-02 that bucket held nine URLs: six container
+carriers behind bot walls or 404s, `eu-court-case-search`, `price-compare` and
+`product-search`. The disallowed list is unchanged. What the sweep can vouch for
+is narrower than the first version said: it confirms a Disallow where it sees
+one, and it lists, rather than clears, what it cannot see.
 
 **The guard.** `npm run sources:robots-check`
 (`apps/api/scripts/check-source-robots-access.ts`, logic and tests in
