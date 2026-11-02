@@ -804,6 +804,11 @@ async function runSingleTest(
     responseTimeMs = 0;
   }
 
+  // The paid-call guard stopped this run before it spent money upstream.
+  // Skip it like an exhausted budget: no result row, so it neither passes a
+  // negative/edge_case test nor shows as a failure on public surfaces.
+  if (isPaidCallBlockedMessage(executionError)) return skipPaidCallBlocked(suite, executionError);
+
   // Validate the result
   const reliability = fieldReliabilityMap?.get(suite.capabilitySlug) ?? null;
   const outputSchema = outputSchemaMap?.get(suite.capabilitySlug) ?? null;
@@ -1196,9 +1201,32 @@ async function runFixtureTest(
 
 // ─── Regression test (FREE — compares structure) ─────────────────────────────
 
+/**
+ * A run the paid-call guard (lib/paid-call-guard.ts) stopped before it spent
+ * money upstream. Logged and skipped, the same treatment as an exhausted test
+ * budget: no test_results row, no internal transaction, no fixture-recapture
+ * count. The log line names the suite so it can be moved to a free input.
+ */
+function skipPaidCallBlocked(
+  suite: typeof testSuites.$inferSelect,
+  reason: string | null,
+): null {
+  log.warn(
+    {
+      label: "test-runner-skip-paid-call-blocked",
+      capability_slug: suite.capabilitySlug,
+      test_suite_id: suite.id,
+      test_type: suite.testType,
+      reason,
+    },
+    "test-runner-skip-paid-call-blocked",
+  );
+  return null;
+}
+
 async function runRegressionTest(
   suite: typeof testSuites.$inferSelect,
-): Promise<SingleTestResult> {
+): Promise<SingleTestResult | null> {
   const db = getDb();
   const startTime = Date.now();
 
@@ -1285,6 +1313,8 @@ async function runRegressionTest(
       executionError = err instanceof Error ? err.message : String(err);
     }
   }
+
+  if (isPaidCallBlockedMessage(executionError)) return skipPaidCallBlocked(suite, executionError);
 
   if (executionError || !currentOutput) {
     const failureReason = executionError
@@ -1763,15 +1793,6 @@ function validateResult(
   outputSchema?: Record<string, unknown> | null,
 ): { passed: boolean; failureReason: string | null } {
   const rules = suite.validationRules as ValidationRules;
-
-  // A test that tried to spend money upstream was stopped by
-  // lib/paid-call-guard.ts. That is neither the refusal a negative /
-  // edge_case / known_bad test expects nor a capability failure; it is
-  // recorded as a failed run that the classifier files as
-  // test_infrastructure, the same treatment as an exhausted test budget.
-  if (isPaidCallBlockedMessage(executionError)) {
-    return { passed: false, failureReason: executionError };
-  }
 
   if (suite.testType === "negative") {
     if (executionError || !capResult) {

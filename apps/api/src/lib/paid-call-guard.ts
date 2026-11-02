@@ -17,11 +17,37 @@
  *      design, so a paid sub-capability can run under a free parent.
  *
  * This guard closes both at the point where money is spent instead of where
- * the capability is classified: every Anthropic request goes through
- * `createAnthropicClient`, and every billable data-vendor request through
- * `meteredVendorFetch`. Both call `assertPaidCallAllowed`, which refuses
- * while a non-customer invocation scope is active. Customer calls never
- * enter a scope, so they are unaffected.
+ * the capability is classified. These call `assertPaidCallAllowed`, which
+ * refuses while a non-customer invocation scope is active:
+ *
+ *   - `createAnthropicClient` (every Anthropic request);
+ *   - `meteredVendorFetch` for BILLABLE_METERED_VENDORS (Serper, Dilisense,
+ *     eSortCode);
+ *   - the raw fetches to openapi.com (`capabilities/lib/openapi-resolver.ts`
+ *     product calls), Cobalt, sec-api.io and EINsearch.
+ *
+ * A billable vendor added later must call `assertPaidCallAllowed` too.
+ *
+ * The scope wraps the automated non-customer executor paths: scheduled and
+ * regression tests (`test-runner.ts`), `guardedExecute` for non-customer
+ * contexts (onboard.ts, smoke-test, onboarding pipeline), onboarding
+ * calibration (`capability-onboarding.ts`), admin recalibrate
+ * (`routes/internal-tests.ts`), fixture verification (`db/seed-tests.ts`)
+ * and `db/audit-tests.ts`. Customer calls never enter a scope, so they are
+ * unaffected.
+ *
+ * Not wrapped, deliberately: operator scripts a person runs by hand to
+ * exercise live upstreams (`scripts/sweep-paid-fixtures.ts`, which spends on
+ * purpose under the EUR 25 sweep cap of DEC-20260812-A;
+ * `scripts/capture-tier-fixtures.ts`, `scripts/smoke-openapi-resolver.ts`,
+ * `src/scripts/audit-live-registries.ts`,
+ * `src/scripts/dk-cvr-retry-2026-05-06.ts`). Running one is a human
+ * decision, not background test traffic.
+ *
+ * A blocked scheduled run is skipped like an exhausted test budget (no
+ * test_results row). For free_quota capabilities the dispatcher still takes
+ * a budget slot before the executor runs, so a blocked run uses one test
+ * slot while spending nothing.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 

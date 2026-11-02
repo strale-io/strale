@@ -1,4 +1,3 @@
-import { isPaidCallBlockedMessage } from "./paid-call-guard.js";
 /**
  * Failure Classification Engine — Adaptive Test Intelligence
  *
@@ -15,6 +14,8 @@ import { isPaidCallBlockedMessage } from "./paid-call-guard.js";
  *   5. stale_input          — expired dates/years in test input
  *   6. unknown              — none of the above matched
  */
+
+import { isPaidCallBlockedMessage } from "./paid-call-guard.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

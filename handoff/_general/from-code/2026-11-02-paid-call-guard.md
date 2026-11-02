@@ -11,16 +11,27 @@ Intent: Make sure Strale's own test traffic never pays an upstream vendor (Pette
 
 ## Delivered
 
-- `apps/api/src/lib/paid-call-guard.ts`: an AsyncLocalStorage scope for non-customer invocations. `createAnthropicClient` (every Anthropic call) and `meteredVendorFetch` for billable vendors (serper, dilisense, esortcode) refuse inside the scope, before any request is sent.
-- The scope wraps every non-customer executor call: scheduled tests and regression runs (`test-runner.ts`), `guardedExecute` for non-customer contexts (onboard.ts, smoke-test, onboarding pipeline), onboarding calibration (`capability-onboarding.ts`), admin recalibrate (`routes/internal-tests.ts`) and `db/audit-tests.ts`.
-- A blocked test is recorded as a failed run classified `test_infrastructure` (same treatment as an exhausted test budget). It never counts as a pass for negative/edge_case/known_bad suites.
+- `apps/api/src/lib/paid-call-guard.ts`: an AsyncLocalStorage scope for non-customer invocations. Inside it these refuse before any request is sent:
+  - `createAnthropicClient` (every Anthropic call);
+  - `meteredVendorFetch` for serper, dilisense and esortcode;
+  - the raw fetches to openapi.com product calls, Cobalt, sec-api.io and EINsearch.
+- The scope wraps the automated non-customer executor paths:
+  - scheduled and regression tests (`test-runner.ts`);
+  - `guardedExecute` for non-customer contexts (onboard.ts, smoke-test, onboarding pipeline);
+  - onboarding calibration (`capability-onboarding.ts`);
+  - admin recalibrate (`routes/internal-tests.ts`);
+  - fixture verification (`db/seed-tests.ts`) and `db/audit-tests.ts`.
+- Operator scripts a person runs by hand to exercise live upstreams are named exemptions in the guard header. `sweep-paid-fixtures.ts` spends on purpose under the EUR 25 sweep cap.
+- A blocked scheduled run is skipped like an exhausted test budget: no test_results row, no internal transaction, no fixture-recapture count, and a `test-runner-skip-paid-call-blocked` warn line naming the suite. It never shows as a pass or a public failure.
 - Customer calls (`/v1/do`, x402, solutions) never enter the scope and are unchanged.
+- Independent review (fresh same-provider agent, separate context): PASS WITH FIXES. Its findings 1-4 and 7 are fixed. Findings 5 (a capability that swallows the block) and 6 (a blocked free_quota run still uses a test-budget slot) are noted and not fixed.
 
 ## Evidence
 
-- New `apps/api/src/lib/paid-call-guard.test.ts` (6 tests) fails with the guard removed (3 failing) and passes with it.
-- Full API unit suite: 8,119 passed, 0 failed. Root typecheck, models:check, env:check and the API lint guards are green.
+- `paid-call-guard.test.ts` (7 tests), `test-runner.paid-call-skip.test.ts` (4), and 2 new cases in `guarded-executor.test.ts`.
+- With the guard calls removed: 3 tests fail. With the runSingleTest/guardedExecute wraps removed: 4 fail. Restored: all pass.
+- Full API unit suite: 8,126 passed, 0 failed. Root typecheck, models:check, env:check and the API lint guards are green.
 
 ## Next
 
-- Next authorised action: after merge and deploy, read `test_results` for `failure_reason LIKE '%paid upstream call blocked%'` (PC session with the verify URL) to list which suites were paying; then point those suites at registration-number inputs or move them to fixture mode | Owner: Strale orchestrator | Blocker: production DB read is PC-only.
+- Next authorised action: after merge and deploy, search the production logs for `test-runner-skip-paid-call-blocked` to list which suites were paying; then point those suites at registration-number inputs or move them to fixture mode | Owner: Strale orchestrator | Blocker: none once deployed; the log search needs log access (Better Stack once live, or Railway logs from the PC).

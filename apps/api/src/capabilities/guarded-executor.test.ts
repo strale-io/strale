@@ -572,3 +572,34 @@ describe("seedCostMetaForOnboarding (pre-insert verification)", () => {
     );
   });
 });
+
+// ─── Paid-call guard scope (lib/paid-call-guard.ts, 2026-11-02) ─────────────
+//
+// A capability classified free can still make a paid call on some inputs
+// (canadian-company-data's name path calls Claude). guardedExecute must run
+// non-customer invocations inside the guard's scope, and customer ones outside.
+
+describe("guardedExecute and the paid-call guard", () => {
+  async function executorThatPays() {
+    const { assertPaidCallAllowed } = await import("../lib/paid-call-guard.js");
+    assertPaidCallAllowed("anthropic");
+    return { output: { ok: true }, provenance: { source: "x", fetched_at: "" } };
+  }
+
+  it("a free_unlimited capability's paid call is refused under internal_test", async () => {
+    const { PaidCallBlockedError } = await import("../lib/paid-call-guard.js");
+    stubMeta({ slug: "x", cost_class: "free_unlimited" });
+    mockExecutor.mockImplementationOnce(executorThatPays);
+    await expect(guardedExecute("x", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
+      PaidCallBlockedError,
+    );
+  });
+
+  it("the same call goes through for a customer", async () => {
+    stubMeta({ slug: "x", cost_class: "free_unlimited" });
+    mockExecutor.mockImplementationOnce(executorThatPays);
+    await expect(guardedExecute("x", {}, customerCtx(), "harness")).resolves.toMatchObject({
+      output: { ok: true },
+    });
+  });
+});

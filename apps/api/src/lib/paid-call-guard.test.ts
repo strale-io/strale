@@ -26,6 +26,23 @@ describe("paid-call guard", () => {
     ).rejects.toBeInstanceOf(PaidCallBlockedError);
   });
 
+  it("a concurrent customer call is never caught by a test's scope", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const scoped = runWithoutPaidCalls("internal_test", async () => {
+      await gate;
+      assertPaidCallAllowed("anthropic");
+    });
+    const customer = (async () => {
+      await gate;
+      assertPaidCallAllowed("anthropic");
+      return "ok";
+    })();
+    release();
+    await expect(scoped).rejects.toBeInstanceOf(PaidCallBlockedError);
+    await expect(customer).resolves.toBe("ok");
+  });
+
   it("stops an Anthropic request before any network traffic", async () => {
     const fetchSpy = vi.fn();
     const client = createAnthropicClient({ apiKey: "test-key", fetch: fetchSpy as never });
@@ -71,7 +88,7 @@ describe("paid-call guard", () => {
 // the scheduler runs it, but its name path calls Claude Haiku. Its second
 // known_answer suite looks up "Shopify" by name, so every scheduled run paid
 // Anthropic.
-describe("canadian-company-data name lookup under scheduled testing", () => {
+describe("canadian-company-data name lookup inside a non-customer scope", () => {
   const savedKey = process.env.ANTHROPIC_API_KEY;
   const fetchSpy = vi.fn();
   beforeEach(() => {
