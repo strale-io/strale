@@ -74,3 +74,14 @@ removed, slower scroll reveals (~1s, 40px rise). Preview page (private):
 https://claude.ai/artifact/Cbduab7jNroiqXwYrTJkvj, regenerated from
 apps/web/dist by copying the homepage assets with relative paths.
 Next: Petter's next look; then carry the spacing to the inner pages.
+
+## Step 1: the home rhythm on every page (83252134)
+
+Section and page-head padding come from `--_page-section-space`,
+`--_page-head-top` and `--_page-head-bottom` in site.css (96-160px sections,
+96-160px above page heads), read by every main page, the use-case detail page
+and the docs. At 1270x686 the sections match the home page at 96px; tall
+screens grow to 160px. The preview now carries the eight main pages, linked to
+each other (generator: scratchpad mkpreview2.py, not in the repo).
+Next: Petter's look at the inner pages; then step 2 (independent review of
+#736 and #892, then merge).
