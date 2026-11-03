@@ -47,6 +47,17 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 :not(pre) > code { background: var(--surface-sunken); padding: var(--space-2) var(--space-4); border-radius: var(--radius-tag); font-size: var(--type-small-size); }
 
 /* ---------- layout ---------- */
+/* Page rhythm (Petter, 2026-11-03): generous air on every page, following the window height as well as
+   the width (as Tilja's site does). Below 1024px the token rhythm; from 1024px 96px at the Surface Pro's
+   686px tall, up to 160px on tall screens. Every page's sections and page head read these two values. */
+:root { --_page-section-space: var(--section-space); --_page-head-top: var(--space-64); --_page-head-bottom: var(--space-32); }
+@media (min-width: 1024px) {
+  :root {
+    --_page-section-space: clamp(var(--space-96), calc(var(--viewport-height) * 0.14), var(--space-160));
+    --_page-head-top: clamp(var(--space-96), calc(var(--viewport-height) * 0.15), var(--space-160));
+    --_page-head-bottom: clamp(var(--space-48), calc(var(--viewport-height) * 0.08), var(--space-80));
+  }
+}
 .container { width: 100%; max-width: calc(var(--container-content) + 2 * var(--gutter)); margin-inline: auto; padding-inline: var(--gutter); }
 .container-wide { max-width: calc(var(--container-wide) + 2 * var(--gutter)); }
 .stack > * + * { margin-top: var(--stack-base); }

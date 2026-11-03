@@ -262,7 +262,7 @@ const WAYS = [
      2026-11-03: the one-window fit read as cramped, so sections get generous air instead: 96px at the
      Surface Pro's 686px, rising to 160px on tall screens. */
   @media (min-width: 1024px) {
-    .section, .cta { padding-block: clamp(var(--space-96), calc(var(--viewport-height) * 0.14), var(--space-160)); }
+    .section, .cta { padding-block: var(--_page-section-space); }
     .section-top { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-32); }
     .section-top-link { padding-bottom: var(--space-4); }
     .section-top .t-lead { max-width: none; }

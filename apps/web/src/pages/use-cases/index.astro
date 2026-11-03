@@ -84,16 +84,16 @@ const libraryCount = allTools(data).length;
 </Base>
 
 <style>
-  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head { padding-block: var(--_page-head-top) var(--_page-head-bottom); }
   .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
   .page-head-art { display: none; width: 100%; }
   @media (min-width: 1024px) {
     .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
     .page-head-art { display: block; }
   }
-  .section { padding-block: var(--section-space); }
+  .section { padding-block: var(--_page-section-space); }
   .section-sunken { background: var(--surface-sunken); }
-  .section-cards { padding-block: var(--space-16) var(--section-space); }
+  .section-cards { padding-block: var(--space-16) var(--_page-section-space); }
 
   .uc-grid { margin: 0; padding: 0; list-style: none; gap: var(--space-24); }
   .uc-grid > li { display: grid; }
