@@ -63,3 +63,14 @@ Every section also fits at 1280×800, 1440×900 and 1920×1080.
   the token cap; growing past it would need a new token and decision.
 - Next: Petter's view of the hero on #892, then the narrow-screen (390, 768)
   pass on the inner pages.
+
+## Petter's preview feedback, 2026-11-03 (fec804e0)
+
+Applied: roomier hero (copy with its own space, taller switchboard band below,
+no one-window fit), home section padding 96-160px by height, light theme only
+(switch removed), no hairline between differently coloured sections, smaller
+footer wordmark with the link columns grouped right and the currency note
+removed, slower scroll reveals (~1s, 40px rise). Preview page (private):
+https://claude.ai/artifact/Cbduab7jNroiqXwYrTJkvj, regenerated from
+apps/web/dist by copying the homepage assets with relative paths.
+Next: Petter's next look; then carry the spacing to the inner pages.
