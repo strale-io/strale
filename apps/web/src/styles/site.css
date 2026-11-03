@@ -72,7 +72,7 @@ main :where(.stack, .stack-tight, .stack-loose) > h2 + * { margin-top: var(--sta
 .brand { color: var(--text); }
 .wordmark { display: block; width: auto; height: calc(var(--space-20) + var(--space-2)); fill: currentColor; }
 .footer-brand .brand { display: inline-flex; }
-.footer-brand .wordmark { height: var(--space-24); }
+.footer-brand .wordmark { height: var(--space-20); }
 
 /* ---------- navigation ---------- */
 .site-nav { position: sticky; top: 0; z-index: var(--z-nav); isolation: isolate; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard); }
@@ -108,10 +108,6 @@ main :where(.stack, .stack-tight, .stack-loose) > h2 + * { margin-top: var(--sta
   .site-nav .brand { margin-right: 0; justify-self: start; }
   .nav-actions { justify-self: end; }
 }
-.theme-switch { display: inline-flex; padding: var(--space-2); border: var(--border-width) solid var(--border); border-radius: var(--radius-pill); background: var(--surface); }
-.theme-switch button { display: inline-grid; place-items: center; width: var(--control-h-sm); height: var(--control-h-sm); border: 0; border-radius: var(--radius-pill); background: none; color: var(--text-muted); cursor: pointer; }
-.theme-switch button:hover { color: var(--text); }
-.theme-switch button[aria-pressed="true"] { background: var(--action-subtle); color: var(--text); }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -337,7 +333,7 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 }
 
 /* ---------- footer ---------- */
-.site-footer { background: var(--surface-sunken); border-top: var(--border-width) solid var(--border); padding-block: var(--space-64) var(--space-32); }
+.site-footer { background: var(--surface-sunken); padding-block: var(--space-64); }
 .footer-grid { display: grid; gap: var(--space-32); grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .footer-brand { grid-column: 1 / -1; display: grid; gap: var(--space-12); align-content: start; }
 .footer-brand img { height: var(--space-24); width: auto; }
@@ -345,10 +341,10 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .footer-col ul { display: grid; gap: var(--space-4); padding: 0; list-style: none; }
 .footer-col a { display: inline-flex; min-height: var(--space-32); align-items: center; color: var(--text-muted); text-decoration: none; font-size: var(--type-compact-size); }
 .footer-col a:hover { color: var(--link); text-decoration: underline; text-underline-offset: var(--space-4); }
-.footer-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-12); margin-top: var(--space-48); padding-top: var(--space-24); border-top: var(--border-width) solid var(--border); color: var(--text-muted); font-size: var(--type-small-size); }
 @media (min-width: 1024px) {
-  .footer-grid { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-48); }
-  .footer-brand { grid-column: auto; }
+  /* Brand on the left; the three link columns sit together at the right edge (Petter, 2026-11-03). */
+  .footer-grid { grid-template-columns: minmax(0, 1fr) repeat(3, max-content); column-gap: var(--space-64); }
+  .footer-brand { grid-column: auto; max-width: calc(var(--space-160) * 2 + var(--space-48)); }
 }
 
 /* ---------- section patterns ---------- */
@@ -432,7 +428,7 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 
 /* ---------- scroll reveals (site.ts) ---------- */
 /* Set only on blocks below the fold at load, and never under reduced motion; site.ts animates them in. */
-[data-reveal].is-pending, [data-reveal-group] > .is-pending { opacity: 0; translate: 0 var(--space-24); }
+[data-reveal].is-pending, [data-reveal-group] > .is-pending { opacity: 0; translate: 0 var(--space-40); }
 
 /* Metadata may be smaller; actions and navigation retain the 15px UI floor. */
-:where(button, input, select, textarea, summary), .small a, .t-small a, .label a, .tag-link, .footer-base a { font-size: var(--type-ui-size); }
+:where(button, input, select, textarea, summary), .small a, .t-small a, .label a, .tag-link { font-size: var(--type-ui-size); }

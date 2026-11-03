@@ -1,5 +1,5 @@
 ---
-// Page shell: head, theme bootstrap, skip link, header, footer. Every page uses it.
+// Page shell: head, skip link, header, footer. Every page uses it.
 import "../styles/tokens.generated.css";
 import "../styles/site.css";
 import Icons from "../components/Icons.astro";
@@ -21,7 +21,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -38,7 +38,6 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
   <meta property="og:type" content="website" />
   <link rel="alternate" type="text/plain" title="llms.txt" href="https://api.strale.io/llms.txt" />
   {data.mode !== "live" && <meta name="robots" content="noindex" />}
-  <script is:inline>try { var s = localStorage.getItem("strale-theme"); if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s); } catch (e) {}</script>
 </head>
 <body>
   <Icons />

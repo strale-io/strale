@@ -125,7 +125,7 @@ const words = headline.split(/\s+/).filter(Boolean);
 <script>import "../scripts/switchboard.ts";</script>
 
 <style>
-  .sb { --_s: 1; position: relative; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); }
+  .sb { --_s: 1; position: relative; background: var(--canvas); }
   .sb-layout { display: flex; flex-direction: column; align-items: center; gap: var(--space-24); padding-block: var(--space-32); }
 
   /* Copy: centred at every width. */
@@ -203,16 +203,17 @@ const words = headline.split(/\s+/).filter(Boolean);
     .sb-glyph { width: calc(var(--space-48) + var(--space-4)); height: calc(var(--space-48) + var(--space-4)); }
   }
 
-  /* From 1024px the hero fills the window: the copy on top, the band takes what is left. The band is a
-     fixed design field (switchboard.ts U.wide x U.high) scaled as one piece, so tools, wires and console
-     never move relative to each other. Title size follows the window height as well as its width, so the
-     two-line headline and the whole band share a short laptop window. */
+  /* From 1024px: the copy gets room of its own and the switchboard sits below it in a tall band; the
+     hero no longer has to fit one window (Petter, 2026-11-03: it read as cramped). Tools sit at fixed
+     fractions of the band, so a taller band spreads them out; tools and console scale as one piece
+     (switchboard.ts U.wide x U.high). */
   @media (min-width: 1024px) {
-    .sb-layout { min-height: calc(var(--viewport-height) - var(--nav-h) - var(--border-width) * 2); justify-content: center; gap: var(--space-24); padding-block: clamp(var(--space-20), calc(var(--viewport-height) * 0.04 - var(--space-8)), var(--space-48)); }
-    .sb-copy { gap: var(--space-12); }
+    .sb-layout { gap: clamp(var(--space-64), calc(var(--viewport-height) * 0.11), var(--space-96)); padding-block: clamp(var(--space-96), calc(var(--viewport-height) * 0.15), var(--space-160)) clamp(var(--space-64), calc(var(--viewport-height) * 0.11), var(--space-96)); }
+    .sb-copy { gap: var(--space-20); }
     .sb-lead { max-width: none; }
-    .sb-title { font-size: max(calc(var(--space-32) + var(--space-4)), min(var(--type-hero-size), calc(var(--viewport-height) * 0.068))); max-width: 30ch; }
-    .sb-board-wrap { flex: 1 1 auto; min-height: calc(var(--space-160) * 2 - var(--space-20)); max-height: calc(var(--space-160) * 4); }
+    .sb-actions { margin-top: var(--space-12); }
+    .sb-title { font-size: var(--type-hero-size); max-width: 30ch; }
+    .sb-board-wrap { height: clamp(calc(var(--space-160) * 3), calc(var(--viewport-height) * 0.78), calc(var(--space-160) * 4)); }
     .sb-board { position: absolute; inset: 0; display: block; padding: 0; }
     .sb-ports { position: absolute; inset: 0; display: block; max-width: none; z-index: 2; }
     .sb-port { position: absolute; left: var(--_x); top: var(--_y); translate: -50% -50%; scale: var(--_s); }

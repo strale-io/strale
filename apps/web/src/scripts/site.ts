@@ -1,24 +1,7 @@
-// Site behaviour: theme switch, disclosures (mobile menu), tabs, copy buttons.
+// Site behaviour: disclosures (mobile menu), tabs, copy buttons.
 // Adapted from the Open Flow specimen script. Toggles classes and attributes; the only style values it sets
 // are the pointer-position custom properties at the end of this file.
 const root = document.documentElement;
-const THEME_KEY = "strale-theme";
-
-// Theme: system (no attribute) | light | dark. Stored per viewer; the page works without storage.
-function applyTheme(choice: string | null) {
-  if (choice === "light" || choice === "dark") root.setAttribute("data-theme", choice);
-  else root.removeAttribute("data-theme");
-  document.querySelectorAll<HTMLButtonElement>("[data-theme-choice]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === (choice || "system"))));
-  try {
-    if (choice === "light" || choice === "dark") localStorage.setItem(THEME_KEY, choice);
-    else localStorage.removeItem(THEME_KEY);
-  } catch {
-    /* storage unavailable: the choice lasts for this page only */
-  }
-}
-applyTheme(root.getAttribute("data-theme"));
-document.querySelectorAll<HTMLButtonElement>("[data-theme-choice]").forEach((b) => b.addEventListener("click", () => applyTheme(b.dataset.themeChoice ?? null)));
-
 // Disclosures: Escape closes and returns focus; an outside click closes.
 const triggers = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-disclosure]"));
 function setOpen(t: HTMLButtonElement, open: boolean) {
@@ -125,7 +108,7 @@ const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
 if (!calm && "IntersectionObserver" in window) {
   const css = getComputedStyle(root);
   const ms = (name: string) => parseFloat(css.getPropertyValue(name)) || 0;
-  const rise = `${ms("--space-24")}px`;
+  const rise = `${ms("--space-40")}px`;
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (!e.isIntersecting) continue;
@@ -133,8 +116,9 @@ if (!calm && "IntersectionObserver" in window) {
       io.unobserve(el);
       el.classList.remove("is-pending");
       el.animate([{ opacity: 0, translate: `0 ${rise}` }, { opacity: 1, translate: "0 0" }], {
-        duration: 2 * ms("--duration-slow"),
-        delay: Number(el.dataset.revealIndex ?? 0) * ms("--duration-fast"),
+        // Petter, 2026-11-03: slower and softer, so the page settles in rather than snaps (about 1s).
+        duration: 3 * ms("--duration-slow"),
+        delay: Number(el.dataset.revealIndex ?? 0) * ms("--duration-base"),
         easing: css.getPropertyValue("--ease-enter").trim() || "ease-out",
       });
     }

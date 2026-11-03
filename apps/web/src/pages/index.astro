@@ -258,11 +258,11 @@ const WAYS = [
   .section-head .t-lead { max-width: var(--measure-lead); }
   /* A section's heading with its "see all" link beside it, so the link costs no extra row. */
   .section-top { display: grid; gap: var(--space-16); }
-  /* Laptop-first (Petter, 2026-11-02): from 1024px every home section fits one window, header included,
-     measured at the Surface Pro's 1270x686. Section padding follows the window height as well as the
-     width, as Tilja's site does: about 62px at 686px tall, the full rhythm on tall screens. */
+  /* Section padding follows the window height as well as the width, as Tilja's site does. Petter,
+     2026-11-03: the one-window fit read as cramped, so sections get generous air instead: 96px at the
+     Surface Pro's 686px, rising to 160px on tall screens. */
   @media (min-width: 1024px) {
-    .section, .cta { padding-block: clamp(var(--space-48), calc(var(--viewport-height) * 0.09), var(--section-space)); }
+    .section, .cta { padding-block: clamp(var(--space-96), calc(var(--viewport-height) * 0.14), var(--space-160)); }
     .section-top { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-32); }
     .section-top-link { padding-bottom: var(--space-4); }
     .section-top .t-lead { max-width: none; }
@@ -296,7 +296,7 @@ const WAYS = [
   /* 3 One call */
   /* The one feature section: more air than the standard rhythm, the copy and the code card centred on each other. */
   .section-call { padding-block: calc(var(--section-space) * 1.5); }
-  @media (min-width: 1024px) { .section-call { padding-block: clamp(var(--space-64), calc(var(--viewport-height) * 0.12), calc(var(--section-space) * 1.5)); } }
+  @media (min-width: 1024px) { .section-call { padding-block: clamp(var(--space-128), calc(var(--viewport-height) * 0.18), calc(var(--space-160) + var(--space-40))); } }
   .split { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }
   @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-64); align-items: center; } }
   .call-copy .t-section { margin-top: var(--space-12); }

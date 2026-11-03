@@ -11,11 +11,6 @@ const items = [
   { id: "pricing", href: "/pricing", label: "Pricing" },
   { id: "docs", href: "/docs", label: "Docs" },
 ];
-const themes = [
-  { id: "system", icon: "i-monitor", label: "Follow system theme" },
-  { id: "light", icon: "i-sun", label: "Light theme" },
-  { id: "dark", icon: "i-moon", label: "Dark theme" },
-];
 ---
 <header class="site-nav">
   <div class="container site-nav-bar">
@@ -28,9 +23,6 @@ const themes = [
       </ul>
     </nav>
     <div class="nav-actions">
-      <div class="theme-switch" role="group" aria-label="Colour theme">
-        {themes.map((t) => <button type="button" data-theme-choice={t.id} aria-pressed={t.id === "system" ? "true" : "false"} title={t.label}><svg class="icon icon-sm" aria-hidden="true"><use href={`#${t.icon}`} /></svg><span class="visually-hidden">{t.label}</span></button>)}
-      </div>
       <a class="btn btn-primary" href="/signup">Get an API key</a>
     </div>
     <button class="nav-link menu-button" type="button" aria-expanded="false" aria-controls="mobile-menu" data-disclosure><span data-label>Menu</span> <svg class="icon" aria-hidden="true"><use href="#i-menu" /></svg></button>
@@ -42,9 +34,6 @@ const themes = [
       </ul>
     </nav>
     <div class="mobile-actions">
-      <div class="theme-switch" role="group" aria-label="Colour theme">
-        {themes.map((t) => <button type="button" data-theme-choice={t.id} aria-pressed={t.id === "system" ? "true" : "false"}><svg class="icon icon-sm" aria-hidden="true"><use href={`#${t.icon}`} /></svg><span class="visually-hidden">{t.label}</span></button>)}
-      </div>
       <a class="btn btn-primary" href="/signup">Get an API key</a>
     </div>
   </div>
