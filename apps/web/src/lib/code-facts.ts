@@ -7,9 +7,10 @@ import { REPO_ROOT } from "./site-data.ts";
 
 function constant(file: string, name: string): number {
   const text = readFileSync(resolve(REPO_ROOT, file), "utf8");
-  const m = text.match(new RegExp(`const ${name}\\s*=\\s*(\\d+)`));
+  // Numeric separators (1_000_000) are part of the literal.
+  const m = text.match(new RegExp(`const ${name}\\s*=\\s*(\\d[\\d_]*)\\b`));
   if (!m) throw new Error(`apps/web expected ${name} in ${file}; update src/lib/code-facts.ts if it moved`);
-  return Number(m[1]);
+  return Number(m[1].replace(/_/g, ""));
 }
 
 /**
@@ -25,6 +26,13 @@ export const FREE_TIER_MONTHLY_LIMIT = (() => {
 })();
 /** Smallest wallet top-up, in EUR cents (apps/api/src/lib/pricing-constants.ts). */
 export const MIN_TOPUP_CENTS = constant("apps/api/src/lib/pricing-constants.ts", "MIN_TOPUP_CENTS");
+/** Largest single wallet top-up, in EUR cents (apps/api/src/routes/wallet.ts validates POST /v1/wallet/topup against it). */
+export const MAX_TOPUP_CENTS = constant("apps/api/src/routes/wallet.ts", "MAX_TOPUP_CENTS");
+/**
+ * Trial credit a new account can be granted, in EUR cents (apps/api/src/lib/trial-eligibility.ts).
+ * One grant per email address; registration can withhold it, and then says so in its response.
+ */
+export const TRIAL_CREDITS_CENTS = constant("apps/api/src/lib/trial-eligibility.ts", "TRIAL_CREDITS_CENTS");
 
 /** The provenance.source string an executor writes, when it is a literal. */
 export function executorSource(slug: string): string | null {

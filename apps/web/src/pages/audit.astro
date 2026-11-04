@@ -1,0 +1,213 @@
+---
+// Execution record (SITE-STRUCTURE.md page 16): strale-frontend's /audit/:transactionId, same
+// sections, Open Flow look, no marketing copy. The site is static, so this one page serves every
+// record: the host rewrites /audit/* here without changing the address (SWITCH-OVER-READINESS
+// item 8) and src/scripts/audit.ts reads the id from the path, or from ?id= where there is no
+// rewrite. It fetches GET /v1/audit/:id?token=…&expires_at=… from the browser; nothing about a
+// record is built into the page. Logic: src/lib/audit-record.ts.
+//   retention   facts.static.retention_days_default
+import Base from "../layouts/Base.astro";
+import { getSiteData, API_BASE } from "../lib/site-data";
+import { REGULATORY_CHECKLIST, formatPeriod } from "../lib/audit-record";
+
+const data = await getSiteData();
+const retention = `${formatPeriod(data.facts.static.retention_days_default)} from execution`;
+const state = (name: string, title: string, body: string) => ({ name, title, body });
+const states = [
+  state("no-token", "This record requires a valid access token", "If you received this link from a colleague, ask them to regenerate it from the API response."),
+  state("not-found", "Transaction not found", "This transaction was not found. It may have been deleted or the retention period may have expired."),
+  state("pending", "This record is still being prepared", "Its integrity hash is still being computed. Reload this page in 30 seconds."),
+  state("expired", "This link has expired", "Ask whoever shared it for a new link. A new one can be issued from the API."),
+];
+---
+<Base title="Compliance record" noindex description="A Strale compliance record for one call: what ran, where the data came from, whether AI was involved, and how the record is kept.">
+  <div class="container narrow" data-audit data-api={API_BASE}>
+    <section class="audit-state stack" data-state="loading" aria-busy="true" aria-label="Loading compliance record">
+      <span class="skeleton title"></span>
+      <span class="skeleton"></span>
+      <span class="skeleton block"></span>
+    </section>
+
+    {states.map((st) => (
+      <section class="audit-state stack" data-state={st.name} hidden>
+        <svg class="icon icon-lg warn" aria-hidden="true"><use href="#i-alert" /></svg>
+        <h1 class="t-section">{st.title}</h1>
+        <p class="t-body muted" data-state-body>{st.body}</p>
+      </section>
+    ))}
+
+    <article class="record" data-state="record" hidden>
+      <header class="record-head">
+        <h1 class="t-section">Compliance record</h1>
+        <div class="row actions">
+          <button class="btn btn-secondary btn-sm" type="button" data-copy-url><svg class="icon icon-sm" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy URL</span></button>
+          <button class="btn btn-secondary btn-sm" type="button" data-print><svg class="icon icon-sm" aria-hidden="true"><use href="#i-doc" /></svg><span>Save as PDF</span></button>
+          <span class="visually-hidden" role="status" data-copy-status></span>
+        </div>
+      </header>
+
+      <div class="notice notice-success">
+        <svg class="icon" aria-hidden="true"><use href="#i-success" /></svg>
+        <div class="stack-tight">
+          <p class="notice-title">Verified compliance record</p>
+          <p class="meta"><code data-f="transaction_id"></code><span aria-hidden="true">·</span><span data-f="timestamp"></span><span aria-hidden="true">·</span><span class="tag badge-success">Completed</span></p>
+          <p class="t-small muted fingerprint">Integrity: <code data-f="input_fingerprint"></code></p>
+        </div>
+      </div>
+
+      <section class="record-section" aria-labelledby="s1">
+        <h2 id="s1" class="t-subhead"><span class="sec">§ 1</span>Execution Summary</h2>
+        <dl class="facts card">
+          <div><dt class="label" data-f="entity_label"></dt><dd><a class="link" data-f="entity_link"></a></dd></div>
+          <div><dt class="label" data-f="steps_label"></dt><dd class="num" data-f="total_steps"></dd></div>
+          <div><dt class="label">Total latency</dt><dd class="num" data-f="latency"></dd></div>
+          <div><dt class="label">Jurisdiction</dt><dd data-f="jurisdiction"></dd></div>
+          <div><dt class="label">Processing</dt><dd><code data-f="processing_location"></code></dd></div>
+          <div><dt class="label">Result</dt><dd class="ok"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check" /></svg><span data-f="result"></span></dd></div>
+        </dl>
+      </section>
+
+      <section class="record-section" aria-labelledby="s2">
+        <h2 id="s2" class="t-subhead"><span class="sec">§ 2</span>Data Provenance</h2>
+        <div class="card stack-tight" data-provenance-single hidden>
+          <div class="between">
+            <div>
+              <p class="t-detail" data-f="step_capability"></p>
+              <p class="t-small muted" data-f="step_source"></p>
+            </div>
+            <span class="tag" data-f="step_badge"></span>
+          </div>
+          <p class="t-small muted"><strong>Classification:</strong> <span data-f="step_classification"></span> · <strong>Latency:</strong> <span class="num" data-f="step_latency"></span> · <strong>Schema:</strong> <span data-f="step_schema"></span></p>
+          <p class="t-small muted" data-f="step_description"></p>
+        </div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Steps and data sources" data-provenance-table hidden>
+          <table class="table">
+            <caption class="visually-hidden">Steps and data sources</caption>
+            <thead><tr><th scope="col">#</th><th scope="col">Capability</th><th scope="col" class="wide">Data Source</th><th scope="col" class="wider">Classification</th><th scope="col">AI</th><th scope="col" class="wide num">Latency</th><th scope="col">Schema</th></tr></thead>
+            <tbody data-steps></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="record-section" aria-labelledby="s3">
+        <h2 id="s3" class="t-subhead"><span class="sec">§ 3</span>AI Transparency</h2>
+        <div class="card stack">
+          <div class="ai-single" data-ai-single hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>
+            <div><p class="t-compact" data-f="ai_single_title"></p><p class="t-small muted" data-f="ai_single_desc"></p></div>
+          </div>
+          <div class="stack" data-ai-multi hidden>
+            <div class="ratio-row">
+              <div class="ratio" aria-hidden="true"><span class="ratio-ai" data-ratio-ai></span><span class="ratio-algo" data-ratio-algo></span></div>
+              <span class="t-small muted" data-f="ai_ratio"></span>
+            </div>
+            <ol class="plain-list ai-steps" role="list" data-ai-steps></ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="record-section" aria-labelledby="s4">
+        <h2 id="s4" class="t-subhead"><span class="sec">§ 4</span>Regulatory Compliance</h2>
+        <ul class="feature-list" role="list">
+          {REGULATORY_CHECKLIST.map((r) => (
+            <li><svg class="icon icon-sm ok" aria-hidden="true"><use href="#i-check" /></svg><p class="t-compact"><strong>{r.regulation}</strong><span class="muted"> — {r.description}</span></p></li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="record-section" aria-labelledby="s5">
+        <h2 id="s5" class="t-subhead"><span class="sec">§ 5</span>Data Governance</h2>
+        <div class="card stack">
+          <dl class="facts two">
+            <div><dt class="label">Personal data processed</dt><dd data-f="personal_data"></dd></div>
+            <div><dt class="label">Data jurisdiction</dt><dd data-f="jurisdiction"></dd></div>
+            <div><dt class="label">Processing location</dt><dd><code data-f="processing_location"></code></dd></div>
+            <div><dt class="label">Data retention</dt><dd>{retention}</dd></div>
+          </dl>
+          <p class="t-small muted rule"><strong>Data deletion:</strong> available via API</p>
+        </div>
+      </section>
+
+      <section class="record-section" aria-labelledby="s6">
+        <h2 id="s6" class="t-subhead"><span class="sec">§ 6</span>Quality at Time of Transaction</h2>
+        <div class="card">
+          <dl class="facts one">
+            <div><dt class="label">Schema validation</dt><dd class="schema" data-f="schema"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-check" /></svg><span></span></dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <footer class="record-foot t-small muted stack-tight">
+        <p>This compliance record was generated automatically by Strale.</p>
+        <p>For questions: <a class="link" href="mailto:compliance@strale.io">compliance@strale.io</a></p>
+        <p>Methodology: <a class="link" href="/security">strale.dev/security</a></p>
+        <p class="mono" data-f="generated"></p>
+      </footer>
+    </article>
+  </div>
+</Base>
+
+<template id="step-row">
+  <tr>
+    <td class="num muted" data-c="n"></td>
+    <td><span class="t-detail" data-c="capability"></span><span class="t-small muted only-narrow" data-c="source-narrow"></span></td>
+    <td class="wide" data-c="source"></td>
+    <td class="wider muted" data-c="classification"></td>
+    <td data-c="ai"></td>
+    <td class="wide num muted" data-c="latency"></td>
+    <td data-c="schema"></td>
+  </tr>
+</template>
+<template id="ai-step">
+  <li class="ai-step"><span class="num muted" data-c="n"></span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-info" /></svg><p class="t-compact"><span data-c="capability"></span><span class="muted" data-c="desc"></span></p></li>
+</template>
+
+<script>import "../scripts/audit.ts";</script>
+
+<style>
+  .narrow { max-width: calc(var(--container-prose) + 2 * var(--gutter)); padding-block: var(--_page-head-top) var(--_page-section-space); }
+  .audit-state { text-align: center; justify-items: center; display: grid; }
+  .audit-state .t-body { max-width: var(--measure-body); }
+  /* The script shows one state at a time with `hidden`; a class's display must not undo it. */
+  [hidden] { display: none !important; }
+  .warn, .record :global(svg.warn) { color: var(--warning); }
+  .ok, .record :global(svg.ok) { color: var(--success); }
+  .record :global(svg.bad) { color: var(--danger); }
+  .skeleton.block { height: calc(var(--space-160) + var(--space-96)); }
+  .record { display: grid; gap: var(--space-40); }
+  .record-head { display: flex; flex-wrap: wrap; gap: var(--space-16); align-items: center; justify-content: space-between; }
+  .actions { gap: var(--space-8); }
+  .meta { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-12); align-items: center; }
+  .fingerprint code { overflow-wrap: anywhere; }
+  .record-section { display: grid; gap: var(--space-16); }
+  .sec { color: var(--text-muted); font-family: var(--type-code-family); font-size: var(--type-small-size); margin-right: var(--space-8); }
+  .facts { display: grid; gap: var(--space-24); grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+  .facts.one { grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 768px) { .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } .facts.two { grid-template-columns: repeat(2, minmax(0, 1fr)); } .facts.one { grid-template-columns: minmax(0, 1fr); } }
+  .facts > div { display: grid; gap: var(--space-4); align-content: start; }
+  .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .facts dd.ok, .schema { display: flex; gap: var(--space-4); align-items: center; }
+  .schema.is-ok { color: var(--success); }
+  .schema.is-off { color: var(--text-muted); }
+  .between { display: flex; gap: var(--space-16); align-items: flex-start; justify-content: space-between; }
+  .rule { padding-top: var(--space-16); border-top: var(--border-width) solid var(--border); }
+  .only-narrow { display: block; }
+  .wide, .wider { display: none; }
+  @media (min-width: 640px) { .wide { display: table-cell; } .only-narrow { display: none; } }
+  @media (min-width: 768px) { .wider { display: table-cell; } }
+  .ai-single { display: flex; gap: var(--space-12); align-items: flex-start; }
+  .ratio-row { display: flex; gap: var(--space-16); align-items: center; }
+  .ratio { flex: 1; display: flex; height: var(--space-8); border-radius: var(--radius-pill); overflow: hidden; background: var(--surface-sunken); }
+  .ratio-ai { background: var(--warning); }
+  .ratio-algo { background: var(--success); }
+  .ai-steps { display: grid; gap: var(--space-12); }
+  .ai-step { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: var(--space-8); align-items: start; }
+  .record-foot { padding-top: var(--space-32); border-top: var(--border-width) solid var(--border); }
+  .mono { font-family: var(--type-code-family); }
+  .card { padding: var(--space-24); }
+
+  @media print {
+    :global(.site-nav), :global(.site-footer), :global(.skip-link), :global(.preview-banner), .actions { display: none; }
+    .narrow { padding-block: 0; }
+  }
+</style>

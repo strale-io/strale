@@ -1,0 +1,146 @@
+---
+// Top up (SITE-STRUCTURE.md page 15): strale-frontend's /topup, same behaviour, Open Flow look,
+// no marketing copy. Paste an API key, see the balance and recent activity, choose an amount and
+// go to card checkout. Stripe returns to /topup?status=success|cancelled (apps/api/src/routes/wallet.ts).
+// The key is kept in sessionStorage for this tab only, under the same name as before, never in
+// localStorage or a cookie. Logic: src/lib/wallet.ts, browser script: src/scripts/topup.ts.
+//   amount bounds   MIN_TOPUP_CENTS, MAX_TOPUP_CENTS (code-facts, the API's own validation)
+//   card processor  facts.static.vendors.payments_card
+import Base from "../layouts/Base.astro";
+import { getSiteData, API_BASE } from "../lib/site-data";
+import { MIN_TOPUP_CENTS, MAX_TOPUP_CENTS } from "../lib/code-facts";
+import { DEFAULT_SUGGESTED_CENTS, SUGGESTED_CENTS, centsToEur } from "../lib/wallet";
+
+const data = await getSiteData();
+const card = data.facts.static.vendors.payments_card;
+const checkout = card ? `${card} Checkout` : "card checkout";
+---
+<Base title="Top up your wallet" description={`Add funds to your Strale wallet to pay for tool calls. ${centsToEur(MIN_TOPUP_CENTS)} minimum, paid through ${checkout}.`}>
+  <section class="page-head">
+    <div class="container narrow stack">
+      <p class="label">Wallet</p>
+      <h1 class="t-campaign">Top up your wallet</h1>
+      <p class="t-lead">Add funds to pay for tool calls. Paste your API key to check your balance and continue to {checkout}.</p>
+    </div>
+  </section>
+
+  <section class="section-tight" aria-label="Top up">
+    <div class="container narrow stack" data-topup data-api={API_BASE} data-min={MIN_TOPUP_CENTS} data-max={MAX_TOPUP_CENTS}>
+      <noscript><p class="notice notice-warning t-compact">This page needs JavaScript to check your balance and start a payment.</p></noscript>
+
+      <div class="notice" data-banner hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>
+        <div class="stack-tight grow">
+          <p class="notice-title" data-banner-title></p>
+          <p data-banner-body></p>
+        </div>
+        <button class="btn btn-tertiary btn-sm btn-icon" type="button" aria-label="Dismiss" data-banner-dismiss><svg class="icon icon-sm" aria-hidden="true"><use href="#i-x" /></svg></button>
+      </div>
+
+      <div class="card panel stack">
+        <h2 class="t-subhead">Your API key</h2>
+
+        <div class="stack" data-key-entry>
+          <p class="t-compact">Paste your Strale API key (starts with <code>sk_live_</code>).</p>
+          <form class="key-form" data-key-form>
+            <label class="visually-hidden" for="topup-key">Strale API key</label>
+            <input class="input mono" id="topup-key" type="password" placeholder="sk_live_..." spellcheck="false" autocomplete="off" />
+            <button class="btn btn-primary" type="submit"><span class="spinner" aria-hidden="true" hidden data-spinner></span><span data-label>Check balance</span></button>
+          </form>
+          <p class="field-message is-error" role="alert" data-key-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span></p>
+          <div class="notice">
+            <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>
+            <p>Your key is kept temporarily in this browser tab until you close it. It is never stored on Strale’s servers, never logged, and never sent anywhere except the Strale API over HTTPS.</p>
+          </div>
+          <p class="t-small muted">Don’t have a key? <a class="link" href="/signup">Get one free</a>.</p>
+        </div>
+
+        <div class="stack" data-key-active hidden>
+          <div class="balance-row">
+            <div class="stack-tight">
+              <p class="label">Current balance</p>
+              <span class="skeleton title" data-balance-skeleton hidden></span>
+              <p class="t-stat num" data-balance-value hidden><span data-balance-amount></span> <span class="spinner" aria-hidden="true" hidden data-balance-spinner></span></p>
+              <p class="t-compact danger" data-balance-unavailable hidden></p>
+            </div>
+            <button class="btn btn-tertiary btn-sm" type="button" data-clear-key>Use a different key</button>
+          </div>
+          <p class="field-message is-error" role="alert" data-balance-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span> <button class="btn btn-tertiary btn-sm" type="button" data-balance-retry>Retry</button></p>
+        </div>
+      </div>
+
+      <div class="card panel stack" data-amount-card hidden>
+        <h2 class="t-subhead">Choose an amount</h2>
+        <div class="amounts" role="group" aria-label="Suggested amounts">
+          {SUGGESTED_CENTS.map((cents) => (
+            <button class="chip amount" type="button" data-amount={cents} aria-pressed={cents === DEFAULT_SUGGESTED_CENTS ? "true" : "false"}>{centsToEur(cents)}</button>
+          ))}
+        </div>
+        <div class="field">
+          <label class="field-label" for="custom-amount">Or enter a custom amount (EUR)</label>
+          <div class="input-wrap">
+            <span class="currency" aria-hidden="true">€</span>
+            <input class="input has-lead" id="custom-amount" type="number" inputmode="decimal" min={MIN_TOPUP_CENTS / 100} max={MAX_TOPUP_CENTS / 100} step="0.01" placeholder="150.00" aria-describedby="custom-amount-help" />
+          </div>
+          <p class="field-help" id="custom-amount-help">Minimum {centsToEur(MIN_TOPUP_CENTS)}, maximum {centsToEur(MAX_TOPUP_CENTS)} per top-up.</p>
+        </div>
+        <p class="field-message is-error" role="alert" data-amount-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span></p>
+        <p class="field-message is-error" role="alert" data-submit-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span></p>
+        <button class="btn btn-primary btn-lg full" type="button" data-continue><span class="spinner" aria-hidden="true" hidden data-spinner></span><span data-label>Continue to payment</span></button>
+        <p class="t-small muted centre">You’ll be redirected to {checkout} to complete the payment securely.</p>
+      </div>
+
+      <div class="card panel stack" data-activity-card hidden>
+        <h2 class="t-subhead">Recent activity</h2>
+        <div class="stack-tight" data-activity-loading hidden><span class="skeleton row-skeleton"></span><span class="skeleton row-skeleton"></span><span class="skeleton row-skeleton"></span></div>
+        <p class="field-message is-error" data-activity-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span></p>
+        <p class="t-compact muted" data-activity-empty hidden>No transactions yet.</p>
+        <ul class="activity plain-list" role="list" data-activity-list hidden></ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<template id="activity-row">
+  <li class="activity-row">
+    <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg>
+    <div class="activity-text">
+      <p class="t-compact activity-desc"></p>
+      <p class="t-small muted activity-meta"></p>
+    </div>
+    <span class="num activity-amount"></span>
+  </li>
+</template>
+
+<script>import "../scripts/topup.ts";</script>
+
+<style>
+  .page-head { padding-block: var(--_page-head-top) var(--space-32); }
+  .page-head .t-lead { max-width: var(--measure-body); }
+  .section-tight { padding-block: var(--space-16) var(--_page-section-space); }
+  /* The script shows and hides parts with `hidden`; a class's display must not undo it. */
+  [hidden] { display: none !important; }
+  .narrow { max-width: calc(var(--container-prose) + 2 * var(--gutter)); }
+  .panel { padding: var(--space-32); }
+  .grow { flex: 1; min-width: 0; }
+  .full { width: 100%; }
+  .centre { text-align: center; }
+  .mono { font-family: var(--type-code-family); }
+  .danger { color: var(--danger); }
+  .key-form { display: grid; gap: var(--space-8); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 640px) { .key-form { grid-template-columns: minmax(0, 1fr) auto; } }
+  .balance-row { display: flex; gap: var(--space-16); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  .balance-row .t-stat { margin: 0; display: flex; gap: var(--space-8); align-items: center; }
+  .amounts { display: grid; gap: var(--space-8); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (min-width: 640px) { .amounts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .amount { justify-content: center; min-height: var(--control-h); }
+  .currency { position: absolute; left: var(--space-12); pointer-events: none; color: var(--text-muted); font-family: var(--type-ui-family); }
+  .row-skeleton { height: var(--control-h); }
+  .activity { display: grid; }
+  .activity-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-12); align-items: center; padding-block: var(--space-12); border-bottom: var(--border-width) solid var(--border); }
+  .activity-row:last-child { border-bottom: 0; }
+  .activity-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .activity-row.is-credit .icon { color: var(--success); rotate: 135deg; }
+  .activity-row.is-debit .icon { color: var(--text-muted); rotate: -45deg; }
+  .activity-row.is-credit .activity-amount { color: var(--success); }
+</style>

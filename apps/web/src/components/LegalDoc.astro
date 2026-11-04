@@ -1,0 +1,36 @@
+---
+// Shell for /terms and /privacy (SITE-STRUCTURE.md page 17): label, title, version date and
+// introduction, then the numbered sections as slotted <section id> blocks. The text itself is
+// carried over word for word from strale-frontend and lives in the two pages.
+interface Props { title: string; updated: string }
+const { title, updated } = Astro.props;
+---
+<section class="page-head">
+  <div class="container narrow stack">
+    <p class="label">Legal</p>
+    <h1 class="t-campaign">{title}</h1>
+    <p class="t-small muted">Last updated: {updated}</p>
+    <div class="t-lead intro"><slot name="intro" /></div>
+  </div>
+</section>
+<div class="container narrow legal">
+  <slot />
+</div>
+
+<style>
+  .page-head { padding-block: var(--_page-head-top) var(--space-48); border-bottom: var(--border-width) solid var(--border); }
+  .narrow { max-width: calc(var(--container-prose) + 2 * var(--gutter)); }
+  .intro { max-width: none; }
+  .legal { padding-block: var(--space-16) var(--_page-section-space); }
+  .legal :global(section) { display: grid; gap: var(--space-16); padding-block: var(--space-48); border-bottom: var(--border-width) solid var(--border); }
+  .legal :global(section:last-child) { border-bottom: 0; }
+  .legal :global(h2) { font-family: var(--type-section-family); font-size: var(--type-subhead-size); font-weight: var(--type-section-weight); line-height: var(--type-subhead-line); }
+  .legal :global(p), .legal :global(li) { font-family: var(--type-body-family); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted); }
+  .legal :global(strong) { color: var(--text); }
+  .legal :global(ul) { display: grid; gap: var(--space-8); padding-left: var(--space-24); margin: 0; }
+  .legal :global(a) { color: var(--link); text-decoration: underline; text-underline-offset: var(--space-4); }
+  .legal :global(a:hover) { color: var(--link-hover); }
+  .legal :global(.table-wrap) { margin-top: var(--space-8); }
+  .legal :global(.table td), .legal :global(.table th) { color: var(--text); }
+  .legal :global(.small) { font-size: var(--type-small-size); line-height: var(--type-small-line); }
+</style>

@@ -1,0 +1,405 @@
+---
+// Privacy Policy (SITE-STRUCTURE.md page 17). The text is strale-frontend's
+// src/pages/Privacy.tsx, word for word: it is a legal notice of Moonlighter AB, so any change
+// to it is Petter's. As before, the two retention periods are read, not typed:
+//   audit-record retention        facts.static.retention_days_default
+//   longest configurable period   facts.static.retention_days_max_configurable
+import Base from "../layouts/Base.astro";
+import LegalDoc from "../components/LegalDoc.astro";
+import { getSiteData } from "../lib/site-data";
+import { formatPeriod } from "../lib/audit-record";
+
+const LAST_UPDATED = "30 April 2026";
+const CONTACT_EMAIL = "compliance@strale.io";
+
+const facts = (await getSiteData()).facts.static;
+const maxDays = facts.retention_days_max_configurable;
+if (typeof maxDays !== "number" || !Number.isFinite(maxDays)) {
+  throw new Error("apps/web/privacy: platform facts carry no static.retention_days_max_configurable; the Privacy Policy states it, so the build stops rather than guess");
+}
+const defaultPeriod = formatPeriod(facts.retention_days_default);
+const maxPeriod = formatPeriod(maxDays);
+---
+<Base title="Privacy Policy" description="How Strale collects, uses, and protects personal data. GDPR and UK GDPR compliant.">
+  <LegalDoc title="Privacy Policy" updated={LAST_UPDATED}>
+    <p slot="intro">
+      This policy explains how Strale collects, uses, and protects
+      personal data. Questions:{" "}
+      <a class="link" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+    </p>
+
+    <section id="controller">
+      <h2>1. Who we are</h2>
+      <p>
+        The Service is operated by <strong>Moonlighter AB</strong> (Sweden,
+        organisationsnummer 559395-7979). For data-protection enquiries,
+        contact{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+      </p>
+      <p>
+        Moonlighter AB is the data controller for account, billing, and usage
+        data described below. For data that customers send to the API to be
+        processed by a capability (e.g. counterparty information for Payee
+        Assurance), Moonlighter AB acts as a data processor on the customer&rsquo;s
+        behalf. A data processing agreement (DPA) is available on request.
+      </p>
+    </section>
+
+    <section id="data">
+      <h2>2. Data we process</h2>
+      <p>We process three categories of personal data:</p>
+      <ul>
+        <li>
+          <strong>Account &amp; billing:</strong> name, email, organisation,
+          hashed API keys, billing records. Card and bank details are handled
+          by our payment processor — we do not see or store them. On-chain
+          wallet addresses used for x402 payments are public by design.
+        </li>
+        <li>
+          <strong>Usage:</strong> request metadata (timestamp, IP, capability,
+          response status, latency), audit records (input fingerprint as
+          SHA-256 hash, output schema validation result, transparency
+          markers), and minimal cookieless website analytics.
+        </li>
+        <li>
+          <strong>Customer-input:</strong> data customers send to the API for
+          processing by a capability. May include personal data (e.g. names,
+          VAT numbers, beneficial-ownership data) and, for some capabilities,
+          special-category data under Art. 9 GDPR (PEP / sanctions screening)
+          or criminal-conviction data under Art. 10 GDPR (adverse-media
+          checks). We process this data only to execute the requested
+          capability. We do not use it to train models and do not sell it.
+        </li>
+      </ul>
+    </section>
+
+    <section id="purposes">
+      <h2>3. Why we process it (lawful basis)</h2>
+      <ul>
+        <li>
+          <strong>Contract (Art. 6(1)(b) GDPR):</strong> to provide the
+          Service — issuing API keys, executing API calls, generating audit
+          records, billing.
+        </li>
+        <li>
+          <strong>Legitimate interests (Art. 6(1)(f) GDPR):</strong> security,
+          fraud and abuse prevention, rate-limiting, audit-trail integrity,
+          and aggregate product improvement.
+        </li>
+        <li>
+          <strong>Legal obligation (Art. 6(1)(c) GDPR):</strong> accounting,
+          tax, anti-money-laundering record-keeping, and lawful regulator
+          requests.
+        </li>
+        <li>
+          <strong>Consent (Art. 6(1)(a) GDPR):</strong> for marketing emails,
+          withdrawable at any time.
+        </li>
+      </ul>
+      <p>
+        Where customers use capabilities involving Art. 9 / Art. 10 data, the
+        customer is responsible for ensuring an appropriate condition under
+        Art. 9 / Art. 10 (typically substantial public interest, fraud
+        prevention, or comparable lawful basis).
+      </p>
+    </section>
+
+    <section id="recipients">
+      <h2>4. Recipients</h2>
+      <p>
+        We share personal data only with categories of recipients necessary
+        to operate the Service: cloud hosting and database providers, payment
+        processors, AI inference providers (for AI-assisted capabilities),
+        and the upstream data sources required to fulfil a capability call
+        (e.g. national company registries, sanctions data providers).
+      </p>
+      <p>
+        Each recipient is bound by an appropriate contract (data processing
+        agreement, standard contractual clauses, or independent-controller
+        terms). The current named sub-processor list is below; we update
+        this list when a vendor changes (last reviewed 30 April 2026).
+      </p>
+      <p>
+        <strong>Current named sub-processors</strong>
+      </p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Current named sub-processors">
+        <table class="table">
+          <caption class="visually-hidden">Current named sub-processors</caption>
+          <thead>
+            <tr>
+              <th scope="col">Vendor</th>
+              <th scope="col">Purpose</th>
+              <th scope="col">Region</th>
+              <th scope="col">Data shared</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Railway</td>
+              <td>Application hosting + Postgres</td>
+              <td>US East (Virginia)</td>
+              <td>All customer + transaction data</td>
+            </tr>
+            <tr>
+              <td>Stripe</td>
+              <td>Wallet top-up payments (no Connect)</td>
+              <td>US, EU regional processing</td>
+              <td>Email, payment method (PCI scope)</td>
+            </tr>
+            <tr>
+              <td>Coinbase x402 facilitator</td>
+              <td>Pay-per-call USDC settlement on Base</td>
+              <td>US</td>
+              <td>Wallet address, settlement metadata</td>
+            </tr>
+            <tr>
+              <td>Anthropic</td>
+              <td>LLM inference for AI-assisted capabilities</td>
+              <td>US</td>
+              <td>Capability input + output for ai_generated / mixed transparency-tagged calls only</td>
+            </tr>
+            <tr>
+              <td>Voyage AI</td>
+              <td>Embeddings for capability search</td>
+              <td>US</td>
+              <td>Search query strings (not capability inputs)</td>
+            </tr>
+            <tr>
+              <td>Browserless.io</td>
+              <td>Headless-browser rendering for scrape-tier capabilities</td>
+              <td>EU</td>
+              <td>URL + capability input for browserless-tagged calls only</td>
+            </tr>
+            <tr>
+              <td>Dilisense</td>
+              <td>Sanctions, PEP, and adverse-media screening database</td>
+              <td>EU (Switzerland)</td>
+              <td>Search names + identifiers for screening</td>
+            </tr>
+            <tr>
+              <td>Serper.dev</td>
+              <td>Adverse-media fallback (Google Search wrapper)</td>
+              <td>US</td>
+              <td>Entity name; only when Dilisense unavailable</td>
+            </tr>
+            <tr>
+              <td>Resend</td>
+              <td>Transactional email (signup, alerts)</td>
+              <td>US, EU regional</td>
+              <td>Account email address only</td>
+            </tr>
+            <tr>
+              <td>Better Stack</td>
+              <td>Log shipping + alerting</td>
+              <td>EU</td>
+              <td>Application logs (PII redacted at source)</td>
+            </tr>
+            <tr>
+              <td>Anthropic Claude (Claude Code)</td>
+              <td>Internal development tooling — not customer-facing</td>
+              <td>US</td>
+              <td>No customer data</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">
+        Country-registry, vendor-API, and other upstream data sources for
+        individual capabilities are documented per-call in the audit
+        record's <code>data_source</code> and{" "}
+        <code>provenance.upstream_vendor</code>{" "}
+        fields. The sub-processor list above covers infrastructure and
+        shared services; per-capability data sources may add additional
+        processors documented in the call's audit body.
+      </p>
+      <p class="small">
+        We notify customers via the contact email on file at least 30 days
+        before adding or changing a sub-processor that processes personal
+        data, except where the change is required for security or
+        regulatory compliance and a shorter notice is necessary.
+      </p>
+    </section>
+
+    <section id="transfers">
+      <h2>5. International transfers</h2>
+      <p>
+        Our infrastructure and several recipients are located in the United
+        States. Where personal data leaves the EEA or the UK, we rely on:
+      </p>
+      <ul>
+        <li>
+          European Commission Standard Contractual Clauses (Decision
+          2021/914), with the UK International Data Transfer Addendum where
+          applicable;
+        </li>
+        <li>
+          the EU-US Data Privacy Framework and its UK Extension where the
+          recipient is certified;
+        </li>
+        <li>
+          supplementary measures including encryption in transit and at rest,
+          access controls, and minimisation of data sent to recipients.
+        </li>
+      </ul>
+    </section>
+
+    <section id="retention">
+      <h2>6. Retention</h2>
+      <ul>
+        <li>
+          <strong>Account data:</strong> lifetime of account plus seven years
+          (Swedish accounting law).
+        </li>
+        <li>
+          <strong>Audit records:</strong> {defaultPeriod} by default
+          (Colorado AI Act SB&nbsp;24-205 minimum); configurable up to{" "}
+          {maxPeriod} for customers with longer regulatory
+          record-keeping obligations.
+        </li>
+        <li>
+          <strong>Customer-input:</strong> stored alongside the audit record under
+          Art.&nbsp;30 (records of processing) for the same period as the audit
+          itself; redacted in place when retention expires so the audit-chain
+          integrity hash remains verifiable.
+        </li>
+        <li>
+          <strong>Trial-credit record:</strong> a SHA-256 hash of the email
+          address a one-off trial credit was issued to, with the date and
+          amount. Retained indefinitely and deliberately survives account
+          closure — it is the only way to enforce one trial credit per address
+          without storing the address, and deleting it would let the same
+          address claim the credit again by closing and re-registering. Lawful
+          basis: Art.&nbsp;6(1)(f). We do not present it as anonymised data: a
+          hash of an email address is pseudonymous, because someone who already
+          guesses the address can confirm it by hashing it. The account link and
+          the IP hash on that record are cleared when the account closes; only
+          the hash remains. To have it removed — accepting that the address can
+          then claim trial credits again — email{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        </li>
+        <li>
+          <strong>Server &amp; security logs:</strong> 90 days.
+        </li>
+        <li>
+          <strong>Marketing data:</strong> until consent is withdrawn or 24
+          months of inactivity.
+        </li>
+      </ul>
+    </section>
+
+    <section id="security">
+      <h2>7. Security</h2>
+      <p>
+        We use industry-standard measures appropriate to the risk: TLS in
+        transit, encryption at rest, hashed API keys, role-based access
+        controls, audit logging, and tamper-evident audit chains. Detail on
+        our public security posture is on the{" "}
+        <a href="/security">Security page</a>.
+      </p>
+    </section>
+
+    <section id="automated-decisions">
+      <h2>7.5 Automated decisions and DPIAs</h2>
+      <p>
+        Strale operates as a <strong>processor</strong> for capability
+        calls; the API customer is the GDPR <strong>controller</strong> for
+        personal data they pass in. Under Art. 22, the right not to be
+        subject to a decision based solely on automated processing runs
+        against the controller. Strale (as processor) provides the
+        infrastructure to support the controller's compliance — every audit
+        response carries a{" "}
+        <code>gdpr.art_22_classification</code>{" "}
+        field (one of <code>data_lookup</code>,{" "}
+        <code>screening_signal</code>, or{" "}
+        <code>risk_synthesis</code>) plus a
+        plain-language disclosure of what that classification means and a{" "}
+        <code>dispute_endpoint</code> URL.
+      </p>
+      <p>
+        For capabilities where the processing characteristics meet at
+        least one Art. 35(3) trigger (Art. 9 / Art. 10 special-category
+        data, automated decision support, or systematic monitoring), we
+        publish a Data Protection Impact Assessment as a reference
+        document. These describe Strale's own processing risk profile and
+        mitigations, and serve as a starting point for the customer's
+        own DPIA covering their pipeline:
+      </p>
+      <ul>
+        <li>
+          <a href="https://github.com/strale-io/strale/blob/main/docs/dpia/sanctions-and-pep-check.md" target="_blank" rel="noopener noreferrer">sanctions-check + pep-check</a>{" "}
+          — Art. 9 (PEP) + Art. 10 (sanctions) data via Dilisense (combined DPIA — both capabilities share the same vendor wrap and risk profile)
+        </li>
+        <li>
+          <a href="https://github.com/strale-io/strale/blob/main/docs/dpia/adverse-media-check.md" target="_blank" rel="noopener noreferrer">adverse-media-check</a>{" "}
+          — Art. 9 / Art. 10 data via Dilisense (primary) + Serper.dev fallback
+        </li>
+        <li>
+          <a href="https://github.com/strale-io/strale/blob/main/docs/dpia/risk-narrative-generate.md" target="_blank" rel="noopener noreferrer">risk-narrative-generate</a>{" "}
+          — Art. 22 automated decision-support synthesis via Anthropic Claude
+        </li>
+        <li>
+          <a href="https://github.com/strale-io/strale/blob/main/docs/dpia/company-enrich.md" target="_blank" rel="noopener noreferrer">company-enrich</a>{" "}
+          — Web-scraped company profile via Browserless + Anthropic
+        </li>
+      </ul>
+    </section>
+
+    <section id="rights">
+      <h2>8. Your rights</h2>
+      <p>
+        Under the GDPR and UK GDPR you have the right to access, rectify,
+        erase, restrict, port, and object to the processing of your personal
+        data, and to withdraw consent where consent is the basis. To exercise
+        any of these rights, email{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        We will respond within one month.
+      </p>
+      <p>
+        The Service exposes{" "}
+        <code>DELETE /v1/auth/me</code>{" "}
+        for full-account erasure (anonymises identifiers, burns the API
+        key, zeroes the wallet, and clears the customer content from your
+        transaction rows) and{" "}
+        <code>DELETE /v1/transactions/&#123;id&#125;</code>{" "}
+        for transaction-level erasure.
+      </p>
+      <p>
+        A note on full-account erasure: everything you sent and everything
+        derived from it is cleared from your transaction rows by the request
+        itself — the request payload, the response, failure messages, the
+        audit body, upstream source records and your idempotency keys. This
+        is the same in-place redaction we already apply to every transaction
+        once its retention window expires, so it is proven not to break the
+        integrity chain: the chain hashes are untouched and every later
+        transaction still verifies, with yours reported as redacted rather
+        than broken.
+      </p>
+      <p>
+        What survives is the processing record under Art.&nbsp;30 — that a
+        call happened, when, what it cost, and its place in the hash chain —
+        together with the{" "}
+        <code>user_id</code> on that row, which points
+        at your now-anonymised account row. A bare identifier is not a name,
+        and severing it would break the chain every later transaction
+        references. The one exception to the clearing is a transaction under
+        a legal hold, which we are required to preserve intact; the erasure
+        response reports how many, if any, were held back.
+      </p>
+      <p>
+        If you believe we have not handled your data lawfully, you may lodge
+        a complaint with the Swedish supervisory authority{" "}
+        <a href="https://www.imy.se" target="_blank" rel="noopener noreferrer">IMY</a>, the UK{" "}
+        <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer">ICO</a>, or the supervisory authority in your country of residence.
+      </p>
+    </section>
+
+    <section id="changes">
+      <h2>9. Changes</h2>
+      <p>
+        We may update this policy. Material changes will be communicated by
+        email at least 30 days before they take effect. The version date at
+        the top of this page reflects the current effective date.
+      </p>
+    </section>
+  </LegalDoc>
+</Base>

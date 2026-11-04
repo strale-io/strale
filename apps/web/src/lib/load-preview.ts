@@ -29,6 +29,12 @@ export function deactivatedSlugs(source: string): Set<string> {
   return slugs;
 }
 
+/** A literal like `7 * 365` (digits joined by *), as STATIC_FACTS writes it; NaN when absent. */
+export function product(expr: string | undefined): number {
+  if (!expr || !/^\s*\d+(\s*\*\s*\d+)*\s*$/.test(expr)) return NaN;
+  return expr.split("*").reduce((n, part) => n * Number(part.trim()), 1);
+}
+
 function staticFacts(root: string): PlatformFacts["static"] {
   const facts = read(root, "apps/api/src/lib/platform-facts.ts");
   const retention = read(root, "apps/api/src/lib/data-retention.ts");
@@ -40,6 +46,7 @@ function staticFacts(root: string): PlatformFacts["static"] {
     vendors,
     retention_days_default: num(/TRANSACTION_RETENTION_DAYS = (\d+)/),
     pii_retention_days: num(/PII_RETENTION_DAYS = (\d+)/),
+    retention_days_max_configurable: product(facts.match(/retention_days_max_configurable:\s*([\d\s*]+),/)?.[1]),
     controller: {
       legal_name: facts.match(/legal_name: "([^"]+)"/)?.[1],
       contact_email: facts.match(/contact_email: "([^"]+)"/)?.[1],

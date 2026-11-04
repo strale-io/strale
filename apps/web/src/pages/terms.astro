@@ -1,0 +1,299 @@
+---
+// Terms and Conditions (SITE-STRUCTURE.md page 17). The text is strale-frontend's
+// src/pages/Terms.tsx, word for word: it binds Moonlighter AB, so any change to it is Petter's.
+// Only the look and three link targets changed: the catalogue link points at /tools (the text
+// still says strale.dev/capabilities, which redirects there at the switch-over), and links
+// use this site's paths.
+import Base from "../layouts/Base.astro";
+import LegalDoc from "../components/LegalDoc.astro";
+
+const LAST_UPDATED = "29 April 2026";
+const CONTACT_EMAIL = "compliance@strale.io";
+---
+<Base title="Terms and Conditions" description="Terms governing use of the Strale API and platform. Operated by Moonlighter AB.">
+  <LegalDoc title="Terms and Conditions" updated={LAST_UPDATED}>
+    <p slot="intro">
+      These terms govern your use of the Strale platform and API
+      (the &ldquo;Service&rdquo;). By signing up for an account or
+      using the Service, you agree to these terms. Questions:{" "}
+      <a class="link" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+    </p>
+
+    <section id="parties">
+      <h2>1. The parties</h2>
+      <p>
+        The Service is operated by <strong>Moonlighter AB</strong> (Sweden,
+        organisationsnummer 559395-7979) (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
+        &ldquo;You&rdquo; means the person or organisation using the Service.
+        If you are accepting these terms on behalf of an organisation, you
+        confirm that you have authority to bind that organisation.
+      </p>
+    </section>
+
+    <section id="service">
+      <h2>2. The Service</h2>
+      <p>
+        The Service is an API platform that lets you call data and validation
+        capabilities, including the Payee Assurance product. Capabilities
+        fetch data from public registries, licensed data providers, and our
+        own algorithmic checks, and return structured responses with
+        provenance and an audit record.
+      </p>
+      <p>
+        Capability behaviour, pricing, and coverage are described on the
+        public catalog at{" "}
+        <a href="/tools">strale.dev/capabilities</a>{" "}
+        and are part of these terms by reference. We may add, change, or
+        remove capabilities; material changes are communicated under{" "}
+        <a href="#changes">Section 12</a>.
+      </p>
+    </section>
+
+    <section id="account">
+      <h2>3. Accounts and API keys</h2>
+      <p>
+        To use authenticated parts of the Service you create an account and
+        generate API keys. You are responsible for keeping your API keys
+        confidential and for activity performed using them. Notify us at{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>{" "}
+        if you suspect a key has been compromised so we can revoke it.
+      </p>
+      <p>
+        Some capabilities are available without an account via x402
+        pay-per-use; in that mode, payment of the on-chain invoice is
+        your authentication and you accept these terms by paying.
+      </p>
+    </section>
+
+    <section id="billing">
+      <h2>4. Pricing, billing, and refunds</h2>
+      <ul>
+        <li>
+          <strong>Wallet model.</strong> You top up a prepaid balance via
+          Stripe and the Service deducts per-call fees as you make API calls.
+          Top-ups are non-refundable except as set out below or as required
+          by applicable consumer-protection law.
+        </li>
+        <li>
+          <strong>x402 pay-per-use.</strong> Each call is paid on-chain in
+          USDC at the moment it is executed. There are no recurring charges
+          and no subscription.
+        </li>
+        <li>
+          <strong>Free trial.</strong> New accounts receive trial credits as
+          announced on{" "}
+          <a href="/pricing">strale.dev/pricing</a>.
+          Trial credits have no cash value and cannot be redeemed.
+        </li>
+        <li>
+          <strong>Failed calls are not charged.</strong> If a capability
+          execution fails on our side or returns a structured error before
+          the upstream call succeeds, no fee is debited.
+        </li>
+        <li>
+          <strong>Account closure refund.</strong> If you close your account,
+          unused wallet balance is refundable on request within 60 days of
+          closure. After 60 days the unused balance is forfeit.
+        </li>
+      </ul>
+    </section>
+
+    <section id="acceptable-use">
+      <h2>5. Acceptable use</h2>
+      <p>You agree not to use the Service to:</p>
+      <ul>
+        <li>break the law, evade sanctions, or facilitate fraud;</li>
+        <li>process personal data of EU/UK data subjects without an appropriate lawful basis;</li>
+        <li>circumvent rate limits, quotas, or the Service&rsquo;s authentication;</li>
+        <li>resell the Service as your own or build a competing product whose primary purpose is to mirror Strale&rsquo;s capability catalog;</li>
+        <li>scrape or systematically extract Strale&rsquo;s own metadata (capability descriptions, test results, pricing) outside of the documented public endpoints;</li>
+        <li>use AI-assisted capability outputs as the sole basis for decisions with legal or significant effects on a person without human review.</li>
+      </ul>
+      <p>
+        For capabilities that involve special-category data under Art. 9 GDPR
+        (e.g. PEP and sanctions screening) or criminal-conviction data under
+        Art. 10 GDPR (e.g. adverse-media checks), you confirm that you have
+        identified and rely on an appropriate condition under Art. 9(2) /
+        Art. 10 GDPR (or the UK equivalent) for processing such data.
+      </p>
+      <p>
+        We may suspend or terminate accounts that breach this section.
+        Serious or repeated breaches result in termination without refund.
+      </p>
+    </section>
+
+    <section id="data">
+      <h2>6. Your data and ours</h2>
+      <p>
+        You retain all rights to the data you send to the Service and to the
+        structured responses you receive. We process your data only to
+        provide the Service and as set out in our{" "}
+        <a href="/privacy">Privacy Policy</a>.
+        We do not use your data to train models and we do not sell it.
+      </p>
+      <p>
+        Strale retains all rights to the platform itself: the executors,
+        orchestration, audit-trail engine, test infrastructure, and
+        accompanying documentation. You receive a non-exclusive,
+        non-transferable licence to use the Service during the term of these
+        terms.
+      </p>
+      <p>
+        Data fetched from public registries and similar third-party sources
+        is governed by those sources&rsquo; own terms. We pass through that
+        data to you with the provenance attached so you can verify its
+        origin.
+      </p>
+      <p>
+        For capabilities that wrap third-party screening providers
+        (currently: Dilisense for sanctions, PEP, and adverse-media checks;
+        Serper for adverse-media fallback), the upstream provider&rsquo;s
+        own service terms govern our access to their data. Their liability
+        to us is contractually limited; those limitations may constrain our
+        practical recourse, and therefore yours, in the event of upstream
+        data error, omission, or outage. Provenance fields on each response
+        identify the upstream provider so you can apply your own
+        due-diligence judgement.
+      </p>
+    </section>
+
+    <section id="availability">
+      <h2>7. Service availability</h2>
+      <p>
+        We aim to keep the Service available continuously, but we do not
+        offer a contractual uptime SLA at this stage. We may schedule
+        maintenance windows, throttle abusive traffic, and depend on
+        third-party data sources whose own availability we do not control.
+        When an upstream source is unavailable, we serve cached results where
+        we have them and return a structured error otherwise.
+      </p>
+      <p>
+        We publish quality and reliability scores for each capability via
+        our public quality endpoint; those scores are our best estimate of
+        execution quality and not a contractual warranty.
+      </p>
+    </section>
+
+    <section id="warranty">
+      <h2>8. Warranty and liability</h2>
+      <p>
+        The Service is provided <strong>&ldquo;as is&rdquo;</strong> and{" "}
+        <strong>&ldquo;as available&rdquo;</strong>. To the maximum extent
+        permitted by law, we disclaim all warranties not expressly granted in
+        these terms, including warranties of merchantability, fitness for a
+        particular purpose, and non-infringement.
+      </p>
+      <p>
+        Capability outputs are evidence to inform your decisions, not
+        decisions in themselves. You are responsible for any action you take
+        based on a Service response. Where a capability returns an explicit{" "}
+        <code>decision-readiness</code>{" "}
+        object, you should consult that object before treating a response as
+        actionable.
+      </p>
+      <p>
+        <strong>Compliance and screening capabilities specifically.</strong>{" "}
+        Capabilities marketed for compliance use &mdash; including sanctions
+        screening (<code>sanctions-check</code>),
+        politically-exposed-persons screening (<code>pep-check</code>),
+        and adverse-media screening (<code>adverse-media-check</code>)
+        &mdash; return evidence about the matches found in upstream data
+        sources at the moment of the call. They are not regulatory
+        determinations. A &ldquo;no match&rdquo; or{" "}
+        <code>is_sanctioned: false</code>{" "}
+        response does not mean the subject is free of sanctions, PEP status,
+        or adverse coverage; it means the upstream provider&rsquo;s index,
+        as configured at that moment, did not surface a match for the query
+        as written. You remain responsible for: (a) querying with
+        appropriate name variants, (b) applying your organisation&rsquo;s
+        risk appetite and additional controls, and (c) any regulatory
+        determination you are required to make. Where applicable law
+        requires human review of an automated decision (e.g. EU AML
+        Directive, UK MLR 2017 Regulation 28A, GDPR Art. 22), that review
+        is your obligation, not ours.
+      </p>
+      <p>
+        To the maximum extent permitted by law, our aggregate liability
+        arising out of or related to these terms in any 12-month period is
+        limited to the greater of (a) the fees you paid us in that period or
+        (b) <strong>EUR 1,000</strong>. We are not liable for indirect,
+        incidental, special, or consequential damages, or for loss of
+        profits, revenue, data, or goodwill.
+      </p>
+      <p>
+        Nothing in these terms limits liability for fraud, gross negligence,
+        wilful misconduct, or any liability that cannot be limited under
+        applicable law.
+      </p>
+    </section>
+
+    <section id="indemnification">
+      <h2>9. Indemnification</h2>
+      <p>
+        You agree to indemnify and hold us harmless from third-party claims
+        arising out of (a) your use of the Service in breach of these terms,
+        (b) your use of capability outputs in a way that infringes the rights
+        of a data subject or third party, or (c) data you submit that you do
+        not have the right to process.
+      </p>
+    </section>
+
+    <section id="termination">
+      <h2>10. Term and termination</h2>
+      <p>
+        These terms apply for as long as you have an account or are using
+        the Service. You may close your account at any time from your
+        dashboard or by emailing us. We may suspend or terminate your
+        account on notice for material breach of these terms; in cases of
+        unlawful use, security risk, or sanctions risk, we may suspend
+        immediately and notify you afterwards.
+      </p>
+      <p>
+        Sections that by their nature should survive termination (data
+        rights, warranty disclaimers, liability limits, indemnification,
+        governing law) survive.
+      </p>
+    </section>
+
+    <section id="changes">
+      <h2>11. Changes to these terms</h2>
+      <p>
+        We may update these terms. Material changes (pricing, liability,
+        governing law, acceptable use) are communicated by email at least
+        30 days before they take effect. Non-material changes take effect on
+        posting. Continued use of the Service after changes take effect
+        means you accept the updated terms.
+      </p>
+    </section>
+
+    <section id="law">
+      <h2>12. Governing law and disputes</h2>
+      <p>
+        These terms are governed by the laws of Sweden, excluding its
+        conflict-of-law rules and the UN Convention on Contracts for the
+        International Sale of Goods.
+      </p>
+      <p>
+        Disputes will be resolved in the Stockholm District Court (Stockholms
+        tingsrätt) as the court of first instance, except that we may bring
+        claims relating to unauthorised access, fee non-payment, or
+        intellectual-property infringement in any court of competent
+        jurisdiction.
+      </p>
+      <p>
+        Mandatory consumer-protection rights of consumers resident in the
+        EU/UK are not affected by this clause.
+      </p>
+    </section>
+
+    <section id="general">
+      <h2>13. General</h2>
+      <ul>
+        <li>If any provision is held unenforceable, the rest remain in effect.</li>
+        <li>You may not assign these terms without our consent; we may assign them as part of a corporate transaction.</li>
+        <li>These terms (with the Privacy Policy) are the entire agreement between us on the subject.</li>
+        <li>Failure to enforce a provision is not a waiver.</li>
+      </ul>
+    </section>
+  </LegalDoc>
+</Base>

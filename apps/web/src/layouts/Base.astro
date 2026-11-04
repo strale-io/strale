@@ -14,8 +14,10 @@ interface Props {
   description?: string;
   /** Header item to mark as the current page. */
   current?: "tools" | "company-data" | "use-cases" | "pricing" | "docs";
+  /** Keep the page out of search indexes (pages that only make sense with a private link). */
+  noindex?: boolean;
 }
-const { title, description = SHORT_DESCRIPTION, current } = Astro.props;
+const { title, description = SHORT_DESCRIPTION, current, noindex = false } = Astro.props;
 const data = await getSiteData();
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
@@ -37,7 +39,7 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
   <meta property="og:url" content={canonical} />
   <meta property="og:type" content="website" />
   <link rel="alternate" type="text/plain" title="llms.txt" href="https://api.strale.io/llms.txt" />
-  {data.mode !== "live" && <meta name="robots" content="noindex" />}
+  {(data.mode !== "live" || noindex) && <meta name="robots" content="noindex" />}
 </head>
 <body>
   <Icons />
