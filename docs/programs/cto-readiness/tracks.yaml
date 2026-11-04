@@ -1025,9 +1025,18 @@ tracks:
       pinned to exactly the addresses checked; the TCP peer address is checked again
       on connect, before a TLS ClientHello, and TLS keeps servername as the
       hostname. Planted test capabilities/raw-socket-rebinding.test.ts failed on
-      main (each tool reached a 127.0.0.1 server) and passes with the guard.
-      domain-age-check and whois-lookup also open raw sockets but only to hardcoded
-      WHOIS servers, so they were left alone. Next: batch 3, byte and pixel caps on
+      main (each tool reached a 127.0.0.1 server) and passes with the guard;
+      raw-socket-allowed.test.ts proves allowed peers still connect (local TCP and
+      TLS servers, full output keys). Review round 1 added: validateHost refuses an
+      empty or whitespace-only host (`https://` stripped to "", which net and tls
+      default to localhost); ssl-check, ssl-certificate-chain and port-check refuse
+      a port that is not an integer 1-65535 before connecting (portInput), and the
+      TLS tools arm their 10 s timer after the socket exists, so a bad port can no
+      longer leave a timer that throws a ReferenceError outside any promise
+      (raw-socket-ports.test.ts). Follow-up, not this batch: domain-age-check and
+      whois-lookup open raw sockets to hardcoded WHOIS servers only and were left on
+      plain createConnection; route them through vetted-connect too for one egress
+      path. Next: batch 3, byte and pixel caps on
       every body and image reader, routed through apps/api/src/lib/resource-limits.ts
       (CR-12); then (4) the trusted-hop rule for forwarded IPs as code and test from
       the VERIFY-IP receipt. Each batch: plant the failure first, then the guard,
