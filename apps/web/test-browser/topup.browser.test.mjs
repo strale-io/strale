@@ -10,7 +10,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,9 @@ let browser;
 
 before(async () => {
   if (!existsSync(join(dist, "topup.html"))) throw new Error("dist/topup.html is missing: build the site first (npm run build:preview-data)");
+  // The mocks answer for API; a build made with another STRALE_API_BASE would call a host they do not cover.
+  const builtApi = readFileSync(join(dist, "topup.html"), "utf8").match(/data-api="([^"]+)"/)?.[1];
+  if (builtApi !== API) throw new Error(`dist/ was built for API base ${builtApi ?? "(none found)"}, but these tests mock ${API}: rebuild with STRALE_API_BASE unset`);
   // Serves dist/ the way Cloudflare Pages does for build.format "file": /topup → topup.html.
   server = createServer((req, res) => {
     const clean = decodeURIComponent((req.url ?? "/").split("?")[0]);
@@ -88,10 +91,13 @@ async function openPage(handler, { storedKey, query = "", clock = false } = {}) 
   await page.goto(`${base}/topup${query}`);
   return { context, page, calls, errors };
 }
-const balanceText = (page) => page.textContent("[data-balance-amount]");
 const visible = (page, sel) => page.$eval(sel, (el) => !el.hidden && !el.closest("[hidden]"));
+/** The balance a visitor sees: the amount's text only while its block is shown, else null. */
+const balanceText = async (page) => ((await visible(page, "[data-balance-value]")) ? page.textContent("[data-balance-amount]") : null);
+/** Neither balance error line is showing. */
+const noBalanceError = async (page) => !(await visible(page, "[data-balance-error]")) && !(await visible(page, "[data-balance-unavailable]"));
 
-test("a slow answer for the old key never overwrites the new key's balance (per-kind counter and active-key guard)", async () => {
+test("a slow answer for the old key never overwrites the new key's balance (active-key guard)", async () => {
   const slowA = deferred();
   const { context, page, calls, errors } = await openPage(async ({ path, key }) => {
     if (path === "/v1/wallet/balance" && key === "sk_live_a") { await slowA.promise; return json({ balance_cents: 111, currency: "EUR" }); }
@@ -176,8 +182,68 @@ test("a stale 401 for an abandoned key does not drop the key now in use", async 
     await page.waitForTimeout(400);
     assert.equal(await visible(page, "[data-key-active]"), true, "B stays active");
     assert.equal(await visible(page, "[data-key-error]"), false);
-    assert.equal(await balanceText(page), "€9.99");
+    assert.equal(await balanceText(page), "€9.99", "B's balance is still shown, not wiped by A's 401");
+    assert.equal(await noBalanceError(page), true);
     assert.equal(await page.evaluate((k) => sessionStorage.getItem(k), KEY_STORE), "sk_live_b");
+  } finally {
+    await context.close();
+  }
+});
+
+test("a stale 401 for the same key is ignored when a newer request for it succeeds", async () => {
+  const first = deferred();
+  let n = 0;
+  const { context, page, calls } = await openPage(async ({ path }) => {
+    if (path !== "/v1/wallet/balance") return json({ transactions: [] });
+    n += 1;
+    if (n === 1) { await first.promise; return json({ error_code: "unauthorized", message: "Invalid API key." }, 401); }
+    return json({ balance_cents: 500, currency: "EUR" });
+  }, { storedKey: "sk_live_k", query: "?status=success", clock: true });
+  try {
+    await waitFor(() => n === 1);
+    await page.clock.runFor(2000); // the first poll tick sends a newer balance request for the same key
+    await waitFor(() => n === 2);
+    await page.waitForSelector("[data-balance-value]:not([hidden])");
+    first.release();
+    await waitFor(() => calls.filter((c) => c.path === "/v1/wallet/transactions").length >= 2);
+    await page.waitForTimeout(300);
+    assert.equal(await visible(page, "[data-key-active]"), true, "the key is kept");
+    assert.equal(await visible(page, "[data-key-error]"), false);
+    assert.equal(await balanceText(page), "€5.00");
+    assert.equal(await noBalanceError(page), true);
+    assert.equal(await page.evaluate((k) => sessionStorage.getItem(k), KEY_STORE), "sk_live_k");
+  } finally {
+    await context.close();
+  }
+});
+
+test("balance and activity requests have separate counters: a newer balance request does not void a slower activity answer", async () => {
+  const gate = { balance: [], transactions: [] };
+  const answer = { balance: [100, 200], transactions: ["first", "second"] };
+  const { context, page } = await openPage(async ({ path }) => {
+    const kind = path === "/v1/wallet/balance" ? "balance" : "transactions";
+    const i = gate[kind].length;
+    const d = deferred();
+    gate[kind].push(d);
+    // The first balance answers at once; every other request waits until the test releases it.
+    if (!(kind === "balance" && i === 0)) await d.promise;
+    return kind === "balance"
+      ? json({ balance_cents: answer.balance[i], currency: "EUR" })
+      : json({ transactions: [{ id: String(i), amount_cents: 100, type: "top_up", description: answer.transactions[i], created_at: "2026-11-01T10:00:00Z" }] });
+  }, { storedKey: "sk_live_k", query: "?status=success", clock: true });
+  try {
+    await waitFor(() => gate.transactions.length === 1); // load: balance done, first activity still loading
+    await page.clock.runFor(2000); // poll tick: a second balance request starts while the activity is pending
+    await waitFor(() => gate.balance.length === 2);
+    gate.transactions[0].release();
+    await page.waitForSelector("[data-activity-list]:not([hidden])", { timeout: 5000 });
+    assert.equal(await page.textContent("[data-activity-list] .activity-desc"), "first", "the activity answer landed despite the newer balance request");
+    gate.balance[1].release();
+    await waitFor(async () => (await balanceText(page)) === "€2.00");
+    await waitFor(() => gate.transactions.length === 2);
+    gate.transactions[1].release();
+    await waitFor(async () => (await page.textContent("[data-activity-list] .activity-desc")) === "second");
+    assert.equal(await visible(page, "[data-activity-loading]"), false);
   } finally {
     await context.close();
   }
