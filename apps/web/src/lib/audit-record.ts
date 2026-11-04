@@ -117,14 +117,34 @@ export function entityPath(a: Pick<AuditRecord, "type" | "entity_slug">): string
 export type AuditOutcome =
   | { kind: "record"; audit: AuditRecord }
   | { kind: "pending" }
-  | { kind: "expired"; message: string | null }
-  | { kind: "not_found" };
+  | { kind: "expired" }
+  | { kind: "not_found" }
+  | { kind: "unavailable" };
 
-/** How the page reads an answer from GET /v1/audit/:id. */
+/**
+ * How the page reads an answer from GET /v1/audit/:id. The page shows its own words for each
+ * state, never the API's message (those name internal finding codes). Only a 404, or a success
+ * that holds no drawable record, is "not found"; a refused or malformed link (400, 401), a hash
+ * failure (503) or any other error is "could not be loaded", which makes no claim about deletion.
+ */
 export function auditOutcome(status: number, body: unknown): AuditOutcome {
-  const b = (body ?? {}) as { audit?: AuditRecord; status?: string; message?: string };
-  if (status === 202 || b.status === "pending") return { kind: "pending" };
-  if (status === 410) return { kind: "expired", message: typeof b.message === "string" ? b.message : null };
-  if (status >= 200 && status < 300 && b.audit && Array.isArray(b.audit.steps) && b.audit.steps.length > 0) return { kind: "record", audit: b.audit };
-  return { kind: "not_found" };
+  const b = (body ?? {}) as { audit?: AuditRecord; status?: string };
+  if (status === 202 || (status >= 200 && status < 300 && b.status === "pending")) return { kind: "pending" };
+  if (status === 410) return { kind: "expired" };
+  if (status === 404) return { kind: "not_found" };
+  if (status >= 200 && status < 300) {
+    return b.audit && Array.isArray(b.audit.steps) && b.audit.steps.length > 0 ? { kind: "record", audit: b.audit } : { kind: "not_found" };
+  }
+  return { kind: "unavailable" };
+}
+
+/** A data-source link only when it is http(s); anything else (javascript:, data:) renders as text. */
+export function safeHttpUrl(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.href : null;
+  } catch {
+    return null;
+  }
 }

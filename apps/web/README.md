@@ -34,6 +34,7 @@ npm run build                # live data, into dist/
 npm run build:preview-data   # preview data, into dist/
 npm test                     # editorial and helper tests
 npm run check                # astro check (types)
+npm run test:browser         # /topup wiring in Chromium against dist/ (build first; npx playwright install chromium)
 node scripts/review.mjs --playwright <path-to-playwright>   # screenshots 1440/390 × light/dark + axe, into review/latest
 ```
 

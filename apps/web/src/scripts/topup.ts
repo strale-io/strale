@@ -13,6 +13,7 @@ import {
   RequestGate,
   TRANSACTION_LABEL,
   centsToEur,
+  checkoutRedirect,
   currentGuard,
   friendlyError,
   isCredit,
@@ -316,9 +317,9 @@ if (root) {
         const body = await parseJsonSafe(res);
         throw new Error(friendlyError(body, `Could not start checkout (status ${res.status}).`));
       }
-      const data = await res.json();
-      if (!data.checkout_url) throw new Error("Checkout session was created but no payment URL was returned.");
-      location.href = data.checkout_url;
+      const target = checkoutRedirect(await res.json());
+      if ("error" in target) throw new Error(target.error);
+      location.href = target.url;
     } catch (e) {
       update({ submitError: e instanceof Error ? e.message : "Could not reach the server. Please try again.", submitting: false });
     }

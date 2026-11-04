@@ -1,19 +1,16 @@
 // /audit/:transactionId: fetch one compliance record from the API and fill the page
 // (strale-frontend's AuditRecord.tsx). The id comes from the address; the token stays in the
 // address and is only ever sent to the Strale API.
-import { auditOutcome, auditRequestUrl, entityPath, parseAuditLocation, type AuditRecord, type AuditStep } from "../lib/audit-record.ts";
+import { auditOutcome, auditRequestUrl, entityPath, parseAuditLocation, safeHttpUrl, type AuditRecord, type AuditStep } from "../lib/audit-record.ts";
 
 const root = document.querySelector<HTMLElement>("[data-audit]");
 if (root) {
   const api = root.dataset.api!;
   const loc = parseAuditLocation(location.pathname, location.search);
 
-  const show = (name: string, body?: string | null) => {
+  // Each state's words are the page's own (audit.astro); the API's messages are never shown.
+  const show = (name: string) => {
     root.querySelectorAll<HTMLElement>("[data-state]").forEach((el) => (el.hidden = el.dataset.state !== name));
-    if (body) {
-      const p = root.querySelector<HTMLElement>(`[data-state="${name}"] [data-state-body]`);
-      if (p) p.textContent = body;
-    }
   };
   const fill = (field: string, text: string) => root.querySelectorAll<HTMLElement>(`[data-f="${field}"]`).forEach((el) => (el.textContent = text));
   const cell = (row: Element, name: string) => row.querySelector<HTMLElement>(`[data-c="${name}"]`)!;
@@ -80,10 +77,11 @@ if (root) {
           cell(tr, "capability").textContent = step.capability;
           cell(tr, "source-narrow").textContent = step.data_source;
           const src = cell(tr, "source");
-          if (step.data_source_url) {
+          const href = safeHttpUrl(step.data_source_url);
+          if (href) {
             const a = document.createElement("a");
             a.className = "link";
-            a.href = step.data_source_url;
+            a.href = href;
             a.target = "_blank";
             a.rel = "noopener noreferrer";
             a.textContent = step.data_source;
@@ -179,10 +177,9 @@ if (root) {
         const body = await res.json().catch(() => null);
         const outcome = auditOutcome(res.status, body);
         if (outcome.kind === "record") render(outcome.audit);
-        else if (outcome.kind === "expired") show("expired", outcome.message);
         else show(outcome.kind);
       })
-      .catch(() => show("not_found"));
+      .catch(() => show("unavailable"));
   }
 }
 

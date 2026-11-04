@@ -101,6 +101,22 @@ export function currentGuard(gate: RequestGate, active: ActiveKey, key: string):
   return { ticket, isCurrent: () => gate.isLatest(ticket) && active.value === key };
 }
 
+/**
+ * Where to send the browser after POST /v1/wallet/topup: the response's checkout_url, and only
+ * when it is an https: address. The old page followed any value; a non-https value is refused.
+ */
+export function checkoutRedirect(body: unknown): { url: string } | { error: string } {
+  const raw = (body as { checkout_url?: unknown } | null)?.checkout_url;
+  if (typeof raw !== "string" || !raw) return { error: "Checkout session was created but no payment URL was returned." };
+  try {
+    const u = new URL(raw);
+    if (u.protocol === "https:") return { url: u.href };
+  } catch {
+    // fall through
+  }
+  return { error: "Checkout session was created but the payment URL is not a secure address, so this page did not follow it." };
+}
+
 /** POST /v1/auth/register body: email always, name only when given (Signup.tsx). */
 export function registerBody(email: string, name: string): { email: string; name?: string } {
   return { email, ...(name ? { name } : {}) };

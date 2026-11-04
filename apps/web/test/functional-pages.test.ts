@@ -8,6 +8,7 @@ import {
   ActiveKey,
   RequestGate,
   centsToEur,
+  checkoutRedirect,
   currentGuard,
   friendlyError,
   isCredit,
@@ -17,7 +18,7 @@ import {
   registerErrorMessage,
   validateAmount,
 } from "../src/lib/wallet.ts";
-import { auditOutcome, auditRequestUrl, entityPath, formatPeriod, parseAuditLocation } from "../src/lib/audit-record.ts";
+import { auditOutcome, auditRequestUrl, entityPath, formatPeriod, parseAuditLocation, safeHttpUrl } from "../src/lib/audit-record.ts";
 import { MAX_TOPUP_CENTS, MIN_TOPUP_CENTS, TRIAL_CREDITS_CENTS } from "../src/lib/code-facts.ts";
 import { product } from "../src/lib/load-preview.ts";
 
@@ -138,12 +139,28 @@ test("the audit answer decides which state the page shows", () => {
   const audit = { type: "capability", steps: [{ step: 1 }] };
   assert.equal(auditOutcome(200, { audit }).kind, "record");
   assert.equal(auditOutcome(202, { status: "pending" }).kind, "pending");
-  assert.deepEqual(auditOutcome(410, { message: "Audit token has expired." }), { kind: "expired", message: "Audit token has expired." });
-  assert.equal(auditOutcome(401, { message: "Invalid audit token." }).kind, "not_found");
+  assert.deepEqual(auditOutcome(410, { message: "This audit URL was issued under a pre-F-A-006 format" }), { kind: "expired" }, "the API's message is not carried to the page");
+  for (const status of [400, 401, 403, 429, 500, 503]) assert.equal(auditOutcome(status, { message: "x" }).kind, "unavailable", `${status} is "could not be loaded", not "not found"`);
   assert.equal(auditOutcome(404, null).kind, "not_found");
   assert.equal(auditOutcome(200, { audit: { steps: [] } }).kind, "not_found", "a record with no steps cannot be drawn");
   assert.equal(entityPath({ type: "capability", entity_slug: "vat-validate" }), "/tools/vat-validate");
   assert.equal(entityPath({ type: "solution", entity_slug: "kyb-essentials-se" }), "/solutions/kyb-essentials-se");
+});
+
+test("a data-source link is drawn only for http(s) addresses", () => {
+  assert.equal(safeHttpUrl("https://bolagsverket.se/x"), "https://bolagsverket.se/x");
+  assert.equal(safeHttpUrl("http://example.org"), "http://example.org/");
+  assert.equal(safeHttpUrl("javascript:alert(1)"), null);
+  assert.equal(safeHttpUrl("data:text/html,<b>x</b>"), null);
+  assert.equal(safeHttpUrl("/relative"), null);
+  assert.equal(safeHttpUrl(undefined), null);
+});
+
+test("checkout redirects only to the API's https checkout_url", () => {
+  assert.deepEqual(checkoutRedirect({ checkout_url: "https://checkout.stripe.com/c/pay/cs_test_1" }), { url: "https://checkout.stripe.com/c/pay/cs_test_1" });
+  for (const bad of ["http://checkout.stripe.com/x", "javascript:alert(1)", "//evil.example", "not a url"]) assert.ok("error" in checkoutRedirect({ checkout_url: bad }), bad);
+  assert.deepEqual(checkoutRedirect({}), { error: "Checkout session was created but no payment URL was returned." });
+  assert.ok("error" in checkoutRedirect(null));
 });
 
 test("retention periods read as years when they are whole years", () => {

@@ -18,6 +18,7 @@ const states = [
   state("not_found", "Transaction not found", "This transaction was not found. It may have been deleted or the retention period may have expired."),
   state("pending", "This record is still being prepared", "Its integrity hash is still being computed. Reload this page in 30 seconds."),
   state("expired", "This link has expired", "Ask whoever shared it for a new link. A new one can be issued from the API."),
+  state("unavailable", "This record could not be loaded", "The link may be incomplete or no longer valid, or the service may be briefly unavailable. Check that you have the whole link, or try again in a moment."),
 ];
 ---
 <Base title="Compliance record" noindex description="A Strale compliance record for one call: what ran, where the data came from, whether AI was involved, and how the record is kept.">
@@ -32,7 +33,7 @@ const states = [
       <section class="audit-state stack" data-state={st.name} hidden>
         <svg class="icon icon-lg warn" aria-hidden="true"><use href="#i-alert" /></svg>
         <h1 class="t-section">{st.title}</h1>
-        <p class="t-body muted" data-state-body>{st.body}</p>
+        <p class="t-body muted">{st.body}</p>
       </section>
     ))}
 

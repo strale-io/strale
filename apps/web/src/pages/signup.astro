@@ -27,12 +27,12 @@ const curl = [
 // The fields POST /v1/auth/register returns (apps/api/src/routes/auth.ts), abridged.
 const response = JSON.stringify({ user_id: "…", email: "you@example.com", api_key: "sk_live_…", wallet_balance_cents: TRIAL_CREDITS_CENTS, getting_started: { message: "…" } }, null, 2);
 ---
-<Base title="Get an API key" description={`Get a Strale API key with ${trial} in trial credit, no card needed. Or call the free tools with no account.`}>
+<Base title="Get an API key" description={`Get a Strale API key; new accounts can start with ${trial} in trial credit, no card needed. Or call the free tools with no account.`}>
   <section class="page-head">
     <div class="container narrow stack">
       <p class="label">Sign up</p>
       <h1 class="t-campaign">Get your API key</h1>
-      <p class="t-lead">Create an account to call every tool with one key. New accounts start with {trial} in trial credit, and no card is needed.</p>
+      <p class="t-lead">Create an account to call every tool with one key. New accounts can start with {trial} in trial credit, and no card is needed.</p>
     </div>
   </section>
 
@@ -41,16 +41,18 @@ const response = JSON.stringify({ user_id: "…", email: "you@example.com", api_
       <div class="card panel" data-signup data-api={API_BASE} data-support={SUPPORT}>
         <div data-signup-form-view class="stack">
           <h2 class="t-subhead">Create your account</h2>
-          <p class="t-compact muted">Get your API key with {trial} in trial credit, instantly.</p>
+          <p class="t-compact muted">Get your API key instantly. New accounts can start with {trial} in trial credit.</p>
           <noscript><p class="t-compact">This form needs JavaScript. You can also register from the command line, below.</p></noscript>
+          {/* No name= attributes on purpose: the script reads the fields by id, so if it fails to
+              load, a native submit carries no fields and the email never lands in a URL. */}
           <form class="stack" data-signup-form>
             <div class="field">
               <label class="field-label" for="signup-email">Email</label>
-              <input class="input" id="signup-email" name="email" type="email" required autocomplete="email" placeholder="you@company.com" />
+              <input class="input" id="signup-email" type="email" required autocomplete="email" placeholder="you@company.com" />
             </div>
             <div class="field">
               <label class="field-label" for="signup-name">Name <span class="optional">(optional)</span></label>
-              <input class="input" id="signup-name" name="name" type="text" autocomplete="name" placeholder="Jane Smith" />
+              <input class="input" id="signup-name" type="text" autocomplete="name" placeholder="Jane Smith" />
             </div>
             <p class="field-message is-error" role="alert" data-signup-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span></p>
             <button class="btn btn-primary btn-lg full" type="submit"><span class="spinner" aria-hidden="true" hidden data-spinner></span><span data-label>Get API key</span></button>
@@ -106,7 +108,7 @@ const response = JSON.stringify({ user_id: "…", email: "you@example.com", api_
 
       <div class="card panel stack">
         <h2 class="t-subhead">Or email us</h2>
-        <p class="t-compact">Email <a class="link" href={`mailto:${SUPPORT}`}>{SUPPORT}</a> for a free API key with {trial} in trial credit.</p>
+        <p class="t-compact">Email <a class="link" href={`mailto:${SUPPORT}`}>{SUPPORT}</a> for a free API key.</p>
       </div>
 
       <p class="t-compact">Already have a key? <a class="link" href="/docs">Read the quickstart</a>.</p>

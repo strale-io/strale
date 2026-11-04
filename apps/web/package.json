@@ -12,7 +12,8 @@
     "check": "astro check",
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "build:preview-data": "node scripts/prepare-assets.mjs && node scripts/build-preview.mjs",
-    "review": "node scripts/review.mjs"
+    "review": "node scripts/review.mjs",
+    "test:browser": "node --test test-browser/*.test.mjs"
   },
   "dependencies": {
     "astro": "5.18.2",
