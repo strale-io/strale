@@ -205,6 +205,11 @@ export async function validateHost(hostname: string): Promise<void> {
   if (typeof hostname !== "string" || hostname.trim() === "") {
     throw new UrlValidationError("A host is required: an empty host would connect to localhost.");
   }
+  // A control character (NUL, CR/LF, DEL) is never part of a hostname, and NUL
+  // makes connect throw synchronously (WP12 batch 2 review, round 2).
+  if (/[\u0000-\u001f\u007f]/.test(hostname)) {
+    throw new UrlValidationError("This host is not a valid hostname or IP address.");
+  }
   const clean = splitHostPort(hostname);
   if (clean === null) {
     throw new UrlValidationError("This host is not a valid hostname or IP address.");

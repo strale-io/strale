@@ -11,6 +11,7 @@
  * The host is 127.0.0.1, treated as allowed in this file only, so a
  * regression that does connect stays on loopback.
  */
+import tls from "node:tls";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/url-validator.js", async (importOriginal) => {
@@ -74,6 +75,32 @@ describe("the raw-socket capabilities refuse an invalid port before connecting",
     expect("rejected" in outcome && isCapabilityRefusal(outcome.rejected)).toBe(true);
     expect(((outcome as { rejected: Error }).rejected).message).toMatch(/must be an integer from 1 to 65535/);
     // No timer was left behind to fire into a half-built socket.
+    expect(vi.getTimerCount()).toBe(0);
+    expect(() => vi.advanceTimersByTime(10_000)).not.toThrow();
+  });
+});
+
+// The timer is armed only after the socket exists. Any input that makes the
+// connect call throw synchronously (a NUL in a host did, before validateHost
+// refused control characters) must reject cleanly and leave no timer that
+// fires into the uninitialised socket 10 s later.
+describe("a synchronous connect failure leaves no timer behind", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.spyOn(tls, "connect").mockImplementation(() => {
+      throw new TypeError("synchronous connect failure");
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ["ssl-check", { domain: "127.0.0.1", port: 443 }],
+    ["ssl-certificate-chain", { host: "127.0.0.1", port: 443 }],
+  ] as const)("%s", async (slug, input) => {
+    await expect(exec(slug)(input as Record<string, unknown>)).rejects.toThrow();
     expect(vi.getTimerCount()).toBe(0);
     expect(() => vi.advanceTimersByTime(10_000)).not.toThrow();
   });

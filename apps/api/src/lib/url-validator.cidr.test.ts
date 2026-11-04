@@ -83,6 +83,10 @@ describe("validateHost — IPv6 literal forms (raw-socket capabilities)", () => 
     await expect(validateHost(host)).rejects.toThrow(/host is required/);
   });
 
+  it.each([["a\u0000b.com"], ["example.com\r\nHost: x"], ["a\u007fb.com"]])("refuses a host with a control character %j", async (host) => {
+    await expect(validateHost(host)).rejects.toThrow(/not a valid hostname/);
+  });
+
   it("refuses a port with no host", async () => {
     await expect(validateHost(":443")).rejects.toThrow();
   });

@@ -155,7 +155,9 @@ describe("connect-time peer check", () => {
 
   // The type omits these; an untyped caller or a cast must still not get through.
   it.each([
-    ["lookup", { lookup: dns.lookup }],
+    // A loopback stub, never the real resolver: if the refusal regresses, the
+    // caller's lookup wins and must still not leave the machine.
+    ["lookup", { lookup: (_h: string, _o: unknown, cb: (e: null, a: string, f: number) => void) => cb(null, "127.0.0.1", 4) }],
     ["path", { path: "/tmp/strale-test.sock" }],
     ["socket", { socket: new net.Socket() }],
   ])("connectTlsVetted refuses a '%s' option that would bypass the guard", (key, extra) => {
@@ -163,7 +165,7 @@ describe("connect-time peer check", () => {
     stubLookup([{ address: "127.0.0.1", family: 4 }]);
     const spy = vi.spyOn(tls, "connect");
     expect(() =>
-      connectTlsVetted({ host: "example.com", port: 443, ...extra } as unknown as Parameters<typeof connectTlsVetted>[0]),
+      connectTlsVetted({ host: "bypass.strale-test.invalid", port: 443, ...extra } as unknown as Parameters<typeof connectTlsVetted>[0]),
     ).toThrow(new RegExp(`'${key}'`));
     expect(spy).not.toHaveBeenCalled();
   });
