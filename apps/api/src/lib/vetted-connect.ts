@@ -148,11 +148,24 @@ export function connectTcpVetted({ host, port, timeoutMs }: VettedTcpOptions): P
  * callback as tls.connect; `lookup` is always this module's. A refusal
  * arrives as the socket's `error` event (code ESSRFBLOCKED), before the
  * handshake, so `secureConnect` never fires.
+ *
+ * `socket` (an already-connected stream), `path` (a Unix socket) and `lookup`
+ * would each route around the guard, so the type omits them and a caller
+ * that passes one anyway (an untyped caller, a cast) gets a throw.
  */
+export type VettedTlsOptions = Omit<tls.ConnectionOptions, "socket" | "path" | "lookup"> & { host: string };
+
+const TLS_BYPASS_OPTIONS = ["socket", "path", "lookup"] as const;
+
 export function connectTlsVetted(
-  options: tls.ConnectionOptions & { host: string },
+  options: VettedTlsOptions,
   secureConnectListener?: () => void,
 ): tls.TLSSocket {
+  for (const key of TLS_BYPASS_OPTIONS) {
+    if ((options as Record<string, unknown>)[key] !== undefined) {
+      throw new TypeError(`connectTlsVetted does not accept '${key}': it would bypass the connect-time check.`);
+    }
+  }
   const socket = tls.connect({ ...options, lookup: vettedLookup }, secureConnectListener);
   return guardPeer(socket, options.host);
 }

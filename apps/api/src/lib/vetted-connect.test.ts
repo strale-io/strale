@@ -143,7 +143,6 @@ describe("connect-time peer check", () => {
         port: 443,
         servername: "example.com",
         rejectUnauthorized: false,
-        lookup: dns.lookup, // a caller's own lookup must not win
       });
       socket.on("error", resolve);
     });
@@ -152,5 +151,20 @@ describe("connect-time peer check", () => {
     expect(opts.servername).toBe("example.com");
     expect(opts.host).toBe("example.com");
     expect(opts.lookup).toBe(vettedLookup);
+  });
+
+  // The type omits these; an untyped caller or a cast must still not get through.
+  it.each([
+    ["lookup", { lookup: dns.lookup }],
+    ["path", { path: "/tmp/strale-test.sock" }],
+    ["socket", { socket: new net.Socket() }],
+  ])("connectTlsVetted refuses a '%s' option that would bypass the guard", (key, extra) => {
+    // If the refusal regresses, the connection that follows must still stay on loopback.
+    stubLookup([{ address: "127.0.0.1", family: 4 }]);
+    const spy = vi.spyOn(tls, "connect");
+    expect(() =>
+      connectTlsVetted({ host: "example.com", port: 443, ...extra } as unknown as Parameters<typeof connectTlsVetted>[0]),
+    ).toThrow(new RegExp(`'${key}'`));
+    expect(spy).not.toHaveBeenCalled();
   });
 });
