@@ -29,8 +29,30 @@
 import dns, { type LookupAddress, type LookupOptions } from "node:dns";
 import net from "node:net";
 import tls from "node:tls";
+import { inputRefusal } from "./capability-refusal.js";
 import { isBlockedIp } from "./url-validator.js";
 import { logWarn } from "./log.js";
+
+/**
+ * A TCP port from caller input: an integer from 1 to 65535, as a number or a
+ * string of digits. Anything else is a structured input refusal. Validate
+ * before connecting: net and tls throw synchronously on an out-of-range or
+ * non-integer port, and port 0 is not a port anyone can be asking about.
+ */
+export function portInput(raw: unknown, field: string): number {
+  const n =
+    typeof raw === "number" ? raw
+      : typeof raw === "string" && /^\s*\d{1,5}\s*$/.test(raw) ? Number(raw)
+        : NaN;
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    throw inputRefusal(
+      `'${field}' must be an integer from 1 to 65535.`,
+      field,
+      `Send '${field}' as a whole number between 1 and 65535, such as 443.`,
+    );
+  }
+  return n;
+}
 
 /** Error code on every refusal from this module. */
 export const SSRF_BLOCKED = "ESSRFBLOCKED";
