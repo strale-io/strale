@@ -23,15 +23,16 @@ account takes the lease per PACE_CORE §2a before acting.
 
 ## In flight: the website (brand-website T6)
 
-Stacked draft PRs #736 <- #892, CI green, nothing merged or published. Petter
+Stacked draft PRs #725 <- #726 <- #727 <- #736 <- #892, CI green, nothing merged or published. Petter
 approved the home page on 2026-11-03 and was shown all eight main pages in a
 private preview (https://claude.ai/artifact/Cbduab7jNroiqXwYrTJkvj). Detail:
 `2026-11-02-website-centred-hero.md`; register: `docs/programs/brand-website/tracks.yaml` T6.
 
 **Next authorised action:** when Petter is happy with the inner pages, step 2,
-which he approved on 2026-11-03: an independent read-only review of #736 and
-then #892 in a separate context, fix findings, then merge #736 and #892 through
-the merge queue (`enable_pr_auto_merge`). Merging does not publish the site.
+which he approved on 2026-11-03: an independent read-only review of the whole
+website stack #725 <- #726 <- #727 <- #736 <- #892 (#736's base is #727's
+branch, not `main`) in a separate context, fix findings, then merge bottom-up
+through the merge queue (`enable_pr_auto_merge`). Merging does not publish the site.
 Step 3: a short switch-over readiness list for Petter.
 
 ## Waiting on Petter (additions)
