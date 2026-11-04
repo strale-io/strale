@@ -11,7 +11,7 @@ export const SHORT_DESCRIPTION =
 
 /** Level 1 — what the agent builder gains. */
 export const L1 = {
-  headline: "Give your agent a new tool without opening another provider account.",
+  headline: "New tools for your agent. No new accounts.",
   support: "Add tools as your agent’s work grows, through the connection you already have.",
   perCall: "Pay per call, with no subscription or contract.",
   x402: "Let your agent pay its own way: on eligible tools, an x402 wallet pays per request and nobody signs up.",

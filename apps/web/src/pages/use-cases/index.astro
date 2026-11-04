@@ -39,7 +39,7 @@ const libraryCount = allTools(data).length;
         <h1 class="t-campaign">The jobs agents are built to do, and the tools to do them</h1>
         <p class="t-lead">Research a question, read a document, check a detail, vet a supplier, check an invoice before it is paid, audit a website. For each job: the tools your agent calls, in order, what comes back, what one run costs and the code to start.</p>
       </div>
-      <div class="plate page-head-art"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+      <div class="plate page-head-art"><Image src={artLibrary} alt="" widths={[360, 540, 720]} sizes="(min-width: 1024px) 360px, 0px" loading="eager" /></div>
     </div>
   </section>
 
@@ -88,8 +88,8 @@ const libraryCount = allTools(data).length;
   .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
   .page-head-art { display: none; width: 100%; }
   @media (min-width: 1024px) {
-    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
-    .page-head-art { display: block; }
+    .page-head-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+    .page-head-art { display: block; justify-self: center; width: min(100%, calc(var(--space-160) * 2 + var(--space-40))); }
   }
   .section { padding-block: var(--_page-section-space); }
   .section-sunken { background: var(--surface-sunken); }

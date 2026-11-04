@@ -46,7 +46,7 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
         <h1 class="t-campaign">Look up companies in official records in {plural(rows.length, "country", "countries")}</h1>
         <p class="t-lead">Across {regions}. Your agent gets the name and registration number, plus status, address and directors where the source provides them.{screening.length > 0 && " It can screen companies and people against sanctions and politically exposed person lists and adverse media."}{withBundles.length > 0 && " It can also run a whole company or invoice-issuer check in one call at one price."}</p>
       </div>
-      <div class="plate page-head-art"><Image src={artCompany} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 320px, 0px" loading="eager" /></div>
+      <div class="plate page-head-art"><Image src={artCompany} alt="" widths={[360, 540, 720]} sizes="(min-width: 1024px) 360px, 0px" loading="eager" /></div>
     </div>
   </section>
 
@@ -177,8 +177,8 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
   .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
   .page-head-art { display: none; width: 100%; }
   @media (min-width: 1024px) {
-    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
-    .page-head-art { display: block; }
+    .page-head-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+    .page-head-art { display: block; justify-self: center; width: min(100%, calc(var(--space-160) * 2 + var(--space-40))); }
   }
   .section { padding-block: var(--_page-section-space); }
   .section-tight { padding-block: var(--space-32) var(--_page-section-space); }

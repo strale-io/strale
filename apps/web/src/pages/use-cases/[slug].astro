@@ -79,7 +79,7 @@ const calls = u.steps.map(call);
             <li><span class="label">Routes</span><span class="fact">{routes}</span></li>
           </ul>
         </div>
-        <div class="plate page-head-art"><Image src={ART[u.art]} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 320px, 0px" loading="eager" /></div>
+        <div class="plate page-head-art"><Image src={ART[u.art]} alt="" widths={[360, 540, 720]} sizes="(min-width: 1024px) 360px, 0px" loading="eager" /></div>
       </div>
     </header>
 
@@ -267,8 +267,8 @@ const calls = u.steps.map(call);
   .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
   .page-head-art { display: none; width: 100%; }
   @media (min-width: 1024px) {
-    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
-    .page-head-art { display: block; }
+    .page-head-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+    .page-head-art { display: block; justify-self: center; width: min(100%, calc(var(--space-160) * 2 + var(--space-40))); }
   }
   .head-actions { margin-top: var(--space-24); gap: var(--space-16) var(--space-24); }
   .facts { display: flex; flex-wrap: wrap; gap: var(--space-16) var(--space-40); margin: 0; margin-top: var(--space-32); padding: var(--space-20) 0 0; list-style: none; border-top: var(--border-width) solid var(--border); }

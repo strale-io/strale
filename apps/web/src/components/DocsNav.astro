@@ -37,7 +37,7 @@ const routes: { id: DocsPage; href: string; label: string }[] = [
         <h1 class="t-campaign">{heading}</h1>
         <p class="t-lead">{lead}</p>
       </div>
-      {art && <div class="plate page-head-art"><Image src={art} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>}
+      {art && <div class="plate page-head-art"><Image src={art} alt="" widths={[360, 540, 720]} sizes="(min-width: 1024px) 360px, 0px" loading="eager" /></div>}
     </div>
   </section>
 
@@ -69,8 +69,8 @@ const routes: { id: DocsPage; href: string; label: string }[] = [
   .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
   .page-head-art { display: none; width: 100%; }
   @media (min-width: 1024px) {
-    .page-head-grid.has-art { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
-    .page-head-art { display: block; }
+    .page-head-grid.has-art { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+    .page-head-art { display: block; justify-self: center; width: min(100%, calc(var(--space-160) * 2 + var(--space-40))); }
   }
 
   .docs { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); padding-block: var(--space-32) var(--space-96); }

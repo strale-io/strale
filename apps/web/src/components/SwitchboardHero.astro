@@ -212,7 +212,7 @@ const words = headline.split(/\s+/).filter(Boolean);
     .sb-copy { gap: var(--space-20); }
     .sb-lead { max-width: none; }
     .sb-actions { margin-top: var(--space-12); }
-    .sb-title { font-size: var(--type-hero-size); max-width: 30ch; }
+    .sb-title { font-size: calc(var(--type-hero-size) * 0.8); max-width: 30ch; }
     .sb-board-wrap { height: clamp(calc(var(--space-160) * 3), calc(var(--viewport-height) * 0.78), calc(var(--space-160) * 4)); }
     .sb-board { position: absolute; inset: 0; display: block; padding: 0; }
     .sb-ports { position: absolute; inset: 0; display: block; max-width: none; z-index: 2; }

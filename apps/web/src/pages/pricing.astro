@@ -41,13 +41,13 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
       <div class="stack">
         <p class="label">Pricing</p>
         <h1 class="t-campaign">Pay for the calls your agent makes. Nothing else.</h1>
-        <p class="t-lead">No subscription, no contract, no minimum. Every tool has one price per call, and a call that fails costs nothing.</p>
+        <p class="t-lead">No subscription and no contract. Every tool has one price per call, and a call that fails costs nothing.</p>
         <div class="row">
           <a class="btn btn-primary btn-lg" href="/signup" data-magnet>Get an API key <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
           <a class="link-standalone" href="/tools?free=1">Try a free tool <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
         </div>
       </div>
-      <div class="plate page-head-art"><Image src={artBalance} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+      <div class="plate page-head-art"><Image src={artBalance} alt="" widths={[360, 540, 720]} sizes="(min-width: 1024px) 360px, 0px" loading="eager" /></div>
     </div>
   </section>
 
@@ -195,8 +195,8 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
   .page-head-grid .stack > .row { margin-top: var(--space-24); }
   .page-head-art { display: none; width: 100%; }
   @media (min-width: 1024px) {
-    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
-    .page-head-art { display: block; }
+    .page-head-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+    .page-head-art { display: block; justify-self: center; width: min(100%, calc(var(--space-160) * 2 + var(--space-40))); }
   }
   .section { padding-block: max(var(--_page-section-space), var(--stack-heading-before)) var(--_page-section-space); }
   .section-tight { padding-block: 0 var(--_page-section-space); }

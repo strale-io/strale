@@ -37,7 +37,7 @@ Page references point to [SITE-STRUCTURE.md](SITE-STRUCTURE.md). Nothing here is
 
 ## Level 1 — what the agent builder gains
 
-1. **Give your agent a new tool without opening another provider account.**
+1. **New tools for your agent. No new accounts.** (Petter, 2026-11-04, replacing "Give your agent a new tool without opening another provider account." as the home headline. "No new accounts" means no account with each provider: the one Strale account or x402 wallet is the connection, so never widen it to "no account at all" (L1.1). The API surfaces that quote the old line (`openapi.ts`, `welcome.ts`, `llms-txt.ts`, `ai-catalog.ts`, `skill.ts`, `mcp-server-card.ts`) switch to it when the site switches over.)
 2. **Add tools as your agent's work grows, through the connection you already have.**
 3. **Pay per call, with no subscription or contract.**
 4. **Let your agent pay its own way: on eligible tools, an x402 wallet pays per request and nobody signs up.**

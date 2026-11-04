@@ -45,7 +45,7 @@ const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.
         <h1 class="t-campaign">Tools</h1>
         <p class="t-lead">{plural(tools.length, "tool")} your agent can call with one key, or with no account at all through an x402 wallet. Each has one price per call, and {plural(tools.filter((t) => t.free).length, "tool")} are free to try.</p>
       </div>
-      <span class="page-head-art" aria-hidden="true"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></span>
+      <span class="page-head-art" aria-hidden="true"><Image src={artLibrary} alt="" widths={[360, 540, 720]} sizes="(min-width: 1024px) 360px, 0px" loading="eager" /></span>
     </div>
   </section>
 
@@ -193,8 +193,8 @@ const single = data.solutions.filter((s) => !familyOf(s.slug)).sort((a, b) => a.
   .page-head-art { display: none; }
   .page-head-art img { width: 100%; height: auto; }
   @media (min-width: 1024px) {
-    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
-    .page-head-art { display: block; max-width: calc(var(--space-160) + var(--space-64)); justify-self: end; }
+    .page-head-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+    .page-head-art { display: block; justify-self: center; width: min(100%, calc(var(--space-160) * 2 + var(--space-40))); }
   }
   .section { padding-block: var(--_page-section-space); }
   .section-sunken { background: var(--surface-sunken); }
