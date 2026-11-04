@@ -277,6 +277,7 @@ IDs every session should know exist, topic only, no numbers:
 - **DEC-20261101-A** — Codex builder lanes: what Codex never receives, who may launch it, which branches it may push, and how its dispatcher signs in and stays off branch code. A Codex session building for Strale reads it first; see CLAUDE.md and `docs/strategy/2026-11-01-codex-builder-lanes-decision.md`.
 - **DEC-20261027-B** — Platform hardening and distribution plan adopted, with scoped publish/pricing grants and retained founder gates; see CLAUDE.md and `docs/strategy/2026-10-27-platform-and-distribution-adoption.md`.
 - **DEC-20261024-A** — Way of working: WoW-Core consumer, T7 re-scoped, codex:check to be retired, daily run by exception (items 2, 4, 5 for Petter to confirm); see CLAUDE.md.
+- **DEC-20261025-A** — Website direction Open Flow 0.2, Daylight: white canvas, ambient motion only in the hero and live-tests panel, generated illustrations; see CLAUDE.md.
 - **DEC-20261024-B** — Website structure/messaging, Open Flow design system and the portfolio plan adopted; see CLAUDE.md.
 - **DEC-20261023-A** — One risk-based data-access rule replaces the three-tier scraping doctrine; see CLAUDE.md.
 - **DEC-20261023-B** — Positioning: global per-call tool library for agents, official-source company/compliance data as flagship; amends DEC-20260905-A. See CLAUDE.md and the linked adoption record.

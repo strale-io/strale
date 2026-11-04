@@ -63,6 +63,10 @@ describe("failure 4 — monitoring infrastructure counted as demand", () => {
     }
   });
 
+  it("counts Strale's own website build as tooling, not demand", () => {
+    expect(categorise("strale-web-build")).toBe("known_monitor");
+  });
+
   it("separates indexers from monitors — they are different evidence", () => {
     expect(categorise("smithery-probe/0")).toBe("known_indexer");
     expect(categorise("glama/1.0.0")).toBe("known_indexer");

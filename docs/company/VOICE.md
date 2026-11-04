@@ -22,6 +22,28 @@ Plain English is part of the system, not a preference:
   says so and shows a dash rather than a figure that reads as a fact.
 - **Say the uncomfortable thing first.** If revenue fell, that is the headline.
 
+### Marketing pages and the catalogue (Petter, 2026-10-25 and 2026-10-26)
+
+- **Marketing copy is confident, not hedged.** A marketing section states what the product
+  does, plainly. Precision (limits, edge cases, what a source does not cover) lives on the
+  tool page, the docs and the limitations list, not in a hero or a feature card. Confidence
+  never stretches a claim: `claims.yaml` still decides what may be said at all.
+- **British English** everywhere a visitor reads: analyse, organisation, licence (noun),
+  catalogue, colour, optimise, summarise.
+- **Tool names are noun phrases, one pattern per kind:** *X Validation*, *X Generator*,
+  *X Parser*, *X Explainer*, *X Converter*, *X Optimiser*, *X Analysis*, *X Extraction*,
+  *X Lookup*, *X Check*. Never a bare verb ("Phone Validate"). Company-registry tools are
+  *&lt;Country&gt; Company Data*, with no source in brackets.
+- **Tool descriptions** start with a verb, say what goes in and what comes back, and name the
+  official source when it is the reason to trust the answer (Companies House, VIES,
+  Bolagsverket). They never carry plumbing (wrapper services, libraries, "via the X JSON
+  wrapper"), method tags ("Algorithmic.", "Pure algorithmic — fast and cheap"; the method is
+  shown separately), self-praise ("audit-grade", "comprehensive", "essential for"), or API
+  field names. The first sentence must stand on its own: the catalogue shows only that.
+- **Names and descriptions are manifest-canonical.** Change them in `manifests/<slug>.yaml`;
+  production picks a change up through a ledgered startup migration guarded on the exact
+  old value (precedent: block 0122). The website reads them from the manifests at build.
+
 ## The claims half of voice
 
 The rules above are about tone. A second, narrower set of rules is about

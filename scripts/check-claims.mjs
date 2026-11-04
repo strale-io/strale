@@ -19,7 +19,7 @@ requireInputs(rowCount, "claims: register rows");
 if (json) {
   console.log(JSON.stringify({ ok: findings.length === 0, findings, warnings, row_count: rowCount }, null, 2));
 } else {
-  console.log(`checked ${rowCount} rows in ${REGISTER_PATH} against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, and the frontend llms.txt when present`);
+  console.log(`checked ${rowCount} rows in ${REGISTER_PATH} against listing configs, package READMEs/descriptions, agent guidance, MCP definitions, discovery card sources, manifest descriptions, platform-facts.ts, apps/web/src, and the frontend llms.txt when present`);
   if (findings.length === 0) {
     console.log("ok   claims register contract");
   } else {

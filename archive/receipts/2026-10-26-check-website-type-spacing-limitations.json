@@ -1,0 +1,1261 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "432fc81be0b071e9f6aebccb179463b932b9c0f9"
+  },
+  "at": "2026-10-26T22:09:36.299Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "web_tests_passed": 21,
+    "after_review_checks": 28,
+    "after_axe_violations": 0,
+    "after_overflow_px": 0,
+    "contrast_pairs": 124,
+    "before_pricing_mobile_overflow_px": 4,
+    "independent_review_high": 0,
+    "independent_review_medium": 0
+  },
+  "topic": "website-type-spacing-limitations",
+  "raw": {
+    "base_commit": "432fc81b",
+    "data_mode": "manifest preview; not live API data",
+    "before": {
+      "built_from": "dist",
+      "generated_at": "2026-10-26T22:02:47.530Z",
+      "pages": [
+        {
+          "path": "/",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 68
+              }
+            ]
+          },
+          "screenshot": "home--desktop-1440-light.jpg",
+          "page_height_px": 5749,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 68
+              }
+            ]
+          },
+          "screenshot": "home--desktop-1440-dark.jpg",
+          "page_height_px": 5749,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 51,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 73
+              }
+            ]
+          },
+          "screenshot": "home--mobile-390-light.jpg",
+          "page_height_px": 9588,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 51,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 73
+              }
+            ]
+          },
+          "screenshot": "home--mobile-390-dark.jpg",
+          "page_height_px": 9588,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--desktop-1440-light.jpg",
+          "page_height_px": 5580,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--desktop-1440-dark.jpg",
+          "page_height_px": 5580,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--mobile-390-light.jpg",
+          "page_height_px": 9908,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--mobile-390-dark.jpg",
+          "page_height_px": 9908,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--desktop-1440-light.jpg",
+          "page_height_px": 7464,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--desktop-1440-dark.jpg",
+          "page_height_px": 7464,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--mobile-390-light.jpg",
+          "page_height_px": 15299,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--mobile-390-dark.jpg",
+          "page_height_px": 15299,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 52,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--desktop-1440-light.jpg",
+          "page_height_px": 5202,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 52,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--desktop-1440-dark.jpg",
+          "page_height_px": 5202,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 53,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--mobile-390-light.jpg",
+          "page_height_px": 9295,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 53,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--mobile-390-dark.jpg",
+          "page_height_px": 9295,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/pricing",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 19
+              }
+            ]
+          },
+          "screenshot": "pricing--desktop-1440-light.jpg",
+          "page_height_px": 4837,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/pricing",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 19
+              }
+            ]
+          },
+          "screenshot": "pricing--desktop-1440-dark.jpg",
+          "page_height_px": 4837,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/pricing",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 4,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 22
+              }
+            ]
+          },
+          "screenshot": "pricing--mobile-390-light.jpg",
+          "page_height_px": 6858,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/pricing",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 4,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 22
+              }
+            ]
+          },
+          "screenshot": "pricing--mobile-390-dark.jpg",
+          "page_height_px": 6858,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": []
+          },
+          "screenshot": "company-data--desktop-1440-light.jpg",
+          "page_height_px": 7089,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": []
+          },
+          "screenshot": "company-data--desktop-1440-dark.jpg",
+          "page_height_px": 7089,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 44,
+            "incomplete": []
+          },
+          "screenshot": "company-data--mobile-390-light.jpg",
+          "page_height_px": 17284,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 44,
+            "incomplete": []
+          },
+          "screenshot": "company-data--mobile-390-dark.jpg",
+          "page_height_px": 17284,
+          "screenshot_clipped_at_px": 7000
+        }
+      ]
+    },
+    "after": {
+      "built_from": "dist",
+      "generated_at": "2026-10-26T22:06:29.400Z",
+      "pages": [
+        {
+          "path": "/",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 69
+              }
+            ]
+          },
+          "screenshot": "home--desktop-1440-light.jpg",
+          "page_height_px": 5626,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 69
+              }
+            ]
+          },
+          "screenshot": "home--desktop-1440-dark.jpg",
+          "page_height_px": 5626,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 74
+              }
+            ]
+          },
+          "screenshot": "home--mobile-390-light.jpg",
+          "page_height_px": 9382,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 74
+              }
+            ]
+          },
+          "screenshot": "home--mobile-390-dark.jpg",
+          "page_height_px": 9382,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--desktop-1440-light.jpg",
+          "page_height_px": 4703,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--desktop-1440-dark.jpg",
+          "page_height_px": 4703,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--mobile-390-light.jpg",
+          "page_height_px": 9257,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools/swedish-company-data",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": []
+          },
+          "screenshot": "tools-swedish-company-data--mobile-390-dark.jpg",
+          "page_height_px": 9257,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--desktop-1440-light.jpg",
+          "page_height_px": 7215,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--desktop-1440-dark.jpg",
+          "page_height_px": 7215,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--mobile-390-light.jpg",
+          "page_height_px": 15056,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/tools",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 270
+              }
+            ]
+          },
+          "screenshot": "tools--mobile-390-dark.jpg",
+          "page_height_px": 15056,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 52,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--desktop-1440-light.jpg",
+          "page_height_px": 4628,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 52,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--desktop-1440-dark.jpg",
+          "page_height_px": 4628,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 53,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--mobile-390-light.jpg",
+          "page_height_px": 8663,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data/sweden",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 53,
+            "incomplete": []
+          },
+          "screenshot": "company-data-sweden--mobile-390-dark.jpg",
+          "page_height_px": 8663,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/pricing",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 19
+              }
+            ]
+          },
+          "screenshot": "pricing--desktop-1440-light.jpg",
+          "page_height_px": 4737,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/pricing",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 49,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 19
+              }
+            ]
+          },
+          "screenshot": "pricing--desktop-1440-dark.jpg",
+          "page_height_px": 4737,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/pricing",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 22
+              }
+            ]
+          },
+          "screenshot": "pricing--mobile-390-light.jpg",
+          "page_height_px": 6978,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/pricing",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 22
+              }
+            ]
+          },
+          "screenshot": "pricing--mobile-390-dark.jpg",
+          "page_height_px": 6978,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": []
+          },
+          "screenshot": "company-data--desktop-1440-light.jpg",
+          "page_height_px": 6520,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 47,
+            "incomplete": []
+          },
+          "screenshot": "company-data--desktop-1440-dark.jpg",
+          "page_height_px": 6520,
+          "screenshot_clipped_at_px": null
+        },
+        {
+          "path": "/company-data",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 44,
+            "incomplete": []
+          },
+          "screenshot": "company-data--mobile-390-light.jpg",
+          "page_height_px": 16777,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/company-data",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 44,
+            "incomplete": []
+          },
+          "screenshot": "company-data--mobile-390-dark.jpg",
+          "page_height_px": 16777,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/docs",
+          "viewport": "desktop-1440",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 9
+              }
+            ]
+          },
+          "screenshot": "docs--desktop-1440-light.jpg",
+          "page_height_px": 8339,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/docs",
+          "viewport": "desktop-1440",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 50,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 9
+              }
+            ]
+          },
+          "screenshot": "docs--desktop-1440-dark.jpg",
+          "page_height_px": 8339,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/docs",
+          "viewport": "mobile-390",
+          "theme": "light",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 51,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 9
+              }
+            ]
+          },
+          "screenshot": "docs--mobile-390-light.jpg",
+          "page_height_px": 12195,
+          "screenshot_clipped_at_px": 7000
+        },
+        {
+          "path": "/docs",
+          "viewport": "mobile-390",
+          "theme": "dark",
+          "status": 200,
+          "overflow_px": 0,
+          "console_errors": [],
+          "axe": {
+            "violations": [],
+            "passes": 51,
+            "incomplete": [
+              {
+                "id": "color-contrast",
+                "nodes": 9
+              }
+            ]
+          },
+          "screenshot": "docs--mobile-390-dark.jpg",
+          "page_height_px": 12195,
+          "screenshot_clipped_at_px": 7000
+        }
+      ]
+    },
+    "measurements": [
+      {
+        "width": 1440,
+        "route": "/",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": null,
+        "overflow": 0,
+        "small_controls": [
+          {
+            "tag": "BUTTON",
+            "class": "sb-pause",
+            "text": "",
+            "size": "12px"
+          }
+        ]
+      },
+      {
+        "width": 1440,
+        "route": "/tools/swedish-company-data",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": "402.906px 402.906px",
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 1440,
+        "route": "/company-data/sweden",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": 48,
+        "limitations_columns": "584px 584px",
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 1440,
+        "route": "/docs",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": null,
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 1440,
+        "route": "/pricing",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": null,
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 390,
+        "route": "/",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": null,
+        "overflow": 0,
+        "small_controls": [
+          {
+            "tag": "BUTTON",
+            "class": "sb-pause",
+            "text": "",
+            "size": "12px"
+          }
+        ]
+      },
+      {
+        "width": 390,
+        "route": "/tools/swedish-company-data",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": "358px",
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 390,
+        "route": "/company-data/sweden",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": 48,
+        "limitations_columns": "358px",
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 390,
+        "route": "/docs",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": null,
+        "overflow": 0,
+        "small_controls": []
+      },
+      {
+        "width": 390,
+        "route": "/pricing",
+        "body": "16px",
+        "nav": [
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px",
+          "15px"
+        ],
+        "country_output_gap": null,
+        "limitations_columns": null,
+        "overflow": 0,
+        "small_controls": []
+      }
+    ],
+    "checks": {
+      "web_test": "\n> test\n> node --test --experimental-strip-types test/*.test.ts\n\n✔ every manifest category is placed in a job group (2.776629ms)\n✔ slug overrides and job examples name real tools (0.347101ms)\n✔ every company-registry tool maps to a country (0.779664ms)\n✔ every company-registry tool names its data source (evidence for claims.yaml official-records-company-data) (0.364873ms)\n✔ the preview loader reads the API's deactivation list (0.592997ms)\n✔ highlighting escapes before it decorates (0.867504ms)\n✔ code facts are read from the API source (0.337202ms)\n✔ money formatting follows the wire-shape rule (cents in, display out) (0.876648ms)\n✔ snippet and description helpers handle the edge cases the review found (3.843298ms)\n✔ company-data views describe registers in words (2.675749ms)\n✔ Returns uses fields tools actually return, never availability flags (1.156232ms)\n✔ loadLive reads every endpoint the site needs and keys them by slug (28886.10683ms)\n✔ a missing endpoint fails the build with the URL in the message (143.970425ms)\n✔ the launch set is the six jobs SITE-STRUCTURE.md §8 names, each with one to five steps (1.350351ms)\n✔ every use case resolves against the repository catalogue: tools, example fields, prices (918.30899ms)\n✔ a free tool counts as free in the cost per run (582.295393ms)\n✔ a tool missing from the catalogue fails the build, naming the slug (541.304363ms)\n✔ a bundled check missing from a live catalogue fails the build, naming the slug (590.227833ms)\n✔ a published-example field the tool does not publish fails the build (675.687054ms)\n✔ an illustrative field the tool's schema does not have fails the build (530.73033ms)\n✔ a use case calling screening tools must say where the person stays in the loop (594.738505ms)\nℹ tests 21\nℹ suites 0\nℹ pass 21\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 29282.61565\n",
+      "web_check": "\n> check\n> astro check\n\n22:06:10 [content] Syncing content\n22:06:10 [content] Synced content\n22:06:10 [types] Generated 59ms\n22:06:10 [check] Getting diagnostics for Astro files in <local>\n\u001b[96msrc/pages/company-data/index.astro\u001b[0m:\u001b[93m10\u001b[0m:\u001b[93m32\u001b[0m - \u001b[93mwarning\u001b[0m\u001b[90m ts(6133): \u001b[0m'allTools' is declared but its value is never read.\n\n\u001b[7m10\u001b[0m import { getSiteData, tools as allTools } from \"../../lib/site-data.ts\";\n\u001b[7m  \u001b[0m \u001b[93m                               ~~~~~~~~\u001b[0m\n\n\u001b[96msrc/pages/tools/[slug].astro\u001b[0m:\u001b[93m13\u001b[0m:\u001b[93m50\u001b[0m - \u001b[93mwarning\u001b[0m\u001b[90m ts(6133): \u001b[0m'plural' is declared but its value is never read.\n\n\u001b[7m13\u001b[0m import { formatEur, formatUsd, formatDate, json, plural } from \"../../lib/format.ts\";\n\u001b[7m  \u001b[0m \u001b[93m                                                 ~~~~~~\u001b[0m\n\nResult (58 files): \n- 0 errors\n- 0 warnings\n- 2 hints\n\n",
+      "preview_build": "\n> build:preview-data\n> node scripts/prepare-assets.mjs && node scripts/build-preview.mjs\n\nprepared 12 brand files in public/\n22:06:16 [content] Syncing content\n22:06:16 [content] Synced content\n22:06:16 [types] Generated 48ms\n22:06:16 [build] output: \"static\"\n22:06:16 [build] mode: \"static\"\n22:06:16 [build] directory: <local>\n22:06:16 [build] Collecting build info...\n22:06:16 [build] ✓ Completed in 79ms.\n22:06:16 [build] Building static entrypoints...\n22:06:18 [vite] ✓ built in 1.83s\n22:06:18 [build] ✓ Completed in 1.87s.\n\n building client (vite) \n22:06:18 [vite] transforming...\n22:06:18 [vite] ✓ 9 modules transformed.\n22:06:18 [vite] rendering chunks...\n22:06:18 [vite] computing gzip size...\n22:06:18 [vite] dist/_astro/Base.astro_astro_type_script_index_0_lang.Di0r7wUa.js             4.52 kB │ gzip: 1.78 kB\n22:06:18 [vite] dist/_astro/SwitchboardHero.astro_astro_type_script_index_0_lang.D7vUO-nC.js  6.79 kB │ gzip: 2.98 kB\n22:06:18 [vite] ✓ built in 77ms\n\n generating static routes \n22:06:18 ▶ src/pages/about.astro\n22:06:18   └─ /about.html (+730ms) \n22:06:19 ▶ src/pages/company-data/[country].astro\n22:06:19   ├─ /company-data/australia.html (+9ms) \n22:06:19   ├─ /company-data/austria.html (+4ms) \n22:06:19   ├─ /company-data/belgium.html (+5ms) \n22:06:19   ├─ /company-data/brazil.html (+3ms) \n22:06:19   ├─ /company-data/bulgaria.html (+3ms) \n22:06:19   ├─ /company-data/canada.html (+3ms) \n22:06:19   ├─ /company-data/croatia.html (+3ms) \n22:06:19   ├─ /company-data/cyprus.html (+3ms) \n22:06:19   ├─ /company-data/czechia.html (+3ms) \n22:06:19   ├─ /company-data/estonia.html (+3ms) \n22:06:19   ├─ /company-data/finland.html (+2ms) \n22:06:19   ├─ /company-data/france.html (+4ms) \n22:06:19   ├─ /company-data/germany.html (+3ms) \n22:06:19   ├─ /company-data/greece.html (+3ms) \n22:06:19   ├─ /company-data/hungary.html (+3ms) \n22:06:19   ├─ /company-data/ireland.html (+3ms) \n22:06:19   ├─ /company-data/italy.html (+3ms) \n22:06:19   ├─ /company-data/japan.html (+3ms) \n22:06:19   ├─ /company-data/latvia.html (+3ms) \n22:06:19   ├─ /company-data/luxembourg.html (+3ms) \n22:06:19   ├─ /company-data/malta.html (+3ms) \n22:06:19   ├─ /company-data/netherlands.html (+3ms) \n22:06:19   ├─ /company-data/norway.html (+3ms) \n22:06:19   ├─ /company-data/poland.html (+2ms) \n22:06:19   ├─ /company-data/portugal.html (+5ms) \n22:06:19   ├─ /company-data/romania.html (+2ms) \n22:06:19   ├─ /company-data/singapore.html (+3ms) \n22:06:19   ├─ /company-data/slovakia.html (+3ms) \n22:06:19   ├─ /company-data/slovenia.html (+3ms) \n22:06:19   ├─ /company-data/spain.html (+10ms) \n22:06:19   ├─ /company-data/sweden.html (+3ms) \n22:06:19   ├─ /company-data/switzerland.html (+3ms) \n22:06:19   ├─ /company-data/united-kingdom.html (+2ms) \n22:06:19   └─ /company-data/united-states.html (+3ms) \n22:06:19 ▶ src/pages/company-data/index.astro\n22:06:19   └─ /company-data.html (+7ms) \n22:06:19 ▶ src/pages/docs/api.astro\n22:06:19   └─ /docs/api.html (+3ms) \n22:06:19 ▶ src/pages/docs/index.astro\n22:06:19   └─ /docs.html (+8ms) \n22:06:19 ▶ src/pages/docs/mcp.astro\n22:06:19   └─ /docs/mcp.html (+3ms) \n22:06:19 ▶ src/pages/docs/sdks.astro\n22:06:19   └─ /docs/sdks.html (+3ms) \n22:06:19 ▶ src/pages/docs/x402.astro\n22:06:19   └─ /docs/x402.html (+3ms) \n22:06:19 ▶ src/pages/index.astro\n22:06:19   └─ /index.html (+8ms) \n22:06:19 ▶ src/pages/pricing.astro\n22:06:19   └─ /pricing.html (+4ms) \n22:06:19 ▶ src/pages/security.astro\n22:06:19   └─ /security.html (+3ms) \n22:06:19 ▶ src/pages/solutions/[slug].astro\n22:06:19 ▶ src/pages/tools/[slug].astro\n22:06:19   ├─ /tools/academic-paper-search.html (+3ms) \n22:06:19   ├─ /tools/accessibility-audit.html (+2ms) \n22:06:19   ├─ /tools/address-geocode.html (+2ms) \n22:06:19   ├─ /tools/address-parse.html (+2ms) \n22:06:19   ├─ /tools/address-validate.html (+2ms) \n22:06:19   ├─ /tools/adverse-media-check.html (+2ms) \n22:06:19   ├─ /tools/age-verify.html (+2ms) \n22:06:19   ├─ /tools/agent-trace-analyze.html (+2ms) \n22:06:19   ├─ /tools/aml-risk-score.html (+2ms) \n22:06:19   ├─ /tools/api-docs-generate.html (+3ms) \n22:06:19   ├─ /tools/api-health-check.html (+2ms) \n22:06:19   ├─ /tools/api-mock-response.html (+2ms) \n22:06:19   ├─ /tools/arxiv-search.html (+2ms) \n22:06:19   ├─ /tools/au-company-data.html (+2ms) \n22:06:19   ├─ /tools/austrian-company-data.html (+2ms) \n22:06:19   ├─ /tools/backlink-check.html (+2ms) \n22:06:19   ├─ /tools/bank-bic-lookup.html (+2ms) \n22:06:19   ├─ /tools/barcode-lookup.html (+2ms) \n22:06:19   ├─ /tools/belgian-company-data.html (+2ms) \n22:06:19   ├─ /tools/bitcoin-address-validate.html (+2ms) \n22:06:19   ├─ /tools/blog-post-outline.html (+2ms) \n22:06:19   ├─ /tools/brand-mention-search.html (+2ms) \n22:06:19   ├─ /tools/brazilian-company-data.html (+2ms) \n22:06:19   ├─ /tools/breach-exposure-check.html (+2ms) \n22:06:19   ├─ /tools/bulgarian-company-data.html (+2ms) \n22:06:19   ├─ /tools/email-validate-bulk.html (+2ms) \n22:06:19   ├─ /tools/business-day-check.html (+2ms) \n22:06:19   ├─ /tools/c2pa-inspect.html (+2ms) \n22:06:19   ├─ /tools/canadian-company-data.html (+3ms) \n22:06:19   ├─ /tools/cert-transparency-search.html (+2ms) \n22:06:19   ├─ /tools/changelog-generate.html (+2ms) \n22:06:19   ├─ /tools/citation-graph.html (+3ms) \n22:06:19   ├─ /tools/clinical-trials-search.html (+3ms) \n22:06:19   ├─ /tools/code-convert.html (+2ms) \n22:06:19   ├─ /tools/code-review.html (+2ms) \n22:06:19   ├─ /tools/commit-message-generate.html (+2ms) \n22:06:19   ├─ /tools/company-enrich.html (+2ms) \n22:06:19   ├─ /tools/company-fundamentals.html (+2ms) \n22:06:19   ├─ /tools/company-id-detect.html (+2ms) \n22:06:19   ├─ /tools/company-industry-classify.html (+2ms) \n22:06:19   ├─ /tools/company-name-match.html (+2ms) \n22:06:19   ├─ /tools/company-news.html (+2ms) \n22:06:19   ├─ /tools/company-tech-stack.html (+2ms) \n22:06:19   ├─ /tools/competitor-compare.html (+3ms) \n22:06:19   ├─ /tools/container-track.html (+2ms) \n22:06:19   ├─ /tools/context-window-optimize.html (+2ms) \n22:06:19   ├─ /tools/contract-extract.html (+2ms) \n22:06:19   ├─ /tools/contract-verify-check.html (+2ms) \n22:06:19   ├─ /tools/cookie-scan.html (+2ms) \n22:06:19   ├─ /tools/country-economic-indicators.html (+2ms) \n22:06:19   ├─ /tools/iso-country-lookup.html (+2ms) \n22:06:19   ├─ /tools/country-tax-rates.html (+3ms) \n22:06:19   ├─ /tools/country-trade-data.html (+3ms) \n22:06:19   ├─ /tools/credit-score-band.html (+2ms) \n22:06:19   ├─ /tools/croatian-company-data.html (+2ms) \n22:06:19   ├─ /tools/cron-explain.html (+2ms) \n22:06:19   ├─ /tools/crontab-generate.html (+8ms) \n22:06:19   ├─ /tools/fear-greed-index.html (+2ms) \n22:06:19   ├─ /tools/csv-clean.html (+3ms) \n22:06:19   ├─ /tools/csv-to-json.html (+2ms) \n22:06:19   ├─ /tools/curl-to-code.html (+2ms) \n22:06:19   ├─ /tools/currency-convert.html (+6ms) \n22:06:19   ├─ /tools/customs-duty-lookup.html (+3ms) \n22:06:19   ├─ /tools/resume-parse.html (+2ms) \n22:06:19   ├─ /tools/cve-details.html (+2ms) \n22:06:19   ├─ /tools/cypriot-company-data.html (+3ms) \n22:06:19   ├─ /tools/cz-bank-account-validate.html (+2ms) \n22:06:19   ├─ /tools/cz-birth-number-validate.html (+3ms) \n22:06:19   ├─ /tools/cz-company-data.html (+2ms) \n22:06:19   ├─ /tools/cz-datova-schranka-id-validate.html (+2ms) \n22:06:19   ├─ /tools/cz-ico-validate.html (+2ms) \n22:06:19   ├─ /tools/cz-unreliable-vat-payer.html (+2ms) \n22:06:19   ├─ /tools/dangerous-goods-classify.html (+2ms) \n22:06:19   ├─ /tools/data-protection-authority-lookup.html (+2ms) \n22:06:19   ├─ /tools/data-quality-check.html (+3ms) \n22:06:19   ├─ /tools/date-parse.html (+2ms) \n22:06:19   ├─ /tools/deduplicate.html (+2ms) \n22:06:19   ├─ /tools/dependency-audit.html (+2ms) \n22:06:19   ├─ /tools/social-profile-check.html (+2ms) \n22:06:19   ├─ /tools/diff-review.html (+2ms) \n22:06:19   ├─ /tools/dns-lookup.html (+2ms) \n22:06:19   ├─ /tools/dockerfile-generate.html (+2ms) \n22:06:19   ├─ /tools/docstring-generate.html (+2ms) \n22:06:19   ├─ /tools/dogecoin-address-validate.html (+2ms) \n22:06:19   ├─ /tools/doi-resolve.html (+2ms) \n22:06:19   ├─ /tools/domain-age-check.html (+2ms) \n22:06:19   ├─ /tools/domain-contact-extract.html (+2ms) \n22:06:19   ├─ /tools/domain-reputation.html (+2ms) \n22:06:19   ├─ /tools/nl-bag-address.html (+2ms) \n22:06:19   ├─ /tools/dutch-company-data.html (+2ms) \n22:06:19   ├─ /tools/nl-energy-label.html (+2ms) \n22:06:19   ├─ /tools/nl-housing-price-index.html (+2ms) \n22:06:19   ├─ /tools/nl-housing-stats.html (+2ms) \n22:06:19   ├─ /tools/nl-woz-value.html (+2ms) \n22:06:19   ├─ /tools/usgs-earthquake-search.html (+2ms) \n22:06:19   ├─ /tools/email-auth-check.html (+2ms) \n22:06:19   ├─ /tools/email-deliverability-check.html (+2ms) \n22:06:19   ├─ /tools/email-draft.html (+2ms) \n22:06:19   ├─ /tools/email-pattern-discover.html (+2ms) \n22:06:19   ├─ /tools/email-reputation-score.html (+2ms) \n22:06:19   ├─ /tools/email-validate.html (+2ms) \n22:06:19   ├─ /tools/employment-cost-estimate.html (+2ms) \n22:06:19   ├─ /tools/ens-resolve.html (+2ms) \n22:06:19   ├─ /tools/ens-reverse-lookup.html (+2ms) \n22:06:19   ├─ /tools/env-template-generate.html (+2ms) \n22:06:19   ├─ /tools/eori-validate.html (+2ms) \n22:06:19   ├─ /tools/error-explain.html (+2ms) \n22:06:19   ├─ /tools/estonian-company-data.html (+2ms) \n22:06:19   ├─ /tools/eth-address-validate.html (+2ms) \n22:06:19   ├─ /tools/eu-ai-act-classify.html (+2ms) \n22:06:19   ├─ /tools/eu-regulation-search.html (+2ms) \n22:06:19   ├─ /tools/ted-procurement.html (+2ms) \n22:06:19   ├─ /tools/eu-trademark-search.html (+2ms) \n22:06:19   ├─ /tools/vat-validate.html (+2ms) \n22:06:19   ├─ /tools/exchange-rate.html (+2ms) \n22:06:19   ├─ /tools/forex-history.html (+4ms) \n22:06:19   ├─ /tools/fake-data-generate.html (+2ms) \n22:06:19   ├─ /tools/fda-safety-search.html (+2ms) \n22:06:19   ├─ /tools/financial-year-dates.html (+2ms) \n22:06:19   ├─ /tools/finnish-company-data.html (+2ms) \n22:06:19   ├─ /tools/fr-bodacc-lookup.html (+2ms) \n22:06:19   ├─ /tools/french-company-data.html (+2ms) \n22:06:19   ├─ /tools/french-insolvency-check.html (+2ms) \n22:06:19   ├─ /tools/gas-price-check.html (+2ms) \n22:06:19   ├─ /tools/gdpr-fine-lookup.html (+2ms) \n22:06:19   ├─ /tools/gdpr-website-check.html (+7ms) \n22:06:19   ├─ /tools/german-company-data.html (+3ms) \n22:06:19   ├─ /tools/github-actions-generate.html (+2ms) \n22:06:19   ├─ /tools/github-repo-analyze.html (+2ms) \n22:06:19   ├─ /tools/github-repo-compare.html (+2ms) \n22:06:19   ├─ /tools/gitignore-generate.html (+2ms) \n22:06:19   ├─ /tools/google-news-search.html (+2ms) \n22:06:19   ├─ /tools/google-search.html (+2ms) \n22:06:19   ├─ /tools/greek-company-data.html (+2ms) \n22:06:19   ├─ /tools/hacker-news-search.html (+2ms) \n22:06:19   ├─ /tools/holiday-calendar.html (+2ms) \n22:06:19   ├─ /tools/hs-code-lookup.html (+2ms) \n22:06:19   ├─ /tools/html-to-pdf.html (+2ms) \n22:06:19   ├─ /tools/http-to-curl.html (+2ms) \n22:06:19   ├─ /tools/hungarian-company-data.html (+2ms) \n22:06:19   ├─ /tools/iban-to-bank.html (+2ms) \n22:06:19   ├─ /tools/iban-validate.html (+2ms) \n22:06:19   ├─ /tools/id-number-validate.html (+2ms) \n22:06:19   ├─ /tools/image-resize.html (+2ms) \n22:06:19   ├─ /tools/image-to-text.html (+2ms) \n22:06:19   ├─ /tools/incoterms-explain.html (+2ms) \n22:06:19   ├─ /tools/insolvency-check.html (+2ms) \n22:06:19   ├─ /tools/invoice-extract.html (+2ms) \n22:06:19   ├─ /tools/invoice-validate.html (+3ms) \n22:06:19   ├─ /tools/irish-company-data.html (+2ms) \n22:06:19   ├─ /tools/isbn-validate.html (+2ms) \n22:06:19   ├─ /tools/italian-company-data.html (+2ms) \n22:06:19   ├─ /tools/japanese-company-data.html (+2ms) \n22:06:19   ├─ /tools/job-board-search.html (+2ms) \n22:06:19   ├─ /tools/job-posting-analyze.html (+2ms) \n22:06:19   ├─ /tools/jsdoc-generate.html (+2ms) \n22:06:19   ├─ /tools/diff-json.html (+2ms) \n22:06:19   ├─ /tools/flatten-json.html (+3ms) \n22:06:19   ├─ /tools/json-repair.html (+2ms) \n22:06:19   ├─ /tools/json-schema-validate.html (+3ms) \n22:06:19   ├─ /tools/json-to-csv.html (+3ms) \n22:06:19   ├─ /tools/json-to-pydantic.html (+2ms) \n22:06:19   ├─ /tools/json-to-typescript.html (+2ms) \n22:06:19   ├─ /tools/json-to-zod.html (+2ms) \n22:06:19   ├─ /tools/jwt-decode.html (+2ms) \n22:06:19   ├─ /tools/keyword-rank-check.html (+2ms) \n22:06:19   ├─ /tools/cve-lookup.html (+2ms) \n22:06:19   ├─ /tools/landing-page-roast.html (+2ms) \n22:06:19   ├─ /tools/language-detect.html (+2ms) \n22:06:19   ├─ /tools/latvian-company-data.html (+2ms) \n22:06:19   ├─ /tools/lei-lookup.html (+2ms) \n22:06:19   ├─ /tools/gleif-l2-ubo-lookup.html (+2ms) \n22:06:19   ├─ /tools/gleif-l2-children-lookup.html (+2ms) \n22:06:19   ├─ /tools/license-compatibility-check.html (+2ms) \n22:06:19   ├─ /tools/link-extract.html (+2ms) \n22:06:19   ├─ /tools/llm-cost-calculate.html (+2ms) \n22:06:19   ├─ /tools/llm-output-validate.html (+2ms) \n22:06:19   ├─ /tools/log-parse.html (+2ms) \n22:06:19   ├─ /tools/luxembourgish-company-data.html (+2ms) \n22:06:19   ├─ /tools/mx-lookup.html (+2ms) \n22:06:19   ├─ /tools/maltese-company-data.html (+2ms) \n22:06:19   ├─ /tools/markdown-to-html.html (+2ms) \n22:06:19   ├─ /tools/marketplace-fee-calculate.html (+2ms) \n22:06:19   ├─ /tools/meeting-notes-extract.html (+2ms) \n22:06:19   ├─ /tools/timezone-meeting-find.html (+2ms) \n22:06:19   ├─ /tools/meta-extract.html (+2ms) \n22:06:19   ├─ /tools/name-parse.html (+2ms) \n22:06:19   ├─ /tools/nginx-config-generate.html (+2ms) \n22:06:19   ├─ /tools/no-bankruptcy-check.html (+2ms) \n22:06:19   ├─ /tools/norwegian-company-data.html (+2ms) \n22:06:19   ├─ /tools/npm-package-info.html (+2ms) \n22:06:19   ├─ /tools/openapi-generate.html (+2ms) \n22:06:19   ├─ /tools/openapi-validate.html (+2ms) \n22:06:19   ├─ /tools/package-security-audit.html (+2ms) \n22:06:19   ├─ /tools/page-exists.html (+7ms) \n22:06:20   ├─ /tools/page-speed-test.html (+2ms) \n22:06:20   ├─ /tools/paid-api-preflight.html (+2ms) \n22:06:20   ├─ /tools/paper-details.html (+2ms) \n22:06:20   ├─ /tools/password-strength.html (+2ms) \n22:06:20   ├─ /tools/payment-reference-generate.html (+2ms) \n22:06:20   ├─ /tools/pdf-extract.html (+2ms) \n22:06:20   ├─ /tools/pep-check.html (+3ms) \n22:06:20   ├─ /tools/phone-normalize.html (+2ms) \n22:06:20   ├─ /tools/phone-type-detect.html (+2ms) \n22:06:20   ├─ /tools/phone-validate.html (+2ms) \n22:06:20   ├─ /tools/pii-redact.html (+2ms) \n22:06:20   ├─ /tools/polish-company-data.html (+2ms) \n22:06:20   ├─ /tools/port-check.html (+2ms) \n22:06:20   ├─ /tools/port-lookup.html (+2ms) \n22:06:20   ├─ /tools/portuguese-company-data.html (+2ms) \n22:06:20   ├─ /tools/postal-code-lookup.html (+2ms) \n22:06:20   ├─ /tools/price-compare.html (+2ms) \n22:06:20   ├─ /tools/pricing-page-extract.html (+2ms) \n22:06:20   ├─ /tools/privacy-policy-analyze.html (+2ms) \n22:06:20   ├─ /tools/product-reviews-extract.html (+2ms) \n22:06:20   ├─ /tools/prompt-compress.html (+2ms) \n22:06:20   ├─ /tools/prompt-optimize.html (+2ms) \n22:06:20   ├─ /tools/protocol-fees-lookup.html (+2ms) \n22:06:20   ├─ /tools/protocol-tvl-lookup.html (+2ms) \n22:06:20   ├─ /tools/public-holiday-lookup.html (+2ms) \n22:06:20   ├─ /tools/pubmed-search.html (+2ms) \n22:06:20   ├─ /tools/pr-description-generate.html (+2ms) \n22:06:20   ├─ /tools/pypi-package-info.html (+2ms) \n22:06:20   ├─ /tools/readme-generate.html (+2ms) \n22:06:20   ├─ /tools/receipt-categorize.html (+2ms) \n22:06:20   ├─ /tools/redirect-trace.html (+2ms) \n22:06:20   ├─ /tools/regex-explain.html (+2ms) \n22:06:20   ├─ /tools/regex-generate.html (+2ms) \n22:06:20   ├─ /tools/release-notes-generate.html (+2ms) \n22:06:20   ├─ /tools/return-policy-extract.html (+2ms) \n22:06:20   ├─ /tools/risk-narrative-generate.html (+2ms) \n22:06:20   ├─ /tools/robots-txt-parse.html (+2ms) \n22:06:20   ├─ /tools/romanian-company-data.html (+2ms) \n22:06:20   ├─ /tools/sanctions-check.html (+2ms) \n22:06:20   ├─ /tools/schema-infer.html (+2ms) \n22:06:20   ├─ /tools/schema-migration-generate.html (+2ms) \n22:06:20   ├─ /tools/serp-analyze.html (+2ms) \n22:06:20   ├─ /tools/sec-edgar-filings.html (+2ms) \n22:06:20   ├─ /tools/sec-filing-events.html (+2ms) \n22:06:20   ├─ /tools/secret-scan.html (+2ms) \n22:06:20   ├─ /tools/header-security-check.html (+2ms) \n22:06:20   ├─ /tools/sentiment-analyze.html (+2ms) \n22:06:20   ├─ /tools/seo-audit.html (+2ms) \n22:06:20   ├─ /tools/sepa-xml-validate.html (+2ms) \n22:06:20   ├─ /tools/serp-related-questions.html (+2ms) \n22:06:20   ├─ /tools/shipping-track.html (+2ms) \n22:06:20   ├─ /tools/shipping-cost-estimate.html (+2ms) \n22:06:20   ├─ /tools/singapore-company-data.html (+2ms) \n22:06:20   ├─ /tools/sitemap-parse.html (+2ms) \n22:06:20   ├─ /tools/skill-extract.html (+2ms) \n22:06:20   ├─ /tools/skill-gap-analyze.html (+2ms) \n22:06:20   ├─ /tools/slovak-company-data.html (+2ms) \n22:06:20   ├─ /tools/slovenian-company-data.html (+2ms) \n22:06:20   ├─ /tools/social-post-generate.html (+2ms) \n22:06:20   ├─ /tools/og-image-check.html (+2ms) \n22:06:20   ├─ /tools/solana-address-validate.html (+2ms) \n22:06:20   ├─ /tools/spanish-company-data.html (+2ms) \n22:06:20   ├─ /tools/sql-explain.html (+2ms) \n22:06:20   ├─ /tools/sql-generate.html (+2ms) \n22:06:20   ├─ /tools/sql-optimize.html (+2ms) \n22:06:20   ├─ /tools/ssl-certificate-chain.html (+3ms) \n22:06:20   ├─ /tools/ssl-check.html (+3ms) \n22:06:20   ├─ /tools/stablecoin-flow-check.html (+3ms) \n22:06:20   ├─ /tools/startup-domain-check.html (+10ms) \n22:06:20   ├─ /tools/stock-quote.html (+4ms) \n22:06:20   ├─ /tools/structured-scrape.html (+3ms) \n22:06:20   ├─ /tools/swedish-company-data.html (+2ms) \n22:06:20   ├─ /tools/swift-message-parse.html (+2ms) \n22:06:20   ├─ /tools/swift-validate.html (+2ms) \n22:06:20   ├─ /tools/swiss-company-data.html (+2ms) \n22:06:20   ├─ /tools/tax-id-validate.html (+2ms) \n22:06:20   ├─ /tools/tech-stack-detect.html (+2ms) \n22:06:20   ├─ /tools/terms-of-service-extract.html (+13ms) \n22:06:20   ├─ /tools/test-case-generate.html (+3ms) \n22:06:20   ├─ /tools/classify-text.html (+2ms) \n22:06:20   ├─ /tools/summarize.html (+2ms) \n22:06:20   ├─ /tools/ticker-lookup.html (+2ms) \n22:06:20   ├─ /tools/timezone-lookup.html (+2ms) \n22:06:20   ├─ /tools/token-count.html (+2ms) \n22:06:20   ├─ /tools/tool-call-validate.html (+2ms) \n22:06:20   ├─ /tools/translate.html (+2ms) \n22:06:20   ├─ /tools/tron-address-validate.html (+2ms) \n22:06:20   ├─ /tools/beneficial-ownership-lookup.html (+2ms) \n22:06:20   ├─ /tools/charity-lookup-uk.html (+2ms) \n22:06:20   ├─ /tools/uk-company-data.html (+2ms) \n22:06:20   ├─ /tools/uk-companies-house-officers.html (+2ms) \n22:06:20   ├─ /tools/uk-cop-check.html (+2ms) \n22:06:20   ├─ /tools/uk-disqualified-director-check.html (+2ms) \n22:06:20   ├─ /tools/uk-filing-events.html (+2ms) \n22:06:20   ├─ /tools/food-safety-rating-uk.html (+3ms) \n22:06:20   ├─ /tools/uk-gazette-notice-search.html (+2ms) \n22:06:20   ├─ /tools/unit-convert.html (+2ms) \n22:06:20   ├─ /tools/uptime-check.html (+2ms) \n22:06:20   ├─ /tools/url-health-check.html (+2ms) \n22:06:20   ├─ /tools/base64-encode-url.html (+2ms) \n22:06:20   ├─ /tools/url-to-markdown.html (+2ms) \n22:06:20   ├─ /tools/url-to-text.html (+2ms) \n22:06:20   ├─ /tools/us-company-data.html (+2ms) \n22:06:20   ├─ /tools/us-company-data-cobalt.html (+2ms) \n22:06:20   ├─ /tools/us-ein-match.html (+2ms) \n22:06:20   ├─ /tools/us-product-recall-search.html (+2ms) \n22:06:20   ├─ /tools/us-sec-filings-extended.html (+2ms) \n22:06:20   ├─ /tools/vasp-non-compliant-check.html (+3ms) \n22:06:20   ├─ /tools/vasp-verify.html (+5ms) \n22:06:20   ├─ /tools/vat-format-validate.html (+2ms) \n22:06:20   ├─ /tools/vat-rate-lookup.html (+4ms) \n22:06:20   ├─ /tools/wallet-age-check.html (+3ms) \n22:06:20   ├─ /tools/wallet-balance-lookup.html (+2ms) \n22:06:20   ├─ /tools/wallet-transactions-lookup.html (+3ms) \n22:06:20   ├─ /tools/weather-lookup.html (+3ms) \n22:06:20   ├─ /tools/web-extract.html (+5ms) \n22:06:20   ├─ /tools/screenshot-url.html (+4ms) \n22:06:20   ├─ /tools/webhook-test-payload.html (+6ms) \n22:06:20   ├─ /tools/website-carbon-estimate.html (+2ms) \n22:06:20   ├─ /tools/whois-lookup.html (+3ms) \n22:06:20   ├─ /tools/work-permit-requirements.html (+2ms) \n22:06:20   ├─ /tools/workflow-security-audit.html (+2ms) \n22:06:20   ├─ /tools/xml-to-json.html (+2ms) \n22:06:20   ├─ /tools/xrp-address-validate.html (+2ms) \n22:06:20   └─ /tools/youtube-summarize.html (+2ms) \n22:06:20 ▶ src/pages/tools/index.astro\n22:06:20   └─ /tools.html (+11ms) \n22:06:20 ▶ src/pages/use-cases/[slug].astro\n22:06:20   ├─ /use-cases/research-agents.html (+5ms) \n22:06:20   ├─ /use-cases/reading-documents.html (+3ms) \n22:06:20   ├─ /use-cases/checking-data.html (+3ms) \n22:06:20   ├─ /use-cases/onboarding.html (+9ms) \n22:06:20   ├─ /use-cases/invoice-issuer.html (+3ms) \n22:06:20   └─ /use-cases/seo-and-web.html (+3ms) \n22:06:20 ▶ src/pages/use-cases/index.astro\n22:06:20   └─ /use-cases.html (+4ms) \n22:06:20 ✓ Completed in 1.77s.\n\n generating optimized images \n22:06:20   ▶ /_astro/tool-library.BndbSC0g_1Frw2j.webp (reused cache entry) (+1ms) (1/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__Z2qnS3H.webp (reused cache entry) (+1ms) (2/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_Z2gnUwO.webp (reused cache entry) (+1ms) (3/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_2infg3.webp (reused cache entry) (+1ms) (4/69)\n22:06:20   ▶ /_astro/tool-library.BndbSC0g_Z2m1x77.webp (reused cache entry) (+0ms) (5/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__2cXGNb.webp (reused cache entry) (+0ms) (6/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_Z23e9w5.webp (reused cache entry) (+0ms) (7/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_2acgBg.webp (reused cache entry) (+1ms) (8/69)\n22:06:20   ▶ /_astro/tool-library.BndbSC0g_TutnN.webp (reused cache entry) (+0ms) (9/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__iY50Q.webp (reused cache entry) (+0ms) (10/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_ZCS1Cu.webp (reused cache entry) (+0ms) (11/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_1WHx6W.webp (reused cache entry) (+0ms) (12/69)\n22:06:20   ▶ /_astro/tool-library.BndbSC0g_ZTaCUd.webp (reused cache entry) (+0ms) (13/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__28zSFz.webp (reused cache entry) (+1ms) (14/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_1Bz9gB.webp (reused cache entry) (+1ms) (15/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_1KdNBD.webp (reused cache entry) (+1ms) (16/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__1qw1kb.webp (reused cache entry) (+0ms) (17/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_KOurO.webp (reused cache entry) (+0ms) (18/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_Z1NFJVy.webp (reused cache entry) (+0ms) (19/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_2hi5sQ.webp (reused cache entry) (+0ms) (20/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__Z1wuhRA.webp (reused cache entry) (+0ms) (21/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_Z4U9lX.webp (reused cache entry) (+0ms) (22/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_14zDAE.webp (reused cache entry) (+1ms) (23/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_v5mpJ.webp (reused cache entry) (+0ms) (24/69)\n22:06:20   ▶ /_astro/company-records.DC72q35__zFwIz.webp (reused cache entry) (+0ms) (25/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_Z1rdcMk.webp (reused cache entry) (+0ms) (26/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_Z17l5F4.webp (reused cache entry) (+0ms) (27/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_Z1mSk8x.webp (reused cache entry) (+0ms) (28/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_1fP6aQ.webp (reused cache entry) (+0ms) (29/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_Z21atqR.webp (reused cache entry) (+0ms) (30/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_1Ok777.webp (reused cache entry) (+0ms) (31/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_1GnlBa.webp (reused cache entry) (+1ms) (32/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_Z11Qqx7.webp (reused cache entry) (+0ms) (33/69)\n22:06:20   ▶ /_astro/developer-jobs.DF0mDBdJ_Z1wjxEG.webp (reused cache entry) (+0ms) (34/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_Z17iIET.webp (reused cache entry) (+1ms) (35/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_Z1filP.webp (reused cache entry) (+0ms) (36/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_1QoX06.webp (reused cache entry) (+0ms) (37/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_ZKyFz9.webp (reused cache entry) (+1ms) (38/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_29G5q0.webp (reused cache entry) (+1ms) (39/69)\n22:06:20   ▶ /_astro/connect.Dqi13U-Q_ZS6jta.webp (reused cache entry) (+1ms) (40/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_ZkvLgC.webp (reused cache entry) (+0ms) (41/69)\n22:06:20   ▶ /_astro/screening.Bb66r9I4_eYjKs.webp (reused cache entry) (+0ms) (42/69)\n22:06:20   ▶ /_astro/search-web.D37XzBZd_KDLxX.webp (reused cache entry) (+0ms) (43/69)\n22:06:20   ▶ /_astro/connect.Dqi13U-Q_1i3l5C.webp (reused cache entry) (+0ms) (44/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_Z1ela2q.webp (reused cache entry) (+0ms) (45/69)\n22:06:20   ▶ /_astro/connect.Dqi13U-Q_Z1cy02x.webp (reused cache entry) (+0ms) (46/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_2x3815.webp (reused cache entry) (+0ms) (47/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_Z273iIo.webp (reused cache entry) (+0ms) (48/69)\n22:06:20   ▶ /_astro/pay-balance.Cn2PX2_p_Z2twE6F.webp (reused cache entry) (+0ms) (49/69)\n22:06:20   ▶ /_astro/connect.Dqi13U-Q_1n1MDe.webp (reused cache entry) (+0ms) (50/69)\n22:06:20   ▶ /_astro/read-documents.BTAK6Uib_ZJuegf.webp (reused cache entry) (+0ms) (51/69)\n22:06:20   ▶ /_astro/pay-balance.Cn2PX2_p_1RseIu.webp (reused cache entry) (+0ms) (52/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_Z9ifc4.webp (reused cache entry) (+0ms) (53/69)\n22:06:20   ▶ /_astro/pay-wallet.ClvlnByC_Z1lsDyr.webp (reused cache entry) (+0ms) (54/69)\n22:06:20   ▶ /_astro/pay-balance.Cn2PX2_p_ZTCUk9.webp (reused cache entry) (+0ms) (55/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_ZFDp10.webp (reused cache entry) (+0ms) (56/69)\n22:06:20   ▶ /_astro/cta-ribbons.VKQqd3TT_1UFgpk.webp (reused cache entry) (+0ms) (57/69)\n22:06:20   ▶ /_astro/pay-wallet.ClvlnByC_KBrI0.webp (reused cache entry) (+0ms) (58/69)\n22:06:20   ▶ /_astro/pay-balance.Cn2PX2_p_1ns3q9.webp (reused cache entry) (+0ms) (59/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_Z1cYyOV.webp (reused cache entry) (+0ms) (60/69)\n22:06:20   ▶ /_astro/cta-ribbons.VKQqd3TT_Z2clvFf.webp (reused cache entry) (+0ms) (61/69)\n22:06:20   ▶ /_astro/pay-wallet.ClvlnByC_Z2t0gBY.webp (reused cache entry) (+0ms) (62/69)\n22:06:20   ▶ /_astro/pay-balance.Cn2PX2_p_Z3b3Yp.webp (reused cache entry) (+0ms) (63/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_1zlLcq.webp (reused cache entry) (+0ms) (64/69)\n22:06:20   ▶ /_astro/cta-ribbons.VKQqd3TT_1GlU8c.webp (reused cache entry) (+1ms) (65/69)\n22:06:20   ▶ /_astro/pay-wallet.ClvlnByC_ZCpQ92.webp (reused cache entry) (+1ms) (66/69)\n22:06:20   ▶ /_astro/pay-balance.Cn2PX2_p_NgMlk.webp (reused cache entry) (+1ms) (67/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_Z2kn7A6.webp (reused cache entry) (+1ms) (68/69)\n22:06:20   ▶ /_astro/check-details.D5pCYV9b_2fjsX3.webp (reused cache entry) (+0ms) (69/69)\n22:06:20 ✓ Completed in 10ms.\n\n22:06:20 [build] 372 page(s) built in 3.88s\n22:06:20 [build] Complete!\n",
+      "design_check": "\n> design:check\n> node scripts/check-design.mjs && node design/brand-kit/quiet-material/build.mjs --check && node design/brand-kit/quiet-material/foundations/build.mjs --check && node design/brand-kit/quiet-material/controls/build.mjs --check && node design/brand-kit/quiet-material/patterns/build.mjs --check && node design/brand-kit/quiet-material/illustrations/build.mjs --check && node design/brand-kit/quiet-material/homepage/build.mjs --check && node design/brand-kit/quiet-material/hero-comparison/build.mjs --check && node design/brand-kit/quiet-material/opening/build.mjs --check && node design/brand-kit/open-flow/build.mjs --check\n\nchecked 15 design/tokens/*.json files, 6 distinct off-token literals (10 raw occurrences) across the internal-report consumers, 6 allowlisted\nok   design tokens contract\n{\"ok\":true,\"assets\":14,\"gradients\":9,\"source_integrity\":\"not-requested\"}\n{\"ok\":true,\"roles\":12,\"fonts\":2,\"production_adopted\":false}\nControls source, output and evidence bindings pass\nPatterns inputs, outputs and evidence pass\nShared-access illustration sources, outputs and evidence pass\nHomepage generated outputs are current.\nHero comparison sources and generated outputs agree.\nOpening study sources and outputs agree.\nok   open-flow design system: 124 contrast pairs pass, specimen on-token, assets match provenance\n",
+      "design_test": "\n> design:test\n> node --test scripts/design.test.mjs scripts/web-design.test.mjs design/brand-kit/quiet-material/build.test.mjs design/brand-kit/quiet-material/foundations/build.test.mjs design/brand-kit/quiet-material/controls/build.test.mjs && node --test design/brand-kit/quiet-material/patterns/build.test.mjs && node --test design/brand-kit/quiet-material/illustrations/build.test.mjs && node --test design/brand-kit/quiet-material/homepage/build.test.mjs && node --test design/brand-kit/open-flow/build.test.mjs\n\n✔ complete retained register passes without claiming source-file verification (81.348017ms)\n✔ a lost current asset fails even if the remaining records are valid (42.02971ms)\n✔ changing a retained source hash fails closed (35.356921ms)\n✔ an invented Amber card and silent illustration promotion fail closed (59.797676ms)\n✔ a gradient change cannot disagree with its token source (29.167119ms)\n✔ dark fields cannot regain same-tone reading cards (58.451144ms)\n✔ Frost and Mint remain direct-text compositions with no nested reading panel (97.53235ms)\n✔ revision metadata cannot contradict candidate identity, adoption or geometry (219.939433ms)\n✔ duplicate gradient identities and missing authority cannot enter the register (46.668699ms)\n✔ font source provenance and file linkage must agree with packaged inputs (40.912165ms)\n✔ evidence rejects missing builder inputs and contradictory measurements (167.096241ms)\n✔ current control recipe renders and validates (6.833264ms)\n✔ controls cannot silently promote themselves or change the retained type (3.116797ms)\n✔ interaction contract cannot lose focus restoration or native navigation (0.804558ms)\n✔ density and minimum target rules remain bounded (0.653943ms)\n✔ retained identity geometry and radius scale cannot disappear (1.544209ms)\n✔ result interaction and row contract cannot silently diverge (0.974593ms)\n✔ evidence rejects omitted checks, missing inputs and stale outputs (13.294514ms)\n✔ evidence cannot hide qualification limits or claim embedded fonts without them (2.846078ms)\n✔ radius variables cannot hide off-scale corner geometry (1.996904ms)\n✔ complete candidate validates with original fonts and master (81.788045ms)\n✔ candidate cannot claim production adoption (31.731787ms)\n✔ missing role or channel cannot silently reduce coverage (56.296069ms)\n✔ unavailable mono weights and mismatched role values fail (53.781985ms)\n✔ font and logo provenance cannot be replaced by unknown sources (32.388465ms)\n✔ derived variants preserve the original path data (1.472862ms)\n✔ identity palette and font families cannot disagree with specimen CSS (47.822526ms)\n✔ dark-card scope cannot silently expand to an unmeasured gradient (28.418254ms)\n✔ evidence requires font, Unicode, fallback and limitation coverage (251.33675ms)\n✔ export manifest cannot promote the candidate or change its provenance (72.906322ms)\n✔ contrast evidence must cover three samples for each declared gradient (58.875184ms)\n✔ clean pass: valid tokens, matching generated file, no lint findings — zero failures (320.603071ms)\n✔ active.json missing a required field fails schema validation, fixing it passes (558.772844ms)\n✔ a candidate with an invalid status fails schema validation, fixing it passes (480.08209ms)\n✔ invalid JSON in a token file is reported, not thrown (197.155152ms)\n✔ a second top-level file in design/tokens/ fails, removing it passes (513.248406ms)\n✔ a missing active.json fails (280.014443ms)\n✔ active.json changed against origin/main with no adopted_by change fails, changing adopted_by too passes (482.506817ms)\n✔ a change to one surface is not licensed by another surface's adopted_by change (416.258243ms)\n✔ source files under apps/web join the lint scope as soon as the tree exists (182.840339ms)\n✔ apps/web files are judged against the website surface's scale, consumers against internal-reports' (218.687989ms)\n✔ .astro files are linted and the generated web token file is exempt (228.370614ms)\n✔ font-family set to a single token reference is on-token; a raw stack is not (0.3413ms)\n✔ active.json absent on origin/main (this PR creates it) is a pass (207.899987ms)\n✔ no origin/main ref available warns and passes, not fails (30.77186ms)\n✔ active.json unchanged from origin/main is a pass even with a stale adopted_by (195.207945ms)\n✔ an off-token hex literal in a consumer fails, allowlisting it (and matching origin/main) passes (551.287324ms)\n✔ a raw font-family: declaration in a consumer fails (262.296506ms)\n✔ an off-scale margin px value in a consumer fails; an on-scale one passes (475.492307ms)\n✔ an off-scale border-radius px value fails; an on-scale one passes (526.671509ms)\n✔ an HTML numeric entity is not mistaken for a hex color (215.393654ms)\n✔ an allowlist entry whose literal no longer appears in the file fails, removing the entry passes (515.256676ms)\n✔ the allowlist growing versus origin/main fails, matching origin/main passes (418.255875ms)\n✔ an allowlist shrinking versus origin/main is not growth (214.232554ms)\n✔ a stale generated file is detected by generate({check:true}) (188.425518ms)\n✔ a missing generated file is detected by generate({check:true}) (225.345366ms)\n✔ hex literals are found in CSS declarations (followed by a semicolon) and inside strings, but HTML entities are not (0.29055ms)\n✔ regenerating a stale file makes it match (194.792572ms)\n✔ token-only styles pass (9.973543ms)\n✔ planted off-token values in .css, <style> and style=\"\" are each caught (8.682852ms)\n✔ the generated token file itself is not linted (3.760779ms)\n✔ expression style attributes are left to review; only literal ones are extracted (0.319852ms)\n✔ a stale or missing generated token file fails; regenerating fixes it (12.293271ms)\n✔ the committed generated token file matches active.json (1.975289ms)\nℹ tests 64\nℹ suites 0\nℹ pass 64\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 8389.034022\n✔ current pattern sources validate and derive human rules and icon exports (8.369334ms)\n✔ cannot silently change retained type, palette, motion or controls (5.244764ms)\n✔ unknown pages cannot render undefined content (1.453526ms)\n✔ new geometry cannot hide an off-scale field radius (3.180282ms)\n✔ duplicate or executable icon data is rejected (7.195052ms)\n✔ marketing budgets refuse overfilled body and extra result rows (2.272931ms)\n✔ claim basis cannot point to an untracked or alternate authority (1.032683ms)\n✔ evidence cannot omit failure recovery or claim a stale output (7.379735ms)\n✔ rendered composition budgets reject excess actions, links, proofs, decoration and panel depth (0.955411ms)\nℹ tests 9\nℹ suites 0\nℹ pass 9\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 123.114099\n✔ rejects semantic drift between the homepage brief and asset registry (4.939622ms)\n✔ rejects a missing task label and disconnected topology contract (1.291659ms)\n✔ detects a stale generated export (8.016156ms)\n✔ requires verification evidence (5.994837ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 117.785364\nHomepage negative contract tests passed (8).\n✔ design/brand-kit/quiet-material/homepage/build.test.mjs (580.844201ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 590.60792\n✔ WCAG maths matches known reference ratios (1.464308ms)\n✔ every contrast pair passes in both themes (2.132642ms)\n✔ a role colour that drops below AA fails the check (4.240798ms)\n✔ a dark theme missing a role fails (1.401826ms)\n✔ reading text below 16px violates the kit rule (2.103519ms)\n✔ compact and UI roles retain the founder-requested 15px floor (3.257718ms)\n✔ kit-06 brand colours are carried over unchanged (0.536146ms)\n✔ lint rejects planted hex, px, raw font stacks, unknown tokens and off-scale breakpoints (1.794028ms)\n✔ the candidate must stay adopted and identical to the active.json website surface (5.988021ms)\n✔ renderTokensCss can point fonts at a web path (1.023109ms)\n✔ a changed asset fails the provenance hash check (3.844063ms)\n✔ copied imagery hashes match the kit-06 asset hashes (0.207287ms)\n✔ fluid sizes hit their endpoints at 360px and 1440px (0.190999ms)\n✔ generated outputs are in sync with the token file (32.313376ms)\n✔ the specimen stays on-token after a planted inline literal (0.926779ms)\n✔ the hero shell reads its text region from the asset record, not a copied number (0.368315ms)\n✔ dark-theme state indicators and special focus rings are proven, not assumed (0.786459ms)\n✔ specimen.js may not set styles or carry colour/length literals (1.449921ms)\nℹ tests 18\nℹ suites 0\nℹ pass 18\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 152.388892\n",
+      "api_typecheck": "",
+      "claims": "\n> claims:check\n> node scripts/check-claims.mjs\n\nchecked 28 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, apps/web/src, and the frontend llms.txt when present\nok   claims register contract\n",
+      "models": "\n> models:check\n> node apps/api/scripts/check-model-literals.mjs\n\nchecked 699 files under apps/api/src (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)\nok   model registry contract\n",
+      "env": "\n> env:check\n> node scripts/check-env.mjs\n\nchecked 128 process.env names against 133 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract\n",
+      "docs": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n",
+      "programs": "\n> programs:check\n> node scripts/check-program-tracks.mjs\n\nok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml\n",
+      "receipts": "\n> receipts:check\n> node scripts/check-receipts.mjs\n\nchecked 68 archive/receipts/*.json files\nok   receipts contract\nwarn (18) — handoffs stating a bare test count with no receipt:\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-02-t12-research-contract.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-02-t13-design-tokens.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-02-t14-cheap-extras.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-03-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-04-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-05-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-06-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-06-retention-cadence-and-review-followups.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-24-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n",
+      "mcp_build": "\n> strale-mcp@0.2.8 build\n> tsc\n\n"
+    }
+  }
+}

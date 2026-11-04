@@ -1,0 +1,873 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "6a357494c7306ccf01f0a4d80658b6754168e709"
+  },
+  "at": "2026-10-26T22:36:45.569Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": false,
+    "implementation_checks_ok": true,
+    "commit_created": false,
+    "handoff_gate_ok": false,
+    "browser_cases": 24,
+    "axe_violations": 0,
+    "overflow_cases": 0,
+    "console_errors": 0,
+    "geometry_checks": 99,
+    "geometry_failures": 0,
+    "contrast_pairs": 124
+  },
+  "topic": "site-polish-wordmark-hero",
+  "raw": {
+    "ok": false,
+    "implementation_checks_ok": true,
+    "commit_created": false,
+    "handoff_gate_ok": false,
+    "browser_cases": 24,
+    "axe_violations": 0,
+    "overflow_cases": 0,
+    "console_errors": 0,
+    "geometry_checks": 99,
+    "geometry_failures": 0,
+    "contrast_pairs": 124,
+    "checks": [
+      {
+        "command": "apps/web: npm test",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "ℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 29731.438569"
+      },
+      {
+        "command": "apps/web: npm run check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "\nResult (59 files): \n- 0 errors\n- 0 warnings\n- 2 hints"
+      },
+      {
+        "command": "apps/web: npm run build:preview-data",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "22:26:23   ▶ /_astro/pay-balance.Cn2PX2_p_NgMlk.webp (reused cache entry) (+1ms) (69/69)\n22:26:23 ✓ Completed in 10ms.\n\n22:26:23 [build] 372 page(s) built in 4.18s\n22:26:23 [build] Complete!"
+      },
+      {
+        "command": "apps/web: npm run build (live read-only)",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "22:31:56   ▶ /_astro/pay-balance.Cn2PX2_p_NgMlk.webp (reused cache entry) (+0ms) (69/69)\n22:31:56 ✓ Completed in 10ms.\n\n22:31:56 [build] 435 page(s) built in 262.96s\n22:31:56 [build] Complete!"
+      },
+      {
+        "command": "npm run design:check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "Shared-access illustration sources, outputs and evidence pass\nHomepage generated outputs are current.\nHero comparison sources and generated outputs agree.\nOpening study sources and outputs agree.\nok   open-flow design system: 124 contrast pairs pass, specimen on-token, assets match provenance"
+      },
+      {
+        "command": "npm run design:test",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "ℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 147.80778"
+      },
+      {
+        "command": "npm run programs:check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> programs:check\n> node scripts/check-program-tracks.mjs\n\nok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml"
+      },
+      {
+        "command": "npm run claims:check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> claims:check\n> node scripts/check-claims.mjs\n\nchecked 28 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, apps/web/src, and the frontend llms.txt when present\nok   claims register contract"
+      },
+      {
+        "command": "npm run models:check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> models:check\n> node apps/api/scripts/check-model-literals.mjs\n\nchecked 699 files under apps/api/src (excluding apps/api/src/lib/models.ts, *.test.ts, 2 allowlisted data files)\nok   model registry contract"
+      },
+      {
+        "command": "npm run env:check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> node scripts/check-env.mjs\n\nchecked 128 process.env names against 133 rows in config/env-manifest.yaml\nexample files: .env.example, apps/api/.env.example\nok   environment manifest contract"
+      },
+      {
+        "command": "npm run docs:check",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index"
+      },
+      {
+        "command": "npm run receipts:check (pre-receipt)",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-09-27-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-02-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-18-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-19-checkin-morning.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it\n  HANDOFF_BARE_TEST_COUNT handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md: states a test count with no archive/receipts/ link — write a receipt (npm run receipt) and cite it"
+      },
+      {
+        "command": "npm --workspace=packages/mcp-server run build",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> strale-mcp@0.2.8 build\n> tsc"
+      },
+      {
+        "command": "apps/api: npx tsc --noEmit --project tsconfig.json",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": ""
+      },
+      {
+        "command": "npm run build (root API build)",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "> npm run build --workspace=apps/api\n\n\n> @strale/api@0.1.0 build\n> tsc"
+      },
+      {
+        "command": "npm run handoff:orient",
+        "result": "pass",
+        "log": "<local>",
+        "output_tail": "  resume file: design/brand-kit/open-flow/README.md\nProgram cto-readiness — active track T7 \"M4 atomic authority cutover\"\n  next action: Per migration plan section 10 M4. The founder approved starting the preparation on 2026-09-11; the cutover merge itself stays his yes or no. The evidence base is the cutover inventory (archive/sessions/2026-09-11-m4-cutover-inventory.md), whose section 7 sets the batch sequence: (1) extract the unique live rules from the .claude/ starter-kit files and retarget the PROTOCOL.md pointers; (2) rewrite CLAUDE.md as a pee…\n  resume file: archive/sessions/2026-09-11-m4-cutover-inventory.md\nSession contract: read docs/programs/README.md → the active track's next action and resume file before choosing work; `npm run handoff:check` must pass before this session ends (clean, pushed, one batch worktree, register or handoff updated)."
+      }
+    ],
+    "handoff_gate": {
+      "result": "fail",
+      "reason": "read-only .git prevents staging/commit; isolated-clone branch convention and possibly stale merged-remote finding conflict with the user scope",
+      "output": "\n> handoff:check\n> node scripts/handoff/handoff-check.mjs\n\nHANDOFF GATE FAILED (session) — 3 thing(s) to fix before this session may end:\n- [dirty] 25 uncommitted or untracked path(s) in <local> apps/web/README.md, apps/web/scripts/prepare-assets.mjs, apps/web/src/components/Footer.astro, apps/web/src/components/Header.astro, apps/web/src/components/SwitchboardHero.astro, … (25 total)\n    fix: commit your own changes (Conventional Commit message); if a path is not yours, stop and report it — never delete another session's work; nothing may stay uncommitted when a session ends\n- [branch] trunk <local> is on design/site-polish; it stays on main\n    fix: finish that branch in a batch worktree (git worktree add ../strale-wt-<track> design/site-polish) and git switch main here\n- [merged-branch] remote branch origin/docs/dq-39-40-answered has landed on main (patch-equivalent) and still exists\n    fix: git push origin --delete docs/dq-39-40-answered (its PR is merged, or it never diverged from main)\n  note: could not fetch origin; remote-branch findings may be stale\n"
+    },
+    "live_platform_facts": {
+      "status": 200,
+      "source": "https://api.strale.io/v1/platform/facts",
+      "as_of": "2026-10-26T22:17:37.353Z"
+    },
+    "source_hashes": [
+      {
+        "path": "apps/web/README.md",
+        "sha256": "e053a86e06dd8bccf6d0ef78fb0f78dc2f405ac78bd0f3e7e6759d161a83f95d"
+      },
+      {
+        "path": "apps/web/scripts/prepare-assets.mjs",
+        "sha256": "966439a507fe7c07327116779c07c8dc9b0a8a743b062b45b9dec0a6adbdd8cb"
+      },
+      {
+        "path": "apps/web/src/components/Footer.astro",
+        "sha256": "42d6615407676a8349993fc1ed561f0c8031ea0088708f553ee856aa76aa99c9"
+      },
+      {
+        "path": "apps/web/src/components/Header.astro",
+        "sha256": "d10cc7eb6c0ff2139717763f106d71ce91576249170b1dfec9f0367541331073"
+      },
+      {
+        "path": "apps/web/src/components/SwitchboardHero.astro",
+        "sha256": "2265529f3303710cb7c57b483f2f6fb716000fee751df2319e128d34fd5e85b1"
+      },
+      {
+        "path": "apps/web/src/scripts/switchboard.ts",
+        "sha256": "278d24f5f1667ac925bda47d87415ce2e6196888f92d226039a15c49d0cc29be"
+      },
+      {
+        "path": "apps/web/src/styles/site.css",
+        "sha256": "d5d7b813e75e7cbb669a895f37db54d156a221dcf695c073dac73a4712392100"
+      },
+      {
+        "path": "apps/web/src/styles/tokens.generated.css",
+        "sha256": "ad4d44ac7395b7f2298264ce85b1d1fc75ae244f98813439a546680e74201868"
+      },
+      {
+        "path": "design/brand-kit/open-flow/CONTRAST.md",
+        "sha256": "713840737954cbd6675a173be5848dfcf033b0af6ccdfc4cfc23d837698876c2"
+      },
+      {
+        "path": "design/brand-kit/open-flow/README.md",
+        "sha256": "863179b35b5e00be44e77ea948a27c434a450796a498b2be86dff7327071d78e"
+      },
+      {
+        "path": "design/brand-kit/open-flow/build.mjs",
+        "sha256": "6a8420ab6ff87cc62ea4f3077588ec712d04f8c5b54cebac551b52e0b9876c78"
+      },
+      {
+        "path": "design/brand-kit/open-flow/provenance.json",
+        "sha256": "954c0542c7bc9e56f20df7fb863b990e7f46975185cd7ffa1988cce2e44f522b"
+      },
+      {
+        "path": "design/brand-kit/open-flow/specimen/index.html",
+        "sha256": "cbb96e0ae8608ef9eaefb648dfc505ee4e01ec6fab368a35457216e1adfc986b"
+      },
+      {
+        "path": "design/brand-kit/open-flow/specimen/specimen.css",
+        "sha256": "c6155ea188b37356c09d491a29c1b0d33871dc02b0d87edc14b91bbb697fab13"
+      },
+      {
+        "path": "design/brand-kit/open-flow/tokens.css",
+        "sha256": "aa934737717a93a5ad992ec28146cbdd425471b921be1a152f64c321aceb4e5c"
+      },
+      {
+        "path": "design/tokens/active.json",
+        "sha256": "5a22d35ad0920a49ba690175ea0966c34dea3cc933030ef5b9e9008ba3ecb388"
+      },
+      {
+        "path": "design/tokens/candidates/open-flow.json",
+        "sha256": "1f1a9caa17681c7123cb2f63b49d48541d885c372e54416d164ac62275ed6f9f"
+      },
+      {
+        "path": "docs/programs/brand-website/tracks.yaml",
+        "sha256": "1f8e4f39719dd5b87f720f5d4f5bc5aebfb543f937cb8f9893313cd2ad2e886f"
+      },
+      {
+        "path": "apps/web/src/components/Wordmark.astro",
+        "sha256": "07bc5d7dcb31f29ef6cbbb6aad779acde3c6f25cba40d80c83800f4249827b53"
+      },
+      {
+        "path": "design/brand-kit/open-flow/assets/logo/wordmark.svg",
+        "sha256": "dafbd8bd27b05a4fff10557c74fe2c7aca90b5526dc5621fa6c61bb9f6cec540"
+      }
+    ],
+    "browser": [
+      {
+        "path": "/",
+        "viewport": "1333x650",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1333x650-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1333x650",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1333x650-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1440x900",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1440x900-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1440x900",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1440x900-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1920x1080",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1920x1080-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1920x1080",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1920x1080-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1024x700",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1024x700-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "1024x700",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--1024x700-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "768x1024",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--768x1024-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "768x1024",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--768x1024-dark.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "390x844",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--390x844-light.jpg"
+      },
+      {
+        "path": "/",
+        "viewport": "390x844",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "home--390x844-dark.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1333x650",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1333x650-light.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1333x650",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1333x650-dark.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1440x900",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1440x900-light.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1440x900",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1440x900-dark.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1920x1080",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1920x1080-light.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1920x1080",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1920x1080-dark.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1024x700",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1024x700-light.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "1024x700",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--1024x700-dark.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "768x1024",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--768x1024-light.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "768x1024",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--768x1024-dark.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "390x844",
+        "theme": "light",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--390x844-light.jpg"
+      },
+      {
+        "path": "/tools/swedish-company-data",
+        "viewport": "390x844",
+        "theme": "dark",
+        "status": 200,
+        "overflow_px": 0,
+        "axe_violations": 0,
+        "console_errors": [],
+        "screenshot": "tools-swedish-company-data--390x844-dark.jpg"
+      }
+    ],
+    "geometry": [
+      {
+        "name": "1333x650 geometry",
+        "ok": true
+      },
+      {
+        "name": "1333x650 call 0",
+        "ok": true
+      },
+      {
+        "name": "1333x650 call 1",
+        "ok": true
+      },
+      {
+        "name": "1333x650 call 2",
+        "ok": true
+      },
+      {
+        "name": "1333x650 call 3",
+        "ok": true
+      },
+      {
+        "name": "1333x650 call 4",
+        "ok": true
+      },
+      {
+        "name": "1333x650 call 5",
+        "ok": true
+      },
+      {
+        "name": "1333x650 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1440x900 geometry",
+        "ok": true
+      },
+      {
+        "name": "1440x900 call 0",
+        "ok": true
+      },
+      {
+        "name": "1440x900 call 1",
+        "ok": true
+      },
+      {
+        "name": "1440x900 call 2",
+        "ok": true
+      },
+      {
+        "name": "1440x900 call 3",
+        "ok": true
+      },
+      {
+        "name": "1440x900 call 4",
+        "ok": true
+      },
+      {
+        "name": "1440x900 call 5",
+        "ok": true
+      },
+      {
+        "name": "1440x900 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 geometry",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 call 0",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 call 1",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 call 2",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 call 3",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 call 4",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 call 5",
+        "ok": true
+      },
+      {
+        "name": "1920x1080 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1024x700 geometry",
+        "ok": true
+      },
+      {
+        "name": "1024x700 call 0",
+        "ok": true
+      },
+      {
+        "name": "1024x700 call 1",
+        "ok": true
+      },
+      {
+        "name": "1024x700 call 2",
+        "ok": true
+      },
+      {
+        "name": "1024x700 call 3",
+        "ok": true
+      },
+      {
+        "name": "1024x700 call 4",
+        "ok": true
+      },
+      {
+        "name": "1024x700 call 5",
+        "ok": true
+      },
+      {
+        "name": "1024x700 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "768x1024 geometry",
+        "ok": true
+      },
+      {
+        "name": "768x1024 call 0",
+        "ok": true
+      },
+      {
+        "name": "768x1024 call 1",
+        "ok": true
+      },
+      {
+        "name": "768x1024 call 2",
+        "ok": true
+      },
+      {
+        "name": "768x1024 call 3",
+        "ok": true
+      },
+      {
+        "name": "768x1024 call 4",
+        "ok": true
+      },
+      {
+        "name": "768x1024 call 5",
+        "ok": true
+      },
+      {
+        "name": "768x1024 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "390x844 geometry",
+        "ok": true
+      },
+      {
+        "name": "390x844 call 0",
+        "ok": true
+      },
+      {
+        "name": "390x844 call 1",
+        "ok": true
+      },
+      {
+        "name": "390x844 call 2",
+        "ok": true
+      },
+      {
+        "name": "390x844 call 3",
+        "ok": true
+      },
+      {
+        "name": "390x844 call 4",
+        "ok": true
+      },
+      {
+        "name": "390x844 call 5",
+        "ok": true
+      },
+      {
+        "name": "390x844 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1333x550 geometry",
+        "ok": true
+      },
+      {
+        "name": "1333x550 call 0",
+        "ok": true
+      },
+      {
+        "name": "1333x550 call 1",
+        "ok": true
+      },
+      {
+        "name": "1333x550 call 2",
+        "ok": true
+      },
+      {
+        "name": "1333x550 call 3",
+        "ok": true
+      },
+      {
+        "name": "1333x550 call 4",
+        "ok": true
+      },
+      {
+        "name": "1333x550 call 5",
+        "ok": true
+      },
+      {
+        "name": "1333x550 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1024x550 geometry",
+        "ok": true
+      },
+      {
+        "name": "1024x550 call 0",
+        "ok": true
+      },
+      {
+        "name": "1024x550 call 1",
+        "ok": true
+      },
+      {
+        "name": "1024x550 call 2",
+        "ok": true
+      },
+      {
+        "name": "1024x550 call 3",
+        "ok": true
+      },
+      {
+        "name": "1024x550 call 4",
+        "ok": true
+      },
+      {
+        "name": "1024x550 call 5",
+        "ok": true
+      },
+      {
+        "name": "1024x550 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1023x700 geometry",
+        "ok": true
+      },
+      {
+        "name": "1023x700 call 0",
+        "ok": true
+      },
+      {
+        "name": "1023x700 call 1",
+        "ok": true
+      },
+      {
+        "name": "1023x700 call 2",
+        "ok": true
+      },
+      {
+        "name": "1023x700 call 3",
+        "ok": true
+      },
+      {
+        "name": "1023x700 call 4",
+        "ok": true
+      },
+      {
+        "name": "1023x700 call 5",
+        "ok": true
+      },
+      {
+        "name": "1023x700 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1200x600 geometry",
+        "ok": true
+      },
+      {
+        "name": "1200x600 call 0",
+        "ok": true
+      },
+      {
+        "name": "1200x600 call 1",
+        "ok": true
+      },
+      {
+        "name": "1200x600 call 2",
+        "ok": true
+      },
+      {
+        "name": "1200x600 call 3",
+        "ok": true
+      },
+      {
+        "name": "1200x600 call 4",
+        "ok": true
+      },
+      {
+        "name": "1200x600 call 5",
+        "ok": true
+      },
+      {
+        "name": "1200x600 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1280x600 geometry",
+        "ok": true
+      },
+      {
+        "name": "1280x600 call 0",
+        "ok": true
+      },
+      {
+        "name": "1280x600 call 1",
+        "ok": true
+      },
+      {
+        "name": "1280x600 call 2",
+        "ok": true
+      },
+      {
+        "name": "1280x600 call 3",
+        "ok": true
+      },
+      {
+        "name": "1280x600 call 4",
+        "ok": true
+      },
+      {
+        "name": "1280x600 call 5",
+        "ok": true
+      },
+      {
+        "name": "1280x600 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "1440x650 geometry",
+        "ok": true
+      },
+      {
+        "name": "1440x650 call 0",
+        "ok": true
+      },
+      {
+        "name": "1440x650 call 1",
+        "ok": true
+      },
+      {
+        "name": "1440x650 call 2",
+        "ok": true
+      },
+      {
+        "name": "1440x650 call 3",
+        "ok": true
+      },
+      {
+        "name": "1440x650 call 4",
+        "ok": true
+      },
+      {
+        "name": "1440x650 call 5",
+        "ok": true
+      },
+      {
+        "name": "1440x650 reduced motion pause hidden",
+        "ok": true
+      },
+      {
+        "name": "automatic call silent",
+        "ok": true
+      },
+      {
+        "name": "pause holds call beyond cycle",
+        "ok": true
+      },
+      {
+        "name": "keyboard selected call announced",
+        "ok": true
+      }
+    ],
+    "reviews": {
+      "technical": "GO, rounds 2",
+      "product": "GO, rounds 2",
+      "record": "archive/sessions/2026-10-26-site-polish-review.md"
+    }
+  }
+}

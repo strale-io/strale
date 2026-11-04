@@ -43,15 +43,20 @@ export const LINT_TARGETS = [
 
 /** Directories whose source files join the lint scope as soon as they exist (the website, once it is built as apps/web). */
 export const LINT_TREES = ["apps/web"];
-const LINT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".css", ".html"]);
-const LINT_SKIP_DIRS = new Set(["node_modules", "dist", "build", ".next", "coverage"]);
+/** The website tree. Its files are judged against the `website` surface's scale, not internal-reports'. */
+export const WEB_TREE = "apps/web";
+/** Generated from active.json's website surface by scripts/generate-web-tokens.mjs; the token source, so exempt like design-system.ts. */
+export const WEB_TOKENS_GENERATED_PATH = "apps/web/src/styles/tokens.generated.css";
+const LINT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".css", ".html", ".astro"]);
+const LINT_EXEMPT = new Set([WEB_TOKENS_GENERATED_PATH]);
+const LINT_SKIP_DIRS = new Set(["node_modules", "dist", "build", ".next", "coverage", ".astro"]);
 
 function walkTree(absDir, relDir, out) {
   for (const entry of readdirSync(absDir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (LINT_SKIP_DIRS.has(entry.name)) continue;
       walkTree(resolve(absDir, entry.name), `${relDir}/${entry.name}`, out);
-    } else if (LINT_EXTENSIONS.has(entry.name.slice(entry.name.lastIndexOf(".")))) {
+    } else if (LINT_EXTENSIONS.has(entry.name.slice(entry.name.lastIndexOf("."))) && !LINT_EXEMPT.has(`${relDir}/${entry.name}`)) {
       out.push(`${relDir}/${entry.name}`);
     }
   }
@@ -254,7 +259,8 @@ export function checkPromotionRequiresDecision(root) {
 // `&#128202;`) and not part of a longer hex run.
 const HEX_RE = /(?<![&0-9A-Za-z])#[0-9A-Fa-f]{6}(?![0-9A-Za-z])/g;
 const RGB_HSL_RE = /\b(rgb|hsl)a?\s*\(/g;
-const FONT_FAMILY_RE = /font-family\s*:/g;
+// A font-family that is only a token reference (`font-family: var(--font-body)`) is on-token.
+const FONT_FAMILY_RE = /font-family\s*:(?!\s*var\(--[\w-]+\)\s*[;}"'])/g;
 // Box-model properties whose px literals are judged against the spacing
 // scale, and border-radius against the radii scale. Deliberately narrow —
 // the plan's "px/rem value not on the surface's spacing/radii scale" is a
@@ -264,7 +270,7 @@ const SPACING_PROP_RE = /\b(?:margin|padding|gap)\s*:\s*([^;{}]+);/g;
 const RADIUS_PROP_RE = /\bborder-radius\s*:\s*([^;{}]+);/g;
 const PX_RE = /(-?\d+(?:\.\d+)?)px/g;
 
-function loadInternalReportsScale(root) {
+function loadSurfaceScale(root, surfaceName) {
   const abs = resolve(root, ACTIVE_PATH);
   if (!existsSync(abs)) return { spacing: new Set(), radii: new Set(), radiiStrings: new Set() };
   let active;
@@ -273,7 +279,7 @@ function loadInternalReportsScale(root) {
   } catch {
     return { spacing: new Set(), radii: new Set(), radiiStrings: new Set() };
   }
-  const surface = active.surfaces?.["internal-reports"];
+  const surface = active.surfaces?.[surfaceName];
   const spacing = new Set((surface?.spacing ?? []).map(Number));
   const radii = new Set((surface?.radii ?? []).filter((v) => typeof v === "number"));
   const radiiStrings = new Set((surface?.radii ?? []).filter((v) => typeof v === "string"));
@@ -329,14 +335,15 @@ function dedupeKey(entry) {
 
 /** Every off-token literal currently in the lint targets, deduplicated by (file, kind, value). Also returns the raw (non-deduplicated) count. */
 export function scanAllLintTargets(root) {
-  const scale = loadInternalReportsScale(root);
+  const internalScale = loadSurfaceScale(root, "internal-reports");
+  const websiteScale = loadSurfaceScale(root, "website");
   const entries = [];
   let rawCount = 0;
   for (const file of lintTargets(root)) {
     const abs = resolve(root, file);
     if (!existsSync(abs)) continue;
     const text = readFileSync(abs, "utf8");
-    const found = scanFileForLiterals(text, scale);
+    const found = scanFileForLiterals(text, file.startsWith(`${WEB_TREE}/`) ? websiteScale : internalScale);
     rawCount += found.length;
     for (const f of found) entries.push({ file, kind: f.kind, value: f.value });
   }

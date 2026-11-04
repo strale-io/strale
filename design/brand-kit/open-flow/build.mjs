@@ -2,7 +2,8 @@
 //   node design/brand-kit/open-flow/build.mjs          regenerate tokens.css, CONTRAST.md and the generated regions of specimen/index.html
 //   node design/brand-kit/open-flow/build.mjs --check  fail if any of those is stale, a contrast pair is below its minimum,
 //                                                      the specimen uses an off-token literal, or a copied asset/font changed
-// Source of every value: design/tokens/candidates/open-flow.json. Asset lineage: provenance.json.
+// Source of every value: design/tokens/candidates/open-flow.json, adopted by DEC-20261024-B and revised by DEC-20261025-A as the website surface of
+// design/tokens/active.json (the two must stay identical). Asset lineage: provenance.json.
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -12,6 +13,10 @@ import { createHash } from 'node:crypto';
 export const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../../..');
 export const TOKENS_PATH = resolve(repo, 'design/tokens/candidates/open-flow.json');
+export const ACTIVE_PATH = resolve(repo, 'design/tokens/active.json');
+/** The surface fields active.json carries for the website; each must equal the adopted candidate's value. */
+export const SURFACE_FIELDS = ['palette', 'type', 'spacing', 'radii', 'shadows', 'motion', 'layout'];
+export const loadWebsiteSurface = () => JSON.parse(readFileSync(ACTIVE_PATH, 'utf8')).surfaces.website;
 const read = p => readFileSync(resolve(here, p), 'utf8');
 export const loadTokens = () => JSON.parse(readFileSync(TOKENS_PATH, 'utf8'));
 export const loadProvenance = () => JSON.parse(read('provenance.json'));
@@ -58,8 +63,8 @@ export function contrastResults(t) {
 }
 
 // ---- validation ----
-export function validate(t, prov = loadProvenance(), { checkFiles = true } = {}) {
-  assert.equal(t.status, 'proposed', 'Open Flow stays a proposed candidate until a decision adopts it');
+export function validate(t, prov = loadProvenance(), { checkFiles = true, website = loadWebsiteSurface() } = {}) {
+  assert.equal(t.status, 'adopted', 'Open Flow is the adopted website system (DEC-20261024-B); its candidate status is adopted');
   const light = Object.keys(rolesFor(t, 'light')).sort(), dark = Object.keys(rolesFor(t, 'dark')).sort();
   assert.deepEqual(dark, light, 'Light and dark themes must define the same role set');
   const lc = Object.keys(pick(t, 'chart.light.')), dc = Object.keys(pick(t, 'chart.dark.'));
@@ -74,7 +79,8 @@ export function validate(t, prov = loadProvenance(), { checkFiles = true } = {})
     assert(r.min <= r.max, `Type role ${id}: min above max`);
     assert(r.family in t.type.families, `Type role ${id}: unknown family ${r.family}`);
   }
-  assert(t.type.scale.body.min >= 16 && t.type.scale.compact.min >= 16, 'Kit-06 type-measure rule: reading text never below 16px');
+  assert(t.type.scale.body.min >= 16, 'Kit-06 type-measure rule: reading text never below 16px');
+  assert(t.type.scale.compact.min >= 15 && t.type.scale.ui.min >= 15, 'Open Flow 0.4: compact and interactive text never below 15px');
   for (const v of Object.values(t.layout.radius_roles)) assert(t.radii.includes(v), `Radius role ${v} is off the radius scale`);
   for (const v of Object.values(t.layout.stack_px)) assert(t.spacing.includes(v), `Stack value ${v} is off the spacing scale`);
   for (const v of [...Object.values(t.layout.gutter_px), ...Object.values(t.layout.section_rhythm_px)]) assert(t.spacing.includes(v), `Layout value ${v} is off the spacing scale`);
@@ -83,6 +89,10 @@ export function validate(t, prov = loadProvenance(), { checkFiles = true } = {})
       assert(existsSync(resolve(here, f.file)), `Missing file ${f.file}`);
       assert.equal(sha(f.file), f.sha256, `File changed since it was copied from its source: ${f.file}`);
     }
+  }
+  if (website) {
+    assert.equal(website.adopted_by, 'DEC-20261025-A', 'The website surface in active.json must be adopted by DEC-20261025-A (Open Flow 0.2, Daylight)');
+    for (const f of SURFACE_FIELDS) assert.deepEqual(website[f], t[f], `active.json website.${f} differs from the adopted Open Flow candidate; promote by decision, never edit one side`);
   }
   return true;
 }
@@ -104,7 +114,7 @@ function themeVars(t, theme) {
   v['color-scheme-value'] = theme;
   return v;
 }
-export function renderTokensCss(t, prov = loadProvenance()) {
+export function renderTokensCss(t, prov = loadProvenance(), { fontBase = 'fonts/', header = null } = {}) {
   const L = t.layout, base = {};
   for (const [k, x] of Object.entries(pick(t, 'brand.'))) base[`brand-${k}`] = x;
   for (const [k, x] of Object.entries(pick(t, 'chart.seq.'))) base[`chart-seq-${k}`] = x;
@@ -127,6 +137,8 @@ export function renderTokensCss(t, prov = loadProvenance()) {
   for (const [k, w] of Object.entries(L.container_px)) base[`container-${k}`] = `${w}px`;
   for (const [k, m] of Object.entries(L.measure)) base[`measure-${k}`] = m;
   for (const [k, s] of Object.entries(L.stack_px)) base[`stack-${k}`] = `var(--space-${s})`;
+  // Viewport lengths a layout fills (0.3): CSS viewport units, stated as data rather than typed into a page.
+  for (const [k, v] of Object.entries(L.viewport ?? {})) base[`viewport-${k}`] = v;
   Object.assign(base, {
     'control-h-sm': `${L.control.height_sm_px}px`, 'control-h': `${L.control.height_px}px`, 'control-h-lg': `${L.control.height_lg_px}px`,
     'target-min': `${L.control.min_target_px}px`, 'border-width': `${L.control.border_px}px`,
@@ -141,13 +153,15 @@ export function renderTokensCss(t, prov = loadProvenance()) {
   const bp = L.breakpoints_px;
   const md = { gutter: `var(--space-${L.gutter_px.md})`, 'grid-columns': L.grid.columns.md, 'column-gap': `var(--space-${L.grid.column_gap_px.md})`, 'section-space': `var(--space-${L.section_rhythm_px.md})`, 'nav-h': `${L.nav.height_px}px` };
   const lg = { gutter: `var(--space-${L.gutter_px.lg})`, 'grid-columns': L.grid.columns.lg, 'column-gap': `var(--space-${L.grid.column_gap_px.lg})`, 'section-space': `var(--space-${L.section_rhythm_px.lg})` };
+  // Container steps (0.3): the content width grows on wide screens, at named breakpoints.
+  const steps = (L.container_steps ?? []).map(c => `@media (min-width: ${bp[c.min_width]}px) {\n  :root {\n    --container-content: ${c.content_px}px;\n  }\n}\n`).join('');
   const reduced = Object.fromEntries(Object.keys(t.motion.duration).map(k => [`duration-${k}`, '0ms']));
   const lightV = decls(themeVars(t, 'light')), darkV = decls(themeVars(t, 'dark'));
-  return `/* GENERATED by design/brand-kit/open-flow/build.mjs from design/tokens/candidates/open-flow.json — do not edit. */
-/* Candidate (status: proposed). Production values live in design/tokens/active.json. */
-@font-face { font-family: "Space Grotesk"; src: url("fonts/SpaceGrotesk.ttf") format("truetype"); font-weight: 300 700; font-display: swap; }
-@font-face { font-family: "Instrument Sans"; src: url("fonts/InstrumentSans.ttf") format("truetype"); font-weight: 400 700; font-stretch: 75% 100%; font-display: swap; }
-@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+  return `${header ?? `/* GENERATED by design/brand-kit/open-flow/build.mjs from design/tokens/candidates/open-flow.json — do not edit. */
+/* Adopted by DEC-20261024-B, revised to 0.2 (Daylight) by DEC-20261025-A and to 0.3 (smaller running text) on 2026-10-26; identical to the website surface in design/tokens/active.json. */`}
+@font-face { font-family: "Space Grotesk"; src: url("${fontBase}SpaceGrotesk.ttf") format("truetype"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Instrument Sans"; src: url("${fontBase}InstrumentSans.ttf") format("truetype"); font-weight: 400 700; font-stretch: 75% 100%; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("${fontBase}IBMPlexMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
 
 :root {
 ${decls(base)}
@@ -162,7 +176,7 @@ ${decls(md).replace(/^/gm, '  ')}
 ${decls(lg).replace(/^/gm, '  ')}
   }
 }
-
+${steps}
 /* Light theme: the default, and any element marked data-theme="light". */
 :root, [data-theme="light"] {
 ${lightV}
@@ -228,7 +242,7 @@ const ROLE_GROUPS = [
   ['Code', ['code-bg', 'code-text', 'code-muted', 'code-keyword', 'code-string', 'code-number', 'code-property']]
 ];
 function genPalette(t) {
-  const brandNotes = { blue: 'Primary expression; action colour', violet: 'Flow and depth; never a state', teal: 'Graphic family; not text, not success', soft: 'Editorial surface, dark text', ink: 'Reading text', paper: 'Clear reading space', 'mist-blue': 'Secondary light surface', 'mist-teal': 'Grouped information', 'deep-violet': 'Dark field, light text', 'logo-black': 'Wordmark only', border: 'Quiet division (kit); the light border role', 'image-ground': 'Sampled from the artwork; not a kit colour' };
+  const brandNotes = { blue: 'Primary expression; artwork and links', violet: 'Flow and depth; never a state', teal: 'Graphic family; not text, not success', soft: 'Editorial surface, dark text', ink: 'Reading text', paper: 'Clear reading space', 'mist-blue': 'Secondary light surface', 'mist-teal': 'Grouped information', 'deep-violet': 'Dark field, light text', 'logo-black': 'Wordmark only', border: 'Quiet division (kit); the light border role', 'image-ground': 'Sampled from the artwork; not a kit colour' };
   const brand = Object.entries(pick(t, 'brand.')).map(([k, v]) => swatch(`brand-${k}`, v, brandNotes[k] || '')).join('');
   const themes = THEMES.map(theme => {
     const roles = rolesFor(t, theme);
@@ -258,7 +272,7 @@ function genChart(t) {
   return `<div class="theme-pair">${sw}</div><div class="ramp-row"><div><p class="label">Sequential (magnitude) · one hue</p><div class="ramp">${seq}</div></div><div><p class="label">Diverging (polarity) · grey midpoint</p><div class="ramp">${div}</div></div></div><figure class="chart-card"><figcaption class="chart-title">Specimen chart — grouped bars, six series <span class="muted">(specimen data)</span></figcaption><ul class="legend">${legend}</ul><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped bar chart specimen with six series over four quarters" class="chart-svg">${grid}${bars}</svg></figure>`;
 }
 function genType(t) {
-  const samples = { hero: 'Hero statement placeholder', campaign: 'Page title placeholder', section: 'Section heading placeholder', subhead: 'Card or sub-section heading', detail: 'Detail heading for a group', lead: 'An introductory paragraph sits under a page or section heading and sets up what follows in one or two sentences.', body: 'Reading text explains the idea in full sentences. It keeps a bounded line length and open leading so a longer explanation stays comfortable. Placeholder copy; the story is decided separately.', compact: 'Compact text for card bodies, table cells and reference rows.', ui: 'Button · Navigation · Tab', small: 'Helper text, metadata and captions.', label: 'Supporting label', code: 'curl -X POST https://api.example.test/v1/run', stat: '1,284', numeric: '€0.02 · 1,284 · 312 ms' };
+  const samples = { hero: 'Hero statement placeholder', 'home-hero': 'Home hero in two columns', campaign: 'Page title placeholder', section: 'Section heading placeholder', subhead: 'Card or sub-section heading', detail: 'Detail heading for a group', lead: 'An introductory paragraph sits under a page or section heading and sets up what follows in one or two sentences.', body: 'Reading text explains the idea in full sentences. It keeps a bounded line length and open leading so a longer explanation stays comfortable. Placeholder copy; the story is decided separately.', compact: 'Compact text for card bodies, table cells and reference rows.', ui: 'Button · Navigation · Tab', small: 'Helper text, metadata and captions.', label: 'Supporting label', code: 'curl -X POST https://api.example.test/v1/run', stat: '1,284', numeric: '€0.02 · 1,284 · 312 ms' };
   return Object.entries(t.type.scale).map(([id, r]) => `<div class="type-row"><div class="type-meta"><code>${id}</code><span>${r.family === 'display' ? 'Space Grotesk' : r.family === 'body' ? 'Instrument Sans' : 'IBM Plex Mono'} ${r.weight}</span><span>${r.min === r.max ? r.min : `${r.min}–${r.max}`}px · ${r.line} · ${r.tracking}em</span><span class="${r.source === 'kit-06' ? 'tag tag-kit' : 'tag'}">${r.source}</span></div><p class="t-${id}">${esc(samples[id])}</p></div>`).join('');
 }
 function genSpace(t) {

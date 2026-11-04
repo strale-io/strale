@@ -7,6 +7,7 @@
 import { requireInputs } from "./require-inputs.mjs";
 import { checkAllDesign, lintTargets, repoRootFrom, GENERATED_PATH } from "./design-lib.mjs";
 import { generate } from "./generate-design-tokens.mjs";
+import { checkWebTokens, lintWebStyles } from "./web-design-lib.mjs";
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -28,6 +29,8 @@ if (genResult.stale) {
       : `${GENERATED_PATH} does not match design/tokens/active.json — fix: npm run design:tokens:generate (then commit it)`,
   });
 }
+
+failures.push(...checkWebTokens(root), ...lintWebStyles(root));
 
 if (json) {
   console.log(JSON.stringify({

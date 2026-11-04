@@ -1,7 +1,7 @@
 schema_version: 1
 program: brand-website
 program_status: active
-updated: "2026-10-23"
+updated: "2026-10-26"
 tracks:
   - id: T1
     title: Product and brand discovery
@@ -52,7 +52,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: "Open Flow adopted by Petter on 2026-10-24 (DEC-20261024-B), together with SITE-STRUCTURE.md and MESSAGING-LEVELS.md. Next: build the site in apps/web (T6) and promote the open-flow tokens into design/tokens/active.json as part of that build. The kit-06 STRALE wordmark stays a candidate; the flowing-S logo stays until Petter decides."
+    next_action: "Open Flow adopted (DEC-20261024-B) and promoted: the candidate is status adopted and is the website surface of design/tokens/active.json, which apps/web builds from (branch claude/loving-newton-mxoo9l, PR open for Petter's review). This track closes when that PR merges; the remaining website work is T6. Open items that stay here: imagery rights and copy-fit record before any public use, and a later professional redraw of the kit-06 STRALE wordmark, adopted by Petter on 2026-10-26 as a vector trace. Petter also approved ink/inverse primary buttons and a two-column hero (go with all three); see docs/strategy/2026-10-26-website-identity-and-hero-adoption.md."
     resume_file: design/brand-kit/open-flow/README.md
     exit:
       - Founder-chosen kit-06 direction built out as a complete website system (tokens, contrast proof, components with states, section patterns, imagery rules) with lineage to the kit.
@@ -89,8 +89,8 @@ tracks:
     gate: none
     depends_on: [T5]
     owner: session
-    next_action: Build the agreed narrative and developer conversion paths in apps/web using the adopted assets and components.
-    resume_file: docs/programs/brand-website/PROGRAM.md
+    next_action: "apps/web is in stacked draft PRs #725 <- #726 <- #727 <- #736 (design/site-polish, main merged in 2026-11-02) <- #892 (design/hero-centred: centred hero with the switchboard below, roomy section rhythm on every page, light theme only, quieter footer, slower reveals; all Petter's 2026-11-03 feedback applied and CI green). Nothing merged or published; the strale.dev switch-over is Petter's call (FD-20260901-PUBLIC-DOMAIN). Petter approved the home page on 2026-11-03 and has the eight main pages to look at in a private preview (https://claude.ai/artifact/Cbduab7jNroiqXwYrTJkvj; regenerate from apps/web/dist by copying the pages with relative asset paths). Next: when he is happy, step 2 = an independent read-only review of the whole stack, fix findings, merge bottom-up through the merge queue; step 3 = a short switch-over readiness list for Petter. Full state: handoff/_general/from-code/2026-11-02-website-centred-hero.md."
+    resume_file: apps/web/README.md
     exit:
       - Responsive, accessible and performant benefit-first website with truthful demonstrations.
       - Visitor-to-first-execution paths and machine discovery surfaces verified.

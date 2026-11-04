@@ -111,8 +111,10 @@ for (const [script, file, key] of [
 }));
 test("scheduled outcomes: no scheduled workflows fails without network", () => runCase("scripts/check-scheduled-outcomes.mjs", [".github/workflows"], () => emptyDir(".github/workflows")));
 test("design: absent consumers fail rather than lint zero files", () => {
-  const targets = ["apps/api/scripts/ceo-dashboard.ts", "apps/api/src/lib/digest-formatter.ts", "apps/api/src/lib/interrupt-sender.ts"];
-  runCase("scripts/check-design.mjs", targets, () => targets.forEach((path) => rmSync(join(fixture, path))));
+  // apps/web joins the lint scope as soon as it exists (LINT_TREES in design-lib.mjs), so it is a
+  // consumer too: with the website present, removing only the three report files leaves inputs.
+  const targets = ["apps/api/scripts/ceo-dashboard.ts", "apps/api/src/lib/digest-formatter.ts", "apps/api/src/lib/interrupt-sender.ts", ...(existsSync(join(fixture, "apps/web")) ? ["apps/web"] : [])];
+  runCase("scripts/check-design.mjs", targets, () => targets.forEach((path) => rmSync(join(fixture, path), { recursive: true, force: true })));
 });
 for (const name of ["check-mjs-syntax", "check-no-direct-getexecutor-in-scripts"]) {
   test(`${name}: empty script selector fails`, () => {

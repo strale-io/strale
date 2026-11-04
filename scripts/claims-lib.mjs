@@ -80,6 +80,9 @@ function loadSourceSurfaces(root) {
 export const PACKAGES_DIR = "packages";
 export const MANIFESTS_DIR = "manifests";
 export const PLATFORM_FACTS_PATH = "apps/api/src/lib/platform-facts.ts";
+/** The website's source (apps/web, DEC-20260902-A): page copy, editorial data and components. */
+export const WEB_SRC_DIR = "apps/web/src";
+const WEB_SRC_EXTENSIONS = /\.(astro|ts|md|mdx|json)$/;
 export const FRONTEND_LLMS_TXT_ENV = "STRALE_FRONTEND_PATH";
 const DEFAULT_FRONTEND_LLMS_TXT = "../strale-frontend/public/llms.txt";
 
@@ -247,6 +250,22 @@ export function loadFrontendLlmsTxt(root) {
   return [{ file: "../strale-frontend/public/llms.txt", text: readFileSync(abs, "utf8") }];
 }
 
+/** Every page, component and editorial file under apps/web/src, as { file, text }. */
+export function loadWebSource(root) {
+  const out = [];
+  const walk = (rel) => {
+    const abs = resolve(root, rel);
+    if (!existsSync(abs)) return;
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) walk(child);
+      else if (WEB_SRC_EXTENSIONS.test(entry.name)) out.push({ file: child, text: readFileSync(resolve(root, child), "utf8") });
+    }
+  };
+  walk(WEB_SRC_DIR);
+  return out;
+}
+
 /** Every scanned surface, as { file, text }[]. */
 export function loadAllSurfaces(root) {
   return [
@@ -255,6 +274,7 @@ export function loadAllSurfaces(root) {
     ...loadSourceSurfaces(root),
     ...loadManifestDescriptions(root),
     ...loadPlatformFacts(root),
+    ...loadWebSource(root),
     ...loadFrontendLlmsTxt(root),
   ];
 }

@@ -145,7 +145,7 @@
       "file": "assets/candidate/logo-refinement.png",
       "sha256": "0f47edf96793bd01fad928d7740f7cd882857eff9c6c27ec1d02ca0b48c26da9",
       "from": "brandkit.proposed.zip:assets/logo-refinement.png",
-      "status": "candidate only — raster study, no vector master; not for use until the founder decides"
+      "status": "source raster study; wordmark adopted by Petter on 2026-10-26 as a vector trace pending professional redraw"
     }
   ],
   "logo": [
@@ -154,14 +154,23 @@
       "file": "assets/logo/lockup-ink.svg",
       "sha256": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
       "from": "design/brand-kit/quiet-material/foundations/exports/lockup-ink.svg",
-      "status": "current flowing-S logo, retained"
+      "status": "previous flowing-S lockup; superseded on 2026-10-26 by the kit-06 wordmark"
     },
     {
       "id": "lockup-inverse",
       "file": "assets/logo/lockup-inverse.svg",
       "sha256": "fcbd4e1461d1341bee85e0630c03ede040164be0157bf658d6b2ce498ba73b60",
       "from": "design/brand-kit/quiet-material/foundations/exports/lockup-inverse.svg",
-      "status": "current flowing-S logo, retained"
+      "status": "previous flowing-S lockup; superseded on 2026-10-26 by the kit-06 wordmark"
+    },
+    {
+      "id": "wordmark",
+      "file": "assets/logo/wordmark.svg",
+      "sha256": "dafbd8bd27b05a4fff10557c74fe2c7aca90b5526dc5621fa6c61bb9f6cec540",
+      "from": "vector trace of assets/candidate/logo-refinement.png; supplied scratchpad/logo/wordmark.svg",
+      "status": "adopted by Petter on 2026-10-26 (go with all three)",
+      "optimization": "SVGO 4.1.0, 1 decimal precision; redundant path commands/nodes removed without changing the silhouette; source viewBox 2002×338 retained",
+      "note": "Professional redraw recommended later: the vector trace has slightly uneven edges at very large sizes."
     }
   ],
   "fonts": [

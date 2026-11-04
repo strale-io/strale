@@ -1,0 +1,40 @@
+---
+import Wordmark from "./Wordmark.astro";
+// Header: Tools · Company data · Use cases · Pricing · Docs, then one button (SITE-STRUCTURE.md).
+// No login link: there is no login product (claims.yaml sign-in-no-login-product).
+interface Props { current?: string }
+const { current } = Astro.props;
+const items = [
+  { id: "tools", href: "/tools", label: "Tools" },
+  { id: "company-data", href: "/company-data", label: "Company data" },
+  { id: "use-cases", href: "/use-cases", label: "Use cases" },
+  { id: "pricing", href: "/pricing", label: "Pricing" },
+  { id: "docs", href: "/docs", label: "Docs" },
+];
+---
+<header class="site-nav">
+  <div class="container site-nav-bar">
+    <a class="brand" href="/" aria-label="Strale">
+      <Wordmark />
+    </a>
+    <nav aria-label="Main">
+      <ul class="nav-links">
+        {items.map((i) => <li><a class="nav-link" href={i.href} aria-current={current === i.id ? "page" : undefined}>{i.label}</a></li>)}
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-primary" href="/signup">Get an API key</a>
+    </div>
+    <button class="nav-link menu-button" type="button" aria-expanded="false" aria-controls="mobile-menu" data-disclosure><span data-label>Menu</span> <svg class="icon" aria-hidden="true"><use href="#i-menu" /></svg></button>
+  </div>
+  <div class="mobile-menu container" id="mobile-menu" hidden>
+    <nav aria-label="Main, mobile">
+      <ul>
+        {items.map((i) => <li><a class="nav-link" href={i.href} aria-current={current === i.id ? "page" : undefined}>{i.label} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a></li>)}
+      </ul>
+    </nav>
+    <div class="mobile-actions">
+      <a class="btn btn-primary" href="/signup">Get an API key</a>
+    </div>
+  </div>
+</header>

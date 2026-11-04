@@ -1,0 +1,397 @@
+---
+// Home (SITE-STRUCTURE.md page 1), tightened to seven sections after the 2026-10-26 design
+// review: hero, the kinds of work, one call start to finish, company and compliance data (the
+// flagship, on the deep-violet stage), paying per call two ways, tested, and start (which also
+// carries the ways in). Every number on this page is computed from build-time data; none is typed.
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import CodeBlock from "../components/CodeBlock.astro";
+import SwitchboardHero from "../components/SwitchboardHero.astro";
+import TestedNow from "../components/TestedNow.astro";
+// Spot illustrations (Open Flow 0.2, Daylight); briefs and hashes in assets/illustrations/provenance.json.
+import artWeb from "../assets/illustrations/search-web.webp";
+import artDocuments from "../assets/illustrations/read-documents.webp";
+import artCheck from "../assets/illustrations/check-details.webp";
+import artDeveloper from "../assets/illustrations/developer-jobs.webp";
+import artText from "../assets/illustrations/connect.webp";
+import artSites from "../assets/illustrations/screening.webp";
+import artCompany from "../assets/illustrations/company-records.webp";
+import artBalance from "../assets/illustrations/pay-balance.webp";
+import artWallet from "../assets/illustrations/pay-wallet.webp";
+import artRibbons from "../assets/illustrations/cta-ribbons.webp";
+import { getSiteData, tools as allTools, coverage, API_BASE } from "../lib/site-data";
+import { formatEur, formatUsd, json, plural } from "../lib/format";
+import { executorSource } from "../lib/code-facts";
+import { JOB_GROUPS } from "../content/jobs";
+import { REGIONS } from "../content/countries";
+import { L1, SHORT_DESCRIPTION } from "../content/positioning";
+
+const data = await getSiteData();
+const tools = allTools(data);
+const bySlug = new Map(tools.map((t) => [t.slug, t]));
+// The count a visitor can browse: the catalogue itself, so the hero, the job groups and /tools agree.
+const libraryCount = tools.length;
+
+// Kinds of work: six of the non-flagship job groups (two even rows of three), with visible examples.
+// Every card links with the same words; breadth is in the hero chip, and the Tools filter keeps per-group counts.
+const JOB_ART = { web: artWeb, documents: artDocuments, text: artText, check: artCheck, sites: artSites, code: artDeveloper } as const;
+const breadth = (Object.keys(JOB_ART) as (keyof typeof JOB_ART)[]).map((id) => JOB_GROUPS.find((g) => g.id === id)!).map((g) => ({
+  ...g,
+  art: JOB_ART[g.id as keyof typeof JOB_ART],
+  picks: g.examples.map((s) => bySlug.get(s)).filter((t) => t !== undefined).slice(0, 3),
+}));
+const jobCount = JOB_GROUPS.filter((g) => tools.some((t) => t.job === g.id)).length;
+
+// One call: a free tool, so a reader can repeat it with no key. The response is trimmed to what a reader needs.
+const demo = ["iban-validate", "email-validate", "dns-lookup"].map((s) => bySlug.get(s)).find((t) => t?.free);
+const demoInput = demo ? data.manifests.get(demo.slug)?.example_input ?? {} : {};
+const demoOutput = (demo?.output_schema?.example ?? {}) as Record<string, unknown>;
+const demoRequest = demo
+  ? `curl -X POST ${API_BASE}/v1/do \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify({ capability_slug: demo.slug, inputs: demoInput }, null, 2).replace(/\n/g, "\n  ")}'`
+  : "";
+const shortOutput = Object.fromEntries(Object.entries(demoOutput).filter(([, v]) => v !== null).slice(0, 4));
+const demoResponse = demo
+  ? json({ result: { status: "completed", price_cents: 0, output: shortOutput, provenance: { source: executorSource(demo.slug) ?? demo.data_source } } })
+  : "";
+const freeCount = tools.filter((t) => t.free).length;
+
+// Company and compliance data: countries with a live registry tool, grouped by region; screening tools by name.
+const countries = coverage(data);
+const byRegion = REGIONS.map((r) => ({ region: r, list: countries.filter((c) => c.region === r) })).filter((r) => r.list.length > 0);
+const screening = ["sanctions-check", "pep-check", "adverse-media-check"].map((s) => bySlug.get(s)).filter((t) => t !== undefined);
+const bundles = data.facts.solution_count_active;
+
+// Paying: example prices, and one real x402 quote for the three-step flow.
+const priced = ["url-to-markdown", "vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).filter((t) => t && t.price_cents > 0 && !t.free).slice(0, 3);
+const quoteTool = ["vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).find((t) => !!t?.x402 && t.x402.price_usd > 0);
+const x402Tools = data.x402.capabilities.length;
+const network = data.x402.network === "base" ? "Base" : data.x402.network;
+
+// Tested: the most recently tested tools, as the public trust projection reports them.
+const testedRows = tools
+  .map((t) => ({ t, tr: data.trust.get(t.slug)! }))
+  .filter((r) => r.tr?.tested && r.tr.last_tested_at && r.tr.pass_rate !== null)
+  .sort((a, b) => Date.parse(b.tr.last_tested_at!) - Date.parse(a.tr.last_tested_at!))
+  .slice(0, 5);
+
+// Ways in, carried by the closing band.
+const WAYS = [
+  { href: "/docs/mcp", title: "MCP", line: "Claude, Cursor or any MCP client" },
+  { href: "/docs/api", title: "REST API", line: "One endpoint, any language" },
+  { href: "/docs/sdks", title: "SDKs", line: "TypeScript and Python" },
+  { href: "/docs/x402", title: "x402", line: "Pay per request, no account" },
+];
+---
+<Base title="Strale — tools your agent can use and pay for per call" description={SHORT_DESCRIPTION}>
+  <!-- 1 Hero: the Switchboard (DEC-20261025-A). L1 headline and support line, catalogue search, Browse tools and Read the docs (SITE-STRUCTURE §1). -->
+  <SwitchboardHero tools={tools} libraryCount={libraryCount} headline={L1.headline} support={L1.support} />
+
+  <!-- 2 The kinds of work. -->
+  <section class="section" aria-labelledby="jobs-title">
+    <div class="container stack-loose">
+      <div class="section-top" data-reveal>
+        <div class="section-head">
+          <p class="label">What agents use it for</p>
+          <h2 id="jobs-title" class="t-section">One connection, every kind of job</h2>
+          <p class="t-lead muted">Find something, read it, check it, act on it. The tools for each step sit behind the same key.</p>
+        </div>
+        <a class="link-standalone section-top-link" href="/tools#catalogue">Browse all {jobCount} jobs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+      <div class="jobs" data-reveal-group>
+        {breadth.map((g) => (
+          <a class="job" href={`/tools?job=${g.id}`} data-spotlight>
+            <span class="job-art" aria-hidden="true"><Image src={g.art} alt="" widths={[200, 300, 400]} sizes="(min-width: 1024px) 96px, 160px" loading="lazy" /></span>
+            <span class="job-copy">
+              <span class="job-title t-subhead">{g.label}</span>
+              <span class="t-compact muted">{g.card ?? g.line}</span>
+              <span class="job-picks">{g.picks.map((t) => t!.name).join(" · ")}</span>
+              <span class="job-more">See the tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 One call, start to finish, with a free tool. -->
+  {demo && (
+    <section class="section section-sunken section-call" aria-labelledby="call-title">
+      <div class="container split">
+        <div class="stack call-copy" data-reveal>
+          <p class="label">How a call works</p>
+          <h2 id="call-title" class="t-section">One call, start to finish</h2>
+          <ol class="steps">
+            <li><strong>Your agent names the tool and its inputs.</strong> Here, <a class="link" href={`/tools/${demo.slug}`}>{demo.name}</a> with one input.</li>
+            <li><strong>Strale runs it and answers.</strong> Clean, structured fields, with the source and the price on every result.</li>
+            <li><strong>Try it now.</strong> {demo.name} is one of {plural(freeCount, "free tool")}. Paste the request and run it; no key needed.</li>
+          </ol>
+        </div>
+        <div data-reveal>
+          <CodeBlock id="call" title={`${demo.name} · example`} panels={[{ label: "Request", lang: "shell", code: demoRequest }, { label: "Response", lang: "json", code: demoResponse }]} />
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- 4 Company and compliance data: the flagship, on the deep-violet stage. -->
+  <section class="section stage" aria-labelledby="company-title">
+    <div class="container stack-loose">
+      <div class="stage-grid">
+      <div class="stage-main">
+      <div class="stage-head" data-reveal>
+        <div class="section-head">
+          <p class="label stage-label">Company and compliance data</p>
+          <h2 id="company-title" class="t-section">Company records from official sources in {plural(countries.length, "country", "countries")}</h2>
+          <p class="t-lead stage-lead">Name, registration number and status, plus address and directors wherever the register publishes them. Each country page names its source, what comes back and the price.</p>
+        </div>
+      </div>
+      <div class="stage-cards" data-reveal-group>
+        <a class="stage-card" href="/tools?job=screening">
+          <span class="stage-card-title">Screen companies and people</span>
+          <span class="stage-card-body">Sanctions and politically exposed person lists, adverse media, and ownership where it is published.</span>
+          <span class="stage-card-meta">{screening.map((t) => t!.name).join(" · ")}</span>
+        </a>
+        <a class="stage-card" href="/tools#bundled">
+          <span class="stage-card-title">Run a whole check in one call</span>
+          <span class="stage-card-body">A full company check or an invoice-issuer check at one price, with every step’s result and an AI-written risk summary for your reviewer.</span>
+          <span class="stage-card-meta">{plural(bundles, "bundled check")}</span>
+        </a>
+      </div>
+      </div>
+      <div class="stage-side">
+      <span class="stage-art" aria-hidden="true"><Image src={artCompany} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 240px, 60vw" loading="lazy" /></span>
+      <div class="coverage" data-reveal>
+        {byRegion.map((r) => (
+          <div class="coverage-region">
+            <h3 class="region-title">{r.region}</h3>
+            <ul class="country-row" role="list">
+              {r.list.map((c) => <li><a class="country" href={`/company-data/${c.path}`}><abbr title={c.name}>{c.iso}</abbr>{c.name}</a></li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div class="row" data-reveal>
+        <a class="btn btn-inverse btn-lg" href="/company-data" data-magnet>See coverage by country <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 Paying: per call, two ways. -->
+  <section class="section" aria-labelledby="pay-title">
+    <div class="container stack-loose">
+      <div class="section-top" data-reveal>
+        <div class="section-head">
+          <p class="label">Pricing</p>
+          <h2 id="pay-title" class="t-section">Pay per call. Two ways to do it.</h2>
+          <p class="t-lead muted">No subscription and no contract. Every tool has one price, and a call that fails costs nothing.</p>
+        </div>
+        <a class="link-standalone section-top-link" href="/pricing">Pricing in full <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+      <div class="pay" data-reveal-group>
+        <article class="pay-card" data-spotlight>
+          <div class="pay-title"><span class="pay-art" aria-hidden="true"><Image src={artBalance} alt="" widths={[160, 240, 320]} sizes="96px" loading="lazy" /></span><h3 class="t-subhead">An API key and a balance</h3></div>
+          <p class="t-compact muted">One account and one key for every tool. Top up a EUR balance by card and each paid call is charged from it.</p>
+          <ul class="price-list" role="list">
+            {priced.map((t) => (
+              <li class="price-row">
+                <a class="link-quiet" href={`/tools/${t!.slug}`}>{t!.name}</a>
+                <span class="price"><span class="num">{formatEur(t!.price_cents)}</span><span class="unit">per call</span></span>
+              </li>
+            ))}
+          </ul>
+        </article>
+        <article class="pay-card" data-spotlight>
+          <div class="pay-title"><span class="pay-art" aria-hidden="true"><Image src={artWallet} alt="" widths={[160, 240, 320]} sizes="96px" loading="lazy" /></span><h3 class="t-subhead">A wallet, with no account</h3></div>
+          <p class="t-compact muted">Your agent pays each request in USDC on {network} over x402. {plural(x402Tools, "tool")} take it today.</p>
+          {quoteTool?.x402 && (
+            <ol class="flow" role="list">
+              <li><span class="flow-n">1</span><span><strong>Call the tool</strong>, with no key</span></li>
+              <li><span class="flow-n">2</span><span><strong>Get a quote</strong>: {quoteTool.name}, {formatUsd(quoteTool.x402.price_usd)}</span></li>
+              <li><span class="flow-n">3</span><span><strong>Pay and get the answer</strong>, in one retry</span></li>
+            </ol>
+          )}
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 Tested: evidence beside the claim, from the public trust projection. Shown only when the build has test results. -->
+  {testedRows.length > 0 && (
+    <section class="section section-sunken" aria-labelledby="tested-title">
+      <div class="container split split-even">
+        <div class="stack" data-reveal>
+          <p class="label">Quality</p>
+          <h2 id="tested-title" class="t-section">Tested, with the results in the open</h2>
+          <p class="t-lead muted">Strale runs its own tests on its tools, from known answers to checks that the source is up, and publishes the results tool by tool.</p>
+          <a class="link-standalone" href="/security#testing">How testing works <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+        <div data-reveal><TestedNow rows={testedRows} loadedAt={data.loaded_at} /></div>
+      </div>
+    </section>
+  )}
+
+  <!-- 7 Start, with the ways in. Deep violet in both themes. -->
+  <section class="cta" aria-labelledby="start-title">
+    <span class="cta-art" aria-hidden="true"><Image src={artRibbons} alt="" widths={[800, 1200, 1600]} sizes="(min-width: 1024px) 60vw, 100vw" loading="lazy" /></span>
+    <div class="container cta-grid">
+      <div class="cta-copy" data-reveal>
+        <h2 id="start-title" class="t-campaign">Make your agent’s first call</h2>
+        <p class="t-lead">Get an API key for every tool, or start with a free tool and no key at all.</p>
+        <div class="row">
+          <a class="btn btn-inverse btn-lg" href="/signup" data-magnet>Get an API key</a>
+          <a class="btn btn-inverse-outline btn-lg" href="/tools?free=1">Try a free tool</a>
+        </div>
+      </div>
+      <ul class="ways" role="list" aria-label="Ways to connect" data-reveal-group>
+        {WAYS.map((w) => <li><a class="way" href={w.href}><span class="way-title">{w.title}</span><span class="way-line">{w.line}</span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a></li>)}
+      </ul>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .section { padding-block: var(--section-space); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-head { display: grid; gap: var(--space-12); }
+  .section-head .t-lead { max-width: var(--measure-lead); }
+  /* A section's heading with its "see all" link beside it, so the link costs no extra row. */
+  .section-top { display: grid; gap: var(--space-16); }
+  /* Section padding follows the window height as well as the width, as Tilja's site does. Petter,
+     2026-11-03: the one-window fit read as cramped, so sections get generous air instead: 96px at the
+     Surface Pro's 686px, rising to 160px on tall screens. */
+  @media (min-width: 1024px) {
+    .section, .cta { padding-block: var(--_page-section-space); }
+    .section-top { grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-32); }
+    .section-top-link { padding-bottom: var(--space-4); }
+    .section-top .t-lead { max-width: none; }
+  }
+
+  /* 2 Kinds of work: six cards, two rows of three from 1024px, with the transparent art standing on the card. */
+  .jobs { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 640px) { .jobs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1024px) { .jobs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .job { display: grid; grid-template-rows: auto 1fr; gap: var(--space-8); padding: var(--space-8) var(--space-24) var(--space-24); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); color: var(--text); text-decoration: none; box-shadow: var(--shadow-1); transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
+  .job:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); transform: translateY(calc(-1 * var(--space-4))); }
+  .job-art { display: block; height: var(--space-160); }
+  .job-art img { width: 100%; height: 100%; object-fit: contain; transition: transform var(--duration-slow) var(--ease-standard); }
+  .job:hover .job-art img { transform: translateY(calc(-1 * var(--space-4))) scale(1.03); }
+  /* The link sits on the card's bottom edge whatever the copy above it, so a row of cards ends level. */
+  .job-copy { display: flex; flex-direction: column; gap: var(--space-8); }
+  .job-title { color: var(--text); }
+  .job-picks { color: var(--text-muted); font-size: var(--type-small-size); line-height: var(--type-small-line); }
+  .job-more { display: inline-flex; align-items: center; gap: var(--space-4); margin-top: auto; padding-top: var(--space-8); color: var(--link); font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); }
+  .job:hover .job-more .icon { transform: translateX(var(--space-4)); }
+  /* From 1024px the art stands beside the copy and the whole card is the link, so two rows of three fit a laptop window. */
+  @media (min-width: 1024px) {
+    .job { grid-template-rows: none; grid-template-columns: var(--space-80) minmax(0, 1fr); align-items: center; gap: var(--space-20); padding: var(--space-20) var(--space-24) var(--space-20) var(--space-16); }
+    .job-art { height: var(--space-80); }
+    .job-copy { gap: var(--space-4); }
+    .job-title { font-size: var(--type-ui-size); font-weight: var(--type-subhead-weight); }
+    .job-more { display: none; }
+  }
+  .job-more .icon { transition: transform var(--duration-base) var(--ease-standard); }
+
+  /* 3 One call */
+  /* The one feature section: more air than the standard rhythm, the copy and the code card centred on each other. */
+  .section-call { padding-block: calc(var(--section-space) * 1.5); }
+  @media (min-width: 1024px) { .section-call { padding-block: clamp(var(--space-128), calc(var(--viewport-height) * 0.18), calc(var(--space-160) + var(--space-40))); } }
+  .split { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-64); align-items: center; } }
+  .call-copy .t-section { margin-top: var(--space-12); }
+  .steps { display: grid; gap: var(--space-20); padding-left: var(--space-20); margin: var(--space-32) 0 0; }
+  .steps li { padding-left: var(--space-4); }
+  @media (min-width: 1024px) { .split-even { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+
+  /* 4 The stage: deep violet in both themes, light text. */
+  .stage { background: var(--surface-inverse); color: var(--text-inverse); position: relative; overflow: hidden; }
+  .stage .stage-label { color: var(--brand-mist-blue); }
+  .stage .t-section { color: var(--text-inverse); }
+  .stage-lead { color: var(--text-inverse); opacity: 0.82; max-width: var(--measure-lead); }
+  .stage-head { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .stage-art { display: block; width: 100%; max-width: calc(var(--space-160) * 2); justify-self: center; }
+  .stage-art img { width: 100%; height: auto; }
+  @media (min-width: 1024px) { .stage-head { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); } .stage-art { justify-self: end; } }
+  /* From 1024px: the copy, the two cards and the button on the left; the art and the countries on the right. */
+  .stage-grid, .stage-main, .stage-side { display: grid; gap: var(--space-32); }
+  /* Below 1024px the art leads the section, as it did before the two-column layout. */
+  .stage-side { display: contents; }
+  .stage-side .stage-art { order: -1; }
+  .stage-side .coverage { order: 1; }
+  .stage-side .row { order: 2; }
+  @media (min-width: 1024px) {
+    .stage-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-64); align-items: center; }
+    .stage-side .stage-art { display: none; }
+    .stage-main { gap: var(--space-20); }
+    .stage .stage-card-meta { padding-top: var(--space-4); }
+    .stage-side { display: grid; gap: var(--space-16); }
+    .stage .stage-cards { grid-template-columns: minmax(0, 1fr); gap: var(--space-12); }
+    .stage .stage-card { padding: var(--space-16) var(--space-20); gap: var(--space-4); }
+    .stage .t-section, .stage .stage-lead { max-width: none; }
+    .stage-main .stage-head { grid-template-columns: minmax(0, 1fr); }
+    .stage .coverage { gap: var(--space-16); }
+    .stage .coverage-region { gap: var(--space-8); }
+    .stage .country-row { gap: var(--space-8) var(--space-4); }
+    .stage .country { min-height: var(--space-32); padding-inline: var(--space-8) var(--space-12); gap: var(--space-4); font-size: var(--type-small-size); }
+  }
+  .coverage { display: grid; gap: var(--space-20); }
+  .coverage-region { display: grid; gap: var(--space-12); }
+  .region-title { font-family: var(--type-label-family); font-size: var(--type-label-size); font-weight: var(--type-label-weight); letter-spacing: var(--type-label-tracking); text-transform: uppercase; color: var(--brand-mist-blue); }
+  .country-row { display: flex; flex-wrap: wrap; gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+  .country { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--brand-deep-violet); background: var(--brand-deep-violet); color: var(--text-inverse); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); box-shadow: inset 0 0 0 var(--border-width) var(--brand-violet); transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
+  .country:hover { background: var(--brand-violet); transform: translateY(calc(-1 * var(--space-2))); }
+  .country abbr { text-decoration: none; font-family: var(--type-code-family); color: var(--brand-mist-blue); }
+  .stage-cards { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 768px) { .stage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stage-card { display: flex; flex-direction: column; gap: var(--space-8); padding: var(--space-24); border-radius: var(--radius-card); background: var(--brand-deep-violet); box-shadow: inset 0 0 0 var(--border-width) var(--brand-violet); color: var(--text-inverse); text-decoration: none; transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
+  .stage-card:hover { transform: translateY(calc(-1 * var(--space-4))); box-shadow: inset 0 0 0 var(--border-width) var(--brand-mist-blue), var(--shadow-3); }
+  .stage-card-title { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); line-height: var(--type-subhead-line); }
+  .stage-card-body { opacity: 0.82; font-size: var(--type-compact-size); line-height: var(--type-compact-line); }
+  .stage-card-meta { margin-top: auto; padding-top: var(--space-8); color: var(--brand-mist-blue); font-size: var(--type-small-size); }
+
+  /* 5 Paying */
+  .pay { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .pay { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .pay-card { display: grid; gap: var(--space-12); align-content: start; padding: var(--space-32); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); }
+  .pay-title { display: flex; align-items: center; gap: var(--space-16); }
+  .pay-art { display: block; flex: none; width: var(--space-80); }
+  .pay-art img { width: 100%; height: auto; }
+  .price-list { display: grid; margin: var(--space-8) 0 0; padding: 0; list-style: none; border-top: var(--border-width) solid var(--border); }
+  .price-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-16); padding-block: var(--space-12); border-bottom: var(--border-width) solid var(--border); font-size: var(--type-compact-size); }
+  .flow { display: grid; gap: var(--space-8); margin: var(--space-8) 0 0; padding: 0; list-style: none; }
+  .flow li { display: flex; align-items: center; gap: var(--space-12); padding: var(--space-12); border-radius: var(--radius-control); background: var(--surface-sunken); font-size: var(--type-compact-size); }
+  .flow-n { display: inline-grid; place-items: center; flex: none; width: var(--space-24); height: var(--space-24); border-radius: var(--radius-pill); background: var(--action); color: var(--text-on-action); font-size: var(--type-label-size); font-weight: var(--type-ui-weight); }
+
+  @media (min-width: 1024px) {
+    .pay-card { padding: var(--space-24); gap: var(--space-8); }
+    .pay-art { width: var(--space-64); }
+    .price-row { padding-block: var(--space-8); }
+    .flow li { padding: var(--space-8) var(--space-12); }
+  }
+
+  /* 7 Start */
+  .cta { position: relative; overflow: hidden; isolation: isolate; background: var(--surface-inverse); color: var(--text-inverse); padding-block: var(--section-space); }
+  .cta-art { position: absolute; z-index: -1; right: calc(-1 * var(--space-64)); bottom: calc(-1 * var(--space-48)); width: 70%; max-width: calc(var(--space-160) * 6); opacity: 0.9; pointer-events: none; }
+  .cta-art img { width: 100%; height: auto; }
+  .cta-grid { display: grid; gap: var(--space-48); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  @media (min-width: 1024px) { .cta-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); } }
+  .cta-copy { display: grid; gap: var(--space-16); }
+  .cta-copy .t-campaign { color: var(--text-inverse); }
+  .cta-copy .t-lead { color: var(--text-inverse); opacity: 0.86; text-wrap: pretty; max-width: var(--measure-lead); }
+  .cta-copy .row { margin-top: var(--space-8); }
+  .ways { display: grid; gap: var(--space-12); grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+  .ways > li { display: grid; }
+  .way { position: relative; display: grid; gap: var(--space-4); padding: var(--space-20); border-radius: var(--radius-card); background: var(--brand-deep-violet); box-shadow: inset 0 0 0 var(--border-width) var(--brand-violet); color: var(--text-inverse); text-decoration: none; transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
+  .way:hover { transform: translateY(calc(-1 * var(--space-4))); box-shadow: inset 0 0 0 var(--border-width) var(--brand-mist-blue), var(--shadow-3); }
+  .way-title { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); }
+  .way-line { opacity: 0.8; font-size: var(--type-small-size); }
+  .way .icon { position: absolute; top: var(--space-20); right: var(--space-20); color: var(--brand-mist-blue); transition: transform var(--duration-base) var(--ease-standard); }
+  .way:hover .icon { transform: translateX(var(--space-4)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .job, .job-art img, .country, .stage-card, .way, .way .icon, .job-more .icon { transition: none; }
+    .job:hover, .country:hover, .stage-card:hover, .way:hover { transform: none; }
+    .job:hover .job-art img, .way:hover .icon, .job:hover .job-more .icon { transform: none; }
+  }
+</style>

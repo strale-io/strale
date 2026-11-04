@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "b8c1f0224227c18fc0d604527879609610f60703d5f5acee23f73980186fc309",
+      "sha256": "a70664ff79b82699ff2f4c82853a6bae3d52d3b2c7084562fe405b704ffea116",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -33,7 +33,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "5df4aa5c43b7a5447e074daa5082f8af868163501013032dd46e8ce54ce1109b",
+      "sha256": "4a7911d0731e639d5ba4a5367061d64f0b2c37a2cea109ee8e0fc16593373b9f",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -77,6 +77,7 @@
         "apps/api/src/startup-migrations/blocks/0113-release-wrongly-quarantined-refusal-suites.ts",
         "apps/api/src/startup-migrations/run-policy.ts",
         "apps/api/src/web3-assurance/evaluators/erc-8004-reputation.ts",
+        "apps/web/src/lib/site-data.ts",
         "config/scheduled-mechanisms.yaml",
         "config/vendors.yaml",
         "context7.json",
@@ -248,7 +249,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "121538786189f95d25767d543f87f76bbb09e9a9c3589c0cc8ba3ad325d17e94",
+      "sha256": "7cddbe209941a6d17852b860285af4818f5aca5b4a0c56ee08f024f0ef41789a",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -271,6 +272,7 @@
         "apps/api/src/lib/vendor-terms.data.json",
         "apps/api/src/lib/vendor-terms.test.ts",
         "apps/api/src/startup-migrations/blocks/0085-actor-identity.ts",
+        "apps/web/README.md",
         "config/env-manifest.yaml",
         "config/vendors.yaml",
         "design/PROVENANCE.md",
@@ -329,7 +331,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "1fe5cae25e04bcde2e2d73139242368a672f599c5c221cba463b0d9b9817219b",
+      "sha256": "87b3fc419e464545087c5786cdec659f3f5d2c328817ce4dac046d8627f76d29",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -342,6 +344,9 @@
         "config/env-manifest.yaml",
         "config/vendors.schema.json",
         "config/vendors.yaml",
+        "design/brand-kit/open-flow/README.md",
+        "design/tokens/active.json",
+        "design/tokens/candidates/open-flow.json",
         "docs/README.md",
         "docs/design/2026-10-29-x402-batch-payment.md",
         "docs/operations/distribution-registry.md",
@@ -452,6 +457,7 @@
         "design/brand-kit/quiet-material/hero-copy/README.md",
         "design/brand-kit/quiet-material/opening/README.md",
         "design/explorations/2026-09-01-quiet-material-v0.7/README.md",
+        "design/tokens/active.json",
         "design/tokens/candidates/codex-handoff-round-23.json",
         "design/tokens/candidates/quiet-material-v0.7.json",
         "docs/company/CHARTER.md",
@@ -473,6 +479,7 @@
         "docs/programs/brand-website/PROOF-QUALIFICATION.md",
         "docs/programs/brand-website/SYSTEM-COMPLETION.md",
         "docs/programs/brand-website/system-completion.json",
+        "docs/programs/brand-website/tracks.yaml",
         "docs/programs/codex-review-backlog.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -492,6 +499,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
+        "docs/strategy/2026-10-26-website-identity-and-hero-adoption.md",
         "docs/strategy/2026-10-27-platform-and-distribution-adoption.md",
         "docs/strategy/2026-11-01-codex-builder-lanes-decision.md",
         "package.json",

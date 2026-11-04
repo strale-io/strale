@@ -158,6 +158,9 @@ export type CallerCategory = "known_monitor" | "known_indexer" | "customer_candi
 const KNOWN_MONITORS = [
   "glimind-probe", "mcpbeat", "yellowmcp-health", "aisec-registry-probe",
   "reliability-bureau-spike", "mcpscoringengine", "x402-observatory",
+  // Our own website build (apps/web/src/lib/load-live.ts) reads /x402/catalog
+  // on every build; it is tooling, never demand.
+  "strale-web-build",
 ];
 const KNOWN_INDEXERS = ["smithery-probe", "glama", "agent-tools.cloud"];
 
