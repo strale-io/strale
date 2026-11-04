@@ -78,6 +78,20 @@ mechanisms:
       an AbortSignal.timeout(), per the Adding New Capabilities pipeline
       requirement in CLAUDE.md.
 
+  - id: weekly-drift-source-robots
+    workflow: .github/workflows/weekly-drift.yml
+    trigger: schedule
+    step:
+      match: id
+      value: source-robots
+    runs: apps/api/scripts/check-source-robots-access.ts
+    secrets: {}
+    purpose: >
+      Checks each scrape-backed capability's Strale-chosen source URL
+      against that site's live robots.txt with production's own parser,
+      so a source that starts disallowing a listed tool is seen within a
+      week (LESSONS.md F7 incident 14). Informational; never fails the job.
+
   - id: weekly-drift-vendor-roster
     workflow: .github/workflows/weekly-drift.yml
     trigger: schedule
