@@ -74,13 +74,14 @@ const GLYPH_PATH: Record<Glyph, string> = {
 const s0 = ports.length > 0 ? ports[start] : null;
 const callHtml = s0 ? `<span class="tk-s">${esc(s0.slug)}</span> · ${esc(s0.price)}\n${tint(s0.input)}` : "";
 // The headline rises in word by word, once (DEC-20261025-A); the words are real text, so it reads and selects normally.
+// Each sentence starts a new line (Petter, 2026-11-04: one sentence per line).
 const words = headline.split(/\s+/).filter(Boolean);
 ---
 <section class="sb" aria-labelledby="hero-title" data-switchboard>
   <div class="container sb-layout">
   <div class="sb-copy">
     <p class="sb-eyebrow"><span class="sb-pulse" aria-hidden="true"></span><strong>{plural(libraryCount, "tool")}</strong><span aria-hidden="true">·</span>one connection<span aria-hidden="true">·</span>pay per call</p>
-    <h1 id="hero-title" class="sb-title">{words.map((w, i) => <><span class="sb-word" style={`--_i: ${i}`}>{w}</span>{i < words.length - 1 ? " " : ""}</>)}</h1>
+    <h1 id="hero-title" class="sb-title">{words.map((w, i) => <><span class="sb-word" style={`--_i: ${i}`}>{w}</span>{i < words.length - 1 ? (/[.!?]$/.test(w) ? <br /> : " ") : ""}</>)}</h1>
     <p class="t-lead sb-lead">{support}</p>
     <div class="sb-actions">
       <form class="sb-search" action="/tools" method="get" role="search">
