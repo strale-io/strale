@@ -85,3 +85,13 @@ screens grow to 160px. The preview now carries the eight main pages, linked to
 each other (generator: scratchpad mkpreview2.py, not in the repo).
 Next: Petter's look at the inner pages; then step 2 (independent review of
 #736 and #892, then merge).
+
+## Petter's 2026-11-04 round
+
+Applied, all on his agreement to the recommendations:
+- Wordmark: 16px in the nav and 10px in the footer.
+- Home headline: "New tools for your agent. No new accounts." at 80% of the hero size; it fits on one line at 1270. Recorded in MESSAGING-LEVELS L1, where the API copies of the old line are listed to switch at the site switch-over.
+- Page tops: text and art split the width 6:5, with the art up to 360px and centred in its half.
+- Pricing lead: "no minimum" removed (L1.3).
+
+Preview updated to version 4.
