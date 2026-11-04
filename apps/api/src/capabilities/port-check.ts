@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import * as net from "net";
 import { validateHost } from "../lib/url-validator.js";
+import { connectTcpVetted } from "../lib/vetted-connect.js";
 
 registerCapability("port-check", async (input: CapabilityInput) => {
   const host = ((input.host as string) ?? (input.hostname as string) ?? (input.task as string) ?? "").trim();
@@ -35,27 +35,17 @@ registerCapability("port-check", async (input: CapabilityInput) => {
 
   async function checkPort(port: number): Promise<{ port: number; open: boolean; service: string; latency_ms: number }> {
     const start = Date.now();
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      socket.setTimeout(timeout);
-
-      socket.on("connect", () => {
-        const latency = Date.now() - start;
-        socket.destroy();
-        resolve({ port, open: true, service: commonServices[port] ?? "unknown", latency_ms: latency });
-      });
-
-      socket.on("timeout", () => {
-        socket.destroy();
-        resolve({ port, open: false, service: commonServices[port] ?? "unknown", latency_ms: timeout });
-      });
-
-      socket.on("error", () => {
-        resolve({ port, open: false, service: commonServices[port] ?? "unknown", latency_ms: Date.now() - start });
-      });
-
-      socket.connect(port, host);
-    });
+    const service = commonServices[port] ?? "unknown";
+    try {
+      // CR-11: the connection goes only to an address checked at connect time.
+      const socket = await connectTcpVetted({ host, port, timeoutMs: timeout });
+      const latency = Date.now() - start;
+      socket.destroy();
+      return { port, open: true, service, latency_ms: latency };
+    } catch (err) {
+      const timedOut = (err as NodeJS.ErrnoException).code === "ETIMEDOUT";
+      return { port, open: false, service, latency_ms: timedOut ? timeout : Date.now() - start };
+    }
   }
 
   const results = await Promise.all(ports.map(checkPort));

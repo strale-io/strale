@@ -1,7 +1,8 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { connect, type TLSSocket } from "node:tls";
+import type { TLSSocket } from "node:tls";
 import { validateHost } from "../lib/url-validator.js";
+import { connectTlsVetted } from "../lib/vetted-connect.js";
 
 registerCapability("ssl-check", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -28,7 +29,8 @@ function getCertInfo(host: string, port: number): Promise<Record<string, unknown
       reject(new Error(`TLS connection to ${host}:${port} timed out.`));
     }, 10000);
 
-    const socket: TLSSocket = connect(
+    // CR-11: connect only to an address checked at connect time; SNI stays `host`.
+    const socket: TLSSocket = connectTlsVetted(
       { host, port, servername: host, rejectUnauthorized: false },
       () => {
         clearTimeout(timeout);
