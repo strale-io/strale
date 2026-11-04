@@ -9,7 +9,7 @@ import Base from "../layouts/Base.astro";
 import { getSiteData, tools as allTools } from "../lib/site-data";
 import { formatEur, formatUsd, plural } from "../lib/format";
 import { JOB_GROUPS } from "../content/jobs";
-import { MAX_PRICE_CAP_CENTS, FREE_TIER_MONTHLY_LIMIT } from "../lib/code-facts";
+import { MAX_PRICE_CAP_CENTS, FREE_TIER_MONTHLY_LIMIT, MIN_TOPUP_CENTS } from "../lib/code-facts";
 import artBalance from "../assets/illustrations/pay-balance.webp";
 import artWallet from "../assets/illustrations/pay-wallet.webp";
 
@@ -164,7 +164,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
     <div class="container faq-grid">
       <h2 id="faq-title" class="t-section">Questions</h2>
       <div class="faq">
-        <details><summary>Is there a subscription or a minimum spend?</summary><p>No. You pay for the calls your agent makes and nothing else.</p></details>
+        <details><summary>Is there a subscription or a minimum spend?</summary><p>There is no subscription. A wallet top-up starts at {formatEur(MIN_TOPUP_CENTS)}, and after that you pay only for the calls your agent makes. The free tools and x402 payments need no top-up.</p></details>
         <details><summary>Can I try paid tools before I pay?</summary><p>Yes. New accounts start with trial credit, and the free tools need no account at all.</p></details>
         <details><summary>What happens when a call fails?</summary><p>A single tool is charged only when it succeeds, so a failed call costs nothing. A bundled check is one price for all its steps, and if every step fails you get it back.</p></details>
         <details><summary>How do I stop my agent from overspending?</summary><p>Every API call carries a price cap you set, up to {formatEur(MAX_PRICE_CAP_CENTS)} per call. A tool that costs more is refused before it runs. With x402 your agent sees the price before it pays.</p></details>

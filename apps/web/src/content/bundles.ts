@@ -11,9 +11,9 @@ export interface BundleFamily {
 }
 
 export const BUNDLE_FAMILIES: BundleFamily[] = [
-  { prefix: "kyb-essentials", label: "Quick company check", line: "Confirm the company is in its official register, check its VAT registration and LEI, and screen it against sanctions lists." },
-  { prefix: "kyb-complete", label: "Full company check", line: "Registry, VAT, LEI and published ownership; sanctions, politically exposed person and adverse media screening; the company’s web presence; and a plain-language risk summary." },
-  { prefix: "invoice-verify", label: "Invoice issuer check", line: "Before you pay: does the issuer exist, are its bank details and VAT number valid, is it sanctioned or in the news, and can the sending domain be trusted. With a plain-language fraud assessment." },
+  { prefix: "kyb-essentials", label: "Quick company check", line: "Look the company up in official company records, check its VAT registration and LEI, and screen it against sanctions lists." },
+  { prefix: "kyb-complete", label: "Full company check", line: "Registry, VAT, LEI and published ownership; sanctions, politically exposed person and adverse media screening; the company’s web presence; and an AI-written risk summary for a person to review." },
+  { prefix: "invoice-verify", label: "Invoice issuer check", line: "Before you pay: does the issuer exist, are its bank details and VAT number valid, is it sanctioned or in the news, and can the sending domain be trusted. With an AI-written risk summary for a person to review." },
 ];
 
 export function familyOf(slug: string): BundleFamily | null {
