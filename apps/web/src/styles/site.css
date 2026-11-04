@@ -81,9 +81,10 @@ main :where(.stack, .stack-tight, .stack-loose) > h2 + * { margin-top: var(--sta
 
 /* ---------- identity ---------- */
 .brand { color: var(--text); }
-.wordmark { display: block; width: auto; height: calc(var(--space-20) + var(--space-2)); fill: currentColor; }
+/* Wordmark sizes (Petter, 2026-11-04): 16px in the nav, the footer about 60% of that. */
+.wordmark { display: block; width: auto; height: var(--space-16); fill: currentColor; }
 .footer-brand .brand { display: inline-flex; }
-.footer-brand .wordmark { height: var(--space-20); }
+.footer-brand .wordmark { height: calc(var(--space-20) / 2); }
 
 /* ---------- navigation ---------- */
 .site-nav { position: sticky; top: 0; z-index: var(--z-nav); isolation: isolate; background: var(--canvas); border-bottom: var(--border-width) solid var(--border); transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard); }
