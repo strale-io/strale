@@ -200,6 +200,16 @@ export async function validateUrl(urlString: string): Promise<void> {
  * Used by port-check, ssl-certificate-chain, and similar capabilities.
  */
 export async function validateHost(hostname: string): Promise<void> {
+  // An empty host is not "no target": net and tls default it to localhost.
+  // ssl-check's `https://` stripped down to "" and reached 127.0.0.1.
+  if (typeof hostname !== "string" || hostname.trim() === "") {
+    throw new UrlValidationError("A host is required: an empty host would connect to localhost.");
+  }
+  // A control character (NUL, CR/LF, DEL) is never part of a hostname, and NUL
+  // makes connect throw synchronously (WP12 batch 2 review, round 2).
+  if (/[\u0000-\u001f\u007f]/.test(hostname)) {
+    throw new UrlValidationError("This host is not a valid hostname or IP address.");
+  }
   const clean = splitHostPort(hostname);
   if (clean === null) {
     throw new UrlValidationError("This host is not a valid hostname or IP address.");

@@ -1,7 +1,8 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { connect, type TLSSocket } from "node:tls";
+import type { TLSSocket } from "node:tls";
 import { validateHost } from "../lib/url-validator.js";
+import { connectTlsVetted, portInput } from "../lib/vetted-connect.js";
 
 registerCapability("ssl-check", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -10,8 +11,8 @@ registerCapability("ssl-check", async (input: CapabilityInput) => {
   }
 
   const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
+  const port = input.port === undefined || input.port === null ? 443 : portInput(input.port, "port");
   await validateHost(cleaned);
-  const port = (input.port as number) ?? 443;
 
   const certInfo = await getCertInfo(cleaned, port);
 
@@ -23,12 +24,11 @@ registerCapability("ssl-check", async (input: CapabilityInput) => {
 
 function getCertInfo(host: string, port: number): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      socket.destroy();
-      reject(new Error(`TLS connection to ${host}:${port} timed out.`));
-    }, 10000);
-
-    const socket: TLSSocket = connect(
+    // The socket exists before the timer is armed: if connect threw
+    // synchronously, a timer armed first would hit `socket` in its temporal
+    // dead zone 10 s later, outside any promise, and crash the process.
+    // CR-11: connect only to an address checked at connect time; SNI stays `host`.
+    const socket: TLSSocket = connectTlsVetted(
       { host, port, servername: host, rejectUnauthorized: false },
       () => {
         clearTimeout(timeout);
@@ -73,6 +73,11 @@ function getCertInfo(host: string, port: number): Promise<Record<string, unknown
         resolve(result);
       }
     );
+
+    const timeout = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`TLS connection to ${host}:${port} timed out.`));
+    }, 10000);
 
     socket.on("error", (err) => {
       clearTimeout(timeout);

@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import * as tls from "tls";
 import { validateHost } from "../lib/url-validator.js";
+import { connectTlsVetted, portInput } from "../lib/vetted-connect.js";
 
 registerCapability("ssl-certificate-chain", async (input: CapabilityInput) => {
   let host = ((input.host as string) ?? (input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim();
@@ -11,16 +11,15 @@ registerCapability("ssl-certificate-chain", async (input: CapabilityInput) => {
   // Strip a port only from `host:port`; a bare IPv6 literal has many colons and
   // its last group is not a port.
   if (host.split(":").length === 2) host = host.replace(/:\d+$/, "");
+  const port = input.port === undefined || input.port === null ? 443 : portInput(input.port, "port");
   await validateHost(host);
-  const port = Number(input.port ?? 443);
 
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      socket.destroy();
-      reject(new Error("TLS connection timed out after 10s."));
-    }, 10000);
-
-    const socket = tls.connect({ host, port, servername: host, rejectUnauthorized: false }, () => {
+    // The socket exists before the timer is armed: if connect threw
+    // synchronously, a timer armed first would hit `socket` in its temporal
+    // dead zone 10 s later, outside any promise, and crash the process.
+    // CR-11: connect only to an address checked at connect time; SNI stays `host`.
+    const socket = connectTlsVetted({ host, port, servername: host, rejectUnauthorized: false }, () => {
       clearTimeout(timeout);
 
       const cert = socket.getPeerCertificate(true);
@@ -88,6 +87,11 @@ registerCapability("ssl-certificate-chain", async (input: CapabilityInput) => {
         provenance: { source: "tls-connect", fetched_at: new Date().toISOString() },
       });
     });
+
+    const timeout = setTimeout(() => {
+      socket.destroy();
+      reject(new Error("TLS connection timed out after 10s."));
+    }, 10000);
 
     socket.on("error", (err) => {
       clearTimeout(timeout);

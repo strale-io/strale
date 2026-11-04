@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import * as net from "net";
 import { validateHost } from "../lib/url-validator.js";
+import { connectTcpVetted, portInput } from "../lib/vetted-connect.js";
 
 registerCapability("port-check", async (input: CapabilityInput) => {
   const host = ((input.host as string) ?? (input.hostname as string) ?? (input.task as string) ?? "").trim();
@@ -8,14 +8,17 @@ registerCapability("port-check", async (input: CapabilityInput) => {
   await validateHost(host);
 
   const portsInput = input.ports ?? input.port;
+  const portsField = input.ports !== undefined ? "ports" : "port";
   let ports: number[];
 
+  // An out-of-range or non-integer port is refused, not reported "closed":
+  // it was never a port, and some values make connect throw synchronously.
   if (typeof portsInput === "string") {
-    ports = portsInput.split(",").map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p));
+    ports = portsInput.split(",").map(p => p.trim()).filter(p => p !== "").map(p => portInput(p, portsField));
   } else if (typeof portsInput === "number") {
-    ports = [portsInput];
+    ports = [portInput(portsInput, portsField)];
   } else if (Array.isArray(portsInput)) {
-    ports = (portsInput as any[]).map(p => Number(p)).filter(p => !isNaN(p));
+    ports = (portsInput as unknown[]).map(p => portInput(p, portsField));
   } else {
     // Default common ports
     ports = [80, 443, 22, 21, 25, 3306, 5432, 6379, 8080, 8443];
@@ -35,27 +38,17 @@ registerCapability("port-check", async (input: CapabilityInput) => {
 
   async function checkPort(port: number): Promise<{ port: number; open: boolean; service: string; latency_ms: number }> {
     const start = Date.now();
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      socket.setTimeout(timeout);
-
-      socket.on("connect", () => {
-        const latency = Date.now() - start;
-        socket.destroy();
-        resolve({ port, open: true, service: commonServices[port] ?? "unknown", latency_ms: latency });
-      });
-
-      socket.on("timeout", () => {
-        socket.destroy();
-        resolve({ port, open: false, service: commonServices[port] ?? "unknown", latency_ms: timeout });
-      });
-
-      socket.on("error", () => {
-        resolve({ port, open: false, service: commonServices[port] ?? "unknown", latency_ms: Date.now() - start });
-      });
-
-      socket.connect(port, host);
-    });
+    const service = commonServices[port] ?? "unknown";
+    try {
+      // CR-11: the connection goes only to an address checked at connect time.
+      const socket = await connectTcpVetted({ host, port, timeoutMs: timeout });
+      const latency = Date.now() - start;
+      socket.destroy();
+      return { port, open: true, service, latency_ms: latency };
+    } catch (err) {
+      const timedOut = (err as NodeJS.ErrnoException).code === "ETIMEDOUT";
+      return { port, open: false, service, latency_ms: timedOut ? timeout : Date.now() - start };
+    }
   }
 
   const results = await Promise.all(ports.map(checkPort));
