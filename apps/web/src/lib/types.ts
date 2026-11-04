@@ -56,6 +56,8 @@ export interface PlatformFacts {
     vendors: Record<string, string>;
     retention_days_default: number;
     pii_retention_days: number;
+    /** Longest retention the default can be configured to (STATIC_FACTS.retention_days_max_configurable). */
+    retention_days_max_configurable?: number;
     controller?: { legal_name?: string; contact_email?: string; incorporation_jurisdiction?: string };
     tos_version_current?: string;
   };

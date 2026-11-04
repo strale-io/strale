@@ -295,3 +295,26 @@ test("unrecorded discovery GET links carry no decorative source tags", () => {
     assert.match(text, /src=skill/, file);
   }
 });
+
+// sla-commitment carries exactly one exception: the Terms' own disclaimer (§7), carried over
+// word for word from strale-frontend. Both directions are pinned against the real register row.
+test("sla-commitment: the Terms' SLA disclaimer passes, every other SLA still fails", () => {
+  const rows = parseYaml(readFileSync(join(realRoot, REGISTER_PATH), "utf8"));
+  const row = rows.find((r) => r.id === "sla-commitment");
+  assert.equal(row.status, "forbidden");
+  const rule = compileMatcher(row);
+  const terms = readFileSync(join(realRoot, "apps/web/src/pages/terms.astro"), "utf8");
+  const disclaimer = terms.match(/we do not\s+offer a contractual uptime SLA at this stage/)?.[0];
+  assert.ok(disclaimer, "the Terms still carry the disclaimer, line break included");
+  assert.equal(rule.test(disclaimer), false, "the disclaimer passes");
+  assert.equal(rule.test(terms), false, "the whole Terms page passes");
+  for (const claim of [
+    "we do not offer a contractual uptime SLA, but our SLA is 99.9%",
+    "Our SLA guarantees",
+    "Enterprise SLA available",
+    "we offer a contractual uptime SLA",
+  ]) assert.equal(rule.test(claim), true, `still forbidden: ${claim}`);
+  // The test discriminates: without the exception the same disclaimer is a finding.
+  const unexcepted = compileMatcher({ ...row, claim: "/\\bSLA\\b/" });
+  assert.equal(unexcepted.test(disclaimer), true);
+});

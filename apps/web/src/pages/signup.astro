@@ -1,0 +1,135 @@
+---
+// Sign up (SITE-STRUCTURE.md page 15): strale-frontend's /signup, same behaviour, Open Flow look,
+// no marketing copy. The form posts { email, name? } to POST /v1/auth/register and shows the key
+// once, in the page only: nothing is stored in the browser (as before). Logic: src/lib/wallet.ts,
+// browser script: src/scripts/signup.ts.
+//   trial credit        TRIAL_CREDITS_CENTS (code-facts); the balance shown after signup is the
+//                       response's wallet_balance_cents, and a withheld credit says so
+//   free tools          facts.capability_counts.free_tier_slugs
+//   keyless allowance   FREE_TIER_MONTHLY_LIMIT (code-facts)
+import Base from "../layouts/Base.astro";
+import CodeBlock from "../components/CodeBlock.astro";
+import { getSiteData, API_BASE } from "../lib/site-data";
+import { FREE_TIER_MONTHLY_LIMIT, TRIAL_CREDITS_CENTS } from "../lib/code-facts";
+import { formatEur } from "../lib/format";
+
+const data = await getSiteData();
+const free = data.facts.capability_counts.free_tier_slugs;
+const trial = formatEur(TRIAL_CREDITS_CENTS);
+const SUPPORT = "hello@strale.io";
+
+const curl = [
+  `curl -X POST \\`,
+  `  ${API_BASE}/v1/auth/register \\`,
+  `  -H "Content-Type: application/json" \\`,
+  `  -d '{"email": "you@example.com"}'`,
+].join("\n");
+// The fields POST /v1/auth/register returns (apps/api/src/routes/auth.ts), abridged.
+const response = JSON.stringify({ user_id: "…", email: "you@example.com", api_key: "sk_live_…", wallet_balance_cents: TRIAL_CREDITS_CENTS, getting_started: { message: "…" } }, null, 2);
+---
+<Base title="Get an API key" description={`Get a Strale API key; new accounts can start with ${trial} in trial credit, no card needed. Or call the free tools with no account.`}>
+  <section class="page-head">
+    <div class="container narrow stack">
+      <p class="label">Sign up</p>
+      <h1 class="t-campaign">Get your API key</h1>
+      <p class="t-lead">Create an account to call every tool with one key. New accounts can start with {trial} in trial credit, and no card is needed.</p>
+    </div>
+  </section>
+
+  <section class="section-tight" aria-label="Create your account">
+    <div class="container narrow stack-loose">
+      <div class="card panel" data-signup data-api={API_BASE} data-support={SUPPORT}>
+        <div data-signup-form-view class="stack">
+          <h2 class="t-subhead">Create your account</h2>
+          <p class="t-compact muted">Get your API key instantly. New accounts can start with {trial} in trial credit.</p>
+          <noscript><p class="t-compact">This form needs JavaScript. You can also register from the command line, below.</p></noscript>
+          {/* No name= attributes on purpose: the script reads the fields by id, so if it fails to
+              load, a native submit carries no fields and the email never lands in a URL. */}
+          <form class="stack" data-signup-form>
+            <div class="field">
+              <label class="field-label" for="signup-email">Email</label>
+              <input class="input" id="signup-email" type="email" required autocomplete="email" placeholder="you@company.com" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="signup-name">Name <span class="optional">(optional)</span></label>
+              <input class="input" id="signup-name" type="text" autocomplete="name" placeholder="Jane Smith" />
+            </div>
+            <p class="field-message is-error" role="alert" data-signup-error hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-error" /></svg><span></span></p>
+            <button class="btn btn-primary btn-lg full" type="submit"><span class="spinner" aria-hidden="true" hidden data-spinner></span><span data-label>Get API key</span></button>
+          </form>
+        </div>
+
+        <div data-signup-done hidden class="stack" tabindex="-1">
+          <h2 class="t-subhead">Account created</h2>
+          <p class="t-compact" data-signup-balance></p>
+          <div class="notice notice-warning" data-signup-withheld hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
+            <p></p>
+          </div>
+          <div class="key-row">
+            <code class="key" data-signup-key></code>
+            <button class="btn btn-secondary btn-sm" type="button" data-signup-copy><svg class="icon icon-sm" aria-hidden="true"><use href="#i-copy" /></svg><span>Copy</span></button>
+          </div>
+          <span class="visually-hidden" role="status" data-signup-copy-status></span>
+          <div class="notice">
+            <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>
+            <p>Save this key now. It is shown only once and cannot be retrieved later.</p>
+          </div>
+          <div class="stack-tight">
+            <p class="label">Next steps</p>
+            <ol class="steps plain-list" role="list">
+              <li><span class="num">01</span><a class="link" href="/docs#first-call">Make your first API call</a></li>
+              <li><span class="num">02</span><a class="link" href="/docs/sdks">Install the TypeScript or Python SDK</a></li>
+              <li><span class="num">03</span><a class="link" href="/tools#bundled">Browse the bundled checks</a></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel stack">
+        <h2 class="t-subhead">Not ready to sign up?</h2>
+        <p class="t-compact">
+          {free.length > 0 ? (
+            <>Try these tools now with no account: {free.map((slug, i) => (
+              <><a href={`/tools/${slug}`}><code>{slug}</code></a>{i < free.length - 1 ? (i === free.length - 2 ? (free.length > 2 ? ", and " : " and ") : ", ") : "."}</>
+            ))}</>
+          ) : <>Some tools work with no account.</>} No API key needed, up to {FREE_TIER_MONTHLY_LIMIT} calls a month.
+        </p>
+        <a class="link-standalone" href="/tools?free=1">See the free tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+
+      <div class="card panel stack">
+        <h2 class="t-subhead">Prefer the command line?</h2>
+        <p class="t-compact">Register through the API directly:</p>
+        <CodeBlock id="register-curl" title="Terminal" panels={[{ label: "Terminal", code: curl, lang: "shell" }]} />
+        <p class="t-compact muted">Response:</p>
+        <CodeBlock id="register-response" title="Response" panels={[{ label: "Response", code: response, lang: "json" }]} />
+      </div>
+
+      <div class="card panel stack">
+        <h2 class="t-subhead">Or email us</h2>
+        <p class="t-compact">Email <a class="link" href={`mailto:${SUPPORT}`}>{SUPPORT}</a> for a free API key.</p>
+      </div>
+
+      <p class="t-compact">Already have a key? <a class="link" href="/docs">Read the quickstart</a>.</p>
+    </div>
+  </section>
+</Base>
+
+<script>import "../scripts/signup.ts";</script>
+
+<style>
+  .page-head { padding-block: var(--_page-head-top) var(--space-32); }
+  .page-head .t-lead { max-width: var(--measure-body); }
+  .section-tight { padding-block: var(--space-16) var(--_page-section-space); }
+  /* The script shows and hides parts with `hidden`; a class's display must not undo it. */
+  [hidden] { display: none !important; }
+  .narrow { max-width: calc(var(--container-prose) + 2 * var(--gutter)); }
+  .panel { padding: var(--space-32); }
+  .full { width: 100%; justify-content: center; }
+  .key-row { display: flex; gap: var(--space-8); align-items: center; }
+  .key { flex: 1; min-width: 0; padding: var(--space-12) var(--space-16); background: var(--surface-sunken); border-radius: var(--radius-control); overflow-wrap: anywhere; word-break: break-all; }
+  .steps { display: grid; gap: var(--space-8); }
+  .steps li { display: flex; gap: var(--space-12); align-items: baseline; }
+  .steps .num { color: var(--text-muted); font-size: var(--type-small-size); }
+</style>
