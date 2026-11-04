@@ -69,12 +69,18 @@
   note: No uptime/SLA commitment exists. Do not publish a percentage figure.
 
 - id: sla-commitment
-  claim: /\bSLA\b/
+  claim: /(?<!we do not\s+offer a contractual uptime\s+)\bSLA\b/
   is_regex: true
   status: forbidden
   surfaces: [homepage, README]
   decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#14"
-  note: No service-level agreement is offered. Revisit if/when one is.
+  note: >
+    No service-level agreement is offered. Revisit if/when one is.
+    The one exception is the Terms' own disclaimer, "we do not offer a
+    contractual uptime SLA at this stage" (§7, apps/web/src/pages/terms.astro,
+    carried over word for word from strale-frontend on 2026-11-04): it states
+    the ruling rather than contradicting it, and the Terms text is Petter's.
+    Every other "SLA" still fails.
 
 - id: average-latency-claim
   claim: /\baverage (response time|latency)\b/

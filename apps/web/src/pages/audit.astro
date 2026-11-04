@@ -15,7 +15,7 @@ const retention = `${formatPeriod(data.facts.static.retention_days_default)} fro
 const state = (name: string, title: string, body: string) => ({ name, title, body });
 const states = [
   state("no-token", "This record requires a valid access token", "If you received this link from a colleague, ask them to regenerate it from the API response."),
-  state("not-found", "Transaction not found", "This transaction was not found. It may have been deleted or the retention period may have expired."),
+  state("not_found", "Transaction not found", "This transaction was not found. It may have been deleted or the retention period may have expired."),
   state("pending", "This record is still being prepared", "Its integrity hash is still being computed. Reload this page in 30 seconds."),
   state("expired", "This link has expired", "Ask whoever shared it for a new link. A new one can be issued from the API."),
 ];

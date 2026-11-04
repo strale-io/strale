@@ -172,7 +172,7 @@ if (root) {
   if (!loc.token) {
     show("no-token");
   } else if (!loc.id) {
-    show("not-found");
+    show("not_found");
   } else {
     fetch(auditRequestUrl(api, loc))
       .then(async (res) => {
@@ -182,7 +182,7 @@ if (root) {
         else if (outcome.kind === "expired") show("expired", outcome.message);
         else show(outcome.kind);
       })
-      .catch(() => show("not-found"));
+      .catch(() => show("not_found"));
   }
 }
 
