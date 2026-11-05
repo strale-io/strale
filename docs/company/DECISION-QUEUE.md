@@ -14,7 +14,9 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-45** · `your_call` · owner Petter · raised 2026-11-05 — **four sentences in the Terms and Privacy pages are out of date; here is the corrected wording, which goes live with the new site unless you change it**
+**DQ-45** · `answered` · owner Petter · raised 2026-11-05 · answered 2026-11-05 (approved as written) — **four sentences in the Terms and Privacy pages are out of date; here is the corrected wording, which goes live with the new site unless you change it**
+
+*Answer (2026-11-05):* Petter, in session: "approve DQ-45". All four changes are applied as written in `apps/web/src/pages/terms.astro` and `privacy.astro`. Both pages' last-updated dates move to 5 November 2026. The Terms date was not named in the entry; it moves because the Terms text changed. They go live with the new site.
 
 *Why it is yours:* the Terms and Privacy policy bind Moonlighter AB (CHARTER § founder-gated). The new site (`apps/web`) carries both word for word from strale.dev, so whatever they say on switch-over day is what we publish on strale.io.
 

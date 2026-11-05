@@ -9,7 +9,7 @@ import LegalDoc from "../components/LegalDoc.astro";
 import { getSiteData } from "../lib/site-data";
 import { formatPeriod } from "../lib/audit-record";
 
-const LAST_UPDATED = "30 April 2026";
+const LAST_UPDATED = "5 November 2026";
 const CONTACT_EMAIL = "compliance@strale.io";
 
 const facts = (await getSiteData()).facts.static;
@@ -157,12 +157,6 @@ const maxPeriod = formatPeriod(maxDays);
               <td>LLM inference for AI-assisted capabilities</td>
               <td>US</td>
               <td>Capability input + output for ai_generated / mixed transparency-tagged calls only</td>
-            </tr>
-            <tr>
-              <td>Voyage AI</td>
-              <td>Embeddings for capability search</td>
-              <td>US</td>
-              <td>Search query strings (not capability inputs)</td>
             </tr>
             <tr>
               <td>Browserless.io</td>
