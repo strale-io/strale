@@ -10,6 +10,7 @@
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
+        ".claude/scripts/wow-hook.mjs",
         ".github/workflows/ci.yml",
         "CLAUDE.md",
         "README.md",
@@ -33,13 +34,14 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "bb2ceb9dd378518dacd0dd207e1a9608ab8fde098c8e8b23671e332c49f1b77c",
+      "sha256": "38fde080163e07236d21ac30424ea70daa18449bbf506c811c7a1c536418e50e",
       "detected_references": [
         ".agents/skills/onboard-capability/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
         ".claude/RUNBOOK.md",
         ".claude/commands/end-session.md",
+        ".claude/scripts/wow-hook.mjs",
         ".claude/skills/go/SKILL.md",
         ".claude/skills/onboard-capability/SKILL.md",
         ".github/workflows/ci.yml",
@@ -410,6 +412,7 @@
         ".claude/commands/end-session.md",
         ".claude/hooks/handoff-session-start.mjs",
         ".claude/hooks/handoff-stop.mjs",
+        ".claude/scripts/wow-hook.mjs",
         ".claude/settings.json",
         ".claude/skills/go/SKILL.md",
         ".codex/hooks.json",

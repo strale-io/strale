@@ -1,6 +1,24 @@
 {
   "crossTool": {
-    "roles": ["builder"],
+    "roles": [
+      "builder"
+    ],
     "dec": "DEC-20261101-A"
-  }
+  },
+  "node": "20",
+  "prepare": "npm --workspace=packages/mcp-server run build",
+  "env": {
+    "AUDIT_HMAC_SECRET": "ci-placeholder-secret-at-least-32-chars-long-0123456789",
+    "FRONTEND_URL": "https://strale.dev"
+  },
+  "secrets": [],
+  "allowDomains": [
+    "registry.npmjs.org",
+    "github.com",
+    "release-assets.githubusercontent.com",
+    "raw.githubusercontent.com"
+  ],
+  "testCommand": "npm test",
+  "typecheckCommand": "npm run typecheck",
+  "codexEnv": "6aece1e0cc688191ab77fa08f902e589"
 }

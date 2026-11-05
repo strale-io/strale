@@ -1080,9 +1080,17 @@ tracks:
       lowering the baseline), c2pa-inspect's native parse (byte-capped at 15 MiB, no
       pixel decode), and routing domain-age-check and whois-lookup through
       vetted-connect (the batch 2 follow-up, still open).
-      Next: batch 4, the trusted-hop rule for forwarded IPs as code and test from the
-      VERIFY-IP receipt. Each batch: plant the failure first, then the guard, then
-      the discriminating test.
+      Batch 4 was attempted on 2026-11-05 (#910) and reverted (#912): it took the
+      right-most public entry, which is Railway's edge, so every caller shared two
+      identities for about 35 minutes (docs/incidents/2026-11-05-client-ip-identity-collapse.md).
+      The header shape is now measured: archive/receipts/2026-11-05-audit-xff-shape-production.json
+      (X-Forwarded-For is exactly "<client>, <railway-edge>", the client-supplied header is
+      replaced, client = left-most = second from right; the temporary measurement from
+      #915 is removed). Next: batch 4 again, client = entries[len-2] (one trusted
+      appended hop) with the left-most fallback when there is one entry, tests from the
+      receipt's shapes, and the identity probe run BEFORE merge from a stable-egress
+      machine. Each batch: plant the failure first, then the guard, then the
+      discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code
