@@ -14,9 +14,14 @@ export const STATIC_PATHS = ["/", "/tools", "/company-data", "/use-cases", "/pri
 /** Built pages that stay out of the sitemap: private-link pages and the wallet flow. /audit is also noindex. */
 export const EXCLUDED_PATHS = ["/audit", "/topup"];
 
-/** Every indexable path, in a stable order. Empty for a preview build. */
-export function sitemapPaths(d: SiteData): string[] {
-  if (d.mode !== "live") return [];
+/** The path a built file answers at: "/tools.html" and "/tools/x.html" (build.format "file") are "/tools" and "/tools/x"; "/index.html" and "/index" are "/". Pages 308s the .html forms to these. */
+export function canonicalPath(pathname: string): string {
+  const p = pathname.replace(/\.html$/, "").replace(/\/index$/, "");
+  return p === "" ? "/" : p;
+}
+
+/** Every page the build emits for indexing (hand-written and generated), whatever the build mode. */
+export function pagePaths(d: SiteData): string[] {
   const generated = [
     ...tools(d).map((t) => `/tools/${t.slug}`),
     ...d.solutions.map((s) => `/solutions/${s.slug}`),
@@ -24,6 +29,11 @@ export function sitemapPaths(d: SiteData): string[] {
     ...USE_CASES.map((u) => `/use-cases/${u.slug}`),
   ].sort();
   return [...STATIC_PATHS, ...generated];
+}
+
+/** Every indexable path, in a stable order. Empty for a preview build. */
+export function sitemapPaths(d: SiteData): string[] {
+  return d.mode === "live" ? pagePaths(d) : [];
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

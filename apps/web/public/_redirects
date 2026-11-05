@@ -21,10 +21,30 @@
 # Integrations is one choice within connecting.
 /integrations  /docs  301
 
-# Guides (built in a separate lane). /learn/* keeps its slug.
+# Guides (SITE-STRUCTURE section 11). Explicit rules come before the splat.
+# Pruned: name deprecated packages (DEC-20260422-A) or conflict with the data-access rule.
+/learn/iban-validation-pydantic-ai  /guides  301
+/learn/sanctions-check-pydantic-ai  /guides  301
+/learn/google-adk-strale-agent  /guides  301
+/learn/vat-validation-openai-agents  /guides  301
+/learn/company-data-openai-agents  /guides  301
+/learn/strale-openai-agents-sdk  /guides  301
+/learn/web-scraping-agent-anti-bot  /guides  301
+# Country guides fold into the country pages.
+/learn/swedish-company-lookup-agent  /company-data/sweden  301
+/learn/uk-company-verification-agent  /company-data/united-kingdom  301
+/learn/german-company-data-agent  /company-data/germany  301
+/guides/swedish-company-lookup-api  /company-data/sweden  301
+/guides/swedish-company-data  /company-data/sweden  301
+/guides/norwegian-company-lookup-api  /company-data/norway  301
+/guides/norwegian-company-data  /company-data/norway  301
+# The rest keep their slug under /guides (built in a separate lane).
 /learn  /guides  301
 /learn/*  /guides/:splat  301
 
 # Internal pages that die.
 /design-system  /  301
 /logo-explorations  /  301
+
+# The OpenAPI document lives on the API host (the old site served a copy).
+/openapi.json  https://api.strale.io/openapi.json  301

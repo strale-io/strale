@@ -1,5 +1,5 @@
 // A small reader for the Cloudflare Pages _redirects file (public/_redirects), so a test can ask
-// what the host will do with an old path. Supports the three forms the file uses: exact paths,
+// what the host will do with an old path. Supports the three forms the file uses: exact paths (a line with no code is a 302, as on Pages),
 // :placeholders and a trailing /* splat (:splat in the target). First match wins, as on Pages.
 
 export interface Rule { from: string; to: string; status: number }
@@ -10,7 +10,7 @@ export function parseRedirects(text: string): Rule[] {
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith("#"))
     .map((l) => {
-      const [from, to, status = "301"] = l.split(/\s+/);
+      const [from, to, status = "302"] = l.split(/\s+/);
       return { from, to, status: Number(status) };
     });
 }
