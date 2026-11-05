@@ -1,11 +1,11 @@
 # INCIDENT: every anonymous API caller identified as one of two addresses
 
-**Status:** reverted (strale-io/strale#912). Restore verification: see section 5.
+**Status:** reverted and verified (strale-io/strale#912, live as fb7c2480 by 13:56 Swedish time).
 **Severity:** medium. Per-IP protections (rate limits, the free-tier monthly
 allowance and the signup trial cap) were shared across all callers. No money
 moved wrongly, no data was exposed, and paid API-key calls are limited per key.
 **Window (Swedish time):** from the deploy of 3b13b39c (strale-io/strale#910,
-merged 13:20, live by 13:25 at the latest) until the revert's deploy (section 5).
+merged 13:20, live by 13:25 at the latest) until the revert was live at about 13:55. That is roughly 30 to 35 minutes.
 
 ## 1. What happened
 
@@ -62,8 +62,12 @@ credit as a refund-class action, after showing Petter the list.
 
 ## 5. Restore verification
 
-To fill in when the revert is live: `/health` commit, and a fresh sample
-showing each request's `ipHash` equal to `sha256` of the caller's egress IP.
+At 13:56 Swedish time `/health` showed `fb7c24808a37`, the revert's merge
+commit. Six fresh free-tier calls gave six distinct identities. Five are the
+exact `sha256` of a known egress IP of this session: 881b8c44… = 34.75.111.51,
+b8e21d72… = 35.231.82.74, d0980acc… = 35.185.16.144, 4359b7fa… =
+35.243.167.234 and b037cb7a… = 34.75.37.254. Per-client identity is back to
+the left-most rule that held before #910.
 
 ## 6. What changes
 
