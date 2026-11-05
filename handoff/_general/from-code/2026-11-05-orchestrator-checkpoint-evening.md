@@ -34,3 +34,7 @@ Intent: orchestrator checkpoint, 2026-11-05 evening, after the account takeover 
    - It syncs to the DB through `manifest-sync-fields.ts`.
    - It needs the Capability Onboarding Protocol checks (validate-capability, readiness), which need a DB, so it goes in its own small PR.
 5. **Carried over:** stale public copy from the guides lane.
+
+## Gate finding this session could not clear
+
+The handoff gate reports the remote branch `worktree-bridge-cse_01RFNL6Vx2oGTueVVUhYjN7M` as merged. It belongs to the previous orchestrator session and its tip, `ad41a59b` (#901), is an ancestor of `main`, so deleting it loses nothing. This session's git access refuses the delete: the proxy disconnects, because only the session's own branch can be pushed. Petter, or a session with branch-delete access, should run `git push origin --delete worktree-bridge-cse_01RFNL6Vx2oGTueVVUhYjN7M`.
