@@ -371,7 +371,7 @@
     {
       "path": "docs/remediation",
       "owner_area": "remediation-program",
-      "sha256": "51f085c1d8168e301a58091357b03efa24723e26a6e898452af56db6c7d43d86",
+      "sha256": "ec2b121faf35eaf9f00ecc034d94f4409bab1bf5393dac900cb27e24ef9e57f3",
       "detected_references": [
         "apps/api/scripts/verify-ip-probe.mjs",
         "apps/api/scripts/wp10-cadence-verdict.mjs",

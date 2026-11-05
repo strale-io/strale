@@ -58,7 +58,7 @@ describe("createCappedTextSink", () => {
     const sink = createCappedTextSink(10);
     expect(sink.push("abc")).toBe(false);
     expect(sink.push(Buffer.from("def"))).toBe(false);
-    expect(sink.text()).toBe("abcdef");
+    expect(sink.value()).toBe("abcdef");
     expect(sink.truncated).toBe(false);
   });
 
@@ -66,11 +66,11 @@ describe("createCappedTextSink", () => {
     const sink = createCappedTextSink(10);
     sink.push("0123456");
     expect(sink.push("789ABCDEF")).toBe(true);
-    expect(sink.text()).toBe("0123456789");
+    expect(sink.value()).toBe("0123456789");
     expect(sink.truncated).toBe(true);
     // Later chunks are ignored, not appended.
     expect(sink.push("more")).toBe(true);
-    expect(sink.text()).toBe("0123456789");
+    expect(sink.value()).toBe("0123456789");
   });
 
   it("decodes once at the end, so a character split across chunks survives", () => {
@@ -78,13 +78,13 @@ describe("createCappedTextSink", () => {
     const sink = createCappedTextSink(100);
     sink.push(bytes.subarray(0, 1));
     sink.push(bytes.subarray(1));
-    expect(sink.text()).toBe("é");
+    expect(sink.value()).toBe("é");
   });
 
   it("a cap that lands mid-character yields a replacement character, not a throw", () => {
     const sink = createCappedTextSink(1);
     expect(sink.push(Buffer.from("é"))).toBe(true);
-    expect(sink.text()).toBe("�");
+    expect(sink.value()).toBe("�");
   });
 });
 

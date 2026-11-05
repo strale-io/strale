@@ -39,6 +39,7 @@
  */
 
 import { logError, logWarn } from "./log.js";
+import { JsonPicker, type Pick } from "./json-pick.js";
 
 /**
  * Largest decoded image the platform accepts.
@@ -210,6 +211,20 @@ export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 /** Package packuments include every release; refuse above 20 MiB (portfolio plan 2.7). */
 export const MAX_PACKAGE_REGISTRY_RESPONSE_BYTES = 20 * 1024 * 1024;
+
+/**
+ * Work bound for reading an npm PACKUMENT through `readJsonPickWithLimit`.
+ *
+ * Measured 2026-11-05, decompressed: renovate 74.3 MB, vite 39.0 MB, next
+ * 31.5 MB, npm 26.1 MB, typescript 15.9 MB. 128 MiB is 1.8x the largest, so no
+ * package refused today is a package people use. Because the packument is
+ * scanned and only the picked paths are kept (lib/json-pick.ts), this number
+ * bounds bytes pulled and CPU, not memory: residency is one network chunk plus
+ * the picks, whatever the size. The 20 MiB `MAX_PACKAGE_REGISTRY_RESPONSE_BYTES`
+ * stays for readers that parse a whole document (PyPI records, which are
+ * per-project and far smaller).
+ */
+export const MAX_PACKUMENT_BYTES = 128 * 1024 * 1024;
 
 /**
  * Largest PageSpeed Insights report the platform will buffer (#434).
@@ -686,8 +701,10 @@ export function assertEffectiveGeometryWithinLimit(
  * does.
  *
  * A missing or zero dimension (a format whose header carries none) is not
- * refused here: the decoder is constructed with `limitInputPixels:
- * MAX_INPUT_PIXELS`, which enforces the same number if the header lied.
+ * refused here; the decoder's own `limitInputPixels: MAX_INPUT_PIXELS` applies
+ * the same number to whatever header it reads. That repeats this check rather
+ * than catching a lying header. Single-frame only: for an animated decode
+ * (`animated: true`) the bound would be width x height x `pages`.
  */
 export function assertInputPixelsWithinLimit(
   width: number | undefined,
@@ -1032,13 +1049,13 @@ async function consumeBody(
  * WHOIS readers parse leading `Key: value` lines and keep a prefix, so the
  * cut changes nothing they report, whereas refusing would turn a working
  * answer into an error. `push` returns true once the cap is reached; the
- * caller then closes the socket and takes `text()`. Bytes are kept as bytes
+ * caller then closes the socket and takes `value()`. Bytes are kept as bytes
  * and decoded once at the end, so a multi-byte character split across chunks
  * is not mangled and the decode never sees more than `maxBytes`.
  */
 export function createCappedTextSink(maxBytes: number): {
   push(chunk: Uint8Array | string): boolean;
-  text(): string;
+  value(): string;
   readonly truncated: boolean;
 } {
   const parts: Buffer[] = [];
@@ -1059,11 +1076,30 @@ export function createCappedTextSink(maxBytes: number): {
       size += buf.length;
       return false;
     },
-    text() {
+    value() {
       return new TextDecoder("utf-8").decode(Buffer.concat(parts, size));
     },
     get truncated() {
       return truncated;
     },
   };
+}
+
+/**
+ * Read a JSON object response BOUNDED and keep only the paths in `pick`
+ * (see lib/json-pick.ts for the spec). The byte cap is the same enforcement
+ * core every reader here uses (declared-length refusal, cancel at the cap);
+ * memory is one chunk plus the picks, so this is the reader for documents that
+ * are large for reasons the caller does not need (npm packuments).
+ */
+export async function readJsonPickWithLimit(
+  response: Response,
+  maxBytes: number,
+  pick: Pick,
+  field = "url",
+  entity = "an endpoint whose response is",
+): Promise<Record<string, any>> {
+  const picker = new JsonPicker(pick);
+  await consumeBody(response, maxBytes, field, entity, (chunk) => picker.write(chunk));
+  return picker.finish();
 }

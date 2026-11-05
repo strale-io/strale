@@ -123,7 +123,10 @@ async function ghFetch(url: string, headers: Record<string, string>): Promise<un
   try {
     // unguarded-fetch-ok: fixed api.github.com host; caller supplies only the repo path
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      await res.body?.cancel();
+      return null;
+    }
     return await readJsonWithLimit(res); // 4 MiB; past it the call degrades to null like any other failure
   } catch { return null; }
 }
@@ -132,7 +135,10 @@ async function ghFetchText(url: string): Promise<string | null> {
   try {
     // unguarded-fetch-ok: fixed api.github.com host; caller supplies only the repo path
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      await res.body?.cancel();
+      return null;
+    }
     // A prefix: only the first 3,000 characters reach the model. The file is the repository owner's.
     return await readTextTruncated(res, MAX_REPO_FILE_BYTES);
   } catch { return null; }

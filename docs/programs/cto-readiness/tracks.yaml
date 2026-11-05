@@ -1037,27 +1037,37 @@ tracks:
       whois-lookup open raw sockets to hardcoded WHOIS servers only and were left on
       plain createConnection; route them through vetted-connect too for one egress
       path.
-      Batch 3 (2026-11-05, branch fix/wp12-resource-caps, CR-12): every reader whose
-      size a caller can drive now goes through apps/api/src/lib/resource-limits.ts.
-      Inventory of 2026-11-05: the caller-URL readers (fetch of a caller's URL, 60
+      Batch 3 (2026-11-05, branch fix/wp12-resource-caps, CR-12): the readers whose
+      size a CALLER can drive now go through apps/api/src/lib/resource-limits.ts.
+      Inventory of 2026-11-05: the caller-URL readers (a caller's URL, about 60
       capabilities) were already capped by #412/#426/#428/#432; the gaps were
       image-resize (no cap on the SOURCE pixel count; sharp's default is 268 MP; now
-      MAX_INPUT_PIXELS = 60 MP, the OCR number, checked from the header and carried
-      as limitInputPixels), whois-lookup and domain-age-check (socket read until the
-      server hangs up; now createCappedTextSink, 256 KiB, truncating) and the
-      caller-chosen-content readers npm-package-info, pypi-package-info,
-      package-security-audit (20 MiB registry cap, package-docs' phrase) and
-      github-repo-analyze (256 KiB file prefix, 4 MiB API JSON). Planted tests:
-      image-resize.pixel-cap, whois-response-cap, registry-body-caps (each failed
-      on main, passes with the guard, fails again with the guard reverted).
-      lib/body-reader-ratchet.test.ts plus lib/body-reader-baseline.json count what
-      is left (220 raw .json()/.text() reads in 130 files, all on FIXED vendor hosts;
-      sharp( on the platform's own output; child-process pipes) and fail if a file
-      gains one. Left, not done: converting those fixed-vendor reads (many tests hand
-      the capability a bare { ok, json() } instead of a Response, so it is a sweep
-      with test rewrites, to be done by lowering the baseline), c2pa-inspect's native
-      parse (byte-capped at 15 MiB, no pixel decode), and routing domain-age-check
-      and whois-lookup through vetted-connect (the batch 2 follow-up, still open).
+      MAX_INPUT_PIXELS = 60 MP, the OCR number, checked from the header, repeated as
+      limitInputPixels on the pipeline), whois-lookup and domain-age-check (socket
+      read until the server hangs up; now createCappedTextSink, 256 KiB, truncating)
+      and the caller-chosen-content readers pypi-package-info, github-repo-analyze
+      (256 KiB file prefix, 4 MiB API JSON) and the three npm readers. Review round
+      1 (B1) found that a 20 MiB cap refused next, vite, npm and renovate (packuments
+      of 31, 39, 26 and 74 MB). npm-package-info, package-security-audit and
+      package-docs now read the packument through lib/json-pick.ts, which scans the
+      bytes and keeps only the named paths, under a 128 MiB work bound
+      (MAX_PACKUMENT_BYTES); npm-package-info also takes the latest version's own
+      small manifest from <pkg>/latest. `time` (per-release dates) exists only in the
+      full packument, which is why it is scanned and not replaced by the abbreviated
+      one. Live, 2026-11-05: outputs for next, vite, renovate (npm-package-info) and
+      next (package-security-audit) are identical to main's; peak RSS for renovate
+      fell from 525 MB to 122 MB. Planted tests: image-resize.pixel-cap,
+      whois-response-cap, registry-body-caps, npm-packument-large.
+      lib/body-reader-ratchet.test.ts (TypeScript AST) plus lib/body-reader-baseline.json
+      FREEZE what is left: 222 raw .json()/.text() reads in 131 files, all on fixed
+      vendor hosts, plus sharp( on the platform's own output and child-process pipes.
+      They are frozen, not capped; a file that gains one fails. A new caller of an
+      existing raw-read helper is not counted. Left, not done: converting those
+      fixed-vendor reads (many tests hand the capability a bare { ok, json() }
+      instead of a Response, so it is a sweep with test rewrites, to be done by
+      lowering the baseline), c2pa-inspect's native parse (byte-capped at 15 MiB, no
+      pixel decode), and routing domain-age-check and whois-lookup through
+      vetted-connect (the batch 2 follow-up, still open).
       Next: batch 4, the trusted-hop rule for forwarded IPs as code and test from the
       VERIFY-IP receipt. Each batch: plant the failure first, then the guard, then
       the discriminating test.
@@ -1065,7 +1075,7 @@ tracks:
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code
       - connect-time re-check for raw sockets
-      - byte and pixel caps on every reader
+      - byte and pixel caps on every reader (NOT MET - caller-driven readers are capped, 222 fixed-vendor reads are frozen by a ratchet and not capped)
       - the forwarded-IP trusted-hop rule as code and test
       - WP12 status in PACKAGE-GRAPH.yaml moves off UNBLOCKED_NOT_YET_STARTED
     evidence: []

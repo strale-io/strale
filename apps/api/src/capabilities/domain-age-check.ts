@@ -29,10 +29,10 @@ function whoisQuery(server: string, domain: string): Promise<string> {
       if (sink.push(chunk)) {
         clearTimeout(timeout);
         socket.destroy();
-        resolve(sink.text());
+        resolve(sink.value());
       }
     });
-    socket.on("end", () => { clearTimeout(timeout); resolve(sink.text()); });
+    socket.on("end", () => { clearTimeout(timeout); resolve(sink.value()); });
     socket.on("error", (err) => { clearTimeout(timeout); reject(err); });
   });
 }

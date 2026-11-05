@@ -93,8 +93,12 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
   // The byte cap above does not bound this (a solid 9,000 x 9,000 PNG is about
   // 100 KB) and sharp's built-in limit is 268 MP. `metadata()` parses the
   // header only, so it is built without the limit and the refusal below is the
-  // repo's own; the decoding pipeline then carries the same limit, which
-  // catches a header that under-reports what the decoder meets.
+  // repo's own. The decoding pipeline carries the same `limitInputPixels`, but
+  // that REPEATS the header check as a backstop (it reads the same header, so
+  // it does not catch a header that lies) and turns sharp's error into ours.
+  // Pages: this takes the first frame only. Opening with `animated: true`
+  // would decode `pages` frames, so the bound would have to be width x height
+  // x pages.
   const sourceField = base64Input ? "base64" : input.image_url ? "image_url" : "url";
   let sourceMeta: Metadata;
   try {

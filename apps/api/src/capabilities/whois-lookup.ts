@@ -138,12 +138,12 @@ function queryWhois(server: string, domain: string): Promise<string> {
       if (sink.push(chunk)) {
         clearTimeout(timeout);
         socket.destroy();
-        resolve(sink.text());
+        resolve(sink.value());
       }
     });
     socket.on("end", () => {
       clearTimeout(timeout);
-      const data = sink.text();
+      const data = sink.value();
       if (!data.trim()) {
         reject(new Error(`Empty WHOIS response from ${server} for ${domain}.`));
       } else {

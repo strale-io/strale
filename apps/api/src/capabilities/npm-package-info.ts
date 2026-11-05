@@ -1,24 +1,51 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { MAX_FETCHED_API_RESPONSE_BYTES, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, readJsonWithLimit } from "../lib/resource-limits.js";
+import { MAX_FETCHED_API_RESPONSE_BYTES, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES, readJsonPickWithLimit, readJsonWithLimit } from "../lib/resource-limits.js";
+import type { Pick } from "../lib/json-pick.js";
+
+// The packument fields this reads; versions are kept by NAME only.
+const PACKUMENT_PICK: Pick = {
+  name: true, description: true, license: true, homepage: true, repository: true, author: true,
+  keywords: true, "dist-tags": true, time: true, versions: "keys",
+};
 
 // npm Registry API — free, no key required
 registerCapability("npm-package-info", async (input: CapabilityInput) => {
   const pkg = ((input.package as string) ?? (input.name as string) ?? (input.task as string) ?? "").trim();
   if (!pkg) throw new Error("'package' (npm package name) is required.");
 
-  const url = `https://registry.npmjs.org/${encodeURIComponent(pkg)}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
+  const base = `https://registry.npmjs.org/${encodeURIComponent(pkg)}`;
+  // Not the full packument (renovate's is 74 MB, vite's 39 MB, next's 31 MB):
+  //  1. the packument, scanned and cut down to what this reads: dist-tags, the
+  //     list of version names, `time` (created, modified and each release's
+  //     publish date, which only the full document carries), and the few
+  //     top-level descriptors;
+  //  2. `<pkg>/latest`, the latest version's own small manifest, for its
+  //     license, homepage and dependencies.
+  const [response, latestResponse] = await Promise.all([
+    fetch(base, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }),
+    fetch(`${base}/latest`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }),
+  ]);
 
-  if (response.status === 404) throw new Error(`npm package "${pkg}" not found.`);
-  if (!response.ok) throw new Error(`npm registry returned HTTP ${response.status}`);
+  if (response.status === 404) {
+    await response.body?.cancel();
+    await latestResponse.body?.cancel();
+    throw new Error(`npm package "${pkg}" not found.`);
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    await latestResponse.body?.cancel();
+    throw new Error(`npm registry returned HTTP ${response.status}`);
+  }
 
-  // Bounded (WP12 batch 3): a packument grows with every release its owner publishes.
-  const data = (await readJsonWithLimit<any>(response, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package", "a registry record of"));
+  const data = await readJsonPickWithLimit(response, MAX_PACKUMENT_BYTES, PACKUMENT_PICK, "package", "a registry record of");
+  let latestVersion: any = null;
+  if (latestResponse.ok) {
+    latestVersion = await readJsonWithLimit<any>(latestResponse, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package", "a registry record of");
+  } else {
+    await latestResponse.body?.cancel();
+    if (latestResponse.status !== 404) throw new Error(`npm registry returned HTTP ${latestResponse.status}`);
+  }
   const latest = data["dist-tags"]?.latest;
-  const latestVersion = latest ? data.versions?.[latest] : null;
   const times = data.time ?? {};
 
   // Get version count and recent versions

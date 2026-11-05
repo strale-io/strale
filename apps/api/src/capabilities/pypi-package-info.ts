@@ -12,8 +12,14 @@ registerCapability("pypi-package-info", async (input: CapabilityInput) => {
     signal: AbortSignal.timeout(10000),
   });
 
-  if (response.status === 404) throw new Error(`PyPI package "${pkg}" not found.`);
-  if (!response.ok) throw new Error(`PyPI API returned HTTP ${response.status}`);
+  if (response.status === 404) {
+    await response.body?.cancel();
+    throw new Error(`PyPI package "${pkg}" not found.`);
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`PyPI API returned HTTP ${response.status}`);
+  }
 
   // Bounded (WP12 batch 3): a project record lists every release file its owner uploaded.
   const data = (await readJsonWithLimit<any>(response, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package", "a registry record of"));

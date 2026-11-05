@@ -1,7 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { SourceBlockedError, STRALE_USER_AGENT } from "../lib/site-access.js";
-import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, ResourceLimitError, readJsonWithLimit } from "../lib/resource-limits.js";
+import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES, ResourceLimitError, readJsonPickWithLimit, readJsonWithLimit } from "../lib/resource-limits.js";
+import type { Pick } from "../lib/json-pick.js";
 
 interface Person { name?: string; email?: string; url?: string }
 interface NpmVersion {
@@ -55,7 +56,18 @@ function validate(input: CapabilityInput) {
   return { ecosystem, name: ecosystem === "pypi" ? name.toLowerCase().replace(/[-_.]+/g, "-") : name, version, max };
 }
 
-async function registryJson<T>(url: string, versionRequested = false): Promise<T | null> {
+// What package-docs reads of a whole npm packument. Everything else (every
+// release's tarball, dependencies, maintainers, the per-release `_npmUser`...) is
+// scanned past, not held: renovate's is 74 MB (lib/json-pick.ts). Per-release
+// `readme` is not kept; the top-level readme is the one used for an unpinned
+// request, and a pinned request reads the small per-version document instead.
+const PACKUMENT_PICK: Pick = {
+  name: true, description: true, homepage: true, repository: true, author: true, license: true,
+  maintainers: true, readme: true, readmeFilename: true, "dist-tags": true, time: true,
+  versions: { "*": { version: true, name: true, description: true, homepage: true, repository: true, author: true, license: true, maintainers: true, deprecated: true } },
+};
+
+async function registryJson<T>(url: string, versionRequested = false, packument = false): Promise<T | null> {
   const response = await fetch(url, {
     headers: { Accept: "application/json", "User-Agent": STRALE_USER_AGENT },
     signal: AbortSignal.timeout(10000),
@@ -71,14 +83,18 @@ async function registryJson<T>(url: string, versionRequested = false): Promise<T
     throw new Error(`Package registry source returned HTTP ${response.status}; retry later.`);
   }
   try {
-    const data = await readJsonWithLimit<T>(response, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package");
+    const data = packument
+      ? await readJsonPickWithLimit(response, MAX_PACKUMENT_BYTES, PACKUMENT_PICK, "package", "a registry record of") as T
+      : await readJsonWithLimit<T>(response, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package");
     if (!data || typeof data !== "object" || Array.isArray(data)) throw new SyntaxError();
     return data;
   } catch (error) {
     if (error instanceof ResourceLimitError) {
-      throw new CapabilityRefusalError(versionRequested
-        ? "'package' must be a registry record no larger than 20 MiB; consult the registry directly for this oversized release."
-        : "'package' must be a registry record no larger than 20 MiB; request a specific 'version' to use the smaller per-version record.");
+      throw new CapabilityRefusalError(packument
+        ? "'package' must be a registry record no larger than 128 MiB; request a specific 'version' to use the smaller per-version record."
+        : versionRequested
+          ? "'package' must be a registry record no larger than 20 MiB; consult the registry directly for this oversized release."
+          : "'package' must be a registry record no larger than 20 MiB; request a specific 'version' to use the smaller per-version record.");
     }
     if (error instanceof SyntaxError) throw new Error("Package registry source returned malformed JSON metadata; retry later.");
     throw error;
@@ -174,10 +190,10 @@ registerCapability("package-docs", async (input) => {
     // Fetch project metadata only for missing README or unknown-version suggestions.
     // An oversized optional fallback must not reject a valid smaller release.
     if (version) source += `/${encodeURIComponent(version)}`;
-    let data = await registryJson<Packument>(source, !!version);
+    let data = await registryJson<Packument>(source, !!version, !version);
     const versionData = version ? data : null;
     if (!data && version) {
-      const project = await registryJson<Packument>(`https://registry.npmjs.org/${encodeURIComponent(name)}`);
+      const project = await registryJson<Packument>(`https://registry.npmjs.org/${encodeURIComponent(name)}`, false, true);
       if (project?.versions) unknownVersion(version, Object.keys(project.versions).sort((a, b) => (project.time?.[b] ?? "").localeCompare(project.time?.[a] ?? "")));
     }
     if (!data || (!version && !data.versions)) refuse("package", "an existing public npm package. Check spelling and ecosystem, or the version list.");
@@ -186,7 +202,7 @@ registerCapability("package-docs", async (input) => {
     }
     if (versionData && !usableReadme(versionData.readme)) {
       try {
-        const project = await registryJson<Packument>(`https://registry.npmjs.org/${encodeURIComponent(name)}`);
+        const project = await registryJson<Packument>(`https://registry.npmjs.org/${encodeURIComponent(name)}`, false, true);
         if (project?.versions && typeof project.versions === "object" && !Array.isArray(project.versions)) data = project;
       } catch (error) {
         if (!(error instanceof CapabilityRefusalError)) throw error;

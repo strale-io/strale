@@ -64,21 +64,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("package registry records are read under the 20 MiB registry cap", () => {
+describe("PyPI records are read under the 20 MiB registry cap", () => {
   const capped = pullsFor(20 * MIB);
 
-  it("npm-package-info", async () => {
-    fetchMock.mockImplementation(async (url: string) =>
-      String(url).startsWith("https://registry.npmjs.org/") ? huge() : json({ downloads: 1 }),
-    );
-    const err = await getExecutor("npm-package-info")!({ package: "left-pad" }).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    expect(totalPulls(), "the registry record was read past the cap").toBeLessThanOrEqual(capped);
-    expect((err as Error).message).toMatch(/'package' must be .*20\.0MB or less/);
-    expect(isCapabilityRefusal(err)).toBe(true);
-  });
+  // npm-package-info, package-security-audit (npm) and package-docs read a
+  // packument through lib/json-pick.ts under a 128 MiB work bound, not this
+  // 20 MiB whole-document cap: see npm-packument-large.test.ts (review B1).
 
   it("pypi-package-info", async () => {
     fetchMock.mockImplementation(async () => huge());
@@ -88,17 +79,6 @@ describe("package registry records are read under the 20 MiB registry cap", () =
     );
     expect(totalPulls(), "the registry record was read past the cap").toBeLessThanOrEqual(capped);
     expect((err as Error).message).toMatch(/'package' must be .*20\.0MB or less/);
-    expect(isCapabilityRefusal(err)).toBe(true);
-  });
-
-  it("package-security-audit (npm)", async () => {
-    fetchMock.mockImplementation(async () => huge());
-    const err = await getExecutor("package-security-audit")!({ name: "left-pad", ecosystem: "npm" }).then(
-      () => null,
-      (e: unknown) => e,
-    );
-    expect(totalPulls(), "the registry record was read past the cap").toBeLessThanOrEqual(capped);
-    expect((err as Error).message).toMatch(/'name' must be .*20\.0MB or less/);
     expect(isCapabilityRefusal(err)).toBe(true);
   });
 
@@ -143,5 +123,39 @@ describe("github-repo-analyze reads repository files as a bounded prefix", () =>
       /Could not access repo o\/r/,
     );
     expect(totalPulls(), "the repo record was read past the cap").toBeLessThanOrEqual(pullsFor(4 * MIB));
+  });
+});
+
+describe("a non-OK answer's body is cancelled before the capability throws or returns null (review N2)", () => {
+  /** A response with a body nobody will read, and a probe for its cancel(). */
+  function unread(status: number) {
+    const cancel = vi.fn();
+    return { cancel, response: new Response(new ReadableStream({ cancel }), { status }) };
+  }
+
+  it.each([
+    ["pypi-package-info", { package: "requests" }, 404],
+    ["pypi-package-info", { package: "requests" }, 503],
+    ["package-security-audit", { name: "requests", ecosystem: "pypi" }, 404],
+    ["package-security-audit", { name: "requests", ecosystem: "pypi" }, 503],
+    ["package-security-audit", { name: "left-pad", ecosystem: "npm" }, 404],
+    ["package-security-audit", { name: "left-pad", ecosystem: "npm" }, 503],
+  ])("%s %j answers HTTP %i", async (slug, input, status) => {
+    const u = unread(status);
+    fetchMock.mockImplementation(async () => u.response);
+    await expect(getExecutor(slug)!(input)).rejects.toThrow();
+    expect(u.cancel, "the unread body was left open").toHaveBeenCalled();
+  });
+
+  it("github-repo-analyze cancels the bodies of the API and raw-file requests that fail", async () => {
+    const all: Array<ReturnType<typeof unread>> = [];
+    fetchMock.mockImplementation(async () => {
+      const u = unread(404);
+      all.push(u);
+      return u.response;
+    });
+    await expect(getExecutor("github-repo-analyze")!({ url: "https://github.com/o/r" })).rejects.toThrow(/Could not access repo/);
+    expect(all.length).toBeGreaterThanOrEqual(5);
+    expect(all.filter((u) => !u.cancel.mock.calls.length).length, "failed responses left open").toBe(0);
   });
 });
