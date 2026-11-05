@@ -39,7 +39,7 @@
  */
 
 import { logError, logWarn } from "./log.js";
-import { JsonPicker, type Pick } from "./json-pick.js";
+import { JsonPickLimitError, JsonPicker, type Pick } from "./json-pick.js";
 
 /**
  * Largest decoded image the platform accepts.
@@ -1033,7 +1033,16 @@ async function consumeBody(
         return maxBytes;
       }
       total += value.byteLength;
-      onChunk?.(value);
+      try {
+        onChunk?.(value);
+      } catch (err) {
+        // The sink refused (a malformed or hostile document): do not leave
+        // the connection open behind the throw.
+        await reader
+          .cancel()
+          .catch(() => logError("image-limit-reader-cancel", new Error("Response body cancellation failed."), { maxBytes }));
+        throw err;
+      }
     }
   } finally {
     reader.releaseLock?.();
@@ -1100,6 +1109,16 @@ export async function readJsonPickWithLimit(
   entity = "an endpoint whose response is",
 ): Promise<Record<string, any>> {
   const picker = new JsonPicker(pick);
-  await consumeBody(response, maxBytes, field, entity, (chunk) => picker.write(chunk));
-  return picker.finish();
+  try {
+    await consumeBody(response, maxBytes, field, entity, (chunk) => picker.write(chunk));
+    return picker.finish();
+  } catch (err) {
+    // A document built to make a reader hold more than it promises: nesting,
+    // an enormous key, or selected fields past the picked-data bound. The
+    // caller's record is what is wrong, in the repo's refusal style.
+    if (err instanceof JsonPickLimitError) {
+      throw new ResourceLimitError(`'${field}' must be ${entity.replace(/ (is|of)$/, "")} without ${err.message}.`);
+    }
+    throw err;
+  }
 }

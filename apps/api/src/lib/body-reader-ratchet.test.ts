@@ -54,6 +54,7 @@ import ts from "typescript";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { MAX_INPUT_PIXELS } from "./resource-limits.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, "..");
@@ -66,9 +67,16 @@ const BASELINE = JSON.parse(readFileSync(join(HERE, "body-reader-baseline.json")
 const RAW_METHODS = new Set(["json", "text", "arrayBuffer", "blob", "formData"]);
 const LISTEN_METHODS = new Set(["on", "once", "addListener", "prependListener"]);
 const PIXEL_CAPS = new Set(["MAX_INPUT_PIXELS", "IMAGE_MAX_INPUT_PIXELS"]);
-const INBOUND_RECEIVER = /(^|\.)req(uest)?(\.clone\(\))?$/;
+// Inbound request bodies are bounded at the rail (app.ts). Only Hono's own
+// `c.req` / `ctx.req` is exempt everywhere; a bare `req` / `request` receiver
+// (which `const request = await fetch(u)` also produces) is exempt only in the
+// files that handle the incoming Request, listed here.
+const HONO_REQ = /^(c|ctx)\.req$/;
+const BARE_REQ = /^(req|request)(\.clone\(\))?$/;
+const INBOUND_FILES = new Set(["routes/mcp.ts"]);
 
 export interface Findings {
+  testImports: number;
   rawReads: number;
   getReaders: number;
   unlimitedSharp: number;
@@ -88,11 +96,34 @@ function calledMember(call: ts.CallExpression): { name: string; receiver: ts.Exp
   return null;
 }
 
-function isSharpCallee(expr: ts.Expression): boolean {
-  if (ts.isIdentifier(expr)) return expr.text === "sharp";
-  if (ts.isPropertyAccessExpression(expr)) return ts.isIdentifier(expr.expression) && expr.expression.text === "sharp" && expr.name.text === "default";
+function isSharpCallee(expr: ts.Expression, names: Set<string>): boolean {
+  if (ts.isIdentifier(expr)) return names.has(expr.text);
+  if (ts.isPropertyAccessExpression(expr)) return ts.isIdentifier(expr.expression) && names.has(expr.expression.text) && expr.name.text === "default";
   return false;
 }
+
+/** Every local name the sharp module is bound to: default, namespace or require. */
+function sharpNames(sf: ts.SourceFile): Set<string> {
+  const names = new Set(["sharp"]);
+  for (const st of sf.statements) {
+    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && st.moduleSpecifier.text === "sharp") {
+      const c = st.importClause;
+      if (c?.name) names.add(c.name.text);
+      if (c?.namedBindings && ts.isNamespaceImport(c.namedBindings)) names.add(c.namedBindings.name.text);
+    }
+    if (
+      ts.isImportEqualsDeclaration(st) &&
+      ts.isExternalModuleReference(st.moduleReference) &&
+      ts.isStringLiteral(st.moduleReference.expression) &&
+      st.moduleReference.expression.text === "sharp"
+    ) {
+      names.add(st.name.text);
+    }
+  }
+  return names;
+}
+
+const TEST_SUPPORT = /(^|\/)test-(helpers|support)(\/|$)/;
 
 /** Is `limitInputPixels` in this options object a number or the shared cap? */
 function limitOption(opts: ts.Expression | undefined): "ok" | "false" | "missing" | "bad" {
@@ -104,7 +135,12 @@ function limitOption(opts: ts.Expression | undefined): "ok" | "false" | "missing
     if (!ts.isPropertyAssignment(p)) return "bad";
     const v = p.initializer;
     if (v.kind === ts.SyntaxKind.FalseKeyword) return "false";
-    if (ts.isNumericLiteral(v) && Number(v.text) > 0) return "ok";
+    // A literal must itself be a real cap: sharp treats 0 as "no limit", and a
+    // number above the platform's own bound is no bound at all.
+    if (ts.isNumericLiteral(v)) {
+      const n = Number(v.text.replace(/_/g, ""));
+      return n > 0 && n <= MAX_INPUT_PIXELS ? "ok" : "bad";
+    }
     if (ts.isIdentifier(v) && PIXEL_CAPS.has(v.text)) return "ok";
     return "bad";
   }
@@ -113,19 +149,39 @@ function limitOption(opts: ts.Expression | undefined): "ok" | "false" | "missing
 
 export function scan(fileName: string, text: string): Findings {
   const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  const f: Findings = { rawReads: 0, getReaders: 0, unlimitedSharp: 0, socketListeners: 0 };
+  const f: Findings = { testImports: 0, rawReads: 0, getReaders: 0, unlimitedSharp: 0, socketListeners: 0 };
+  const sharps = sharpNames(sf);
+  const inboundFile = INBOUND_FILES.has(fileName);
   let sinks = 0;
   let listeners = 0;
   const visit = (node: ts.Node) => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      TEST_SUPPORT.test(node.moduleSpecifier.text)
+    ) {
+      f.testImports++;
+    }
     if (ts.isCallExpression(node)) {
+      if (
+        node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+        node.arguments[0] &&
+        ts.isStringLiteralLike(node.arguments[0]) &&
+        TEST_SUPPORT.test(node.arguments[0].text)
+      ) {
+        f.testImports++;
+      }
       const member = calledMember(node);
       if (member) {
-        if (node.arguments.length === 0 && RAW_METHODS.has(member.name) && !INBOUND_RECEIVER.test(member.receiver.getText(sf))) f.rawReads++;
+        const recv = member.receiver.getText(sf);
+        const inbound = HONO_REQ.test(recv) || (inboundFile && BARE_REQ.test(recv));
+        if (node.arguments.length === 0 && RAW_METHODS.has(member.name) && !inbound) f.rawReads++;
         if (node.arguments.length === 0 && member.name === "getReader") f.getReaders++;
         const first = node.arguments[0];
         if (LISTEN_METHODS.has(member.name) && first && (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first)) && first.text === "data") listeners++;
       }
-      if (isSharpCallee(node.expression)) {
+      if (isSharpCallee(node.expression, sharps)) {
         const lim = limitOption(node.arguments[1]);
         const parent = node.parent;
         const metadataChain =
@@ -157,9 +213,11 @@ function inventory() {
   const sharp: Record<string, number> = {};
   const sockets: Record<string, number> = {};
   const readers: Record<string, number> = {};
+  const testImports: Record<string, number> = {};
   for (const file of sources(SRC)) {
     const rel = relative(SRC, file).split(sep).join("/");
-    const f = scan(file, readFileSync(file, "utf8"));
+    const f = scan(rel, readFileSync(file, "utf8"));
+    if (f.testImports) testImports[rel] = f.testImports;
     // resource-limits.ts is the reader: its own stream consumption and its
     // bodyless-response fallback are the point.
     if (rel !== "lib/resource-limits.ts") {
@@ -169,7 +227,7 @@ function inventory() {
     if (f.unlimitedSharp) sharp[rel] = f.unlimitedSharp;
     if (f.socketListeners) sockets[rel] = f.socketListeners;
   }
-  return { raw, sharp, sockets, readers };
+  return { raw, sharp, sockets, readers, testImports };
 }
 
 function compare(kind: string, found: Record<string, number>, baseline: Record<string, number>, how: string, key: string) {
@@ -203,6 +261,10 @@ describe("unbounded readers only ever go down (resource-limits.ts is the body re
     expect(Object.values(inv.raw).reduce((a, b) => a + b, 0)).toBe(222);
   });
 
+  it("no production file imports from test-helpers/ or test-support/ (those directories are not scanned)", () => {
+    expect(inv.testImports).toEqual({});
+  });
+
   it("response streams are only consumed inside resource-limits.ts", () => {
     expect(inv.readers, "use the readers in lib/resource-limits.ts instead of reading a stream by hand").toEqual({});
   });
@@ -229,7 +291,7 @@ describe("unbounded readers only ever go down (resource-limits.ts is the body re
 });
 
 describe("the counting cannot be bypassed by spelling", () => {
-  const raw = (src: string) => scan("x.ts", src).rawReads;
+  const raw = (src: string, file = "x.ts") => scan(file, src).rawReads;
   it.each([
     ["awaited property call", "async function f(r: Response) { return await r.json(); }"],
     ["returned without await", "function f(r: Response) { return r.json(); }"],
@@ -246,8 +308,15 @@ describe("the counting cannot be bypassed by spelling", () => {
   it("does not count calls with arguments, inbound requests or other methods", () => {
     expect(raw("const x = c.json({ a: 1 });")).toBe(0);
     expect(raw("const x = await c.req.json();")).toBe(0);
-    expect(raw("const x = await req.clone().json();")).toBe(0);
+    expect(raw("const x = await ctx.req.text();")).toBe(0);
+    expect(raw("const x = await req.clone().json();", "routes/mcp.ts")).toBe(0);
     expect(raw("const x = r.jsonp();")).toBe(0);
+  });
+
+  it("a fetched response named request is still counted", () => {
+    expect(raw("const request = await fetch(u); return await request.json();")).toBe(1);
+    expect(raw("function f(req: Response) { return req.text(); }")).toBe(1);
+    expect(raw("function f(req: Request) { return req.json(); }", "capabilities/anything.ts")).toBe(1);
   });
 
   const sharp = (src: string) => scan("x.ts", src).unlimitedSharp;
@@ -259,6 +328,12 @@ describe("the counting cannot be bypassed by spelling", () => {
     ["zero (sharp treats it as no limit)", "const s = sharp(buf, { limitInputPixels: 0 });"],
     ["options elsewhere", "const s = sharp(buf, opts);"],
     ["sharp.default", "const s = sharp.default(buf);"],
+    ["a literal above the platform's cap", "const s = sharp(buf, { limitInputPixels: 268_402_689 });"],
+    ["a negative literal", "const s = sharp(buf, { limitInputPixels: -1 });"],
+    ["an import alias", 'import s from "sharp";\nconst x = s(buf);'],
+    ["a namespace import", 'import * as sh from "sharp";\nconst x = sh(buf, { limitInputPixels: false });'],
+    ["a require alias", 'import s = require("sharp");\nconst x = s(buf);'],
+    ["an aliased import's .default", 'import s from "sharp";\nconst x = s.default(buf);'],
   ])("counts an unlimited decode: %s", (_name, src) => {
     expect(sharp(src)).toBe(1);
   });
@@ -292,6 +367,18 @@ describe("the counting cannot be bypassed by spelling", () => {
     const names = sources(SRC).map((f) => relative(SRC, f).split(sep).join("/"));
     expect(names).toContain("capabilities/lib/streaming-response-testutil.ts");
     expect(names.some((n) => n.endsWith(".test.ts"))).toBe(false);
+  });
+
+  it("accepts an aliased sharp import that carries the cap", () => {
+    expect(sharp('import s from "sharp";\nconst x = s(buf, { limitInputPixels: MAX_INPUT_PIXELS });')).toBe(0);
+  });
+
+  it("counts imports from test-helpers/ and test-support/", () => {
+    const t = (src: string) => scan("x.ts", src).testImports;
+    expect(t('import { a } from "../test-helpers/upstream-replay.js";')).toBe(1);
+    expect(t('export * from "./test-support/crash-child.js";')).toBe(1);
+    expect(t('const m = await import("../test-support/x.js");')).toBe(1);
+    expect(t('import { a } from "../lib/test-helpful.js";')).toBe(0);
   });
 
   it("counts getReader() and ignores comments and strings", () => {

@@ -174,3 +174,42 @@ describe("the packument work bound", () => {
     expect(cancel).toHaveBeenCalled();
   });
 });
+
+describe("the /latest request is optional (review nits)", () => {
+  const packumentOnly = () =>
+    new Response(
+      JSON.stringify({
+        name: "big", description: "d", license: "MIT", "dist-tags": { latest: "1.0.0" },
+        versions: { "1.0.0": { dependencies: { a: "1" } } }, time: { created: "c", modified: "m", "1.0.0": "t" },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+  it.each([
+    ["answers 503", async () => json({}, 503)],
+    ["fails to connect", async () => { throw new Error("ECONNRESET"); }],
+    ["returns a body that is not JSON", async () => new Response("<html>", { status: 200 })],
+  ])("a /latest request that %s degrades: top-level license kept, dependency lists empty", async (_n, latest) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      const u = String(url);
+      if (u === "https://registry.npmjs.org/big") return packumentOnly();
+      if (u.endsWith("/latest")) return latest();
+      return json({ downloads: 1 });
+    });
+    const r = (await getExecutor("npm-package-info")!({ package: "big" })) as { output: Record<string, any> };
+    expect(r.output).toMatchObject({ name: "big", latest_version: "1.0.0", license: "MIT", dependencies: [], dev_dependencies: [], total_versions: 1 });
+  });
+
+  it("the /latest body is cancelled when the packument read throws", async () => {
+    const cancel = vi.fn();
+    const latest = new Response(new ReadableStream({ cancel }), { status: 200 });
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith("/latest")
+        ? latest
+        : new Response(JSON.stringify({ x: "[".repeat(300) }).replace(/"\[+"/, "[".repeat(300)), { status: 200 }),
+    );
+    await expect(getExecutor("npm-package-info")!({ package: "big" })).rejects.toThrow(/nesting deeper than 128/);
+    expect(cancel).toHaveBeenCalled();
+  });
+});
+
