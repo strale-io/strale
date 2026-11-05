@@ -29,25 +29,11 @@ import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { apiError } from "./errors.js";
 import { logError } from "./log.js";
+import { clientIpOrNull } from "./client-ip.js";
 
 // ─── IP extraction (mirrors do.ts / middleware.ts) ────────────────────────────
 
-const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
-const IPV6_RE = /^[0-9a-fA-F:]{2,45}$/;
-
-function isPlausibleIp(value: string): boolean {
-  return IPV4_RE.test(value) || IPV6_RE.test(value);
-}
-
-function extractClientIp(c: Context): string | null {
-  const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  if (forwarded && isPlausibleIp(forwarded)) return forwarded;
-  const cfIp = c.req.header("cf-connecting-ip")?.trim();
-  if (cfIp && isPlausibleIp(cfIp)) return cfIp;
-  const realIp = c.req.header("x-real-ip")?.trim();
-  if (realIp && isPlausibleIp(realIp)) return realIp;
-  return null;
-}
+const extractClientIp = clientIpOrNull;
 
 /**
  * Hash an IP identically to how do.ts / middleware.ts hash it, so DB-backed

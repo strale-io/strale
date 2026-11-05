@@ -32,6 +32,7 @@ import {
 } from "../lib/do/batch.js";
 import { setCreditsHeaders } from "../lib/do/dispatch.js";
 import type { CapabilityInfo } from "../lib/do/types.js";
+import { clientIpOrNull } from "../lib/client-ip.js";
 
 const MAX_TIMEOUT_SECONDS = 60;
 const DEFAULT_TIMEOUT_SECONDS = 30;
@@ -91,7 +92,7 @@ async function replayBatch(c: Context<AppEnv>, db: ReturnType<typeof getDb>, ord
 doBatchRoute.post("/do/batch", authMiddleware, async (c) => {
   const user = c.get("user");
   const db = getDb();
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") ?? null;
+  const ip = clientIpOrNull(c);
   c.set("clientMeta", extractClientMeta(c.req, { src: c.req.query("src"), ip: ip ?? undefined }) ?? null);
   // The audit trail's request context, as /v1/do records it (raw IPs are never stored).
   c.set("requestContext", {
