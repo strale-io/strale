@@ -224,7 +224,7 @@ authRoute.post(
           },
         ],
         browse_capabilities: "https://api.strale.io/v1/capabilities",
-        docs: "https://strale.dev/docs",
+        docs: "https://strale.io/docs",
       },
     },
     201,

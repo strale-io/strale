@@ -75,4 +75,4 @@ through to your storage layer.
 - ALWAYS reject malformed identifiers early before making API calls.
 
 SDKs: `npm install straleio` / `pip install straleio`
-Catalog: https://strale.dev/capabilities
+Catalog: https://strale.io/capabilities

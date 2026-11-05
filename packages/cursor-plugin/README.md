@@ -1,6 +1,6 @@
 # Strale plugin for Cursor
 
-Connects Cursor to [Strale](https://strale.dev?src=cursor&utm_source=cursor&utm_medium=listing&utm_campaign=distribution-t12),
+Connects Cursor to [Strale](https://strale.io?src=cursor&utm_source=cursor&utm_medium=listing&utm_campaign=distribution-t12),
 a library of pay-per-call tools for agents: company records, EU VAT checks,
 sanctions and PEP screening, validation and web page reading.
 
@@ -28,7 +28,7 @@ sanctions and PEP screening, validation and web page reading.
 ## Using paid tools
 
 Search, the free tools and the info tools work without a key. For paid tools and `strale_balance`, get an API key
-at [strale.dev/signup](https://strale.dev/signup?src=cursor&utm_source=cursor&utm_medium=listing&utm_campaign=distribution-t12)
+at [strale.io/signup](https://strale.io/signup?src=cursor&utm_source=cursor&utm_medium=listing&utm_campaign=distribution-t12)
 and add it as a header in your Cursor MCP settings:
 
 ```json

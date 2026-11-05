@@ -19,7 +19,7 @@ execute-by-slug instead).
 
 ## Prerequisites
 
-- A Strale API key — sign up at [strale.dev/signup](https://strale.dev/signup)
+- A Strale API key — sign up at [strale.io/signup](https://strale.io/signup)
   for EUR 2.00 free trial credit, no card required. (`strale_ping`,
   `strale_search`, `strale_methodology`, and `strale_trust_profile` work
   without a key; `strale_execute` works without a key only for the free-tier

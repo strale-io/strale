@@ -42,9 +42,9 @@ should flag nothing. If it flags a tool, stop and fix the server.
   this order: data or research, finance, business operations. The list is
   only visible inside the portal.
 - **Documentation URL:** https://github.com/strale-io/strale/blob/main/docs/claude-connector.md
-- **Privacy policy URL:** https://strale.dev/privacy
+- **Privacy policy URL:** https://strale.io/privacy
 - **Support contact:** hello@strale.io
-- **Icon:** the Strale mark from https://strale.dev/favicon.svg. If the
+- **Icon:** the Strale mark from https://strale.io/favicon.svg. If the
   portal asks for PNG, export it at 512×512.
 - **Listing slug (permanent):** `strale`
 
@@ -55,7 +55,7 @@ should flag nothing. If it flags a tool, stop and fix the server.
   2. Validate an IBAN, VAT number or email address found in an invoice or a form.
   3. Read a web page and return its text for Claude to summarise.
 - **What users need before connecting:** nothing for search and the free
-  tools. For paid tools, a Strale API key from https://strale.dev/signup
+  tools. For paid tools, a Strale API key from https://strale.io/signup
   and a wallet balance.
 - **Reads or writes:** reads only. The one write is the charge for a paid
   call to the user's own Strale wallet.
@@ -63,7 +63,7 @@ should flag nothing. If it flags a tool, stop and fix the server.
 ## 5. Company
 
 - **Company name:** Moonlighter AB
-- **Website:** https://strale.dev
+- **Website:** https://strale.io
 - **Primary contact for review updates:** petter@strale.io
 
 ## 6. Authentication

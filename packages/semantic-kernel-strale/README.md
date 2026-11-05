@@ -8,7 +8,7 @@
 > `https://api.strale.io/mcp?src=npm-readme`, or run `npx strale-mcp`.
 > Semantic Kernel for Python and .NET can load MCP servers as plugins.
 
-[Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
+[Strale](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
 
 ## Install
 
@@ -111,7 +111,7 @@ const result = await client.execute({
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
+Sign up at [strale.io](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
 
 ---
 
@@ -125,7 +125,7 @@ available capabilities work without an API key or signup:
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all available capabilities, [sign up](https://strale.dev/signup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
+For all available capabilities, [sign up](https://strale.io/signup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
 
 ## Using Strale in agent system prompts
 
@@ -149,10 +149,10 @@ Eligible Strale tools are also available via [x402](https://x402.org) — the HT
 
 ## Resources
 
-- 📖 [Documentation](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 📖 [Documentation](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
-- 💰 [Pricing](https://strale.dev/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔍 [Quality methodology](https://strale.dev/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔒 [Security](https://strale.dev/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 💰 [Pricing](https://strale.io/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.io/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔒 [Security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 This JavaScript integration uses the community `semantic-kernel` npm port. It is not Microsoft’s official .NET or Python Semantic Kernel SDK.

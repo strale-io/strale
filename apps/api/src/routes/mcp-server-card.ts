@@ -48,7 +48,7 @@ async function buildCard(): Promise<object> {
   const card = {
     name: "strale",
     version: readPackageVersion(),
-    description: `Give your agent a new tool without opening another provider account. ${count} tools accessible via MCP and REST API; company data across ${countryCount} countries.`,
+    description: `New tools for your agent. No new accounts. ${count} tools accessible via MCP and REST API; company data across ${countryCount} countries.`,
     transport: [
       {
         type: "streamable-http",
@@ -58,7 +58,7 @@ async function buildCard(): Promise<object> {
     authentication: {
       type: "bearer",
       description:
-        "Strale API key (sk_live_...). The strale_search tool works without authentication. Paid execution and wallet tools require an API key from https://strale.dev?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+        "Strale API key (sk_live_...). The strale_search tool works without authentication. Paid execution and wallet tools require an API key from https://strale.io?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
     },
     tools: "dynamic",
     products: [
@@ -73,9 +73,9 @@ async function buildCard(): Promise<object> {
     resources: [],
     prompts: [],
     links: {
-      homepage: "https://strale.dev?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
-      documentation: "https://strale.dev/docs?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
-      pricing: "https://strale.dev/pricing?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      homepage: "https://strale.io?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      documentation: "https://strale.io/docs?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      pricing: "https://strale.io/pricing?src=mcp-card&utm_source=mcp-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
       agent_card: "https://api.strale.io/.well-known/agent-card.json?src=mcp-card",
       a2a_endpoint: "https://api.strale.io/a2a?src=mcp-card",
       source: "https://github.com/petterlindstrom79/strale",

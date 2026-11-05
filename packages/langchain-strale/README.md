@@ -1,6 +1,6 @@
 # langchain-strale
 
-[Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) tools as LangChain tools: company registry lookups, VAT and IBAN checks, sanctions and PEP screening, web page reading, and more, each paid per call. Built on `langchain-core` 1.x (`BaseTool`, `BaseToolkit`).
+[Strale](https://strale.io?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) tools as LangChain tools: company registry lookups, VAT and IBAN checks, sanctions and PEP screening, web page reading, and more, each paid per call. Built on `langchain-core` 1.x (`BaseTool`, `BaseToolkit`).
 
 ## Install
 
@@ -47,7 +47,7 @@ Solutions (for example `kyb-essentials-se`) show up in `strale_search` results w
 
 Search works without a key, and some tools are free without one (for example `iban-validate`, `email-validate`, `dns-lookup`). The current free list is `free_tier_slugs` at https://api.strale.io/v1/platform/facts. A paid tool called without a key returns `ok: false` with instructions on how to pay (from a per-capability tool, as a tool error).
 
-Get a key at [strale.dev](https://strale.dev/signup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Get a key at [strale.io](https://strale.io/signup?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## x402 pay-per-use access
 
@@ -58,6 +58,6 @@ Eligible Strale tools are also sold per request over [x402](https://x402.org) wi
 
 ## Resources
 
-- [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Documentation](https://strale.io/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Pricing](https://strale.io/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - [Changelog](https://github.com/strale-io/strale/blob/main/packages/langchain-strale/CHANGELOG.md)

@@ -51,7 +51,7 @@ describe("an agent refused for lack of credentials is told what it can actually 
     // Signup is still offered — for a human. It just cannot be the sole path,
     // which is what produced 176 arrivals and 0 signups.
     const asText = JSON.stringify(body);
-    expect(asText).toContain("strale.dev/signup");
+    expect(asText).toContain("strale.io/signup");
     expect(Object.keys(body), "the machine route must be present too").toContain("pay_per_call");
   });
 

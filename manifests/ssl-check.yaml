@@ -197,7 +197,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      domain: strale.dev
+      domain: strale.io
     expected_fields:
       - field: valid
         operator: is_true

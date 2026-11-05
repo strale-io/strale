@@ -61,9 +61,9 @@ iban-validate, email-validate, dns-lookup, json-repair, url-to-markdown
 POST https://api.strale.io/v1/suggest
 {"query": "check if a company is on a sanctions list"}
 
-Or browse: https://strale.dev/capabilities
+Or browse: https://strale.io/capabilities
 
 ## Credentials
 
 Set STRALE_API_KEY in .env
-Create an account; trial credits are available where eligible: https://strale.dev/signup
+Create an account; trial credits are available where eligible: https://strale.io/signup

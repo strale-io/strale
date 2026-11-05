@@ -19,7 +19,7 @@ process.env.ADMIN_SECRET ??=
 // imports app.ts transitively imports wallet.ts and crashes if the var
 // is unset. Use the production frontend URL because audit-token.test
 // asserts the shareable URL starts with https://strale.dev/audit/...
-process.env.FRONTEND_URL ??= "https://strale.dev";
+process.env.FRONTEND_URL ??= "https://strale.io";
 
 // ── Credential scrub (incident 2026-08-22: STARVE-SET-1) ────────────────────
 //

@@ -345,7 +345,7 @@ function composeAuditRecord(args: {
     // canonical name (it's a path, not a loadable URL); audit_url stays
     // populated for any client that hardcoded the old name.
     audit_path: `/audit/${transactionId}`,
-    audit_url: `strale.dev/audit/${transactionId}`,
+    audit_url: `strale.io/audit/${transactionId}`,
     steps,
     personal_data_processed: personalDataProcessed,
     personal_data_categories: personalDataCategories,

@@ -28,7 +28,7 @@ import { capabilities, transactions, users, wallets, walletTransactions,
 } from "../db/schema.js";
 
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "audit-leak-secret-at-least-32-chars-long-00";
   process.env.ADMIN_SECRET ??= "audit-leak-admin-secret-at-least-32-chars-0";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_audit_placeholder";

@@ -27,18 +27,18 @@ const WELCOME_TEMPLATE = {
   "@context": "https://schema.org",
   "@type": "WebAPI",
   name: "Strale API",
-  tagline: "Give your agent a new tool without opening another provider account.",
+  tagline: "New tools for your agent. No new accounts.",
   description: "", // filled by buildWelcome()
   version: "1.0.0",
 
   // Top-level links for Beacon first-contact navigation detection
   links: {
-    documentation: "https://strale.dev/docs",
+    documentation: "https://strale.io/docs",
     openapi: "https://api.strale.io/openapi.json",
     pricing: "https://api.strale.io/v1/pricing",
-    changelog: "https://strale.dev/changelog",
+    changelog: "https://strale.io/changelog",
     status: "https://api.strale.io/status",
-    signup: "https://strale.dev/signup",
+    signup: "https://strale.io/signup",
     mcp_server: "https://api.strale.io/mcp",
     agent_card: "https://api.strale.io/.well-known/agent-card.json",
   },
@@ -67,9 +67,9 @@ const WELCOME_TEMPLATE = {
   },
 
   documentation: {
-    docs: "https://strale.dev/docs",
-    api_reference: "https://strale.dev/api-reference",
-    quickstart: "https://strale.dev/docs/quickstart",
+    docs: "https://strale.io/docs",
+    api_reference: "https://strale.io/api-reference",
+    quickstart: "https://strale.io/docs/quickstart",
     changelog: "https://api.strale.io/changelog",
     status: "https://api.strale.io/status",
   },
@@ -77,7 +77,7 @@ const WELCOME_TEMPLATE = {
   authentication: {
     type: "bearer",
     header: "Authorization: Bearer sk_live_...",
-    signup: "https://strale.dev/signup",
+    signup: "https://strale.io/signup",
     credit_card_required: false,
     description:
       "Register via POST /v1/auth/register with email. Returns an API key immediately, plus \u20ac2.00 trial credits for a first-time address — read wallet_balance_cents from the response rather than assuming it. No credit card required.",
@@ -107,7 +107,7 @@ const WELCOME_TEMPLATE = {
     trial_credits_eur: 2.0,
     range: "\u20ac0.02 \u2013 \u20ac0.50 per capability execution",
     pricing_endpoint: "https://api.strale.io/v1/pricing",
-    pricing_page: "https://strale.dev/pricing",
+    pricing_page: "https://strale.io/pricing",
     capabilities_with_prices: "https://api.strale.io/v1/capabilities",
     description:
       "Pay only for what you use. A first-time email address receives \u20ac2.00 in trial credits instantly \u2014 no credit card required.",
@@ -176,12 +176,12 @@ const WELCOME_TEMPLATE = {
     name: "Strale API",
     description: "", // filled at request time by buildWelcome()
     url: "https://api.strale.io",
-    documentation: "https://strale.dev/docs",
-    termsOfService: "https://strale.dev/terms",
+    documentation: "https://strale.io/docs",
+    termsOfService: "https://strale.io/terms",
     provider: {
       "@type": "Organization",
       name: "Strale",
-      url: "https://strale.dev",
+      url: "https://strale.io",
       email: "hello@strale.io",
     },
   },
@@ -207,7 +207,7 @@ async function buildWelcome(): Promise<{ body: typeof WELCOME_TEMPLATE; md: stri
       description,
       structured_data: {
         ...WELCOME_TEMPLATE.structured_data,
-        description: `Give your agent a new tool without opening another provider account. ${cap} tools for AI agents; company data across ${cn} countries`,
+        description: `New tools for your agent. No new accounts. ${cap} tools for AI agents; company data across ${cn} countries`,
       },
     };
     const md = renderWelcomeMd(cap, cn);
@@ -227,7 +227,7 @@ async function buildWelcome(): Promise<{ body: typeof WELCOME_TEMPLATE; md: stri
 function renderWelcomeMd(capCount: number, countryCount: number): string {
   return `# Strale API
 
-> Give your agent a new tool without opening another provider account.
+> New tools for your agent. No new accounts.
 
 ${capCount} tools for AI agents, paid per call. Company data across ${countryCount} countries.
 
@@ -253,12 +253,12 @@ Free trial: €2.00 credits for a first-time email address, no credit card requi
 
 ## Links
 
-- Documentation: https://strale.dev/docs
+- Documentation: https://strale.io/docs
 - OpenAPI spec: https://api.strale.io/openapi.json
 - MCP server: https://api.strale.io/mcp
 - Agent card: https://api.strale.io/.well-known/agent-card.json
 - Pricing: https://api.strale.io/v1/pricing
-- Changelog: https://strale.dev/changelog
+- Changelog: https://strale.io/changelog
 - Status: https://api.strale.io/status
 
 ## Authentication
@@ -358,7 +358,7 @@ const PRICING = {
   // slugs at all: a literal cannot track either a withdrawal or an addition.
   free_capabilities: [] as Array<{ slug: string; price_cents: number; description: string }>,
   full_catalog: "https://api.strale.io/v1/capabilities",
-  pricing_page: "https://strale.dev/pricing",
+  pricing_page: "https://strale.io/pricing",
 };
 
 /**
@@ -405,7 +405,7 @@ welcomeRoute.get("/status", (c) => {
     status: "operational",
     health_endpoint: "https://api.strale.io/health",
     uptime_check: "https://api.strale.io/health",
-    changelog: "https://strale.dev/changelog",
+    changelog: "https://strale.io/changelog",
     incidents: [],
   });
 });
@@ -413,14 +413,14 @@ welcomeRoute.get("/status", (c) => {
 // ─── Redirect routes ────────────────────────────────────────────────────────
 
 const REDIRECTS: Array<[string, string]> = [
-  ["/changelog", "https://strale.dev/changelog"],
-  ["/terms", "https://strale.dev/terms"],
-  ["/terms-of-service", "https://strale.dev/terms"],
-  ["/privacy", "https://strale.dev/privacy"],
-  ["/docs", "https://strale.dev/docs"],
-  ["/developers", "https://strale.dev/docs"],
-  ["/api-reference", "https://strale.dev/api-reference"],
-  ["/signup", "https://strale.dev/signup"],
+  ["/changelog", "https://strale.io/changelog"],
+  ["/terms", "https://strale.io/terms"],
+  ["/terms-of-service", "https://strale.io/terms"],
+  ["/privacy", "https://strale.io/privacy"],
+  ["/docs", "https://strale.io/docs"],
+  ["/developers", "https://strale.io/docs"],
+  ["/api-reference", "https://strale.io/api-reference"],
+  ["/signup", "https://strale.io/signup"],
 ];
 
 for (const [path, target] of REDIRECTS) {
@@ -491,12 +491,12 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://api.strale.io/health</loc><changefreq>always</changefreq><priority>0.3</priority></url>
   <url><loc>https://api.strale.io/llms.txt</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://api.strale.io/llms-full.txt</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://strale.dev/docs</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://strale.dev/pricing</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://strale.dev/changelog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://strale.dev/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://strale.dev/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://strale.dev/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://strale.io/docs</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://strale.io/pricing</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://strale.io/changelog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://strale.io/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://strale.io/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://strale.io/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
 </urlset>
 `;
 

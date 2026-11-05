@@ -1,6 +1,6 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — connects agents to hundreds of pay-per-call tools: company records, screening, validation, web page reading and document extraction. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+MCP server for [Strale](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — connects agents to hundreds of pay-per-call tools: company records, screening, validation, web page reading and document extraction. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
 The MCP server version reported in the `initialize` response matches the npm package version.
 
@@ -241,9 +241,9 @@ npm run dev --workspace=packages/mcp-server
 
 ## API Reference
 
-Full API documentation: [strale.dev/docs](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+Full API documentation: [strale.io/docs](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
-Quality methodology: [strale.dev/trust/methodology](https://strale.dev/trust/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+Quality methodology: [strale.io/trust/methodology](https://strale.io/trust/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## Contributing
 
@@ -263,7 +263,7 @@ available capabilities work without an API key or signup:
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all available capabilities, [sign up](https://strale.dev/signup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
+For all available capabilities, [sign up](https://strale.io/signup?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) for paid access; trial eligibility is determined at signup.
 
 ## x402 pay-per-use access
 
@@ -275,11 +275,11 @@ Eligible Strale tools are also available via [x402](https://x402.org) — the HT
 
 ## Resources
 
-- 📖 [Documentation](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 📖 [Documentation](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
-- 💰 [Pricing](https://strale.dev/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔍 [Quality methodology](https://strale.dev/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔒 [Security](https://strale.dev/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 💰 [Pricing](https://strale.io/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.io/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔒 [Security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## License
 

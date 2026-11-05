@@ -270,7 +270,7 @@ describe("F-A-007: two-key rotation", () => {
 describe("getShareableUrl (F-A-006)", () => {
   it("embeds token + expires_at as query params", () => {
     const { url, expiresAt } = getShareableUrl("txn-abc");
-    expect(url).toMatch(/^https:\/\/strale\.dev\/audit\/txn-abc\?token=[0-9a-f]{32}&expires_at=\d+$/);
+    expect(url).toMatch(/^https:\/\/strale\.io\/audit\/txn-abc\?token=[0-9a-f]{32}&expires_at=\d+$/);
     expect(url).toContain(`expires_at=${expiresAt}`);
     expect(expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000));
   });

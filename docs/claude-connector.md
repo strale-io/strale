@@ -7,7 +7,7 @@ Claude find and run these tools inside a conversation.
 
 - **Server URL:** `https://api.strale.io/mcp/connector`
 - **Works in:** claude.ai, Claude Desktop, Claude mobile, Cowork and Claude Code
-- **Privacy policy:** https://strale.dev/privacy
+- **Privacy policy:** https://strale.io/privacy
 - **Support:** hello@strale.io
 
 ## Set it up
@@ -19,7 +19,7 @@ Claude find and run these tools inside a conversation.
    the free tools work straight away, with no account.
 3. The first time Claude calls a paid tool, Claude shows a **Connect**
    button. Click it. A Strale page opens and asks for your Strale API key.
-   No key yet? Get one at https://strale.dev/signup.
+   No key yet? Get one at https://strale.io/signup.
 4. Paste the key and click **Allow**. You return to Claude, and the call
    that needed your account runs.
 
@@ -84,6 +84,6 @@ review, not decisions about anyone.
 - **Spending limit reached.** The **Claude connector** key's hourly limit
   was hit. Raise it with your primary key
   (`PATCH /v1/api-keys/{id}`), or wait for the hour to pass.
-- **Insufficient balance.** Top up at https://strale.dev.
+- **Insufficient balance.** Top up at https://strale.io.
 
 Anything else: hello@strale.io.

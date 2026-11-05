@@ -43,7 +43,7 @@ if (process.env.DATABASE_URL_TEST) {
   // getStripe() asserts on this at module load; the value is never used for a
   // network call because only signature verification runs in this path.
   process.env.STRIPE_SECRET_KEY ??= "sk_test_wp1_placeholder";
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "wp1-integration-secret-at-least-32-chars-long";
 }
 

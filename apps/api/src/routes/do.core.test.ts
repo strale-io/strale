@@ -669,7 +669,7 @@ describe("POST /v1/do — insufficient balance", () => {
     expect(res.status).toBe(402);
     const body = await res.json();
     expect(body.error_code).toBe("insufficient_balance");
-    expect(body.details.fix).toContain("https://strale.dev/dashboard");
+    expect(body.details.fix).toContain("https://strale.io/dashboard");
     expect(body.details.wallet_balance_cents).toBe(2);
     expect(body.details.required_cents).toBe(CAPABILITY_FIXTURE.priceCents);
     expect(body.error).toBeUndefined();

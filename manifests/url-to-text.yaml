@@ -20,7 +20,7 @@ input_schema:
 output_schema:
   type: object
   example:
-    url: https://strale.dev
+    url: https://strale.io
     text: Strale — Trust and Quality Infrastructure for AI Agents
     title: Strale — Trust and Quality Infrastructure for AI Agents
     language: en
@@ -45,7 +45,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale.dev
+      url: https://strale.io
     expected_fields:
       - field: text
         operator: not_null
@@ -76,7 +76,7 @@ test_fixtures:
         reliability: guaranteed
         value: string
   health_check_input:
-    url: https://strale.dev
+    url: https://strale.io
 output_field_reliability:
   text: guaranteed
   title: guaranteed

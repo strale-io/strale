@@ -212,7 +212,7 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
         `Reason given:`,
         reason,
         ``,
-        `Review at:        ${process.env.ADMIN_DASHBOARD_URL ?? "https://strale.dev"}/admin/disputes/${dispute.id}`,
+        `Review at:        ${process.env.ADMIN_DASHBOARD_URL ?? "https://strale.io"}/admin/disputes/${dispute.id}`,
         `Or via DB:        SELECT * FROM dispute_requests WHERE id = '${dispute.id}';`,
         ``,
         `30-day SLA: respond by ${new Date(dispute.submittedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)} (Art. 22(3) statutory).`,

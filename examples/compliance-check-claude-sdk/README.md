@@ -23,7 +23,7 @@ shareable audit URL.
 ## Prerequisites
 
 - Node.js 20+
-- A Strale API key — sign up at [strale.dev/signup](https://strale.dev/signup)
+- A Strale API key — sign up at [strale.io/signup](https://strale.io/signup)
   for EUR 2.00 free trial credit, no card required
 - An Anthropic API key — [console.anthropic.com](https://console.anthropic.com/settings/keys)
 
@@ -70,7 +70,7 @@ npx tsx src/agent.ts "Spotify AB" 556703-7485 SE556703748501
     "data_jurisdiction": "US",
     "processing_location": "us-east4-eqdc4a",
     "input_hash": "sha256:...",
-    "shareable_url": "https://strale.dev/audit/576bc59a-...?token=...",
+    "shareable_url": "https://strale.io/audit/576bc59a-...?token=...",
     "regulations_addressed": { "gdpr": { "article_30": "...", "article_15": "...", "article_17": "..." } }
   },
   ...

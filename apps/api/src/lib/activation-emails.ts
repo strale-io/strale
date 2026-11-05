@@ -72,13 +72,13 @@ That validates a German IBAN. It's free — no credits used, no API key needed.
 
 When you're ready for paid capabilities (company lookups, sanctions screening, web extraction), use your API key; trial credits are available where eligible.
 
-Browse available capabilities: https://strale.dev/capabilities
+Browse available capabilities: https://strale.io/capabilities
 
 Questions? Reply to this email — it goes straight to me.
 
 — Petter
 Founder, Strale
-https://strale.dev
+https://strale.io
 `;
 
   const preStyle = "background:#f4f4f4;padding:12px;border-radius:4px;overflow-x:auto;font-size:13px;line-height:1.5;font-family:monospace;white-space:pre-wrap;word-break:break-all;";
@@ -91,9 +91,9 @@ https://strale.dev
     `  -H "Content-Type: application/json" \\`,
     `  -d '{"capability_slug": "iban-validate", "inputs": {"iban": "DE89370400440532013000"}}'</pre>`,
     "<p>That validates a German IBAN. It's free — no credits used, no API key needed.</p>",
-    '<p>Browse available capabilities: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
+    '<p>Browse available capabilities: <a href="https://strale.io/capabilities" style="color:#2563eb;">strale.io/capabilities</a></p>',
     "<p>Questions? Reply to this email — it goes straight to me.</p>",
-    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.dev" style="color:#2563eb;">strale.dev</a></p>',
+    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.io" style="color:#2563eb;">strale.io</a></p>',
     "</div>",
   ].join("\n");
 
@@ -125,7 +125,7 @@ No credit card, no setup. Just paste and run.
 
 For paid capabilities (sanctions screening, company registries, web scraping), use your API key and check your wallet balance before calling.
 
-Browse everything: https://strale.dev/capabilities
+Browse everything: https://strale.io/capabilities
 
 — Petter
 Founder, Strale
@@ -148,8 +148,8 @@ Founder, Strale
     `  -H "Content-Type: application/json" \\`,
     `  -d '{"capability_slug": "email-validate", "inputs": {"email": "test@example.com"}}'</pre>`,
     "<p>No credit card, no setup. Just paste and run.</p>",
-    '<p>Browse everything: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
-    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.dev" style="color:#2563eb;">strale.dev</a></p>',
+    '<p>Browse everything: <a href="https://strale.io/capabilities" style="color:#2563eb;">strale.io/capabilities</a></p>',
+    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.io" style="color:#2563eb;">strale.io</a></p>',
     "</div>",
   ].join("\n");
 
@@ -177,8 +177,8 @@ Your first Strale API call just went through — ${capabilitySlug}.
 Here are a few related capabilities you might find useful:
 ${related.map((s) => `- ${s}`).join("\n")}
 
-Browse available capabilities: https://strale.dev/capabilities
-Or try a bundled solution (multi-step workflow): https://strale.dev/solutions
+Browse available capabilities: https://strale.io/capabilities
+Or try a bundled solution (multi-step workflow): https://strale.io/solutions
 
 — Petter
 Founder, Strale
@@ -192,9 +192,9 @@ Founder, Strale
     "<ul>",
     ...related.map((s) => `<li><code style="font-size:13px;">${s}</code></li>`),
     "</ul>",
-    '<p>Browse available capabilities: <a href="https://strale.dev/capabilities" style="color:#2563eb;">strale.dev/capabilities</a></p>',
-    '<p>Or try a bundled solution: <a href="https://strale.dev/solutions" style="color:#2563eb;">strale.dev/solutions</a></p>',
-    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.dev" style="color:#2563eb;">strale.dev</a></p>',
+    '<p>Browse available capabilities: <a href="https://strale.io/capabilities" style="color:#2563eb;">strale.io/capabilities</a></p>',
+    '<p>Or try a bundled solution: <a href="https://strale.io/solutions" style="color:#2563eb;">strale.io/solutions</a></p>',
+    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.io" style="color:#2563eb;">strale.io</a></p>',
     "</div>",
   ].join("\n");
 

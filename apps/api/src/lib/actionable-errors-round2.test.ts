@@ -40,7 +40,7 @@ it.each(["", "synthetic"])("MCP preserves the 429 funnel event with apiKey=%s", 
   const result = await executeCapability("email-validate", {}, { apiKey, baseUrl: "https://example.test", maxPriceCents: 100, onFunnelEvent });
   expect(onFunnelEvent).toHaveBeenCalledExactlyOnceWith({ type: "rate_limited", tool: "strale_execute", slug: "email-validate" });
   if (!apiKey) {
-    expect(result.content[0].text).toContain("https://strale.dev/signup");
+    expect(result.content[0].text).toContain("https://strale.io/signup");
     expect(result.content[0].text).toContain("paid access");
     expect(result.content[0].text).not.toContain("€2");
   }

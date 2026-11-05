@@ -34,7 +34,7 @@ tools.
 
 You need a Strale API key.
 
-1. Create an account at [strale.dev](https://strale.dev) and top up your wallet.
+1. Create an account at [strale.io](https://strale.io) and top up your wallet.
 2. Copy your API key from the dashboard.
 3. In n8n, create a **Strale API** credential and paste the key.
 
@@ -121,7 +121,7 @@ Actions release workflow.
 ## Resources
 
 - [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
-- [Strale API documentation](https://strale.dev/docs)
+- [Strale API documentation](https://strale.io/docs)
 - [Source](https://github.com/strale-io/strale/tree/main/packages/n8n-nodes-strale)
 
 ## Version history

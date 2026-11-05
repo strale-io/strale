@@ -37,7 +37,7 @@
   required_in: []
   set_in:
     - none
-  example_value: https://strale.dev
+  example_value: https://strale.io
   cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ADMIN_SECRET
   purpose: Bearer secret protecting internal admin/dashboard endpoints.

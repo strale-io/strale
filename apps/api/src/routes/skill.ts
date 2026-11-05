@@ -25,7 +25,7 @@ description: >
 
 # Strale — tools for AI agents, paid per call
 
-Give your agent a new tool without opening another provider account.
+New tools for your agent. No new accounts.
 Add tools through the connection you already have.
 The live catalogue has ${facts.capability_counts.active_visible} tools and ${facts.solution_count_active} bundled checks.
 Company-data tools cover ${facts.countries.company_data_active_iso.length} countries; available fields vary by source.
@@ -36,7 +36,7 @@ For paid API-key calls, use a Strale account and send:
 
 \`Authorization: Bearer <STRALE_API_KEY>\`
 
-Register with \`POST https://api.strale.io/v1/auth/register?src=skill\` (or at https://strale.dev/signup?src=skill&utm_source=skill&utm_medium=listing&utm_campaign=distribution-d0-d1); the
+Register with \`POST https://api.strale.io/v1/auth/register?src=skill\` (or at https://strale.io/signup?src=skill&utm_source=skill&utm_medium=listing&utm_campaign=distribution-d0-d1); the
 response carries your API key and \`wallet_balance_cents\`. Eligible first-time addresses can receive
 ${euros(TRIAL_CREDITS_CENTS)} in trial credits; read the granted balance from the signup
 response rather than assuming eligibility. No credit card is required for the trial.

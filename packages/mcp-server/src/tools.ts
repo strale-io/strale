@@ -142,7 +142,7 @@ export function isConnectorExcluded(slug: string, category?: string | null): boo
 }
 
 const CONNECT_ACCOUNT_FIX =
-  "Connect your Strale account to this connector (Claude shows a Connect button), or add an API key from https://strale.dev/signup.";
+  "Connect your Strale account to this connector (Claude shows a Connect button), or add an API key from https://strale.io/signup.";
 
 /** Origin for URLs the caller is told to use. */
 function publicOrigin(opts: StraleClientOptions): string {
@@ -384,7 +384,7 @@ export async function executeCapability(
                 discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
               api_key: {
-                how: "If a human can complete a web form, https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
+                how: "If a human can complete a web form, https://strale.io/signup issues a key. Trial eligibility is determined at signup.",
                 then: "Reconnect with Authorization: Bearer sk_live_YOUR_KEY",
               },
               free_without_either: `${FREE_TIER_SLUGS.length} capabilities need no key and no payment (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit): ${FREE_TIER_SLUGS.join(", ")}.`,
@@ -438,7 +438,7 @@ export async function executeCapability(
               ? `The free allowance is shared by everyone calling from the same network address. ${CONNECT_ACCOUNT_FIX} Free tools then run without the shared allowance.`
               : typeof details?.fix === "string" && mentionsSignupUrl(details.fix)
               ? details.fix
-              : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for paid access and send an API key.`,
+              : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.io/signup for paid access and send an API key.`,
             ...(details ? { details } : {}),
             ...(retryAfter != null ? { retry_after_seconds: retryAfter } : {}),
           }),
@@ -755,7 +755,7 @@ export function registerStraleTools(
                 discovery: attributedUrl(publicOrigin(opts), "/.well-known/x402.json", opts.src),
               },
               api_key_alternative:
-                "If a human can complete a web form: https://strale.dev/signup issues a key. Trial eligibility is determined at signup.",
+                "If a human can complete a web form: https://strale.io/signup issues a key. Trial eligibility is determined at signup.",
               learn_more:
                 "Call strale_search to browse capabilities, or strale_methodology for how sources are tested and evidenced.",
             }, null, 2),
@@ -772,7 +772,7 @@ export function registerStraleTools(
       title: "Run a Strale tool",
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
       description:
-        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Inputs follow the capability's own schema, which strale_search lists; the API is documented at https://strale.dev/docs. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
+        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Inputs follow the capability's own schema, which strale_search lists; the API is documented at https://strale.io/docs. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (monthly per-IP allowance; see GET /v1/platform/facts, static.free_tier_monthly_limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -1121,7 +1121,7 @@ Use strale_trust_profile for the current batch projection: badge, tested flag, r
 API-key calls expose transaction records through strale_transaction. Audit access and source fields vary by rail and execution mode; check the response. Eligible tools can also be paid through x402 without a Strale account.
 
 Live catalogue facts: https://api.strale.io/v1/platform/facts
-Public methodology: https://strale.dev/trust/methodology`;
+Public methodology: https://strale.io/trust/methodology`;
 
       const text = opts.connector
         ? methodologyText.replace(" Eligible tools can also be paid through x402 without a Strale account.", "")
@@ -1272,7 +1272,7 @@ Public methodology: https://strale.dev/trust/methodology`;
             content: [
               {
                 type: "text" as const,
-                text: "API key required to look up paid transactions. Get a free key at https://strale.dev/signup",
+                text: "API key required to look up paid transactions. Get a free key at https://strale.io/signup",
               },
             ],
           };

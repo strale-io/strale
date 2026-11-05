@@ -42,7 +42,7 @@ export async function enforceFreeTierAllowance(c: Context, db: ReturnType<typeof
   const identity = ctx?.ipHash ? `ip:${ctx.ipHash}` : ctx?.fingerprintHash ? `fp:${ctx.fingerprintHash}` : null;
   if (!identity) {
     return c.json(apiError("rate_limited", "Unable to identify this free-tier caller.", {
-      retryable: false, fix: "Sign up for an API key at https://strale.dev/signup?src=free-tier-limit.",
+      retryable: false, fix: "Sign up for an API key at https://strale.io/signup?src=free-tier-limit.",
     }), 429);
   }
   const now = new Date();
@@ -70,7 +70,7 @@ export async function enforceFreeTierAllowance(c: Context, db: ReturnType<typeof
       return c.json(apiError("rate_limited", `Free-tier monthly allowance reached (${limit} calls/month).`, {
         limit, window: "month", resets_at: month.end.toISOString(), retryable: false,
         retry_after_seconds: retryAfterSeconds,
-        fix: `Sign up for an API key at https://strale.dev/signup?src=free-tier-limit, or wait until ${month.end.toISOString()}.`,
+        fix: `Sign up for an API key at https://strale.io/signup?src=free-tier-limit, or wait until ${month.end.toISOString()}.`,
       }), 429);
     }
     c.set("freeTierUsage" as any, buildFreeTierUsage(count, month.end));
@@ -85,7 +85,7 @@ export async function enforceFreeTierAllowance(c: Context, db: ReturnType<typeof
       return c.json(apiError("rate_limited", "Free-tier hourly anti-abuse guard reached.", {
         limit: hourlyGuard, window: "hour", resets_at: end.toISOString(), retryable: true,
         retry_after_seconds: hourRetryAfterSeconds,
-        fix: `Retry after ${end.toISOString()}, or sign up for an API key at https://strale.dev/signup?src=free-tier-limit.`,
+        fix: `Retry after ${end.toISOString()}, or sign up for an API key at https://strale.io/signup?src=free-tier-limit.`,
       }), 429);
     }
     logError("free-tier-counter-read-failed", err, { identifiedBy: ctx?.ipHash ? "ip" : "fingerprint" });

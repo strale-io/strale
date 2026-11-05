@@ -89,7 +89,7 @@ export function authorizationServerMetadata() {
     code_challenge_methods_supported: ["S256"],
     client_id_metadata_document_supported: true,
     authorization_response_iss_parameter_supported: true,
-    service_documentation: "https://strale.dev/docs",
+    service_documentation: "https://strale.io/docs",
   };
 }
 
@@ -100,7 +100,7 @@ export function protectedResourceMetadata() {
     bearer_methods_supported: ["header"],
     scopes_supported: [OAUTH_SCOPE],
     resource_name: "Strale",
-    resource_documentation: "https://strale.dev/docs",
+    resource_documentation: "https://strale.io/docs",
   };
 }
 

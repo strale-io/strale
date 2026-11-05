@@ -347,10 +347,10 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       "A library of pay-per-call tools for agents: company records, sanctions and PEP screening, email, phone, IBAN and VAT checks, web page reading and document extraction. Pay with an API key or, on eligible tools, an x402 wallet with no signup. Live counts: https://api.strale.io/v1/platform/facts",
     url: `${BASE_URL}/a2a?src=a2a-card`,
     version: "1.0.0",
-    documentationUrl: "https://strale.dev/docs?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
+    documentationUrl: "https://strale.io/docs?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1",
     provider: {
       organization: "Strale",
-      url: "https://strale.dev",
+      url: "https://strale.io",
     },
     capabilities: {
       streaming: false,
@@ -372,7 +372,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         discovery: `${PUBLIC_API_BASE}/.well-known/x402.json`,
         how: "POST the skill's x402_endpoint, settle the 402 challenge in USDC on Base, replay. Payment is the authentication — no signup.",
       },
-      api_key: { signup: "https://strale.dev/signup?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1" },
+      api_key: { signup: "https://strale.io/signup?src=a2a-card&utm_source=a2a-card&utm_medium=listing&utm_campaign=distribution-d0-d1" },
     },
     defaultInputModes: ["application/json", "text/plain"],
     defaultOutputModes: ["application/json"],
@@ -652,7 +652,7 @@ async function handleMessageSend(
       const fix = (data.details as Record<string, unknown> | undefined)?.fix;
       if (typeof fix === "string") helpText += ` ${fix}`;
       if (errorCode === "unauthorized" && bearer === null) {
-        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, create an account; trial credits are available where eligible at https://strale.dev";
+        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, create an account; trial credits are available where eligible at https://strale.io";
       }
 
       return c.json({

@@ -240,7 +240,7 @@ function resolveAuditFrontendBase(): string {
   for (const c of candidates) {
     if (c && c.trim()) return c.trim().replace(/\/$/, "");
   }
-  return "https://strale.dev";
+  return "https://strale.io";
 }
 
 const AUDIT_FRONTEND_BASE = resolveAuditFrontendBase();

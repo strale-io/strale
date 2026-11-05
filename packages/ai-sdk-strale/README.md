@@ -1,6 +1,6 @@
 # strale-ai-sdk
 
-[Vercel AI SDK](https://ai-sdk.dev) tools for [Strale](https://strale.dev?src=npm-ai-sdk&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d6),
+[Vercel AI SDK](https://ai-sdk.dev) tools for [Strale](https://strale.io?src=npm-ai-sdk&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d6),
 a library of pay-per-call tools for AI agents: company registry lookups, VAT and
 IBAN checks, sanctions and PEP screening, web page reading, finance and developer
 utilities. One package, no account with each data provider.
@@ -46,7 +46,7 @@ calls `strale_execute`. You can also add the tools one at a time with
 
 1. **API key.** Pass `apiKey`, or set `STRALE_API_KEY`. Calls are debited from your
    Strale wallet and refused above `maxPriceCents` (default 200, i.e. €2.00).
-   Get a key at [strale.dev/signup](https://strale.dev/signup?src=npm-ai-sdk).
+   Get a key at [strale.io/signup](https://strale.io/signup?src=npm-ai-sdk).
 2. **x402.** With no key, pass `x402Fetch`: a fetch that settles x402 payment
    challenges in USDC on Base, such as `wrapFetchWithPayment` from
    [`x402-fetch`](https://www.npmjs.com/package/x402-fetch). The payment is the
