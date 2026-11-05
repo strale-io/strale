@@ -1,3 +1,12 @@
+# The project's own *.pages.dev addresses are never indexed: before the switch-over the live build
+# is reachable there, and afterwards only strale.io should be (DEC-20261105-A). Cloudflare already
+# marks preview deployments noindex; this covers the production pages.dev host as well.
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex
+
+https://:version.:project.pages.dev/*
+  X-Robots-Tag: noindex
+
 /*
   Strict-Transport-Security: max-age=31536000
   X-Content-Type-Options: nosniff

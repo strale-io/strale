@@ -157,4 +157,9 @@ test("assets and headers that live URLs depend on ship in public/", () => {
   assert.match(headers, /X-Content-Type-Options: nosniff/);
   assert.match(headers, /Referrer-Policy: strict-origin-when-cross-origin/);
   assert.doesNotMatch(headers, /Content-Security-Policy/);
+  // The pages.dev hosts are noindex; the site's own host never is.
+  assert.match(headers, /^https:\/\/:project\.pages\.dev\/\*\n  X-Robots-Tag: noindex$/m);
+  assert.match(headers, /^https:\/\/:version\.:project\.pages\.dev\/\*\n  X-Robots-Tag: noindex$/m);
+  const siteWide = headers.split(/\n(?=\S)/).find((b) => b.startsWith("/*\n"))!;
+  assert.doesNotMatch(siteWide, /X-Robots-Tag/);
 });
