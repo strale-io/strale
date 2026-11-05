@@ -228,7 +228,7 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     const host = (n % 254) + 1;
     const third = Math.floor(n / 254) % 256;
     const second = Math.floor(n / (254 * 256)) % 128;
-    return `45.${second}.${third}.${host}`;
+    return `10.${second}.${third}.${host}`;
   }
 
   /**

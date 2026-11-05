@@ -6,7 +6,6 @@ import { readBearer } from "./bearer-placeholder.js";
 import { apiError } from "./errors.js";
 import { consumeIpRate } from "./rate-limit.js";
 import type { AppEnv, User } from "../types.js";
-import { clientIpOrNull } from "./client-ip.js";
 
 /**
  * An API key, or an access token from the Claude connector's OAuth flow
@@ -136,9 +135,16 @@ export function optionalAuthIpLimitedUnlessKeyed(maxPerIp: number, windowMs: num
 
 // ─── Shared IP helpers ────────────────────────────────────────────────────────
 
-/** Client IP by the trusted-hop rule (lib/client-ip.ts). Returns "unknown" if not available. */
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6_RE = /^[0-9a-fA-F:]{2,45}$/;
+
+/** Extract client IP from proxy headers. Returns "unknown" if not available. */
 export function getClientIp(c: Context): string {
-  return clientIpOrNull(c) ?? "unknown";
+  const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+  if (forwarded && (IPV4_RE.test(forwarded) || IPV6_RE.test(forwarded))) return forwarded;
+  const realIp = c.req.header("x-real-ip")?.trim();
+  if (realIp && (IPV4_RE.test(realIp) || IPV6_RE.test(realIp))) return realIp;
+  return "unknown";
 }
 
 /** Hash an IP for storage (first 16 chars of SHA-256). Never store raw IPs. */
