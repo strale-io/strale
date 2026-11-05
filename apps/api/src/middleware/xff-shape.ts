@@ -8,6 +8,7 @@
  * the only inputs that reach the log object are classifier outputs drawn from
  * a closed label set. Remove once a receipt has been written.
  */
+import { createHmac, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { rateLimitByIp } from "../lib/rate-limit.js";
@@ -70,10 +71,37 @@ export function classifyIp(raw: string | null | undefined): IpClass {
   return "public_v6";
 }
 
+/**
+ * Distinct-value counters for the left-most and right-most XFF entries. Values
+ * are kept only as HMAC-SHA256 under a random per-process key that is never
+ * logged, persisted or exported, so nothing in memory is a reproducible address
+ * hash. Only the set sizes leave this module, saturating at the cap.
+ */
+export const DISTINCT_CAP = 1000;
+let hmacKey = randomBytes(32);
+const leftSeen = new Set<string>();
+const rightSeen = new Set<string>();
+
+function observe(set: Set<string>, entry: string): void {
+  if (set.size >= DISTINCT_CAP) return;
+  const v = normalize(entry) ?? entry.trim();
+  set.add(createHmac("sha256", hmacKey).update(v).digest("hex"));
+}
+
+/** Test helper: new key, empty sets. */
+export function resetDistinctForTests(): void {
+  hmacKey = randomBytes(32);
+  leftSeen.clear();
+  rightSeen.clear();
+}
+
 export interface XffShape {
   label: "xff-shape";
   entry_count: number;
   entries_truncated: boolean;
+  distinct_left_most_seen: number;
+  distinct_right_most_seen: number;
+  left_most_equals_right_most: boolean;
   entry_classes: IpClass[];
   peer_class: IpClass;
   left_most_is_peer: boolean;
@@ -91,11 +119,19 @@ export function buildShape(
 ): XffShape {
   const entries = xff ? xff.split(",").map((e) => e.trim()) : [];
   const leftMost = entries.length > 0 ? normalize(entries[0]) : null;
+  if (entries.length > 0) {
+    observe(leftSeen, entries[0]);
+    observe(rightSeen, entries[entries.length - 1]);
+  }
   const peerNorm = normalize(peer);
   return {
     label: "xff-shape",
     entry_count: entries.length,
     entries_truncated: entries.length > MAX_POSITIONS,
+    distinct_left_most_seen: leftSeen.size,
+    distinct_right_most_seen: rightSeen.size,
+    left_most_equals_right_most:
+      entries.length > 0 && (normalize(entries[0]) ?? entries[0]) === (normalize(entries[entries.length - 1]) ?? entries[entries.length - 1]),
     entry_classes: entries.slice(0, MAX_POSITIONS).map(classifyIp),
     peer_class: classifyIp(peer),
     left_most_is_peer: leftMost !== null && leftMost === peerNorm,

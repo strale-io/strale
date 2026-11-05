@@ -39,6 +39,19 @@ public_v4]` with the last entry being Railway's edge, and whether
 `left_most_is_peer` is ever true (it should be false behind the edge).
 Include real client traffic, not only your own probes.
 
+## Reading the distinct counts
+
+`distinct_left_most_seen` and `distinct_right_most_seen` count distinct
+left-most and right-most XFF entries seen by this process (saturating at
+1000). Values are held only as HMAC-SHA256 under a random per-process key
+that is never logged or exported, so only the counts leave memory.
+`left_most_equals_right_most` is true when there is one entry or both ends
+match. Discriminator: if right-most stays around 2 while left-most grows
+with distinct callers, the right-most entry is Railway's edge, not the
+client, and a right-most rule would collapse identities (the 2026-11-05
+failure). If both grow together, the right-most entry is the client.
+Counts reset on restart; the debug endpoint's own calls are included.
+
 ## Removal
 
 Once the tally is written as a receipt

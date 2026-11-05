@@ -4,7 +4,7 @@ import { Hono } from "hono";
 const lines: Array<Record<string, unknown>> = [];
 vi.mock("../lib/log.js", () => ({ log: { info: (o: Record<string, unknown>) => lines.push(o) } }));
 
-const { xffShapeRoute, shapeOfRequest, classifyIp, buildShape, xffShapeLogger, XFF_SHAPE_MAX_LINES } = await import("./xff-shape.js");
+const { resetDistinctForTests, DISTINCT_CAP, xffShapeRoute, shapeOfRequest, classifyIp, buildShape, xffShapeLogger, XFF_SHAPE_MAX_LINES } = await import("./xff-shape.js");
 
 const IPV4 = /\b\d{1,3}(?:\.\d{1,3}){3}\b/;
 const IPV6 = /(?:[0-9a-f]{0,4}:){2,}[0-9a-f]{0,4}/i;
@@ -136,4 +136,43 @@ describe("GET /v1/debug/xff-shape (temporary)", () => {
     expect(codes).toContain(429);
   });
   it("shapeOfRequest is exported", () => expect(typeof shapeOfRequest).toBe("function"));
+});
+
+describe("distinct counters", () => {
+  const xff = (v: string) => buildShape(v, undefined, none);
+  beforeEach(() => resetDistinctForTests());
+
+  it("same value twice counts once; distinct values grow left and right independently", () => {
+    xff("8.8.8.8, 1.1.1.1");
+    let s = xff("8.8.8.8, 1.1.1.1");
+    expect([s.distinct_left_most_seen, s.distinct_right_most_seen]).toEqual([1, 1]);
+    s = xff("8.8.4.4, 1.1.1.1");
+    expect([s.distinct_left_most_seen, s.distinct_right_most_seen]).toEqual([2, 1]);
+    s = xff("9.9.9.9, 1.0.0.1");
+    expect([s.distinct_left_most_seen, s.distinct_right_most_seen]).toEqual([3, 2]);
+  });
+
+  it("left_most_equals_right_most", () => {
+    expect(xff("8.8.8.8").left_most_equals_right_most).toBe(true);
+    expect(xff("8.8.8.8, 8.8.8.8:80").left_most_equals_right_most).toBe(true);
+    expect(xff("8.8.8.8, 1.1.1.1").left_most_equals_right_most).toBe(false);
+    expect(xff("").left_most_equals_right_most).toBe(false);
+  });
+
+  it("saturates at the cap", () => {
+    let s = xff("8.8.8.8");
+    for (let i = 0; i < DISTINCT_CAP + 50; i++) s = xff(`10.${i >> 8}.${i & 255}.1, 1.1.1.1`);
+    expect(s.distinct_left_most_seen).toBe(DISTINCT_CAP);
+    expect(s.distinct_right_most_seen).toBe(2);
+  });
+
+  it("outputs only numbers and booleans for the new fields, no hex digests or IPs", () => {
+    const s = xff("34.75.37.254, 66.33.22.4");
+    expect(typeof s.distinct_left_most_seen).toBe("number");
+    expect(typeof s.left_most_equals_right_most).toBe("boolean");
+    const json = JSON.stringify(s);
+    expect(json).not.toMatch(/[0-9a-f]{32,}/i);
+    expect(json).not.toMatch(IPV4);
+    expect(json).not.toMatch(IPV6);
+  });
 });
