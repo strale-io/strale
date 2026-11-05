@@ -19,5 +19,6 @@
     "raw.githubusercontent.com"
   ],
   "testCommand": "npm test",
-  "typecheckCommand": "npm run typecheck"
+  "typecheckCommand": "npm run typecheck",
+  "codexEnv": "6aece1e0cc688191ab77fa08f902e589"
 }
