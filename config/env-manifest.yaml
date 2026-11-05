@@ -1361,6 +1361,15 @@
   set_in:
     - none
   cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
+- name: XFF_SHAPE_LOG
+  purpose: Temporary switch for the xff-shape measurement (middleware/xff-shape.ts, incident 2026-11-05). On by default; set to 0 to disable. Logs class labels and counts of X-Forwarded-For, never an address, at most 200 lines per process. Remove with the middleware.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Optional off-switch; unset in production on purpose so one deploy yields the data."
 - name: X402_CHALLENGE_VERSION
   purpose: Which x402 challenge/response protocol version (1 or 2) the gateway advertises — a config switch so the version bump takes effect without a code change.
   provider: internal
