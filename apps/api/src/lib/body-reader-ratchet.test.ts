@@ -20,11 +20,12 @@
  * `readTextWithLimit`, `readBodyWithLimit`, `readTextTruncated`,
  * `createCappedTextSink`). The baseline is `body-reader-baseline.json`;
  * editing it upward needs a reviewer to agree the upstream is fixed and its
- * answer cannot be made large by a caller.
+ * answer cannot be made large by a caller. When readers are removed the
+ * failure message prints the current map to paste back.
  */
 
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -74,7 +75,7 @@ function count(pattern: (line: string, file: { text: string; lines: string[]; i:
   return found;
 }
 
-function compare(kind: string, found: Record<string, number>, baseline: Record<string, number>, how: string) {
+function compare(kind: string, found: Record<string, number>, baseline: Record<string, number>, how: string, key: string) {
   const grew: string[] = [];
   const shrank: string[] = [];
   for (const f of new Set([...Object.keys(found), ...Object.keys(baseline)])) {
@@ -84,26 +85,15 @@ function compare(kind: string, found: Record<string, number>, baseline: Record<s
     if (now < was) shrank.push(`${f}: ${was} -> ${now}`);
   }
   expect(grew, `${kind} added. ${how}`).toEqual([]);
-  expect(shrank, `${kind} removed: lower the number in lib/body-reader-baseline.json so the ratchet holds`).toEqual([]);
+  expect(
+    shrank,
+    `${kind} removed: lower the number in lib/body-reader-baseline.json so the ratchet holds. ` +
+      `Current "${key}" map: ${JSON.stringify(Object.fromEntries(Object.entries(found).sort(([x], [y]) => x.localeCompare(y))))}`,
+  ).toEqual([]);
 }
 
-/**
- * `UPDATE_BODY_READER_BASELINE=1 npx vitest run src/lib/body-reader-ratchet.test.ts`
- * rewrites the baseline from the tree. Use it to LOWER numbers after removing
- * readers; a diff that raises one is the thing review exists to catch.
- */
-const BASELINE_FILE = join(dirname(fileURLToPath(import.meta.url)), "body-reader-baseline.json");
-const collected: Partial<typeof BASELINE> = {};
-
 function check(key: keyof typeof BASELINE, kind: string, found: Record<string, number>, how: string) {
-  collected[key] = Object.fromEntries(Object.entries(found).sort(([a], [b]) => a.localeCompare(b)));
-  if (process.env.UPDATE_BODY_READER_BASELINE === "1") {
-    if (Object.keys(collected).length === 3) {
-      writeFileSync(BASELINE_FILE, JSON.stringify({ ...BASELINE, ...collected }, null, 2) + "\n");
-    }
-    return;
-  }
-  compare(kind, found, BASELINE[key], how);
+  compare(kind, found, BASELINE[key], how, key);
 }
 
 describe("unbounded readers only ever go down (resource-limits.ts is the body reader)", () => {

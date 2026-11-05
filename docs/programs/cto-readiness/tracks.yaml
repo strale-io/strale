@@ -1013,11 +1013,11 @@ tracks:
     depends_on: [T4]
     owner: session
     next_action: >
-      WP12 batches 1 and 2 of 4 done, both under audit finding CR-11 (egress/SSRF).
+      WP12 batches 1 to 3 of 4 done: 1 and 2 under audit finding CR-11 (egress/SSRF), 3 under CR-12.
       Batch 1 (2026-11-02, PR #891): isBlockedIp is CIDR arithmetic over the IANA
       special-purpose tables via net.BlockList, and validateHost parses [v6]:port,
       refuses stray-colon hosts and checks dns.lookup as well as resolve4/6.
-      Batch 2 (2026-11-04, branch fix/wp12-connect-time-recheck): the DNS-rebinding
+      Batch 2 (2026-11-04, PR #894): the DNS-rebinding
       TOCTOU in the raw-socket tools is closed. port-check, ssl-check and
       ssl-certificate-chain now connect through apps/api/src/lib/vetted-connect.ts,
       whose vettedLookup is the socket's lookup: one getaddrinfo resolution at
@@ -1036,11 +1036,31 @@ tracks:
       (raw-socket-ports.test.ts). Follow-up, not this batch: domain-age-check and
       whois-lookup open raw sockets to hardcoded WHOIS servers only and were left on
       plain createConnection; route them through vetted-connect too for one egress
-      path. Next: batch 3, byte and pixel caps on
-      every body and image reader, routed through apps/api/src/lib/resource-limits.ts
-      (CR-12); then (4) the trusted-hop rule for forwarded IPs as code and test from
-      the VERIFY-IP receipt. Each batch: plant the failure first, then the guard,
-      then the discriminating test.
+      path.
+      Batch 3 (2026-11-05, branch fix/wp12-resource-caps, CR-12): every reader whose
+      size a caller can drive now goes through apps/api/src/lib/resource-limits.ts.
+      Inventory of 2026-11-05: the caller-URL readers (fetch of a caller's URL, 60
+      capabilities) were already capped by #412/#426/#428/#432; the gaps were
+      image-resize (no cap on the SOURCE pixel count; sharp's default is 268 MP; now
+      MAX_INPUT_PIXELS = 60 MP, the OCR number, checked from the header and carried
+      as limitInputPixels), whois-lookup and domain-age-check (socket read until the
+      server hangs up; now createCappedTextSink, 256 KiB, truncating) and the
+      caller-chosen-content readers npm-package-info, pypi-package-info,
+      package-security-audit (20 MiB registry cap, package-docs' phrase) and
+      github-repo-analyze (256 KiB file prefix, 4 MiB API JSON). Planted tests:
+      image-resize.pixel-cap, whois-response-cap, registry-body-caps (each failed
+      on main, passes with the guard, fails again with the guard reverted).
+      lib/body-reader-ratchet.test.ts plus lib/body-reader-baseline.json count what
+      is left (220 raw .json()/.text() reads in 130 files, all on FIXED vendor hosts;
+      sharp( on the platform's own output; child-process pipes) and fail if a file
+      gains one. Left, not done: converting those fixed-vendor reads (many tests hand
+      the capability a bare { ok, json() } instead of a Response, so it is a sweep
+      with test rewrites, to be done by lowering the baseline), c2pa-inspect's native
+      parse (byte-capped at 15 MiB, no pixel decode), and routing domain-age-check
+      and whois-lookup through vetted-connect (the batch 2 follow-up, still open).
+      Next: batch 4, the trusted-hop rule for forwarded IPs as code and test from the
+      VERIFY-IP receipt. Each batch: plant the failure first, then the guard, then
+      the discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code
