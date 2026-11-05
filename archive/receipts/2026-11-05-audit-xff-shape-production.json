@@ -1,0 +1,52 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a7b094f131a23fc964089b045b1dec6534561a49"
+  },
+  "at": "2026-11-05T14:06:22.743Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5b6d4f47-5c22-57f8-bdb4-1b179b367b7f/scratchpad/xff-receipt-body.json"
+  },
+  "summary": {
+    "ok": true,
+    "entry_count": 2,
+    "shape": "client, railway-edge",
+    "client_position": "left-most (second from right)",
+    "real_traffic_lines": 200,
+    "client_header_replaced": true
+  },
+  "topic": "xff-shape-production",
+  "raw": {
+    "question": "Shape of X-Forwarded-For as the API receives it in production behind Railway's edge (WP12 batch 4 prerequisite; incident docs/incidents/2026-11-05-client-ip-identity-collapse.md).",
+    "method": "Address-free measurement shipped in strale-io/strale#915 (deployed a7b094f1, 2026-11-05 ~15:04 Swedish time): middleware logs per-request shape (entry count, per-position class labels, peer class, booleans, distinct-value counts under a per-process HMAC key); GET /v1/debug/xff-shape returns the same for the caller's own request. Read via the Railway connector (deploy logs, filter xff-shape) and by calling the endpoint from the orchestrator's cloud container (rotating egress).",
+    "real_traffic_log_lines": {
+      "rows_total": 200,
+      "xff_lines": 200,
+      "shapes": {
+        "2|[\"public_v4\", \"public_v4\"]": 200
+      },
+      "peer_class": {
+        "\"cgnat\"": 200
+      },
+      "left_most_is_peer": {
+        "false": 200
+      },
+      "max_distinct_left_most": 6,
+      "max_distinct_right_most": 9,
+      "lines_with_ipv4_like": 0
+    },
+    "own_probe_calls": {
+      "count": 10,
+      "shape": "entry_count 2, entry_classes [public_v4, public_v4], peer_class cgnat, left_most_is_peer false, every call",
+      "forged_header_call": "Request sent with 'X-Forwarded-For: 198.51.100.7, 10.0.0.1' and 'X-Real-IP: 203.0.113.9' arrived with entry_count 2 and entry_classes [public_v4, public_v4]: the client-supplied header was replaced, not appended to (an append would have produced 4 entries including a private class)."
+    },
+    "corroborating_evidence": {
+      "pre_incident_identity": "Under the old left-most rule, each request's ipHash equalled sha256 of the caller's own egress IP (4 distinct callers matched), recorded in the incident doc.",
+      "incident_identity": "Under the right-most rule (#910), 9 requests from >=5 distinct egress IPs collapsed to 2 identities, i.e. the right-most entry is Railway's edge, served from a pool (9 distinct right-most values over 200 real requests)."
+    },
+    "conclusion": "Production X-Forwarded-For is exactly '<client>, <railway-edge-public-ip>' (2 entries, both public IPv4), written by Railway's edge, which discards any client-supplied value. The client is the left-most entry, equivalently the second entry from the right. The socket peer is a CGNAT-range internal proxy. X-Real-IP is also present; CF-Connecting-IP and Forwarded are not.",
+    "implication_for_wp12_batch4": "A trusted-hop rule must take the entry ONE hop left of the edge: client = entries[len-2] when len >= 2 (TRUSTED_PROXY_HOPS counts Railway's edge as one appended hop). The current left-most rule is correct today because Railway overwrites; the hardened rule only adds safety if Railway ever starts appending. Retry the identity probe before merge from a stable-egress machine.",
+    "privacy": "No address, hash or port was logged or returned; 0 of 200 lines contained an IPv4-like substring."
+  }
+}
