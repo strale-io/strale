@@ -1,7 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { MAX_FETCHED_API_RESPONSE_BYTES, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES, readJsonPickWithLimit, readJsonWithLimit } from "../lib/resource-limits.js";
 import type { Pick } from "../lib/json-pick.js";
-import { logWarn } from "../lib/log.js";
 
 // The packument fields this reads; versions are kept by NAME only.
 const PACKUMENT_PICK: Pick = {
@@ -22,18 +21,19 @@ registerCapability("npm-package-info", async (input: CapabilityInput) => {
   //     top-level descriptors;
   //  2. `<pkg>/latest`, the latest version's own small manifest, for its
   //     license, homepage and dependencies.
-  // The latest manifest only adds license, homepage and the dependency lists.
-  // If it cannot be had (a 5xx, a network error, an unreadable body) the call
-  // degrades instead of failing: license and homepage fall back to the
-  // packument's own top-level values, and the two dependency lists are empty.
-  // That is logged, not silent.
-  const [response, latestResponse] = await Promise.all([
+  // Both requests must succeed. A failed /latest is an upstream error, like a
+  // failed packument fetch, not a reason to answer with empty dependency lists
+  // that would read as "this package has no dependencies". A 404 on /latest is
+  // different: the package has no `latest` tag, so there IS no latest version
+  // and its (absent) dependency lists are empty because of that.
+  const [response, latestAttempt] = await Promise.all([
     fetch(base, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }),
-    fetch(`${base}/latest`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }).catch((err) => {
-      logWarn("npm-package-info-latest-unavailable", "latest manifest request failed; degrading", { pkg, err: String(err) });
-      return null;
-    }),
+    fetch(`${base}/latest`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }).then(
+      (res) => ({ res, err: null as unknown }),
+      (err: unknown) => ({ res: null as Response | null, err }),
+    ),
   ]);
+  const latestResponse = latestAttempt.res;
   const dropLatest = () => latestResponse?.body?.cancel().catch(() => undefined);
 
   if (response.status === 404) {
@@ -45,6 +45,14 @@ registerCapability("npm-package-info", async (input: CapabilityInput) => {
     await response.body?.cancel();
     await dropLatest();
     throw new Error(`npm registry returned HTTP ${response.status}`);
+  }
+  if (latestAttempt.err || (latestResponse && !latestResponse.ok && latestResponse.status !== 404)) {
+    await response.body?.cancel();
+    await dropLatest();
+    if (latestAttempt.err) {
+      throw new Error(`npm registry latest-version request failed: ${latestAttempt.err instanceof Error ? latestAttempt.err.message : String(latestAttempt.err)}`);
+    }
+    throw new Error(`npm registry returned HTTP ${latestResponse!.status}`);
   }
 
   let data: Record<string, any>;
@@ -59,14 +67,11 @@ registerCapability("npm-package-info", async (input: CapabilityInput) => {
     try {
       latestVersion = await readJsonWithLimit<any>(latestResponse, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package", "a registry record of");
     } catch (err) {
-      logWarn("npm-package-info-latest-unavailable", "latest manifest unreadable; degrading", { pkg, err: String(err) });
+      if (err instanceof SyntaxError) throw new Error("npm registry returned an unreadable latest-version record; retry later.");
+      throw err;
     }
-  } else if (latestResponse) {
+  } else {
     await dropLatest();
-    // 404: the package has no `latest` tag, which is a complete answer.
-    if (latestResponse.status !== 404) {
-      logWarn("npm-package-info-latest-unavailable", "latest manifest returned an error status; degrading", { pkg, status: latestResponse.status });
-    }
   }
   const latest = data["dist-tags"]?.latest;
   const times = data.time ?? {};

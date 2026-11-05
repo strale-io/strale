@@ -1062,9 +1062,12 @@ tracks:
       32 MiB are refused; keys of unpicked objects keep no bytes; measured growth
       under 32 MiB for 64 MiB deep-nesting and huge-key bodies, against 700 MB and
       an out-of-memory crash before), and it enforces the JSON grammar outside
-      captured values. If the latest-manifest request fails, npm-package-info
-      degrades (license and homepage from the packument, empty dependency lists, a
-      logged warning) instead of failing. Cosmetic: dev_dependencies key order can
+      captured values. If the latest-manifest request fails (5xx, connection error,
+      unreadable body), npm-package-info fails with an upstream error and is not
+      charged; it never answers with empty dependency lists, which would read as
+      "no dependencies". A 404 on it (no latest tag) is a complete answer: no
+      latest version, so the dependency lists are empty because there is none (the
+      schema types them as arrays, not nullable, and main answers the same). Cosmetic: dev_dependencies key order can
       differ from main's for some packages (left-pad; found in review). Planted tests: image-resize.pixel-cap,
       whois-response-cap, registry-body-caps, npm-packument-large.
       lib/body-reader-ratchet.test.ts (TypeScript AST) plus lib/body-reader-baseline.json

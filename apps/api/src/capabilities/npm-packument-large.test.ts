@@ -175,7 +175,7 @@ describe("the packument work bound", () => {
   });
 });
 
-describe("the /latest request is optional (review nits)", () => {
+describe("a failed /latest request fails the call; it never becomes empty dependency lists", () => {
   const packumentOnly = () =>
     new Response(
       JSON.stringify({
@@ -184,20 +184,53 @@ describe("the /latest request is optional (review nits)", () => {
       }),
       { status: 200, headers: { "content-type": "application/json" } },
     );
-
-  it.each([
-    ["answers 503", async () => json({}, 503)],
-    ["fails to connect", async () => { throw new Error("ECONNRESET"); }],
-    ["returns a body that is not JSON", async () => new Response("<html>", { status: 200 })],
-  ])("a /latest request that %s degrades: top-level license kept, dependency lists empty", async (_n, latest) => {
+  const serve = (latest: () => Promise<Response>) =>
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u === "https://registry.npmjs.org/big") return packumentOnly();
       if (u.endsWith("/latest")) return latest();
       return json({ downloads: 1 });
     });
+
+  it.each([
+    ["answers 503", async () => json({}, 503), /npm registry returned HTTP 503/],
+    ["fails to connect", async () => { throw new Error("ECONNRESET"); }, /latest-version request failed: ECONNRESET/],
+    ["returns a body that is not JSON", async () => new Response("<html>", { status: 200 }), /unreadable latest-version record/],
+  ])("a /latest request that %s fails the call", async (_n, latest, message) => {
+    serve(latest);
+    await expect(getExecutor("npm-package-info")!({ package: "big" })).rejects.toThrow(message);
+  });
+
+  it("no output at all is produced on a /latest failure (so no empty dependency arrays)", async () => {
+    serve(async () => json({}, 502));
+    const out = await getExecutor("npm-package-info")!({ package: "big" }).then(
+      (r) => r,
+      () => "refused",
+    );
+    expect(out).toBe("refused");
+  });
+
+  it("a 404 on /latest (no latest tag) is a complete answer: no latest version, empty lists", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      const u = String(url);
+      if (u === "https://registry.npmjs.org/big")
+        return new Response(JSON.stringify({ name: "big", "dist-tags": {}, versions: { "1.0.0": {} }, time: { "1.0.0": "t" } }), { status: 200 });
+      if (u.endsWith("/latest")) return json({ error: "version not found: latest" }, 404);
+      return json({ downloads: 1 });
+    });
     const r = (await getExecutor("npm-package-info")!({ package: "big" })) as { output: Record<string, any> };
-    expect(r.output).toMatchObject({ name: "big", latest_version: "1.0.0", license: "MIT", dependencies: [], dev_dependencies: [], total_versions: 1 });
+    expect(r.output.latest_version).toBeUndefined();
+    expect(r.output.dist_tags).toEqual({});
+    expect(r.output).toMatchObject({ dependencies: [], dev_dependencies: [], total_versions: 1 });
+  });
+
+  it("the packument body is cancelled when /latest fails", async () => {
+    const cancel = vi.fn();
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith("/latest") ? json({}, 500) : new Response(new ReadableStream({ cancel }), { status: 200 }),
+    );
+    await expect(getExecutor("npm-package-info")!({ package: "big" })).rejects.toThrow(/HTTP 500/);
+    expect(cancel).toHaveBeenCalled();
   });
 
   it("the /latest body is cancelled when the packument read throws", async () => {
