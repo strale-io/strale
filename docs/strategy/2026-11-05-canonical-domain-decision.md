@@ -104,7 +104,8 @@ Petter's work:
    - Re-create every record listed under "State" on Cloudflare before switching
      nameservers. `api` must be DNS-only (grey cloud), not proxied, unless that
      is a deliberate choice.
-   - Keep the Search Console verification TXT.
+   - Keep a Search Console verification TXT if one exists (none was public on
+     2026-11-05); otherwise verify strale.io in Search Console after the move.
    - After the nameserver switch, verify MX, SPF, DKIM, DMARC and the API.
 2. **Point `strale.io` and `www.strale.io` at the Pages project.**
 3. **Redirect strale.dev on its Cloudflare zone.** Pages `_redirects` cannot
@@ -122,13 +123,16 @@ Petter's work:
 
 Old paths take two hops after the switch: `strale.dev/capabilities/x` →
 `strale.io/capabilities/x` → `strale.io/tools/x`. That is acceptable. The
-`_redirects` map in `apps/web` implements the second hop on strale.io.
+`_redirects` map in `apps/web` will implement the second hop on strale.io
+(readiness item 4).
 
 ## Reversal
 
 1. Remove the strale.dev redirect rule and point strale.dev back at
    `strale-frontend`, which stays deployed until it is retired.
-2. Return strale.io to a temporary redirect.
+2. **strale.io keeps serving a site itself**: the Pages project, or
+   `strale-frontend` too. It never redirects back to strale.dev. Browsers that
+   cached the strale.dev → strale.io 301 would otherwise loop.
 
 A 301 is cached by browsers and search engines, so a reversal after weeks is
 slow. That is why this was a founder call.

@@ -44,7 +44,7 @@ Cloudflare project and the domain are below.
 - **At the switch-over** (full steps in `docs/strategy/2026-11-05-canonical-domain-decision.md`):
   - Move the strale.io zone from GoDaddy to Cloudflare. Export it first and re-create every
     record before switching nameservers: `api` (DNS-only), MX, SPF, DKIM, DMARC, M365 and
-    Resend records, and the Search Console TXT. Then verify mail and the API.
+    Resend records, and any Search Console TXT. Then verify mail and the API.
   - Point strale.io and www at the Pages project.
   - Redirect strale.dev on its zone. Either use a Single Redirect with a dynamic target and
     "Preserve query string" on, or a Bulk Redirect with subpath matching and query
