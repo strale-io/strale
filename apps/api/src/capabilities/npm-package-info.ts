@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { MAX_FETCHED_API_RESPONSE_BYTES, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, readJsonWithLimit } from "../lib/resource-limits.js";
 
 // npm Registry API — free, no key required
 registerCapability("npm-package-info", async (input: CapabilityInput) => {
@@ -14,7 +15,8 @@ registerCapability("npm-package-info", async (input: CapabilityInput) => {
   if (response.status === 404) throw new Error(`npm package "${pkg}" not found.`);
   if (!response.ok) throw new Error(`npm registry returned HTTP ${response.status}`);
 
-  const data = (await response.json()) as any;
+  // Bounded (WP12 batch 3): a packument grows with every release its owner publishes.
+  const data = (await readJsonWithLimit<any>(response, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package", "a registry record of"));
   const latest = data["dist-tags"]?.latest;
   const latestVersion = latest ? data.versions?.[latest] : null;
   const times = data.time ?? {};
@@ -33,7 +35,7 @@ registerCapability("npm-package-info", async (input: CapabilityInput) => {
       signal: AbortSignal.timeout(5000),
     });
     if (dlResp.ok) {
-      const dlData = (await dlResp.json()) as any;
+      const dlData = await readJsonWithLimit<any>(dlResp, MAX_FETCHED_API_RESPONSE_BYTES, "package");
       weeklyDownloads = dlData.downloads ?? null;
     }
   } catch { /* non-critical */ }

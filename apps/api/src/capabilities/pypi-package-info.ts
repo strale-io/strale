@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { MAX_FETCHED_API_RESPONSE_BYTES, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, readJsonWithLimit } from "../lib/resource-limits.js";
 
 // PyPI JSON API — free, no key required
 registerCapability("pypi-package-info", async (input: CapabilityInput) => {
@@ -14,7 +15,8 @@ registerCapability("pypi-package-info", async (input: CapabilityInput) => {
   if (response.status === 404) throw new Error(`PyPI package "${pkg}" not found.`);
   if (!response.ok) throw new Error(`PyPI API returned HTTP ${response.status}`);
 
-  const data = (await response.json()) as any;
+  // Bounded (WP12 batch 3): a project record lists every release file its owner uploaded.
+  const data = (await readJsonWithLimit<any>(response, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "package", "a registry record of"));
   const info = data.info ?? {};
 
   // Get release history

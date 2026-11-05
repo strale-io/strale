@@ -95,7 +95,7 @@ describe("image-resize bounds the source image's pixel count from its header", (
       (e: unknown) => e,
     );
     expect(err, "an 81 megapixel source was decoded").toBeInstanceOf(ResourceLimitError);
-    expect((err as Error).message).toMatch(/'base64' must be \d+(\.\d+)? megapixels or less/);
+    expect((err as Error).message).toMatch(/'base64' must be an image of 60 megapixels or less \(received 9000x9000, 81\.0 megapixels\)/);
   }, 60_000);
 
   it("refuses a header that declares 400 MP with a structured refusal, not sharp's own text", async () => {
