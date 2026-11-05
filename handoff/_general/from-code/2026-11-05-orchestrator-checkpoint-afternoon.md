@@ -51,7 +51,7 @@ Strale entry is `session_01RFNL6TLV5jtWpGMEzuea6W`. Check with
 
 ## Open items, in priority order
 
-1. **Trial-credit check (incident follow-up).** List the signups between about 13:20 and 13:55 Swedish time on 2026-11-05 whose trial grant was withheld by the shared per-IP cap. Show Petter the list, then restore their credit as a refund-class action. This needs a production database read; the Railway connector may make it possible from the cloud.
+1. **Trial-credit check (incident follow-up): closed.** Railway HTTP logs show no sign-up requests in the window, so nothing was withheld. The incident record has the evidence.
 2. **Switch-over date.** I proposed Monday 10 November; Petter hasn't answered yet. The day itself:
    1. Cloudflare: point strale.io at Pages and turn on the strale.dev 301 (Petter).
    2. Merge #917.
