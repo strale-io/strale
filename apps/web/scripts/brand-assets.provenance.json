@@ -1,0 +1,16 @@
+{
+  "what": "Open Flow share card and iOS home-screen icon for the website (SWITCH-OVER-READINESS row 12). Typographic, rendered from code; no image generation.",
+  "script": "apps/web/scripts/render-brand-assets.mjs",
+  "rendered_on": "2026-11-05",
+  "sources": {
+    "tokens": "design/tokens/active.json, surfaces.website.palette (light.canvas, brand.ink, brand.blue, brand.violet, brand.teal)",
+    "headline": "apps/web/src/content/positioning.ts L1.headline",
+    "wordmark": "design/brand-kit/open-flow/assets/logo/wordmark.svg",
+    "fonts": "design/brand-kit/open-flow/fonts/SpaceGrotesk.ttf (display), InstrumentSans.ttf (body)",
+    "icon_mark": "design/brand-kit/quiet-material/foundations/exports/mark-ink.svg (the S mark the favicon uses), fill recoloured to brand.ink"
+  },
+  "sha256": {
+    "og-image.png": "fec71a4a0aea2dae9bcb180f8fe5f3e21c562cc43148efbfe2496f788f7cfd7f",
+    "apple-touch-icon.png": "c74a8d0abef94b6cc8c604073c7059f3fe48b96a8dde09664c3fa32f204b985e"
+  }
+}
