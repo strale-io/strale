@@ -75,7 +75,7 @@ describe("clientIpFromHeaders: the trusted-hop rule", () => {
   it("IPv6: accepted, lower-cased, zone and brackets dropped", () => {
     expect(fromHeaders({ "x-forwarded-for": "2001:DB8::1" })).toBe("2001:db8::1");
     expect(fromHeaders({ "x-forwarded-for": "9.9.9.9, 2001:db8:0:0:0:0:0:1" })).toBe("2001:db8:0:0:0:0:0:1");
-    expect(fromHeaders({ "x-forwarded-for": "fe80::1%eth0" })).toBe("fe80::1");
+    expect(fromHeaders({ "x-forwarded-for": "2001:db8::5%eth0" })).toBe("2001:db8::5");
     expect(fromHeaders({ "x-forwarded-for": "[2001:db8::1]:443" })).toBe("2001:db8::1");
   });
 
@@ -85,6 +85,34 @@ describe("clientIpFromHeaders: the trusted-hop rule", () => {
     expect(fromHeaders({ "x-forwarded-for": "0:0:0:0:0:ffff:198.51.100.7" })).toBe("198.51.100.7");
     expect(fromHeaders({ "x-forwarded-for": "::ffff:c633:6407" })).toBe("198.51.100.7");
     expect(fromHeaders({ "x-forwarded-for": "198.51.100.7:51234" })).toBe("198.51.100.7");
+  });
+
+  it("skips internal hops: they are never the client", () => {
+    expect(fromHeaders({ "x-forwarded-for": "203.0.113.7, 10.0.0.5" })).toBe("203.0.113.7");
+    expect(fromHeaders({ "x-forwarded-for": "203.0.113.7, 100.64.1.2" })).toBe("203.0.113.7");
+    expect(fromHeaders({ "x-forwarded-for": "203.0.113.7, 172.16.0.1, 192.168.1.1, 169.254.1.1, 127.0.0.1" })).toBe("203.0.113.7");
+    expect(fromHeaders({ "x-forwarded-for": "203.0.113.7, fd00::1, fe80::1, ::1" })).toBe("203.0.113.7");
+  });
+
+  it("a client-forged left entry is ignored even when internal hops follow", () => {
+    expect(fromHeaders({ "x-forwarded-for": "198.51.100.9, 203.0.113.7" })).toBe("203.0.113.7");
+    expect(fromHeaders({ "x-forwarded-for": "198.51.100.9, 203.0.113.7, 10.0.0.5" })).toBe("203.0.113.7");
+  });
+
+  it("only internal entries means no public client", () => {
+    expect(fromHeaders({ "x-forwarded-for": "10.0.0.5" })).toBeNull();
+    expect(fromHeaders({ "x-forwarded-for": "10.0.0.5, 192.168.0.1" })).toBeNull();
+    expect(fromHeaders({ "x-forwarded-for": "::1" })).toBeNull();
+  });
+
+  it("IPv4-mapped internal addresses are internal", () => {
+    expect(fromHeaders({ "x-forwarded-for": "::ffff:10.0.0.5" })).toBeNull();
+    expect(fromHeaders({ "x-forwarded-for": "203.0.113.7, ::ffff:10.0.0.5" })).toBe("203.0.113.7");
+    expect(fromHeaders({ "x-forwarded-for": "203.0.113.7, ::ffff:a00:5" })).toBe("203.0.113.7");
+  });
+
+  it("an unparseable entry stops the walk instead of exposing one further left", () => {
+    expect(fromHeaders({ "x-forwarded-for": "198.51.100.9, junk, 10.0.0.5" })).toBeNull();
   });
 
   it("normalizeIp rejects non-IPs", () => {
@@ -127,13 +155,13 @@ describe("call sites go through the rule (planted failure: left-most / X-Real-IP
     expect(statuses).toEqual([200, 200, 200, 429, 429, 429]);
   });
 
-  it("a request with no usable client IP is not rate limited into a shared bucket", async () => {
+  it("a request with no usable client IP shares one fail-closed 'unknown' bucket", async () => {
     const app = new Hono();
-    app.use("*", rateLimitByIp(1, 60_000, "client-ip-test-null"));
+    app.use("*", rateLimitByIp(2, 60_000, "client-ip-test-null"));
     app.get("/", (c) => c.text("ok"));
-    for (let i = 0; i < 3; i++) {
-      expect((await app.request("/", { headers: { "x-real-ip": "10.0.0.1" } })).status).toBe(200);
-    }
+    const statuses: number[] = [];
+    for (let i = 0; i < 4; i++) statuses.push((await app.request("/", { headers: { "x-real-ip": "10.0.0.1" } })).status);
+    expect(statuses).toEqual([200, 200, 429, 429]);
   });
 });
 
@@ -162,7 +190,6 @@ describe("single-function ratchet", () => {
     for (const f of files) {
       const rel = relative(API_ROOT, f).split(sep).join("/");
       if (ALLOWED.has(rel)) continue;
-      if (rel.includes("test-helpers/") || rel.includes("test-support/")) continue;
       const text = readFileSync(f, "utf8");
       if (!HEADER_RE.test(text)) continue;
       const sf = ts.createSourceFile(f, text, ts.ScriptTarget.Latest, true);

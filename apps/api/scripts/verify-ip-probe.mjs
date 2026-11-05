@@ -13,7 +13,20 @@
 // proof the edge proxy overwrites/strips client-supplied values rather than
 // appending to them.
 //
+// Post-deploy identity check (WP12 batch 4, lib/client-ip.ts): the script also
+// fetches this machine's own public IP from https://api.ipify.org and asserts
+// the API's ipHash equals sha256(own IP).slice(0,16), the hash the API computes.
+// That proves the trusted-hop rule resolves the REAL client, not an internal
+// proxy hop. The process exits 1 on any mismatch.
+//
+// Run it from TWO different egress IPs (e.g. this machine and a phone hotspot or
+// a cloud shell) after every deploy that touches client-ip.ts and after any
+// Railway networking / DNS change: two different identities, each equal to its
+// own machine's IP, rule out a shared internal address. If identity is not the
+// probe's own IP, revert the deploy.
+//
 // Usage: node scripts/verify-ip-probe.mjs
+import { createHash } from "node:crypto";
 const BASE = "https://api.strale.io";
 
 async function call(label, extraHeaders) {
@@ -47,9 +60,15 @@ async function main() {
     }),
   );
 
+  const ownIp = (await (await fetch("https://api.ipify.org")).text()).trim();
+  const expected = createHash("sha256").update(ownIp.toLowerCase()).digest("hex").slice(0, 16);
+  const identityMatches = results.every((r) => r.ipHash === expected);
   const hashes = new Set(results.map((r) => r.ipHash));
   const out = {
     results,
+    own_public_ip: ownIp,
+    expected_ipHash_for_own_ip: expected,
+    identity_is_probe_own_ip: identityMatches,
     all_ipHash_identical: hashes.size === 1,
     distinct_ipHash_count: hashes.size,
     conclusion:
@@ -58,6 +77,7 @@ async function main() {
         : "Client-supplied header values DID change the extracted IP: the edge proxy appends to or passes through client values, and leftmost-XFF extraction IS spoofable.",
   };
   console.log(JSON.stringify(out, null, 2));
+  if (!identityMatches || hashes.size !== 1) process.exitCode = 1;
 }
 
 main().catch((e) => {

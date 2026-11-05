@@ -18,8 +18,9 @@
  *   - append: the edge's entry is the right-most, and everything left of it is
  *     client-typed and ignored.
  *
- * So the client IP is the entry TRUSTED_PROXY_HOPS from the right of the
- * X-Forwarded-For list (all header lines joined, in order). The old rule read
+ * So the client IP is the TRUSTED_PROXY_HOPS-th public entry from the right of
+ * the X-Forwarded-For list (all header lines joined, in order), internal-range
+ * entries being skipped as hops of ours (see clientIpFromHeaders). The old rule read
  * the LEFT-most entry, which under "append" is whatever the client typed.
  *
  * X-Real-IP and CF-Connecting-IP are never read: nothing trusted sets them for
@@ -67,14 +68,45 @@ export function normalizeIp(raw: string): string | null {
   return lower;
 }
 
-/** The client IP, or null when the proxy did not supply a usable one. */
+/** True for addresses that can never be an internet client: loopback, private, CGNAT, link-local, unspecified, ULA. */
+export function isInternalIp(ip: string): boolean {
+  if (isIP(ip) === 4) {
+    const [a, b] = ip.split(".").map(Number) as [number, number];
+    return (
+      a === 0 || a === 10 || a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    );
+  }
+  const first = parseInt(ip.split(":")[0] || "0", 16);
+  return ip === "::1" || ip === "::" || (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80;
+}
+
+/**
+ * The client IP, or null when the proxy did not supply a usable one.
+ *
+ * Walk X-Forwarded-For from the right. Entries in internal ranges (see
+ * isInternalIp) are proxy hops of ours, never the client, and are skipped; the
+ * TRUSTED_PROXY_HOPS-th PUBLIC entry from the right is the client. So if the
+ * edge ever writes `client, <internal-hop>` the client is still found, and a
+ * client-typed entry to its left is never reached. An unparseable entry stops
+ * the walk with null: it is never skipped to reach one further left. With only
+ * internal entries there is no public client: null.
+ */
 export function clientIpFromHeaders(get: HeaderGetter): string | null {
   const raw = get("x-forwarded-for");
   if (!raw) return null;
   const entries = raw.split(",");
-  const idx = entries.length - TRUSTED_PROXY_HOPS;
-  if (idx < 0) return null;
-  return normalizeIp(entries[idx]!);
+  let publicSeen = 0;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const ip = normalizeIp(entries[i]!);
+    if (ip === null) return null;
+    if (isInternalIp(ip)) continue;
+    if (++publicSeen === TRUSTED_PROXY_HOPS) return ip;
+  }
+  return null;
 }
 
 /** Same, for Hono contexts and anything with `req.header(name)`. */

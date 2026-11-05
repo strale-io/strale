@@ -8,6 +8,7 @@ import { HTTPException } from "hono/http-exception";
 import { versionMiddleware } from "./lib/versioning.js";
 import { apiError } from "./lib/errors.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
+import { clientIpOrNull } from "./lib/client-ip.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
 import { fireAndForget } from "./lib/fire-and-forget.js";
@@ -679,7 +680,6 @@ app.route("/v1/internal/onboarding", internalOnboardingRoute);
 app.route("/v1/audit", auditRoute);
 
 import { verifyRoute } from "./routes/verify.js";
-import { clientIpOrNull } from "./lib/client-ip.js";
 app.route("/v1/verify", verifyRoute);
 
 // Post-deploy verification (30s delay, tests unstable/recovering capabilities)

@@ -165,11 +165,12 @@ it("caches results and failures for 30 seconds, coalesces reads, and limits IPs"
     for (const fail of [false, true]) {
       const read = vi.fn(async () => { if (fail) throw new Error("db"); return jobFreshness(new Map()); });
       const route = createHealthJobsRoute(read);
-      await Promise.all([route.request("/"), route.request("/")]);
-      await route.request("/");
+      const own = { headers: { "x-forwarded-for": fail ? "192.0.2.51" : "192.0.2.50" } };
+      await Promise.all([route.request("/", own), route.request("/", own)]);
+      await route.request("/", own);
       expect(read).toHaveBeenCalledTimes(1);
       clock.mockReturnValue(Date.now() + 30000);
-      await route.request("/");
+      await route.request("/", own);
       expect(read).toHaveBeenCalledTimes(2);
     }
     const route = createHealthJobsRoute(async () => []);

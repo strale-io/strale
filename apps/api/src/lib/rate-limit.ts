@@ -175,12 +175,11 @@ const rateLimitIp = clientIpOrNull;
  */
 export function consumeIpRate(c: Context, maxRequests: number, windowMs: number, scope?: string): Response | null {
   const ip = rateLimitIp(c);
-  // Skip rate limiting if IP can't be detected — don't share a single
-  // "unknown" bucket across all unidentified users.
-  if (ip === null) return null;
-
+  // No usable client IP: fail closed on one shared "unknown" bucket rather than
+  // letting unidentifiable callers skip the limit (WP12 batch 4 review).
   // A scope gives a route its own bucket instead of sharing the IP's.
-  const result = checkRate(scope ? `${scope}:ip:${ip}` : `ip:${ip}`, maxRequests, windowMs);
+  const key = ip ?? "unknown";
+  const result = checkRate(scope ? `${scope}:ip:${key}` : `ip:${key}`, maxRequests, windowMs);
   setRateLimitHeaders(c, result);
   if (result.allowed) return null;
   return c.json(
