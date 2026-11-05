@@ -56,9 +56,9 @@ New signups in the window may have been refused the trial credit, with the cap
 counting every other signup in the window. Calls with an API key are limited
 per key. The x402 path uses the IP for attribution only.
 
-**Open:** list the signups in the window whose trial was withheld (needs a
-production read; this session has no database access) and restore their
-credit as a refund-class action, after showing Petter the list.
+**Checked 2026-11-05 (Railway HTTP logs, 13:15–14:00 Swedish time, read through the Railway connector):**
+- No requests reached `/v1/auth/register`, `/v1/signup` or `/oauth*` in the window. So no trial grant could have been withheld by the shared per-IP cap, which needs more than 5 grants per bucket. Nothing needs restoring.
+- The 429s in the window were on `/x402/*` endpoints, almost all from uptime and catalogue probes (MPP32, Mekler, Forum Labs, ZeroBot, Lumi, CoinbaseBazaarDiscovery) plus one `axios` client. The same probes get 429s in the hour before and the hour after (for example CarbonMonitor every 15 minutes, and frames-ag-catalog-bot and an `axios` client at 14:26). The window's 429 pattern therefore can't be told apart from normal probe throttling, and no customer-visible harm was found.
 
 ## 5. Restore verification
 

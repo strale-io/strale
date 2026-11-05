@@ -2,7 +2,7 @@
  * registrations in app.ts or mounted routers, not transport handlers. /mcp is
  * deliberately absent: it has a real ALL handler and an explicit exclusion. */
 export const middlewareRegistrations: Record<string, number> = {
-  "/*": 4,
+  "/*": 5, // 5th: TEMPORARY xffShapeLogger (incident 2026-11-05); back to 4 when removed
   "/x402/*": 4,
   "/v1/capabilities/*": 1,
   "/v1/capabilities": 1,

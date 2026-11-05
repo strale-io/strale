@@ -208,7 +208,7 @@ node design/brand-kit/open-flow/screenshot.mjs path/to/node_modules/playwright/i
 ## Open items
 
 - **Founder review** of this system. Adoption needs a decision record and the promotion swap described in `design/README.md`.
-- **Logo.** The kit-06 STRALE wordmark was adopted by Petter on 2026-10-26 ("go with all three"), as a vector trace pending a professional redraw. Use `assets/logo/wordmark.svg` with `currentColor`: ink on light and inverse on dark, sized by height (22px nav, 24px footer). The trace has slightly uneven edges at very large sizes; a professional redraw is recommended later. The S-only favicon is retained.
+- **Logo.** The kit-06 STRALE wordmark was adopted by Petter on 2026-10-26 ("go with all three"), as a vector trace pending a professional redraw. Use `assets/logo/wordmark.svg` with `currentColor`: ink on light and inverse on dark, sized by height (22px nav, 24px footer). The trace has slightly uneven edges at very large sizes; a professional redraw is recommended later. The favicon and app icon are the flowing A cut from the wordmark (`assets/logo/mark-flow-a.svg`), white on deep violet, chosen by Petter on 2026-11-05 ("c"), replacing the retired quiet-material S mark. They are rendered by `apps/web/scripts/render-brand-assets.mjs` into `assets/icon/`.
 - **Imagery approval.** Kit-06 asset checks are `checks-pending`, and the library's approval is "not-granted". Each image used publicly needs a live copy-fit check and a rights record.
 - **Dark-native artwork.** No dark-ground raster exists. Dark uses `bands.svg` and contained panels. A dark field commission is optional.
 - **Missing formats** listed by the kit: small 1:1 card, sequence, 3:1 divider, 9:16 story. None blocks the website.

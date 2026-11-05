@@ -1,0 +1,22 @@
+{
+  "what": "Open Flow share card, iOS home-screen icon and favicons for the website (SWITCH-OVER-READINESS row 12). Typographic, rendered from code; no image generation.",
+  "script": "apps/web/scripts/render-brand-assets.mjs",
+  "rendered_on": "2026-11-05",
+  "sources": {
+    "tokens": "design/tokens/active.json, surfaces.website.palette (light.canvas, brand.ink, brand.blue, brand.violet, brand.teal)",
+    "headline": "apps/web/src/content/positioning.ts L1.headline",
+    "wordmark": "design/brand-kit/open-flow/assets/logo/wordmark.svg",
+    "fonts": "design/brand-kit/open-flow/fonts/SpaceGrotesk.ttf (display), InstrumentSans.ttf (body)",
+    "icon_mark": "design/brand-kit/open-flow/assets/logo/wordmark.svg, the A clipped to x 958..1328 (mark-flow-a.svg); white (light.text-inverse) on brand.deep-violet; chosen by Petter on 2026-11-05 (candidate c), replacing the retired quiet-material S mark",
+    "decision": "Petter, 2026-11-05: the S mark is an old logo no longer in use; candidate c, the flowing A"
+  },
+  "sha256": {
+    "og-image.png": "fec71a4a0aea2dae9bcb180f8fe5f3e21c562cc43148efbfe2496f788f7cfd7f",
+    "apple-touch-icon.png": "7f9ff7b468a245de20c3233acbc9b24f964039fde44f62daaa4bb41192a2f6d4",
+    "design/brand-kit/open-flow/assets/icon/favicon.svg": "464053c1806e87d5a1aa39f2f38f3180ce45c94ee647fc420cc2f4db169de17c",
+    "design/brand-kit/open-flow/assets/icon/favicon.ico": "2dc9a09f7917bfccbe287c3c80f3abcf306f848288efa2ef9c7bd4943ae84c11",
+    "design/brand-kit/open-flow/assets/icon/favicon-16.png": "03cef2705aa0144557a65dee0e76cfb4caef94600e9b4d26b2fecf3985315333",
+    "design/brand-kit/open-flow/assets/icon/favicon-32.png": "f9eadcdbfc0f3a9c5da3584c1bca7749861ebe4af3b726e840d54e56e709dbd6",
+    "design/brand-kit/open-flow/assets/logo/mark-flow-a.svg": "8fd188ed43a10313e3bd86b727b674165a2130ece509b7f14e18d4d264835097"
+  }
+}

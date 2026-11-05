@@ -151,7 +151,7 @@ test("no rule shadows any page the build emits", () => {
 
 test("assets and headers that live URLs depend on ship in public/", () => {
   for (const f of ["apple-touch-icon.png", "og-image.png"]) assert.ok(existsSync(resolve(web, "public", f)), f);
-  // favicon-32x32.png is the S mark, copied from the brand kit before every build (not tracked).
+  // favicon-32x32.png is the flowing A mark, copied from the brand kit before every build (not tracked).
   assert.match(readFileSync(resolve(web, "scripts/prepare-assets.mjs"), "utf8"), /`\$\{marks\}\/favicon-32\.png`, "favicon-32x32\.png"/);
   const headers = readFileSync(resolve(web, "public/_headers"), "utf8");
   assert.match(headers, /Strict-Transport-Security: max-age=31536000\b/);
