@@ -56,7 +56,7 @@
     "models:check": "node apps/api/scripts/check-model-literals.mjs",
     "models:test": "node --test apps/api/scripts/check-model-literals.test.mjs",
     "claims:check": "node scripts/check-claims.mjs",
-    "claims:test": "node --test scripts/claims.test.mjs",
+    "claims:test": "node --test scripts/claims.test.mjs scripts/claims-machine-readable.test.mjs",
     "docs:check": "node scripts/check-docs-index.mjs",
     "docs:test": "node --test scripts/check-docs-index.test.mjs",
     "archive:index": "node scripts/generate-archive-index.mjs",
