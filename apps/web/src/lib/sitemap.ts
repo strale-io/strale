@@ -12,8 +12,8 @@ import type { SiteData } from "./types.ts";
 /** Hand-written pages that are built and indexable. Each is src/pages/<path>.astro (or <path>/index.astro). */
 export const STATIC_PATHS = ["/", "/tools", "/company-data", "/use-cases", "/pricing", "/docs", "/docs/mcp", "/docs/api", "/docs/x402", "/docs/sdks", "/guides", "/security", "/about", "/privacy", "/terms", "/signup"];
 
-/** Built pages that stay out of the sitemap: private-link pages and the wallet flow. /audit is also noindex. */
-export const EXCLUDED_PATHS = ["/audit", "/topup"];
+/** Built pages that stay out of the sitemap: private-link pages and the wallet flow. /audit and /404 are also noindex; /404 builds to 404.html, which Pages serves with status 404 for unknown paths. */
+export const EXCLUDED_PATHS = ["/audit", "/topup", "/404"];
 
 /** The path a built file answers at: "/tools.html" and "/tools/x.html" (build.format "file") are "/tools" and "/tools/x"; "/index.html" and "/index" are "/". Pages 308s the .html forms to these. */
 export function canonicalPath(pathname: string): string {

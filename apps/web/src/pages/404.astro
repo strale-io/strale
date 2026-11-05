@@ -1,0 +1,23 @@
+---
+// Not found. Built to dist/404.html, which Cloudflare Pages serves with status 404 for any
+// path no file matches (without it Pages serves the homepage with 200). Retired tool pages end
+// here too (SWITCH-OVER-READINESS.md). Out of the sitemap (EXCLUDED_PATHS) and noindex.
+import Base from "../layouts/Base.astro";
+---
+<Base title="Page not found" description="This page does not exist." noindex>
+  <section class="page-head">
+    <div class="container">
+      <div class="stack">
+        <p class="label">404</p>
+        <h1 class="t-campaign">This page does not exist</h1>
+        <p class="t-lead">The address may be mistyped, or the page may have been retired. These are the places to look instead.</p>
+        <p>
+          <a class="btn btn-primary" href="/tools">Browse the tools</a>
+          <a class="btn btn-secondary" href="/docs">Read the docs</a>
+          <a class="btn btn-secondary" href="/guides">Guides</a>
+          <a class="btn btn-secondary" href="/">Home</a>
+        </p>
+      </div>
+    </div>
+  </section>
+</Base>
