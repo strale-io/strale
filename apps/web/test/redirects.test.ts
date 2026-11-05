@@ -124,6 +124,9 @@ test("the redirect targets are the ones SITE-STRUCTURE.md names", () => {
   assert.deepEqual(outcome("/integrations"), { kind: "redirect", to: "/docs" });
   assert.deepEqual(outcome("/design-system"), { kind: "redirect", to: "/" });
   assert.deepEqual(outcome("/openapi.json"), { kind: "external", to: "https://api.strale.io/openapi.json" });
+  assert.deepEqual(outcome("/.well-known/agent-card.json"), { kind: "external", to: "https://api.strale.io/.well-known/agent-card.json" });
+  // The two cards and llms.txt that the site itself serves are not redirected.
+  for (const p of ["/.well-known/agent.json", "/.well-known/mcp.json", "/llms.txt"]) assert.ok(!resolveRedirect(rules, p), p);
 });
 
 test("redirects are permanent and /audit/* is a rewrite that keeps the address", () => {
@@ -162,4 +165,13 @@ test("assets and headers that live URLs depend on ship in public/", () => {
   assert.match(headers, /^https:\/\/:version\.:project\.pages\.dev\/\*\n  X-Robots-Tag: noindex$/m);
   const siteWide = headers.split(/\n(?=\S)/).find((b) => b.startsWith("/*\n"))!;
   assert.doesNotMatch(siteWide, /X-Robots-Tag/);
+  // The machine-readable files (SWITCH-OVER-READINESS item 6): exact paths, so a future
+  // /.well-known/security.txt does not get a JSON content type.
+  const block = (path: string) => headers.split(/\n\s*\n/).find((b) => b.split("\n")[0].trim() === path) ?? "";
+  for (const [path, type] of [["/.well-known/agent.json", "application/json"], ["/.well-known/mcp.json", "application/json"], ["/llms.txt", "text/plain"]] as const) {
+    const b = block(path);
+    assert.match(b, new RegExp(`^\\s+Content-Type: ${type.replace("/", "\\/")}; charset=utf-8$`, "m"), path);
+    assert.match(b, /^\s+Access-Control-Allow-Origin: \*$/m, path);
+  }
+  assert.doesNotMatch(headers, /^\/\.well-known\/\*/m);
 });

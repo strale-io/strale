@@ -83,3 +83,6 @@
 
 # The OpenAPI document lives on the API host (the old site served a copy).
 /openapi.json  https://api.strale.io/openapi.json  301
+
+# The API serves the canonical A2A agent card; the site card is a pointer to it.
+/.well-known/agent-card.json  https://api.strale.io/.well-known/agent-card.json  301
