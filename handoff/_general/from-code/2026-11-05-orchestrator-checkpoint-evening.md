@@ -38,3 +38,13 @@ Intent: orchestrator checkpoint, 2026-11-05 evening, after the account takeover 
 ## Gate finding this session could not clear
 
 The handoff gate reports the remote branch `worktree-bridge-cse_01RFNL6Vx2oGTueVVUhYjN7M` as merged. It belongs to the previous orchestrator session and its tip, `ad41a59b` (#901), is an ancestor of `main`, so deleting it loses nothing. This session's git access refuses the delete: the proxy disconnects, because only the session's own branch can be pushed. Petter, or a session with branch-delete access, should run `git push origin --delete worktree-bridge-cse_01RFNL6Vx2oGTueVVUhYjN7M`.
+
+## Codex for Strale: on hold
+
+- **Decision:** at about 17:10 Swedish time Petter decided, relayed by the wow-core master, that Strale uses Codex like the other projects. This replaces "Strale builds on Claude for now".
+- **Hold:** the wow-core master then put the environment form on hold. Petter wants the shared setup (wow-core's `.claude/scripts/cloud-setup.sh` reading `.claude/cloud.json`), not a Strale-specific setup command, and the comms profile does not ship it to Strale yet.
+- **Next step:** when the shared kit reaches Strale, give Petter the Legacy Codex Cloud form values and record the environment ID as `codexEnv` in `.claude/cloud.json` by PR. Until then, Strale builds on Claude.
+- **Network allowlist, from `package-lock.json` and the install scripts:**
+  - `registry.npmjs.org`;
+  - `github.com`, `objects.githubusercontent.com` and `raw.githubusercontent.com`, needed only for c2pa-node's prebuilt binary and test certificates.
+- **Test variables:** the dummy `AUDIT_HMAC_SECRET` and `FRONTEND_URL` that `ci.yml` already publishes.
