@@ -1,4 +1,10 @@
 {
+  "crossTool": {
+    "roles": [
+      "builder"
+    ],
+    "dec": "DEC-20261101-A"
+  },
   "node": "20",
   "prepare": "npm --workspace=packages/mcp-server run build",
   "env": {
@@ -9,7 +15,7 @@
   "allowDomains": [
     "registry.npmjs.org",
     "github.com",
-    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
     "raw.githubusercontent.com"
   ],
   "testCommand": "npm test",
