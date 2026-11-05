@@ -36,7 +36,7 @@ function parse(argv) {
     done: new Set(['--note', '--from']),
     asks: new Set(['--open', '--project', '--json']),
     digest: new Set(['--channel', '--post', '--now', '--from']),
-    lease: new Set(['--take', '--check', '--add', '--account', '--sessions', '--session', '--parent', '--from', '--json']),
+    lease: new Set(['--take', '--check', '--add', '--account', '--sessions', '--session', '--parent', '--from', '--json', '--authority']),
   }[command];
   if (!allowed) throw new UsageError(`unknown command ${command}`);
   const options = { command };
@@ -45,7 +45,7 @@ function parse(argv) {
     if (command === 'done' && i === 1 && !key.startsWith('--')) { options._ = [key]; continue; }
     if (!allowed.has(key)) throw new UsageError(`unknown argument ${key}`);
     const name = key.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    if (['--peek', '--from-now', '--json', '--open', '--post', '--take', '--check'].includes(key)) {
+    if (['--peek', '--from-now', '--json', '--open', '--post', '--take', '--check', '--authority'].includes(key)) {
       if (options[name]) throw new UsageError(`${key} specified more than once`);
       options[name] = true;
     } else {
@@ -93,6 +93,7 @@ function parse(argv) {
     if (!options.take && takeOnly.length) throw new UsageError(`--${takeOnly[0]} needs --take`);
     if (!options.check && checkOnly.length) throw new UsageError(`--${checkOnly[0]} needs --check`);
     if (options.from !== undefined && !options.take && options.add === undefined) throw new UsageError('--from needs --take or --add');
+    if (options.authority && (options.take || options.check || options.add !== undefined || options.json || options.from !== undefined)) throw new UsageError('--authority stands alone');
     if ((options.take || options.check || options.add !== undefined) && options.json) throw new UsageError('--json only shows the lease');
     if (options.add !== undefined && !/^[a-z0-9][a-z0-9-]{0,62}:(?:session|cse)_[A-Za-z0-9]+$/.test(options.add)) throw new UsageError('--add must be one <project>:<cloud session id>');
     if (options.take) {
@@ -201,6 +202,9 @@ function parseMessage(comment) {
 function messageBody(comment) { return parseMessage(comment)?.body ?? withoutFooter(comment.body); }
 
 // One line, nothing after it but the cloud footer: `LEASE account=<label> sessions=<project>:<id>,...`.
+// A key is a project name, `pc-helper` for the account's standing PC helper session (COMMS_CORE §1; the wow-hook
+// trust gate reads that entry, founder 2026-11-04) or `codex-dispatcher` for the fleet's Codex dispatcher (the
+// wow-hook push attach reads it, founder 2026-11-05). Nothing else treats them differently.
 export function parseLease(body) {
   const match = withoutFooter(body).trim().match(/^LEASE account=([a-z0-9][a-z0-9-]{0,62}) sessions=(\S+)$/);
   if (!match) return null;
@@ -236,6 +240,41 @@ export function leaseVerdict(lease, session, parent, account) {
   return named
     ? { active: true, line: `active: the lease (${since}) names ${named.project}:${named.session}` }
     : { active: false, line: `stand down: the lease (${since}) names neither this session nor its parent; turn off this session's own scheduled tasks, say so in one line to your master or on your PR, and stop` };
+}
+// Who may be the PC helper (founder 2026-11-04; COMMS_CORE §1, the wow-hook trust gate). Anything may post a LEASE
+// line, so the newest lease alone cannot name the helper: only the FIRST `pc-helper` entry of the current account
+// period counts. The period is the run of consecutive leases naming the newest lease's account (it starts at the
+// lease that changed the account); a later, different `pc-helper` entry in it is ignored. Returns the newest
+// lease's account, the `wow-core` entry of the period's first lease (the takeover session, who alone may write
+// a pc-helper entry or change the wow-core entry inside the period) and that first helper.
+// A period that starts within 24 hours after an earlier period of the same account (A→B→A) has no helper at all.
+export function leaseAuthority(comments) {
+  const leases = [...comments].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || Number(a.id) - Number(b.id))
+    .map((comment) => { const message = parseMessage(comment); const lease = message && parseLease(message.body); return lease ? { id: comment.id, createdAt: comment.created_at, ...lease } : null; })
+    .filter(Boolean);
+  if (!leases.length) return null;
+  const newest = leases[leases.length - 1];
+  let start = leases.length - 1;
+  while (start > 0 && leases[start - 1].account === newest.account) start--;
+  const entry = (lease, project) => lease.sessions.find((row) => row.project === project)?.session ?? null;
+  // An A→B→A flip: a period that begins within 24 hours of an earlier period of the SAME account has no helper
+  // authority (a real takeover never returns to an account inside a day; a forged account flip would).
+  let prev = start - 1;
+  while (prev > 0 && leases[prev - 1].account === leases[start - 1]?.account) prev--;
+  const prevPeriodStart = start > 0 ? leases[prev].createdAt : null;
+  const began = Date.parse(leases[start].createdAt);
+  const flipped = leases.slice(0, start).some((lease) => lease.account === newest.account && began - Date.parse(lease.createdAt) < 24 * 3_600_000);
+  // Only a lease that still carries the period's wow-core entry can name the helper: a swapped-in wow-core session
+  // writes lines whose wow-core entry differs, so its pc-helper entry (and any built on its line) never counts.
+  // The Codex dispatcher (`codex-dispatcher`, founder 2026-11-05; the wow-hook push attach) is named the same way.
+  const authority = entry(leases[start], 'wow-core');
+  const firstOf = (key) => (flipped || !authority ? null : leases.slice(start).find((lease) => entry(lease, 'wow-core') === authority && entry(lease, key)) ?? null);
+  const first = firstOf('pc-helper');
+  const dispatcher = firstOf('codex-dispatcher');
+  // The wow-core entry of the period's FIRST lease (the takeover's --take) is the authority: a later change to the
+  // wow-core entry inside the period (a session swapping itself in with --add) is ignored, as for the helper.
+  return { account: newest.account, periodStart: leases[start].createdAt, prevPeriodStart, wowCore: entry(leases[start], 'wow-core'), pcHelper: first ? entry(first, 'pc-helper') : null, pcHelperLease: first ? first.id : null,
+    codexDispatcher: dispatcher ? entry(dispatcher, 'codex-dispatcher') : null, codexDispatcherLease: dispatcher ? dispatcher.id : null, ...(flipped ? { flipped: true } : {}) };
 }
 // A master restarted after the takeover adds itself: the newest lease with its project's entry replaced.
 export function leaseWith(lease, entry) {
@@ -426,6 +465,7 @@ async function main() {
       const comment = await sendMessage(LEASE_CHANNEL, options.from, `LEASE account=${options.account} sessions=${options.sessions}`);
       console.log(`leased ${comment.id}`); return;
     }
+    if (options.authority) { console.log(JSON.stringify(leaseAuthority(await channelComments(LEASE_CHANNEL)))); return; }
     const lease = newestLease(await channelComments(LEASE_CHANNEL));
     if (options.add !== undefined) {
       if (!lease) throw new UsageError('no lease to add to: the takeover takes the first one');
