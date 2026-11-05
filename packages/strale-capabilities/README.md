@@ -74,7 +74,7 @@ interface Capability {
 | **security** | header-security-check, ssl-certificate-chain, port-check |
 | **monitoring** | uptime-check, page-speed-test, redirect-trace |
 
-Full list at [strale.io/capabilities](https://strale.io/capabilities?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Full list at [strale.io/tools](https://strale.io/tools?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Using Capabilities
 
@@ -91,7 +91,7 @@ available capabilities work without an API key: `email-validate`, `dns-lookup`, 
 
 ## Trust & Quality
 
-Testing modes vary by tool. Inspect current test signals, source context and limitations before use. See [strale.io/trust](https://strale.io/trust?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Testing modes vary by tool. Inspect current test signals, source context and limitations before use. See [strale.io/security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Regenerating the Catalog
 
@@ -105,6 +105,6 @@ Fetches the latest capabilities from the Strale API and writes `capabilities.jso
 
 - [Homepage](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - [Documentation](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- [Capabilities](https://strale.io/capabilities?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Capabilities](https://strale.io/tools?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - [GitHub](https://github.com/petterlindstrom79/strale)
 - [MCP Server Card](https://api.strale.io/.well-known/mcp.json)

@@ -25,7 +25,7 @@ console.log(result.output);     // the tool's structured fields
 console.log(result.provenance); // { source, fetched_at }
 ```
 
-`max_price_cents` caps what one call may cost: the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.io/capabilities](https://strale.io/capabilities?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) and in `strale.capability(slug)`.
+`max_price_cents` caps what one call may cost: the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.io/tools](https://strale.io/tools?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) and in `strale.capability(slug)`.
 
 ## Describe the task instead of naming the tool
 
@@ -77,7 +77,7 @@ const res = await fetch("https://api.strale.io/v1/solutions/kyb-essentials-se/ex
 });
 ```
 
-Each bundle's inputs and price are on its page at [strale.io/solutions](https://strale.io/solutions?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Each bundle's inputs and price are on its page at [strale.io/tools](https://strale.io/tools?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Free tools
 

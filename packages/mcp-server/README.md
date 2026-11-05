@@ -243,7 +243,7 @@ npm run dev --workspace=packages/mcp-server
 
 Full API documentation: [strale.io/docs](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
-Quality methodology: [strale.io/trust/methodology](https://strale.io/trust/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+Quality methodology: [strale.io/security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## Contributing
 
@@ -278,7 +278,7 @@ Eligible Strale tools are also available via [x402](https://x402.org) — the HT
 - 📖 [Documentation](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
 - 💰 [Pricing](https://strale.io/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔍 [Quality methodology](https://strale.io/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 🔒 [Security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## License

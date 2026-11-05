@@ -66,7 +66,7 @@ verifyRoute.get("/:transactionId", async (c) => {
         created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
         status: txn.status,
       },
-      methodology_url: "https://strale.io/trust/methodology",
+      methodology_url: "https://strale.io/security",
     });
   }
 
@@ -225,7 +225,7 @@ verifyRoute.get("/:transactionId", async (c) => {
       status: txn.status,
       ...(targetRedacted ? { redacted_at: txn.redactedAt instanceof Date ? txn.redactedAt.toISOString() : txn.redactedAt } : {}),
     },
-    methodology_url: "https://strale.io/trust/methodology",
+    methodology_url: "https://strale.io/security",
   });
 });
 

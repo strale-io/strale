@@ -152,7 +152,7 @@ Eligible Strale tools are also available via [x402](https://x402.org) — the HT
 - 📖 [Documentation](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
 - 💰 [Pricing](https://strale.io/pricing?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔍 [Quality methodology](https://strale.io/methodology?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 🔒 [Security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 This JavaScript integration uses the community `semantic-kernel` npm port. It is not Microsoft’s official .NET or Python Semantic Kernel SDK.

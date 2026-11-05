@@ -61,7 +61,7 @@ iban-validate, email-validate, dns-lookup, json-repair, url-to-markdown
 POST https://api.strale.io/v1/suggest
 {"query": "check if a company is on a sanctions list"}
 
-Or browse: https://strale.io/capabilities
+Or browse: https://strale.io/tools
 
 ## Credentials
 

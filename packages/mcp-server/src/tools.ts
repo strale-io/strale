@@ -1121,7 +1121,7 @@ Use strale_trust_profile for the current batch projection: badge, tested flag, r
 API-key calls expose transaction records through strale_transaction. Audit access and source fields vary by rail and execution mode; check the response. Eligible tools can also be paid through x402 without a Strale account.
 
 Live catalogue facts: https://api.strale.io/v1/platform/facts
-Public methodology: https://strale.io/trust/methodology`;
+Public methodology: https://strale.io/security`;
 
       const text = opts.connector
         ? methodologyText.replace(" Eligible tools can also be paid through x402 without a Strale account.", "")

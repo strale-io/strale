@@ -36,7 +36,7 @@ const WELCOME_TEMPLATE = {
     documentation: "https://strale.io/docs",
     openapi: "https://api.strale.io/openapi.json",
     pricing: "https://api.strale.io/v1/pricing",
-    changelog: "https://strale.io/changelog",
+    changelog: "https://strale.io/docs",
     status: "https://api.strale.io/status",
     signup: "https://strale.io/signup",
     mcp_server: "https://api.strale.io/mcp",
@@ -68,8 +68,8 @@ const WELCOME_TEMPLATE = {
 
   documentation: {
     docs: "https://strale.io/docs",
-    api_reference: "https://strale.io/api-reference",
-    quickstart: "https://strale.io/docs/quickstart",
+    api_reference: "https://strale.io/docs/api",
+    quickstart: "https://strale.io/docs",
     changelog: "https://api.strale.io/changelog",
     status: "https://api.strale.io/status",
   },
@@ -258,7 +258,7 @@ Free trial: €2.00 credits for a first-time email address, no credit card requi
 - MCP server: https://api.strale.io/mcp
 - Agent card: https://api.strale.io/.well-known/agent-card.json
 - Pricing: https://api.strale.io/v1/pricing
-- Changelog: https://strale.io/changelog
+- Changelog: https://strale.io/docs
 - Status: https://api.strale.io/status
 
 ## Authentication
@@ -405,7 +405,7 @@ welcomeRoute.get("/status", (c) => {
     status: "operational",
     health_endpoint: "https://api.strale.io/health",
     uptime_check: "https://api.strale.io/health",
-    changelog: "https://strale.io/changelog",
+    changelog: "https://strale.io/docs",
     incidents: [],
   });
 });
@@ -413,13 +413,13 @@ welcomeRoute.get("/status", (c) => {
 // ─── Redirect routes ────────────────────────────────────────────────────────
 
 const REDIRECTS: Array<[string, string]> = [
-  ["/changelog", "https://strale.io/changelog"],
+  ["/changelog", "https://strale.io/docs"],
   ["/terms", "https://strale.io/terms"],
   ["/terms-of-service", "https://strale.io/terms"],
   ["/privacy", "https://strale.io/privacy"],
   ["/docs", "https://strale.io/docs"],
   ["/developers", "https://strale.io/docs"],
-  ["/api-reference", "https://strale.io/api-reference"],
+  ["/api-reference", "https://strale.io/docs/api"],
   ["/signup", "https://strale.io/signup"],
 ];
 
@@ -493,7 +493,6 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://api.strale.io/llms-full.txt</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
   <url><loc>https://strale.io/docs</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://strale.io/pricing</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://strale.io/changelog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://strale.io/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://strale.io/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://strale.io/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>

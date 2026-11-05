@@ -199,7 +199,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
     ${sectionHeader("🌐", "Website Traffic")}
     <tr><td style="padding: 4px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px;">
-        <tr><td style="padding: 3px 0; color: ${MUTED};">strale.dev</td><td style="padding: 3px 0; text-align: right; color: ${wt.straleDev.available ? TEXT : NEUTRAL};">${escHtml(wt.straleDev.note)}</td></tr>
+        <tr><td style="padding: 3px 0; color: ${MUTED};">strale.io</td><td style="padding: 3px 0; text-align: right; color: ${wt.straleDev.available ? TEXT : NEUTRAL};">${escHtml(wt.straleDev.note)}</td></tr>
         <tr><td style="padding: 3px 0; color: ${MUTED};">scan.strale.io</td><td style="padding: 3px 0; text-align: right; color: ${wt.beacon.available ? TEXT : NEUTRAL};">${escHtml(wt.beacon.note)}</td></tr>
       </table>
     </td></tr>`;

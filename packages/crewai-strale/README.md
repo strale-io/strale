@@ -114,5 +114,5 @@ Eligible Strale tools are also available via [x402](https://x402.org) — the HT
 - 📖 [Documentation](https://strale.io/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
 - 💰 [Pricing](https://strale.io/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- 🔍 [Quality methodology](https://strale.io/methodology?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- 🔍 [Quality methodology](https://strale.io/security?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - 🔒 [Security](https://strale.io/security?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)

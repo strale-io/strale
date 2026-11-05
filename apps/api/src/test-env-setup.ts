@@ -18,7 +18,7 @@ process.env.ADMIN_SECRET ??=
 // redirect URLs must come from a server-controlled var). Any test that
 // imports app.ts transitively imports wallet.ts and crashes if the var
 // is unset. Use the production frontend URL because audit-token.test
-// asserts the shareable URL starts with https://strale.dev/audit/...
+// asserts the shareable URL starts with the configured frontend host (strale.io after the switch-over)
 process.env.FRONTEND_URL ??= "https://strale.io";
 
 // ── Credential scrub (incident 2026-08-22: STARVE-SET-1) ────────────────────

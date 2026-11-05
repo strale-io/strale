@@ -128,7 +128,7 @@ GET https://api.strale.io/v1/capabilities/vat-validate
 ```
 
 Every capability publishes its limitations honestly, including coverage
-gaps. Methodology: [strale.io/quality](https://strale.io/quality?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+gaps. Methodology: [strale.io/security](https://strale.io/security?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ### IDE rules for safe data handling
 

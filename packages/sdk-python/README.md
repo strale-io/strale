@@ -26,7 +26,7 @@ print(result.output)      # the tool's structured fields
 print(result.provenance)  # Provenance(source=..., fetched_at=...)
 ```
 
-`do()` takes a `DoRequest` and returns a `DoResponse`, or a `DryRunResponse` when `dry_run=True` (the return type is the union of the two). `max_price_cents` is required: it caps what one call may cost, and the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.io/capabilities](https://strale.io/capabilities?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) and in `strale.capability(slug)`.
+`do()` takes a `DoRequest` and returns a `DoResponse`, or a `DryRunResponse` when `dry_run=True` (the return type is the union of the two). `max_price_cents` is required: it caps what one call may cost, and the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.io/tools](https://strale.io/tools?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) and in `strale.capability(slug)`.
 
 ## Describe the task instead of naming the tool
 
@@ -81,7 +81,7 @@ res = httpx.post(
 )
 ```
 
-Each bundle's inputs and price are on its page at [strale.io/solutions](https://strale.io/solutions?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Each bundle's inputs and price are on its page at [strale.io/tools](https://strale.io/tools?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Free tools
 

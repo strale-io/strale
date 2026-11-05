@@ -272,7 +272,7 @@ transactionsRoute.get(
           created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
           status: txn.status,
         },
-        methodology_url: "https://strale.io/trust/methodology",
+        methodology_url: "https://strale.io/security",
       });
     }
 
@@ -330,7 +330,7 @@ transactionsRoute.get(
         data_jurisdiction: txn.dataJurisdiction,
         status: txn.status,
       },
-      methodology_url: "https://strale.io/trust/methodology",
+      methodology_url: "https://strale.io/security",
     });
   },
 );
