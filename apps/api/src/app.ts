@@ -12,6 +12,7 @@ import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
 import { fireAndForget } from "./lib/fire-and-forget.js";
 import { requestContext } from "./middleware/request-context.js";
+import { xffShapeLogger } from "./middleware/xff-shape.js";
 import type { AppEnv } from "./types.js";
 import { doRoute } from "./routes/do.js";
 import { doBatchRoute } from "./routes/do-batch.js";
@@ -73,6 +74,10 @@ export const app = new Hono<AppEnv>();
 // middleware/request-context.ts. Mounted first so every subsequent handler
 // has a populated `c.get("log")`.
 app.use("*", requestContext());
+
+// TEMPORARY (incident 2026-11-05): logs the X-Forwarded-For shape, no addresses,
+// at most 200 lines per process. Remove once the receipt is written.
+app.use("*", xffShapeLogger());
 
 // Global error handler — never leak internals to client.
 //
