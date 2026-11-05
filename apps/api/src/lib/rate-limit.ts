@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import { apiError } from "./errors.js";
-import { clientIpOrNull } from "./client-ip.js";
+import { clientIpOrNull, isLoopbackPeer } from "./client-ip.js";
 
 // ─── Sliding window counter ────────────────────────────────────────────────────
 // In-memory store keyed by identifier. Each entry tracks request timestamps
@@ -175,6 +175,12 @@ const rateLimitIp = clientIpOrNull;
  */
 export function consumeIpRate(c: Context, maxRequests: number, windowMs: number, scope?: string): Response | null {
   const ip = rateLimitIp(c);
+  // No usable client IP AND a loopback TCP peer: an in-process self-call (MCP
+  // trust prewarm / trust-profile tool). Not an internet client, so no IP limit,
+  // as before WP12 batch 4. A loopback peer with a usable public X-Forwarded-For
+  // is keyed on that IP as usual; with an internal-only one it is still a
+  // self-call. See isLoopbackPeer in client-ip.ts.
+  if (ip === null && isLoopbackPeer(c)) return null;
   // No usable client IP: fail closed on one shared "unknown" bucket rather than
   // letting unidentifiable callers skip the limit (WP12 batch 4 review).
   // A scope gives a route its own bucket instead of sharing the IP's.

@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import ts from "typescript";
 
-import { clientIpFromHeaders, normalizeIp, TRUSTED_PROXY_HOPS } from "./client-ip.js";
+import { isLoopbackPeer, clientIpFromHeaders, normalizeIp, TRUSTED_PROXY_HOPS } from "./client-ip.js";
 import { getClientIp } from "./middleware.js";
 import { rateLimitByIp } from "./rate-limit.js";
 
@@ -162,6 +162,50 @@ describe("call sites go through the rule (planted failure: left-most / X-Real-IP
     const statuses: number[] = [];
     for (let i = 0; i < 4; i++) statuses.push((await app.request("/", { headers: { "x-real-ip": "10.0.0.1" } })).status);
     expect(statuses).toEqual([200, 200, 429, 429]);
+  });
+});
+
+describe("loopback self-calls (MCP trust prewarm)", () => {
+  const env = (addr: string) => ({ incoming: { socket: { remoteAddress: addr, remotePort: 1, remoteFamily: "IPv4" } } });
+  const mk = (scope: string) => {
+    const app = new Hono();
+    app.use("*", rateLimitByIp(120, 60_000, scope));
+    app.get("/v1/public/ops/trust/x", (c) => c.text("ok"));
+    return app;
+  };
+  const call = (app: Hono, addr: string | null, headers: Record<string, string> = {}) =>
+    app.request("/v1/public/ops/trust/x", { headers }, addr === null ? undefined : env(addr)).then((r) => r.status);
+
+  it("isLoopbackPeer: 127/8, ::1, mapped 127; not private or public; false without a socket", () => {
+    const c = (a: string) => ({ env: env(a) }) as never;
+    expect(isLoopbackPeer(c("127.0.0.1"))).toBe(true);
+    expect(isLoopbackPeer(c("::1"))).toBe(true);
+    expect(isLoopbackPeer(c("::ffff:127.0.0.1"))).toBe(true);
+    expect(isLoopbackPeer(c("10.0.0.5"))).toBe(false);
+    expect(isLoopbackPeer(c("203.0.113.7"))).toBe(false);
+    expect(isLoopbackPeer({ env: undefined } as never)).toBe(false);
+  });
+
+  it("(a)(d) loopback peer, no X-Forwarded-For: 300 calls (> 120/min) are never limited", async () => {
+    const app = mk("lo-a");
+    for (let i = 0; i < 300; i++) expect(await call(app, "127.0.0.1")).toBe(200);
+  });
+
+  it("(b) non-loopback peer, no X-Forwarded-For: shared unknown bucket, 429 past the limit", async () => {
+    const app = mk("lo-b");
+    const statuses: number[] = [];
+    for (let i = 0; i < 125; i++) statuses.push(await call(app, "10.1.2.3"));
+    expect(statuses.slice(0, 120).every((s) => s === 200)).toBe(true);
+    expect(statuses.slice(120)).toEqual([429, 429, 429, 429, 429]);
+    expect(await call(mk("lo-b2"), null)).toBe(200); // no socket info: still counted, fresh scope
+  });
+
+  it("(c) loopback peer: internal-only X-Forwarded-For is still a self-call; a public one is keyed on that IP", async () => {
+    const app = mk("lo-c");
+    for (let i = 0; i < 150; i++) expect(await call(app, "127.0.0.1", { "x-forwarded-for": "10.0.0.5" })).toBe(200);
+    const statuses: number[] = [];
+    for (let i = 0; i < 125; i++) statuses.push(await call(app, "127.0.0.1", { "x-forwarded-for": "198.51.100.20" }));
+    expect(statuses.slice(120)).toEqual([429, 429, 429, 429, 429]);
   });
 });
 

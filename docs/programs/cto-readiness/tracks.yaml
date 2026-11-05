@@ -1103,7 +1103,9 @@ tracks:
       Review round 1 (2026-11-05): clientIpFromHeaders walks X-Forwarded-For from the
       right, skips internal-range hops (private, loopback, CGNAT, link-local, ULA,
       mapped forms) and takes the first public entry; consumeIpRate fails closed on
-      a shared unknown bucket. Post-deploy condition: run
+      a shared unknown bucket, except a loopback TCP peer with no usable client IP
+      (the MCP trust prewarm and trust-profile self-calls), which skips the IP limit as
+      before (isLoopbackPeer in client-ip.ts). Post-deploy condition: run
       apps/api/scripts/verify-ip-probe.mjs from two different egress IPs; it asserts
       the API's ipHash equals sha256 of the probe machine's own public IP. Revert the
       deploy if identity is not the probe's own IP.

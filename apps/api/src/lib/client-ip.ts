@@ -32,6 +32,7 @@
  */
 
 import { isIP } from "node:net";
+import { getConnInfo } from "@hono/node-server/conninfo";
 
 /** Proxies between the internet and this process that append to X-Forwarded-For. */
 export const TRUSTED_PROXY_HOPS = 1;
@@ -112,4 +113,24 @@ export function clientIpFromHeaders(get: HeaderGetter): string | null {
 /** Same, for Hono contexts and anything with `req.header(name)`. */
 export function clientIpOrNull(c: { req: { header(name: string): string | undefined } }): string | null {
   return clientIpFromHeaders((n) => c.req.header(n));
+}
+
+/**
+ * True when the TCP peer of this request is the loopback interface: an
+ * in-process or same-host self-call (the MCP route's trust prewarm and its
+ * trust-profile tool call this API over localhost with no X-Forwarded-For).
+ * Internet traffic always arrives from Railway's edge over the internal
+ * network, never on loopback, so a loopback peer is never an internet client.
+ * Any failure to read the socket (no Node server, a test harness) is false:
+ * callers then treat the request as an unidentified one and fail closed.
+ */
+export function isLoopbackPeer(c: Parameters<typeof getConnInfo>[0]): boolean {
+  try {
+    const addr = getConnInfo(c).remote.address;
+    if (!addr) return false;
+    const v = addr.toLowerCase().replace(/^::ffff:/, "");
+    return v === "::1" || (isIP(v) === 4 && v.startsWith("127."));
+  } catch {
+    return false;
+  }
 }
