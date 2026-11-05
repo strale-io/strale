@@ -25,7 +25,10 @@ import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import ts from "typescript";
 
-import { isLoopbackPeer, clientIpFromHeaders, normalizeIp, TRUSTED_PROXY_HOPS } from "./client-ip.js";
+import {
+  isLoopbackPeer, clientIpFromHeaders, normalizeIp, TRUSTED_PROXY_HOPS,
+  noteXffShape, publicEntryCount, resetXffShapeWarning, SHAPE_WARN_INTERVAL_MS,
+} from "./client-ip.js";
 import { getClientIp } from "./middleware.js";
 import { rateLimitByIp } from "./rate-limit.js";
 
@@ -139,6 +142,12 @@ describe("clientIpFromHeaders: other shapes", () => {
     expect(fromHeaders(xff("203.0.113.7", "10.0.0.5"))).toBe("203.0.113.7");
   });
 
+  it("an internal entry LEFT of a lone public one: the public one is the edge, so null, never the edge (review M3)", () => {
+    expect(fromHeaders(xff("100.64.1.2", "192.0.2.10"))).toBeNull();
+    expect(fromHeaders(xff("10.0.0.5", "192.0.2.10"))).toBeNull();
+    expect(fromHeaders(xff("10.0.0.5", "192.0.2.10", "10.0.0.9"))).toBeNull();
+  });
+
   it("only internal entries means no public client", () => {
     expect(fromHeaders(xff("10.0.0.5"))).toBeNull();
     expect(fromHeaders(xff("10.0.0.5", "192.168.0.1"))).toBeNull();
@@ -160,6 +169,31 @@ describe("clientIpFromHeaders: other shapes", () => {
     for (const bad of ["", "abc", "1.2.3", "1.2.3.4.5", "256.0.0.1", "::g", "1:2:3:4:5:6:7:8:9"]) {
       expect(normalizeIp(bad)).toBeNull();
     }
+  });
+});
+
+describe("shape alarm: a header that is not <client>, <edge> is logged, address-free and throttled", () => {
+  it("publicEntryCount counts public entries; null on garbage", () => {
+    expect(publicEntryCount("198.51.100.7, 192.0.2.10")).toBe(2);
+    expect(publicEntryCount("198.51.100.7, 192.0.2.10, 10.0.0.1")).toBe(2);
+    expect(publicEntryCount("198.51.100.7, 192.0.2.10, 192.0.2.11")).toBe(3);
+    expect(publicEntryCount("198.51.100.7")).toBe(1);
+    expect(publicEntryCount("junk, 192.0.2.10")).toBeNull();
+  });
+
+  it("the measured shape never warns; another shape warns once per interval, with no address in the payload", () => {
+    resetXffShapeWarning();
+    const calls: Array<[object, string]> = [];
+    const warn = (o: object, m: string) => { calls.push([o, m]); };
+    expect(noteXffShape("198.51.100.7, 192.0.2.10", 1_000, warn)).toBe(false);
+    expect(noteXffShape(undefined, 1_000, warn)).toBe(false);
+    expect(noteXffShape("198.51.100.7, 192.0.2.10, 192.0.2.11", 1_000, warn)).toBe(true);
+    expect(noteXffShape("198.51.100.7", 2_000, warn)).toBe(false);
+    expect(noteXffShape("198.51.100.7", 1_000 + SHAPE_WARN_INTERVAL_MS, warn)).toBe(true);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]![0]).toMatchObject({ label: "xff-shape-unexpected", public_entries: 3, total_entries: 3, expected_public_entries: 2 });
+    for (const [o, m] of calls) expect(JSON.stringify(o) + m).not.toMatch(/\d+\.\d+\.\d+\.\d+|[0-9a-f]+:[0-9a-f:]+/i);
+    resetXffShapeWarning();
   });
 });
 

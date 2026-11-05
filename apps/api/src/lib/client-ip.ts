@@ -28,9 +28,17 @@
  *
  * Under today's "replace" behaviour this rule gives the same answer as the
  * old left-most read. What it adds is safety if Railway ever starts
- * APPENDING: then the header is `<client-typed...>, <client>, <edge>`, and
- * the left-most entry would be whatever the client typed, while this rule
- * still lands on the real client.
+ * APPENDING while still adding its own entry: then the header is
+ * `<client-typed...>, <client>, <edge>`, and the left-most entry would be
+ * whatever the client typed, while this rule still lands on the real client.
+ * (If Railway appended the client but not itself, this rule would pick a
+ * client-typed value: no worse than the left-most read.)
+ *
+ * What it trades: if a SECOND public hop ever appears (a CDN in front, or a
+ * Railway change), the rule would return that hop's neighbour, the #910
+ * collapse class. clientIpOrNull therefore logs an address-free warning,
+ * at most once per SHAPE_WARN_INTERVAL_MS, whenever a request's public-entry
+ * count is not exactly TRUSTED_PROXY_HOPS + 1.
  *
  * X-Real-IP and CF-Connecting-IP are never read: nothing this rule trusts
  * needs them. If a CDN is ever put in front of the API, raise
@@ -42,8 +50,12 @@
 
 import { isIP } from "node:net";
 import { getConnInfo } from "@hono/node-server/conninfo";
+import { log } from "./log.js";
 
-/** Proxies between the internet and this process that append to X-Forwarded-For. */
+/**
+ * Trusted proxies between the internet and this process that add their own
+ * entry to X-Forwarded-For (Railway's edge writes `<client>, <edge>`).
+ */
 export const TRUSTED_PROXY_HOPS = 1;
 
 /** A header reader: Hono's `c.req.header`, `Headers.get`, or a test double. */
@@ -103,12 +115,15 @@ export function isInternalIp(ip: string): boolean {
  * addresses (Railway's edge); the next public entry is the client, and
  * anything further left is client-typed and never reached.
  *
- * When the list holds exactly one public entry there is nothing to the left
- * of the trusted hop, so that entry is taken as the client: this is the shape
- * an edge that overwrites without adding itself would produce, and it keeps
- * per-client identity (rather than failing every anonymous caller closed) if
- * Railway ever drops its own entry. The receipt shows two entries on every
- * request, so production does not take this branch today.
+ * When the list holds exactly one public entry AND it is the left-most
+ * entry, there is nothing to the left of the trusted hop, so that entry is
+ * taken as the client: this is the shape an edge that overwrites without
+ * adding itself would produce, and it keeps per-client identity (rather than
+ * failing every anonymous caller closed) if Railway ever drops its own entry.
+ * When an internal entry sits LEFT of the lone public one (`10.x, <edge>`),
+ * the public entry is the edge and the client is not usable: null, never the
+ * edge. The receipt shows two public entries on every request, so production
+ * takes neither branch today.
  *
  * An unparseable entry stops the walk with null: it is never skipped to reach
  * one further left. With only internal entries there is no public client:
@@ -119,19 +134,67 @@ export function clientIpFromHeaders(get: HeaderGetter): string | null {
   if (!raw) return null;
   const entries = raw.split(",");
   let lastPublic: string | null = null;
+  let lastPublicIndex = -1;
   let publicSeen = 0;
   for (let i = entries.length - 1; i >= 0; i--) {
     const ip = normalizeIp(entries[i]!);
     if (ip === null) return null;
     if (isInternalIp(ip)) continue;
     lastPublic = ip;
+    lastPublicIndex = i;
     if (++publicSeen === TRUSTED_PROXY_HOPS + 1) return ip;
   }
-  return publicSeen === 1 ? lastPublic : null;
+  return publicSeen === 1 && lastPublicIndex === 0 ? lastPublic : null;
+}
+
+/**
+ * Number of public entries in X-Forwarded-For, or null when an entry does not
+ * parse. Production always shows TRUSTED_PROXY_HOPS + 1 (the receipt).
+ */
+export function publicEntryCount(raw: string): number | null {
+  let n = 0;
+  for (const entry of raw.split(",")) {
+    const ip = normalizeIp(entry);
+    if (ip === null) return null;
+    if (!isInternalIp(ip)) n++;
+  }
+  return n;
+}
+
+/** At most one shape warning per this interval, per process. */
+export const SHAPE_WARN_INTERVAL_MS = 10 * 60_000;
+let lastShapeWarnAt = -Infinity;
+
+/**
+ * Warn (address-free, throttled) when a request's X-Forwarded-For does not
+ * have the measured shape, so a Railway or CDN change is seen rather than
+ * silently re-keying callers. Returns true when it warned (for tests).
+ */
+export function noteXffShape(raw: string | null | undefined, now = Date.now(), warn: (o: object, m: string) => void = defaultWarn): boolean {
+  if (!raw) return false;
+  const count = publicEntryCount(raw);
+  if (count === TRUSTED_PROXY_HOPS + 1) return false;
+  if (now - lastShapeWarnAt < SHAPE_WARN_INTERVAL_MS) return false;
+  lastShapeWarnAt = now;
+  warn(
+    { label: "xff-shape-unexpected", public_entries: count, total_entries: raw.split(",").length, expected_public_entries: TRUSTED_PROXY_HOPS + 1 },
+    "X-Forwarded-For shape differs from the measured <client>, <edge> (lib/client-ip.ts)",
+  );
+  return true;
+}
+
+/** Test hook: forget the last warning time. */
+export function resetXffShapeWarning(): void {
+  lastShapeWarnAt = -Infinity;
+}
+
+function defaultWarn(o: object, m: string): void {
+  log.warn(o, m);
 }
 
 /** Same, for Hono contexts and anything with `req.header(name)`. */
 export function clientIpOrNull(c: { req: { header(name: string): string | undefined } }): string | null {
+  noteXffShape(c.req.header("x-forwarded-for"));
   return clientIpFromHeaders((n) => c.req.header(n));
 }
 

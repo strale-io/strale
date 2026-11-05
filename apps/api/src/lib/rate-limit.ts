@@ -164,7 +164,8 @@ export function consumeKeyUnits(c: Context, units: number, maxUnits: number, win
 
 /**
  * The client IP the limiter keys on, or null when there is none. The rule
- * (right-most X-Forwarded-For entry; X-Real-IP and CF-Connecting-IP ignored)
+ * (the public X-Forwarded-For entry one hop left of Railway's edge; X-Real-IP
+ * and CF-Connecting-IP ignored)
  * and its evidence live in lib/client-ip.ts.
  */
 const rateLimitIp = clientIpOrNull;

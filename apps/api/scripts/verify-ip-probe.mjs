@@ -22,15 +22,19 @@
 // the hash of a value the client typed".
 //
 // The exact check needs a FIXED egress IP. The script samples the egress IP
-// POOL_SAMPLES times before and after the calls; if it sees more than one
-// address (a cloud session, whose egress rotates per connection), the identity
-// result is reported as inconclusive and the process exits 2. Exit 1 is a real
-// mismatch or a spoofed value reaching identity; exit 0 is a pass.
+// (IPv4 from api.ipify.org and IPv6-preferring from api64.ipify.org) before and
+// after the calls; a fixed egress is at most one address per family. If it sees
+// more (a cloud session, whose egress rotates per connection), the identity
+// result is inconclusive: exit 2. A call that is not 200 or carries no ipHash
+// (429, free-tier exhausted) is also inconclusive: exit 3, never an identity
+// failure. Exit 1 is a real mismatch or a spoofed value reaching identity;
+// exit 0 is a pass.
 //
-// Run it from a fixed-egress machine BEFORE merging a change to client-ip.ts
-// (production runs the current rule, and the receipt shows the new rule picks
-// the same entry on today's shape), and again after the deploy. On exit 1 do
-// not merge, or revert the deploy.
+// What each run proves. Run BEFORE merging a change to client-ip.ts, exit 0
+// shows the deployed rule still resolves this machine and that the header
+// still has the shape the receipt measured (the new rule's correctness on that
+// shape is the unit tests). Run AFTER the deploy, it is the real gate for the
+// new rule: on exit 1, revert the deploy.
 //
 // Usage: node scripts/verify-ip-probe.mjs
 import { createHash } from "node:crypto";
@@ -61,7 +65,15 @@ const SPOOFED = ["203.0.113.77", "8.8.8.8", "1.1.1.1", "8.8.4.4"];
 const hash = (ip) => createHash("sha256").update(ip.toLowerCase()).digest("hex").slice(0, 16);
 
 async function sampleEgress(n, seen) {
-  for (let i = 0; i < n; i++) seen.add((await (await fetch("https://api.ipify.org")).text()).trim());
+  for (let i = 0; i < n; i++) {
+    for (const url of ["https://api.ipify.org", "https://api64.ipify.org"]) {
+      try {
+        seen.add((await (await fetch(url)).text()).trim().toLowerCase());
+      } catch {
+        // api64 is unreachable without IPv6 routing on some hosts; IPv4 alone is fine.
+      }
+    }
+  }
   return seen;
 }
 
@@ -78,25 +90,31 @@ async function main() {
   );
   await sampleEgress(POOL_SAMPLES, egress);
 
-  const fixedEgress = egress.size === 1;
-  const ownIp = fixedEgress ? [...egress][0] : null;
-  const expected = ownIp ? hash(ownIp) : null;
+  const v4 = [...egress].filter((ip) => !ip.includes(":"));
+  const v6 = [...egress].filter((ip) => ip.includes(":"));
+  const fixedEgress = v4.length <= 1 && v6.length <= 1 && egress.size >= 1;
+  const ownIps = fixedEgress ? [...egress] : [];
+  const expected = new Set(ownIps.map(hash));
   const spoofedHashes = new Set(SPOOFED.map(hash));
   const spoofReached = results.some((r) => spoofedHashes.has(r.ipHash));
-  const identityMatches = fixedEgress && results.every((r) => r.ipHash === expected);
+  const callsUsable = results.every((r) => r.status === 200 && typeof r.ipHash === "string");
+  const identityMatches = fixedEgress && callsUsable && results.every((r) => expected.has(r.ipHash));
   const hashes = new Set(results.map((r) => r.ipHash));
   const out = {
     results,
     egress_ips_sampled: [...egress],
     fixed_egress: fixedEgress,
-    own_public_ip: ownIp,
-    expected_ipHash_for_own_ip: expected,
+    own_public_ips: ownIps,
+    expected_ipHashes_for_own_ips: [...expected],
+    calls_usable: callsUsable,
     identity_is_probe_own_ip: fixedEgress ? identityMatches : "inconclusive: egress rotates",
     spoofed_value_reached_identity: spoofReached,
     all_ipHash_identical: hashes.size === 1,
     distinct_ipHash_count: hashes.size,
     conclusion: spoofReached
       ? "FAIL: a client-typed X-Forwarded-For / X-Real-IP value became the identity."
+      : !callsUsable
+        ? "Inconclusive: a call was not 200 or carried no ipHash (rate limit or free-tier allowance?). Retry later."
       : !fixedEgress
         ? "Inconclusive: this machine's egress IP rotates, so identity cannot be matched exactly. Run from a fixed-egress machine."
         : identityMatches
@@ -104,8 +122,10 @@ async function main() {
           : "FAIL: an identity is not this machine's own IP (the edge or a proxy hop is being read). Do not merge; revert if deployed.",
   };
   console.log(JSON.stringify(out, null, 2));
-  if (spoofReached || (fixedEgress && !identityMatches)) process.exitCode = 1;
+  if (spoofReached) process.exitCode = 1;
+  else if (!callsUsable) process.exitCode = 3;
   else if (!fixedEgress) process.exitCode = 2;
+  else if (!identityMatches) process.exitCode = 1;
 }
 
 main().catch((e) => {

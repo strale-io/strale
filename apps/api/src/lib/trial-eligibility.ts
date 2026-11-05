@@ -22,9 +22,9 @@
  * **What actually closes it is the UNIQUE index on `trial_grants.email_hash`:
  * one grant per address, enforced by the database.** The per-IP cap below is a
  * speed bump that stops the observed pattern and nothing more sophisticated —
- * (Since WP12 batch 4 `getClientIp` takes the right-most X-Forwarded-For entry,
- * the one Railway's single edge hop supplies (lib/client-ip.ts); a client cannot
- * pick its bucket by typing a header. Many source addresses still defeat a per-IP
+ * (Since WP12 batch 4 `getClientIp` takes the public X-Forwarded-For entry one
+ * hop left of Railway's edge (lib/client-ip.ts); the edge replaces a
+ * client-supplied header, so a client cannot pick its bucket by typing one. Many source addresses still defeat a per-IP
  * cap.) An earlier draft of this file called the cap "the gate that was
  * missing"; that overstated it, and overstating a control is how a package
  * records an exit condition as met when it is not. See MAX_TRIAL_GRANTS_PER_IP.
@@ -70,8 +70,9 @@ export const TRIAL_CREDITS_CENTS = 200;
  * The rule that holds under a hostile client is the UNIQUE index on
  * `trial_grants.email_hash`: one grant per address, enforced by the database.
  *
- * The hop count was confirmed by VERIFY-IP (one hop, archive/receipts/
- * 2026-09-02-audit-verify-ip-proxy-hops.json) and is code in lib/client-ip.ts.
+ * The header shape (`<client>, <railway-edge>`) is measured in
+ * archive/receipts/2026-11-05-audit-xff-shape-production.json and is code in
+ * lib/client-ip.ts.
  */
 export const MAX_TRIAL_GRANTS_PER_IP = 5;
 
