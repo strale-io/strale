@@ -1,0 +1,46 @@
+name: Website daily rebuild
+
+# The public site (apps/web) is a static build that reads tools, prices and
+# counts from the live API at build time, so it goes stale unless it is rebuilt.
+# Once a day this calls the Cloudflare Pages deploy hook of the strale-web
+# project, which rebuilds `main` (SWITCH-OVER-READINESS item 8).
+#
+# The hook URL is the repository secret CF_PAGES_DEPLOY_HOOK, created by Petter
+# in the Pages project (Settings > Build > Deploy hooks). Anyone holding the URL
+# can start a build, so it is never printed. The job holds no other secret and
+# its token has no permissions.
+
+on:
+  schedule:
+    # 03:17 UTC: 04:17 Swedish time in winter, 05:17 in summer.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: web-daily-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    if: github.repository == 'strale-io/strale'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger the Cloudflare Pages build
+        env:
+          HOOK: ${{ secrets.CF_PAGES_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::The repository secret CF_PAGES_DEPLOY_HOOK is not set."
+            exit 1
+          fi
+          case "$HOOK" in
+            https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/*) ;;
+            *) echo "::error::CF_PAGES_DEPLOY_HOOK is not a Cloudflare Pages deploy hook URL."; exit 1 ;;
+          esac
+          curl --fail --silent --show-error --max-time 30 \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            -X POST "$HOOK" -o response.json
+          node -e 'const r = require("./response.json"); if (!r.success) { console.error("Cloudflare did not accept the build:", JSON.stringify(r.errors)); process.exit(1); } console.log("Build queued:", r.result && r.result.id);'
