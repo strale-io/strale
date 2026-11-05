@@ -35,9 +35,7 @@
 /learn/uk-company-verification-agent  /company-data/united-kingdom  301
 /learn/german-company-data-agent  /company-data/germany  301
 /guides/swedish-company-lookup-api  /company-data/sweden  301
-/guides/swedish-company-data  /company-data/sweden  301
 /guides/norwegian-company-lookup-api  /company-data/norway  301
-/guides/norwegian-company-data  /company-data/norway  301
 # The rest keep their slug under /guides (built in a separate lane).
 /learn  /guides  301
 /learn/*  /guides/:splat  301

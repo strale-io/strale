@@ -13,7 +13,7 @@ import { coverage } from "../src/lib/site-data.ts";
 const web = resolve(import.meta.dirname, "..");
 const rules = parseRedirects(readFileSync(resolve(web, "public/_redirects"), "utf8"));
 
-// strale-frontend src/data/learnGuides.ts (49 slugs, served at /learn/:slug) and guides.ts (8, at /guides/:slug).
+// strale-frontend src/data/learnGuides.ts (49 slugs, served at /learn/:slug) and guides.ts (6, at /guides/:slug).
 const LEARN = [
   "iban-validation-langchain-python", "iban-validation-pydantic-ai", "iban-validation-crewai", "vat-validation-python-agent",
   "vat-validation-openai-agents", "swift-bic-validation-agent", "iban-validation-mcp", "multi-currency-iban-validation",
@@ -28,12 +28,12 @@ const LEARN = [
   "strale-do-natural-language", "mcp-server-claude-code-setup", "mcp-server-cursor-setup", "strale-openai-agents-sdk",
   "audit-trail-compliance-agent", "google-adk-strale-agent",
 ];
-const GUIDES = ["swedish-company-lookup-api", "swedish-company-data", "norwegian-company-lookup-api", "norwegian-company-data", "vat-number-validation-api", "free-apis-for-ai-agents", "x402-pay-per-call-api", "sanctions-pep-adverse-media-comparison"];
+const GUIDES = ["swedish-company-lookup-api", "norwegian-company-lookup-api", "vat-number-validation-api", "free-apis-for-ai-agents", "x402-pay-per-call-api", "sanctions-pep-adverse-media-comparison"];
 // SITE-STRUCTURE.md section 11: pruned (deprecated packages, scraping framing) go to /guides.
 const PRUNED = ["iban-validation-pydantic-ai", "sanctions-check-pydantic-ai", "google-adk-strale-agent", "vat-validation-openai-agents", "company-data-openai-agents", "strale-openai-agents-sdk", "web-scraping-agent-anti-bot"];
 // Country guides fold into the country pages.
 const FOLDED_LEARN: Record<string, string> = { "swedish-company-lookup-agent": "sweden", "uk-company-verification-agent": "united-kingdom", "german-company-data-agent": "germany" };
-const FOLDED_GUIDES: Record<string, string> = { "swedish-company-lookup-api": "sweden", "swedish-company-data": "sweden", "norwegian-company-lookup-api": "norway", "norwegian-company-data": "norway" };
+const FOLDED_GUIDES: Record<string, string> = { "swedish-company-lookup-api": "sweden", "norwegian-company-lookup-api": "norway" };
 // The guides the other lane is expected to build: every old slug minus the pruned and the folded.
 const CARRY_OVER_LEARN = [
   "iban-validation-langchain-python", "iban-validation-crewai", "vat-validation-python-agent", "swift-bic-validation-agent", "iban-validation-mcp",
@@ -142,9 +142,13 @@ test("no rule shadows any page the build emits", () => {
 });
 
 test("assets and headers that live URLs depend on ship in public/", () => {
-  for (const f of ["favicon-32x32.png", "apple-touch-icon.png", "og-image.png"]) assert.ok(existsSync(resolve(web, "public", f)), f);
+  for (const f of ["apple-touch-icon.png", "og-image.png"]) assert.ok(existsSync(resolve(web, "public", f)), f);
+  // favicon-32x32.png is the S mark, copied from the brand kit before every build (not tracked).
+  assert.match(readFileSync(resolve(web, "scripts/prepare-assets.mjs"), "utf8"), /`\$\{marks\}\/favicon-32\.png`, "favicon-32x32\.png"/);
   const headers = readFileSync(resolve(web, "public/_headers"), "utf8");
-  assert.match(headers, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
+  assert.match(headers, /Strict-Transport-Security: max-age=31536000\b/);
+  // No includeSubDomains until every strale.io subdomain is confirmed HTTPS-only (DEC-20261105-A).
+  assert.doesNotMatch(headers, /includeSubDomains/);
   assert.match(headers, /X-Content-Type-Options: nosniff/);
   assert.match(headers, /Referrer-Policy: strict-origin-when-cross-origin/);
   assert.doesNotMatch(headers, /Content-Security-Policy/);
