@@ -28,6 +28,7 @@ import { readBearer } from "../lib/bearer-placeholder.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import type { AppEnv } from "../types.js";
+import { clientIpOrNull } from "../lib/client-ip.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -396,7 +397,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
 export const agentCardRoute = new Hono();
 
 agentCardRoute.get("/", async (c) => {
-  recordDiscoveryHit("/.well-known/agent-card.json", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
+  recordDiscoveryHit("/.well-known/agent-card.json", c.req, { src: c.req.query("src"), ip: (clientIpOrNull(c) ?? undefined) });
   const { card, etag } = await buildAgentCard();
 
   // Conditional request support (304 Not Modified)

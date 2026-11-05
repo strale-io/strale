@@ -173,8 +173,8 @@ it("caches results and failures for 30 seconds, coalesces reads, and limits IPs"
       expect(read).toHaveBeenCalledTimes(2);
     }
     const route = createHealthJobsRoute(async () => []);
-    for (let i = 0; i < 6; i++) expect((await route.request("/", { headers: { "x-real-ip": "192.0.2.123" } })).status).toBe(503);
-    expect((await route.request("/", { headers: { "x-real-ip": "192.0.2.123" } })).status).toBe(429);
+    for (let i = 0; i < 6; i++) expect((await route.request("/", { headers: { "x-forwarded-for": "192.0.2.123" } })).status).toBe(503);
+    expect((await route.request("/", { headers: { "x-forwarded-for": "192.0.2.123" } })).status).toBe(429);
   } finally { clock.mockRestore(); }
 });
 

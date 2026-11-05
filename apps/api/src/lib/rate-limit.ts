@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import { apiError } from "./errors.js";
+import { clientIpOrNull } from "./client-ip.js";
 
 // ─── Sliding window counter ────────────────────────────────────────────────────
 // In-memory store keyed by identifier. Each entry tracks request timestamps
@@ -161,36 +162,12 @@ export function consumeKeyUnits(c: Context, units: number, maxUnits: number, win
   );
 }
 
-// Simple validation: an IP must be a plausible IPv4 or IPv6 string.
-// This prevents header injection from producing pathological cache keys.
-const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
-const IPV6_RE = /^[0-9a-fA-F:]{2,45}$/;
-function isPlausibleIp(value: string): boolean {
-  return IPV4_RE.test(value) || IPV6_RE.test(value);
-}
-
-/** The client IP the limiter keys on, or null when it cannot be detected. */
-function rateLimitIp(c: Context): string | null {
-  // Extract IP from proxy headers, validating format to prevent
-  // header spoofing from creating arbitrary rate-limit buckets.
-  const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  const cfIp = c.req.header("cf-connecting-ip")?.trim();
-  const realIp = c.req.header("x-real-ip")?.trim();
-  // NOTE: Behind Railway's edge, a client-supplied X-Forwarded-For, X-Real-IP
-  // or CF-Connecting-IP does not become the rate-limit key: measured against
-  // production on 2026-11-02, a different forged value on every request did
-  // not produce fresh buckets (archive/receipts/2026-11-02-audit-forwarded-
-  // for-rate-limit-key.json). Railway does not document this, and its staff
-  // have given contradicting answers on whether the edge strips or appends a
-  // client-sent header, so it is a measured fact that can change on their
-  // side: re-run that probe after any Railway networking change, and before
-  // trusting these headers for anything stronger than rate limiting. Behind
-  // a different proxy, configure trusted proxy headers accordingly.
-  if (forwarded && isPlausibleIp(forwarded)) return forwarded;
-  if (cfIp && isPlausibleIp(cfIp)) return cfIp;
-  if (realIp && isPlausibleIp(realIp)) return realIp;
-  return null;
-}
+/**
+ * The client IP the limiter keys on, or null when there is none. The rule
+ * (right-most X-Forwarded-For entry; X-Real-IP and CF-Connecting-IP ignored)
+ * and its evidence live in lib/client-ip.ts.
+ */
+const rateLimitIp = clientIpOrNull;
 
 /**
  * Count one request against the caller's IP bucket. Returns the 429 response

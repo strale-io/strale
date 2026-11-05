@@ -679,6 +679,7 @@ app.route("/v1/internal/onboarding", internalOnboardingRoute);
 app.route("/v1/audit", auditRoute);
 
 import { verifyRoute } from "./routes/verify.js";
+import { clientIpOrNull } from "./lib/client-ip.js";
 app.route("/v1/verify", verifyRoute);
 
 // Post-deploy verification (30s delay, tests unstable/recovering capabilities)
@@ -727,7 +728,7 @@ app.route("/x402", x402GatewayV2);
 
 // x402 manifest — DB-driven machine-readable list of x402-enabled endpoints
 app.get("/.well-known/x402.json", async (c) => {
-  recordDiscoveryHit("/.well-known/x402.json", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
+  recordDiscoveryHit("/.well-known/x402.json", c.req, { src: c.req.query("src"), ip: (clientIpOrNull(c) ?? undefined) });
   c.header("Cache-Control", "public, max-age=300");
   const manifest = await getX402Manifest();
   return c.json(manifest);
