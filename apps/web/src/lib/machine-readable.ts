@@ -40,40 +40,43 @@ ${SENTENCE}
 
 ${L1.perCall} ${L1.x402}
 
-This file is a short pointer. The authoritative, current list of tools, prices and counts is served by the API, so read it there:
+This file is a short pointer. The authoritative, current list of tools, prices and counts is served by the API, so read it there.
 
-- Dynamic llms.txt: ${api("llms")}
-- Tool catalogue, with each tool's inputs, price and limits: ${s}/tools
-- Platform facts, including live counts: ${api("facts")}
-- OpenAPI document: ${api("openapi")}
-- Which tools can be paid per request over x402, with USD prices: ${api("x402Catalog")}
-- x402 discovery: ${api("x402Discovery")}
+## Read
+
+- [Dynamic llms.txt](${api("llms")}): the API's own, generated from the live catalogue
+- [Tool catalogue](${s}/tools): each tool's inputs, price and limits
+- [Platform facts](${api("facts")}): live counts and settings
+- [OpenAPI document](${api("openapi")}): the REST API reference
+- [x402 catalog](${api("x402Catalog")}): which tools can be paid per request over x402, with USD prices
+- [x402 discovery](${api("x402Discovery")}): machine-readable x402 listing
 
 ## Connect
 
-- MCP: ${api("mcp")} (Streamable HTTP; Authorization: Bearer <API key>)
-- REST: POST ${api("do")} with a capability_slug, an inputs object and max_price_cents
-- Agent card: ${s}/.well-known/agent.json (canonical, from the API: ${api("agentCard")})
-- MCP server card: ${s}/.well-known/mcp.json
+- [MCP endpoint](${api("mcp")}): Streamable HTTP; Authorization: Bearer <API key>
+- [REST: POST /v1/do](${api("do")}): a capability_slug, an inputs object and max_price_cents
+- [Agent card](${s}/.well-known/agent.json): a pointer card; the canonical A2A card is ${api("agentCard")}
+- [MCP server card](${s}/.well-known/mcp.json): how to connect over MCP
 
 ## Pay
 
 - API key: create one at ${s}/signup, top up a prepaid wallet, pay per call.
-- x402: on eligible tools only, pay per request in USDC on Base with no signup. Not every tool is eligible, so check ${api("x402Catalog")} before relying on it.
+- x402: on eligible tools only, pay per request in USDC on Base with no signup. Not every tool is eligible, so check the x402 catalog (${api("x402Catalog")}) before relying on it.
 
 ## Docs
 
-- ${s}/docs
-- ${s}/docs/mcp
-- ${s}/docs/x402
-- ${s}/pricing
+- [Docs](${s}/docs): connect and make a first call
+- [MCP](${s}/docs/mcp): set up the MCP connection
+- [x402](${s}/docs/x402): pay per request without signup, on eligible tools
+- [Pricing](${s}/pricing): how per-call pricing works
 `;
 }
 
+// A pointer card, not a full A2A AgentCard: it has no skills and no $schema (the old file's schema
+// URL returns 404). The canonical A2A card, with the skills, is links.canonical_agent_card.
 export function renderAgentCard(site: string): Record<string, unknown> {
   const s = base(site);
   return {
-    $schema: "https://a2a-protocol.org/schemas/agent-card/v1",
     name: "Strale",
     description: `${L1.headline} ${SENTENCE} Live counts at ${api("facts")}.`,
     url: api("a2a"),
@@ -102,7 +105,7 @@ export function renderMcpCard(site: string): Record<string, unknown> {
     transport: "streamable-http",
     authentication: {
       type: "bearer",
-      description: `API key starting with sk_live_. Create one at ${s}/signup`,
+      description: `API key starting with sk_live_. Create one at ${s}/signup. The strale_search tool works without a key.`,
     },
     documentation: `${s}/docs`,
     pricing: `${s}/pricing`,

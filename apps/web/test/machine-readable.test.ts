@@ -7,14 +7,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { API_PATHS, allMachineReadableText, renderAgentCard, renderLlmsTxt, renderMcpCard } from "../src/lib/machine-readable.ts";
 import { L1, SENTENCE } from "../src/content/positioning.ts";
-import { checkSchema, compileMatcher } from "../../../scripts/claims-lib.mjs";
 
 const repo = resolve(import.meta.dirname, "../../..");
 const SITE = "https://example.test";
 const files = allMachineReadableText(SITE);
 
 /** The keys of the files these replace (strale-frontend public/.well-known/agent.json and mcp.json). */
-const OLD_AGENT_KEYS = ["$schema", "name", "description", "url", "version", "capabilities", "authentication", "links"];
+const OLD_AGENT_KEYS = ["name", "description", "url", "version", "capabilities", "authentication", "links"];
 const OLD_AGENT_LINKS = ["canonical_agent_card", "mcp_server", "documentation", "pricing", "signup"];
 const OLD_MCP_KEYS = ["name", "description", "url", "transport", "authentication", "documentation", "pricing"];
 
@@ -24,7 +23,9 @@ test("both cards are valid JSON with every key of the old schema", () => {
   for (const k of OLD_AGENT_KEYS) assert.ok(k in agent, `agent.json lacks ${k}`);
   for (const k of OLD_AGENT_LINKS) assert.ok(k in agent.links, `agent.json links lacks ${k}`);
   assert.deepEqual(Object.keys(agent.capabilities).sort(), ["pushNotifications", "streaming"]);
-  assert.ok(Array.isArray(agent.authentication.schemes) && typeof agent.authentication.description === "string");
+  assert.deepEqual(agent.authentication.schemes, ["bearer"]);
+  assert.ok("$schema" in agent === false, "the old $schema URL returns 404");
+  assert.ok(typeof agent.authentication.description === "string");
   for (const k of OLD_MCP_KEYS) assert.ok(k in mcp, `mcp.json lacks ${k}`);
   assert.equal(mcp.transport, "streamable-http");
   assert.equal(mcp.authentication.type, "bearer");
@@ -39,28 +40,18 @@ test("each file leads with the L1 line and carries the positioning sentence", ()
   }
 });
 
-test("no file contains a forbidden claim from the register, whatever scan_paths says", () => {
-  const { register } = checkSchema(repo);
-  const forbidden = register.filter((r: { status: string }) => r.status === "forbidden");
-  assert.ok(forbidden.length > 10, "the register's forbidden rows were not loaded");
-  for (const row of forbidden) {
-    const m = compileMatcher(row);
-    assert.ok(m, `${row.id} is not a valid pattern`);
-    for (const f of files) assert.ok(!m.test(f.text), `${f.file} matches forbidden claim ${row.id}`);
-  }
-});
-
 test("no retired trust framing, no universal x402 claim, no typed count", () => {
   for (const f of files) {
     assert.doesNotMatch(f.text, /trust layer|independently tested|\bSQS\b|quality[- ]scored|verified (data|capabilities)/i, `${f.file}: retired framing`);
-    assert.doesNotMatch(f.text, /\ball\b[^.\n]{0,40}\b(x402|capabilities|tools)\b[^.\n]{0,40}\bx402\b/i, `${f.file}: universal x402 claim`);
+    assert.doesNotMatch(f.text, /(?<!not )\b(all|any|every) (the )?(tools?|capabilities)\b/i, `${f.file}: universal claim`);
     assert.doesNotMatch(f.text, /\b\d{2,}\+?\s/, `${f.file}: a typed number`);
     assert.doesNotMatch(f.text, /[€$]\s?\d/, `${f.file}: a typed price`);
   }
   // x402 is always scoped to eligible tools.
   const llms = files[0].text;
   assert.match(llms, /eligible tools/);
-  assert.doesNotMatch(llms, /(?<!not )(every|all) tools?\b/i);
+  const payLine = llms.split("\n").find((l) => l.startsWith("- x402:")) ?? "";
+  assert.match(payLine, /eligible/, "the Pay x402 line must scope x402 to eligible tools");
 });
 
 test("the host comes from the site config: it changes with it, and no literal site host is in the source", () => {

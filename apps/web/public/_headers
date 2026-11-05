@@ -1,4 +1,8 @@
-/.well-known/*
+/.well-known/agent.json
+  Access-Control-Allow-Origin: *
+  Content-Type: application/json; charset=utf-8
+
+/.well-known/mcp.json
   Access-Control-Allow-Origin: *
   Content-Type: application/json; charset=utf-8
 
