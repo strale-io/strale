@@ -30,8 +30,10 @@ decision queue.
 
 ### FD-20260901-PUBLIC-DOMAIN — public domain migration
 
-**State:** awaiting an accepted website/design checkpoint and a cutover plan
-with tested rollback for the reversible technical parts.
+**State:** decided 2026-11-05 by the founder: DEC-20261105-A
+([full text](../strategy/2026-11-05-canonical-domain-decision.md)). `strale.io`
+becomes the main website and `strale.dev` redirects to it, at the website
+switch-over. Kept here until the switch-over runs, then removed.
 
 **Reserved boundary:** choosing and initiating an irreversible public brand or
 infrastructure migration is a founder decision under the
@@ -39,16 +41,18 @@ infrastructure migration is a founder decision under the
 
 **Reserved class:** one-way-public-act.
 
-**Established:** `strale.dev` and `strale.io` are recorded as owned. The public
-website migration has not been approved here. Homepage v2 and Quiet Material
-v0.7 are not accepted/live authorities, so a domain decision made against them
-would be premature.
+**Established:** `strale.dev` and `strale.io` are both owned. Petter, in session
+on 2026-11-05: "yes, make strale.io the main site". On that day `strale.io` and
+`www.strale.io` pointed at a Vercel deployment that no longer exists
+(`x-vercel-error: DEPLOYMENT_NOT_FOUND`, HTTP 404).
 
-**Recommendation until ready:** keep the existing public domains unchanged.
-Prepare the website acceptance result, redirect/SEO/link inventory, rollback
-limits, and exact proposed cutover before presenting a founder choice.
+**Recommendation until ready:** execute through
+`docs/programs/brand-website/SWITCH-OVER-READINESS.md`; the domain change and the
+new site go live in the same switch-over.
 
-**Founder action now:** none.
+**Founder action now:** none; the decision is made. The DNS and redirect work it
+needs is listed under "Petter's part" in
+`docs/programs/brand-website/SWITCH-OVER-READINESS.md`.
 
 ### FD-20260901-WP14-LEGAL — supplier, customer, and public commitments
 

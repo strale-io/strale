@@ -2,7 +2,11 @@
 
 Written 2026-11-04, after the new site merged into `main` as one PR (strale-io/strale#892,
 `3a0e2229`). Merging published nothing: no workflow deploys `apps/web`, and strale.dev still
-serves `strale-frontend`. The switch-over itself is Petter's call (FD-20260901-PUBLIC-DOMAIN).
+serves `strale-frontend`. The switch-over itself is Petter's call.
+
+**Domain (DEC-20261105-A, 2026-11-05):** the new site goes live on **`strale.io`**, and
+`strale.dev` 301-redirects every path and query to it, in the same switch-over. Item 11 below
+carries the domain work.
 
 **Verdict: not ready to switch today.** The design and copy are approved; what is missing is
 plumbing. Sign-up, top-up, the execution record, Terms and Privacy (items 1 and 2) are built on
@@ -23,15 +27,22 @@ are still missing.
 | 8 | Hosting: a Cloudflare Pages project (root `apps/web`, `npm run build`, output `dist`, Node 22) and a scheduled rebuild so prices and tool lists stay fresh | Not set up. Creating the project is free; it needs the Cloudflare account. **The host also needs one rewrite for execution records.** The static build has a single page for every record (`dist/audit.html`), so the host must rewrite `/audit/*` to it while keeping the address, not redirect it: on Pages, the `_redirects` line `/audit/*  /audit  200`. The API issues links of the form `https://strale.dev/audit/<id>?token=…&expires_at=…` (`apps/api/src/lib/audit-token.ts`). Without the rewrite those links 404; the page also reads `/audit?id=<id>&token=…` as a fallback. **CORS:** signup and wallet calls are allowed only from the origins in `ALLOWED_ORIGINS` in `apps/api/src/app.ts` (`https://strale.dev`, `https://www.strale.dev` and the value of `FRONTEND_URL`), so they fail on a Pages preview domain. To test there, add the preview origin to the `ALLOWED_ORIGINS` array in code. **Never change `FRONTEND_URL` for a preview:** it also sets the Stripe success and cancel URLs (`apps/api/src/routes/wallet.ts`) and, unless `AUDIT_FRONTEND_URL` is set, the host of every new audit link (`apps/api/src/lib/audit-token.ts`). |
 | 9 | The API surfaces that still quote the old headline switch to "New tools for your agent. No new accounts." (`openapi.ts`, `welcome.ts`, `llms-txt.ts`, `ai-catalog.ts`, `skill.ts`, `mcp-server-card.ts`) | Waits for the switch, by design (MESSAGING-LEVELS L1). |
 | 10 | `npm run test:browser` (the `/topup` wiring in Chromium, `apps/web/test-browser/`) runs in the CI `web` job after the preview build, preceded by `npx playwright install --with-deps chromium` | Not wired: today it runs only by hand. Adding it edits `.github/workflows/ci.yml`, so it goes in its own reviewed PR. |
+| 11 | The domain move (DEC-20261105-A): `STRALE_SITE_URL` becomes `https://strale.io`; API `FRONTEND_URL` and `ALLOWED_ORIGINS` gain strale.io (strale.dev stays on CORS while redirected traffic drains); every surface naming strale.dev (package READMEs, `server.json`, `smithery.yaml`, `glama.json`, `context7.json`, `llms.txt`, agent and MCP cards, platform facts, the claims register) moves to strale.io | Not started. Code and docs are session work; the API config change ships with the switch-over, not before, because `FRONTEND_URL` sets Stripe return URLs. |
 
-Items 1 to 7, 9 and 10 are session work. Item 8's build settings are session work; the
+Items 1 to 7 and 9 to 11 are session work. Item 8's build settings are session work; the
 Cloudflare project and the domain are below.
 
 ## Petter's part
 
 - **Cloudflare:** a Pages project connected to `strale-io/strale`, or a scoped API token so a
   session can create it. Free tier.
-- **The switch itself:** point strale.dev at the new project. One-way and public, so it stays
+- **strale.io now:** `strale.io` and `www.strale.io` point at a Vercel deployment that no longer
+  exists (HTTP 404 `DEPLOYMENT_NOT_FOUND`, checked 2026-11-05), and strale.io is the address on
+  every email. Until the switch-over, redirect both to `https://strale.dev`.
+- **At the switch-over:** DNS for `strale.io` and `www` to the Pages project; a redirect rule on
+  the strale.dev zone sending every path and query to strale.io (Pages `_redirects` cannot
+  redirect a whole domain); afterwards, the Google Search Console change of address.
+- **The switch itself:** point strale.io at the new project and strale.dev at the redirect. One-way and public, so it stays
   his click. Rollback is pointing it back at `strale-frontend`, which stays deployed.
 - **Two open page decisions** from SITE-STRUCTURE: whether About names the founder, and whether
   the Terms change so "For platforms" can be published (it stays unpublished until then).
