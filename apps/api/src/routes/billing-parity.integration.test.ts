@@ -40,7 +40,7 @@ import {
 } from "../db/schema.js";
 
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "wp4-parity-secret-at-least-32-chars-000000";
   process.env.ADMIN_SECRET ??= "wp4-parity-admin-secret-at-least-32-chars0";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_wp4_placeholder";

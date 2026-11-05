@@ -4,8 +4,8 @@ exports[`common error envelopes remain stable with additive advice 1`] = `
 [
   {
     "details": {
-      "docs_url": "https://strale.dev/docs",
-      "fix": "Top up the wallet at https://strale.dev/dashboard or pay per call over x402 using a URL from /x402/catalog.",
+      "docs_url": "https://strale.io/docs",
+      "fix": "Top up the wallet at https://strale.io/topup or pay per call over x402 using a URL from /x402/catalog.",
       "required_cents": 5,
       "wallet_balance_cents": 0,
     },

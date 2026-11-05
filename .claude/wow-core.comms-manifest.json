@@ -1,10 +1,14 @@
 {
   "schema_version": 1,
   "profile": "comms",
-  "wow_core_commit": "6d08fdcd6465dde2598126ed6f84459d0d02b135",
+  "wow_core_commit": "d92ad9b0ec200f55499ee7c67353b789d37ada71",
   "files": [
     ".claude/scripts/bus.mjs",
+    ".claude/scripts/cloud-env.sh",
+    ".claude/scripts/cloud-setup.sh",
     ".claude/scripts/gh-api.mjs",
-    "docs/COMMS_CORE.md"
+    ".claude/scripts/wow-hook.mjs",
+    "docs/COMMS_CORE.md",
+    "docs/FOUNDER_PROFILE.md"
   ]
 }

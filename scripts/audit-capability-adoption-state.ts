@@ -25,7 +25,7 @@ const __dirname = typeof import.meta.dirname === "string"
   : dirname(fileURLToPath(import.meta.url));
 
 const API_BASE = "https://api.strale.io";
-const FRONTEND_BASE = "https://strale.dev";
+const FRONTEND_BASE = "https://strale.io";
 const REPO_ROOT = join(__dirname, "..");
 const APPS_API = join(REPO_ROOT, "apps", "api");
 const FRONTEND_DIR = "c:/Users/pette/Projects/strale-frontend";

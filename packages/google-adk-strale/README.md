@@ -15,4 +15,4 @@ See [`DEPRECATED.md`](./DEPRECATED.md) for the full explanation, alternatives, a
   - `pip install crewai-strale`
   - `pip install composio-strale`
 
-Docs: https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1
+Docs: https://strale.io/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1

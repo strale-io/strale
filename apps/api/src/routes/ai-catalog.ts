@@ -23,8 +23,8 @@ async function buildCatalog() {
     version: "0.1",
     publisher: {
       name: "Strale",
-      url: "https://strale.dev",
-      description: "Give your agent a new tool without opening another provider account.",
+      url: "https://strale.io",
+      description: "New tools for your agent. No new accounts.",
       contact: "hello@strale.io",
     },
     services: [
@@ -55,7 +55,7 @@ async function buildCatalog() {
         description:
           "Direct REST API access to all Strale capabilities via POST /v1/do.",
         endpoint: "https://api.strale.io/v1",
-        documentation: "https://strale.dev/docs",
+        documentation: "https://strale.io/docs",
         authentication: "bearer",
       },
       {

@@ -141,7 +141,7 @@ class StraleToolkit:
         def strale_execute(request: StraleExecuteInput) -> dict:
             """Execute a Strale capability. Pass the slug from strale_search and the required inputs. Returns structured output with execution status, latency, and data provenance."""
             if not toolkit.api_key:
-                return {"error": "STRALE_API_KEY required. Get one at https://strale.dev/signup (trial credits where eligible)."}
+                return {"error": "STRALE_API_KEY required. Get one at https://strale.io/signup (trial credits where eligible)."}
             resp = httpx.post(
                 f"{toolkit.base_url}/v1/do",
                 json={

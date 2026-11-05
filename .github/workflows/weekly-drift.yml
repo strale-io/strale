@@ -25,7 +25,7 @@ jobs:
       issues: write
     env:
       AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
-      FRONTEND_URL: https://strale.dev
+      FRONTEND_URL: https://strale.io
       # The cron runs without a strale-frontend checkout. Drift checks
       # that point at frontend paths skip cleanly when the path is missing.
       STRALE_FRONTEND_PATH: /tmp/__missing__

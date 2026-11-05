@@ -31,7 +31,7 @@ import { buildExecutionReceipt, LOCAL_BUILD_SENTINEL } from "../lib/receipt/exec
 import { deriveSourceObservation, settleExecutionReceipt } from "../lib/receipt/settle.js";
 
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "p5-receipt-secret-at-least-32-chars-long-000";
   process.env.ADMIN_SECRET ??= "p5-receipt-admin-secret-at-least-32-chars-00";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_p5_placeholder";

@@ -159,7 +159,7 @@ jobs:
           --health-retries 10
     env:
       AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
-      FRONTEND_URL: https://strale.dev
+      FRONTEND_URL: https://strale.io
       ADMIN_SECRET: ci-placeholder-admin-secret-at-least-32-chars-0123456789
       DATABASE_URL_TEST: postgresql://postgres:test@localhost:5432/strale_test
     steps:
@@ -332,7 +332,7 @@ jobs:
       # URLs. Any HTTPS string works for test — the real value lives on
       # Railway. Without this, any test that imports app.ts (i.e. every
       # request-level test) fails at module load.
-      FRONTEND_URL: https://strale.dev
+      FRONTEND_URL: https://strale.io
     steps:
       - name: Require successful image boot (or intentional docs-only skip)
         env:

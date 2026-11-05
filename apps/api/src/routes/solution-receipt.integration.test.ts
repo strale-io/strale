@@ -40,7 +40,7 @@ import {
 import { readManifestSnapshot } from "../lib/receipt/manifest-snapshot.js";
 
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "p5-solrcpt-secret-at-least-32-chars-long-00";
   process.env.ADMIN_SECRET ??= "p5-solrcpt-admin-secret-at-least-32-chars-0";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_p5_placeholder";

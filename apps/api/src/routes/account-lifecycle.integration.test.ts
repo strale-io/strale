@@ -38,7 +38,7 @@ import {
 } from "../db/schema.js";
 
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_wp11_placeholder";
   process.env.AUDIT_HMAC_SECRET ??= "wp11-integration-secret-at-least-32-chars";
 }

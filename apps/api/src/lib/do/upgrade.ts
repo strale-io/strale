@@ -27,7 +27,7 @@ export function buildUpgradeBlock(capabilitySlug: string, input?: Record<string,
   const nudge = inferContextualNudge(capabilitySlug, input, output);
   return {
     message: nudge?.message ?? "You're using a free capability. Create an account to access paid tools; trial credits are available where eligible.",
-    signup_url: "https://strale.dev/signup",
+    signup_url: "https://strale.io/signup",
     self_signup: {
       url: "https://api.strale.io/v1/signup",
       method: "POST",

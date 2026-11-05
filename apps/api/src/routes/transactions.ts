@@ -272,7 +272,7 @@ transactionsRoute.get(
           created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
           status: txn.status,
         },
-        methodology_url: "https://strale.dev/trust/methodology",
+        methodology_url: "https://strale.io/security",
       });
     }
 
@@ -330,7 +330,7 @@ transactionsRoute.get(
         data_jurisdiction: txn.dataJurisdiction,
         status: txn.status,
       },
-      methodology_url: "https://strale.dev/trust/methodology",
+      methodology_url: "https://strale.io/security",
     });
   },
 );
@@ -475,7 +475,7 @@ transactionsRoute.post(
       token,
       expires_at: expiresAt,
       expires_at_iso: new Date(expiresAt * 1000).toISOString(),
-      audit_url: `https://strale.dev/audit/${id}?token=${token}&expires_at=${expiresAt}`,
+      audit_url: `https://strale.io/audit/${id}?token=${token}&expires_at=${expiresAt}`,
     });
   },
 );

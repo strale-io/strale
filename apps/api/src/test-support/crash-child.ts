@@ -35,7 +35,7 @@ if (!databaseUrl || !apiKey || !slug) {
 }
 
 process.env.DATABASE_URL = databaseUrl;
-process.env.FRONTEND_URL ??= "https://strale.dev";
+process.env.FRONTEND_URL ??= "https://strale.io";
 process.env.AUDIT_HMAC_SECRET ??= "wp1-crash-child-secret-at-least-32-chars-long";
 process.env.ADMIN_SECRET ??= "wp1-crash-child-admin-secret-at-least-32-chars";
 process.env.STRIPE_SECRET_KEY ??= "sk_test_wp1_placeholder";

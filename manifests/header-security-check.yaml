@@ -77,7 +77,7 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    url: https://strale.dev
+    url: https://strale.io
 output_field_reliability:
   grade: guaranteed
   score: guaranteed

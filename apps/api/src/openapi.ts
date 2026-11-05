@@ -105,12 +105,12 @@ export const openApiSpec = {
     "x-guidance": "Browse x402 endpoints below and send the required input; payment is requested per call.",
     version: "1.0.0",
     description:
-      "Give your agent a new tool without opening another provider account. Search and read the web, read documents, check details and look up companies through one connection. Pay per call with an API key or, on eligible tools, an x402 wallet. Browse /v1/platform/facts for live coverage.",
-    contact: { name: "Strale", email: "hello@strale.io", url: "https://strale.dev" },
-    termsOfService: "https://strale.dev/terms",
+      "New tools for your agent. No new accounts. Search and read the web, read documents, check details and look up companies through one connection. Pay per call with an API key or, on eligible tools, an x402 wallet. Browse /v1/platform/facts for live coverage.",
+    contact: { name: "Strale", email: "hello@strale.io", url: "https://strale.io" },
+    termsOfService: "https://strale.io/terms",
     license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
   },
-  externalDocs: { description: "Strale Documentation", url: "https://strale.dev/docs" },
+  externalDocs: { description: "Strale Documentation", url: "https://strale.io/docs" },
   servers: [{ url: "https://api.strale.io", description: "Production — includes sandbox access via free trial (€2.00 credits on signup, no card required)" }],
   tags: [
     { name: "capabilities", description: "Browse and execute capabilities" },
@@ -127,7 +127,7 @@ export const openApiSpec = {
       BearerAuth: {
         type: "http" as const,
         scheme: "bearer",
-        description: "Strale API key (starts with sk_live_). Obtain from https://strale.dev after registration.",
+        description: "Strale API key (starts with sk_live_). Obtain from https://strale.io after registration.",
       },
     },
     schemas: {

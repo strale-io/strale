@@ -199,7 +199,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
     ${sectionHeader("🌐", "Website Traffic")}
     <tr><td style="padding: 4px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px;">
-        <tr><td style="padding: 3px 0; color: ${MUTED};">strale.dev</td><td style="padding: 3px 0; text-align: right; color: ${wt.straleDev.available ? TEXT : NEUTRAL};">${escHtml(wt.straleDev.note)}</td></tr>
+        <tr><td style="padding: 3px 0; color: ${MUTED};">strale.io</td><td style="padding: 3px 0; text-align: right; color: ${wt.straleDev.available ? TEXT : NEUTRAL};">${escHtml(wt.straleDev.note)}</td></tr>
         <tr><td style="padding: 3px 0; color: ${MUTED};">scan.strale.io</td><td style="padding: 3px 0; text-align: right; color: ${wt.beacon.available ? TEXT : NEUTRAL};">${escHtml(wt.beacon.note)}</td></tr>
       </table>
     </td></tr>`;
@@ -348,7 +348,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
   <tr><td style="padding: 16px 32px; background: #f9fafb; border-top: 1px solid ${BORDER};">
     <div style="font-size: 11px; color: ${MUTED}; text-align: center;">
       Generated at ${data.generatedAt.slice(0, 16).replace("T", " ")} UTC&nbsp;&nbsp;·&nbsp;&nbsp;
-      ${link("Dashboard", "https://strale.dev")}&nbsp;&nbsp;·&nbsp;&nbsp;
+      ${link("Dashboard", "https://strale.io")}&nbsp;&nbsp;·&nbsp;&nbsp;
       ${link("Railway", "https://railway.app")}&nbsp;&nbsp;·&nbsp;&nbsp;
       ${link("GitHub", "https://github.com/strale-io/strale")}
     </div>

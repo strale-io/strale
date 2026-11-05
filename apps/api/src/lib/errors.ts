@@ -71,7 +71,7 @@ export function recoveryDetails(
   let advice: Record<string, unknown>;
   switch (code) {
     case "insufficient_balance":
-      advice = { fix: "Top up the wallet at https://strale.dev/dashboard or pay per call over x402 using a URL from /x402/catalog.", docs_url: "https://strale.dev/docs" }; break;
+      advice = { fix: "Top up the wallet at https://strale.io/topup or pay per call over x402 using a URL from /x402/catalog.", docs_url: "https://strale.io/docs" }; break;
     case "token_expired":
     case "legacy_token_sunset":
       advice = { fix: "Ask the account owner to reissue the audit URL with POST /v1/transactions/:id/audit-token using the primary key, then use its token and expires_at query parameters.", retryable: false }; break;

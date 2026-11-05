@@ -17,7 +17,7 @@ A Python [LangChain](https://python.langchain.com/) agent that runs a KYB
 ## Prerequisites
 
 - Python 3.10+
-- A Strale API key — sign up at [strale.dev/signup](https://strale.dev/signup)
+- A Strale API key — sign up at [strale.io/signup](https://strale.io/signup)
   for EUR 2.00 free trial credit, no card required
 - An Anthropic API key — [console.anthropic.com](https://console.anthropic.com/settings/keys)
 

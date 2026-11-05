@@ -28,7 +28,7 @@ import {
 } from "../db/schema.js";
 
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "batch-int-secret-at-least-32-chars-long-0000";
   process.env.ADMIN_SECRET ??= "batch-int-admin-secret-at-least-32-chars-000";
   process.env.STRIPE_SECRET_KEY ??= "sk_test_batch_placeholder";

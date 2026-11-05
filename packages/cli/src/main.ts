@@ -163,7 +163,7 @@ async function request<T>(deps: CliDeps, opts: RequestOptions): Promise<T> {
       {
         error_code: "unauthorized",
         message: "STRALE_API_KEY is not set.",
-        fix: "Set the STRALE_API_KEY environment variable to your API key (sk_live_...). Get one at https://strale.dev/signup.",
+        fix: "Set the STRALE_API_KEY environment variable to your API key (sk_live_...). Get one at https://strale.io/signup.",
         retryable: false,
         source: "cli",
       },
@@ -219,7 +219,7 @@ async function request<T>(deps: CliDeps, opts: RequestOptions): Promise<T> {
         {
           error_code: "payment_required",
           message: typeof body.error === "string" ? body.error : "This tool is not free.",
-          fix: "Set STRALE_API_KEY to pay from your Strale wallet (sign up at https://strale.dev/signup), or pay per call over x402 by signing one of 'details.accepts' and sending it as the X-PAYMENT header to POST https://api.strale.io/v1/do; the CLI does not sign x402 payments.",
+          fix: "Set STRALE_API_KEY to pay from your Strale wallet (sign up at https://strale.io/signup), or pay per call over x402 by signing one of 'details.accepts' and sending it as the X-PAYMENT header to POST https://api.strale.io/v1/do; the CLI does not sign x402 payments.",
           retryable: false,
           source: "api",
           http_status: 402,

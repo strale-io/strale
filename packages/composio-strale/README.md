@@ -3,7 +3,7 @@
 > **Maintenance only (frozen 2026-10-29).** This package keeps working and
 > gets fixes for breakage, but no new features. For new work, connect to the Strale MCP server at `https://api.strale.io/mcp?src=pypi-readme`, which any MCP client can use.
 
-[Composio](https://composio.dev) integration for [Strale](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — available pay-per-call tools as Composio custom tools.
+[Composio](https://composio.dev) integration for [Strale](https://strale.io?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — available pay-per-call tools as Composio custom tools.
 
 ## Install
 
@@ -71,7 +71,7 @@ Three tools registered under the `strale` toolkit:
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
+Sign up at [strale.io](https://strale.io?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — trial eligibility is determined at signup.
 
 ## x402 pay-per-use access
 
@@ -83,7 +83,7 @@ Eligible Strale tools are also available via [x402](https://x402.org) — the HT
 
 ## Resources
 
-- [Documentation](https://strale.dev/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Documentation](https://strale.io/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - [Examples](https://github.com/strale-io/strale-examples)
-- [Pricing](https://strale.dev/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- [Quality methodology](https://strale.dev/methodology?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Pricing](https://strale.io/pricing?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Quality methodology](https://strale.io/security?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)

@@ -28,7 +28,7 @@ import { capabilities, testSuites, testResults } from "../db/schema.js";
 // unconditionally leaked configuration into every other suite in a full-suite
 // run and made an unrelated admin-auth test fail intermittently.
 if (process.env.DATABASE_URL_TEST) {
-  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.FRONTEND_URL ??= "https://strale.io";
   process.env.AUDIT_HMAC_SECRET ??= "wp1-example-secret-at-least-32-chars-long-00";
   process.env.ADMIN_SECRET ??= "wp1-example-admin-secret-at-least-32-chars-00";
 }

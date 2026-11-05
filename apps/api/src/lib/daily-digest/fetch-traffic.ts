@@ -4,7 +4,7 @@ export async function getWebsiteTraffic(): Promise<WebsiteTraffic> {
   return {
     straleDev: {
       available: false,
-      note: "No analytics installed. Add Plausible (plausible.io) to strale.dev for tracking.",
+      note: "No analytics installed. Add Plausible (plausible.io) to strale.io for tracking.",
     },
     beacon: {
       available: false,

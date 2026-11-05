@@ -19,7 +19,7 @@ The exact configuration of both columns is in [`recipes.json`](recipes.json).
 
 ## Before you start
 
-1. A Strale API key. Sign up at [strale.dev/signup](https://strale.dev/signup?utm_source=clay-template&utm_medium=listing&utm_campaign=d9);
+1. A Strale API key. Sign up at [strale.io/signup](https://strale.io/signup?utm_source=clay-template&utm_medium=listing&utm_campaign=d9);
    trial credit is available where eligible.
 2. A Clay table with the input columns. [`sample-table.csv`](sample-table.csv)
    is a three-row table you can import to try it.
@@ -115,7 +115,7 @@ Strale answers with a JSON error that Clay shows in the cell:
 | `error_code` | Meaning | What to do |
 |---|---|---|
 | `unauthorized` | the key is missing or wrong | check the `Authorization` header |
-| `insufficient_balance` | the wallet is empty | top up at strale.dev |
+| `insufficient_balance` | the wallet is empty | top up at strale.io |
 | `execution_failed` | the tool could not answer this row, for example a number in the wrong format, an unsupported country or a registry that is down; you are not charged | `details.error` says why; retry later if `details.retryable` is true |
 | `invalid_input` | the request itself is malformed, for example a missing input | compare the body with the recipe |
 | `budget_exceeded` | the tool now costs more than the recipe's price cap | check the new price, then raise `max_price_cents` if you accept it |

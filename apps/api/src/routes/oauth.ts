@@ -168,7 +168,7 @@ ${hidden}<input type="hidden" name="csrf" value="${esc(csrf)}">
 <label for="api_key">Your Strale API key</label>
 <input id="api_key" name="api_key" type="password" placeholder="sk_live_..." spellcheck="false">
 ${error ? `<p class="err">${esc(error)}</p>` : ""}
-<p>Strale checks the key and does not store it or pass it to ${esc(client.displayName)}. No account yet? <a href="https://strale.dev/signup?src=claude-dir">Get a key</a>.</p>
+<p>Strale checks the key and does not store it or pass it to ${esc(client.displayName)}. No account yet? <a href="https://strale.io/signup?src=claude-dir">Get a key</a>.</p>
 <div class="row"><button class="primary" type="submit" name="decision" value="allow">Allow</button><button type="submit" name="decision" value="deny">Cancel</button></div>
 </form>`;
   const res = page(`Connect ${client.displayName} to Strale`, body, error ? 401 : 200);

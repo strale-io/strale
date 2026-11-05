@@ -1,0 +1,1335 @@
+#!/usr/bin/env node
+// wow-core — the ONE hook dispatcher for Claude Code and Codex. Source of truth: wow-core
+// scripts/wow-hook.mjs; consumers receive it by sync as .claude/scripts/wow-hook.mjs, and
+// scripts/install.ps1 copies it (with the thin scripts/codex-hook.mjs wrapper) to
+// ~/.codex/wow-core/ for the user-level Codex hooks. Edit it HERE; never in a consumer or
+// in the installed copy.
+//
+//   node wow-hook.mjs session-start | session-end | pre-tool-use | post-tool-use |
+//                     post-tool-use-failure | stop   [--tool claude|codex]   < hook JSON
+//
+// Why one dispatcher (2026-10-08 fleet cleanup): hooks repeated output on every turn, every
+// Bash call spawned two pwsh processes, and pwsh is optional on the Linux cloud runners, so
+// hooks broke there silently. Everything is node now: no pwsh, one process per hook event,
+// silent unless there is something to say. Codex records hook trust per DEFINITION hash, so
+// the user-level hooks.json stays static (node "<path>" <event>) and all behaviour lives
+// here; the dispatcher stays silent anywhere that is not a wow-core consumer.
+//
+// Tool: --tool wins and nothing else is consulted (the Claude wiring passes `--tool claude`, so
+// a CODEX_THREAD_ID inherited from a launching Codex session cannot flip it; codex-hook.mjs
+// forces codex). Without --tool: WOW_HOOK_TOOL, then Codex when the environment/payload says
+// so (CODEX_THREAD_ID, payload turn_id), else Claude Code.
+//
+// Events
+//   session-start   source startup/clear/absent: the startup contract + `health.mjs --brief`
+//                   as ONE block of at most 15 lines / 2,000 characters (health is trimmed
+//                   first, the contract never; the lane statement and the repo's handoff context,
+//                   clipped to a few lines plus a pointer, count inside the same budget).
+//                   source resume/compact: ONE short line.
+//                   Claude Code gets it as hookSpecificOutput.additionalContext JSON, Codex
+//                   as plain stdout (its developer context). Claude also writes the
+//                   per-session presence marker .claude/sessions/<id>.lock. Codex adds its
+//                   orientation lines and the repo's handoff-session-start.mjs output.
+//   session-end     removes the marker (and the no-progress ledger).
+//   pre-tool-use    Every tool ("*"), first: the old-account fence (WOW_ACCOUNT_LABEL set and this
+//                   session started before the current lease period on another account, or before
+//                   the previous period when the fleet returned to this account: DENY every tool
+//                   but the few to go quiet; fail open, PACE_CORE §2a "The old-account fence").
+//                   Bash: a lease write must name WOW_ACCOUNT_LABEL; hooks/guard-bash-policy.mjs, then the shared-tree commit guard
+//                   (BLOCK `git commit` in the PRIMARY checkout while another live session
+//                   holds it; worktrees and solo sessions are never blocked), then the push
+//                   check (`git push` in any form, with WOW_ACCOUNT_LABEL set: DENY when the
+//                   newest account lease, `bus.mjs lease --json`, names another account, so a
+//                   session left on the old account stops itself; FAIL OPEN with one stderr
+//                   line when the label is unset or the bus cannot be read in 5 s). Deny JSON.
+//                   mcp__claude-code-remote__add_repo: ALLOW when the call is exactly {owner,
+//                   repo} or {repo: "owner/name"} naming the repository in WOW_BUS_REPO; files
+//                   the session can edit are never read. Anything else gets no decision: the
+//                   host's normal permission flow runs.
+//                   mcp__claude-code-remote__confirm_repository_trust: ALLOW only for the lease-named
+//                   PC helper (WOW_ACCOUNT_LABEL is the leased account's AND the newest lease holds
+//                   `pc-helper:<id>` with this session's id, CLAUDE_CODE_REMOTE_SESSION_ID); DENY for
+//                   everything else and whenever that cannot be established (fail CLOSED), citing
+//                   COMMS_CORE §1. Founder 2026-11-04; replaces the static settings deny.
+//   post-tool-use, post-tool-use-failure
+//                   Bash: no-progress halt ({"decision":"block"} once) after 3 identical
+//                   consecutive failures; silent otherwise.
+//   stop            Codex runs `.claude/scripts/handoff/handoff-stop.mjs`; Claude runs that
+//                   handoff gate when the repository opts in with `.claude/handoff.config.json`.
+//                   Child results map onto one Stop contract:
+//                     child exit 2 (+ stderr reason)          -> block, reason = stderr
+//                     child exit 0 + {"decision":"block"}     -> block, reason = its reason
+//                     child exit 0 + {"systemMessage": ...}   -> passed through, stop allowed
+//                     child exit 0, empty or plain stdout     -> pass (plain text goes to stderr)
+//                     child crash (other exit), timeout,
+//                     or spawn failure                        -> FAIL-OPEN: stop allowed, visible
+//                                                                systemMessage + stderr note
+//                   Any block -> exactly one JSON {"decision":"block","reason":...} on stdout,
+//                   exit 0. All pass -> no stdout. Fail-open on a crashing child matches Claude
+//                   Code (exit 1 from a Stop hook does not block): a broken gate must not trap
+//                   the session in a block loop the agent cannot clear; it is surfaced instead.
+//                   The lane pool is NOT part of the stop path: a session never sends work to
+//                   another agent unless the founder asks (founder decision 2026-10-08).
+//
+// The dispatcher's own errors fail open too (exit 0, stderr note), and every child and the
+// dispatcher itself run under a deadline below the host's hook timeout.
+//
+// Environment (tests): WOW_HOOK_CHILD_TIMEOUT_MS (alias WOW_CODEX_HOOK_CHILD_TIMEOUT_MS)
+// overrides every child timeout; WOW_SESSION_MARKER_TTL_HOURS bounds peer-marker age.
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import {
+  closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const SELF = path.resolve(fileURLToPath(import.meta.url));
+export const MODES = ["session-start", "session-end", "pre-tool-use", "post-tool-use", "post-tool-use-failure", "stop"];
+const OVERRIDE_MS = Number(process.env.WOW_HOOK_CHILD_TIMEOUT_MS || process.env.WOW_CODEX_HOOK_CHILD_TIMEOUT_MS) || 0;
+const STDIN_WAIT_MS = 5_000;
+const DEADLINE_MS = {
+  "session-start": 55_000, "session-end": 8_000, "pre-tool-use": 8_000,
+  "post-tool-use": 8_000, "post-tool-use-failure": 8_000, stop: 170_000,
+};
+// Tests shorten the pre-tool-use deadline to prove the trust call fails closed (never lengthens it).
+const DEADLINE_TEST_MS = Number(process.env.WOW_HOOK_DEADLINE_MS) || 0;
+if (DEADLINE_TEST_MS > 0) DEADLINE_MS["pre-tool-use"] = Math.min(DEADLINE_MS["pre-tool-use"], DEADLINE_TEST_MS);
+const CHILD_MS = { sessionStart: 40_000, handoff: 120_000, health: 5_000 };
+export const BUDGET = { lines: 15, chars: 2_000 };
+export const RESUME_LINE = "wow-core: restore the working set (modified files, active ids, current task); the model check is already done.";
+export const NOPROGRESS_THRESHOLD = 3;
+
+function note(message) {
+  try { process.stderr.write(`wow-core hook: ${message}\n`); } catch { /* ignore */ }
+}
+
+let exiting = false;
+function finish(stdout = "") {
+  if (exiting) return;
+  exiting = true;
+  const done = () => process.exit(0);
+  if (stdout) process.stdout.write(stdout, done);
+  else done();
+}
+
+function readStdin() {
+  return new Promise((resolve) => {
+    if (process.stdin.isTTY) { resolve(""); return; }
+    let data = "";
+    let settled = false;
+    const end = () => {
+      if (settled) return;
+      settled = true;
+      try { process.stdin.pause(); } catch { /* ignore */ }
+      resolve(data);
+    };
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => { data += chunk; });
+    process.stdin.on("end", end);
+    process.stdin.on("error", end);
+    setTimeout(end, STDIN_WAIT_MS).unref();
+  });
+}
+
+export function parsePayload(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+
+export function detectTool(argv = process.argv, env = process.env, payload = {}) {
+  const flag = argv.indexOf("--tool");
+  const named = flag >= 0 ? argv[flag + 1] : env.WOW_HOOK_TOOL;
+  if (named === "codex" || named === "claude") return named;
+  if (env.CODEX_THREAD_ID || (payload && typeof payload.turn_id === "string")) return "codex";
+  return "claude";
+}
+
+// ---- repository discovery (no git process: walk up looking for .git, honouring ceilings) ----
+
+const normDir = (value) => {
+  const resolved = path.resolve(value).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+};
+
+export function findRoot(start, env = process.env) {
+  const ceilings = String(env.GIT_CEILING_DIRECTORIES || "").split(path.delimiter).filter(Boolean).map(normDir);
+  let dir = path.resolve(start);
+  for (;;) {
+    if (existsSync(path.join(dir, ".git"))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir || ceilings.includes(normDir(parent))) return null;
+    dir = parent;
+  }
+}
+
+// `.git` is a directory in a primary checkout and a `gitdir: <repo>/.git/worktrees/<n>` file in
+// a linked worktree. A submodule's file points into .git/modules, so it counts as primary.
+export function isLinkedWorktree(root) {
+  try {
+    const dotGit = path.join(root, ".git");
+    if (statSync(dotGit).isDirectory()) return false;
+    const target = readFileSync(dotGit, "utf8").replace(/^gitdir:\s*/i, "").trim().replace(/\\/g, "/");
+    return /\/worktrees\//.test(target);
+  } catch { return false; }
+}
+
+// Live Codex lane runs 2026-10-05: inherited repo-wide state is verified by the master.
+function isLane(root) {
+  if (process.env.WOW_LANE) return true;
+  try {
+    const hooks = execFileSync("git", ["-C", root, "config", "--worktree", "--get", "core.hooksPath"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], windowsHide: true, timeout: 10_000,
+    }).trim().replace(/\\/g, "/");
+    return /(?:^|\/)wow-lanes\/hooks-sub\d+\/?$/i.test(hooks);
+  } catch { return false; }
+}
+
+const has = (root, rel) => existsSync(path.join(root, rel));
+const isWowCore = (root) =>
+  has(root, "consumers.json") && has(root, "core/WAYS_OF_WORKING_CORE.md") && has(root, "scripts/sync-to-project.ps1");
+// The checkout root when this hook runs from wow-core's own layout (<root>/scripts/wow-hook.mjs), else null: a consumer's
+// copy sits in .claude/scripts. Working-tree files alone can be planted (review 2026-11-05), the hook's own path cannot.
+export function ownCheckoutRoot(self = SELF) {
+  const dir = path.dirname(self);
+  const root = path.dirname(dir);
+  return path.basename(dir) === "scripts" && path.basename(root) !== ".claude" ? root : null;
+}
+// The host project is wow-core AND this hook is wow-core's own copy: the only test for the master's exemptions.
+const isWowCoreHost = (projectDir) => Boolean(projectDir && ownCheckoutRoot() && isWowCore(projectDir));
+export const isConsumer = (root) =>
+  has(root, ".claude/wow-core.version") || has(root, ".claude/wow-core.partial") || isWowCore(root);
+const firstExisting = (root, rels) => rels.find((rel) => has(root, rel)) ?? null;
+
+// ---- presence markers and the no-progress ledger: .claude/sessions/ (gitignored) ----
+
+const sessionsDir = (root) => path.join(root, ".claude", "sessions");
+const safeId = (sid) => (typeof sid === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(sid) ? sid : null);
+const markerPath = (root, sid) => path.join(sessionsDir(root), `${sid}.lock`);
+const ledgerPath = (root, sid) => path.join(sessionsDir(root), `${sid}.noprogress.json`);
+
+export function writeMarker(root, sid, cwd) {
+  const id = safeId(sid);
+  if (!id) return false;
+  try {
+    mkdirSync(sessionsDir(root), { recursive: true });
+    writeFileSync(markerPath(root, id), JSON.stringify({ session_id: id, pid: process.pid, started_at: Math.floor(Date.now() / 1000), cwd }));
+    return true;
+  } catch { return false; }
+}
+
+export function removeSessionFiles(root, sid) {
+  const id = safeId(sid);
+  if (!id) return;
+  for (const file of [markerPath(root, id), ledgerPath(root, id)]) {
+    try { rmSync(file, { force: true }); } catch { /* ignore */ }
+  }
+}
+
+// Liveness: any shell activity refreshes THIS session's marker mtime, so a long-running
+// session stays detectable by a peer's guard (expiry in guardSharedTree).
+export function touchMarker(root, sid) {
+  const id = safeId(sid);
+  if (!id) return;
+  try {
+    const file = markerPath(root, id);
+    if (existsSync(file)) { const now = new Date(); utimesSync(file, now, now); }
+  } catch { /* ignore */ }
+}
+
+// ---- shared-tree commit guard (port of the retired hooks/guard-shared-tree-commit.ps1) ----
+// Two sessions sharing one tree clobbered a commit and swapped HEAD under each other
+// (GLES-016). Isolating parallel writers in worktrees is the kept doctrine (DEC-092); this
+// makes the one irreversible shared-state action fail loud instead of relying on memory.
+
+// A command start (line start, ; & | or a subshell paren), optionally prefixed by `env`/`command`
+// and VAR=value assignments (`GIT_EDITOR=true git commit`), then `git ... commit`.
+const GIT_COMMIT = /(?:^|[;&|(])\s*(?:(?:env|command)\s+)?(?:[A-Za-z_]\w*=(?:"[^"\r\n]*"|'[^'\r\n]*'|\S*)\s+)*git(?:\.exe)?(?<args>\s[^\r\n;&|]*\bcommit\b[^\r\n;&|]*)/ims;
+
+// The directory the command's `git ... commit` actually targets (`git -C <path>` resolved
+// against the payload cwd), or null when the command has no git commit.
+export function commitProbeDir(command, cwd) {
+  const match = GIT_COMMIT.exec(String(command ?? ""));
+  if (!match) return null;
+  let before = match.groups.args;
+  const at = before.search(/commit/i);
+  if (at >= 0) before = before.slice(0, at);
+  let probe = path.resolve(cwd);
+  for (const found of before.matchAll(/(?:^|\s)-C(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/g)) {
+    const target = found[1] ?? found[2] ?? found[3];
+    probe = path.isAbsolute(target) ? path.resolve(target) : path.resolve(probe, target);
+  }
+  return probe;
+}
+
+export function guardSharedTree({ command, sid, cwd, env = process.env, now = Date.now() }) {
+  const result = { reason: null, warnings: [] };
+  const probe = commitProbeDir(command, cwd);
+  if (!probe) return result;
+  const root = findRoot(probe, env);
+  if (!root || isLinkedWorktree(root)) return result; // not a repo, or a worktree: the safe path
+  const dir = sessionsDir(root);
+  if (!existsSync(dir)) return result;
+  touchMarker(root, sid);
+  let ttlHours = 4;
+  const configured = env.WOW_SESSION_MARKER_TTL_HOURS;
+  if (configured !== undefined && String(configured).trim() !== "") {
+    const value = Number(configured);
+    if (Number.isFinite(value) && value > 0) ttlHours = value;
+    else result.warnings.push(`WARNING (multi-session safeguard): invalid WOW_SESSION_MARKER_TTL_HOURS='${configured}'; using default 4 h.`);
+  }
+  const mine = safeId(sid);
+  const peers = [];
+  let names = [];
+  try { names = readdirSync(dir).filter((name) => name.endsWith(".lock")).sort(); } catch { return result; }
+  for (const name of names) {
+    const id = name.slice(0, -".lock".length);
+    if (id === mine) continue;
+    let ageHours;
+    try { ageHours = (now - statSync(path.join(dir, name)).mtimeMs) / 3_600_000; } catch { continue; }
+    if (ageHours >= ttlHours) {
+      result.warnings.push(`WARNING (multi-session safeguard): stale marker '${name}' in '${root}' is older than the ${ttlHours} h TTL; ignoring it and allowing the commit.`);
+      continue;
+    }
+    peers.push(id);
+  }
+  if (peers.length) {
+    result.reason = `BLOCKED (multi-session safeguard): another agent session is active in this PRIMARY checkout (${root}). Peer session(s): ${peers.join(", ")}. Two sessions sharing one tree clobber each other's commits and swap HEAD (GLES-016). Isolate: create a worktree (git worktree add ../<name> -b <branch>) and commit there. Stale markers are ignored after ${ttlHours} h (WOW_SESSION_MARKER_TTL_HOURS).`;
+  }
+  return result;
+}
+
+// ---- bus repository attach (plan 2026-10-27 §4g item 3, 2026-10-29) ----
+// A cloud session starts with only its own repository attached, so bus.mjs gets HTTP 403, and the
+// auto-mode classifier refuses add_repo as a self-granted permission. The fleet environment has no
+// per-environment repository setting, so this rule allows that one attach and nothing wider. It
+// narrows what an honest session attaches; it is code in the repository, so it does not stop a
+// session that edits its own hooks or settings (the classifier and review stay that control).
+
+export const ADD_REPO_TOOL = "mcp__claude-code-remote__add_repo";
+// The same pattern as bus.mjs REPO_NAME, so every bus repository bus.mjs accepts can match.
+const REPO_NAME = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+const NAME_PART = /^[A-Za-z0-9_.-]+$/;
+
+// The environment only: add_repo is a cloud tool and the fleet environment sets WOW_BUS_REPO. Files
+// (the project's .claude/bus.json, the user bus config) are writable by the session, never trusted.
+export function trustedBusRepo(env = process.env) {
+  const repo = env.WOW_BUS_REPO;
+  return typeof repo === "string" && REPO_NAME.test(repo) ? repo : null;
+}
+
+// The one repository the call names, as lower-case owner/name, or null. Exact shapes only:
+// {owner, repo} or {repo: "owner/name"}, every value a string. Any other key or value gives null, so
+// the hook never allows a call it did not fully compare (the tool's real fields are unverified).
+export function addRepoTarget(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const keys = Object.keys(input);
+  if (!keys.includes("repo") || !keys.every((key) => key === "owner" || key === "repo")) return null;
+  const owner = Object.hasOwn(input, "owner") ? input.owner : undefined;
+  const repo = input.repo;
+  if (typeof repo !== "string") return null;
+  if (owner === undefined) return REPO_NAME.test(repo) ? repo.toLowerCase() : null;
+  if (typeof owner !== "string" || !NAME_PART.test(owner) || !NAME_PART.test(repo)) return null;
+  return `${owner}/${repo}`.toLowerCase();
+}
+
+export function busAttachDecision(input, env = process.env) {
+  const bus = trustedBusRepo(env);
+  const target = addRepoTarget(input);
+  if (!bus || !target || target !== bus.toLowerCase()) return null;
+  return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
+    permissionDecisionReason: `wow-core: attaching the bus repository ${bus} (WOW_BUS_REPO) is allowed` } };
+}
+
+export function denyResponse(reason) {
+  return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } };
+}
+
+// ---- session-start cap and depth (founder 2026-11-01; promotes a consumer PR) ----
+// An unprompted create_session would let any session, or an injected prompt it reads, start
+// sessions whose children could do the same: fan-out and spend with no ceiling. This rule is the
+// only thing that approves the call (it is in no allow list, so a crash, a timeout or an older
+// copy of this hook falls back to a prompt, never to an uncapped yes): inside a cap (per session,
+// per container per UTC day, each start claiming its own slot file atomically) and a depth: a
+// master (0) may start lanes (1), a lane reviewers (2), a reviewer nothing. A session's depth is
+// the tag in its own first prompt, which this rule writes into every child it allows; no tag
+// means 0 (a session nobody started through this rule). Anything it cannot read or claim is a
+// deny. Known limits: a session that edits its own transcript, settings or slot files can evade
+// it (code in the repository, like the bus rule above), and a scheduled task that starts a fresh
+// session each time is not a create_session call.
+
+export const SPAWN_LIMITS = Object.freeze({ perSession: 10, perContainerDay: 25, maxDepth: 2 });
+export const ARCHIVE_TAGS = Object.freeze(["wow-task"]);
+const DEPTH_TAG = /\[wow-spawn-depth: (\d+)\]/g;
+const HEAD_BYTES = 256 * 1024;
+// Only the Claude Code remote server's tool (also under a plugin prefix); another server's tool of that name keeps the normal prompt.
+export const isCreateSession = (name) => typeof name === "string" && /^mcp__(?:.+_)?claude-code-remote__create_session$/.test(name);
+
+// The first real user turn's text from a Claude Code transcript (JSONL), read from the head only.
+// Meta and compaction entries and tool results are not the first prompt; none found throws.
+export function firstPromptText(transcriptPath) {
+  const fd = openSync(transcriptPath, "r");
+  let head;
+  try {
+    const buffer = Buffer.alloc(HEAD_BYTES);
+    head = buffer.subarray(0, readSync(fd, buffer, 0, HEAD_BYTES, 0)).toString("utf8");
+  } finally { closeSync(fd); }
+  for (const line of head.split("\n")) {
+    if (!line.trim()) continue;
+    let entry;
+    try { entry = JSON.parse(line); } catch { continue; }
+    if (entry?.type !== "user" || !entry.message || entry.isMeta || entry.isCompactSummary) continue;
+    const content = entry.message.content;
+    if (typeof content === "string" && content.trim()) return content;
+    if (Array.isArray(content)) {
+      const parts = content.filter((part) => part?.type === "text" && part.text).map((part) => part.text);
+      if (parts.length) return parts.join("\n");
+    }
+  }
+  throw new Error("no first user prompt in the transcript head");
+}
+
+export function depthOf(promptText) {
+  const tags = [...String(promptText ?? "").matchAll(DEPTH_TAG)].map((m) => Number(m[1]));
+  return tags.length ? Math.max(...tags) : 0;
+}
+
+// owner/name, lower case, from any GitHub URL spelling; null when it is not one. Only a string,
+// a GitHub owner (letters, digits, inner hyphens) and a repository name other than ".", "..", ".git"
+// count: a name GitHub cannot hold would start a session without a checkout (#211 review).
+export function githubRepo(url) {
+  if (typeof url !== "string") return null;
+  // A colon separates host and owner only in the scp form (git@github.com:owner/repo): elsewhere
+  // it is a port, so github.com:443/a/b must not read as owner 443 (review 2026-11-02).
+  const m = url.trim().toLowerCase()
+    .match(/^(?:(?:https?:\/\/|ssh:\/\/git@)?(?:www\.)?github\.com\/|git@github\.com:)([a-z0-9](?:-?[a-z0-9])*)\/([a-z0-9_.-]+?)(?:\.git)?(?:[/?#].*)?$/);
+  return m && ![".", "..", ".git"].includes(m[2]) ? `${m[1]}/${m[2]}` : null;
+}
+
+// The repositories of the roster's Active masters table (its second column, one `owner/name` each), lower-case.
+export function rosterRepos(text) {
+  const section = String(text ?? "").split(/^## /m).slice(1).find((part) => part.startsWith("Active masters")) ?? "";
+  return new Set([...section.matchAll(/^\|[^|]*\|\s*`([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)`/gm)].map((m) => m[1].toLowerCase()));
+}
+// ... from the real wow-core project directory's working tree (the spawn rule only refuses with it).
+const rosterReposAt = (wowCore) => rosterRepos(readFileSync(path.join(wowCore, "docs", "fleet-roster.md"), "utf8"));
+
+// Claim the first free numbered slot in dir, atomically (O_EXCL); null when all limit are taken.
+function claimSlot(dir, limit) {
+  mkdirSync(dir, { recursive: true });
+  for (let n = 0; n < limit; n++) {
+    try { closeSync(openSync(path.join(dir, String(n)), "wx")); return path.join(dir, String(n)); }
+    catch (error) { if (error?.code !== "EEXIST") throw error; }
+  }
+  return null;
+}
+
+function pruneOldDays(base, today) {
+  try {
+    for (const name of readdirSync(base)) {
+      const day = name.match(/^container-.+-(\d{4}-\d{2}-\d{2})$/)?.[1];
+      const old = day ? Date.parse(today) - Date.parse(day) > 2 * 86_400_000
+        : name.startsWith("session-") && Date.now() - statSync(path.join(base, name)).mtimeMs > 7 * 86_400_000;
+      if (old) rmSync(path.join(base, name), { recursive: true, force: true });
+    }
+  } catch { /* best effort */ }
+}
+
+export function spawnDecision(payload, env = process.env, now = Date.now(), { exemptCaps = false } = {}) {
+  try {
+    const sid = safeId(payload?.session_id);
+    const transcript = payload?.transcript_path;
+    if (!sid || typeof transcript !== "string" || !transcript) throw new Error("no session id or transcript path in the hook payload");
+    const depth = depthOf(firstPromptText(transcript));
+    const input = payload?.tool_input && typeof payload.tool_input === "object" ? payload.tool_input : {};
+    // A depth-0 session whose host project directory is wow-core (the takeover or the wow-core
+    // master) never starts a roster master: the founder does, in its own project, so it is not this
+    // session's child in the app (founder 2026-11-02, takeover step 5). wow-core's own row is exempt by its
+    // repository name: this file also ships to comms consumers, which may be public, so it names no owner.
+    const projectDir = typeof env.CLAUDE_PROJECT_DIR === "string" && env.CLAUDE_PROJECT_DIR ? path.resolve(env.CLAUDE_PROJECT_DIR) : null;
+    const target = githubRepo(input.source_url);
+    // The lease-named PC helper (exemptCaps) starts PC sessions in project repositories on the
+    // founder's PC; those are one-job sessions, never masters (2026-11-04: the probe was refused here).
+    if (!exemptCaps && depth === 0 && isWowCoreHost(projectDir) && target && target.split("/")[1] !== "wow-core"
+      && rosterReposAt(projectDir).has(target)) {
+      return denyResponse("wow-core: the founder starts a roster master in its own project from the takeover's launch line, so it does not sit under this session in the app (founder 2026-11-02). Give him the line (docs/fleet-roster.md) instead.");
+    }
+    // The helper's exemption is for PC sessions only: it must name the bridge environment explicitly, so a
+    // plain create_session (which inherits the cloud fleet environment) cannot start a cloud session in a
+    // master's repository (review 2026-11-04). The kind of the named environment stays review-checked.
+    if (exemptCaps && isWowCoreHost(projectDir) && target && rosterReposAt(projectDir).has(target)
+      && !(typeof input.environment_id === "string" && input.environment_id.trim())) {
+      return denyResponse("wow-core: the PC helper starts PC sessions only on the project's bridge environment: pass its environment_id (docs/fleet-roster.md \"PC helper\" step 5).");
+    }
+    // A child without a repository has no checkout, so no hooks: the cap and the depth limit
+    // would stop at it (live probe 2026-11-01: a no-repo depth-2 session started a third level
+    // unprompted). Only the wow-core master (depth 0, host project wow-core, this hook wow-core's own copy) may start one.
+    // The exception covers an absent source_url only: one that is present but does not parse (a
+    // port, user info, an API host) is refused, so it cannot slip a roster master past the refusal
+    // above (review 2026-11-02).
+    const master = !exemptCaps && depth === 0 && isWowCoreHost(projectDir);
+    const noUrl = input.source_url === undefined || input.source_url === null || input.source_url === "";
+    if (!target && !(master && noUrl)) {
+      return denyResponse("wow-core: create_session needs a GitHub source_url: a session without a repository has no hooks, so the session cap and depth limit could not follow it (founder 2026-11-01). Use a subagent, or name the repository.");
+    }
+    const childDepth = depth + 1;
+    if (childDepth > SPAWN_LIMITS.maxDepth) {
+      return denyResponse(`wow-core: session depth ${depth} may not start sessions (master → lane → reviewer, no deeper; founder 2026-11-01). Use a subagent instead.`);
+    }
+    // The standing PC helper starts one session per PC job for as long as the account's lease period lasts, so
+    // the per-session and per-container caps (a runaway guard) would stop it after 10 jobs. Only the lease-named
+    // helper is exempt (checked by the caller); the depth limit, the tag and the archive tag still apply.
+    let sessionSlot = null;
+    let daySlot = null;
+    if (!exemptCaps) {
+      const base = env.WOW_SPAWN_DIR || path.join(os.homedir(), ".wow-core", "spawn");
+      const container = safeId(env.CLAUDE_CODE_CONTAINER_ID) || safeId(os.hostname()) || "local";
+      const today = new Date(now).toISOString().slice(0, 10);
+      pruneOldDays(base, today);
+      sessionSlot = claimSlot(path.join(base, `session-${sid}`), SPAWN_LIMITS.perSession);
+      if (!sessionSlot) return denyResponse(`wow-core: this session has started ${SPAWN_LIMITS.perSession} sessions, the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
+      try { daySlot = claimSlot(path.join(base, `container-${container}-${today}`), SPAWN_LIMITS.perContainerDay); }
+      catch (error) { rmSync(sessionSlot, { force: true }); throw error; }
+      if (!daySlot) {
+        rmSync(sessionSlot, { force: true });
+        return denyResponse(`wow-core: this container has started ${SPAWN_LIMITS.perContainerDay} sessions today (UTC ${today}), the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
+      }
+    }
+    const prompt = String(input.prompt ?? "").replace(DEPTH_TAG, "").trimEnd();
+    // The archive tag (founder 2026-11-02): every session started here is a task the starter
+    // archives when it is done, and the sweep archives it if the starter does not. The caller
+    // cannot choose.
+    const tags = (Array.isArray(input.tags) ? input.tags : []).filter((t) => typeof t === "string" && !ARCHIVE_TAGS.includes(t));
+    const updatedInput = { ...input, prompt: `${prompt}${prompt ? "\n\n" : ""}[wow-spawn-depth: ${childDepth}]`,
+      tags: [...tags, "wow-task"] };
+    return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
+      permissionDecisionReason: exemptCaps
+        ? `wow-core: session start by the lease-named PC helper (no cap, COMMS_CORE §1), child depth ${childDepth}`
+        : `wow-core: session start ${Number(path.basename(sessionSlot)) + 1}/${SPAWN_LIMITS.perSession} for this session, ${Number(path.basename(daySlot)) + 1}/${SPAWN_LIMITS.perContainerDay} for this container today, child depth ${childDepth}`,
+      updatedInput } };
+  } catch (error) {
+    return denyResponse(`wow-core: the session-start cap could not check this call (${error?.message ?? error}), so it is refused (fail closed). Use a subagent, or ask the founder.`);
+  }
+}
+
+// ---- no-progress guard (port of the retired hooks/guard-noprogress-loop.ps1) ----
+// WoW section 5 mechanical termination guard, no-progress arm (GLES-028/029): the IDENTICAL
+// bash command failing N times in a row with no successful run in between halts the loop.
+// A success of that command resets the streak, so unrelated failures of a common command
+// (`npm test`) minutes apart never accumulate into a false halt (GLES-027). The event itself
+// is the pass/fail signal: PostToolUse only fires after success, PostToolUseFailure only
+// after failure. A halt is {"decision":"block"} on stdout with exit 0.
+
+export function noProgress({ root, sid, command, failed }) {
+  const id = safeId(sid);
+  const cmd = String(command ?? "").trim();
+  if (!id || !cmd) return null;
+  const ledger = ledgerPath(root, id);
+  let lastCmd = null;
+  let streak = 0;
+  if (existsSync(ledger)) {
+    try {
+      const state = JSON.parse(readFileSync(ledger, "utf8"));
+      lastCmd = typeof state.lastCmd === "string" ? state.lastCmd : null;
+      streak = Number.isInteger(state.streak) ? state.streak : 0;
+    } catch { lastCmd = null; streak = 0; }
+  }
+  if (!failed) { // SUCCESS = progress: clears the command we were spinning on
+    if (cmd === lastCmd) { try { rmSync(ledger, { force: true }); } catch { /* ignore */ } }
+    return null;
+  }
+  streak = cmd === lastCmd ? streak + 1 : 1;
+  if (streak >= NOPROGRESS_THRESHOLD) {
+    try { rmSync(ledger, { force: true }); } catch { /* ignore */ } // fresh window next time
+    return `NO-PROGRESS LOOP (WoW section 5 mechanical termination guard): the identical command has now FAILED ${NOPROGRESS_THRESHOLD} times in a row with no successful run in between:\n  ${cmd}\nThis is a spin, not progress. STOP - do not run this same command again. Per the section 5 stop conditions, surface the blocker to the founder in plain language (what is failing, and the next thing you would try), or change approach. Re-anchor to the frozen spec before continuing.`;
+  }
+  try {
+    mkdirSync(sessionsDir(root), { recursive: true });
+    writeFileSync(ledger, JSON.stringify({ lastCmd: cmd, streak }));
+  } catch { /* ignore */ }
+  return null;
+}
+
+// ---- push check (founder 2026-11-04; PACE_CORE §2a "The push check") ----
+// Only masters checked the account lease, so lanes of the account the fleet left kept pushing after
+// a takeover. Every session whose environment carries WOW_ACCOUNT_LABEL (the `fleet` cloud
+// environment, fleet card §5) now reads the newest lease before a `git push` and is refused when the
+// lease names another account. Fail open: an unset label, a missing bus.mjs, an unreadable bus or a
+// lease nobody has taken never blocks a push (an outage must not stop every session).
+const PUSH_TIMEOUT_MS = 5_000;
+const ACCOUNT_NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
+const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path", "--super-prefix", "--config-env"]);
+// Words that may stand before `git` in a command position: shell keywords and launchers.
+const LAUNCHER = new Set(["env", "command", "sudo", "exec", "nohup", "time", "timeout", "nice", "ionice", "xargs", "if", "elif", "while", "until",
+  "then", "do", "else", "!", "bash", "sh", "zsh", "dash", "-c", "-lc", "-ec", "-e"]);
+const launcherMaterial = (word) => LAUNCHER.has(word) || /^[A-Za-z_]\w*=/.test(word) || /^-/.test(word) || /^\d+(?:\.\d+)?[smhd]?$/.test(word);
+
+// True when any segment of the command runs `git [global options] push`. Quotes are dropped first, so
+// `bash -c "cd x && git push"` is seen; every word before `git` must be a launcher, a keyword, an
+// option, a duration or an assignment, so a commit message that mentions "git push" is not. A quoted
+// value of git's `-c` (`-c k='a b'`) is squeezed into one word first.
+export function isGitPush(command) {
+  if (typeof command !== "string" || !/push/.test(command)) return false;
+  const squeezed = command
+    .replace(/=(["'])((?:(?!\1)[^])*)\1/g, (_, q, inner) => `=${inner.replace(/\s+/g, "_")}`)
+    .replace(/(\s-c\s+)(["'])((?:(?!\2)[^])*)\2/g, (whole, lead, q, inner) =>
+      /^[\w.-]+=/.test(inner) && !/\bgit\b/.test(inner) ? `${lead}${inner.replace(/\s+/g, "_")}` : whole);
+  const flat = squeezed.replace(/\$\(|[`"'(){}]/g, " ");
+  for (const segment of flat.split(/[;&|\r\n]+/)) {
+    const tokens = segment.split(/\s+/).filter(Boolean);
+    for (let i = 0; i < tokens.length; i++) {
+      if (!/^(?:.*[\\/])?git(?:\.exe)?$/i.test(tokens[i])) continue;
+      if (!tokens.slice(0, i).every(launcherMaterial)) continue;
+      let j = i + 1;
+      while (j < tokens.length && tokens[j].startsWith("-")) {
+        j += GIT_GLOBAL_WITH_VALUE.has(tokens[j]) ? 2 : 1;
+      }
+      if (tokens[j] === "push") return true;
+    }
+  }
+  return false;
+}
+
+// The newest lease as bus.mjs prints it (`lease --json`: {account, sessions: [{project, session}]} or
+// null for no lease), read under PUSH_TIMEOUT_MS. Throws a one-line reason when it cannot be read; the
+// push check fails open on that. (The PC helper gate reads the lease authority instead, below, and fails closed.)
+async function readLease(cwd, run = runChild) {
+  const bus = path.join(path.dirname(SELF), "bus.mjs");
+  if (!existsSync(bus)) throw new Error("bus.mjs is not next to this hook");
+  const result = await run(cwd, bus, ["lease", "--json"], "", PUSH_TIMEOUT_MS);
+  try {
+    if (result.error || result.timedOut || result.code !== 0) throw new Error(result.timedOut ? "timed out" : result.error?.message ?? `bus.mjs exit ${result.code}`);
+    return JSON.parse(result.stdout.trim());
+  } catch (error) {
+    throw new Error(`the account lease could not be read (${String(error?.message ?? error).split("\n")[0]})`);
+  }
+}
+
+// The deny reason, or null to allow. `run` is injectable for tests.
+export async function pushCheck({ command, cwd, env = process.env, run = runChild, fresh = false, transcriptPath, leaseAccount }) {
+  if (!isGitPush(command)) return null;
+  // Only a weekly Patrol started after the switch may push from another account (founder 2026-11-05, Patrols kept on
+  // their own account); any other fresh session there (an old master's routine, an old lane's child) is still refused.
+  if (fresh && typeof transcriptPath === "string") {
+    let first = "";
+    try { first = firstPromptText(transcriptPath); } catch { /* no readable first prompt: not a Patrol */ }
+    if (PATROL_PROMPT.test(first)) return null;
+  }
+  const label = typeof env.WOW_ACCOUNT_LABEL === "string" ? env.WOW_ACCOUNT_LABEL : "";
+  if (!label) return null;
+  if (!ACCOUNT_NAME.test(label)) { note(`push check skipped: WOW_ACCOUNT_LABEL '${label}' is not a valid account label; allowing the push (fail-open)`); return null; }
+  let lease;
+  try {
+    lease = typeof leaseAccount === "string" ? { account: leaseAccount } : await readLease(cwd, run);
+  } catch (error) {
+    note(`push check skipped: ${String(error?.message ?? error).split("\n")[0]}; allowing the push (fail-open)`);
+    return null;
+  }
+  const account = lease && typeof lease === "object" ? lease.account : null;
+  if (account === null || account === undefined) return null; // no lease: nothing to fence
+  if (typeof account !== "string" || !ACCOUNT_NAME.test(account)) {
+    note("push check skipped: the lease names no valid account; allowing the push (fail-open)");
+    return null;
+  }
+  if (account === label) return null;
+  return `wow-core: the newest lease (bus channel fleet-lease) names account ${account}, not yours (${label}). If a takeover on your account is in progress, wait for its lease and retry the push. Otherwise the fleet moved to ${account}: stop, do not push and do not continue this session's work; report it on your PR with a comment starting "To orchestrator:" (the fleet moved to ${account}; what you did and did not push), pause (never delete) your own scheduled tasks, and end. Your master on ${account} relaunches whatever is still needed.`;
+}
+
+// ---- Old-account fence (founder 2026-11-05) ----
+// "We would need a way to close all sessions exactly when we are running out of tokens so that they don't open
+// up automatically and resume work." Sessions work until the account runs out (PACE_CORE §2a), so at a takeover
+// the old account still holds lanes and masters mid-step; at its reset they wake (5 Nov 02:00: a project's old lanes
+// commented and pushed). Nothing can close them at that moment: the old account has no usage left and the new
+// one cannot see its sessions. So a session is fenced instead: when the environment's WOW_ACCOUNT_LABEL is not
+// the leased account AND the session started before the current lease period began (the takeover), every tool
+// call is refused, except the few it needs to go quiet (stop PR wakes, pause its own scheduled tasks). A session
+// started after the takeover (the takeover itself before its lease, the cleanup line, a Patrol run) is not
+// fenced. Fail-open like the push check: no label, no WOW_BUS_REPO, an unreadable lease, no period start or an
+// unreadable session start fence nothing. A stop for well-behaved sessions, not a security boundary (a session
+// can edit its own hooks or the cache file). The lease authority is cached for FENCE_CACHE_MS so this costs one
+// bus read per five minutes per container, not one per tool call.
+const PATROL_PROMPT = /\bScheduled\s+codebase\s+patrol\b|\bexecute\s+the\s+patrol\s+skill\b/i;
+export const FENCE_CACHE_MS = 300_000;
+export const FENCE_FAIL_CACHE_MS = 60_000;
+const FENCE_QUIET_TOOLS = /^mcp__(?:.+_)?claude-code-remote__(?:unsubscribe_pr_activity|list_triggers|get_trigger|update_trigger|get_session)$/;
+export const fenceAllows = (name) => name === "ToolSearch" || (typeof name === "string" && FENCE_QUIET_TOOLS.test(name));
+
+// When this session started: the first timestamp in its transcript (the transcript survives a container restart).
+export function sessionStartedAt(transcriptPath) {
+  if (typeof transcriptPath !== "string" || !transcriptPath || !existsSync(transcriptPath)) return null;
+  let fd;
+  try {
+    fd = openSync(transcriptPath, "r");
+    const TS = /"timestamp"\s*:\s*"(\d{4}-\d\d-\d\dT[^"]{1,40})"/;
+    let match = null;
+    // 64 KB first; a first message larger than that (a long brief, an image) is scanned up to 2 MB.
+    for (const size of [65_536, 2_097_152]) {
+      const buf = Buffer.alloc(size);
+      const n = readSync(fd, buf, 0, size, 0);
+      match = buf.subarray(0, n).toString("utf8").match(TS);
+      if (match || n < size) break;
+    }
+    const at = match ? Date.parse(match[1]) : NaN;
+    return Number.isFinite(at) ? at : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) try { closeSync(fd); } catch { /* ignore */ }
+  }
+}
+
+async function cachedAuthority(cwd, env, run, now) {
+  const key = createHash("sha256").update(String(trustedBusRepo(env))).digest("hex").slice(0, 16);
+  const dir = typeof env.WOW_FENCE_CACHE_DIR === "string" && env.WOW_FENCE_CACHE_DIR ? env.WOW_FENCE_CACHE_DIR : os.tmpdir();
+  const file = path.join(dir, `wow-fence-${key}.json`);
+  try {
+    const cached = JSON.parse(readFileSync(file, "utf8"));
+    const age = typeof cached?.at === "number" ? now - cached.at : -1;
+    // A failed read is cached for a minute too, so a bus outage costs one 5 s wait per minute, not one per tool call.
+    if (cached?.error && age >= 0 && age < FENCE_FAIL_CACHE_MS) throw new Error(`${cached.error} (cached)`);
+    if (!cached?.error && age >= 0 && age < FENCE_CACHE_MS) return cached.authority;
+  } catch (error) {
+    if (/\(cached\)$/.test(String(error?.message))) throw error;
+  }
+  let authority;
+  try {
+    authority = await readAuthority(cwd, env, run);
+  } catch (error) {
+    try { writeFileSync(file, JSON.stringify({ at: now, error: String(error?.message ?? error).split("\n")[0] })); } catch { /* best effort */ }
+    throw error;
+  }
+  try { writeFileSync(file, JSON.stringify({ at: now, authority })); } catch { /* cache is best effort */ }
+  return authority;
+}
+
+// { fenced, reason?, fresh, account? } — `fresh` is true when this session started at or after the current lease
+// period began on another account than its own; only a fresh weekly Patrol may then push (pushCheck). `account`
+// is the leased account when the bus was read, so the push check need not read it again.
+export async function fenceCheck({ toolName, transcriptPath, cwd, env = process.env, run = runChild, now = Date.now() }) {
+  const label = typeof env.WOW_ACCOUNT_LABEL === "string" ? env.WOW_ACCOUNT_LABEL : "";
+  if (!label || !ACCOUNT_NAME.test(label) || !trustedBusRepo(env)) return { fenced: false, fresh: false };
+  const startedAt = sessionStartedAt(transcriptPath);
+  if (startedAt === null) return { fenced: false, fresh: false };
+  let authority;
+  try {
+    authority = await cachedAuthority(cwd, env, run, now);
+  } catch (error) {
+    note(`old-account fence skipped: ${String(error?.message ?? error).split("\n")[0]}; allowing (fail-open)`);
+    return { fenced: false, fresh: false };
+  }
+  const account = authority && typeof authority === "object" ? authority.account : null;
+  if (typeof account !== "string" || !ACCOUNT_NAME.test(account)) return { fenced: false, fresh: false };
+  const at = (value) => Date.parse(typeof value === "string" ? value : "");
+  let cutoff;
+  if (account === label) {
+    // The fleet came back to this account (A to B to A): a session from before it left (before the previous,
+    // other-account period began) is as stale as one left behind. The takeover itself started inside that period.
+    cutoff = at(authority.prevPeriodStart);
+    if (!Number.isFinite(cutoff) || startedAt >= cutoff) return { fenced: false, fresh: false, account };
+  } else {
+    cutoff = at(authority.periodStart);
+    if (!Number.isFinite(cutoff)) return { fenced: false, fresh: false, account };
+    if (startedAt >= cutoff) return { fenced: false, fresh: true, account };
+  }
+  if (fenceAllows(toolName)) return { fenced: false, fresh: false, account };
+  const since = new Date(at(authority.periodStart)).toISOString().replace(/\.\d{3}Z$/, "Z");
+  return { fenced: true, fresh: false, account, reason: `wow-core: the fleet's lease is on account ${account} since ${since}, and this session (account ${label}) started before the fleet last left this account, so its work has been taken over there. Every action is refused. Go quiet and end: unsubscribe from your PR's activity (unsubscribe_pr_activity), pause (never delete) this session's own scheduled tasks (update_trigger, enabled false), then end your turn with one line saying the fleet moved. Do not push, comment, label or start sessions; the master on ${account} relaunches whatever is still needed (PACE_CORE §2a "Old-account fence").` };
+}
+
+// A lease write must name the session's own account (founder 2026-11-05): a `--take` for another account would fence
+// every older session of every account but that one. Null to allow.
+const TAKE_WRITE = (command) => /\bbus\.mjs\b[^;&|\n]*\blease\b[^;&|\n]*--take\b/.test(command)
+  || (/\bLEASE\s+account=/.test(command) && /fleet-lease|\bbus\.mjs\b[^;&|\n]*\bsend\b/.test(command) && !/^\s*(?:git|rg|grep)\b/.test(command));
+export function leaseAccountGuard(command, env = process.env) {
+  if (typeof command !== "string" || !TAKE_WRITE(command)) return null;
+  const label = typeof env.WOW_ACCOUNT_LABEL === "string" ? env.WOW_ACCOUNT_LABEL : "";
+  const written = (command.match(/--account[ =]+["']?([A-Za-z0-9][A-Za-z0-9-]*)/)?.[1] ?? command.match(/\bLEASE\s+account=([A-Za-z0-9][A-Za-z0-9-]*)/)?.[1] ?? "").toLowerCase() || null;
+  if (!label || !ACCOUNT_NAME.test(label) || !written || written === label) return null;
+  return `wow-core: this lease write names account ${written}, but this session runs on ${label} (WOW_ACCOUNT_LABEL). Only a takeover on an account leases that account; a lease for another account would stop every session started before it. Re-run with --account ${label}, or ask the wow-core master.`;
+}
+
+// ---- PC helper trust gate (founder 2026-11-04, "approve the PC helper exception") ----
+// COMMS_CORE §1: no fleet session calls confirm_repository_trust, because the founder's Allow limits that
+// session to trusted devices for good. The one exception is the standing "PC helper (fleet)" session the
+// wow-core master starts at a takeover: it is the only session that starts PC sessions, so it is the
+// only one that needs the card. This replaces the static settings deny. ALLOW only when the environment's
+// WOW_ACCOUNT_LABEL is the leased account's and the newest lease names this session as `pc-helper:<id>`
+// (ids compare after the first underscore: the platform shows one session as session_<x> and cse_<x>).
+// Everything else, including any failure to establish that, DENIES. The founder still answers the card.
+export const CONFIRM_TRUST_TOOL = "mcp__claude-code-remote__confirm_repository_trust";
+export const PC_HELPER_KEY = "pc-helper";
+export const isConfirmTrust = (name) => typeof name === "string" && /^mcp__(?:.+_)?claude-code-remote__confirm_repository_trust$/.test(name);
+const SESSION_SUFFIX = /^[A-Za-z0-9]+$/;
+const suffixOf = (id) => {
+  if (typeof id !== "string") return null;
+  const suffix = id.slice(id.indexOf("_") + 1);
+  return id.includes("_") && SESSION_SUFFIX.test(suffix) ? suffix : null;
+};
+
+// The lease authority as `bus.mjs lease --authority` prints it: {account, wowCore, pcHelper, pcHelperLease} or
+// null. Anything may post a LEASE line, so only the FIRST pc-helper entry of the current account period names the
+// helper (bus.mjs leaseAuthority). The bus repository must come from the environment (WOW_BUS_REPO, set by the
+// fleet environment); the project's .claude/bus.json and the user bus config are files the session can edit,
+// so this gate never relies on them. Throws a one-line reason; both users below fail closed on it.
+async function readAuthority(cwd, env, run) {
+  if (!trustedBusRepo(env)) throw new Error("the trusted bus repository (WOW_BUS_REPO) is not set, so the account lease could not be read");
+  const bus = path.join(path.dirname(SELF), "bus.mjs");
+  if (!existsSync(bus)) throw new Error("bus.mjs is not next to this hook, so the account lease could not be read");
+  const result = await run(cwd, bus, ["lease", "--authority"], "", PUSH_TIMEOUT_MS);
+  try {
+    if (result.error || result.timedOut || result.code !== 0) throw new Error(result.timedOut ? "timed out" : result.error?.message ?? `bus.mjs exit ${result.code}`);
+    return JSON.parse(result.stdout.trim());
+  } catch (error) {
+    throw new Error(`the account lease could not be read (${String(error?.message ?? error).split("\n")[0]})`);
+  }
+}
+
+// { ok: true, session, account } when this session is the lease-named PC helper, else { ok: false, why }.
+export async function pcHelperIdentity({ cwd, env = process.env, run = runChild }) {
+  return leasedRoleIdentity({ key: PC_HELPER_KEY, field: "pcHelper", cwd, env, run });
+}
+
+// The same check for each standing role the lease authority names by its first entry (`pcHelper`, `codexDispatcher`).
+async function leasedRoleIdentity({ key, field, cwd, env, run }) {
+  const label = typeof env.WOW_ACCOUNT_LABEL === "string" ? env.WOW_ACCOUNT_LABEL : "";
+  if (!label || !ACCOUNT_NAME.test(label)) return { ok: false, why: "WOW_ACCOUNT_LABEL is unset or invalid" };
+  const mine = suffixOf(env.CLAUDE_CODE_REMOTE_SESSION_ID);
+  if (!mine) return { ok: false, why: "this session's id (CLAUDE_CODE_REMOTE_SESSION_ID) is missing" };
+  let authority;
+  try { authority = await readAuthority(cwd, env, run); } catch (error) { return { ok: false, why: String(error?.message ?? error).split("\n")[0] }; }
+  if (!authority || typeof authority !== "object" || typeof authority.account !== "string") return { ok: false, why: "there is no lease naming an account" };
+  if (authority.account !== label) return { ok: false, why: `the lease names account ${authority.account}, not this session's (${label})` };
+  const named = authority[field];
+  if (!named) return { ok: false, why: `the lease period has no ${key}:<session id> entry` };
+  if (suffixOf(named) !== mine) return { ok: false, why: `the lease names another session as ${key} (only the first entry of the account's lease period counts)` };
+  return { ok: true, session: named, account: label };
+}
+
+// { allow: true, reason } or { allow: false, reason }. `run` is injectable for tests.
+export async function pcHelperGate({ cwd, env = process.env, run = runChild }) {
+  let who;
+  try { who = await pcHelperIdentity({ cwd, env, run }); } catch (error) { who = { ok: false, why: String(error?.message ?? error).split("\n")[0] }; }
+  if (!who.ok) {
+    return { allow: false, reason: `wow-core: confirm_repository_trust is refused: ${who.why}. No fleet session asks for trust: the card limits that session to trusted devices for good (COMMS_CORE §1). Only the lease-named PC helper may, and nothing depends on messaging it; carry on without it.` };
+  }
+  return { allow: true, reason: `wow-core: this session is the lease-named PC helper (${PC_HELPER_KEY}:${who.session}, account ${who.account}); the founder answers the card` };
+}
+
+// Writing a `pc-helper` lease entry is how a session would name itself the helper, and rewriting the `wow-core`
+// entry is how it would make itself the one who may (review 2026-11-04). The authority is the `wow-core` session of
+// the account period's FIRST lease (`bus.mjs lease --authority`): it alone writes a pc-helper entry or changes a
+// wow-core entry inside the period. A `--take` (or raw LEASE) for a DIFFERENT account than the newest lease starts
+// a new period, that is a takeover, and stays allowed. This stops honest mistakes and the obvious self-grant; a
+// session that edits its own hooks or posts through another route is stopped only by the first-entry rules in
+// bus.mjs and by the founder, who clicks Allow on the helper's card alone (COMMS_CORE §1). Fail closed when the
+// lease cannot be read.
+const LEASE_WRITE = (command) => (/\bbus\.mjs\b[^;&|\n]*\blease\b[^;&|\n]*--(?:add|take)\b/.test(command))
+  || (/\bLEASE\s+account=/.test(command))
+  || (/fleet-lease/.test(command) && /\b(?:send|api|POST|comments)\b/.test(command));
+export function writesPcHelperLease(command) {
+  return typeof command === "string" && /pc-helper/i.test(command) && LEASE_WRITE(command);
+}
+// The Codex dispatcher's entry is guarded the same way. This text match stops honest mistakes only (it misses split
+// strings, variables and a body file); the control on the push attach is the period's first entry PLUS the
+// `Codex dispatcher:` line the master merges into TASKS.md (codexDispatcherAttachDecision).
+export function writesCodexDispatcherLease(command) {
+  return typeof command === "string" && /codex-dispatcher/i.test(command) && LEASE_WRITE(command);
+}
+export function writesWowCoreLease(command) {
+  return typeof command === "string" && /wow-core\s*:\s*(?:session|cse)_/i.test(command) && LEASE_WRITE(command);
+}
+// The account a lease write names (`--account x` or `LEASE account=x`), or null when it names none.
+const writtenAccount = (command) => command.match(/--account[ =]+["']?([a-z0-9][a-z0-9-]*)/)?.[1] ?? command.match(/\bLEASE\s+account=([a-z0-9][a-z0-9-]*)/)?.[1] ?? null;
+export async function pcHelperLeaseGuard({ command, cwd, env = process.env, run = runChild }) {
+  const helperWrite = writesPcHelperLease(command) || writesCodexDispatcherLease(command);
+  const wowCoreWrite = writesWowCoreLease(command);
+  if (!helperWrite && !wowCoreWrite) return null;
+  const refuse = (why) => `wow-core: a pc-helper or codex-dispatcher entry, or a change to the wow-core entry inside an account's lease period, may be written only by the takeover (the wow-core session of the period's first lease): ${why}. The PC helper is the one session allowed to ask for the founder's trust card (COMMS_CORE §1) and the Codex dispatcher the one allowed to attach fleet repositories with push (MODEL_ROUTING "Codex dispatch"), so naming them is not for lanes or masters. Ask the wow-core master.`;
+  const mine = suffixOf(env.CLAUDE_CODE_REMOTE_SESSION_ID);
+  if (!mine) return refuse("this session's id (CLAUDE_CODE_REMOTE_SESSION_ID) is missing");
+  let authority;
+  try { authority = await readAuthority(cwd, env, run); } catch (error) { return refuse(String(error?.message ?? error).split("\n")[0]); }
+  const isAuthority = Boolean(authority && authority.wowCore) && suffixOf(authority.wowCore) === mine;
+  if (helperWrite) {
+    if (!authority || !authority.wowCore) return refuse("the newest lease period names no wow-core session");
+    return isAuthority ? null : refuse("this session is not the wow-core session of the account's lease period");
+  }
+  // A wow-core write only: allowed for the period's authority, for the very first lease, and for a takeover that
+  // starts a new account period (its account differs from the newest lease's).
+  if (!authority || isAuthority) return null;
+  const account = writtenAccount(command);
+  if (account && account !== authority.account) return null;
+  return refuse(`this session is not the wow-core session of the account's lease period (${authority.account}), and the write does not start a new account period`);
+}
+
+// True only for the lease-named PC helper: its first prompt is the roster's PC helper launch line (a cheap
+// filter so no other create_session reads the bus) AND the lease authority names this session. Any failure is false.
+const PC_HELPER_PROMPT = /You are the fleet's PC helper/;
+export async function isLeasedPcHelper(payload, cwd, env = process.env, run = runChild) {
+  try {
+    const transcript = payload?.transcript_path;
+    if (typeof transcript !== "string" || !transcript || !PC_HELPER_PROMPT.test(firstPromptText(transcript))) return false;
+    return (await pcHelperIdentity({ cwd, env, run })).ok === true;
+  } catch { return false; }
+}
+
+// ---- Codex dispatcher push attach (founder 2026-11-05; MODEL_ROUTING "Codex dispatch" "Results") ----
+// The fleet's one Codex dispatcher pushes each finished Codex Cloud task to `codex/<slug>` of the requesting project,
+// so it attaches that repository with add_repo (push access); the auto-mode classifier refused that as a self-granted
+// permission, which held every Codex request. This rule allows exactly that attach and nothing wider: the call is
+// exactly {owner, repo, access: "push"}; the repository is a row of docs/fleet-roster.md "Active masters" as committed
+// on origin/main of this hook's own wow-core checkout (the roster names owner/name for every master the dispatcher
+// serves; consumers.json names bare repositories and leaves out comms consumers that have masters); never wow-core
+// itself or the bus repository; this session is the FIRST `codex-dispatcher` entry of the account's lease period
+// (`bus.mjs lease --authority`, the PC helper's rule, so a later forged entry counts for nothing); AND it is the one
+// `Codex dispatcher: <id>` of TASKS.md as committed on the same origin/main. Anything on the account may post a LEASE
+// line, so before the master writes the entry any session could be "first" (review 2026-11-05); the TASKS.md line
+// lands only through the master's gate-merged state PR, after it checked the dispatcher with get_session. Both must
+// name this session. Anything else, and any failure, gives no decision: the classifier decides as before. Like the
+// bus attach, it narrows what an honest session attaches; a session that edits its own hooks, settings or
+// refs/remotes/origin/main (update-ref, a forced fetch) is outside it (the classifier and review stay that control). Both files are read from the fully qualified remote ref with
+// replace objects off, so a local tag or branch named origin/main, or a refs/replace entry, is not read instead.
+export const CODEX_DISPATCHER_KEY = "codex-dispatcher";
+const ORIGIN_MAIN = "refs/remotes/origin/main";
+const ROSTER_SOURCE = `${ORIGIN_MAIN}:docs/fleet-roster.md`;
+const STATE_SOURCE = `${ORIGIN_MAIN}:TASKS.md`;
+
+// The one repository the call names, as lower-case owner/name, or null: exactly the own keys owner, repo and access,
+// owner and repo plain names, access exactly "push". Anything else is null.
+export function dispatcherAttachTarget(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const keys = Object.keys(input);
+  if (keys.length !== 3 || !["owner", "repo", "access"].every((key) => keys.includes(key))) return null;
+  const { owner, repo, access } = input;
+  if (access !== "push" || typeof owner !== "string" || typeof repo !== "string" || !NAME_PART.test(owner) || !NAME_PART.test(repo)) return null;
+  return `${owner}/${repo}`.toLowerCase();
+}
+
+// The id of the one `Codex dispatcher: <id>` in the live state (TASKS.md), or null: the label must occur exactly once
+// and be followed by a session id (session_ or cse_ form, optionally in backticks). None, several or no id → null.
+export function stateDispatcher(text) {
+  if (typeof text !== "string") return null;
+  const labels = [...text.matchAll(/Codex dispatcher:/gi)];
+  if (labels.length !== 1) return null;
+  return text.slice(labels[0].index).match(/^Codex dispatcher:[ \t]*`?((?:session|cse)_[A-Za-z0-9]+)`?(?![A-Za-z0-9_-])/i)?.[1] ?? null;
+}
+
+// A file as committed on refs/remotes/origin/main of the checkout that holds this hook, only in wow-core's own layout
+// (<root>/scripts/wow-hook.mjs; a consumer's copy sits in .claude/scripts and never serves the dispatcher). Throws.
+function committedFile(source, self = SELF) {
+  const root = ownCheckoutRoot(self);
+  if (!root) throw new Error("not wow-core's own checkout");
+  return execFileSync("git", ["-C", root, "--no-replace-objects", "show", source], {
+    encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], windowsHide: true, timeout: PUSH_TIMEOUT_MS,
+    env: { ...process.env, GIT_NO_REPLACE_OBJECTS: "1" },
+  });
+}
+const committedRoster = () => committedFile(ROSTER_SOURCE);
+const committedState = () => committedFile(STATE_SOURCE);
+
+export async function codexDispatcherAttachDecision({ input, cwd, env = process.env, run = runChild, roster = committedRoster, state = committedState }) {
+  const target = dispatcherAttachTarget(input);
+  if (!target) return null;
+  // From here the call has the dispatcher's shape, so say on stderr why the hook leaves it to the classifier.
+  const pass = (why) => { note(`push attach of ${target} left to the permission flow: ${why}`); return null; };
+  try {
+    const bus = trustedBusRepo(env);
+    if (target.split("/")[1] === "wow-core" || !bus || target === bus.toLowerCase()) return pass("wow-core, the bus repository, or no trusted bus repository (WOW_BUS_REPO)");
+    let fleet;
+    try { fleet = rosterRepos(roster()); } catch (error) { return pass(`the roster could not be read from ${ROSTER_SOURCE} (${String(error?.message ?? error).split("\n")[0]})`); }
+    if (!fleet.has(target)) return pass(`not a repository of the roster's Active masters on ${ROSTER_SOURCE}`);
+    let recorded;
+    try { recorded = stateDispatcher(state()); } catch (error) { return pass(`TASKS.md could not be read from ${STATE_SOURCE} (${String(error?.message ?? error).split("\n")[0]})`); }
+    if (!recorded) return pass(`${STATE_SOURCE} does not name exactly one "Codex dispatcher: <session id>" (the wow-core master records it through a merged state PR; fetch origin after it merges)`);
+    const who = await leasedRoleIdentity({ key: CODEX_DISPATCHER_KEY, field: "codexDispatcher", cwd, env, run });
+    if (!who.ok) return pass(who.why);
+    if (suffixOf(recorded) !== suffixOf(who.session)) return pass(`${STATE_SOURCE} names another session as the Codex dispatcher`);
+    return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
+      permissionDecisionReason: `wow-core: this session is the lease-named Codex dispatcher (${CODEX_DISPATCHER_KEY}:${who.session}, account ${who.account}) and TASKS.md on origin/main records it; attaching the fleet repository ${target} with push access, to push codex/<slug>, is allowed (MODEL_ROUTING "Codex dispatch")` } };
+  } catch (error) { return pass(String(error?.message ?? error).split("\n")[0]); }
+}
+
+// ---- children ----
+
+function lastLines(text, n = 3) {
+  return String(text ?? "").trim().split(/\r?\n/).filter(Boolean).slice(-n).join(" | ");
+}
+
+// Runs `node <script> ...args` with the hook JSON on stdin, under a hard deadline. On
+// timeout the whole process tree is killed and the result returns at once — it does not
+// wait for pipes a grandchild may still hold open.
+function runChild(root, rel, args, input, timeoutMs, maxMs = Infinity) {
+  const ms = Math.min(OVERRIDE_MS || timeoutMs, maxMs);
+  return new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const settle = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ stdout, stderr, timeoutMs: ms, ...result });
+    };
+    let child;
+    try {
+      child = spawn(process.execPath, [path.resolve(root, rel), ...args], {
+        cwd: root, windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch (error) {
+      resolve({ stdout, stderr, error });
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (process.platform === "win32" && child.pid) {
+        spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+      } else {
+        try { child.kill("SIGKILL"); } catch { /* ignore */ }
+      }
+      for (const stream of [child.stdin, child.stdout, child.stderr]) {
+        try { stream?.destroy(); } catch { /* ignore */ }
+      }
+      settle({ timedOut: true });
+    }, ms);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", (error) => settle({ error }));
+    child.on("close", (code, signal) => settle({ code, signal }));
+    child.stdin.on("error", () => { /* child exited before reading stdin */ });
+    child.stdin.end(input);
+  });
+}
+
+function parseJsonObject(text) {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+
+// Maps one child's Stop result onto {kind, reason?, systemMessage?, stray?}.
+function interpret(label, r) {
+  if (r.error) return { kind: "error", detail: `${label} could not start: ${r.error.message}` };
+  if (r.timedOut) return { kind: "error", detail: `${label} timed out after ${Math.round(r.timeoutMs / 1000)} s` };
+  const out = r.stdout.trim();
+  const err = r.stderr.trim();
+  if (r.code === 2) {
+    return { kind: "block", reason: err || out || `${label} blocked the stop (exit 2) without a reason.` };
+  }
+  if (r.code !== 0) {
+    return { kind: "error", detail: `${label} exited ${r.code ?? r.signal}${err || out ? `: ${lastLines(err || out)}` : ""}` };
+  }
+  if (!out) return { kind: "pass" };
+  let parsed = parseJsonObject(out);
+  let stray = "";
+  if (!parsed) {
+    const lines = out.split(/\r?\n/);
+    const last = parseJsonObject(lines[lines.length - 1].trim());
+    if (last) { parsed = last; stray = lines.slice(0, -1).join("\n").trim(); }
+  }
+  if (!parsed) return { kind: "pass", stray: out };
+  const systemMessage = typeof parsed.systemMessage === "string" && parsed.systemMessage ? parsed.systemMessage : undefined;
+  if (parsed.decision === "block") {
+    const reason = typeof parsed.reason === "string" && parsed.reason.trim() ? parsed.reason : `${label} blocked the stop without a reason.`;
+    return { kind: "block", reason, systemMessage, stray };
+  }
+  const known = new Set(["decision", "reason", "systemMessage", "suppressOutput"]);
+  const unknown = Object.keys(parsed).filter((key) => !known.has(key));
+  if (unknown.length) stray = [stray, `ignored JSON fields: ${unknown.join(", ")}`].filter(Boolean).join("\n");
+  return { kind: "pass", systemMessage, stray };
+}
+
+async function stop(root, input, tool) {
+  const children = [
+    ...((tool === "codex" || has(root, ".claude/handoff.config.json"))
+      ? [{ label: "handoff gate", rel: ".claude/scripts/handoff/handoff-stop.mjs", args: [], ms: CHILD_MS.handoff }]
+      : []),
+  ].filter((child) => has(root, child.rel));
+  const reasons = [];
+  const messages = [];
+  for (const child of children) {
+    const run = await runChild(root, child.rel, child.args, input, child.ms);
+    const result = interpret(child.label, run);
+    if (run.stderr.trim() && result.kind !== "block") note(`${child.label} stderr: ${run.stderr.trim()}`);
+    if (result.stray) note(`${child.label} stdout (not hook JSON): ${result.stray}`);
+    if (result.systemMessage) messages.push(result.systemMessage);
+    if (result.kind === "block") reasons.push(result.reason.trim());
+    if (result.kind === "error") {
+      note(`${result.detail} — stop allowed (fail-open)`);
+      const command = ["node", child.rel, ...child.args].join(" ");
+      messages.push(`wow-core Stop hook: ${result.detail}; the stop was allowed (fail-open). Run \`${command}\` by hand and fix it.`);
+    }
+  }
+  if (reasons.length) {
+    const out = { decision: "block", reason: reasons.join("\n\n") };
+    if (messages.length) out.systemMessage = messages.join("\n");
+    return JSON.stringify(out) + "\n";
+  }
+  if (messages.length) return JSON.stringify({ systemMessage: messages.join("\n") }) + "\n";
+  return "";
+}
+
+// ---- session start ----
+
+// A linked worktree reports its own folder as the top level, so name the project after the
+// directory that holds the shared .git instead.
+function projectName(root) {
+  try {
+    const common = execFileSync("git", ["-C", root, "rev-parse", "--path-format=absolute", "--git-common-dir"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], windowsHide: true, timeout: 10_000,
+    }).trim();
+    if (path.basename(common).toLowerCase() === ".git") return path.basename(path.dirname(common));
+  } catch { /* fall through */ }
+  return path.basename(root);
+}
+
+function startupContract(root, routing) {
+  try {
+    const template = readFileSync(path.join(root, ".claude/templates/startup-contract.md"), "utf8").trim();
+    if (template) return { text: template, shared: true };
+  } catch { /* Older consumers may not have the shared contract yet. */ }
+  // Compatibility only: defer all role/review routes to MODEL_ROUTING.
+  return { text: `MODEL CHECK: once per session, follow ${routing} for role, tier, provider preference, review rounds and final verification; resolve model and reasoning effort via models.mjs from the registry. A launch with pinned model and effort counts as verified; do not request a relaunch for it. Otherwise verify once and request a relaunch on mismatch with -m <model> -c model_reasoning_effort=<effort>. Pin model AND effort on every child launch. Subscription-included routes only. ASK LAST: try your tools before asking the founder (PACE_CORE §5).`, shared: false };
+}
+
+// Codex-only orientation lines (Claude reads CLAUDE.md/AGENTS.md itself).
+function codexOrientation(root, shared) {
+  const instructions = has(root, "AGENTS.md")
+    ? "AGENTS.md is this repo's instruction file"
+    : has(root, "CLAUDE.md")
+      ? "this repo has no AGENTS.md; CLAUDE.md is its instruction file (Codex reads it as the fallback)"
+      : "this repo has no AGENTS.md; ask before assuming house rules";
+  const genericFile = firstExisting(root, ["docs/LESSONS_GENERIC.md", "docs/fleet/LESSONS_GENERIC.md", "core/LESSONS_GENERIC.md"]);
+  // The lessons store is split into LESSONS_*.md (index in LESSONS_GENERIC.md): name the directory
+  // and let rg filter with -g, since PowerShell does not expand a shell glob for rg.
+  const lessonsDir = genericFile ? path.posix.dirname(genericFile) : null;
+  const builder = firstExisting(root, ["docs/BUILDER_CORE.md", "docs/fleet/BUILDER_CORE.md", "core/BUILDER_CORE.md"]);
+  const skills = firstExisting(root, [".claude/skills", "skills"]);
+  const lines = [
+    `INSTRUCTIONS: ${instructions}. Skills are invoked as $name (for example $sweep, $review)${skills ? `; each skill's source is ${skills}/<name>/SKILL.md - read that file when Codex does not list the skill` : ""}.`,
+  ];
+  const orient = [];
+  if (has(root, "TASKS.md")) orient.push("read TASKS.md In progress + Open only (Closed is archived)");
+  if (has(root, "docs/PRODUCT.md")) orient.push("consult docs/PRODUCT.md when direction is in question");
+  if (orient.length) lines.push(`ORIENTATION: ${orient.join("; ")}.`);
+  const lessonPaths = [lessonsDir, has(root, "LESSONS.md") ? "LESSONS.md" : null].filter(Boolean);
+  if (lessonPaths.length) lines.push(`LESSONS: before design/review work run rg -n -i '<task nouns>' -g 'LESSONS*.md' ${lessonPaths.join(" ")}; read hits and the always-on tier, never whole files.`);
+  if (builder) lines.push(`Delegated builds follow ${builder}.`);
+  if (!shared) lines.push("AFTER A COMPACTION OR RESUME: re-establish the working set (modified files, active DEC/LES/TASK ids, current sprint item) before continuing.");
+  const gates = [
+    has(root, ".claude/scripts/handoff/handoff-stop.mjs") ? "the handoff gate" : null,
+  ].filter(Boolean);
+  if (!shared) lines.push("Before ending the session, commit, push and rewrite the next-action line; run $sweep at milestones, phase seams and before an agent switch.");
+  if (gates.length) lines.push(`The Stop hook runs ${gates.join(" and ")}: a block lists what to fix before you stop again.`);
+  return lines;
+}
+
+const clip = (line, max = 220) => (line.length > max ? `${line.slice(0, max - 1)}…` : line);
+
+// Required lines are never cut; optional lines are added in priority order while the line and
+// character budgets hold, so health is trimmed first (it comes last).
+export function composeBlock(required, optional, budget = BUDGET) {
+  const out = [...required];
+  let chars = out.join("\n").length;
+  for (const raw of optional) {
+    const line = clip(String(raw).replace(/\s+$/, ""));
+    if (!line) continue;
+    if (out.length + 1 > budget.lines || chars + 1 + line.length > budget.chars) continue;
+    out.push(line);
+    chars += 1 + line.length;
+  }
+  return out.join("\n");
+}
+
+async function healthLines(root, input) {
+  const health = ".claude/scripts/health.mjs";
+  if (!has(root, health)) return [];
+  const run = await runChild(root, health, ["--brief"], input, CHILD_MS.health, CHILD_MS.health);
+  if (run.error || run.timedOut || run.code !== 0) return [];
+  return run.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+export function sessionStartOutput(tool, text) {
+  if (tool === "codex") return `${text}\n`;
+  return `${JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: text } })}\n`;
+}
+
+async function sessionStart(root, payload, raw, tool, lane, cwd) {
+  if (tool === "claude") writeMarker(root, payload.session_id, cwd);
+  const source = typeof payload.source === "string" ? payload.source : "";
+  if (source === "resume" || source === "compact") return sessionStartOutput(tool, RESUME_LINE);
+  const input = raw.trim() ? raw : "{}";
+  const routing = firstExisting(root, ["docs/MODEL_ROUTING.md", "core/MODEL_ROUTING.md", "docs/fleet/MODEL_ROUTING.md"])
+    ?? "the fleet routing table (wow-core core/MODEL_ROUTING.md)";
+  const contract = startupContract(root, routing);
+  let contractText = contract.text;
+  // Live Codex lane runs 2026-10-05: the lane protocol owns close-out, not repo-wide gates.
+  // A lane's model was pinned by the master at launch, and Codex cannot see its own model id:
+  // the MODEL CHECK line made the first doctrine lane stop and ask for a relaunch, so lanes
+  // get a statement instead of the check.
+  if (lane) {
+    contractText = contractText.replace(/^MODEL CHECK\b.*$/m, "MODEL: pinned by the master at launch (MODEL_ROUTING sub-orchestrator row); treat it as verified - do not stop to check it or ask for a relaunch.");
+    contractText = contractText.replace(/\bthe model check\b/gi, "launch verification");
+  }
+  const required = [];
+  if (tool === "codex") required.push(`${projectName(root)} session start (wow-core, Codex).`);
+  required.push(...contractText.split(/\r?\n/));
+  const optional = [...(tool === "codex" ? codexOrientation(root, contract.shared) : []), ...(await healthLines(root, input))];
+  // Lines that must survive the budget (lane statement, project handoff context) are reserved
+  // first; orientation and health then fill whatever room is left, health last.
+  const reserved = [];
+  if (lane) reserved.push(LANE_LINE);
+  if (tool === "codex" || has(root, ".claude/handoff.config.json")) reserved.push(...(await handoffLines(root, input)));
+  const room = {
+    lines: BUDGET.lines - reserved.length,
+    chars: BUDGET.chars - reserved.reduce((sum, line) => sum + line.length + 1, 0),
+  };
+  const text = [composeBlock(required, optional, room), ...reserved].join("\n");
+  return sessionStartOutput(tool, text);
+}
+
+const LANE_LINE = "LANE: you are a lane sub-orchestrator; follow your lane protocol for delivery and close-out. The master verifies the lane; session-end gates do not run here.";
+const HANDOFF_REL = ".claude/scripts/handoff/handoff-session-start.mjs";
+const HANDOFF_POINTER = `full context: node ${HANDOFF_REL}`;
+
+// The repo's handoff context, clipped to a few lines: the first two, the session-contract line
+// when it would otherwise be cut, and a pointer to the full output. A project's context command
+// can emit thousands of characters (one consumer ~13.6k); the startup block stays bounded.
+export function clipHandoff(stdout) {
+  const all = String(stdout ?? "").split(/\r?\n/).map((line) => line.trimEnd()).filter((line) => line.trim());
+  const lines = all.slice(0, 2).map((line) => clip(line, 160));
+  const truncated = all.length > 2 || all.slice(0, 2).some((line) => line.length > 160);
+  if (all.length > 2) {
+    const contract = all.slice(2).reverse().find((line) => /^Session contract/i.test(line));
+    if (contract) lines.push(clip(contract, 180));
+  }
+  if (truncated) lines.push(HANDOFF_POINTER);
+  return lines;
+}
+
+async function handoffLines(root, input) {
+  if (!has(root, HANDOFF_REL)) return [];
+  const run = await runChild(root, HANDOFF_REL, [], input, CHILD_MS.sessionStart);
+  if (run.stderr.trim()) note(`handoff session-start stderr: ${run.stderr.trim()}`);
+  if (run.error || run.timedOut || run.code !== 0) {
+    const why = run.error ? run.error.message : run.timedOut ? `timed out after ${Math.round(run.timeoutMs / 1000)} s` : `exit ${run.code ?? run.signal}`;
+    note(`handoff session-start failed: ${why}`);
+    return [clip(`(handoff session-start hook failed: ${why}; run \`node ${HANDOFF_REL}\` by hand.)`, 200), ...clipHandoff(run.stdout).slice(0, 2)];
+  }
+  return clipHandoff(run.stdout);
+}
+
+// ---- dispatch ----
+
+// root is null when the payload cwd is outside any wow-core consumer: the shell policy and marker
+// refresh are skipped, but a `git -C <primary-checkout> commit` is still guarded against the
+// TARGET repo's presence markers.
+// Codex sends its shell payload without a tool_name: a payload with no name and a string command is its Bash.
+const ROUTED_TOOL = (name, input) => name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string")
+  || name === ADD_REPO_TOOL || isCreateSession(name) || isConfirmTrust(name);
+async function preToolUse(root, payload, cwd) {
+  // The settings route every tool here ("*") for the old-account fence; everything else below is per tool.
+  const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd });
+  if (fence.fenced) return `${JSON.stringify(denyResponse(fence.reason))}\n`;
+  if (!ROUTED_TOOL(payload?.tool_name, payload?.tool_input)) return "";
+  if (payload?.tool_name === ADD_REPO_TOOL) {
+    const decision = busAttachDecision(payload.tool_input) ?? await codexDispatcherAttachDecision({ input: payload.tool_input, cwd });
+    return decision ? `${JSON.stringify(decision)}\n` : "";
+  }
+  if (isCreateSession(payload?.tool_name)) {
+    return `${JSON.stringify(spawnDecision(payload, process.env, Date.now(), { exemptCaps: await isLeasedPcHelper(payload, cwd) }))}\n`;
+  }
+  if (isConfirmTrust(payload?.tool_name)) {
+    const gate = await pcHelperGate({ cwd });
+    const hookSpecificOutput = { hookEventName: "PreToolUse", permissionDecision: gate.allow ? "allow" : "deny", permissionDecisionReason: gate.reason };
+    return `${JSON.stringify({ hookSpecificOutput })}\n`;
+  }
+  const command = payload?.tool_input?.command;
+  const leaseAccount = leaseAccountGuard(command);
+  if (leaseAccount) return `${JSON.stringify(denyResponse(leaseAccount))}\n`;
+  const helperLease = await pcHelperLeaseGuard({ command, cwd });
+  if (helperLease) return `${JSON.stringify(denyResponse(helperLease))}\n`;
+  if (root) touchMarker(root, payload.session_id);
+  const policy = root ? firstExisting(root, [".claude/hooks/guard-bash-policy.mjs", "hooks/guard-bash-policy.mjs"]) : null;
+  if (policy) {
+    try {
+      const { evaluate, response } = await import(pathToFileURL(path.resolve(root, policy)).href);
+      const reason = evaluate(command, cwd);
+      if (reason) return `${JSON.stringify(response(reason))}\n`;
+    } catch (error) {
+      note(`bash policy failed, allowing: ${error?.message ?? error}`);
+    }
+  }
+  const guard = guardSharedTree({ command, sid: payload.session_id, cwd });
+  for (const warning of guard.warnings) note(warning);
+  if (guard.reason) return `${JSON.stringify(denyResponse(guard.reason))}\n`;
+  const pushReason = await pushCheck({ command, cwd, fresh: fence.fresh, transcriptPath: payload?.transcript_path, leaseAccount: fence.account });
+  return pushReason ? `${JSON.stringify(denyResponse(pushReason))}\n` : "";
+}
+
+export async function dispatch(mode, raw, tool) {
+  const payload = parsePayload(raw);
+  const cwd = typeof payload.cwd === "string" && payload.cwd && existsSync(payload.cwd) ? payload.cwd : process.cwd();
+  const found = findRoot(cwd);
+  const root = found && isConsumer(found) ? found : null;
+  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd);
+  if (!root) return "";
+  switch (mode) {
+    case "post-tool-use":
+    case "post-tool-use-failure": {
+      const reason = noProgress({ root, sid: payload.session_id, command: payload?.tool_input?.command, failed: mode === "post-tool-use-failure" });
+      if (reason) return `${JSON.stringify({ decision: "block", reason })}\n`;
+      return "";
+    }
+    case "session-end":
+      removeSessionFiles(root, payload.session_id);
+      return "";
+    case "session-start":
+      return sessionStart(root, payload, raw, tool, isLane(root), cwd);
+    case "stop":
+      if (isLane(root)) return "";
+      // A fenced session cannot act, so the handoff gate would only make it spend more turns on the old account.
+      if ((await fenceCheck({ toolName: "Stop", transcriptPath: payload?.transcript_path, cwd })).fenced) return "";
+      return stop(root, raw.trim() ? raw : "{}", tool);
+    default:
+      return "";
+  }
+}
+
+// The one tool whose failure must not fall back to the host's normal flow: if the hook cannot finish in time, or
+// breaks, confirm_repository_trust is DENIED (fail closed; the other tools fail open as before).
+const denyTrustOnFailure = (why) => `${JSON.stringify(denyResponse(`wow-core: confirm_repository_trust is refused: the trust gate ${why}, so it fails closed (COMMS_CORE §1).`))}\n`;
+
+export async function run(forcedTool) {
+  const mode = process.argv[2];
+  if (!MODES.includes(mode)) {
+    note(`unknown mode '${mode ?? ""}'; doing nothing`);
+    finish("");
+    return;
+  }
+  // Known limit (review 2026-11-04): the tool name is in the stdin payload, so a hook that hangs before stdin
+  // arrives, or crashes at startup before this line, cannot know it is the trust call and fails open like every
+  // other tool. That outcome is the host's normal permission flow, not an allow: there is no allow rule for the
+  // tool, wow-core's settings carry no deny only so the hook's allow can work, and the founder's own card remains.
+  let trustCall = false;
+  const watchdog = setTimeout(() => {
+    note(`${mode} exceeded its ${DEADLINE_MS[mode] / 1000} s deadline; ${trustCall ? "denying the trust call (fail-closed)" : "allowing (fail-open)"}`);
+    finish(trustCall ? denyTrustOnFailure(`exceeded its ${DEADLINE_MS[mode] / 1000} s deadline`) : "");
+  }, DEADLINE_MS[mode]);
+  watchdog.unref();
+  try {
+    const raw = await readStdin();
+    trustCall = mode === "pre-tool-use" && isConfirmTrust(parsePayload(raw)?.tool_name);
+    const tool = forcedTool ?? detectTool(process.argv, process.env, parsePayload(raw));
+    finish(await dispatch(mode, raw, tool));
+  } catch (error) {
+    note(`internal error, ${trustCall ? "denying the trust call (fail-closed)" : "fail-open"}: ${String(error?.stack ?? error).split("\n")[0]}`);
+    finish(trustCall ? denyTrustOnFailure("hit an internal error") : "");
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === SELF) await run();
