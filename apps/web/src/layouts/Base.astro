@@ -18,8 +18,10 @@ interface Props {
   current?: "tools" | "company-data" | "use-cases" | "pricing" | "docs";
   /** Keep the page out of search indexes (pages that only make sense with a private link). */
   noindex?: boolean;
+  /** Structured data (schema.org) for the page, written as ld+json. */
+  jsonLd?: Record<string, unknown>[];
 }
-const { title, description = SHORT_DESCRIPTION, current, noindex = false } = Astro.props;
+const { title, description = SHORT_DESCRIPTION, current, noindex = false, jsonLd = [] } = Astro.props;
 const data = await getSiteData();
 const ogImage = new URL("/og-image.png", Astro.site).href;
 const head = liveHead(data.mode, Astro.site!, noindex);
@@ -52,6 +54,7 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
   {head.analytics && <script is:inline defer src={head.analytics.src} data-website-id={head.analytics.websiteId} data-domains={head.analytics.domains} data-exclude-search={head.analytics.excludeSearch}></script>}
   {head.verification && <meta name="google-site-verification" content={head.verification} />}
   {head.noindex && <meta name="robots" content="noindex" />}
+  {jsonLd.map((ld) => <script type="application/ld+json" set:html={JSON.stringify(ld).replace(/</g, "\\u003c")} />)}
 </head>
 <body>
   <Icons />

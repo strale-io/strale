@@ -30,7 +30,7 @@ test("every page's canonical is the sitemap's <loc> for it: no .html, /index is 
     assert.equal(canonical, site + (p.path === "/" ? "/" : p.path), p.file);
     assert.doesNotMatch(canonical!, /\.html|\/index/);
     // A page that is not in the sitemap must be a family page or an excluded page.
-    const known = STATIC_PATHS.includes(p.path) || EXCLUDED_PATHS.includes(p.path) || /^\/(tools|solutions|company-data|use-cases)\/[^/]+$/.test(p.path);
+    const known = STATIC_PATHS.includes(p.path) || EXCLUDED_PATHS.includes(p.path) || /^\/(tools|solutions|company-data|use-cases|guides)\/[^/]+$/.test(p.path);
     assert.ok(known, `${p.path} is built but is neither in STATIC_PATHS, excluded, nor a known family`);
   }
 });

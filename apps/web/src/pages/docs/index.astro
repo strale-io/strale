@@ -66,7 +66,7 @@ const toc = [
     <ul class="grid-2 plain-list" role="list">
       <li><a class="card card-link route-card" href="/docs/mcp" data-spotlight><span class="card-title">MCP</span><span class="card-body">Add Strale’s MCP server to Claude Desktop, Claude Code, Cursor or any MCP client. The agent searches and calls tools itself.</span></a></li>
       <li><a class="card card-link route-card" href="/docs/api" data-spotlight><span class="card-title">REST API</span><span class="card-body">One endpoint, <code>POST /v1/do</code>, from any language. One API key and one wallet balance cover every tool.</span></a></li>
-      <li><a class="card card-link route-card" href="/docs/sdks" data-spotlight><span class="card-title">SDKs</span><span class="card-body">TypeScript and Python clients, and packages for LangChain, CrewAI, Semantic Kernel and Composio.</span></a></li>
+      <li><a class="card card-link route-card" href="/docs/sdks" data-spotlight><span class="card-title">SDKs</span><span class="card-body">TypeScript and Python clients, and packages for LangChain, CrewAI and Composio.</span></a></li>
       <li><a class="card card-link route-card" href="/docs/x402" data-spotlight><span class="card-title">x402</span><span class="card-body">No account and no key. Your agent pays in USDC per request on {plural(x402Tools, "eligible tool")}{x402Bundles > 0 ? ` and ${plural(x402Bundles, "eligible bundled check")}` : ""}.</span></a></li>
     </ul>
   </section>
@@ -100,7 +100,7 @@ const toc = [
     <CodeBlock id="success-shape" title="Success response" wrap panels={[{ label: "Response", lang: "json", code: json(successShape) }]} />
     <ul class="doc-list t-body">
       <li><code>price_cents</code> is what this call cost, in euro cents. It is <code>0</code> for free tools.</li>
-      <li><code>wallet_balance_cents</code> is your balance after the call. Calls without a key do not carry it; they carry <code>free_tier: true</code> and a <code>usage</code> block with the day’s count.</li>
+      <li><code>wallet_balance_cents</code> is your balance after the call. Calls without a key do not carry it; they carry <code>free_tier: true</code> and a <code>usage</code> block with the calls used this month, the monthly limit and when it resets.</li>
       <li><code>provenance</code> names the source that answered and when it was fetched.</li>
       <li><code>meta.audit</code> is the audit record for the call.</li>
     </ul>

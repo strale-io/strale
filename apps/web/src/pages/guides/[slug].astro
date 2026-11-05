@@ -1,0 +1,108 @@
+---
+// A guide (SITE-STRUCTURE.md page 11): one job, one working example, and the limits of the tool.
+// The text is data in src/data/guides/<slug>.md (lib/guides.ts reads it). Prices, tool names,
+// the free allowance and retention periods are tokens in that text, filled from the catalogue at
+// build time, and the table of tools below is built from the catalogue too.
+import DocsNav from "../../components/DocsNav.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData } from "../../lib/site-data.ts";
+import { countryRows } from "../../lib/company-data.ts";
+import { formatEur } from "../../lib/format.ts";
+import { loadGuides, resolveGuide, renderInline, plainText, faqPairs, GROUPS } from "../../lib/guides.ts";
+
+export function getStaticPaths() {
+  return loadGuides().map((g) => ({ params: { slug: g.slug }, props: { slug: g.slug } }));
+}
+
+const { slug } = Astro.props as { slug: string };
+const data = await getSiteData();
+const guide = resolveGuide(loadGuides().find((g) => g.slug === slug)!, data);
+const group = GROUPS.find((g) => g.id === guide.group)!;
+const countries = countryRows(data).filter((c) => guide.countries.includes(c.iso));
+const primary = guide.toolRows[0];
+const faq = faqPairs(guide.sections);
+const jsonLd: Record<string, unknown>[] = [
+  { "@context": "https://schema.org", "@type": "Article", headline: plainText(guide.title), description: guide.description, author: { "@type": "Organization", name: "Strale" } },
+  ...(guide.steps.length
+    ? [{ "@context": "https://schema.org", "@type": "HowTo", name: plainText(guide.title), step: guide.steps.map((s) => ({ "@type": "HowToStep", text: plainText(s) })) }]
+    : []),
+  ...(faq.length
+    ? [{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })) }]
+    : []),
+];
+const toc = [
+  ...(guide.steps.length ? [{ id: "steps", label: "Steps" }] : []),
+  ...guide.sections.map((s) => ({ id: s.id, label: s.heading })),
+  { id: "tools", label: "Tools in this guide" },
+];
+---
+<DocsNav
+  title={plainText(guide.title)}
+  description={guide.description}
+  current="guides"
+  label={`Guides · ${group.label}`}
+  heading={plainText(guide.title)}
+  lead={plainText(guide.summary)}
+  toc={toc}
+  jsonLd={jsonLd}
+>
+  {(guide.framework || guide.language) && (
+    <ul class="row plain-list" role="list" aria-label="Framework and language">
+      {guide.framework && <li><span class="tag tag-kit">{guide.framework}</span></li>}
+      {guide.language && <li><span class="tag">{guide.language}</span></li>}
+    </ul>
+  )}
+
+  {guide.steps.length > 0 && (
+    <section id="steps" aria-labelledby="steps-title">
+      <h2 id="steps-title" class="t-section">Steps</h2>
+      <ol class="doc-list t-body">
+        {guide.steps.map((s) => <li set:html={renderInline(s)} />)}
+      </ol>
+    </section>
+  )}
+
+  {guide.sections.map((s) => (
+    <section id={s.id} aria-labelledby={`${s.id}-title`}>
+      <h2 id={`${s.id}-title`} class="t-section">{s.heading}</h2>
+      {s.blocks.map((b, i) => {
+        if (b.kind === "p") return <p class="t-body" set:html={renderInline(b.text)} />;
+        if (b.kind === "h3") return <h3 class="t-subhead" set:html={renderInline(b.text)} />;
+        if (b.kind === "ul") return <ul class="doc-list t-body">{b.items.map((x) => <li set:html={renderInline(x)} />)}</ul>;
+        if (b.kind === "ol") return <ol class="doc-list t-body">{b.items.map((x) => <li set:html={renderInline(x)} />)}</ol>;
+        if (b.kind === "table") return (
+          <div class="table-wrap" tabindex="0" role="region" aria-label={s.heading}>
+            <table class="table">
+              <thead><tr>{b.head.map((h) => <th scope="col" set:html={renderInline(h)} />)}</tr></thead>
+              <tbody>{b.rows.map((r) => <tr>{r.map((c, j) => (j === 0 ? <th scope="row" set:html={renderInline(c)} /> : <td set:html={renderInline(c)} />))}</tr>)}</tbody>
+            </table>
+          </div>
+        );
+        return <CodeBlock id={`${s.id}-${i}`} title={b.panels[0].label} wrap panels={b.panels.map((p) => ({ label: p.label, lang: p.lang, code: p.code }))} />;
+      })}
+    </section>
+  ))}
+
+  <section id="tools" aria-labelledby="tools-title">
+    <h2 id="tools-title" class="t-section">Tools in this guide</h2>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tools in this guide">
+      <table class="table">
+        <thead><tr><th scope="col">Tool</th><th scope="col">Price per call</th></tr></thead>
+        <tbody>
+          {guide.toolRows.map((t) => (
+            <tr><th scope="row"><a class="link" href={`/tools/${t.slug}`}>{t.name}</a></th><td class="num">{t.free ? "Free" : formatEur(t.priceCents)}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    {countries.length > 0 && (
+      <p class="t-compact muted">Company records for {countries.map((c, i) => <>{i > 0 && ", "}<a class="link" href={`/company-data/${c.path}`}>{c.name}</a></>)}: inputs, output fields, source and last test.</p>
+    )}
+    <div class="row">
+      {primary.free
+        ? <a class="btn btn-primary" href={`/tools/${primary.slug}`}>Try {primary.name}</a>
+        : <a class="btn btn-primary" href="/signup">Get an API key</a>}
+      <a class="btn btn-secondary" href="/guides">All guides</a>
+    </div>
+  </section>
+</DocsNav>

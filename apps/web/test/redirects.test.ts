@@ -29,9 +29,16 @@ const LEARN = [
   "audit-trail-compliance-agent", "google-adk-strale-agent",
 ];
 const GUIDES = ["swedish-company-lookup-api", "norwegian-company-lookup-api", "vat-number-validation-api", "free-apis-for-ai-agents", "x402-pay-per-call-api", "sanctions-pep-adverse-media-comparison"];
-// SITE-STRUCTURE.md section 11: pruned (deprecated packages, scraping framing) go to /guides.
-const PRUNED = ["iban-validation-pydantic-ai", "sanctions-check-pydantic-ai", "google-adk-strale-agent", "vat-validation-openai-agents", "company-data-openai-agents", "strale-openai-agents-sdk", "web-scraping-agent-anti-bot"];
-// Country guides fold into the country pages.
+// SITE-STRUCTURE.md section 11: pruned (deprecated packages, scraping framing) point at the closest guide or page.
+const PRUNED_TO: Record<string, string> = {
+  "iban-validation-pydantic-ai": "/guides/financial-data-validation-pipeline", "sanctions-check-pydantic-ai": "/guides/sanctions-check-langchain",
+  "google-adk-strale-agent": "/docs/mcp", "vat-validation-openai-agents": "/guides/vat-validation-python-agent",
+  "company-data-openai-agents": "/guides/company-verification-multiple-countries", "strale-openai-agents-sdk": "/docs/sdks",
+  "web-scraping-agent-anti-bot": "/tools/web-extract",
+};
+const PRUNED = Object.keys(PRUNED_TO);
+// Country guides stay built pages at /guides/<slug>, linked from their country page. The old /learn address
+// points at the guide, not at the country page; the two /guides/ pages are live and get no rule.
 const FOLDED_LEARN: Record<string, string> = { "swedish-company-lookup-agent": "sweden", "uk-company-verification-agent": "united-kingdom", "german-company-data-agent": "germany" };
 const FOLDED_GUIDES: Record<string, string> = { "swedish-company-lookup-api": "sweden", "norwegian-company-lookup-api": "norway" };
 // The guides the other lane is expected to build: every old slug minus the pruned and the folded.
@@ -44,9 +51,9 @@ const CARRY_OVER_LEARN = [
   "kyc-mcp-cursor", "url-to-markdown-langchain", "dns-lookup-agent-python", "ssl-certificate-check-agent", "tech-stack-detection-agent",
   "domain-reputation-check-agent", "json-repair-ai-agent", "email-validation-langchain", "seo-audit-agent-python", "url-to-markdown-mcp",
   "strale-fallback-middleware-agent", "agent-resilience-patterns", "multi-step-due-diligence-agent", "strale-do-natural-language",
-  "mcp-server-claude-code-setup", "mcp-server-cursor-setup", "audit-trail-compliance-agent",
+  "mcp-server-claude-code-setup", "mcp-server-cursor-setup", "audit-trail-compliance-agent", ...Object.keys(FOLDED_LEARN),
 ];
-const CARRY_OVER_GUIDES = ["vat-number-validation-api", "free-apis-for-ai-agents", "x402-pay-per-call-api", "sanctions-pep-adverse-media-comparison"];
+const CARRY_OVER_GUIDES = [...Object.keys(FOLDED_GUIDES), "vat-number-validation-api", "free-apis-for-ai-agents", "x402-pay-per-call-api", "sanctions-pep-adverse-media-comparison"];
 const CARRY_OVER = [...CARRY_OVER_LEARN, ...CARRY_OVER_GUIDES];
 const COUNTRY_PATHS = ["sweden", "norway", "germany", "united-kingdom"].map((c) => `/company-data/${c}`);
 
@@ -84,26 +91,24 @@ test("every path of today's site resolves to a page, a rewrite or a redirect to 
   for (const [path, kind] of OLD_PATHS) assert.equal(outcome(path).kind, kind, path);
 });
 
-test("all 49 /learn and 8 /guides slugs end in a carried-over guide, the country page or /guides", () => {
+test("all 49 /learn and 6 /guides slugs end in a built guide or the closest page, and a live guide is never redirected", () => {
   assert.equal(LEARN.length, 49);
   for (const s of LEARN) {
     const o = outcome(`/learn/${s}`);
-    if (PRUNED.includes(s)) assert.deepEqual(o, { kind: "redirect", to: "/guides" }, s);
-    else if (FOLDED_LEARN[s]) assert.deepEqual(o, { kind: "redirect", to: `/company-data/${FOLDED_LEARN[s]}` }, s);
+    if (PRUNED_TO[s]) assert.deepEqual(o, { kind: "redirect", to: PRUNED_TO[s] }, s);
     else assert.deepEqual(o, { kind: "redirect", to: `/guides/${s}` }, s);
   }
   for (const s of GUIDES) {
     const o = outcome(`/guides/${s}`);
-    if (FOLDED_GUIDES[s]) assert.deepEqual(o, { kind: "redirect", to: `/company-data/${FOLDED_GUIDES[s]}` }, s);
-    else assert.deepEqual(o, { kind: "page" }, s);
+    assert.deepEqual(o, { kind: "page" }, s);
   }
 });
 
-test("the carry-over list is every old slug minus the pruned and the folded", () => {
-  assert.equal(CARRY_OVER_LEARN.length, LEARN.length - PRUNED.length - Object.keys(FOLDED_LEARN).length);
-  assert.equal(CARRY_OVER_GUIDES.length, GUIDES.length - Object.keys(FOLDED_GUIDES).length);
-  for (const s of CARRY_OVER_LEARN) assert.ok(LEARN.includes(s) && !PRUNED.includes(s) && !FOLDED_LEARN[s], s);
-  for (const s of CARRY_OVER_GUIDES) assert.ok(GUIDES.includes(s) && !FOLDED_GUIDES[s], s);
+test("the carry-over list is every old slug minus the pruned", () => {
+  assert.equal(CARRY_OVER_LEARN.length, LEARN.length - PRUNED.length);
+  assert.equal(CARRY_OVER_GUIDES.length, GUIDES.length);
+  for (const s of CARRY_OVER_LEARN) assert.ok(LEARN.includes(s) && !PRUNED.includes(s), s);
+  for (const s of CARRY_OVER_GUIDES) assert.ok(GUIDES.includes(s), s);
 });
 
 test("the country pages the guides fold into exist in the build's country list", () => {

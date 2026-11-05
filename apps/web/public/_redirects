@@ -21,24 +21,61 @@
 # Integrations is one choice within connecting.
 /integrations  /docs  301
 
-# Guides (SITE-STRUCTURE section 11). Explicit rules come before the splat.
-# Pruned: name deprecated packages (DEC-20260422-A) or conflict with the data-access rule.
-/learn/iban-validation-pydantic-ai  /guides  301
-/learn/sanctions-check-pydantic-ai  /guides  301
-/learn/google-adk-strale-agent  /guides  301
-/learn/vat-validation-openai-agents  /guides  301
-/learn/company-data-openai-agents  /guides  301
-/learn/strale-openai-agents-sdk  /guides  301
-/learn/web-scraping-agent-anti-bot  /guides  301
-# Country guides fold into the country pages.
-/learn/swedish-company-lookup-agent  /company-data/sweden  301
-/learn/uk-company-verification-agent  /company-data/united-kingdom  301
-/learn/german-company-data-agent  /company-data/germany  301
-/guides/swedish-company-lookup-api  /company-data/sweden  301
-/guides/norwegian-company-lookup-api  /company-data/norway  301
-# The rest keep their slug under /guides (built in a separate lane).
+# Guides (SITE-STRUCTURE section 11). One source: guideRedirects() in src/content/guide-fates.ts;
+# test/guides.test.ts fails if these lines and that list differ. Pruned guides point at the closest
+# guide or page; every other /learn guide keeps its slug under /guides; the folded country guides
+# are built guide pages too (linked from their country page), so nothing points away from a guide.
+# The /guides/* pages are live, so there are no /guides rules. Exact rules, no splat.
 /learn  /guides  301
-/learn/*  /guides/:splat  301
+/learn/iban-validation-langchain-python  /guides/iban-validation-langchain-python  301
+/learn/iban-validation-pydantic-ai  /guides/financial-data-validation-pipeline  301
+/learn/iban-validation-crewai  /guides/iban-validation-crewai  301
+/learn/vat-validation-python-agent  /guides/vat-validation-python-agent  301
+/learn/vat-validation-openai-agents  /guides/vat-validation-python-agent  301
+/learn/swift-bic-validation-agent  /guides/swift-bic-validation-agent  301
+/learn/iban-validation-mcp  /guides/iban-validation-mcp  301
+/learn/multi-currency-iban-validation  /guides/multi-currency-iban-validation  301
+/learn/financial-data-validation-pipeline  /guides/financial-data-validation-pipeline  301
+/learn/eori-number-validation-agent  /guides/eori-number-validation-agent  301
+/learn/swedish-company-lookup-agent  /guides/swedish-company-lookup-agent  301
+/learn/uk-company-verification-agent  /guides/uk-company-verification-agent  301
+/learn/german-company-data-agent  /guides/german-company-data-agent  301
+/learn/kyb-workflow-crewai  /guides/kyb-workflow-crewai  301
+/learn/company-verification-multiple-countries  /guides/company-verification-multiple-countries  301
+/learn/beneficial-ownership-lookup-agent  /guides/beneficial-ownership-lookup-agent  301
+/learn/lei-code-lookup-agent  /guides/lei-code-lookup-agent  301
+/learn/vat-registration-check-agent  /guides/vat-registration-check-agent  301
+/learn/company-data-openai-agents  /guides/company-verification-multiple-countries  301
+/learn/kyb-mcp-claude  /guides/kyb-mcp-claude  301
+/learn/sanctions-check-langchain  /guides/sanctions-check-langchain  301
+/learn/sanctions-check-pydantic-ai  /guides/sanctions-check-langchain  301
+/learn/pep-check-ai-agent  /guides/pep-check-ai-agent  301
+/learn/adverse-media-check-agent  /guides/adverse-media-check-agent  301
+/learn/full-kyc-pipeline-python  /guides/full-kyc-pipeline-python  301
+/learn/gdpr-compliance-check-agent  /guides/gdpr-compliance-check-agent  301
+/learn/eu-ai-act-classification-agent  /guides/eu-ai-act-classification-agent  301
+/learn/aml-screening-agent-workflow  /guides/aml-screening-agent-workflow  301
+/learn/compliance-agent-strale-fallback  /guides/compliance-agent-strale-fallback  301
+/learn/kyc-mcp-cursor  /guides/kyc-mcp-cursor  301
+/learn/url-to-markdown-langchain  /guides/url-to-markdown-langchain  301
+/learn/dns-lookup-agent-python  /guides/dns-lookup-agent-python  301
+/learn/ssl-certificate-check-agent  /guides/ssl-certificate-check-agent  301
+/learn/tech-stack-detection-agent  /guides/tech-stack-detection-agent  301
+/learn/domain-reputation-check-agent  /guides/domain-reputation-check-agent  301
+/learn/json-repair-ai-agent  /guides/json-repair-ai-agent  301
+/learn/email-validation-langchain  /guides/email-validation-langchain  301
+/learn/web-scraping-agent-anti-bot  /tools/web-extract  301
+/learn/seo-audit-agent-python  /guides/seo-audit-agent-python  301
+/learn/url-to-markdown-mcp  /guides/url-to-markdown-mcp  301
+/learn/strale-fallback-middleware-agent  /guides/strale-fallback-middleware-agent  301
+/learn/agent-resilience-patterns  /guides/agent-resilience-patterns  301
+/learn/multi-step-due-diligence-agent  /guides/multi-step-due-diligence-agent  301
+/learn/strale-do-natural-language  /guides/strale-do-natural-language  301
+/learn/mcp-server-claude-code-setup  /guides/mcp-server-claude-code-setup  301
+/learn/mcp-server-cursor-setup  /guides/mcp-server-cursor-setup  301
+/learn/strale-openai-agents-sdk  /docs/sdks  301
+/learn/audit-trail-compliance-agent  /guides/audit-trail-compliance-agent  301
+/learn/google-adk-strale-agent  /docs/mcp  301
 
 # Internal pages that die.
 /design-system  /  301

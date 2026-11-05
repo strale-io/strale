@@ -5,7 +5,7 @@ import { Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import Base from "../layouts/Base.astro";
 
-export type DocsPage = "overview" | "mcp" | "api" | "sdks" | "x402";
+export type DocsPage = "overview" | "mcp" | "api" | "sdks" | "x402" | "guides";
 interface Props {
   title: string;
   description: string;
@@ -19,17 +19,20 @@ interface Props {
   art?: ImageMetadata;
   /** Anchors on this page, listed under the route links on wide screens. */
   toc?: { id: string; label: string }[];
+  /** Structured data for the page (schema.org), passed to the layout. */
+  jsonLd?: Record<string, unknown>[];
 }
-const { title, description, current, label = "Docs", heading, lead, art, toc = [] } = Astro.props;
+const { title, description, current, label = "Docs", heading, lead, art, toc = [], jsonLd = [] } = Astro.props;
 const routes: { id: DocsPage; href: string; label: string }[] = [
   { id: "overview", href: "/docs", label: "Start here" },
   { id: "mcp", href: "/docs/mcp", label: "MCP" },
   { id: "api", href: "/docs/api", label: "REST API" },
   { id: "sdks", href: "/docs/sdks", label: "SDKs" },
   { id: "x402", href: "/docs/x402", label: "x402" },
+  { id: "guides", href: "/guides", label: "Guides" },
 ];
 ---
-<Base title={title} description={description} current="docs">
+<Base title={title} description={description} current="docs" jsonLd={jsonLd}>
   <section class="page-head">
     <div class:list={["container", "page-head-grid", { "has-art": !!art }]}>
       <div class="stack">

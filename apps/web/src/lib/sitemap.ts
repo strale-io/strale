@@ -6,10 +6,11 @@
 import { tools } from "./site-data.ts";
 import { countryRows } from "./company-data.ts";
 import { USE_CASES } from "../content/use-cases.ts";
+import { loadGuides } from "./guides.ts";
 import type { SiteData } from "./types.ts";
 
 /** Hand-written pages that are built and indexable. Each is src/pages/<path>.astro (or <path>/index.astro). */
-export const STATIC_PATHS = ["/", "/tools", "/company-data", "/use-cases", "/pricing", "/docs", "/docs/mcp", "/docs/api", "/docs/x402", "/docs/sdks", "/security", "/about", "/privacy", "/terms", "/signup"];
+export const STATIC_PATHS = ["/", "/tools", "/company-data", "/use-cases", "/pricing", "/docs", "/docs/mcp", "/docs/api", "/docs/x402", "/docs/sdks", "/guides", "/security", "/about", "/privacy", "/terms", "/signup"];
 
 /** Built pages that stay out of the sitemap: private-link pages and the wallet flow. /audit is also noindex. */
 export const EXCLUDED_PATHS = ["/audit", "/topup"];
@@ -27,6 +28,7 @@ export function pagePaths(d: SiteData): string[] {
     ...d.solutions.map((s) => `/solutions/${s.slug}`),
     ...countryRows(d).map((c) => `/company-data/${c.path}`),
     ...USE_CASES.map((u) => `/use-cases/${u.slug}`),
+    ...loadGuides().map((g) => `/guides/${g.slug}`),
   ].sort();
   return [...STATIC_PATHS, ...generated];
 }
