@@ -14,6 +14,32 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-45** · `your_call` · owner Petter · raised 2026-11-05 — **four sentences in the Terms and Privacy pages are out of date; here is the corrected wording, which goes live with the new site unless you change it**
+
+*Why it is yours:* the Terms and Privacy policy bind Moonlighter AB (CHARTER § founder-gated). The new site (`apps/web`) carries both word for word from strale.dev, so whatever they say on switch-over day is what we publish on strale.io.
+
+*What is established (read from `apps/web/src/pages/terms.astro` and `privacy.astro` on main, 2026-11-05):*
+1. Terms §2 says the Service includes "the Payee Assurance product". That product name was retired with the Counterparty Assurance framing (DEC-20260812-A); nothing on the site sells it.
+2. Terms §2 says material changes are communicated under "Section 12". The changes clause is §11 (§12 is governing law). The link already points at the right section; only the number is wrong.
+3. Terms §7 says "We publish quality and reliability scores for each capability via our public quality endpoint". That endpoint and the scores were deleted with the SQS engine (DEC-20260503-B); the URL answers 404.
+4. Privacy §4 lists Voyage AI as a sub-processor for search embeddings. Tool search stopped using embeddings on 2026-10-26 (DEC-20261026-A), so no data goes to Voyage.
+
+*Proposed wording (all four narrow what we say; none touches pricing, liability, governing law or acceptable use, so under Terms §11 they are non-material and take effect on posting, with no 30-day email):*
+1. §2: "The Service is an API platform that lets you call data and validation capabilities." (the Payee Assurance clause removed).
+2. §2: "Section 12" becomes "Section 11".
+3. §7, second paragraph: "Where we describe a capability's tests, limitations or reliability, that description is our best estimate of execution quality and not a contractual warranty." (keeps the disclaimer, drops the deleted endpoint).
+4. Privacy §4: remove the Voyage AI row, and move the policy's last-updated date to the posting date.
+
+The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the switch-over with the other domain references (DEC-20261105-A); that needs no decision.
+
+*Options:* approve all four as written; edit any of them; or publish the old text unchanged (it then goes live on strale.io with these four errors).
+
+*Recommendation:* approve as written. A session makes the edit in one reviewed PR before the switch-over.
+
+*Consequence:* approving fixes four statements that are false today, at no cost. Not approving publishes them again on the new domain.
+
+*Related, separate and still open:* cto-readiness T16 (WP14) — the sign-up form shows no Terms while the backend records acceptance. That is its own founder gate, not part of this entry.
+
 **DQ-44** · `answered` · owner Petter · raised 2026-10-31 · answered 2026-11-05 (renewed) — **our Google search credit expires on 8 November; renewing costs about $62.50 for six months, and not renewing takes seven tools off sale**
 
 *Answer (2026-11-05):* Petter renewed: USD 62.50 charged through Paddle on 2026-11-05 (Serper billing page, payment history), 50,000 credits added, balance 97,487 right after the top-up. The new credits are valid six months, to about 2027-05-05. Still unknown: whether the 47,487 from the May pack lapse on 8 November or carry over; the balance after that date shows which (about 97,000 = carried over, about 50,000 = lapsed). Usage on the dashboard was 86 credits from 22 October to 5 November, about 185 a month, lower than the 430 estimated below. The rollover email was withdrawn unsent. Follow-up: ask DataForSEO in writing whether its results may be resold (OUTBOX row `dataforseo-resale`), so the next renewal can move to a balance that does not expire.
