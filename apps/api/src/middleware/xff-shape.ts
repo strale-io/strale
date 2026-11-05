@@ -9,7 +9,8 @@
  * a closed label set. Remove once a receipt has been written.
  */
 import { isIP } from "node:net";
-import type { MiddlewareHandler } from "hono";
+import { Hono, type Context, type MiddlewareHandler } from "hono";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 import { log } from "../lib/log.js";
 
 export type IpClass =
@@ -106,6 +107,29 @@ export function buildShape(
   };
 }
 
+/** Shape of the current request; shared by the logger and the debug route. */
+export function shapeOfRequest(c: Context): XffShape {
+  const env = c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined;
+  return buildShape(c.req.header("x-forwarded-for"), env?.incoming?.socket?.remoteAddress, {
+    realIp: c.req.header("x-real-ip") !== undefined,
+    cf: c.req.header("cf-connecting-ip") !== undefined,
+    forwarded: c.req.header("forwarded") !== undefined,
+    proto: c.req.header("x-forwarded-proto") !== undefined,
+    host: c.req.header("x-forwarded-host") !== undefined,
+  });
+}
+
+/**
+ * TEMPORARY: GET /v1/debug/xff-shape. Unauthenticated; returns the structure of
+ * the CALLER'S OWN request only (no addresses, hashes or ports), 20/min per IP.
+ * Removed together with the logger once the receipt is written.
+ */
+export const xffShapeRoute = new Hono();
+xffShapeRoute.get("/", rateLimitByIp(20, 60_000, "xff-shape-debug"), (c) => {
+  c.header("cache-control", "no-store");
+  return c.json(shapeOfRequest(c));
+});
+
 export function xffShapeLogger(opts: { maxLines?: number } = {}): MiddlewareHandler {
   const max = opts.maxLines ?? XFF_SHAPE_MAX_LINES;
   let emitted = 0;
@@ -114,14 +138,7 @@ export function xffShapeLogger(opts: { maxLines?: number } = {}): MiddlewareHand
     if (emitted < max && process.env.XFF_SHAPE_LOG !== "0" && !c.req.path.startsWith("/health")) {
       emitted++;
       try {
-        const env = c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined;
-        const shape = buildShape(c.req.header("x-forwarded-for"), env?.incoming?.socket?.remoteAddress, {
-          realIp: c.req.header("x-real-ip") !== undefined,
-          cf: c.req.header("cf-connecting-ip") !== undefined,
-          forwarded: c.req.header("forwarded") !== undefined,
-          proto: c.req.header("x-forwarded-proto") !== undefined,
-          host: c.req.header("x-forwarded-host") !== undefined,
-        });
+        const shape = shapeOfRequest(c);
         log.info(shape, "xff-shape");
       } catch {
         // Measurement must never affect a request.

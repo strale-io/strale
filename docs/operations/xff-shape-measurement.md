@@ -23,6 +23,14 @@ unparseable`), `peer_class`, `left_most_is_peer`, and booleans for
 a hash, a prefix or a port. Tests assert no IPv4/IPv6-looking substring in the
 emitted object.
 
+## Debug endpoint (temporary)
+
+`GET https://<api>/v1/debug/xff-shape` is unauthenticated and returns the same
+shape object for the caller's own request (no address, hash or port), limited
+to 20 per minute per IP, `cache-control: no-store`. It lets a session without
+log access read the shape by calling it. It is excluded from the OpenAPI
+coverage test with a TEMPORARY reason in `openapi-internal-routes.ts`.
+
 ## Reading it
 
 Search `xff-shape` in Railway logs or Better Stack. Tally `entry_classes` and
@@ -35,6 +43,6 @@ Include real client traffic, not only your own probes.
 
 Once the tally is written as a receipt
 (`npm run receipt -- --kind xff-shape --topic production --from <file>`),
-delete `middleware/xff-shape.ts`, its test, the `app.ts` lines, and the
+delete `middleware/xff-shape.ts`, its test, the `app.ts` lines (middleware and `/v1/debug/xff-shape` route), the exclusion in `openapi-internal-routes.ts`, the `"/*"` count in `openapi-route-coverage.ts` (5 back to 4), and the
 `XFF_SHAPE_LOG` row in `config/env-manifest.yaml`, then run
 `npm run env:example`.

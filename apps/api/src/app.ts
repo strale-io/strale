@@ -12,7 +12,7 @@ import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
 import { fireAndForget } from "./lib/fire-and-forget.js";
 import { requestContext } from "./middleware/request-context.js";
-import { xffShapeLogger } from "./middleware/xff-shape.js";
+import { xffShapeLogger, xffShapeRoute } from "./middleware/xff-shape.js";
 import type { AppEnv } from "./types.js";
 import { doRoute } from "./routes/do.js";
 import { doBatchRoute } from "./routes/do-batch.js";
@@ -553,6 +553,8 @@ app.route("/v1", suggestRoute);
 // and the contract every consumer (frontend, llms.txt, agent card,
 // methodology pages) should read from.
 app.route("/v1/platform/facts", platformFactsRoute);
+// TEMPORARY (incident 2026-11-05): own-request XFF shape, no addresses. Remove with xffShapeLogger.
+app.route("/v1/debug/xff-shape", xffShapeRoute);
 // Bucket C — GDPR Art. 22(3) dispute intake. Accepts authenticated
 // (account holder) or signed-token (anonymous data subject with a
 // shareable audit URL) submissions. See routes/dispute.ts.

@@ -4,7 +4,7 @@ import { Hono } from "hono";
 const lines: Array<Record<string, unknown>> = [];
 vi.mock("../lib/log.js", () => ({ log: { info: (o: Record<string, unknown>) => lines.push(o) } }));
 
-const { classifyIp, buildShape, xffShapeLogger, XFF_SHAPE_MAX_LINES } = await import("./xff-shape.js");
+const { xffShapeRoute, shapeOfRequest, classifyIp, buildShape, xffShapeLogger, XFF_SHAPE_MAX_LINES } = await import("./xff-shape.js");
 
 const IPV4 = /\b\d{1,3}(?:\.\d{1,3}){3}\b/;
 const IPV6 = /(?:[0-9a-f]{0,4}:){2,}[0-9a-f]{0,4}/i;
@@ -110,4 +110,30 @@ describe("xffShapeLogger", () => {
     await hit(mk());
     expect(lines).toHaveLength(0);
   });
+});
+
+describe("GET /v1/debug/xff-shape (temporary)", () => {
+  const headers = { "x-forwarded-for": "203.0.113.9, 34.75.37.254", "x-forwarded-proto": "https", "x-real-ip": "1.2.3.4" };
+  it("returns the same shape as the logger, with no IP-looking substring", async () => {
+    delete process.env.XFF_SHAPE_LOG;
+    lines.length = 0;
+    const app = new Hono();
+    app.use("*", xffShapeLogger());
+    app.route("/v1/debug/xff-shape", xffShapeRoute);
+    const res = await app.request("/v1/debug/xff-shape", { headers });
+    const text = await res.text();
+    expect(res.status).toBe(200);
+    expect(text).not.toMatch(IPV4);
+    expect(text).not.toMatch(IPV6);
+    expect(JSON.parse(text)).toEqual(lines[0]);
+    expect(JSON.parse(text).entry_classes).toEqual(["private", "public_v4"]);
+  });
+  it("is rate limited", async () => {
+    const app = new Hono();
+    app.route("/v1/debug/xff-shape", xffShapeRoute);
+    const codes: number[] = [];
+    for (let i = 0; i < 25; i++) codes.push((await app.request("/v1/debug/xff-shape", { headers: { "x-forwarded-for": "198.51.100.77" } })).status);
+    expect(codes).toContain(429);
+  });
+  it("shapeOfRequest is exported", () => expect(typeof shapeOfRequest).toBe("function"));
 });
