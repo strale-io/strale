@@ -1086,11 +1086,16 @@ tracks:
       The header shape is now measured: archive/receipts/2026-11-05-audit-xff-shape-production.json
       (X-Forwarded-For is exactly "<client>, <railway-edge>", the client-supplied header is
       replaced, client = left-most = second from right; the temporary measurement from
-      #915 is removed). Next: batch 4 again, client = entries[len-2] (one trusted
-      appended hop) with the left-most fallback when there is one entry, tests from the
-      receipt's shapes, and the identity probe run BEFORE merge from a stable-egress
-      machine. Each batch: plant the failure first, then the guard, then the
-      discriminating test.
+      #915 is removed). Batch 4 redo is open as a draft PR on
+      claude/quirky-davinci-gha13h: lib/client-ip.ts takes the public entry one hop
+      left of the edge (one public entry alone is the client), tests pin the
+      receipt's shape and fail against both #910's right-most rule and the old
+      left-most rule, and verify-ip-probe.mjs reports rotating egress as
+      inconclusive (exit 2) instead of a false mismatch. Next: run
+      `node apps/api/scripts/verify-ip-probe.mjs` from a fixed-egress machine (the PC)
+      and get exit 0, merge AFTER the switch-over PR #917 (shared route files), then
+      re-run the probe after deploy. Each batch: plant the failure first, then the
+      guard, then the discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code

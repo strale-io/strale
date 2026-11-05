@@ -87,7 +87,7 @@ describeDb("Claude connector OAuth against real Postgres", () => {
     const csrf = /name="csrf" value="([0-9a-f]+)"/.exec(await page.text())![1];
     const body = new URLSearchParams({ ...Object.fromEntries(query), csrf, ...form });
     return app.request("http://localhost/oauth/authorize", {
-      method: "POST", body, headers: { Cookie: cookie, "Content-Type": "application/x-www-form-urlencoded", "X-Forwarded-For": `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
+      method: "POST", body, headers: { Cookie: cookie, "Content-Type": "application/x-www-form-urlencoded", "X-Forwarded-For": `45.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` },
     });
   }
 
@@ -296,7 +296,7 @@ describeDb("Claude connector OAuth against real Postgres", () => {
     const query = authorizeQuery();
     const noCsrf = await app.request("http://localhost/oauth/authorize", {
       method: "POST", body: new URLSearchParams({ ...Object.fromEntries(query), api_key: primary, decision: "allow" }),
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Forwarded-For": "10.8.0.1" },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Forwarded-For": "45.8.0.1" },
     });
     expect(noCsrf.status).toBe(400);
     expect(noCsrf.headers.get("Location")).toBeNull();

@@ -44,6 +44,7 @@ import {
 } from "../lib/oauth.js";
 import { authenticateApiKey } from "../lib/api-keys.js";
 import { readBearer } from "../lib/bearer-placeholder.js";
+import { clientIpFromHeaders } from "../lib/client-ip.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -405,9 +406,7 @@ function extractApiKey(req: Request): string {
 // ─── Extract client IP for free-tier rate limiting ──────────────────────────
 
 function extractClientIp(req: Request): string {
-  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = req.headers.get("x-real-ip")?.trim();
-  return forwarded || realIp || "unknown";
+  return clientIpFromHeaders((n) => req.headers.get(n)) ?? "unknown";
 }
 
 // ─── CORS headers ───────────────────────────────────────────────────────────

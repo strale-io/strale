@@ -8,6 +8,7 @@ import { HTTPException } from "hono/http-exception";
 import { versionMiddleware } from "./lib/versioning.js";
 import { apiError } from "./lib/errors.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
+import { clientIpOrNull } from "./lib/client-ip.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
 import { fireAndForget } from "./lib/fire-and-forget.js";
@@ -727,7 +728,7 @@ app.route("/x402", x402GatewayV2);
 
 // x402 manifest — DB-driven machine-readable list of x402-enabled endpoints
 app.get("/.well-known/x402.json", async (c) => {
-  recordDiscoveryHit("/.well-known/x402.json", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
+  recordDiscoveryHit("/.well-known/x402.json", c.req, { src: c.req.query("src"), ip: (clientIpOrNull(c) ?? undefined) });
   c.header("Cache-Control", "public, max-age=300");
   const manifest = await getX402Manifest();
   return c.json(manifest);
