@@ -71,7 +71,7 @@ the left-most rule that held before #910.
 
 ## 6. What changes
 
-- **Before WP12 batch 4 is attempted again:** a receipt that records the real
+- **Done 2026-11-05:** `archive/receipts/2026-11-05-audit-xff-shape-production.json` records the shape (`<client>, <railway-edge>`; the client-supplied header is replaced). Originally planned: a receipt that records the real
   `X-Forwarded-For` entry count and order in production. Capture it with an
   echo of the raw header on a non-production Railway service behind the same
   edge, or a temporary debug log line. The rule is then written against that.
