@@ -48,3 +48,25 @@ The handoff gate reports the remote branch `worktree-bridge-cse_01RFNL6Vx2oGTueV
   - `registry.npmjs.org`;
   - `github.com`, `objects.githubusercontent.com` and `raw.githubusercontent.com`, needed only for c2pa-node's prebuilt binary and test certificates.
 - **Test variables:** the dummy `AUDIT_HMAC_SECRET` and `FRONTEND_URL` that `ci.yml` already publishes.
+
+## Switch-over done (2026-11-05, about 22:35 Swedish time)
+
+**Cloudflare (Petter):**
+- strale.io and www.strale.io are custom domains on the Pages project `strale-web`, both Active. strale.io is a proxied CNAME to `strale-web.pages.dev`.
+- The old strale.io → strale.dev rule is off.
+- The strale.dev zone has a redirect rule "strale.dev to strale.io": dynamic `concat("https://strale.io", http.request.uri.path)`, **302**, query string kept.
+
+**#917:** merged as ae7622c0 and deployed. Checks after the deploy:
+- `llms.txt` has 0 strale.dev mentions;
+- the MCP card, OAuth metadata and sign-up links name strale.io;
+- CORS answers `https://strale.io`.
+
+**Railway (Petter):** `FRONTEND_URL=https://strale.io`, redeployed at 22:32. A new free-tier call returns an audit link on strale.io, and the page loads ("Compliance record · Strale"). The Stripe return path `/topup?status=…` loads on strale.io. No live checkout was created.
+
+**Tomorrow:**
+1. Switch the strale.dev rule from 302 to **301**. That is Petter's step, in Cloudflare: strale.dev → Rules → Redirect Rules → edit → status 301.
+2. Release the packages listed in `docs/programs/brand-website/SWITCHOVER-REFERENCES.md`.
+3. File the Search Console change of address (Petter).
+4. Change `.claude/cloud.json` env `FRONTEND_URL` to strale.io, to match ci.yml after #917.
+
+**Open:** the #920 PC probe was requested from the PC helper (brief `docs/lanes/pc/wp12-identity-probe-brief.md`). It answers on #920.
