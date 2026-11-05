@@ -1,0 +1,68 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "fd87491fb273cfd84f6b853fa640d85772dab21f"
+  },
+  "at": "2026-11-05T19:59:55.980Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/hook-run.json"
+  },
+  "summary": {
+    "ok": true
+  },
+  "topic": "wow-hook-pretooluse-strale",
+  "raw": {
+    "ok": true,
+    "summary": {
+      "hook": ".claude/scripts/wow-hook.mjs pre-tool-use (wow-core d92ad9b)",
+      "cases": 7
+    },
+    "raw": {
+      "results": [
+        {
+          "case": "bash_git_status",
+          "exit": 0,
+          "decision": "none (normal permissions)",
+          "ms": 69
+        },
+        {
+          "case": "bash_commit_push_feature",
+          "exit": 0,
+          "decision": "none (normal permissions)",
+          "ms": 1536
+        },
+        {
+          "case": "read",
+          "exit": 0,
+          "decision": "none (normal permissions)",
+          "ms": 54
+        },
+        {
+          "case": "edit",
+          "exit": 0,
+          "decision": "none (normal permissions)",
+          "ms": 46
+        },
+        {
+          "case": "add_repo_bus",
+          "exit": 0,
+          "decision": "allow",
+          "ms": 73
+        },
+        {
+          "case": "add_repo_other",
+          "exit": 0,
+          "decision": "none (normal permissions)",
+          "ms": 47
+        },
+        {
+          "case": "planted_create_session_unverifiable",
+          "exit": 0,
+          "decision": "deny",
+          "ms": 49
+        }
+      ]
+    }
+  }
+}
