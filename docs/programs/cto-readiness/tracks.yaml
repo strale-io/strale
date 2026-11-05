@@ -1013,7 +1013,7 @@ tracks:
     depends_on: [T4]
     owner: session
     next_action: >
-      WP12 batches 1 to 3 of 4 done and batch 4 built, pending independent review: 1 and 2 under audit finding CR-11 (egress/SSRF), 3 under CR-12, 4 under CR-19.
+      WP12 batches 1 to 3 of 4 done: 1 and 2 under audit finding CR-11 (egress/SSRF), 3 under CR-12.
       Batch 1 (2026-11-02, PR #891): isBlockedIp is CIDR arithmetic over the IANA
       special-purpose tables via net.BlockList, and validateHost parses [v6]:port,
       refuses stray-colon hosts and checks dns.lookup as well as resolve4/6.
@@ -1080,35 +1080,9 @@ tracks:
       lowering the baseline), c2pa-inspect's native parse (byte-capped at 15 MiB, no
       pixel decode), and routing domain-age-check and whois-lookup through
       vetted-connect (the batch 2 follow-up, still open).
-      Batch 4 (2026-11-05, branch fix/wp12-trusted-hop-forwarded-ip, pending review):
-      the forwarded-IP trusted-hop rule is code. apps/api/src/lib/client-ip.ts is
-      the one reader of client-IP headers: the entry TRUSTED_PROXY_HOPS (1) from the
-      right of X-Forwarded-For (all header lines joined), validated with node:net
-      and canonicalised (IPv4-mapped IPv6 to IPv4, IPv6 lower-cased, zone, brackets
-      and port dropped); X-Real-IP and CF-Connecting-IP are never read; no header
-      gives null (getClientIp: "unknown"), a garbage right-most entry gives null
-      and never falls back to a client-typed entry to its left. Hop structure from
-      archive/receipts/2026-09-02-audit-verify-ip-proxy-hops.json (one Railway edge
-      hop, no CDN), rechecked 2026-10-28 and 2026-11-02; right-most is correct
-      whether Railway overwrites or appends. getClientIp, consumeIpRate,
-      rateLimitByIpDb, the MCP extractor and every attribution/audit call site
-      (do, do-batch, solution-execute, x402 gateway, llms-txt, a2a, app) go
-      through it; lib/client-ip.test.ts has a TypeScript-AST ratchet that fails on
-      any other production file naming those headers. Planted tests failed on main
-      (5 of 15) and pass. Left, not done: production headers can only be re-verified
-      after deploy (run apps/api/scripts/verify-ip-probe.mjs; a change to the real
-      hop count is a one-constant change); the WP12 exit item "byte and pixel caps"
-      stays NOT MET for the 222 frozen fixed-vendor reads. WP12 moves off
-      UNBLOCKED_NOT_YET_STARTED in PACKAGE-GRAPH.yaml only after review of batch 4.
-      Review round 1 (2026-11-05): clientIpFromHeaders walks X-Forwarded-For from the
-      right, skips internal-range hops (private, loopback, CGNAT, link-local, ULA,
-      mapped forms) and takes the first public entry; consumeIpRate fails closed on
-      a shared unknown bucket, except a loopback TCP peer with no usable client IP
-      (the MCP trust prewarm and trust-profile self-calls), which skips the IP limit as
-      before (isLoopbackPeer in client-ip.ts). Post-deploy condition: run
-      apps/api/scripts/verify-ip-probe.mjs from two different egress IPs; it asserts
-      the API's ipHash equals sha256 of the probe machine's own public IP. Revert the
-      deploy if identity is not the probe's own IP.
+      Next: batch 4, the trusted-hop rule for forwarded IPs as code and test from the
+      VERIFY-IP receipt. Each batch: plant the failure first, then the guard, then
+      the discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code

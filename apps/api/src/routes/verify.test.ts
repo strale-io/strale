@@ -131,7 +131,7 @@ describe("GET /v1/verify/:id — F-A-012 chain-walk cap", () => {
     chainShape = "short";
     const app = await loadApp();
     const res = await app.request(`/v1/verify/${TARGET_TXN.id}`, {
-      headers: { "x-forwarded-for": "203.0.113.1" },
+      headers: { "x-forwarded-for": "10.0.0.1" },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -146,7 +146,7 @@ describe("GET /v1/verify/:id — F-A-012 chain-walk cap", () => {
     chainShape = "long";
     const app = await loadApp();
     const res = await app.request(`/v1/verify/${TARGET_TXN.id}`, {
-      headers: { "x-forwarded-for": "203.0.113.2" },
+      headers: { "x-forwarded-for": "10.0.0.2" },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -160,7 +160,7 @@ describe("GET /v1/verify/:id — F-A-012 chain-walk cap", () => {
     chainShape = "long";
     const app = await loadApp();
     const res = await app.request(`/v1/verify/${TARGET_TXN.id}?depth=50`, {
-      headers: { "x-forwarded-for": "203.0.113.3" },
+      headers: { "x-forwarded-for": "10.0.0.3" },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -174,7 +174,7 @@ describe("GET /v1/verify/:id — F-A-012 chain-walk cap", () => {
     chainShape = "long";
     const app = await loadApp();
     const res = await app.request(`/v1/verify/${TARGET_TXN.id}?depth=100`, {
-      headers: { "x-forwarded-for": "203.0.113.4" },
+      headers: { "x-forwarded-for": "10.0.0.4" },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -186,7 +186,7 @@ describe("GET /v1/verify/:id — F-A-012 chain-walk cap", () => {
 describe("GET /v1/verify/:id — F-A-012 rate limit 10/min per IP", () => {
   it("11th request within window returns 429 with Retry-After", async () => {
     const app = await loadApp();
-    const ip = "203.0.113.100"; // unique bucket for this test
+    const ip = "10.0.0.100"; // unique bucket for this test
     // Fire 10 requests — all should 200
     for (let i = 0; i < 10; i++) {
       reset();
@@ -210,7 +210,7 @@ describe("GET /v1/verify/:id — F-A-012 rate limit 10/min per IP", () => {
   it("different IP not affected by another IP's limit", async () => {
     const app = await loadApp();
     // Exhaust IP A
-    const ipA = "203.0.113.200";
+    const ipA = "10.0.0.200";
     for (let i = 0; i < 10; i++) {
       reset();
       chainShape = "short";
@@ -228,7 +228,7 @@ describe("GET /v1/verify/:id — F-A-012 rate limit 10/min per IP", () => {
     reset();
     chainShape = "short";
     const freshB = await app.request(`/v1/verify/${TARGET_TXN.id}`, {
-      headers: { "x-forwarded-for": "203.0.113.201" },
+      headers: { "x-forwarded-for": "10.0.0.201" },
     });
     expect(freshB.status).toBe(200);
   });

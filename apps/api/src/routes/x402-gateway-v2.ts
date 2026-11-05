@@ -75,7 +75,6 @@ import { recordX402Miss } from "../lib/x402-demand.js";
 import { executeWithTransientRetry } from "../lib/retry.js";
 import { createHash } from "node:crypto";
 import { inputForPersistence } from "../lib/never-persist-inputs.js";
-import { clientIpOrNull } from "../lib/client-ip.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -1095,7 +1094,7 @@ function requestedIncludes(raw: string | undefined): Set<string> {
 x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
   recordDiscoveryHit("/x402/catalog", c.req, {
     src: c.req.query("src"),
-    ip: (clientIpOrNull(c) ?? undefined),
+    ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
   });
   await ensureCache();
 
@@ -1216,7 +1215,8 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     recordX402Miss({ slug, kind: known ? "x402_not_on_rail" : "x402_unknown_slug",
       detail: known ? "known solution, not enabled for x402" : "no such x402 solution",
       ...{ userAgent: c.req.header("user-agent") ?? null,
-        ip: clientIpOrNull(c) } });
+        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+          ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
       { details: { fix: "Choose an enabled slug from GET /x402/catalog and use its x402 URL.", docs_url: `${BASE_URL}/x402/catalog` }, error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
@@ -1422,7 +1422,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         claimId,
         clientMeta: extractClientMeta(c.req, {
           src: c.req.query("src"),
-          ip: (clientIpOrNull(c) ?? undefined),
+          ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
         }) ?? null,
         capabilityId: null,
         solutionSlug: sol.slug,
@@ -1491,7 +1491,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
-      ip: (clientIpOrNull(c) ?? undefined),
+      ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
     }) ?? null,
     capabilityId: null,
     solutionSlug: sol.slug,
@@ -1592,7 +1592,8 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     recordX402Miss({ slug, kind: known ? "x402_not_on_rail" : "x402_unknown_slug",
       detail: known ? "known capability, not enabled for x402" : "no such x402 capability",
       ...{ userAgent: c.req.header("user-agent") ?? null,
-        ip: clientIpOrNull(c) } });
+        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+          ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
       { details: { fix: "Choose an enabled slug from GET /x402/catalog and use its x402 URL.", docs_url: `${BASE_URL}/x402/catalog` }, error: "Capability not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
@@ -1757,7 +1758,8 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // it. A product signal, not a catalogue one.
     recordX402Miss({ slug, kind: "x402_bad_input", detail: validation.error,
       ...{ userAgent: c.req.header("user-agent") ?? null,
-        ip: clientIpOrNull(c) } });
+        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+          ?? c.req.header("cf-connecting-ip") ?? null } });
     return schemaBadRequest(c, validation.error, cap.inputSchema);
   }
 
@@ -1852,7 +1854,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
-      ip: (clientIpOrNull(c) ?? undefined),
+      ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
     }) ?? null,
         capabilityId: cap.id,
         solutionSlug: null,
@@ -1927,7 +1929,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         claimId,
     clientMeta: extractClientMeta(c.req, {
       src: c.req.query("src"),
-      ip: (clientIpOrNull(c) ?? undefined),
+      ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
     }) ?? null,
     capabilityId: cap.id,
     solutionSlug: null,

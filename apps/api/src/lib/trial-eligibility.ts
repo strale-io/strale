@@ -22,10 +22,8 @@
  * **What actually closes it is the UNIQUE index on `trial_grants.email_hash`:
  * one grant per address, enforced by the database.** The per-IP cap below is a
  * speed bump that stops the observed pattern and nothing more sophisticated —
- * (Since WP12 batch 4 `getClientIp` takes the right-most X-Forwarded-For entry,
- * the one Railway's single edge hop supplies (lib/client-ip.ts); a client cannot
- * pick its bucket by typing a header. Many source addresses still defeat a per-IP
- * cap.) An earlier draft of this file called the cap "the gate that was
+ * `getClientIp` reads the leftmost X-Forwarded-For entry, which the client
+ * supplies. An earlier draft of this file called the cap "the gate that was
  * missing"; that overstated it, and overstating a control is how a package
  * records an exit condition as met when it is not. See MAX_TRIAL_GRANTS_PER_IP.
  *
@@ -59,19 +57,20 @@ export const TRIAL_CREDITS_CENTS = 200;
  * How many trial grants one signup IP may take before the grant is withheld.
  *
  * A speed bump, NOT the durable rule, and the difference matters because an
- * earlier draft of this file claimed otherwise. Before WP12 batch 4
- * `getClientIp` read the LEFTMOST X-Forwarded-For entry, which is whatever the
- * client typed if the edge appends; it now reads the entry the trusted hop
- * supplied (lib/client-ip.ts). An attacker with many source addresses still
- * never shares a bucket and this cap never fires for them. It does stop the abuse actually observed in
+ * earlier draft of this file claimed otherwise. `getClientIp` reads the
+ * LEFTMOST X-Forwarded-For entry, which is whatever the client typed — so an
+ * attacker who varies that header per request never shares a bucket and this
+ * cap never fires for them. It does stop the abuse actually observed in
  * production (eight sequential registrations from one real address over 44
  * hours, no spoofing), and it stops nothing more sophisticated.
  *
  * The rule that holds under a hostile client is the UNIQUE index on
  * `trial_grants.email_hash`: one grant per address, enforced by the database.
  *
- * The hop count was confirmed by VERIFY-IP (one hop, archive/receipts/
- * 2026-09-02-audit-verify-ip-proxy-hops.json) and is code in lib/client-ip.ts.
+ * Making the header trustworthy needs Railway's proxy hop count confirmed —
+ * verification gate VERIFY-IP, which blocks WP12. Guessing the hop count and
+ * reading the wrong entry would break every IP-keyed rate limit in production
+ * at once, so it is not a thing to fix in passing here.
  */
 export const MAX_TRIAL_GRANTS_PER_IP = 5;
 
