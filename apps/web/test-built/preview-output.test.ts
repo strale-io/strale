@@ -48,6 +48,15 @@ test("a preview build is noindex on every page, and robots.txt and the sitemap b
   assert.doesNotMatch(readFileSync(resolve(dist, "sitemap.xml"), "utf8"), /<url>/);
 });
 
+test("the build emits a 404.html: noindex, linking to the main sections, so Pages answers unknown paths with a real 404", () => {
+  const file = resolve(dist, "404.html");
+  assert.ok(existsSync(file), "dist/404.html is missing: without it Cloudflare Pages serves the homepage with 200 for every unknown path");
+  const html = readFileSync(file, "utf8");
+  assert.match(html, /<meta name="robots" content="noindex"/);
+  for (const href of ["/tools", "/docs", "/guides", "/"]) assert.ok(html.includes(`href="${href}"`), `404.html links to ${href}`);
+  assert.doesNotMatch(readFileSync(resolve(dist, "sitemap.xml"), "utf8"), /404/);
+});
+
 test("pages carry the share image and the files Pages needs are in dist/", () => {
   const home = pages.find((p) => p.path === "/")!.html;
   assert.ok(home.includes(`<meta property="og:image" content="${site}/og-image.png"`));

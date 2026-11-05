@@ -1,7 +1,7 @@
 // sitemap.xml, robots.txt and the Umami tag (SWITCH-OVER-READINESS items 5 and 7). Run: npm test.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { USE_CASES } from "../src/content/use-cases.ts";
 import { loadPreview } from "../src/lib/load-preview.ts";
@@ -31,6 +31,13 @@ test("the live sitemap lists every generated family and no excluded or preview p
   for (const p of EXCLUDED_PATHS) assert.ok(!paths.includes(p), p);
   assert.equal(new Set(paths).size, paths.length, "no duplicates");
   assert.ok(paths.every((p) => !/preview|noindex/.test(p)));
+});
+
+test("the not-found page is a built page that is excluded from the sitemap", () => {
+  assert.ok(EXCLUDED_PATHS.includes("/404"));
+  assert.ok(!STATIC_PATHS.includes("/404"));
+  assert.ok(!pagePaths(data("live")).includes("/404"));
+  assert.ok(existsSync(resolve(web, "src/pages/404.astro")));
 });
 
 test("a preview build lists nothing and robots.txt disallows everything", () => {

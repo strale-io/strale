@@ -160,6 +160,11 @@ test("assets and headers that live URLs depend on ship in public/", () => {
   assert.match(headers, /X-Content-Type-Options: nosniff/);
   assert.match(headers, /Referrer-Policy: strict-origin-when-cross-origin/);
   assert.doesNotMatch(headers, /Content-Security-Policy/);
+  // The pages.dev hosts are noindex; the site's own host never is.
+  assert.match(headers, /^https:\/\/:project\.pages\.dev\/\*\n  X-Robots-Tag: noindex$/m);
+  assert.match(headers, /^https:\/\/:version\.:project\.pages\.dev\/\*\n  X-Robots-Tag: noindex$/m);
+  const siteWide = headers.split(/\n(?=\S)/).find((b) => b.startsWith("/*\n"))!;
+  assert.doesNotMatch(siteWide, /X-Robots-Tag/);
   // The machine-readable files (SWITCH-OVER-READINESS item 6): exact paths, so a future
   // /.well-known/security.txt does not get a JSON content type.
   const block = (path: string) => headers.split(/\n\s*\n/).find((b) => b.split("\n")[0].trim() === path) ?? "";
