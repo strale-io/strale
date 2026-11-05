@@ -813,6 +813,12 @@ jobs:
       - run: npm test
       - run: npm run check
       - run: npm run build:preview-data
+      - name: Built-output checks (preview build)
+        run: npm run test:built
+      - name: Install Chromium (also used by the live review below)
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests (/topup, preview build)
+        run: npm run test:browser
       - name: Live build and review (non-blocking; reads the production API)
         id: live
         continue-on-error: true
@@ -820,7 +826,6 @@ jobs:
           STRALE_SITE_DATA: live
         run: |
           npm run build
-          npx playwright install --with-deps chromium
           node scripts/review.mjs --pages "$(node scripts/review-pages.mjs)" --out review/live
       - if: always() && steps.live.outcome != 'skipped'
         uses: actions/upload-artifact@v4
