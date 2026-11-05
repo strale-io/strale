@@ -1,18 +1,18 @@
 ---
 slug: kyb-mcp-claude
 title: "How do I run a company check in Claude Desktop through MCP?"
-description: "Add the Strale MCP server to Claude Desktop and ask Claude to look up a company, check its VAT number and screen it. No code."
+description: "Add the Strale MCP server to Claude Desktop and ask Claude to look up a company and screen it. No code."
 group: companies
 framework: "MCP"
 language: "JSON"
-tools: [uk-company-data, sanctions-check, vat-format-validate, pep-check]
+tools: [uk-company-data, sanctions-check, pep-check]
 steps:
   - "Add the Strale MCP server to your Claude Desktop configuration with your API key."
   - "Restart Claude Desktop."
   - "Ask Claude to check a company."
   - "Claude searches for the tools and runs the lookups one after another."
 ---
-Add the Strale MCP server to Claude Desktop with your API key and ask Claude to look up a company, check its VAT number and screen it. Claude finds and chains the tools itself. The tools used here need a key.
+Add the Strale MCP server to Claude Desktop with your API key and ask Claude to look up a company and screen it. Claude finds and chains the tools itself. The tools used here need a key.
 
 ## The solution
 
@@ -33,7 +33,7 @@ Add the Strale MCP server to Claude Desktop with your API key and ask Claude to 
 Then ask Claude:
 
 ```text Prompt
-Verify UK company 00445790. Look up its company data, check its VAT number and run a sanctions screening.
+Verify UK company 00445790. Look up its company data and run a sanctions screening.
 ```
 
 ## How it works
