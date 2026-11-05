@@ -60,7 +60,7 @@ async function call(label, extraHeaders) {
   };
 }
 
-const POOL_SAMPLES = Number(process.env.POOL_SAMPLES ?? 4);
+const POOL_SAMPLES = 4;
 const SPOOFED = ["203.0.113.77", "8.8.8.8", "1.1.1.1", "8.8.4.4"];
 const hash = (ip) => createHash("sha256").update(ip.toLowerCase()).digest("hex").slice(0, 16);
 
