@@ -16,8 +16,10 @@ interface Props {
   current?: "tools" | "company-data" | "use-cases" | "pricing" | "docs";
   /** Keep the page out of search indexes (pages that only make sense with a private link). */
   noindex?: boolean;
+  /** Structured data (schema.org) for the page, written as ld+json. */
+  jsonLd?: Record<string, unknown>[];
 }
-const { title, description = SHORT_DESCRIPTION, current, noindex = false } = Astro.props;
+const { title, description = SHORT_DESCRIPTION, current, noindex = false, jsonLd = [] } = Astro.props;
 const data = await getSiteData();
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
@@ -40,6 +42,7 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
   <meta property="og:type" content="website" />
   <link rel="alternate" type="text/plain" title="llms.txt" href="https://api.strale.io/llms.txt" />
   {(data.mode !== "live" || noindex) && <meta name="robots" content="noindex" />}
+  {jsonLd.map((ld) => <script type="application/ld+json" set:html={JSON.stringify(ld).replace(/</g, "\\u003c")} />)}
 </head>
 <body>
   <Icons />

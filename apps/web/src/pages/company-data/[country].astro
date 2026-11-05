@@ -13,6 +13,7 @@ import { countryRows, returns, screeningTools, SCREENING, BUNDLE_LABEL } from ".
 import { formatEur, formatUsd, formatDate, json } from "../../lib/format.ts";
 import { toolSnippets } from "../../lib/snippets.ts";
 import { TRANSPARENCY } from "../../lib/describe.ts";
+import { guidesForCountry, plainText } from "../../lib/guides.ts";
 
 export async function getStaticPaths() {
   const data = await getSiteData();
@@ -23,6 +24,8 @@ const { iso } = Astro.props as { iso: string };
 const data = await getSiteData();
 const country = countryRows(data).find((c) => c.iso === iso)!;
 const screening = screeningTools(data).filter((t) => SCREENING.includes(t.slug));
+// Guides about this country's register (src/data/guides/*.md, `countries:` in the front matter).
+const guides = guidesForCountry(iso);
 const testOf = (slug: string) => {
   const t = data.trust.get(slug);
   return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of its tests passed on their latest run` : ""}` : null;
@@ -91,6 +94,15 @@ const testOf = (slug: string) => {
       </section>
     );
   })}
+
+  {guides.length > 0 && (
+    <section class="section" aria-labelledby="guides-title">
+      <div class="container stack">
+        <h2 id="guides-title" class="t-subhead">Guides for {country.inSentence}</h2>
+        <ul class="plain-list stack-tight">{guides.map((g) => <li><a class="link" href={`/guides/${g.slug}`}>{plainText(g.title)}</a></li>)}</ul>
+      </div>
+    </section>
+  )}
 
   <section class="section section-sunken" aria-labelledby="more-title">
     <div class="container grid-2">
