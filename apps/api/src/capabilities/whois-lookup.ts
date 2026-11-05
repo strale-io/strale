@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { createConnection } from "node:net";
+import { MAX_WHOIS_RESPONSE_BYTES, createCappedTextSink } from "../lib/resource-limits.js";
 
 // F-0-006 Bucket D: opens a WHOIS TCP connection to a HARDCODED server
 // (TLD map elsewhere in the file). The user domain is the query payload
@@ -129,11 +130,20 @@ function queryWhois(server: string, domain: string): Promise<string> {
       socket.write(`${domain}\r\n`);
     });
 
-    let data = "";
-    socket.setEncoding("utf8");
-    socket.on("data", (chunk) => { data += chunk; });
+    // Capped (WP12 batch 3): plain TCP from a registry, so the reply size is
+    // not ours to choose, and this file turns every Name Server / Status line
+    // into an output array entry. The prefix holds every field parsed below.
+    const sink = createCappedTextSink(MAX_WHOIS_RESPONSE_BYTES);
+    socket.on("data", (chunk) => {
+      if (sink.push(chunk)) {
+        clearTimeout(timeout);
+        socket.destroy();
+        resolve(sink.value());
+      }
+    });
     socket.on("end", () => {
       clearTimeout(timeout);
+      const data = sink.value();
       if (!data.trim()) {
         reject(new Error(`Empty WHOIS response from ${server} for ${domain}.`));
       } else {

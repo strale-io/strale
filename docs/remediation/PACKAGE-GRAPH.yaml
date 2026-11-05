@@ -176,15 +176,20 @@ packages:
   WP12:
     title: Network/resource safety substrate
     status: IN_PROGRESS
-    status_date: "2026-11-04"
+    status_date: "2026-11-05"
     progress: >
-      Batches 1 and 2 of 4 done (execution record: docs/programs/cto-readiness/tracks.yaml
+      Batches 1 to 3 of 4 done (execution record: docs/programs/cto-readiness/tracks.yaml
       T18). Batch 1, PR #891: CIDR-based outbound guard incl. the IPv6 gaps.
-      Batch 2, branch fix/wp12-connect-time-recheck: connect-time re-check for the
+      Batch 2, PR #894: connect-time re-check for the
       raw-socket tools (port-check, ssl-check, ssl-certificate-chain) via
       apps/api/src/lib/vetted-connect.ts, plus refusal of an empty host and of
-      invalid ports before connecting. Remaining: byte/pixel caps (batch 3) and
-      the XFF trusted-hop rule as code and test (batch 4).
+      invalid ports before connecting. Batch 3 (branch fix/wp12-resource-caps,
+      not yet merged): byte and pixel caps on the CALLER-DRIVEN body, socket and
+      image readers via apps/api/src/lib/resource-limits.ts. The 222 raw reads of
+      fixed vendor APIs that remain are frozen by a ratchet
+      (apps/api/src/lib/body-reader-ratchet.test.ts), not capped, so the
+      "byte/pixel caps on every reader" exit is NOT met. Remaining: converting
+      those reads, and the XFF trusted-hop rule as code and test (batch 4).
     unblocked_by: >
       VERIFY-IP resolved 2026-09-02 (empirical probe, high confidence): exactly
       one proxy hop in front of api.strale.io (Railway's own edge, no CDN), and
@@ -197,9 +202,10 @@ packages:
       The XFF-trust question was one exit condition of five. CIDR-based IP
       guard (IPv6 gaps), connect-time re-check for raw-socket DNS rebinding,
       and byte/pixel caps are real work independent of VERIFY-IP. As of
-      2026-11-04 the package is in progress: the CIDR guard and the
-      connect-time re-check are built (see progress above); byte/pixel caps
-      and the trusted-hop rule are not yet. Not accepted or scoped down.
+      2026-11-05 the package is in progress: the CIDR guard, the
+      connect-time re-check and the caps on caller-driven readers are built
+      (see progress above); the fixed-vendor reads are frozen, not capped; the
+      trusted-hop rule is not yet. Not accepted or scoped down.
     depends_on: [WP0]
     risks: [CR-11, CR-12, CR-19]
     review: {codex: required, fable: required}

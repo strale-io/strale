@@ -34,6 +34,7 @@ import { chown, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
+import { MAX_INPUT_PIXELS } from "../../../lib/resource-limits.js";
 
 /** Languages the image installs (Dockerfile); a call may combine up to three. */
 export const SUPPORTED_LANGUAGES = ["eng", "swe", "dan", "nor", "fin", "deu", "fra", "spa", "ita", "nld"] as const;
@@ -50,7 +51,7 @@ export const RENDER_LONG_SIDE_PX = 3508;
 /** Images larger than this on the long side are scaled down before OCR. */
 export const IMAGE_MAX_LONG_SIDE_PX = 5000;
 /** Decode guard for caller images (sharp's limitInputPixels). */
-export const IMAGE_MAX_INPUT_PIXELS = 60_000_000;
+export const IMAGE_MAX_INPUT_PIXELS = MAX_INPUT_PIXELS;
 export const CHILD_MAX_AS_BYTES = 1536 * 1024 * 1024;
 export const CHILD_MAX_CPU_SECONDS = 90;
 /** Created by the Dockerfile; children run as this user when the API is root. */
