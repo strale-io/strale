@@ -1,13 +1,16 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import { safeFetch } from "../lib/safe-fetch.js";
 import {
   IMAGE_FORMATS,
   FIT_MODES,
   MAX_DECODED_IMAGE_BYTES,
+  MAX_INPUT_PIXELS,
+  asPixelLimitRefusal,
   assertEnum,
   assertQuality,
   assertEffectiveGeometryWithinLimit,
+  assertInputPixelsWithinLimit,
   assertOutputGeometryWithinLimit,
   checkedBase64,
   effectiveOutputGeometry,
@@ -86,8 +89,27 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
     );
   }
 
+  // The source's own pixel count, from its header, before anything decodes it.
+  // The byte cap above does not bound this (a solid 9,000 x 9,000 PNG is about
+  // 100 KB) and sharp's built-in limit is 268 MP. `metadata()` parses the
+  // header only, so it is built without the limit and the refusal below is the
+  // repo's own. The decoding pipeline carries the same `limitInputPixels`, but
+  // that REPEATS the header check as a backstop (it reads the same header, so
+  // it does not catch a header that lies) and turns sharp's error into ours.
+  // Pages: this takes the first frame only. Opening with `animated: true`
+  // would decode `pages` frames, so the bound would have to be width x height
+  // x pages.
+  const sourceField = base64Input ? "base64" : input.image_url ? "image_url" : "url";
+  let sourceMeta: Metadata;
+  try {
+    sourceMeta = await sharp(imageBuffer, { limitInputPixels: false }).metadata();
+  } catch (err) {
+    throw asPixelLimitRefusal(err, sourceField);
+  }
+  assertInputPixelsWithinLimit(sourceMeta.width, sourceMeta.height, sourceField);
+
   // Process with Sharp
-  let pipeline = sharp(imageBuffer);
+  let pipeline = sharp(imageBuffer, { limitInputPixels: MAX_INPUT_PIXELS });
 
   // The requested geometry was bounded before any bytes were fetched. That is
   // not sufficient on its own: with one dimension omitted sharp derives the
@@ -96,10 +118,9 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
   // being hardened against, so the cap is applied again to the geometry sharp
   // will actually produce. Reviewer-found.
   //
-  // metadata() is a header parse, not a decode, and the input is already
-  // capped at 4 MiB — so this reads the dimensions without doing the
-  // allocation the cap exists to prevent.
-  const source = await pipeline.metadata();
+  // The header was already parsed above (a header parse, not a decode), so
+  // this reuses it rather than reading the dimensions twice.
+  const source = sourceMeta;
   const resolved = effectiveOutputGeometry(
     source.width ?? 0,
     source.height ?? 0,
@@ -121,7 +142,12 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
     pipeline = pipeline.png();
   }
 
-  const outputBuffer = await pipeline.toBuffer();
+  let outputBuffer: Buffer;
+  try {
+    outputBuffer = await pipeline.toBuffer();
+  } catch (err) {
+    throw asPixelLimitRefusal(err, sourceField);
+  }
   const metadata = await sharp(outputBuffer).metadata();
 
   const mimeType = format === "jpeg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";

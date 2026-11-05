@@ -1,4 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES, readJsonPickWithLimit, readJsonWithLimit } from "../lib/resource-limits.js";
+import type { Pick } from "../lib/json-pick.js";
+
+const NPM_AUDIT_PICK: Pick = {
+  "dist-tags": true, time: true, maintainers: true,
+  // detectInstallScripts reads only these three script names.
+  versions: { "*": { _npmUser: true, scripts: { preinstall: true, install: true, postinstall: true }, deprecated: true } },
+};
 
 const COPYLEFT_LICENSES = new Set(["GPL-2.0", "GPL-3.0", "AGPL-3.0", "LGPL-2.1", "LGPL-3.0", "GPL-2.0-only", "GPL-3.0-only", "AGPL-3.0-only", "LGPL-2.1-only", "LGPL-3.0-only"]);
 
@@ -444,10 +452,20 @@ async function fetchNpmRegistry(name: string): Promise<RegistryResult> {
     signal: AbortSignal.timeout(10000),
   });
 
-  if (resp.status === 404) throw new Error(`npm package '${name}' not found.`);
-  if (!resp.ok) throw new Error(`npm registry returned HTTP ${resp.status}`);
+  if (resp.status === 404) {
+    await resp.body?.cancel();
+    throw new Error(`npm package '${name}' not found.`);
+  }
+  if (!resp.ok) {
+    await resp.body?.cancel();
+    throw new Error(`npm registry returned HTTP ${resp.status}`);
+  }
 
-  const data = (await resp.json()) as Record<string, unknown>;
+  // Scanned, not parsed whole (lib/json-pick.ts): the packument of a popular
+  // package is 30-75 MB. Kept: dist-tags, `time` (every release's date, to find
+  // the previous release), the maintainer list, and per release only the
+  // publisher, scripts and deprecation notice.
+  const data = await readJsonPickWithLimit(resp, MAX_PACKUMENT_BYTES, NPM_AUDIT_PICK, "name", "a registry record of");
   const latest = (data["dist-tags"] as Record<string, string>)?.latest ?? null;
   const times = (data.time as Record<string, string>) ?? {};
   const latestTime = latest ? times[latest] : null;
@@ -492,10 +510,16 @@ async function fetchPypiRegistry(name: string, version: string | null): Promise<
 
   const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
 
-  if (resp.status === 404) throw new Error(`PyPI package '${name}'${version ? ` version ${version}` : ""} not found.`);
-  if (!resp.ok) throw new Error(`PyPI returned HTTP ${resp.status}`);
+  if (resp.status === 404) {
+    await resp.body?.cancel();
+    throw new Error(`PyPI package '${name}'${version ? ` version ${version}` : ""} not found.`);
+  }
+  if (!resp.ok) {
+    await resp.body?.cancel();
+    throw new Error(`PyPI returned HTTP ${resp.status}`);
+  }
 
-  const data = (await resp.json()) as Record<string, unknown>;
+  const data = await readJsonWithLimit<Record<string, unknown>>(resp, MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, "name", "a registry record of");
   const info = (data.info as Record<string, unknown>) ?? {};
 
   const latestVersion = (info.version as string) ?? null;

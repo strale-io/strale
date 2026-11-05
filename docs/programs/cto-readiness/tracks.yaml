@@ -1013,11 +1013,11 @@ tracks:
     depends_on: [T4]
     owner: session
     next_action: >
-      WP12 batches 1 and 2 of 4 done, both under audit finding CR-11 (egress/SSRF).
+      WP12 batches 1 to 3 of 4 done: 1 and 2 under audit finding CR-11 (egress/SSRF), 3 under CR-12.
       Batch 1 (2026-11-02, PR #891): isBlockedIp is CIDR arithmetic over the IANA
       special-purpose tables via net.BlockList, and validateHost parses [v6]:port,
       refuses stray-colon hosts and checks dns.lookup as well as resolve4/6.
-      Batch 2 (2026-11-04, branch fix/wp12-connect-time-recheck): the DNS-rebinding
+      Batch 2 (2026-11-04, PR #894): the DNS-rebinding
       TOCTOU in the raw-socket tools is closed. port-check, ssl-check and
       ssl-certificate-chain now connect through apps/api/src/lib/vetted-connect.ts,
       whose vettedLookup is the socket's lookup: one getaddrinfo resolution at
@@ -1036,16 +1036,58 @@ tracks:
       (raw-socket-ports.test.ts). Follow-up, not this batch: domain-age-check and
       whois-lookup open raw sockets to hardcoded WHOIS servers only and were left on
       plain createConnection; route them through vetted-connect too for one egress
-      path. Next: batch 3, byte and pixel caps on
-      every body and image reader, routed through apps/api/src/lib/resource-limits.ts
-      (CR-12); then (4) the trusted-hop rule for forwarded IPs as code and test from
-      the VERIFY-IP receipt. Each batch: plant the failure first, then the guard,
-      then the discriminating test.
+      path.
+      Batch 3 (2026-11-05, branch fix/wp12-resource-caps, CR-12): the readers whose
+      size a CALLER can drive now go through apps/api/src/lib/resource-limits.ts.
+      Inventory of 2026-11-05: the caller-URL readers (a caller's URL, about 60
+      capabilities) were already capped by #412/#426/#428/#432; the gaps were
+      image-resize (no cap on the SOURCE pixel count; sharp's default is 268 MP; now
+      MAX_INPUT_PIXELS = 60 MP, the OCR number, checked from the header, repeated as
+      limitInputPixels on the pipeline), whois-lookup and domain-age-check (socket
+      read until the server hangs up; now createCappedTextSink, 256 KiB, truncating)
+      and the caller-chosen-content readers pypi-package-info, github-repo-analyze
+      (256 KiB file prefix, 4 MiB API JSON) and the three npm readers. Review round
+      1 (B1) found that a 20 MiB cap refused next, vite, npm and renovate (packuments
+      of 31, 39, 26 and 74 MB). npm-package-info, package-security-audit and
+      package-docs now read the packument through lib/json-pick.ts, which scans the
+      bytes and keeps only the named paths, under a 128 MiB work bound
+      (MAX_PACKUMENT_BYTES); npm-package-info also takes the latest version's own
+      small manifest from <pkg>/latest. `time` (per-release dates) exists only in the
+      full packument, which is why it is scanned and not replaced by the abbreviated
+      one. Live, 2026-11-05: outputs for next, vite, renovate (npm-package-info) and
+      next (package-security-audit) are identical to main's; peak RSS for renovate
+      fell from 525 MB to 122 MB. Round 2 (B2, S4, S5): json-pick keeps its memory
+      promise for the parts it does not pick (nesting past 128 levels, a key past
+      4096 bytes under a wildcard, a picked value past 16 MiB or picked data past
+      32 MiB are refused; keys of unpicked objects keep no bytes; measured growth
+      under 32 MiB for 64 MiB deep-nesting and huge-key bodies, against 700 MB and
+      an out-of-memory crash before), and it enforces the JSON grammar outside
+      captured values. If the latest-manifest request fails (5xx, connection error,
+      unreadable body), npm-package-info fails with an upstream error and is not
+      charged; it never answers with empty dependency lists, which would read as
+      "no dependencies". A 404 on it (no latest tag) is a complete answer: no
+      latest version, so the dependency lists are empty because there is none (the
+      schema types them as arrays, not nullable, and main answers the same). Cosmetic: dev_dependencies key order can
+      differ from main's for some packages (left-pad; found in review). Planted tests: image-resize.pixel-cap,
+      whois-response-cap, registry-body-caps, npm-packument-large.
+      lib/body-reader-ratchet.test.ts (TypeScript AST) plus lib/body-reader-baseline.json
+      FREEZE what is left: 222 raw .json()/.text() reads in 131 files, all on fixed
+      vendor hosts, plus sharp( on the platform's own output and child-process pipes.
+      They are frozen, not capped; a file that gains one fails. A new caller of an
+      existing raw-read helper is not counted. Left, not done: converting those
+      fixed-vendor reads (many tests hand the capability a bare { ok, json() }
+      instead of a Response, so it is a sweep with test rewrites, to be done by
+      lowering the baseline), c2pa-inspect's native parse (byte-capped at 15 MiB, no
+      pixel decode), and routing domain-age-check and whois-lookup through
+      vetted-connect (the batch 2 follow-up, still open).
+      Next: batch 4, the trusted-hop rule for forwarded IPs as code and test from the
+      VERIFY-IP receipt. Each batch: plant the failure first, then the guard, then
+      the discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code
       - connect-time re-check for raw sockets
-      - byte and pixel caps on every reader
+      - byte and pixel caps on every reader (NOT MET - caller-driven readers are capped, 222 fixed-vendor reads are frozen by a ratchet and not capped)
       - the forwarded-IP trusted-hop rule as code and test
       - WP12 status in PACKAGE-GRAPH.yaml moves off UNBLOCKED_NOT_YET_STARTED
     evidence: []

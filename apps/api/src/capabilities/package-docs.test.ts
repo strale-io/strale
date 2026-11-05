@@ -6,7 +6,7 @@ import yaml from "js-yaml";
 import { getDirectExecutor } from "./index.js";
 import { CapabilityRefusalError, isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { SourceBlockedError, STRALE_USER_AGENT } from "../lib/site-access.js";
-import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES } from "../lib/resource-limits.js";
+import { MAX_PACKAGE_REGISTRY_RESPONSE_BYTES, MAX_PACKUMENT_BYTES } from "../lib/resource-limits.js";
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./__fixtures__/package-docs/${name}.json`, import.meta.url), "utf8"));
 const execute = getDirectExecutor("package-docs")!;
@@ -162,14 +162,27 @@ describe("package-docs refusal and source failures", () => {
   });
   it("enforces the streaming size cap without relying on content-length and cancels reading", async () => {
     const cancel = vi.fn();
-    const body = new ReadableStream({ pull(c) { c.enqueue(new Uint8Array(1024 * 1024)); }, cancel });
+    // A packument-shaped body that never ends (an open string): the 128 MiB
+    // work bound, not the 20 MiB whole-document cap, is what stops it.
+    let first = true;
+    const body = new ReadableStream({
+      pull(c) {
+        if (first) { first = false; c.enqueue(new TextEncoder().encode('{"readme":"')); }
+        c.enqueue(new Uint8Array(1024 * 1024).fill(0x78));
+      },
+      cancel,
+    });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body));
     await expect(execute({ ecosystem: "npm", package: "request" })).rejects.toThrow(/request a specific 'version'/);
     expect(cancel).toHaveBeenCalledTimes(1);
   });
+  it("names the real reason a packument is refused (nesting, not size)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"readme":' + "[".repeat(300)));
+    await expect(execute({ ecosystem: "npm", package: "request" })).rejects.toThrow(/nesting deeper than 128 levels.*specific 'version'/);
+  });
   it("rejects an oversized declared body and cancels it", async () => {
     const cancel = vi.fn(); const body = new ReadableStream({ cancel });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body, { headers: { "Content-Length": String(MAX_PACKAGE_REGISTRY_RESPONSE_BYTES + 1) } }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body, { headers: { "Content-Length": String(MAX_PACKUMENT_BYTES + 1) } }));
     await expect(execute({ ecosystem: "npm", package: "request" })).rejects.toThrow(/request a specific 'version'/);
     expect(cancel).toHaveBeenCalled();
   });
@@ -239,7 +252,7 @@ describe("Round 2 registry edge cases", () => {
   });
   it("returns smaller npm release metadata even when optional packument exceeds the cap", async () => {
     const release = fixture("npm-deprecated").versions["2.88.2"];
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(json(release)).mockResolvedValueOnce(new Response(null, { headers: { "Content-Length": String(MAX_PACKAGE_REGISTRY_RESPONSE_BYTES + 1) } }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(json(release)).mockResolvedValueOnce(new Response(null, { headers: { "Content-Length": String(MAX_PACKUMENT_BYTES + 1) } }));
     const { output } = await execute({ ecosystem: "npm", package: "request", version: "2.88.2" });
     expect(output).toMatchObject({ version: "2.88.2", readme: null, latest_version: null });
   });

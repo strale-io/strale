@@ -39,6 +39,7 @@
  */
 
 import { logError, logWarn } from "./log.js";
+import { JsonPickLimitError, JsonPicker, type Pick } from "./json-pick.js";
 
 /**
  * Largest decoded image the platform accepts.
@@ -212,6 +213,20 @@ export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 export const MAX_PACKAGE_REGISTRY_RESPONSE_BYTES = 20 * 1024 * 1024;
 
 /**
+ * Work bound for reading an npm PACKUMENT through `readJsonPickWithLimit`.
+ *
+ * Measured 2026-11-05, decompressed: renovate 74.3 MB, vite 39.0 MB, next
+ * 31.5 MB, npm 26.1 MB, typescript 15.9 MB. 128 MiB is 1.8x the largest, so no
+ * package refused today is a package people use. Because the packument is
+ * scanned and only the picked paths are kept (lib/json-pick.ts), this number
+ * bounds bytes pulled and CPU, not memory: residency is one network chunk plus
+ * the picks, whatever the size. The 20 MiB `MAX_PACKAGE_REGISTRY_RESPONSE_BYTES`
+ * stays for readers that parse a whole document (PyPI records, which are
+ * per-project and far smaller).
+ */
+export const MAX_PACKUMENT_BYTES = 128 * 1024 * 1024;
+
+/**
  * Largest PageSpeed Insights report the platform will buffer (#434).
  *
  * This is the read #432 left open rather than guess at. The number is now
@@ -295,6 +310,40 @@ export const MAX_OUTPUT_DIMENSION = 10_000;
  * case above, which is four hundred times larger.
  */
 export const MAX_OUTPUT_PIXELS = 25_000_000;
+
+/**
+ * Largest SOURCE image, in pixels, that any decoder in the platform will open
+ * (WP12 batch 3, CR-12).
+ *
+ * The byte cap (4 MiB) does not bound this: deflate turns a solid 9,000 x
+ * 9,000 image into ~100 KB, so a small file buys a decode of any size up to
+ * sharp's own `limitInputPixels` default of 268 MP, a figure picked for a
+ * general-purpose image server and not for a per-call API. 60 MP is the number
+ * OCR already uses (`IMAGE_MAX_INPUT_PIXELS`, which now imports this), well
+ * past every ordinary camera frame (24 MP full frame, 50 MP high-resolution
+ * bodies) and 2.4x the 25 MP output cap, so a real photograph is never
+ * refused; only a file whose declared size no photograph or scan reaches is.
+ */
+export const MAX_INPUT_PIXELS = 60_000_000;
+
+/**
+ * Largest WHOIS reply read from a registry socket (WP12 batch 3, CR-12).
+ *
+ * A real thin or thick reply is 2-20 KB (Verisign ~3 KB, DENIC ~2 KB, a
+ * long .jp or .kr record ~10 KB; the capabilities keep the first 3,000
+ * characters of it and parse leading `Key: value` lines). 256 KiB is over ten
+ * times the largest of those, and exists to turn "until the server hangs up
+ * or ten seconds pass" into a bound.
+ */
+export const MAX_WHOIS_RESPONSE_BYTES = 256 * 1024;
+
+/**
+ * How much of a repository FILE (README, package.json, requirements.txt)
+ * `github-repo-analyze` reads. The capability sends an LLM the first 3,000
+ * characters of the README and 1,500 of package.json; 256 KiB is ~85x that.
+ * The file's content belongs to whoever owns the repository the caller named.
+ */
+export const MAX_REPO_FILE_BYTES = 256 * 1024;
 
 
 /** The output encodings this capability actually produces. */
@@ -646,6 +695,47 @@ export function assertEffectiveGeometryWithinLimit(
 }
 
 /**
+ * Refuse a SOURCE image whose header declares more pixels than the platform
+ * will decode. Call it with the dimensions from `sharp(...).metadata()`, which
+ * parses the header and decodes nothing, and BEFORE building the pipeline that
+ * does.
+ *
+ * A missing or zero dimension (a format whose header carries none) is not
+ * refused here; the decoder's own `limitInputPixels: MAX_INPUT_PIXELS` applies
+ * the same number to whatever header it reads. That repeats this check rather
+ * than catching a lying header. Single-frame only: for an animated decode
+ * (`animated: true`) the bound would be width x height x `pages`.
+ */
+export function assertInputPixelsWithinLimit(
+  width: number | undefined,
+  height: number | undefined,
+  field = "base64",
+): void {
+  if (!width || !height) return;
+  const pixels = width * height;
+  if (pixels > MAX_INPUT_PIXELS) {
+    throw new ResourceLimitError(
+      `'${field}' must be an image of ${MAX_INPUT_PIXELS / 1_000_000} megapixels or less ` +
+        `(received ${width}x${height}, ${(pixels / 1_000_000).toFixed(1)} megapixels).`,
+    );
+  }
+}
+
+/**
+ * Translate sharp's own pixel-limit error (raised when a header under-reports
+ * what the decoder meets) into the repo's refusal. Any other error is returned
+ * unchanged for the caller to throw.
+ */
+export function asPixelLimitRefusal(err: unknown, field = "base64"): unknown {
+  if (err instanceof Error && /exceeds pixel limit/i.test(err.message)) {
+    return new ResourceLimitError(
+      `'${field}' must be an image of ${MAX_INPUT_PIXELS / 1_000_000} megapixels or less.`,
+    );
+  }
+  return err;
+}
+
+/**
  * Read a fetched response body, aborting once the cap is crossed.
  *
  * `await response.arrayBuffer()` cannot enforce a limit: by the time it
@@ -792,13 +882,9 @@ export async function readJsonWithLimit<T = unknown>(
   response: Response,
   maxBytes: number = MAX_FETCHED_API_RESPONSE_BYTES,
   field = "url",
+  entity = "an endpoint whose response is",
 ): Promise<T> {
-  const text = await readTextWithLimit(
-    response,
-    maxBytes,
-    field,
-    "an endpoint whose response is",
-  );
+  const text = await readTextWithLimit(response, maxBytes, field, entity);
   return JSON.parse(text) as T;
 }
 
@@ -947,10 +1033,92 @@ async function consumeBody(
         return maxBytes;
       }
       total += value.byteLength;
-      onChunk?.(value);
+      try {
+        onChunk?.(value);
+      } catch (err) {
+        // The sink refused (a malformed or hostile document): do not leave
+        // the connection open behind the throw.
+        await reader
+          .cancel()
+          .catch(() => logError("image-limit-reader-cancel", new Error("Response body cancellation failed."), { maxBytes }));
+        throw err;
+      }
     }
   } finally {
     reader.releaseLock?.();
   }
   return total;
+}
+
+/**
+ * Accumulate TEXT from a source that is not a `Response` (a raw socket),
+ * keeping at most `maxBytes` of it (WP12 batch 3, CR-12).
+ *
+ * The socket counterpart of `readTextTruncated`: truncating, because the two
+ * WHOIS readers parse leading `Key: value` lines and keep a prefix, so the
+ * cut changes nothing they report, whereas refusing would turn a working
+ * answer into an error. `push` returns true once the cap is reached; the
+ * caller then closes the socket and takes `value()`. Bytes are kept as bytes
+ * and decoded once at the end, so a multi-byte character split across chunks
+ * is not mangled and the decode never sees more than `maxBytes`.
+ */
+export function createCappedTextSink(maxBytes: number): {
+  push(chunk: Uint8Array | string): boolean;
+  value(): string;
+  readonly truncated: boolean;
+} {
+  const parts: Buffer[] = [];
+  let size = 0;
+  let truncated = false;
+  return {
+    push(chunk) {
+      if (truncated) return true;
+      const buf = typeof chunk === "string" ? Buffer.from(chunk, "utf8") : Buffer.from(chunk);
+      const room = maxBytes - size;
+      if (buf.length >= room) {
+        if (room > 0) parts.push(buf.subarray(0, room));
+        size = maxBytes;
+        truncated = true;
+        return true;
+      }
+      parts.push(buf);
+      size += buf.length;
+      return false;
+    },
+    value() {
+      return new TextDecoder("utf-8").decode(Buffer.concat(parts, size));
+    },
+    get truncated() {
+      return truncated;
+    },
+  };
+}
+
+/**
+ * Read a JSON object response BOUNDED and keep only the paths in `pick`
+ * (see lib/json-pick.ts for the spec). The byte cap is the same enforcement
+ * core every reader here uses (declared-length refusal, cancel at the cap);
+ * memory is one chunk plus the picks, so this is the reader for documents that
+ * are large for reasons the caller does not need (npm packuments).
+ */
+export async function readJsonPickWithLimit(
+  response: Response,
+  maxBytes: number,
+  pick: Pick,
+  field = "url",
+  entity = "an endpoint whose response is",
+): Promise<Record<string, any>> {
+  const picker = new JsonPicker(pick);
+  try {
+    await consumeBody(response, maxBytes, field, entity, (chunk) => picker.write(chunk));
+    return picker.finish();
+  } catch (err) {
+    // A document built to make a reader hold more than it promises: nesting,
+    // an enormous key, or selected fields past the picked-data bound. The
+    // caller's record is what is wrong, in the repo's refusal style.
+    if (err instanceof JsonPickLimitError) {
+      throw new ResourceLimitError(`'${field}' must be ${entity.replace(/ (is|of)$/, "")} without ${err.message}.`);
+    }
+    throw err;
+  }
 }
