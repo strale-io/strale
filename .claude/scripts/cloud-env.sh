@@ -73,7 +73,7 @@ wow_cloud_load() {
 }
 # Cloud sandboxes reach the internet only through an HTTPS proxy. Node's own
 # fetch/https (corepack, pnpm, undici clients) ignore HTTPS_PROXY unless told
-# (pcos-ci 2026-10-05: pnpm install ENETUNREACH to the npm registry; cinver
+# (a consumer 2026-10-05: pnpm install ENETUNREACH to the npm registry; another
 # worked only because its env set NODE_USE_ENV_PROXY=1 by hand).
 wow_cloud_proxy() {
   local proxy=${HTTPS_PROXY:-${https_proxy:-}}
@@ -86,7 +86,7 @@ wow_cloud_proxy() {
   export npm_config_proxy=${npm_config_proxy:-${HTTP_PROXY:-${http_proxy:-$proxy}}}
   # Loopback and RFC 6761 reserved names never reach the internet, so they bypass the proxy:
   # a test server on 127.0.0.1 reached by a .invalid hostname otherwise fails behind it
-  # (tilja cloud trial 2026-10-07: 3 pinned-DNS transport tests). Existing entries are kept.
+  # (a consumer cloud trial 2026-10-07: 3 pinned-DNS transport tests). Existing entries are kept.
   # Both IPv6 spellings: Node's http matches ::1, undici's fetch matches [::1] (review of #92).
   local bypass=localhost,127.0.0.1,::1,[::1],.localhost,.invalid,.test name current entry
   for name in NO_PROXY no_proxy; do
@@ -106,7 +106,7 @@ wow_cloud_activate() {
   if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     . "$NVM_DIR/nvm.sh" --no-use >/dev/null 2>&1 || return
     # An exact pin that setup did not install made `nvm use` exit 3 and the whole
-    # command was skipped with an empty receipt (cinver 2026-10-06). Fall back to
+    # command was skipped with an empty receipt (a consumer, 2026-10-06). Fall back to
     # the installed major, and always say why if activation still fails.
     if ! nvm use "$target" >/dev/null 2>&1; then
       local major=${target#v}; major=${major%%.*}
@@ -125,7 +125,7 @@ wow_cloud_activate() {
 # Setup uses these functions without activating a runtime before it is installed.
 # Setup installs dependencies for the checkout it ran on (usually main, cached).
 # A task branch with a different lockfile then ran against the wrong packages
-# (cinver 2026-10-06). Setup records the installed lockfile hash; commands
+# (a consumer, 2026-10-06). Setup records the installed lockfile hash; commands
 # reinstall (frozen) only when the branch's lockfile differs.
 wow_cloud_lockfile() {
   local f; for f in pnpm-lock.yaml package-lock.json npm-shrinkwrap.json yarn.lock; do [[ -f $f ]] && { printf '%s\n' "$f"; return 0; }; done; return 1

@@ -87,8 +87,9 @@ message is the conversation and nothing routes it.
   attached to the session (HTTP 403 "not enabled for this session"). A session whose task needs the
   bus (the lease check does) attaches exactly the repository in `WOW_BUS_REPO` with `add_repo`,
   before any other; the startup inbox never asks. The dispatcher's PreToolUse hook allows exactly
-  that call, reading `WOW_BUS_REPO` only from the environment, and ships to full consumers only; a
-  `comms`-profile session gets a prompt or refusal, does not retry, and reports on its PR. Costs
+  that call, reading `WOW_BUS_REPO` only from the environment; it ships to full and `comms`
+  consumers (a comms sync wires it for PreToolUse only). A session whose repository has no such
+  hook yet gets a prompt or refusal, does not retry, and reports on its PR. Costs
   named for the founder: the hook cannot stop a session editing its own hooks, an injected
   instruction can get a session to attach the bus and read every channel, and a session with several
   repositories may stop reading the project's `.claude/settings.json`. Staged probe passed on Cinver
@@ -108,7 +109,9 @@ as the account's lease period lasts; the depth limit and the tags still apply to
 from that tag. It refuses a wow-core session starting a roster master's repository: the founder starts
 masters (founder 2026-11-02). A start without a GitHub `source_url` is refused, except the wow-core
 master's own with no `source_url` at all (a session with no repository has no hooks; probe
-2026-11-01); a `source_url` that does not parse is always refused.
+2026-11-01); a `source_url` that does not parse is always refused. Both wow-core rules hold only where
+the hook runs from wow-core's own checkout (`scripts/`, not a consumer's `.claude/scripts`), never on
+wow-core-looking files alone (review of #259).
 Known limits: that repo-less child (whose prompt could still tell it to act as a master: review-checked) and a child on a repository that does not wire `wow-hook.mjs` are
 not capped further; a session that edits its own transcript, settings or slot files can evade the
 cap; a scheduled task that starts a fresh session each time is not a `create_session` call.
@@ -119,6 +122,8 @@ cap; a scheduled task that starts a fresh session each time is not a `create_ses
   only when the work needs its own checkout or a long runtime.
 - A refused start never goes to the founder: it waits for the cap to reset, uses a subagent, or the
   master rebalances its lanes.
+- A session never checks out an unmerged fork or contributor ref in its own tree (`gh pr checkout`
+  included); review such changes from the diff. The hook in the tree decides every tool call.
 
 ## 4. One channel for everything that needs the founder: `needs-founder`
 

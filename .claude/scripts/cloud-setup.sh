@@ -9,7 +9,7 @@ trap 'trap - EXIT; exit 0' EXIT
 LOG=/tmp/cloud-setup.log
 log() { printf 'cloud-setup: %s\n' "$*" | tee -a "$LOG"; }
 # Hard ceiling for the WHOLE script, including unbounded steps (node, corepack):
-# tilja-ci still ERRORed at ~1 h with per-step limits and a step budget.
+# a consumer's CI environment still ERRORed at ~1 h with per-step limits and a step budget.
 # Re-exec once under timeout; the inner run does the work.
 if [[ -z ${WOW_SETUP_WRAPPED:-} && " $* " != *" --dry-run "* && "$(uname -s)" == Linux ]] && command -v timeout >/dev/null 2>&1; then
   ceiling=$(( ${CLOUD_SETUP_BUDGET:-1500} + 300 ))
@@ -37,7 +37,7 @@ WOW_CLOUD_ENV_LIBRARY=1 source "$scripts_dir/cloud-env.sh"
 wow_cloud_proxy
 if [[ -n ${NODE_USE_ENV_PROXY:-} ]]; then log 'proxy ok (Node/npm routed through HTTPS_PROXY)'; fi
 # apt ignores HTTPS_PROXY and sudo drops proxy variables, so apt downloads went
-# direct and waited out long timeouts until Codex killed setup (tilja-ci
+# direct and waited out long timeouts until Codex killed setup (a consumer CI environment
 # 2026-10-05, ERROR after ~1 h). Configure apt itself, with short timeouts.
 apt_proxy() {
   local conf=/etc/apt/apt.conf.d/99wow-cloud-proxy proxy=${https_proxy:-${HTTPS_PROXY:-}}
@@ -188,12 +188,12 @@ run_step() {
 }
 # Steps that can block on the network or a database (install, Postgres, prepare)
 # run in their own process group under a time limit. A step with no limit turned
-# one failure into a silent 50-minute hang (tilja-ci 2026-10-05).
+# one failure into a silent 50-minute hang (a consumer, 2026-10-05).
 # Only for steps that need no stdin and set no variables in this shell.
 bounded_step() {
   local step=$1 limit=${CLOUD_STEP_TIMEOUT:-600} result marker pid dog remaining; shift
   # Whole-setup budget: Codex appears to kill tasks near ~1 h including setup
-  # (tilja-ci ERROR 3x at 50-60 min even with per-step limits). Once the budget
+  # (a consumer: ERROR 3x at 50-60 min even with per-step limits). Once the budget
   # is spent, skip the remaining heavy steps so the agent phase still starts and
   # its receipt can report what happened.
   remaining=$(( ${CLOUD_SETUP_BUDGET:-1500} - SECONDS ))
@@ -378,7 +378,7 @@ if $need_pwsh && [[ "$(uname -s)" == Linux ]]; then bounded_step pwsh install_pw
 if [[ -n "$prepare" ]]; then bounded_step prepare bash -c "$prepare"; else log 'prepare (disabled) ok'; fi
 # Codex treats setup as running while any process it started is alive: every
 # step logged ok, then a running cluster held setup until the 3600 s limit
-# (tilja-mirror-ci, product-compliance-os and coopreclaim, 2026-10-06). Stop it;
+# (three consumers, 2026-10-06). Stop it;
 # cloud-env.sh starts the declared cluster before each command. Claude Code
 # cloud sessions keep it running for the agent.
 if [[ $dry_run == false && ${CLAUDE_CODE_REMOTE:-} != true && "${pg_major:-}" =~ ^[0-9]+$ ]] &&

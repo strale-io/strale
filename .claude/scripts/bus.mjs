@@ -18,7 +18,7 @@ const CLOUD_SESSION = /^(?:session|cse)_[A-Za-z0-9]+$/;
 // A cloud session reaches only the repositories attached to it; the bus repository usually is not.
 const NO_ACCESS = /not enabled for this session/i;
 // A command that needs the bus may attach it; the startup inbox never asks for an attach (COMMS_CORE §2).
-const NO_ACCESS_HINT = 'this session cannot reach the bus repository. If this task needs the bus, attach it with add_repo as owner and repo, naming exactly the repository in WOW_BUS_REPO (where the wow-core hook is wired and WOW_BUS_REPO is set, that one call runs without a prompt); if a prompt or refusal appears, do not retry: report on your PR (a comment starting "To orchestrator:") and carry on.';
+const NO_ACCESS_HINT = 'this session cannot reach the bus repository. If this task needs the bus, attach it with add_repo as owner and repo, naming exactly the repository in WOW_BUS_REPO, as {"owner":"<owner>","repo":"<name>"} with no other key (an access key is refused) (where the wow-core hook is wired and WOW_BUS_REPO is set, that one call runs without a prompt); if a prompt or refusal appears, do not retry: report on your PR (a comment starting "To orchestrator:") and carry on.';
 const NO_ACCESS_INBOX = 'this session cannot reach the bus repository; carry on (attach it only when a task needs the bus, COMMS_CORE §2).';
 
 class UsageError extends Error {}
