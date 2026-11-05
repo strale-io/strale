@@ -253,6 +253,8 @@ app.use("*", async (c, next) => {
 const ALLOWED_ORIGINS = [
   "https://strale.dev",
   "https://www.strale.dev",
+  "https://strale.io",
+  "https://www.strale.io",
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 

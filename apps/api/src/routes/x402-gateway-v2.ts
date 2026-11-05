@@ -627,7 +627,7 @@ export function build402(
     mimeType: "application/json",
     serviceName: "Strale",
     tags: metadata?.tags ?? [],
-    iconUrl: "https://strale.dev/favicon-32x32.png",
+    iconUrl: "https://strale.io/favicon-32x32.png",
     // Tool name belongs in the description; serviceName identifies the provider.
     ...(metadata ? { description: `${metadata.name}: ${metadata.description}` } : { description: `${name}: ${finalDescription}` }),
   };

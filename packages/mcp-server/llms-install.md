@@ -38,7 +38,7 @@ The result has `output.valid: true` and costs nothing.
 
 ## 3. Optional: add an API key for paid tools
 
-Paid tools need a key from https://strale.dev/signup. Ask the user for it;
+Paid tools need a key from https://strale.io/signup. Ask the user for it;
 never invent one. Add it as a header to the same entry:
 
 ```json

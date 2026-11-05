@@ -1,6 +1,6 @@
 # strale-capabilities
 
-Local catalog of available [Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities — IBAN validation, VAT checks, company data across supported countries, sanctions screening, SSL certificate checks, EU compliance automation, and more.
+Local catalog of available [Strale](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) capabilities — IBAN validation, VAT checks, company data across supported countries, sanctions screening, SSL certificate checks, EU compliance automation, and more.
 
 Use this package to explore the Strale capability catalog offline, build tool selectors, or integrate capability metadata into your AI agent setup.
 
@@ -74,7 +74,7 @@ interface Capability {
 | **security** | header-security-check, ssl-certificate-chain, port-check |
 | **monitoring** | uptime-check, page-speed-test, redirect-trace |
 
-Full list at [strale.dev/capabilities](https://strale.dev/capabilities?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Full list at [strale.io/tools](https://strale.io/tools?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Using Capabilities
 
@@ -91,7 +91,7 @@ available capabilities work without an API key: `email-validate`, `dns-lookup`, 
 
 ## Trust & Quality
 
-Testing modes vary by tool. Inspect current test signals, source context and limitations before use. See [strale.dev/trust](https://strale.dev/trust?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+Testing modes vary by tool. Inspect current test signals, source context and limitations before use. See [strale.io/security](https://strale.io/security?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ## Regenerating the Catalog
 
@@ -103,8 +103,8 @@ Fetches the latest capabilities from the Strale API and writes `capabilities.jso
 
 ## Links
 
-- [Homepage](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- [Documentation](https://strale.dev/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
-- [Capabilities](https://strale.dev/capabilities?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Homepage](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Documentation](https://strale.io/docs?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+- [Capabilities](https://strale.io/tools?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 - [GitHub](https://github.com/petterlindstrom79/strale)
 - [MCP Server Card](https://api.strale.io/.well-known/mcp.json)

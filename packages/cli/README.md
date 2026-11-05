@@ -1,6 +1,6 @@
 # strale-cli
 
-A command-line client for [Strale](https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1), built for AI agents and scripts first:
+A command-line client for [Strale](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1), built for AI agents and scripts first:
 
 - every result is one JSON document on stdout;
 - every failure is one JSON document on stderr, carrying the API's stable `error_code` and the text of its `fix`;
@@ -119,7 +119,7 @@ The CLI does not sign x402 payments. Calling a paid tool without `STRALE_API_KEY
 
 | Variable | Use |
 |---|---|
-| `STRALE_API_KEY` | Your API key (`sk_live_...`). Get one at [strale.dev/signup](https://strale.dev/signup). The CLI reads no other credential source and never prints the key. |
+| `STRALE_API_KEY` | Your API key (`sk_live_...`). Get one at [strale.io/signup](https://strale.io/signup). The CLI reads no other credential source and never prints the key. |
 
 Requests go to `https://api.strale.io` and identify themselves with `X-Strale-Client: strale-cli/<version>` and `src=cli`.
 

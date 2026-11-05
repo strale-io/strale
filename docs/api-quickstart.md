@@ -147,7 +147,7 @@ Categories: compliance, validation, data-extraction, developer-tools, web3, secu
 
 ## Get an API key
 
-Sign up at [strale.dev](https://strale.dev) — trial credits are available where eligible.
+Sign up at [strale.io](https://strale.io) — trial credits are available where eligible.
 
 ## Several agents on one wallet
 

@@ -29,7 +29,7 @@ function renderLlmsTxt(facts: Awaited<ReturnType<typeof computePlatformFacts>>):
   const countryCount = facts.countries.company_data_active_iso.length;
   return `# Strale
 
-> Give your agent a new tool without opening another provider account.
+> New tools for your agent. No new accounts.
 
 Strale is a library of ${capCount} tools for AI agents, paid per call with no subscription or contract. Company-data tools cover ${countryCount} countries. Add tools through the connection you already have, using MCP, A2A or the REST API. On eligible tools, an x402 wallet pays per request without signup.
 
@@ -47,7 +47,7 @@ Strale is a library of ${capCount} tools for AI agents, paid per call with no su
 ### MCP (recommended for Claude, Cursor, Windsurf)
 Endpoint: https://api.strale.io/mcp?src=llms-txt
 Transport: Streamable HTTP
-Auth: Bearer token (API key from https://strale.dev?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1)
+Auth: Bearer token (API key from https://strale.io?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1)
 Free tool: strale_search works without auth
 
 ### A2A (Agent-to-Agent)
@@ -73,8 +73,8 @@ Browse inputs, output fields, prices and limitations at /v1/capabilities. Search
 
 ## Links
 
-- Homepage: https://strale.dev?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
-- Docs: https://strale.dev/docs?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
+- Homepage: https://strale.io?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
+- Docs: https://strale.io/docs?src=llms-txt&utm_source=llms-txt&utm_medium=listing&utm_campaign=distribution-d0-d1
 - Agent skill: https://api.strale.io/SKILL.md
 - MCP Server Card: https://api.strale.io/.well-known/mcp.json
 - AI Catalog: https://api.strale.io/.well-known/ai-catalog.json

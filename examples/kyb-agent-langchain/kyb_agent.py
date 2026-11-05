@@ -24,7 +24,7 @@ STRALE_API_KEY = os.environ.get("STRALE_API_KEY")
 if not STRALE_API_KEY:
     raise SystemExit(
         "STRALE_API_KEY is not set. Copy .env.example to .env and fill it in.\n"
-        "Get a key (with EUR 2.00 trial credit) at https://strale.dev/signup"
+        "Get a key (with EUR 2.00 trial credit) at https://strale.io/signup"
     )
 if not os.environ.get("ANTHROPIC_API_KEY"):
     raise SystemExit(

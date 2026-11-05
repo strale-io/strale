@@ -291,7 +291,7 @@ methodologyRoute.get("/", (c) => {
         token: "audit_url uses HMAC-SHA256(secret, `${recordId}:${expiresAt}`) signing with 90-day TTL.",
         retention: "Record metadata is retained for 3 years; record content is redacted at 90 days.",
       },
-      contact: { email: "hello@strale.io", docs: "https://strale.dev/docs" },
+      contact: { email: "hello@strale.io", docs: "https://strale.io/docs" },
     },
     200,
     {

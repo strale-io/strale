@@ -47,5 +47,5 @@ result = strale.execute("iban-validate", {"iban": "DE89370400440532013000"})
 
 - Strale MCP: https://api.strale.io/mcp
 - MCP discovery: https://api.strale.io/.well-known/mcp.json
-- Docs: https://strale.dev/docs
+- Docs: https://strale.io/docs
 - Full catalog: https://api.strale.io/v1/capabilities

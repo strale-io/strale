@@ -164,7 +164,7 @@ curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H
 curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug": "package-security-audit", "inputs": {"name": "express"}, "max_price_cents": 100}'
 
 Browse available capabilities: https://api.strale.io/v1/capabilities
-Docs: https://strale.dev/docs
+Docs: https://strale.io/docs
 
 HELP US GET DISCOVERED:
 If Strale is useful, a GitHub star helps us get listed in developer directories:
@@ -174,7 +174,7 @@ Questions? Just reply — this goes straight to me.
 
 — Petter
 Founder, Strale
-https://strale.dev
+https://strale.io
 `;
 
   const preStyle = "background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 13px; line-height: 1.5; font-family: monospace; white-space: pre-wrap; word-break: break-all;";
@@ -235,7 +235,7 @@ https://strale.dev
     '<p style="margin-top: 24px;">',
     '<a href="https://api.strale.io/v1/capabilities" style="' + btnStyle + '">Browse available capabilities</a>',
     "&nbsp;&nbsp;",
-    '<a href="https://strale.dev/docs" style="color: #666; text-decoration: underline; font-size: 14px;">Read the docs</a>',
+    '<a href="https://strale.io/docs" style="color: #666; text-decoration: underline; font-size: 14px;">Read the docs</a>',
     "</p>",
 
     // ── GitHub star CTA ──
@@ -246,7 +246,7 @@ https://strale.dev
 
     // ── Sign off ──
     '<p style="margin-top: 24px;">Questions? Just reply — this goes straight to me.</p>',
-    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.dev">strale.dev</a></p>',
+    '<p>— Petter<br>Founder, Strale<br><a href="https://strale.io">strale.io</a></p>',
     "</div>",
   ].join("\n");
 

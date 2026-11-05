@@ -24,10 +24,10 @@ input_schema:
 output_schema:
   type: object
   example:
-    url: https://strale.dev
+    url: https://strale.io
     is_up: true
     server: cloudflare
-    final_url: https://strale.dev
+    final_url: https://strale.io
     ssl_valid: true
     status_code: 200
     content_type: text/html
@@ -55,7 +55,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale.dev
+      url: https://strale.io
     expected_fields:
       - field: is_up
         operator: not_null
@@ -86,7 +86,7 @@ test_fixtures:
         reliability: guaranteed
         value: array
   health_check_input:
-    url: https://strale.dev
+    url: https://strale.io
 output_field_reliability:
   is_up: guaranteed
   ssl_valid: guaranteed

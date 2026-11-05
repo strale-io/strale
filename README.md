@@ -8,7 +8,7 @@ Pay-per-call tools for AI agents — one API key or an x402 wallet. MCP server, 
 [![npm](https://img.shields.io/npm/v/straleio?label=straleio)](https://www.npmjs.com/package/straleio)
 [![PyPI](https://img.shields.io/pypi/v/straleio?label=straleio%20PyPI)](https://pypi.org/project/straleio/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![strale.dev](https://img.shields.io/badge/strale.dev-live-green)](https://strale.dev?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
+[![strale.io](https://img.shields.io/badge/strale.io-live-green)](https://strale.io?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)
 
 ## What Strale is
 
@@ -81,7 +81,7 @@ A subset of capabilities (email/IBAN/crypto-address validation, DNS lookup,
 JSON repair, URL-to-markdown, and more) work with no signup, no API key, and
 no wallet — only an IP-based daily rate limit. Read the current list from
 `GET /v1/platform/facts` (`free_tier_slugs`), not from a number in this
-file. Get a key and trial credits at [strale.dev](https://strale.dev?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) when
+file. Get a key and trial credits at [strale.io](https://strale.io?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) when
 you need the rest of the catalog.
 
 ### Framework integrations
@@ -128,7 +128,7 @@ GET https://api.strale.io/v1/capabilities/vat-validate
 ```
 
 Every capability publishes its limitations honestly, including coverage
-gaps. Methodology: [strale.dev/quality](https://strale.dev/quality?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
+gaps. Methodology: [strale.io/security](https://strale.io/security?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1).
 
 ### IDE rules for safe data handling
 
@@ -153,9 +153,9 @@ registry scraping.
 
 ### More
 
-- [strale.dev](https://strale.dev?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — homepage and sign-up
-- [strale.dev/docs](https://strale.dev/docs?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — API reference
-- [strale.dev/pricing](https://strale.dev/pricing?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — pricing
+- [strale.io](https://strale.io?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — homepage and sign-up
+- [strale.io/docs](https://strale.io/docs?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — API reference
+- [strale.io/pricing](https://strale.io/pricing?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) — pricing
 - [scan.strale.io](https://scan.strale.io) — Beacon, a free agent-readiness scanner
 - [api.strale.io/mcp](https://api.strale.io/mcp?src=gh-readme) — MCP endpoint (Streamable HTTP)
 - [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration

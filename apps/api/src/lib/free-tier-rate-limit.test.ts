@@ -73,7 +73,7 @@ describe("monthly free allowance", () => {
     const body = await response.json();
     expect(body.error_code).toBe("rate_limited");
     expect(body.details).toMatchObject({ limit, window: "month", resets_at: "2026-11-01T00:00:00.000Z", retryable: false });
-    expect(body.details.fix).toContain("https://strale.dev/signup?src=free-tier-limit");
+    expect(body.details.fix).toContain("https://strale.io/signup?src=free-tier-limit");
     expect(response.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(response.headers.get("X-RateLimit-Reset")).toBe(String(Date.parse(body.details.resets_at) / 1000));
   });

@@ -85,7 +85,7 @@ async function anonymousPaidRefusal(
       error_code: "unauthorized",
       details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header or choose a free 'capability_slug' from GET /v1/capabilities." },
       message:
-        "This capability requires an API key. Sign up at strale.dev/signup for paid tools; trial credits are available where eligible.",
+        "This capability requires an API key. Sign up at strale.io/signup for paid tools; trial credits are available where eligible.",
       free_capabilities: freeSlugs,
       hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
       self_signup: {
@@ -461,7 +461,7 @@ doRoute.post(
       return c.json({
         error_code: "unauthorized",
       details: { fix: "Send a valid API key in the Authorization: Bearer <api_key> header or choose a free 'capability_slug' from GET /v1/capabilities." },
-        message: "No free capability matched your request. Sign up at strale.dev/signup for paid tools; trial credits are available where eligible.",
+        message: "No free capability matched your request. Sign up at strale.io/signup for paid tools; trial credits are available where eligible.",
         free_capabilities: freeSlugs,
         hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
       }, 401);

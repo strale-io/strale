@@ -523,7 +523,7 @@ describe("D2 offline CDP/Bazaar discovery gate", () => {
     ]) {
       const required = make(schema);
       expect(required.extensions.bazaar).toBeUndefined();
-      expect(required.resource).toMatchObject({ serviceName: "Strale", description: "Tool: Description", tags: [], iconUrl: "https://strale.dev/favicon-32x32.png" });
+      expect(required.resource).toMatchObject({ serviceName: "Strale", description: "Tool: Description", tags: [], iconUrl: "https://strale.io/favicon-32x32.png" });
       expect(validateOfflineDiscovery(required)).toEqual([]);
     }
   });

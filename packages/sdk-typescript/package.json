@@ -30,8 +30,8 @@
     "sdk",
     "typescript"
   ],
-  "author": "Strale <hello@strale.io> (https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)",
-  "homepage": "https://strale.dev?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
+  "author": "Strale <hello@strale.io> (https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1)",
+  "homepage": "https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/strale-io/strale.git",

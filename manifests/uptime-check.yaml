@@ -50,7 +50,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale.dev
+      url: https://strale.io
     expected_fields:
       - field: status
         operator: not_null
@@ -74,7 +74,7 @@ test_fixtures:
         reliability: common
         value: string
   health_check_input:
-    url: https://strale.dev
+    url: https://strale.io
 output_field_reliability:
   status: guaranteed
   latency_ms: guaranteed

@@ -56,7 +56,7 @@ function topUpButtons(userId: string): string {
   // For now, link to the top-up endpoint instructions since we can't pre-auth Stripe links without a session
   return [
     '<div style="margin: 20px 0;">',
-    '<a href="https://strale.dev/topup" style="display: inline-block; background: #1a1a1a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; margin-right: 8px;">Add credits</a>',
+    '<a href="https://strale.io/topup" style="display: inline-block; background: #1a1a1a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; margin-right: 8px;">Add credits</a>',
     "</div>",
   ].join("");
 }
@@ -87,7 +87,7 @@ ${formatUsageSummary(usage)}
 
 Free-tier capabilities (url-to-markdown, email-validate, etc.) still work at no cost. Paid capabilities need a top-up.
 
-Add credits at https://strale.dev/topup
+Add credits at https://strale.io/topup
 
 — Petter
 Founder, Strale`;
@@ -140,7 +140,7 @@ ${formatUsageSummary(usage)}
 
 Free-tier capabilities (url-to-markdown, email-validate, dns-lookup, iban-validate, json-repair) still work.
 
-Add credits at https://strale.dev/topup — takes 30 seconds.
+Add credits at https://strale.io/topup — takes 30 seconds.
 
 — Petter
 Founder, Strale`;

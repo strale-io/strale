@@ -20,7 +20,7 @@ actually installed and exercised while building these — see each README's
 
 ## No API key yet?
 
-Sign up at [strale.dev/signup](https://strale.dev/signup) for EUR 2.00 in
+Sign up at [strale.io/signup](https://strale.io/signup) for EUR 2.00 in
 free trial credit, no card required. Five capabilities also work with **no
 key at all**: `email-validate`, `dns-lookup`, `json-repair`,
 `url-to-markdown`, `iban-validate`, plus six crypto address validators
