@@ -80,21 +80,22 @@ test("the host comes from the site config: it changes with it, and no literal si
 });
 
 // Where each linked API path is served. A path that is not here, or whose route is gone, fails.
-const ROUTES: Record<keyof typeof API_PATHS, [file: string, needle: string]> = {
-  llms: ["routes/llms-txt.ts", 'llmsTxtRoute.get("/llms.txt"'],
-  x402Catalog: ["routes/x402-gateway-v2.ts", 'x402GatewayV2.get("/catalog"'],
-  x402Discovery: ["app.ts", 'app.get("/.well-known/x402.json"'],
-  facts: ["app.ts", 'app.route("/v1/platform/facts"'],
-  openapi: ["app.ts", 'app.get("/openapi.json"'],
-  mcp: ["app.ts", 'app.route("/mcp"'],
-  agentCard: ["app.ts", 'app.route("/.well-known/agent-card.json"'],
-  a2a: ["app.ts", 'app.route("/a2a"'],
-  do: ["routes/do.ts", 'doRoute.post(\n  "/do"'],
+const ROUTES: Record<keyof typeof API_PATHS, [publicPath: string, file: string, needle: string]> = {
+  llms: ["/llms.txt", "routes/llms-txt.ts", 'llmsTxtRoute.get("/llms.txt"'],
+  x402Catalog: ["/x402/catalog", "routes/x402-gateway-v2.ts", 'x402GatewayV2.get("/catalog"'],
+  x402Discovery: ["/.well-known/x402.json", "app.ts", 'app.get("/.well-known/x402.json"'],
+  facts: ["/v1/platform/facts", "app.ts", 'app.route("/v1/platform/facts"'],
+  openapi: ["/openapi.json", "app.ts", 'app.get("/openapi.json"'],
+  mcp: ["/mcp", "app.ts", 'app.route("/mcp"'],
+  agentCard: ["/.well-known/agent-card.json", "app.ts", 'app.route("/.well-known/agent-card.json"'],
+  a2a: ["/a2a", "app.ts", 'app.route("/a2a"'],
+  do: ["/v1/do", "routes/do.ts", 'doRoute.post(\n  "/do"'],
 };
 
 test("every API path the files link to is a route in apps/api", () => {
   assert.deepEqual(Object.keys(ROUTES).sort(), Object.keys(API_PATHS).sort());
-  for (const [k, [file, needle]] of Object.entries(ROUTES)) {
+  for (const [k, [publicPath, file, needle]] of Object.entries(ROUTES)) {
+    assert.equal(API_PATHS[k as keyof typeof API_PATHS], publicPath, `${k}: linked path differs from the route`);
     const src = readFileSync(resolve(repo, "apps/api/src", file), "utf8");
     assert.ok(src.includes(needle), `${k} (${API_PATHS[k as keyof typeof API_PATHS]}): ${needle} not found in ${file}`);
   }
