@@ -126,6 +126,16 @@ const CONNECTOR_EXCLUDED_SLUGS = new Set([
   "paid-api-preflight", "crypto-counterparty-kyb", "defi-risk-check", "defi-protocol-risk",
 ]);
 
+/**
+ * True when API error text already carries the Strale sign-up URL. The API text
+ * moves from strale.dev to strale.io at the DEC-20261105-A switch-over, so
+ * installed versions must recognise both hosts (https only, optional www).
+ * The URL must end at a boundary: strale.io.evil.com or /signup.evil do not match.
+ */
+export function mentionsSignupUrl(text: string): boolean {
+  return /https:\/\/(?:www\.)?strale\.(?:dev|io)\/signup(?![\w-]|\.\w)/.test(text);
+}
+
 /** True when the connector must not offer this tool or bundle. */
 export function isConnectorExcluded(slug: string, category?: string | null): boolean {
   return CONNECTOR_EXCLUDED_SLUGS.has(slug) || (category ?? "").toLowerCase() === "web3";
@@ -426,7 +436,7 @@ export async function executeCapability(
             error: typeof (data as any).message === "string" ? (data as any).message : "Free-tier rate limit reached.",
             fix: opts.connector
               ? `The free allowance is shared by everyone calling from the same network address. ${CONNECT_ACCOUNT_FIX} Free tools then run without the shared allowance.`
-              : typeof details?.fix === "string" && details.fix.includes("https://strale.dev/signup")
+              : typeof details?.fix === "string" && mentionsSignupUrl(details.fix)
               ? details.fix
               : `${details?.fix ?? "Retry after the time in the Retry-After response header."} Sign up at https://strale.dev/signup for paid access and send an API key.`,
             ...(details ? { details } : {}),
