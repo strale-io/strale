@@ -65,11 +65,13 @@ jobs:
             echo "::error::Released ${RELEASE_TAG} but server.json on main says ${version}. Bump both server.json copies on main, then run this workflow by hand."
             exit 1
           fi
-          # Right after a release npm can lag a little; give it a minute.
+          # Right after a release npm's install metadata can lag by minutes (on
+          # 2026-11-05, 0.2.10 took longer than the old one-minute wait and this
+          # job failed), so wait up to ten minutes, bypassing npm's local cache.
           on_npm=false
-          for attempt in 1 2 3 4 5; do
-            if npm view "strale-mcp@${version}" version >/dev/null 2>&1; then on_npm=true; break; fi
-            sleep 15
+          for attempt in $(seq 1 20); do
+            if npm view "strale-mcp@${version}" version --prefer-online >/dev/null 2>&1; then on_npm=true; break; fi
+            sleep 30
           done
           if [ "$on_npm" != true ]; then
             echo "::error::strale-mcp@${version} is not on npm; the registry would reject it"
