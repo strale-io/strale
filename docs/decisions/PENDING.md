@@ -42,8 +42,8 @@ infrastructure migration is a founder decision under the
 **Reserved class:** one-way-public-act.
 
 **Established:** `strale.dev` and `strale.io` are both owned. Petter, in session
-on 2026-11-05: "yes, make strale.io the main site". On that day `strale.io` and
-`www.strale.io` pointed at a Vercel deployment that no longer exists
+on 2026-11-05: "yes, make strale.io the main site". On that day the `strale.io`
+apex pointed at a Vercel deployment that no longer exists
 (`x-vercel-error: DEPLOYMENT_NOT_FOUND`, HTTP 404).
 
 **Recommendation until ready:** execute through
