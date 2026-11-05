@@ -76,6 +76,9 @@ async function growthOf<T>(work: () => Promise<T>): Promise<{ result: T | Error;
 }
 
 const LIMIT_MIB = 32;
+// 200,000 kept entries are real objects (about 250 bytes each): the entry cap
+// bounds them near 50 MiB, which is what the flood tests allow.
+const FLOOD_LIMIT_MIB = 64;
 
 describe("memory stays flat for the parts of a document that are not picked", () => {
   it("a 64 MiB key in an unpicked object", async () => {
@@ -151,4 +154,46 @@ describe("memory stays flat for the parts of a document that are not picked", ()
     await expect(readJsonPickWithLimit(new Response(body), MAX_PACKUMENT_BYTES, { name: true })).rejects.toThrow();
     expect(cancelled).toBe(true);
   });
+
+  /** `head`, then entries `entry(i)` forever (the cap must stop it), no tail. */
+  function flood(head: string, entry: (i: number) => string): Response {
+    let n = 0;
+    let first = true;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(ctrl) {
+          let out = first ? head : "";
+          first = false;
+          while (out.length < CHUNK && n < 12_000_000) out += entry(n++);
+          ctrl.enqueue(enc.encode(out));
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    return new Response(body, { status: 200 });
+  }
+
+  it('a flood of keys under a "keys" pick is refused at the entry cap', async () => {
+    const res = flood('{"versions":{', (i) => `"${i}":0,`);
+    const { result, growthMiB } = await growthOf(() => readJsonPickWithLimit(res, MAX_PACKUMENT_BYTES, { versions: "keys" }, "package"));
+    expect(result).toBeInstanceOf(ResourceLimitError);
+    expect((result as Error).message).toMatch(/more than 200000 selected entries/);
+    expect(growthMiB, `grew ${growthMiB.toFixed(0)} MiB`).toBeLessThan(FLOOD_LIMIT_MIB);
+  }, 60_000);
+
+  it("a flood of keys under a wildcard pick is refused at the entry cap", async () => {
+    const res = flood('{"versions":{', (i) => `"${i}":{"a":1},`);
+    const { result, growthMiB } = await growthOf(() => readJsonPickWithLimit(res, MAX_PACKUMENT_BYTES, { versions: { "*": { a: true } } }, "package"));
+    expect(result).toBeInstanceOf(ResourceLimitError);
+    expect((result as Error).message).toMatch(/selected entries/);
+    expect(growthMiB, `grew ${growthMiB.toFixed(0)} MiB`).toBeLessThan(FLOOD_LIMIT_MIB);
+  }, 60_000);
+
+  it("a realistic number of versions (10,000) is accepted", async () => {
+    const body = Array.from({ length: 10_000 }, (_, i) => `"1.0.${i}":{"a":1}`).join(",");
+    const res = new Response(`{"versions":{${body}}}`);
+    const out = await readJsonPickWithLimit(res, MAX_PACKUMENT_BYTES, { versions: { "*": { a: true } } }, "package");
+    expect(Object.keys(out.versions)).toHaveLength(10_000);
+  });
 });
+

@@ -91,7 +91,7 @@ async function registryJson<T>(url: string, versionRequested = false, packument 
   } catch (error) {
     if (error instanceof ResourceLimitError) {
       throw new CapabilityRefusalError(packument
-        ? "'package' must be a registry record no larger than 128 MiB; request a specific 'version' to use the smaller per-version record."
+        ? `${error.message.replace(/\.$/, "")}; request a specific 'version' to use the smaller per-version record.`
         : versionRequested
           ? "'package' must be a registry record no larger than 20 MiB; consult the registry directly for this oversized release."
           : "'package' must be a registry record no larger than 20 MiB; request a specific 'version' to use the smaller per-version record.");

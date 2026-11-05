@@ -143,6 +143,20 @@ describe("a 45 MB packument (larger than the old 20 MiB cap) is served", () => {
     expect(JSON.stringify(r.output)).toContain("bob"); // _npmUser of 1.0.8 was read
   }, 60_000);
 
+  it("package-security-audit: install-script detection is the same with the narrowed scripts pick", async () => {
+    const at = async (version: string) => {
+      registry(2 * MIB);
+      const r = (await getExecutor("package-security-audit")!({ name: "big", ecosystem: "npm", version })) as { output: Record<string, any> };
+      return r.output;
+    };
+    const hit = JSON.stringify(await at("1.0.7"));
+    const miss = JSON.stringify(await at("1.0.8"));
+    expect(hit).toContain('"has_install_scripts":true');
+    expect(hit).toContain('"install_script_names":["postinstall"]');
+    expect(miss).toContain('"has_install_scripts":false');
+    expect(miss).toContain('"install_script_names":[]');
+  }, 60_000);
+
   it("package-docs (unpinned): succeeds, takes the top-level README and the version list", async () => {
     registry(45 * MIB);
     const r = (await getExecutor("package-docs")!({ ecosystem: "npm", package: "big" })) as { output: Record<string, any> };

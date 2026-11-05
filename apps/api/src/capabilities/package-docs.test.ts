@@ -176,6 +176,10 @@ describe("package-docs refusal and source failures", () => {
     await expect(execute({ ecosystem: "npm", package: "request" })).rejects.toThrow(/request a specific 'version'/);
     expect(cancel).toHaveBeenCalledTimes(1);
   });
+  it("names the real reason a packument is refused (nesting, not size)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"readme":' + "[".repeat(300)));
+    await expect(execute({ ecosystem: "npm", package: "request" })).rejects.toThrow(/nesting deeper than 128 levels.*specific 'version'/);
+  });
   it("rejects an oversized declared body and cancels it", async () => {
     const cancel = vi.fn(); const body = new ReadableStream({ cancel });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(body, { headers: { "Content-Length": String(MAX_PACKUMENT_BYTES + 1) } }));

@@ -73,6 +73,10 @@ export const MAX_JSON_DEPTH = 128;
 export const MAX_KEY_BYTES = 4096;
 export const MAX_VALUE_BYTES = 16 * 1024 * 1024;
 export const MAX_PICKED_BYTES = 32 * 1024 * 1024;
+/** Entries (keys kept in a picked object) across the document; renovate has 5,889 versions. */
+export const MAX_PICKED_ENTRIES = 200_000;
+/** Charged per kept entry on top of its key, for the object slot and the value. */
+const ENTRY_OVERHEAD_BYTES = 64;
 const MAX_SCALAR_BYTES = 64;
 
 const QUOTE = 0x22;
@@ -146,6 +150,7 @@ export class JsonPicker {
   private capEsc = false;
   private capBytes = 0;
   private pickedBytes = 0;
+  private pickedEntries = 0;
   private capAssign: ((v: unknown) => void) | null = null;
 
   constructor(private readonly spec: Pick) {}
@@ -276,10 +281,14 @@ export class JsonPicker {
     if (!top.arr && out && !top.keyOverflow) {
       const key = top.key;
       if (top.spec === "keys") {
+        this.chargeEntry(key);
         out[key] = Object.create(null);
       } else {
         spec = childSpec(top.spec, key);
-        if (spec !== null) assign = (v) => { out[key] = v; };
+        if (spec !== null) {
+          this.chargeEntry(key);
+          assign = (v) => { out[key] = v; };
+        }
       }
     }
 
@@ -480,6 +489,17 @@ export class JsonPicker {
     this.capEsc = false;
     this.capBytes = 0;
     this.capKind = first === LBRACE || first === LBRACKET ? "container" : first === QUOTE ? "string" : "scalar";
+  }
+
+  /** A key kept in a picked object costs its length plus overhead, and counts toward the entry cap. */
+  private chargeEntry(key: string): void {
+    this.pickedBytes += Buffer.byteLength(key) + ENTRY_OVERHEAD_BYTES;
+    if (++this.pickedEntries > MAX_PICKED_ENTRIES) {
+      throw new JsonPickLimitError("picked", `more than ${MAX_PICKED_ENTRIES} selected entries`);
+    }
+    if (this.pickedBytes > MAX_PICKED_BYTES) {
+      throw new JsonPickLimitError("picked", `selected fields totalling more than ${MAX_PICKED_BYTES / 1048576} MiB`);
+    }
   }
 
   private keep(slice: Uint8Array): void {

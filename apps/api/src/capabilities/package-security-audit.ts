@@ -4,7 +4,8 @@ import type { Pick } from "../lib/json-pick.js";
 
 const NPM_AUDIT_PICK: Pick = {
   "dist-tags": true, time: true, maintainers: true,
-  versions: { "*": { _npmUser: true, scripts: true, deprecated: true } },
+  // detectInstallScripts reads only these three script names.
+  versions: { "*": { _npmUser: true, scripts: { preinstall: true, install: true, postinstall: true }, deprecated: true } },
 };
 
 const COPYLEFT_LICENSES = new Set(["GPL-2.0", "GPL-3.0", "AGPL-3.0", "LGPL-2.1", "LGPL-3.0", "GPL-2.0-only", "GPL-3.0-only", "AGPL-3.0-only", "LGPL-2.1-only", "LGPL-3.0-only"]);
