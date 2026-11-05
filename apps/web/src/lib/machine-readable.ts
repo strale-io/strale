@@ -54,7 +54,7 @@ This file is a short pointer. The authoritative, current list of tools, prices a
 ## Connect
 
 - [MCP endpoint](${api("mcp")}): Streamable HTTP; Authorization: Bearer <API key>
-- [REST: POST /v1/do](${api("do")}): a capability_slug, an inputs object and max_price_cents
+- [REST API](${api("openapi")}): call POST ${api("do")} with a capability_slug, an inputs object and max_price_cents
 - [Agent card](${s}/.well-known/agent.json): a pointer card; the canonical A2A card is ${api("agentCard")}
 - [MCP server card](${s}/.well-known/mcp.json): how to connect over MCP
 
