@@ -162,7 +162,7 @@ threads:
       Strale (Moonlighter AB, Sweden)
       petter@strale.io
   - id: rik-open-data-403
-    to: RIK Ariregister open-data contact (unverified: confirm the address on rik.ee before sending; from petter@strale.io)
+    to: "RIK Ariregister open-data contact (unverified: confirm the address on rik.ee before sending; from petter@strale.io)"
     subject: "Automated access to the Ariregister open-data file from our server"
     asked: Whether our server may download the daily open-data file, and if so what we should do to be allowed
     unblocks: Estonian directors in estonian-company-data (production-watch issue 856)
@@ -196,7 +196,8 @@ threads:
     unblocks: DQ-44
     sent:
     follow_up_by:
-    status: draft
+    status: withdrawn
+    reply: Withdrawn unsent 2026-11-05. Petter renewed the Starter pack the same day (DQ-44); the balance after 8 November answers the rollover question without an email.
     note: Written 2026-10-31 by the morning run. Needed by 2026-11-06. If unanswered by then, DQ-44 is decided without it.
     body: |
       Hello,
@@ -204,6 +205,31 @@ threads:
       Our Starter credits expire on 8 November with most of the 50,000 unused. If we renew
       before then, do the unused credits carry over to the new pack? If not, is there another
       way to keep them?
+
+      Kind regards,
+      Petter Lindstrom
+      Moonlighter AB (Strale)
+  - id: dataforseo-resale
+    to: support@dataforseo.com (from petter@strale.io)
+    subject: "Reselling SERP API results inside a pay-per-call API"
+    asked: Whether Strale may return DataForSEO SERP results to its own API customers per call, and how terms section 7.1 applies
+    unblocks: moving the eight Serper-backed tools to a non-expiring balance before the May 2027 Serper renewal (DQ-44 follow-up)
+    sent:
+    follow_up_by:
+    status: draft
+    note: Drafted 2026-11-05 by the orchestrator. Not urgent; send before 2027-03-01 so a switch can be built and reviewed before Serper's credits expire around 2027-05-05. Evidence for the question is docs/research/2026-10-26-serp-vendor-replacement.md.
+    body: |
+      Hello,
+
+      We run Strale (strale.dev), an API where AI agents pay per call for tools such as web
+      search, news search and keyword rank checks. We would like to use your Google SERP and
+      News APIs behind those tools, returning the results (titles, URLs, snippets, positions)
+      to our customers inside our own responses, one search per customer request, with
+      DataForSEO credited as the source.
+
+      1. Do your terms permit this use, and can you confirm it in writing?
+      2. How does section 7.1 (not using the services to compete with the search engine
+         providers) apply to a per-call search tool like this?
 
       Kind regards,
       Petter Lindstrom

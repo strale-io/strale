@@ -4,6 +4,15 @@
 that invoices). Set by Petter 2026-08-15. Compute rides the Claude plan and is
 optimized, not billed here.
 
+## Week of 2026-11-02 → 2026-11-08 (in progress, read 2026-11-05)
+
+| line | committed/spent | source of truth | note |
+|---|---|---|---|
+| Serper Starter pack renewal | **USD 62.50** (USD 50 + 25 % VAT) | Serper billing page, payment 2026-11-05 | Petter's purchase, DQ-44; one-off every six months, about USD 10.40/month |
+
+The renewal alone is above the €50 weekly envelope, which is why it was Petter's
+decision (DQ-44) rather than a session's. Other lines this week are not yet read.
+
 ## Week of 2026-08-18 → 2026-08-24 (in progress, read 2026-08-23)
 
 | line | committed/spent | source of truth | note |

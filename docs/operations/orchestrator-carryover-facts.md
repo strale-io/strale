@@ -320,7 +320,7 @@ unknown FNR is a SOAP Fault HTTP 500 with German text; zero hits is 200 with no 
 `avg_latency_ms` 1500. WSDL itself needs auth. Env `JUSTIZONLINE_API_KEY` set on Railway with `--skip-deploys`.
 
 **Vendor cost and quota facts (audit 2026-08-18; Section 12 flags what moved).** Serper: 50,000 credits bought 2026-05-08 (USD 62.50 via Paddle), login `petter@strale.io`,
-**credits expire ~2026-11-08** (expiry, not exhaustion, is the constraint; renewal is a purchase and Petter's). CDP x402: ~2,000 settlements/30d, past the 1,000 free tier.
+**credits expire ~2026-11-08** (expiry, not exhaustion, is the constraint; renewal is a purchase and Petter's). **Update 2026-11-05:** Petter renewed (USD 62.50, 50,000 credits, balance 97,487 right after); the new pack expires about 2027-05-05, and usage was ~185 credits/month in late October (DQ-44). CDP x402: ~2,000 settlements/30d, past the 1,000 free tier.
 `sec-api.io` and EINsearch: no subscription exists, zero calls, scaffolded stubs. Dilisense: ~20 calls/30d against the 100/mo free tier. Never self-host sanctions lists to
 save money (DEC-20260428-B bar applies the moment raw OFAC/EU/UN feeds are touched). Voyage: inside the free 200M-token allowance. Vendors with no self-serve balance API
 (Dilisense, Serper, Browserless, Voyage, Anthropic needs an admin key): do not promise a programmatic balance check. 2026-08-30 refusal mining found four upstreams down with
