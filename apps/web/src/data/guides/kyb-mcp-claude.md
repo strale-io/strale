@@ -38,8 +38,8 @@ Verify UK company 00445790. Look up its company data, check its VAT number and r
 
 ## How it works
 
-The Strale MCP server gives Claude a few meta-tools: `strale_search` finds a tool, `strale_execute` runs it. For a company check Claude typically looks up the company, reads the VAT number from the result, checks it, then screens the name.
+The Strale MCP server gives Claude a few meta-tools: `strale_search` finds a tool, `strale_execute` runs it. For a company check Claude typically looks up the company, then screens the name. A VAT number is not part of the company lookup result: if you want it checked, give Claude the number from your own records. Screening results are matches for a person to review, not a verdict.
 
 Each `strale_execute` call carries a price ceiling, so a tool that costs more than the ceiling is refused before it runs. The options are in [Connect over MCP](/docs/mcp).
 
-For a repeatable check, use a bundled check instead. It runs the same steps in one call, at one price, with one record. They are listed under [Bundled checks](/solutions).
+For a repeatable check, use a bundled check instead. It runs the same steps in one call, at one price, with one record. They are listed under [Bundled checks](/tools#bundled).

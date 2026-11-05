@@ -98,13 +98,6 @@ const frameworks = [
     note: "Python 3.10 or later. Pass the tools to an Agent with tools=tools.",
   },
   {
-    id: "semantic-kernel",
-    name: "Semantic Kernel",
-    install: "npm install strale-semantic-kernel",
-    code: `import { createStralePlugin } from "strale-semantic-kernel";\n\nconst plugin = await createStralePlugin({ apiKey: process.env.STRALE_API_KEY! });\nkernel.addPlugin(plugin);`,
-    note: "Node.js 20 or later, with the semantic-kernel package. Pass categories: [\"finance\"] to filter.",
-  },
-  {
     id: "composio",
     name: "Composio",
     install: "pip install composio-strale",
@@ -123,11 +116,11 @@ const toc = [
 ---
 <DocsNav
   title="Use the SDKs"
-  description="Call Strale tools from TypeScript or Python, and use the LangChain, CrewAI, Semantic Kernel and Composio packages."
+  description="Call Strale tools from TypeScript or Python, and use the LangChain, CrewAI and Composio packages."
   current="sdks"
   label="Docs · SDKs"
   heading="Use the SDKs"
-  lead="TypeScript and Python clients for the same calls as the REST API, plus packages for four agent frameworks."
+  lead="TypeScript and Python clients for the same calls as the REST API, plus packages for three agent frameworks."
   toc={toc}
 >
   <section id="first-call" aria-labelledby="first-call-title">

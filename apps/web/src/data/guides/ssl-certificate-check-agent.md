@@ -45,4 +45,4 @@ print(response.output)
 
 The tool connects to the domain, reads the certificate it presents and reports the issuer, `valid_from` and `valid_to` dates, `is_expired`, `is_expiring_soon`, `days_until_expiry`, the TLS protocol, the cipher and the subject alternative names.
 
-Checking `is_expiring_soon` lets an agent raise an alert before a certificate lapses. Only port 443 is checked.
+Checking `is_expiring_soon` lets an agent raise an alert before a certificate lapses.

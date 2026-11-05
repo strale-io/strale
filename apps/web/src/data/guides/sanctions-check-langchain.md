@@ -37,7 +37,7 @@ for call in result.tool_calls:
 
 The tool searches the consolidated sanctions and debarment lists that Dilisense maintains, including the US OFAC SDN list, the EU financial sanctions list, the UN Security Council list and the UK sanctions list. The tool page names the sources. It matches names approximately and returns `is_sanctioned`, `match_count` and a `matches` list.
 
-Each match has the listed name, the lists it appears on, its classification and the listing details. There is no numeric confidence score. Common names can match the wrong person or company, so pass `country`, and `birth_date` for a person, to narrow the search.
+Each match has the listed name, the lists it appears on, the countries involved and the listing details. There is no numeric confidence score. Common names can match the wrong person or company, so pass `country`, and `birth_date` for a person, to narrow the search.
 
 Every answer includes `lists_queried`, which names the lists searched, so you can show what was checked.
 

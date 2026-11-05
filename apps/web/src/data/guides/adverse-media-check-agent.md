@@ -45,10 +45,10 @@ print(result)
 
 ## How it works
 
-The tool searches Dilisense's news index, which is organised by financial-crime category. If Dilisense returns nothing, it falls back to a web search. The answer says which path produced it in `source`, and results from the fallback are weaker evidence.
+The tool searches Dilisense's news index, which is organised by financial-crime category. If Dilisense is unavailable (quota exhausted, a server error or a missing key), it falls back to a web search. The answer says which path produced it in `source`, and results from the fallback are weaker evidence.
 
 The answer has `risk_level`, `total_hits`, a `categories` breakdown and `top_articles`, each with a headline, category and source link. The risk level follows fixed rules, and the thresholds are in `risk_level_thresholds` in the answer. No language model makes the call.
 
 The search window is the last 12 months, and the company needs to be searched by its registered name. For a plain-language summary of several checks, run `risk-narrative-generate` on the results. That tool uses a language model, and this one does not.
 
-A match means a name appears on a list that was searched. It is not a decision about the person or company: a person should review it.
+A hit means news coverage matched the name. It is not a finding about the person or company: a person should read the articles and decide.

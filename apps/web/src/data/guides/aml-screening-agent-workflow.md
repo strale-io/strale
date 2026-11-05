@@ -50,4 +50,4 @@ Anti-money-laundering programmes usually combine three searches: sanctions lists
 
 The agent decides the order, and reports every result, including empty ones. Matches need a person's judgement, because common names produce false matches. Pass the country and, for a person, the birth date to narrow them.
 
-A bundled check runs a fixed set of steps in one call, at one price, with one record. They are listed under [Bundled checks](/solutions).
+A bundled check runs a fixed set of steps in one call, at one price, with one record. They are listed under [Bundled checks](/tools#bundled).

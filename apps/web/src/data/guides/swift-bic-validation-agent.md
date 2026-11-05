@@ -36,7 +36,7 @@ print(f"Head office: {result.output['is_head_office']}")
 
 ## How it works
 
-A SWIFT/BIC code is 8 or 11 characters long. The tool checks the format and length, then reads the bank code, country code, location code and branch code from the string itself. An 8-character code is a head-office code, which is what `is_head_office` reports.
+A SWIFT/BIC code is 8 or 11 characters long. The tool checks the format and length, then reads the bank code, country code, location code and branch code from the string itself. A code of 8 characters, or of 11 ending in XXX, is a head-office code, which is what `is_head_office` reports.
 
 It is structural parsing, not a lookup in a bank directory. It does not return the bank's name and does not confirm that the code is in use. Pair it with your own bank reference data if you need either.
 

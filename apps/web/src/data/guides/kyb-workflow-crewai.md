@@ -52,4 +52,4 @@ A business verification workflow usually does three things: confirms the company
 
 A sanctions result is a list of matches for a person to review. It is not a verdict on the company.
 
-Strale also sells bundled checks that run these steps in one call, at one price, with one record. Browse them under [Bundled checks](/solutions) before you build your own pipeline.
+Strale also sells bundled checks that run these steps in one call, at one price, with one record. Browse them under [Bundled checks](/tools#bundled) before you build your own pipeline.

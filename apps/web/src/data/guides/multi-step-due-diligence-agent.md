@@ -61,7 +61,7 @@ print(result)
 
 ## How it works
 
-A bundled check combines several tools in one call, with one price and one record. KYB Essentials covers the registry lookup, VAT check, LEI and sanctions screening. KYB Complete adds PEP screening, adverse media, digital presence checks and a plain-language risk narrative. The bundles, their steps and their prices are listed under [Bundled checks](/solutions).
+A bundled check combines several tools in one call, with one price and one record. KYB Essentials covers the registry lookup, VAT check, LEI and sanctions screening. KYB Complete adds PEP screening, adverse media, digital presence checks and a plain-language risk narrative. The bundles, their steps and their prices are listed under [Bundled checks](/tools#bundled).
 
 The endpoint is `POST /v1/solutions/{slug}/execute`, and the inputs go in an `inputs` object. The slug names the country, so `kyb-complete-uk` takes a UK company number.
 

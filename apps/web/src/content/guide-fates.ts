@@ -41,15 +41,17 @@ export const PRUNED: Record<string, { to: string; why: string }> = {
 
 /**
  * Country-lookup guides (SITE-STRUCTURE.md §11: "fold into the country pages"). Each country page
- * links to its guides, and the guide itself stays at /guides/<slug> because it is long. The old
- * address points at the country page.
+ * links to its guides (`countries:` in the guide's front matter), and the guide itself stays a
+ * built page at /guides/<slug>. The old /learn address points at the guide, never at the country
+ * page: no redirect may point away from a built guide. The two old /guides/ addresses are live
+ * pages and get no rule.
  */
-export const FOLDED: Record<string, { to: string; guide: string }> = {
-  "/learn/swedish-company-lookup-agent": { to: "/company-data/sweden", guide: "swedish-company-lookup-agent" },
-  "/learn/uk-company-verification-agent": { to: "/company-data/united-kingdom", guide: "uk-company-verification-agent" },
-  "/learn/german-company-data-agent": { to: "/company-data/germany", guide: "german-company-data-agent" },
-  "/guides/swedish-company-lookup-api": { to: "/company-data/sweden", guide: "swedish-company-lookup-api" },
-  "/guides/norwegian-company-lookup-api": { to: "/company-data/norway", guide: "norwegian-company-lookup-api" },
+export const FOLDED: Record<string, { guide: string; country: string }> = {
+  "/learn/swedish-company-lookup-agent": { guide: "swedish-company-lookup-agent", country: "/company-data/sweden" },
+  "/learn/uk-company-verification-agent": { guide: "uk-company-verification-agent", country: "/company-data/united-kingdom" },
+  "/learn/german-company-data-agent": { guide: "german-company-data-agent", country: "/company-data/germany" },
+  "/guides/swedish-company-lookup-api": { guide: "swedish-company-lookup-api", country: "/company-data/sweden" },
+  "/guides/norwegian-company-lookup-api": { guide: "norwegian-company-lookup-api", country: "/company-data/norway" },
 };
 
 export interface Redirect {
@@ -63,9 +65,8 @@ export function guideRedirects(): Redirect[] {
   const out: Redirect[] = [{ from: "/learn", to: "/guides", status: 301 }];
   for (const slug of OLD_LEARN) {
     const from = `/learn/${slug}`;
-    out.push({ from, to: PRUNED[from]?.to ?? FOLDED[from]?.to ?? `/guides/${slug}`, status: 301 });
+    out.push({ from, to: PRUNED[from]?.to ?? `/guides/${FOLDED[from]?.guide ?? slug}`, status: 301 });
   }
-  for (const [from, f] of Object.entries(FOLDED)) if (from.startsWith("/guides/")) out.push({ from, to: f.to, status: 301 });
   for (const [from, p] of Object.entries(PRUNED)) if (from.startsWith("/guides/")) out.push({ from, to: p.to, status: 301 });
   return out;
 }

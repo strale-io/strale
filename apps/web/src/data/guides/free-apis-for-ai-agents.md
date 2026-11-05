@@ -29,7 +29,7 @@ The list is read from the catalogue each time the site is built. It changes as t
 
 ## Why these tools are free
 
-They are algorithmic or protocol-level checks, such as format validation, DNS lookups, JSON repair and address-format checks, with no metered upstream vendor that Strale pays for on each call. Tools that call a paid source, such as a register, a screening vendor or a language model, are not on the list.
+They are algorithmic or protocol-level checks, such as format validation, DNS lookups, JSON repair and address-format checks, with little or no metered upstream cost for each call. Tools that call a paid source, such as a register, a screening vendor or a language model, are not on the list.
 
 ## The allowance, precisely
 

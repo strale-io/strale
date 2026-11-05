@@ -43,7 +43,7 @@ const result = await strale.do({
   max_price_cents: 10,
 });
 
-console.log(result.output.company_name, result.output.legal_representatives.length);
+console.log(result.output.company_name, (result.output.legal_representatives as unknown[]).length);
 ```
 
 A sample answer, with every field the tool returns, is on the [Norway page](/company-data/norway).

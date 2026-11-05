@@ -23,7 +23,7 @@ Add a `.cursor/mcp.json` file to your project and Cursor's assistant can search 
       "command": "npx",
       "args": ["-y", "strale-mcp"],
       "env": {
-        "STRALE_API_KEY": "sk_live_YOUR_KEY"
+        "STRALE_API_KEY": "${env:STRALE_API_KEY}"
       }
     }
   }

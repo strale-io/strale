@@ -17,7 +17,7 @@ curl -X POST https://api.strale.io/v1/do \
   -H "Authorization: Bearer sk_live_YOUR_KEY" \
   -d '{
     "capability_slug": "pep-check",
-    "inputs": { "name": "Angela Merkel" },
+    "inputs": { "name": "Example Person" },
     "max_price_cents": 10
   }'
 ```
@@ -55,7 +55,7 @@ The field names are the tool's own. The name is the tool's test input and is exp
     "match_count": 0,
     "total_results": 0,
     "matches": [],
-    "lists_queried": { "collection": "dilisense/sanctions", "source_count": 125 },
+    "lists_queried": { "collection": "dilisense/consolidated-sanctions" },
     "source": "dilisense"
   }
 }

@@ -14,7 +14,7 @@ x402 uses HTTP status 402 Payment Required as a payment protocol. Your agent cal
 ```bash 1. Ask for a quote
 curl -i -X POST https://api.strale.io/x402/v2/<tool-slug> \
   -H "Content-Type: application/json" \
-  -d '{"inputs":{"...":"..."}}'
+  -d '{"<input>":"<value>"}'
 # HTTP 402 with the price, the payee and how long the quote stays valid
 ```
 ```bash 2. Repeat with payment
@@ -23,7 +23,7 @@ curl -i -X POST https://api.strale.io/x402/v2/<tool-slug> \
 curl -X POST https://api.strale.io/x402/v2/<tool-slug> \
   -H "Content-Type: application/json" \
   -H "PAYMENT-SIGNATURE: <base64 payment from your x402 client>" \
-  -d '{"inputs":{"...":"..."}}'
+  -d '{"<input>":"<value>"}'
 # HTTP 200 with the tool's normal output
 ```
 

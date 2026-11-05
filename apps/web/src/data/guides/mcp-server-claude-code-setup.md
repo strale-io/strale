@@ -26,7 +26,7 @@ claude mcp add strale -- npx -y strale-mcp
       "command": "npx",
       "args": ["-y", "strale-mcp"],
       "env": {
-        "STRALE_API_KEY": "sk_live_YOUR_KEY"
+        "STRALE_API_KEY": "${STRALE_API_KEY}"
       }
     }
   }

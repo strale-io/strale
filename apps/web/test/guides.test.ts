@@ -10,6 +10,8 @@ import { GROUPS, indexGroups, loadGuides, parseBlocks, renderInline, resolveGuid
 import { FOLDED, OLD_GUIDES, OLD_LEARN, PRUNED, guideRedirects } from "../src/content/guide-fates.ts";
 import { COUNTRY_BY_PREFIX } from "../src/content/countries.ts";
 import { loadPreview } from "../src/lib/load-preview.ts";
+import { parseRedirects } from "../src/lib/redirects.ts";
+import { tools as allTools } from "../src/lib/site-data.ts";
 import type { ManifestExtras, SiteData } from "../src/lib/types.ts";
 
 const repo = resolve(import.meta.dirname, "../../..");
@@ -27,6 +29,8 @@ function previewData(): SiteData {
   return { mode: "manifests", source: "repository manifests", loaded_at: "", facts: p.facts, capabilities: p.capabilities, solutions: [], x402: p.x402, trust: new Map(), manifests, limitations: p.limitations, solutionLimitations: new Map(), };
 }
 
+/** The tools the site builds a /tools/<slug> page for (the catalogue's visible tools, not every manifest). */
+const visibleTools = new Set(allTools(previewData()).map((t) => t.slug));
 const blocks = (g: Guide): Block[] => g.sections.flatMap((s) => s.blocks);
 const codeOf = (g: Guide) => blocks(g).flatMap((b) => (b.kind === "code" ? b.panels.map((p) => p.code) : []));
 /** All prose of a guide: summary, steps, headings and non-code blocks. */
@@ -69,13 +73,19 @@ test("a token that names a tool the catalogue lacks, or a free tool priced, fail
   assert.throws(() => resolveTokens("{{fact:nope}}", d, "t"), /unknown fact/);
 });
 
-test("every tool a guide names, and every /tools/ link in its text, is a manifest slug", () => {
+test("every tool a guide names, and every /tools/ link in its text, is a tool the site builds a page for", () => {
   for (const g of guides) {
-    for (const s of g.tools) assert.ok(manifestSlugs.has(s), `${g.slug}: tools: ${s}`);
+    for (const s of g.tools) assert.ok(manifestSlugs.has(s) && visibleTools.has(s), `${g.slug}: tools: ${s}`);
     const links = [...textOf(g).matchAll(/\/tools\/([a-z0-9-]+)/g)].map((m) => m[1]);
-    for (const s of links) assert.ok(manifestSlugs.has(s), `${g.slug}: links to /tools/${s}`);
-    for (const slug of [...codeOf(g).join("\n").matchAll(/(?:capability_slug|slug)["']?\s*[:=]\s*["']([a-z0-9-]+)["']/g)].map((m) => m[1])) assert.ok(manifestSlugs.has(slug), `${g.slug}: code calls ${slug}`);
+    for (const s of links) assert.ok(manifestSlugs.has(s) && visibleTools.has(s), `${g.slug}: links to /tools/${s}, which the site does not build`);
+    for (const slug of [...codeOf(g).join("\n").matchAll(/(?:capability_slug|slug)["']?\s*[:=]\s*["']([a-z0-9-]+)["']/g)].map((m) => m[1])) assert.ok(manifestSlugs.has(slug) && visibleTools.has(slug), `${g.slug}: code calls ${slug}`);
   }
+});
+
+test("the page the guides send readers to for bundled checks exists (there is no /solutions page)", () => {
+  assert.equal(existsSync(resolve(repo, "apps/web/src/pages/solutions/index.astro")), false);
+  assert.match(readFileSync(resolve(repo, "apps/web/src/pages/tools/index.astro"), "utf8"), /id="bundled"/);
+  for (const g of guides) assert.doesNotMatch(textOf(g), /\]\(\/solutions\)/, g.slug);
 });
 
 // Packages -------------------------------------------------------------------------------------
@@ -229,11 +239,13 @@ test("retired framing and deleted features stay out of the guides", () => {
 });
 
 test("guide text does not hard-code the site's address", () => {
-  for (const g of guides) assert.doesNotMatch(textOf(g), /strale\.(dev|io)(?!\/(v1|x402|mcp|llms|openapi))/, g.slug);
+  // Only the API host may be named, and then only as api.strale.io.
+  for (const g of guides) assert.doesNotMatch(textOf(g), /(?<!api\.)strale\.(dev|io)\b/, g.slug);
 });
 
 test("screening guides keep a person in the loop", () => {
-  for (const slug of ["sanctions-check-langchain", "pep-check-ai-agent", "adverse-media-check-agent", "full-kyc-pipeline-python", "aml-screening-agent-workflow", "compliance-agent-strale-fallback"]) {
+  const screening = ["sanctions-check-langchain", "pep-check-ai-agent", "adverse-media-check-agent", "full-kyc-pipeline-python", "aml-screening-agent-workflow", "compliance-agent-strale-fallback", "kyc-mcp-cursor", "sanctions-pep-adverse-media-comparison", "kyb-workflow-crewai", "kyb-mcp-claude", "multi-step-due-diligence-agent"];
+  for (const slug of screening) {
     const g = guides.find((x) => x.slug === slug)!;
     assert.match(textOf(g), /person|human/i, slug);
     assert.match(textOf(g), /review|decid|verdict/i, slug);
@@ -256,13 +268,33 @@ test("the carried guides are the old set minus the seven pruned", () => {
   assert.deepEqual(carried.sort(), guides.map((g) => g.slug).sort());
 });
 
-test("folded country guides are linked from their country page data", () => {
+test("folded country guides are built guides, linked from their country page", () => {
   const isoByPath = new Map(Object.values(COUNTRY_BY_PREFIX).map((c) => [`/company-data/${c.path}`, c.iso]));
+  assert.equal(Object.keys(FOLDED).length, 5);
   for (const [from, f] of Object.entries(FOLDED)) {
-    const iso = isoByPath.get(f.to);
-    assert.ok(iso, `${from} -> ${f.to} is not a country page`);
-    assert.ok(guidesForCountry(iso!).some((g) => g.slug === f.guide), `${f.guide} is not linked from ${f.to}`);
+    const iso = isoByPath.get(f.country);
+    assert.ok(iso, `${from}: ${f.country} is not a country page`);
+    assert.ok(guides.some((g) => g.slug === f.guide), `${f.guide} is not a guide`);
+    assert.ok(guidesForCountry(iso!).some((g) => g.slug === f.guide), `${f.guide} is not linked from ${f.country}`);
   }
+});
+
+test("no redirect starts at a built guide page, or points away from a built guide", () => {
+  const built = new Set(guides.map((g) => `/guides/${g.slug}`));
+  const rules = parseRedirects(readFileSync(resolve(import.meta.dirname, "../public/_redirects"), "utf8"));
+  for (const r of [...guideRedirects().map((x) => ({ from: x.from, to: x.to })), ...rules]) {
+    assert.ok(!built.has(r.from), `${r.from} is a built guide page; on Cloudflare Pages a redirect would hide it`);
+    assert.ok(!r.to.startsWith("/company-data/") || !r.from.startsWith("/learn/") , `${r.from} -> ${r.to} points away from a guide to a country page`);
+  }
+  // A /learn address whose guide is built redirects to that guide.
+  for (const r of guideRedirects().filter((x) => x.from.startsWith("/learn/") && built.has(`/guides/${x.from.slice(7)}`))) assert.equal(r.to, `/guides/${r.from.slice(7)}`);
+});
+
+test("the guide lines of public/_redirects equal guideRedirects(), in both directions", () => {
+  const rules = parseRedirects(readFileSync(resolve(import.meta.dirname, "../public/_redirects"), "utf8"));
+  const inFile = rules.filter((r) => r.from === "/learn" || r.from.startsWith("/learn/") || r.from === "/guides" || r.from.startsWith("/guides/")).map((r) => `${r.from} ${r.to} ${r.status}`).sort();
+  const inCode = guideRedirects().map((r) => `${r.from} ${r.to} ${r.status}`).sort();
+  assert.deepEqual(inFile, inCode);
 });
 
 test("every old guide address has a redirect or keeps its path, and every target exists", () => {
@@ -273,11 +305,12 @@ test("every old guide address has a redirect or keeps its path, and every target
   const pages = new Set(["/guides", "/docs/mcp", "/docs/sdks", "/docs/x402"]);
   for (const r of redirects) {
     const t = r.to;
-    const ok = pages.has(t) || (t.startsWith("/guides/") && slugs.has(t.slice(8))) || (t.startsWith("/tools/") && manifestSlugs.has(t.slice(7))) || (t.startsWith("/company-data/") && [...Object.values(COUNTRY_BY_PREFIX)].some((c) => t === `/company-data/${c.path}`));
+    const ok = pages.has(t) || (t.startsWith("/guides/") && slugs.has(t.slice(8))) || (t.startsWith("/tools/") && visibleTools.has(t.slice(7)));
     assert.ok(ok, `${r.from} -> ${t} does not exist`);
     assert.notEqual(r.from, r.to);
   }
-  for (const s of OLD_GUIDES) assert.ok(from.has(`/guides/${s}`) || slugs.has(s) , s);
+  // The old /guides pages are live under the same address, so they need no rule.
+  for (const s of OLD_GUIDES) assert.ok(slugs.has(s), s);
 });
 
 test("the parser reads the Markdown subset: tabs, tables, lists and questions", () => {

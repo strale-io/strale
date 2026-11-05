@@ -31,7 +31,7 @@ agent = Agent(
 
 @agent.tool_plain
 def pep_check(name: str, country: str = "") -> dict:
-    """Check whether a person appears in a database of politically exposed persons."""
+    """Check whether a person appears in a database of politically exposed persons. country is an ISO two-letter code, such as SE."""
     inputs = {"name": name}
     if country:
         inputs["country"] = country
@@ -62,4 +62,4 @@ Customer checks often combine three searches: is the person politically exposed,
 
 Each tool returns matches or hits for a person to review. The system prompt tells the agent to report them and not to decide. Whether a customer is accepted is a decision for your process, not for the screening result.
 
-To run a fixed set of checks on a company, with one price and one record, look at the bundled checks under [Bundled checks](/solutions).
+To run a fixed set of checks on a company, with one price and one record, look at the bundled checks under [Bundled checks](/tools#bundled).
