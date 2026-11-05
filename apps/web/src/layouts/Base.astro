@@ -8,6 +8,8 @@ import Footer from "../components/Footer.astro";
 import { getSiteData } from "../lib/site-data";
 import { SHORT_DESCRIPTION } from "../content/positioning";
 import { formatDate } from "../lib/format";
+import { liveHead } from "../lib/analytics";
+import { canonicalPath } from "../lib/sitemap";
 
 interface Props {
   title: string;
@@ -19,7 +21,9 @@ interface Props {
 }
 const { title, description = SHORT_DESCRIPTION, current, noindex = false } = Astro.props;
 const data = await getSiteData();
-const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL("/og-image.png", Astro.site).href;
+const head = liveHead(data.mode, Astro.site!, noindex);
+const canonical = new URL(canonicalPath(Astro.url.pathname), Astro.site).href;
 const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
 ---
 <!doctype html>
@@ -38,8 +42,16 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
   <meta property="og:description" content={description} />
   <meta property="og:url" content={canonical} />
   <meta property="og:type" content="website" />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={fullTitle} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="alternate" type="text/plain" title="llms.txt" href="https://api.strale.io/llms.txt" />
-  {(data.mode !== "live" || noindex) && <meta name="robots" content="noindex" />}
+  {head.analytics && <script is:inline defer src={head.analytics.src} data-website-id={head.analytics.websiteId} data-domains={head.analytics.domains} data-exclude-search={head.analytics.excludeSearch}></script>}
+  {head.verification && <meta name="google-site-verification" content={head.verification} />}
+  {head.noindex && <meta name="robots" content="noindex" />}
 </head>
 <body>
   <Icons />

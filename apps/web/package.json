@@ -13,6 +13,7 @@
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "build:preview-data": "node scripts/prepare-assets.mjs && node scripts/build-preview.mjs",
     "review": "node scripts/review.mjs",
+    "test:built": "node --test --experimental-strip-types test-built/*.test.ts",
     "test:browser": "node --test test-browser/*.test.mjs"
   },
   "dependencies": {

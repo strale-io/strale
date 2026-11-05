@@ -20,6 +20,8 @@ const copies = [
   [`${marks}/favicon.ico`, "favicon.ico"],
   [`${marks}/mark-ink.svg`, "favicon.svg"],
   [`${marks}/favicon-32.png`, "favicon-32.png"],
+  // Same S mark at the old name: the x402 Bazaar iconUrl (apps/api x402-gateway-v2.ts) links /favicon-32x32.png.
+  [`${marks}/favicon-32.png`, "favicon-32x32.png"],
 ];
 for (const [from, to] of copies) {
   const dest = resolve(web, "public", to);

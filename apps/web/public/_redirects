@@ -1,0 +1,48 @@
+# Cloudflare Pages redirects for the strale.dev switch-over (SWITCH-OVER-READINESS items 4 and 8).
+# First match wins, so the rewrite and the exact paths come before the splats.
+# Every path of today's site (strale-frontend src/App.tsx, public/sitemap.xml) is checked against
+# this file in test/redirects.test.ts. Changing it means updating that test's old-path table.
+
+# Execution records: one static page serves every id. A rewrite (200), not a redirect, so the
+# address and the ?token=&expires_at= query the API issues stay as they are.
+/audit/*  /audit  200
+
+# Tools (today's "capabilities"); the bare path too, because the Terms print it.
+/capabilities  /tools  301
+/capabilities/:slug  /tools/:slug  301
+
+# Bundled checks are listed on /tools; there is no separate index page.
+/solutions  /tools  301
+
+# One page for data and checking.
+/trust  /security  301
+/trust/*  /security  301
+
+# Integrations is one choice within connecting.
+/integrations  /docs  301
+
+# Guides (SITE-STRUCTURE section 11). Explicit rules come before the splat.
+# Pruned: name deprecated packages (DEC-20260422-A) or conflict with the data-access rule.
+/learn/iban-validation-pydantic-ai  /guides  301
+/learn/sanctions-check-pydantic-ai  /guides  301
+/learn/google-adk-strale-agent  /guides  301
+/learn/vat-validation-openai-agents  /guides  301
+/learn/company-data-openai-agents  /guides  301
+/learn/strale-openai-agents-sdk  /guides  301
+/learn/web-scraping-agent-anti-bot  /guides  301
+# Country guides fold into the country pages.
+/learn/swedish-company-lookup-agent  /company-data/sweden  301
+/learn/uk-company-verification-agent  /company-data/united-kingdom  301
+/learn/german-company-data-agent  /company-data/germany  301
+/guides/swedish-company-lookup-api  /company-data/sweden  301
+/guides/norwegian-company-lookup-api  /company-data/norway  301
+# The rest keep their slug under /guides (built in a separate lane).
+/learn  /guides  301
+/learn/*  /guides/:splat  301
+
+# Internal pages that die.
+/design-system  /  301
+/logo-explorations  /  301
+
+# The OpenAPI document lives on the API host (the old site served a copy).
+/openapi.json  https://api.strale.io/openapi.json  301
