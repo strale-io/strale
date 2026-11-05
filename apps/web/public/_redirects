@@ -1,0 +1,30 @@
+# Cloudflare Pages redirects for the strale.dev switch-over (SWITCH-OVER-READINESS items 4 and 8).
+# First match wins, so the rewrite and the exact paths come before the splats.
+# Every path of today's site (strale-frontend src/App.tsx, public/sitemap.xml) is checked against
+# this file in test/redirects.test.ts. Changing it means updating that test's old-path table.
+
+# Execution records: one static page serves every id. A rewrite (200), not a redirect, so the
+# address and the ?token=&expires_at= query the API issues stay as they are.
+/audit/*  /audit  200
+
+# Tools (today's "capabilities"); the bare path too, because the Terms print it.
+/capabilities  /tools  301
+/capabilities/:slug  /tools/:slug  301
+
+# Bundled checks are listed on /tools; there is no separate index page.
+/solutions  /tools  301
+
+# One page for data and checking.
+/trust  /security  301
+/trust/*  /security  301
+
+# Integrations is one choice within connecting.
+/integrations  /docs  301
+
+# Guides (built in a separate lane). /learn/* keeps its slug.
+/learn  /guides  301
+/learn/*  /guides/:splat  301
+
+# Internal pages that die.
+/design-system  /  301
+/logo-explorations  /  301

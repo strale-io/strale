@@ -8,6 +8,7 @@ import Footer from "../components/Footer.astro";
 import { getSiteData } from "../lib/site-data";
 import { SHORT_DESCRIPTION } from "../content/positioning";
 import { formatDate } from "../lib/format";
+import { analyticsTag } from "../lib/analytics";
 
 interface Props {
   title: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 const { title, description = SHORT_DESCRIPTION, current, noindex = false } = Astro.props;
 const data = await getSiteData();
+const analytics = analyticsTag(data.mode);
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
 ---
@@ -39,6 +41,7 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
   <meta property="og:url" content={canonical} />
   <meta property="og:type" content="website" />
   <link rel="alternate" type="text/plain" title="llms.txt" href="https://api.strale.io/llms.txt" />
+  {analytics && <script is:inline defer src={analytics.src} data-website-id={analytics.websiteId}></script>}
   {(data.mode !== "live" || noindex) && <meta name="robots" content="noindex" />}
 </head>
 <body>
