@@ -14,7 +14,9 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-44** · `your_call` · owner Petter · raised 2026-10-31 · needed by 2026-11-06 — **our Google search credit expires on 8 November; renewing costs about $62.50 for six months, and not renewing takes seven tools off sale**
+**DQ-44** · `answered` · owner Petter · raised 2026-10-31 · answered 2026-11-05 (renewed) — **our Google search credit expires on 8 November; renewing costs about $62.50 for six months, and not renewing takes seven tools off sale**
+
+*Answer (2026-11-05):* Petter renewed: USD 62.50 charged through Paddle on 2026-11-05 (Serper billing page, payment history), 50,000 credits added, balance 97,487 right after the top-up. The new credits are valid six months, to about 2027-05-05. Still unknown: whether the 47,487 from the May pack lapse on 8 November or carry over; the balance after that date shows which (about 97,000 = carried over, about 50,000 = lapsed). Usage on the dashboard was 86 credits from 22 October to 5 November, about 185 a month, lower than the 430 estimated below. The rollover email was withdrawn unsent. Follow-up: ask DataForSEO in writing whether its results may be resold (OUTBOX row `dataforseo-resale`), so the next renewal can move to a balance that does not expire.
 
 *The choice:* renew the Serper Starter pack, or let it lapse and retire the tools that depend on it.
 
