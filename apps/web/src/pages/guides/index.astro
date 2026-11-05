@@ -1,0 +1,49 @@
+---
+// Guides index (SITE-STRUCTURE.md page 11): every guide, grouped by the job it does. The list is
+// the guide files in src/data/guides/ (lib/guides.ts indexGroups), so a guide cannot be left
+// off this page.
+import DocsNav from "../../components/DocsNav.astro";
+import { indexGroups, plainText } from "../../lib/guides.ts";
+import { plural } from "../../lib/format.ts";
+
+const groups = indexGroups();
+const total = groups.reduce((n, g) => n + g.guides.length, 0);
+const toc = groups.map((g) => ({ id: g.id, label: g.label }));
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Strale guides",
+    numberOfItems: total,
+    itemListElement: groups.flatMap((g) => g.guides).map((guide, i) => ({ "@type": "ListItem", position: i + 1, name: plainText(guide.title), url: new URL(`/guides/${guide.slug}`, Astro.site).href })),
+  },
+];
+---
+<DocsNav
+  title="Guides"
+  description="Step-by-step guides for giving an AI agent Strale tools: payment checks, company lookups, screening, web and domain checks, and patterns for calling Strale reliably."
+  current="guides"
+  label="Docs · Guides"
+  heading="Guides"
+  lead={`${plural(total, "guide")} for building an agent that uses Strale tools. Each has a working example and says what the tool does not do.`}
+  toc={toc}
+  jsonLd={jsonLd}
+>
+  {groups.map((g) => (
+    <section id={g.id} aria-labelledby={`${g.id}-title`}>
+      <h2 id={`${g.id}-title`} class="t-section">{g.label}</h2>
+      <p class="t-body muted">{g.blurb}</p>
+      <ul class="grid-2 plain-list" role="list">
+        {g.guides.map((guide) => (
+          <li>
+            <a class="card card-link route-card" href={`/guides/${guide.slug}`} data-spotlight>
+              <span class="card-title">{plainText(guide.title)}</span>
+              <span class="card-body">{guide.description}</span>
+              {(guide.framework || guide.language) && <span class="card-meta"><span class="tag tag-kit">{guide.framework ?? guide.language}</span></span>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</DocsNav>

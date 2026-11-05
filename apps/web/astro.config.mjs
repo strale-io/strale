@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 export default defineConfig({
-  site: process.env.STRALE_SITE_URL ?? "https://strale.dev",
+  site: process.env.STRALE_SITE_URL ?? "https://strale.io",
   output: "static",
   trailingSlash: "never",
   build: { format: "file" },
