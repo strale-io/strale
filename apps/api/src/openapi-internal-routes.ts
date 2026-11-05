@@ -1,8 +1,5 @@
 /** Explicit exclusions; exact operations prevent broad prefixes hiding new APIs. */
 const groups: Array<{ reason: string; routes: string[] }> = [
-  { reason: "TEMPORARY measurement (incident 2026-11-05): returns the structure of the caller's own request, no addresses; removed with middleware/xff-shape.ts once the receipt is written.", routes: [
-    "GET /v1/debug/xff-shape",
-  ] },
   { reason: "Deployment/operations probe; jobs requires admin authentication.", routes: [
     "GET /health/jobs",
     "GET /health/deep",
