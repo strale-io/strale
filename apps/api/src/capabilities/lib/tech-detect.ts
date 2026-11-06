@@ -44,6 +44,106 @@ export function scanWindow(html: string): string {
   return `${html.slice(0, SCAN_HEAD_CHARS)}\n${html.slice(-(MAX_SCAN_CHARS - SCAN_HEAD_CHARS))}`;
 }
 
+/**
+ * Tracking pixels are `<img>` tags whose source is a tracker host. Every other
+ * image, and every `<source>`, `<video>` and `<audio>`, is content, not an
+ * install signal.
+ */
+const PIXEL_SRC =
+  /facebook\.com\/tr[/?]|px\.ads\.linkedin\.com|ct\.pinterest\.com|analytics\.twitter\.com\/i\/adsct|t\.co\/i\/adsct|bat\.bing\.com|googleads\.g\.doubleclick\.net|googleadservices\.com|stats\.wp\.com|alb\.reddit\.com|analytics\.tiktok\.com/i;
+
+const SKIPPED_TAGS: ReadonlySet<string> = new Set(["a", "meta"]);
+const CONTENT_MEDIA_TAGS: ReadonlySet<string> = new Set(["img", "source", "video", "audio", "picture", "track"]);
+/** Script bodies that are data, not code: page content can sit inside them. */
+const DATA_SCRIPT_TYPE = /\btype\s*=\s*["']?(?:application\/(?:ld\+)?json|importmap|speculationrules|text\/(?:template|html|x-template))/i;
+/**
+ * Data scripts whose body is configuration the platform itself prints, not
+ * page content: WordPress lists its emoji script (and so its core version)
+ * as JSON under this id.
+ */
+const DATA_SCRIPT_KEEP = /\bid\s*=\s*["']wp-emoji-settings["']/i;
+const MAX_TAG_CHARS = 4000;
+const MAX_COMMENT_CHARS = 2000;
+
+export interface ActiveMarkup {
+  /** Start tags and executable script and style bodies, joined. No visible text, no links. */
+  markup: string;
+  /** HTML comments, joined. Only comment signatures read these. */
+  comments: string;
+}
+
+/**
+ * Keep what a page loads or runs, and drop what a reader sees.
+ *
+ * A page that talks about a product ("we compared Hotjar and Plausible", a
+ * link to a vendor's site, a customer-logo `<img alt="HubSpot">`) does not use
+ * it. So HTML signatures are matched only against: start tags (script, link,
+ * iframe, form, and the id, class and data- attributes of any element), the
+ * bodies of executable inline scripts and styles, and tracking-pixel images.
+ * Visible text, `<a>` links, `<meta>` content (read separately), content
+ * images and data scripts (JSON) are dropped.
+ *
+ * Linear in the input: one forward pass with `indexOf`, no backtracking
+ * across tags, so a page built from unterminated tags cannot make it quadratic.
+ */
+export function extractActiveMarkup(html: string): ActiveMarkup {
+  const lower = html.toLowerCase();
+  const out: string[] = [];
+  const comments: string[] = [];
+  let i = 0;
+  let cachedGt = -2;
+  let noMoreGt = false;
+
+  while (i < html.length) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) break;
+
+    if (html.startsWith("<!--", lt)) {
+      const end = html.indexOf("-->", lt + 4);
+      comments.push(html.slice(lt + 4, end === -1 ? undefined : Math.min(end, lt + 4 + MAX_COMMENT_CHARS)));
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+
+    const nameMatch = /^<([a-zA-Z][\w:-]*)/.exec(html.slice(lt, lt + 40));
+    if (!nameMatch) { i = lt + 1; continue; }
+    const tag = nameMatch[1].toLowerCase();
+
+    // First ">" after lt. The first ">" after an earlier "<" is also the first
+    // one after this "<" when it lies beyond it, so each ">" is found once.
+    if (!noMoreGt && cachedGt < lt) {
+      cachedGt = html.indexOf(">", lt);
+      if (cachedGt === -1) noMoreGt = true;
+    }
+    if (noMoreGt) break;
+    const gt = cachedGt;
+    const tagText = html.slice(lt, Math.min(gt + 1, lt + MAX_TAG_CHARS));
+    i = gt + 1;
+
+    if (tag === "script" || tag === "style") {
+      const close = lower.indexOf(`</${tag}`, gt + 1);
+      const body = html.slice(gt + 1, close === -1 ? undefined : close);
+      i = close === -1 ? html.length : close;
+      out.push(tagText);
+      const isData =
+        tag === "script" &&
+        !DATA_SCRIPT_KEEP.test(tagText) &&
+        (DATA_SCRIPT_TYPE.test(tagText) || /^\s*self\.__next_f\b/.test(body.slice(0, 40)));
+      if (!isData) out.push(body);
+      continue;
+    }
+    if (SKIPPED_TAGS.has(tag)) continue;
+    if (CONTENT_MEDIA_TAGS.has(tag)) {
+      // Only the source decides: an alt text that names a tracker is a mention.
+      const src = /\bsrc\s*=\s*["']?([^"'\s>]+)/i.exec(tagText)?.[1] ?? "";
+      if (!PIXEL_SRC.test(src)) continue;
+    }
+    out.push(tagText);
+  }
+
+  return { markup: out.join("\n"), comments: comments.join("\n") };
+}
+
 export function cleanVersion(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const v = raw.trim().replace(/^v(?=\d)/i, "");
@@ -158,13 +258,21 @@ export function detectTechnologies(input: DetectInput): TechMatch[] {
   }
 
   // 2. HTML.
+  // Matched against what the page loads or runs, never its visible text or links.
   const html = scanWindow(input.html);
+  const { markup, comments } = extractActiveMarkup(html);
   for (const sig of TECH_SIGNATURES) {
-    if (!sig.html) continue;
+    if (!sig.html && !sig.comment) continue;
     let matched = false;
     let version: string | null = null;
-    for (const pattern of sig.html) {
-      const m = pattern.exec(html);
+    for (const pattern of sig.html ?? []) {
+      const m = pattern.exec(markup);
+      if (!m) continue;
+      matched = true;
+      version ??= cleanVersion(m[1]);
+    }
+    for (const pattern of sig.comment ?? []) {
+      const m = pattern.exec(comments);
       if (!m) continue;
       matched = true;
       version ??= cleanVersion(m[1]);

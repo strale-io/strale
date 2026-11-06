@@ -42,6 +42,9 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   // passed (DEC-20261023-A); identifies as Strale like every other route.
   let headers: Record<string, string> = {};
   let cookieNames: string[] = [];
+  // A HEAD that fails or is refused leaves the result without response-header
+  // signals; say so instead of reporting an empty header list as a finding.
+  const headWarnings: string[] = [];
   try {
     const headRes = await safeFetch(fullUrl, {
       method: "HEAD",
@@ -51,7 +54,13 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
     await discardBody(headRes, "company-tech-stack: HEAD");
     headRes.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
     cookieNames = extractCookieNames(headRes.headers.getSetCookie?.() ?? []);
-  } catch { /* ignore */ }
+    if (headRes.status >= 400) {
+      headWarnings.push(`The HEAD request for response headers answered HTTP ${headRes.status}; header signals are taken from that answer and may be incomplete.`);
+    }
+  } catch (err) {
+    const reason = err instanceof Error ? err.message.slice(0, 120) : "unknown error";
+    headWarnings.push(`The HEAD request for response headers failed (${reason}); server, CDN, hosting and cookie signals from headers are missing from this result.`);
+  }
 
   // Signature matching on the same material (lib/tech-signatures.ts). It is
   // deterministic and carries versions; the model below adds a summary and
@@ -176,12 +185,15 @@ Return JSON:
     status: dnsResults.overall,
     failed_lookups: dnsResults.failures.map((f) => f.type),
   };
-  output.warnings = dnsResults.overall === "unavailable" || dnsResults.overall === "partial"
-    ? [
-        `Public DNS lookups failed (${dnsResults.failures.map((f) => `${f.type}: ${f.code}`).join(", ")}). ` +
-        "Technologies that only DNS shows (email provider, DNS host, hosting by CNAME) may be missing from this result.",
-      ]
-    : [];
+  output.warnings = [
+    ...headWarnings,
+    ...(dnsResults.overall === "unavailable" || dnsResults.overall === "partial"
+      ? [
+          `Public DNS lookups failed (${dnsResults.failures.map((f) => `${f.type}: ${f.code}`).join(", ")}). ` +
+          "Technologies that only DNS shows (email provider, DNS host, hosting by CNAME) may be missing from this result.",
+        ]
+      : []),
+  ];
   output.coverage_note = COVERAGE_NOTE;
 
   return {

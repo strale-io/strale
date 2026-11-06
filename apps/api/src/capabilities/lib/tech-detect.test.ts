@@ -306,7 +306,7 @@ describe("the signature table", () => {
   it("gives every signature a way to be detected, or makes it the target of an implication", () => {
     const implied = new Set(TECH_SIGNATURES.flatMap((s) => (s.implies ?? []).map(normalizeTechName)));
     for (const sig of TECH_SIGNATURES) {
-      const sources = [sig.html, sig.headers && Object.keys(sig.headers), sig.cookies, sig.meta && Object.keys(sig.meta), sig.mx, sig.txt, sig.ns, sig.cname];
+      const sources = [sig.html, sig.comment, sig.headers && Object.keys(sig.headers), sig.cookies, sig.meta && Object.keys(sig.meta), sig.mx, sig.txt, sig.ns, sig.cname];
       const hasSource = sources.some((s) => Array.isArray(s) && s.length > 0);
       expect(hasSource || implied.has(normalizeTechName(sig.name)), sig.name).toBe(true);
     }

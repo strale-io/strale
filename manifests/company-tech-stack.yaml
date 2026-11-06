@@ -85,7 +85,7 @@ output_schema:
       type: string
 data_source: Rendered homepage, HTTP response headers and public DNS (MX, TXT, NS, CNAME), summarised with Claude API
 data_source_type: scrape
-transparency_tag: ai_generated
+transparency_tag: mixed
 freshness_category: live-fetch
 maintenance_class: scraping-fragile-target
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)

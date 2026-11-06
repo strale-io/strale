@@ -13,6 +13,13 @@ Date: 2026-11-06 | Branch: `feat/tech-stack-detect-coverage` | No PR opened (orc
 - Manifests `tech-stack-detect.yaml` and `company-tech-stack.yaml`: output schema and example, `output_field_reliability` (`version` is `common`, never guaranteed), limitations, `data_source`. For `tech-stack-detect` the declared output (`cms`, `hosting`, `analytics`, `css_framework`, `frontend_framework`, all "guaranteed") described an earlier LLM version and was never emitted by the current executor; it now matches the real output. `transparency_tag` is `algorithmic` (the executor has no LLM).
 - The "Database covers 1,000+ technologies" limitation text was a claim the code never backed; it now says "several hundred common technologies".
 
+## Review round 1 (2026-11-06)
+
+- HTML signatures now match only what a page loads or runs (`extractActiveMarkup` in `lib/tech-detect.ts`): start tags (script, link, iframe, form; id, class and data- attributes), executable inline script and style bodies, tracking-pixel images. Visible text, `<a>` links, `<meta>` content, content images and JSON data scripts are dropped (exception: WordPress's `wp-emoji-settings` JSON, which states the core version). Banner comments are read only by signatures that declare `comment` (Yoast, Rank Math, WP Rocket). The pass is a single `indexOf` walk, linear on unterminated-tag input.
+- `tech-detect.mentions.test.ts` generates a provable sample string for every html pattern and asserts a page that only mentions it (text, link, alt, code, meta description) does not detect it; a positive control loads the same samples via `<script src>`. With stripping removed, 356 tests fail. Every pattern in the table (not a sample) is also timed on adversarial input.
+- `company-tech-stack` manifest `transparency_tag` is `mixed`; a failed or refused HEAD adds a `warnings` entry.
+- A few patterns that matched a bare product word or a link were tightened (Trustpilot review links, Freshchat word, Salesforce web-to-lead word, Framer badge text).
+
 ## Behaviour changes a reviewer should know
 
 - Signatures that matched a bare product word now need the vendor's host or file name. A page that only mentions or links to a product no longer reports it (the old table reported HubSpot, Marketo, Zendesk, Wix, Webflow and Tailwind from text, links and logos). This lowers some old counts on purpose.

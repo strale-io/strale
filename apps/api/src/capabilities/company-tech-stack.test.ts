@@ -143,6 +143,24 @@ describe("company-tech-stack signature layer", () => {
     expect(output.warnings[0]).toMatch(/DNS lookups failed \(MX: ETIMEOUT\)/);
   });
 
+  it("states a failed HEAD request in warnings instead of silently dropping header signals", async () => {
+    safeFetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    const output = await run();
+    expect(output.warnings.join(" ")).toMatch(/HEAD request for response headers failed \(fetch failed\)/);
+    expect(output.detected_technologies.map((t: { name: string }) => t.name)).not.toContain("Nginx");
+    expect(output.detected_technologies.map((t: { name: string }) => t.name)).toContain("WordPress");
+  });
+
+  it("states a refused HEAD request in warnings", async () => {
+    safeFetchMock.mockImplementation(async () => new Response(null, { status: 405, headers: { server: "nginx" } }));
+    const output = await run();
+    expect(output.warnings.join(" ")).toMatch(/HEAD request for response headers answered HTTP 405/);
+  });
+
+  it("has no warnings when HEAD and DNS both work", async () => {
+    expect((await run()).warnings).toEqual([]);
+  });
+
   it("passes the signature matches to the model so its summary agrees with them", async () => {
     await run();
     const prompt = extractJsonWithLlm.mock.calls[0][0].prompt as string;

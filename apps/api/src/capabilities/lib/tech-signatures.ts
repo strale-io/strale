@@ -31,8 +31,16 @@ export interface TechSignature {
   category: string;
   /** Default "high". Use "medium" when the pattern can also match look-alikes. */
   confidence?: Confidence;
-  /** Tested against the page HTML (head and body, scripts, inline JSON, comments). */
+  /**
+   * Tested against what the page loads or runs: start tags (script, link,
+   * iframe, form; id, class and data- attributes), executable inline script and
+   * style bodies, and tracking-pixel images. NOT visible text, `<a>` links,
+   * content images or JSON data scripts, so a page that only mentions a vendor
+   * does not detect it (see extractActiveMarkup in tech-detect.ts).
+   */
   html?: RegExp[];
+  /** Tested against HTML comments only (a plugin's "optimized with X vN" banner). */
+  comment?: RegExp[];
   /** Header name (lowercase) to a pattern on its value. */
   headers?: Record<string, RegExp>;
   /** Tested against each Set-Cookie cookie NAME. */
@@ -186,18 +194,18 @@ export const TECH_SIGNATURES: TechSignature[] = [
   { name: "Elementor", category: "site-builder", meta: { generator: /^Elementor(?:\s+v?(\d[\w.]*))?/i }, html: [/elementor\/assets\/(?:js|css)\/frontend(?:-lite)?(?:\.min)?\.(?:js|css)\?ver=(\d+\.\d+\.\d+)/i,/wp-content\/plugins\/elementor\//i, /\belementor-(?:widget|section|kit)-/i] },
   { name: "Divi", category: "site-builder", html: [/themes\/Divi\/style(?:\.min)?\.css\?ver=(\d+\.\d+\.\d+)/i,/wp-content\/themes\/Divi\//i, /\bet_pb_(?:section|row)\b/i] },
   { name: "WPBakery", category: "site-builder", meta: { generator: /^Powered by WPBakery Page Builder(?:\s+v?(\d[\w.]*))?/i }, html: [/js_composer\/assets\/(?:js\/dist\/js_composer_front|css\/js_composer)[\w.-]{0,30}\.(?:js|css)\?ver=(\d+\.\d+\.\d+)/i,/wp-content\/plugins\/js_composer\//i, /\bvc_row\b/] },
-  { name: "Yoast SEO", category: "cms", html: [/optimized with the Yoast SEO(?: Premium)? plugin v(\d[\w.]*)/i, /yoast-schema-graph/i] },
-  { name: "Rank Math", category: "cms", html: [/Rank Math(?: PRO)? WordPress SEO plugin[^<]{0,40}?v?(\d+\.\d+[\w.]*)/i, /rank-math-schema/i] },
+  { name: "Yoast SEO", category: "cms", comment: [/optimized with the Yoast SEO(?: Premium)? plugin v(\d[\w.]*)/i], html: [/yoast-schema-graph/i] },
+  { name: "Rank Math", category: "cms", comment: [/Rank Math(?: PRO)? WordPress SEO plugin[^<]{0,40}?v?(\d+\.\d+[\w.]*)/i], html: [/rank-math-schema/i] },
   { name: "Slider Revolution", category: "cms", meta: { generator: /^Powered by Slider Revolution\s+(\d[\w.]*)/i }, html: [/wp-content\/plugins\/revslider\//i] },
   { name: "Contact Form 7", category: "forms", html: [/contact-form-7\/includes\/(?:js|css)\/(?:index|scripts|styles)\.(?:js|css)\?ver=(\d+\.\d+\.\d+)/i,/wp-content\/plugins\/contact-form-7\//i] },
   { name: "Gravity Forms", category: "forms", html: [/wp-content\/plugins\/gravityforms\//i, /\bgform_wrapper\b/] },
-  { name: "WP Rocket", category: "cms", html: [/wp-content\/plugins\/wp-rocket\//i, /This website is like a Rocket/i, /wp-content\/cache\/(?:min|wpr)\b/i] },
+  { name: "WP Rocket", category: "cms", comment: [/This website is like a Rocket/i], html: [/wp-content\/plugins\/wp-rocket\//i, /wp-content\/cache\/(?:min|wpr)\b/i] },
   { name: "Joomla", category: "cms", meta: { generator: /^Joomla!?(?:\s+v?(\d[\w.]*))?/i }, html: [/\/media\/jui\/js\//i, /\/media\/system\/js\/core\.js/i], implies: ["PHP"] },
   { name: "Ghost", category: "cms", meta: { generator: /^Ghost(?:\s+(\d[\w.]*))?/i }, html: [/\bdata-ghost=["']https?:/i, /\/ghost\/(?:portal|sodo-search)@/i, /\/content\/themes\/[^"'\s]{1,60}\/assets\/built\//i], cname: [/ghost\.io$/] },
   { name: "Wix", category: "cms", meta: { generator: /^Wix\.com Website Builder/i }, headers: { "x-wix-request-id": /.+/, server: /pepyaka/i }, html: [/static\.wixstatic\.com|static\.parastorage\.com|wixstatic\.com\/media/i, /wix-(?:thunderbolt|dashboard)/i], cname: [/wixdns\.net$/] },
   { name: "Squarespace", category: "cms", meta: { generator: /^Squarespace(?:\s+(\d[\w.]*))?/i }, headers: { server: /^squarespace$/i }, html: [/squarespace-cdn\.com|static1\.squarespace\.com|static\.squarespace\.com\/universal/i, /Squarespace\.(?:afterBodyLoad|Constants)/], cname: [/squarespace\.com$/] },
   { name: "Webflow", category: "cms", meta: { generator: /^Webflow/i }, html: [/data-wf-(?:page|site|domain)=/i, /assets\.website-files\.com|cdn\.prod\.website-files\.com|uploads-ssl\.webflow\.com/i, /\/js\/webflow\.[\w.]*js/i], cname: [/proxy-ssl\.webflow\.com$|proxy\.webflow\.com$|\.webflow\.io$/] },
-  { name: "Framer", category: "site-builder", meta: { generator: /^Framer\b/i }, html: [/framerusercontent\.com|events\.framer\.com|framer\.com\/m\//i, /Made in Framer|data-framer-(?:name|component-type|hydrate)/i], cname: [/framer\.(?:app|website)$/] },
+  { name: "Framer", category: "site-builder", meta: { generator: /^Framer\b/i }, html: [/framerusercontent\.com|events\.framer\.com|framer\.com\/m\//i, /data-framer-(?:name|component-type|hydrate)/i], cname: [/framer\.(?:app|website)$/] },
   { name: "Shopify", category: "ecommerce", html: [/cdn\.shopify\.com/i, /\bShopify\.(?:theme|shop|routes)\b/, /myshopify\.com/i], headers: { "x-shopid": /.+/, "x-shopify-stage": /.+/, "x-sorting-hat-shopid": /.+/, "powered-by": /shopify/i }, cookies: [/^_shopify_[ysa]$/, /^cart_currency$/], meta: { "shopify-checkout-api-token": /.+/, "shopify-digital-wallet": /.+/ }, cname: [/myshopify\.com$/, /shops\.myshopify\.com$/] },
   { name: "BigCommerce", category: "ecommerce", html: [/cdn\d*\.bigcommerce\.com|bigcommerce\.com\/s-[a-z0-9]+/i] },
   { name: "Magento", category: "ecommerce", html: [/\/static\/(?:version\d+\/)?frontend\/Magento\//i, /Magento_[A-Z][a-z]+\//, /mage\/cookies|\bmage-cache-(?:storage|sessid)\b/i], cookies: [/^mage-cache-sessid$/], implies: ["PHP"] },
@@ -288,10 +296,10 @@ export const TECH_SIGNATURES: TechSignature[] = [
   { name: "Marketo", category: "marketing", html: [/munchkin\.marketo\.net|\bMunchkin\.init\(|mktoForms2|marketo\.com\/js\/forms2/i, /mktdns\.com/i] },
   { name: "Pardot", category: "marketing", html: [/pardot\.com|pi\.pardot\.com|piAId\b/i] },
   { name: "Optimizely", category: "marketing", html: [/cdn\.optimizely\.com|optimizely\.com\/js\//i] },
-  { name: "Salesforce", category: "crm", html: [/\.force\.com\/(?:servlet|embeddedservice)|salesforceliveagent\.com|service\.force\.com|\bsalesforce\.com\/servlet/i, /web-to-lead|webto\/salesforce/i] },
+  { name: "Salesforce", category: "crm", html: [/\.force\.com\/(?:servlet|embeddedservice)|salesforceliveagent\.com|service\.force\.com|\bsalesforce\.com\/servlet/i, /servlet\.WebToLead/i] },
   { name: "Pipedrive", category: "crm", html: [/webforms\.pipedrive\.com|leadbooster-chat\.pipedrive\.com|pipedriveassets\.com/i] },
   { name: "Zoho", category: "crm", html: [/js\.zohocdn\.com|salesiq\.zoho\.(?:com|eu)|zohopublic\.(?:com|eu)|forms\.zohopublic|zsiqchat/i] },
-  { name: "Freshworks", category: "crm", html: [/freshsales\.io|freshworks\.com\/(?:js|widget)|wchat\.freshchat\.com|\bfreshchat\b|freshdesk\.com\/(?:js|widget)|euc-widget\.freshworks\.com/i] },
+  { name: "Freshworks", category: "crm", html: [/freshsales\.io|freshworks\.com\/(?:js|widget)|wchat\.freshchat\.com|\bfcWidget\.init\b|freshdesk\.com\/(?:js|widget)|euc-widget\.freshworks\.com/i] },
   { name: "ActiveCampaign", category: "marketing-automation", html: [/trackcmp\.net|activehosted\.com|activecampaign\.com\/f\/embed/i] },
   { name: "Mailchimp", category: "marketing-automation", html: [/chimpstatic\.com|list-manage\.com|mailchimp\.com\/(?:embed|js)|\bmc\.us\d+\.list-manage/i] },
   { name: "Klaviyo", category: "marketing-automation", html: [/static\.klaviyo\.com|a\.klaviyo\.com|klaviyo\.com\/onsite|_learnq\.push/i] },
@@ -313,7 +321,7 @@ export const TECH_SIGNATURES: TechSignature[] = [
   { name: "Calendly", category: "scheduling", html: [/assets\.calendly\.com|calendly\.com\/[A-Za-z0-9_-]{2,}\/?|Calendly\.initInlineWidget/i] },
   { name: "Chili Piper", category: "scheduling", html: [/chilipiper\.com|js\.chilipiper\.io/i] },
   { name: "Cal.com", category: "scheduling", html: [/app\.cal\.com\/embed|cal\.com\/embed/i] },
-  { name: "Trustpilot", category: "reviews", html: [/widget\.trustpilot\.com|invitejs\.trustpilot\.com|trustpilot\.com\/review\//i] },
+  { name: "Trustpilot", category: "reviews", html: [/widget\.trustpilot\.com|invitejs\.trustpilot\.com|\btrustpilot-widget\b/i] },
   { name: "G2", category: "reviews", html: [/share\.g2\.com|\.g2\.com\/(?:widgets|static)|g2crowd\.com\/widgets/i], confidence: "medium" },
 
   // ─── Chat and support widgets ──────────────────────────────────────────────
