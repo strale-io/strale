@@ -75,3 +75,23 @@ Three non-blocking items are also fixed:
 Five new tests fail on e5367a0f.
 
 Still open: a meta or icon inside an HTML comment can still win (review N2/M1).
+
+## After the review of fd80ee8f (FAIL on B3, fixed)
+
+**Fixed:**
+- **B3, commented-out tags read as live.** A commented-out og:site_name or JSON-LD block billed the wrong `company_name`. `stripHtmlComments` now drops comments in one linear pass, as a browser does:
+  - a comment ends at `-->` or `--!>`;
+  - `<!-->` and `<!--->` are empty comments;
+  - an unclosed comment ends the document;
+  - `<script>` and `<style>` text is copied through, so a `<!--` inside JavaScript is not a comment;
+  - search positions are cached.
+
+  The builder reads only this comment-free copy, which also covers icons inside comments (earlier M1/N2).
+- **Non-blocking items:**
+  - `tagEnd` is a small tokenizer state machine, so `content=x="` cannot open a quote across tags.
+  - Attribute names accept any characters except whitespace, `"`, `'`, `>`, `/` and `=`.
+  - An oversized JSON-LD block is skipped rather than ending the budget loop.
+
+**Tests:** four new tests fail on fd80ee8f; comment-flood timing tests stay under 1 s.
+
+**Follow-up, not in this change:** `apps/api/src/capabilities/lib/readability-convert.ts` (used by the free `url-to-markdown`) hands whole fetched pages to jsdom. Nesting and attribute floods may stall it in the same way. Measure it at `MAX_FETCHED_HTML_BYTES` and bound it with a depth limiter, a worker with a timeout, or a smaller cap. An attempt to queue this as a suggested task timed out, so it is recorded here.

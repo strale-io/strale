@@ -322,6 +322,51 @@ describe("buildBoundedMetadataHtml", () => {
     expect(ms).toBeLessThan(1_000);
   });
 
+  it("ignores a commented-out meta tag and a commented-out JSON-LD block", () => {
+    const oldLd = `<script type="application/ld+json">{"@type":"Organization","name":"OldLd"}</script>`;
+    const html = `<html><head><!-- <meta property="og:site_name" content="OldCo"> --><meta property="og:site_name" content="NewCo"><!-- ${oldLd} --></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE).company_name).toBe("NewCo");
+  });
+
+  it("a <!-- inside a script is not a comment that hides the JSON-LD after it", () => {
+    const html = `<html><head><script>var s = "<!--";</script>${organizationLd}</head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "LDCO" });
+  });
+
+  it("handles empty and unclosed comments as a browser does", () => {
+    expect(extractStructuredCompanyMetadata(`<head><!--><meta property="og:site_name" content="A"></head>`, PAGE).company_name).toBe("A");
+    expect(extractStructuredCompanyMetadata(`<head><!---><meta property="og:site_name" content="B"></head>`, PAGE).company_name).toBe("B");
+    expect(extractStructuredCompanyMetadata(`<head><!-- x --!><meta property="og:site_name" content="C"></head>`, PAGE).company_name).toBe("C");
+    expect(extractStructuredCompanyMetadata(`<head><meta property="og:site_name" content="D"><!-- never closed <meta property="og:site_name" content="E">`, PAGE).company_name).toBe("D");
+  });
+
+  it("an = inside an unquoted value does not open a quote across tags", () => {
+    const html = `<html><head><meta name=a content=x="><meta property="og:site_name" content="Real"></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE).company_name).toBe("Real");
+  });
+
+  it("reads attribute names with digits and punctuation as names", () => {
+    const html = `<html><head><meta property="og:site_name" data-v1="x content=Evil" content="Real"></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE).company_name).toBe("Real");
+  });
+
+  it("skips an oversized JSON-LD block and still reads a later Organization", () => {
+    const big = `<script type="application/ld+json">{"x":"${"<".repeat(250_000)}"}</script>`;
+    const html = `<html><head></head><body>${big}${big}${organizationLd}</body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "LDCO" });
+  });
+
+  it.each([
+    ["unclosed comment openers", "<!--".repeat(4 * 1024 * 1024)],
+    ["empty comments", "<!---->".repeat(2 * 1024 * 1024)],
+    ["comments and scripts interleaved", "<!-- a --><script>b</script>".repeat(600 * 1024)],
+    ["comment opener inside unclosed script", "<script>" + "<!--".repeat(4 * 1024 * 1024)],
+  ])("strips comments linearly: %s", (_label, html) => {
+    const started = performance.now();
+    extractStructuredCompanyMetadata(html, PAGE);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
   it("does not take <header> for <head> on a page that omits the head tag", () => {
     const html = `<!doctype html><meta property="og:site_name" content="Acme Co"><meta name="description" content="What Acme does."><header><nav>Menu</nav></header><main>Body</main>`;
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme Co", description: "What Acme does." });

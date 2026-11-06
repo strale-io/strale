@@ -56,6 +56,65 @@ export function asciiLowerCase(text: string): string {
 }
 
 /**
+ * Drops HTML comments in one linear pass, as a browser would: a comment ends
+ * at "-->" or "--!>" ("<!-->" and "<!--->" are empty comments), an unclosed
+ * one ends the document, and a "<!--" inside <script> or <style> text is not
+ * a comment, so those blocks are copied through untouched. Each search
+ * position is cached until the cursor passes it, so the pass stays linear.
+ */
+export function stripHtmlComments(source: string): string {
+  const lower = asciiLowerCase(source);
+  const pieces: string[] = [];
+  let cursor = 0;
+  let nextComment = -2;
+  let nextScript = -2;
+  let nextStyle = -2;
+  let nextClose = -2;
+  let nextBangClose = -2;
+  const refresh = (cached: number, needle: string, from: number) =>
+    cached !== -1 && cached < from ? lower.indexOf(needle, from) : cached;
+  while (cursor < source.length) {
+    nextComment = refresh(nextComment, "<!--", cursor);
+    nextScript = refresh(nextScript, "<script", cursor);
+    nextStyle = refresh(nextStyle, "<style", cursor);
+    const candidates = [nextComment, nextScript, nextStyle].filter((p) => p >= 0);
+    if (candidates.length === 0) {
+      pieces.push(source.slice(cursor));
+      break;
+    }
+    const start = Math.min(...candidates);
+    if (start === nextComment) {
+      pieces.push(source.slice(cursor, start));
+      if (lower.startsWith("<!-->", start)) {
+        cursor = start + 5;
+        continue;
+      }
+      if (lower.startsWith("<!--->", start)) {
+        cursor = start + 6;
+        continue;
+      }
+      nextClose = refresh(nextClose, "-->", start + 4);
+      nextBangClose = refresh(nextBangClose, "--!>", start + 4);
+      const ends = [nextClose >= 0 ? nextClose + 3 : -1, nextBangClose >= 0 ? nextBangClose + 4 : -1].filter((p) => p >= 0);
+      if (ends.length === 0) break;
+      cursor = Math.min(...ends);
+      continue;
+    }
+    // A script or style block: its text may hold "<!--"; copy it through.
+    const closeTag = start === nextScript ? "</script" : "</style";
+    const close = lower.indexOf(closeTag, start + 1);
+    const closeEnd = close < 0 ? -1 : lower.indexOf(">", close);
+    if (closeEnd < 0) {
+      pieces.push(source.slice(cursor));
+      break;
+    }
+    pieces.push(source.slice(cursor, closeEnd + 1));
+    cursor = closeEnd + 1;
+  }
+  return pieces.join("");
+}
+
+/**
  * Drops every <script> and <style> block from a slice of HTML, in one linear
  * pass: the next position of each opening tag is searched for once and reused
  * until the cursor passes it, so a page full of one kind cannot make every
@@ -210,7 +269,7 @@ function quotesBalanced(tag: string): boolean {
 // The lookbehind anchors a name to the start of a token: an unanchored
 // `[a-zA-Z-]+` retried from every position of a long letter run, which made a
 // 4 KB tag cost milliseconds and a page of them tens of seconds.
-const LINK_ATTRIBUTE = /(?<=[\s"'\/])([a-zA-Z-]+)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
+const LINK_ATTRIBUTE = /(?<=[\s"'\/])([^\s"'>\/=]+)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
 /** Icon-looking tags examined per page, whether or not they yield an icon. */
 const ICON_CANDIDATE_LIMIT = 64;
 
@@ -261,11 +320,12 @@ const TITLE_LIMIT = 2 * 1024;
  * work is bounded by that cap times `limit`.
  */
 function tagEnd(text: string, start: number, limit: number): number {
+  // A small slice of the HTML tokenizer: a quote opens a value only right
+  // after "=" (whitespace allowed), and an unquoted value runs to whitespace,
+  // so neither content=O'Brien nor content=x=" opens a quoted span.
   let quote: string | null = null;
-  // As in the HTML tokenizer, a quote opens a value only right after "="
-  // (whitespace allowed); one inside an unquoted value, as in
-  // content=O'Brien, is an ordinary character.
   let afterEquals = false;
+  let unquoted = false;
   const stop = Math.min(text.length, start + limit);
   for (let i = start + 1; i < stop; i++) {
     const c = text[i]!;
@@ -274,14 +334,19 @@ function tagEnd(text: string, start: number, limit: number): number {
       continue;
     }
     if (c === ">") return i;
-    if (afterEquals && (c === '"' || c === "'")) {
-      quote = c;
-      afterEquals = false;
-    } else if (c === "=") {
-      afterEquals = true;
-    } else if (c !== " " && c !== "\t" && c !== "\n" && c !== "\r" && c !== "\f") {
-      afterEquals = false;
+    const space = c === " " || c === "\t" || c === "\n" || c === "\r" || c === "\f";
+    if (unquoted) {
+      if (space) unquoted = false;
+      continue;
     }
+    if (afterEquals) {
+      if (space) continue;
+      afterEquals = false;
+      if (c === '"' || c === "'") quote = c;
+      else unquoted = true;
+      continue;
+    }
+    if (c === "=") afterEquals = true;
   }
   return -1;
 }
@@ -314,6 +379,10 @@ export function buildBoundedMetadataHtml(
   html: string,
   diagnostics?: { scriptOpeningsVisited: number; iconCandidates?: number; metaCandidates?: number },
 ): string {
+  // Everything below reads the page as a browser would see it: commented-out
+  // tags (a theme's placeholder og:site_name, a rebrand's old JSON-LD) are
+  // not statements the site makes.
+  html = stripHtmlComments(html);
   const lower = asciiLowerCase(html);
   // "<head" alone would also match "<header", and HTML5 lets a page omit the
   // <head> tag, so require the tag name to end there.
@@ -431,7 +500,9 @@ export function buildBoundedMetadataHtml(
   let length = prefix.length + suffix.length + fixed.reduce((sum, piece) => sum + piece.length + 1, 0);
   const keptJsonLd: string[] = [];
   for (const block of jsonLd) {
-    if (length + block.length + 1 > METADATA_HTML_LIMIT) break;
+    // An oversized block is skipped, not the end: a later one may be the
+    // Organization and still fit.
+    if (length + block.length + 1 > METADATA_HTML_LIMIT) continue;
     keptJsonLd.push(block);
     length += block.length + 1;
   }
