@@ -143,8 +143,9 @@ async function fetchByIco(ico: string): Promise<AresResponse> {
 //
 // Any other failure does not fail the whole call either (the tier-1 record
 // from the BE view is still the answer), but it is reported as what it is:
-// `error` carries the reason into tier_2_available_reason, the way the
-// Estonian tool reports a failed directors read, instead of the 404 text
+// `error` carries the reason into tier_2_available_reason (as the Estonian
+// tool reports a failed directors read), sets `tier_2_status:
+// "upstream_unavailable"` and nulls legal_representatives, instead of the 404 text
 // ("likely sole trader…"), which would misdescribe a registered company whose
 // VR read merely failed (2026-11-06 swallowed-failures audit, row 18).
 type VrFetch = { vr: AresVrResponse | null; error: string | null };
@@ -175,7 +176,7 @@ export function czTier2Reason(representativeCount: number, vrError: string | nul
   if (vrError !== null) {
     return (
       `ARES VR view could not be read (${vrError}), so legal representatives are unknown for this record; ` +
-      "tier_1 data is unaffected. An empty list here says nothing about whether the entity has a statutory body; retry later."
+      "tier_1 data is unaffected. legal_representatives is null because this says nothing about whether the entity has a statutory body; retry later."
     );
   }
   return representativeCount > 0
@@ -294,12 +295,17 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
       legal_form: data.pravniForma ?? null,
       registered_address: data.sidlo?.textovaAdresa ?? "",
       date_incorporated: data.datumVzniku ?? null,
-      legal_representatives: representatives,
-      total_legal_representatives: representatives.length,
+      // A failed VR read is "unknown", not "none": null, never [] or 0, so an
+      // agent cannot read the outage as "this entity has no statutory body".
+      legal_representatives: vrError !== null ? null : representatives,
+      total_legal_representatives: vrError !== null ? null : representatives.length,
       signing_authority,
       // Evidence Tier framework labels (DEC-20260518-A)
       tier_2_available: representatives.length > 0,
       tier_2_available_reason: czTier2Reason(representatives.length, vrError),
+      // Machine-readable marker, present only when the VR leg failed, so the
+      // output for an answered VR read (a 404 included) is unchanged.
+      ...(vrError !== null ? { tier_2_status: "upstream_unavailable" as const } : {}),
       ubo_availability: "restricted",
       ubo_availability_reason: "UBO evidence register access restricted to AML-obliged entities post-CJEU 2022",
     },

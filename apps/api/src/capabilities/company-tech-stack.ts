@@ -17,11 +17,12 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const cleanDomain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   const fullUrl = `https://${cleanDomain}`;
 
-  // Fetch HTML + headers in parallel with DNS
-  const [html, dnsResults] = await Promise.all([
-    fetchRenderedHtml(fullUrl),
-    resolveDns(cleanDomain),
-  ]);
+  // DNS first, then the render. A resolver outage throws here, before the
+  // paid Browserless render and the paid LLM call, so an outage (and the
+  // transient retry that follows it) costs no render. Run in parallel, a DNS
+  // rejection left the render already paid for, and the retry paid again.
+  const dnsResults = await resolveDns(cleanDomain);
+  const html = await fetchRenderedHtml(fullUrl);
 
   // Extract HTTP headers by doing a HEAD request. Runs only after
   // fetchRenderedHtml succeeded, i.e. after its robots.txt and block checks

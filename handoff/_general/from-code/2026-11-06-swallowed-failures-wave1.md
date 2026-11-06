@@ -92,6 +92,36 @@ The receipts record `62f1b1d0`, the pre-amend WIP commit. Its `apps/api/src` tre
 - **domain-reputation's no-TXT quirk.** It skips the SPF and DMARC penalties, and the DMARC lookup, for a domain with no TXT records at all. That is a scoring bug, kept as-is for this wave.
 - **The audit's insolvency-check row overstates the gap.** A timeout already threw, and the insolvency endpoint already threw on non-404. Only a non-OK search status was swallowed.
 
+## Review round 1
+
+The independent review of `ad5663b6` passed with no blockers. It raised two should-fixes and one nit, all three now fixed. `lib/vasp-data.ts` was left alone, because another lane is rewriting it on top of this branch.
+
+1. **company-tech-stack: DNS now runs before the render.**
+   - DNS used to share a `Promise.all` with the paid Browserless render. A DNS outage rejected the call after the render had run, and the transient retry rendered again.
+   - Now DNS resolves first, so a resolver failure throws before any paid call.
+   - Test: the transient case asserts that Browserless and the LLM were never called. The negative case asserts exactly one render.
+2. **cz-company-data: a machine-readable status for a failed VR read.**
+   - On that path the output now carries `tier_2_status: "upstream_unavailable"`.
+   - `legal_representatives` and `total_legal_representatives` are `null`, not `[]` or `0`, so an agent cannot read the outage as "no statutory body".
+   - `tier_2_status` is present only on the failed path. An answered VR read, including a 404, keeps its old output exactly; a test pins `[]`, `0` and the absent key.
+   - **Manifest** (`manifests/cz-company-data.yaml`):
+     - both fields are typed `[array|integer, "null"]`;
+     - `tier_2_status` is added to the schema, with reliability `rare`;
+     - `total_legal_representatives` reliability moves from `guaranteed` to `common`. No known_answer assertion used it.
+3. **email-deliverability-check: an IPv6-only domain earns no blocklist credit.**
+   - No list was asked about its address, so it gets no 20 points and an issue line: "Blocklist check not performed: the domain resolves only to IPv6…".
+   - A domain with no address at all keeps its historical credit, because it has nothing to list.
+   - Test: an IPv6-only domain scores 0 and sends no blocklist query.
+
+**Fail-before for the round:** the three sources were restored from `ad5663b6` and the two executor test files run against them. Exactly the five new round-1 assertions failed (`archive/receipts/2026-11-06-test-run-swallowed-failures-wave1-review1-fail-before.json`).
+
+**After the round:**
+- The three wave-1 files pass.
+- 19 related suites pass: manifest, output contract, execution outcome, retry, taxonomy, actionable errors, body-read ledger and PII.
+- The `apps/api` typecheck passes.
+
+Evidence: `archive/receipts/2026-11-06-test-run-swallowed-failures-wave1-review1-after.json`.
+
 ## Next
 
 Waves 2 and 3 follow:

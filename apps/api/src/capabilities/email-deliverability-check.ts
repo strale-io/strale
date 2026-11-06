@@ -220,7 +220,13 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
     }
   }
 
-  if (!blacklisted) {
+  // An IPv6-only domain has an address no list was asked about. Unchecked is
+  // not clean, so it earns no blocklist credit. (A domain with no address at
+  // all has nothing to list and keeps its historical credit.)
+  const ipv6Unchecked = !hasIpv4 && ipAddresses.length > 0;
+  if (ipv6Unchecked) {
+    issues.push("Blocklist check not performed: the domain resolves only to IPv6, and the checked lists cover IPv4 only");
+  } else if (!blacklisted) {
     // Credit only the lists that answered: an unanswered list is not a clean one.
     score += blacklistsUnknown === 0 ? 20 : Math.round((20 * (DNSBLS.length - blacklistsUnknown)) / DNSBLS.length);
   } else {

@@ -52,16 +52,23 @@ output_schema:
     jurisdiction:
       type: string
     legal_representatives:
-      type: array
+      type:
+        - array
+        - "null"
       description: >-
         Active members of the statutory body (Statutární orgán) and prokura from the ARES VR view.
         Canonical Strale shape: {type, name, role, role_code, role_group, date_of_birth, nationality,
         start_date}. Excludes supervisory bodies (dozorčí rada — not in statutarniOrgany, not a legal
         representative). Filters out historic members (datumVymazu present) and ended memberships
         (zanikClenstvi present). Empty for entities not in the public commercial register (sole
-        traders, associations, foreign branches).
+        traders, associations, foreign branches). Null when the ARES VR view could not be read
+        (tier_2_status is then "upstream_unavailable"): unknown, not "no statutory body".
     total_legal_representatives:
-      type: integer
+      type:
+        - integer
+        - "null"
+      description: >-
+        Count of legal_representatives. Null when the ARES VR view could not be read.
     signing_authority:
       type:
         - string
@@ -73,6 +80,12 @@ output_schema:
       type: boolean
     tier_2_available_reason:
       type: string
+    tier_2_status:
+      type: string
+      enum: ["upstream_unavailable"]
+      description: >-
+        Present only when the ARES VR view could not be read (5xx, timeout, network error). Absent when
+        the VR view answered, including a 404 for an entity outside the commercial register.
 geography: eu
 processes_personal_data: true
 personal_data_categories:
@@ -161,10 +174,11 @@ output_field_reliability:
   # Common because entities outside the public commercial register (sole traders,
   # associations, foreign branches) have no VR view; the empty array is honest.
   legal_representatives: common
-  total_legal_representatives: guaranteed
+  total_legal_representatives: common
   signing_authority: common
   tier_2_available: guaranteed
   tier_2_available_reason: guaranteed
+  tier_2_status: rare
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
 

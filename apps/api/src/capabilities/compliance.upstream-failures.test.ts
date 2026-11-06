@@ -237,7 +237,10 @@ describe("cz-company-data", () => {
     const exec = await load("cz-company-data", "./cz-company-data.js");
     const { output } = await exec({ ico: ICO });
     expect(output.tier_2_available).toBe(false);
-    expect(output.legal_representatives).toEqual([]);
+    // Unknown, not "none": null rather than [] or 0, plus a machine-readable status.
+    expect(output.legal_representatives).toBeNull();
+    expect(output.total_legal_representatives).toBeNull();
+    expect(output.tier_2_status).toBe("upstream_unavailable");
     expect(output.tier_2_available_reason).toContain(`ARES VR view could not be read (${reason})`);
     expect(output.tier_2_available_reason).not.toMatch(/sole trader/);
     // Liquidation cannot be excluded without the VR view.
@@ -254,6 +257,10 @@ describe("cz-company-data", () => {
     expect(output.tier_2_available_reason).toBe(
       "ARES VR view returned no active statutory body members for this entity (likely sole trader / association / foreign branch not in the commercial register); tier_2 not bindable on this record.",
     );
+    // The real negative keeps its old shape: an empty list, a zero count, no status key.
+    expect(output.legal_representatives).toEqual([]);
+    expect(output.total_legal_representatives).toBe(0);
+    expect(output).not.toHaveProperty("tier_2_status");
   });
 
   it("a VR read that answered binds tier 2", async () => {

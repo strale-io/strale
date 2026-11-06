@@ -40,7 +40,8 @@ vi.mock("dns", async (orig) => {
 const safeFetchMock = vi.hoisted(() => vi.fn());
 vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => {}) }));
 vi.mock("../lib/robots-txt.js", () => ({ assertRobotsAllowed: vi.fn(async () => {}) }));
-vi.mock("./lib/browserless-extract.js", () => ({ fetchRenderedHtml: vi.fn(async () => "<html><body>hi</body></html>") }));
+const renderMock = vi.hoisted(() => vi.fn(async () => "<html><body>hi</body></html>"));
+vi.mock("./lib/browserless-extract.js", () => ({ fetchRenderedHtml: renderMock }));
 const llmMock = vi.hoisted(() => vi.fn(async () => ({ domain: "example.com", detected_technologies: [] })));
 vi.mock("./lib/llm-extract.js", () => ({ extractJsonWithLlm: llmMock }));
 
@@ -105,6 +106,7 @@ beforeEach(() => {
   allNxdomain();
   safeFetchMock.mockReset().mockRejectedValue(new Error("fetch failed"));
   llmMock.mockClear();
+  renderMock.mockClear();
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -162,6 +164,9 @@ describe.each(["ETIMEOUT", "ESERVFAIL"])("a resolver failure (%s) throws, unbill
     dns.resolveMx.mockImplementation(reject(code));
     await expectUnbilledUpstreamFailure(run("company-tech-stack", { domain: "example.com" }), code);
     expect(llmMock).not.toHaveBeenCalled();
+    // Review round 1: the paid Browserless render must not run either, or a
+    // DNS outage plus its retry costs two renders.
+    expect(renderMock).not.toHaveBeenCalled();
   });
 
   it("email-pattern-discover, on the MX lookup", async () => {
@@ -358,6 +363,7 @@ describe("a real negative keeps today's output, and is still billed", () => {
     for (const fn of [dns.resolveMx, dns.resolveTxt, dns.resolveCname]) fn.mockImplementation(reject("ENODATA"));
     const result = await run("company-tech-stack", { domain: "example.com" });
     expect(result.output.dns_records).toEqual({ a: [IP], mx: [], txt: [], cname: [] });
+    expect(renderMock).toHaveBeenCalledTimes(1);
     expect(llmMock).toHaveBeenCalledTimes(1);
   });
 
@@ -431,6 +437,21 @@ describe("email-deliverability-check: an errored blocklist is unknown, never 'no
     const { output } = await run("email-deliverability-check", { domain: "example.com" });
     expect(output.blacklisted).toBe(false);
     expect((output.blacklists_checked as unknown[])[0]).toEqual({ name: "zen.spamhaus.org", listed: null, error: "127.255.255.254" });
+  });
+
+  it("an IPv6-only domain is not checked, and earns no blocklist credit", async () => {
+    for (const fn of Object.values(dns)) fn.mockImplementation(reject("ENODATA"));
+    dns.resolve6.mockResolvedValue(["2001:db8::1"]);
+    const { output } = await run("email-deliverability-check", { domain: "example.com" });
+    expect(output.blacklisted).toBe(false);
+    expect(output.blacklists_checked).toEqual([]);
+    expect(output.issues).toContain(
+      "Blocklist check not performed: the domain resolves only to IPv6, and the checked lists cover IPv4 only",
+    );
+    // No MX, SPF, DMARC or DKIM, and no blocklist credit: nothing is earned.
+    expect(output.score).toBe(0);
+    // No reversed-IPv6 query was sent to any list.
+    expect(dns.resolve4.mock.calls.map((c) => c[0])).toEqual(["example.com"]);
   });
 
   it("a real listing is still a listing", async () => {
