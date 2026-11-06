@@ -1,0 +1,83 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "6e5f86963b958f850b94817e34d2b8ecc49aaa58"
+  },
+  "at": "2026-11-06T11:19:25.397Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/smoke4.json"
+  },
+  "summary": {
+    "checked_at": "2026-11-06T11:20:00Z",
+    "install": "clean directory outside the repo, npm i <name>@<version> from registry.npmjs.org"
+  },
+  "topic": "npm-four-packages-production-smoke",
+  "raw": {
+    "checked_at": "2026-11-06T11:20:00Z",
+    "install": "clean directory outside the repo, npm i <name>@<version> from registry.npmjs.org",
+    "packages": {
+      "straleio@0.1.4": {
+        "release_run": "https://github.com/strale-io/strale/actions/runs/42205787095",
+        "provenance": "https://slsa.dev/provenance/v1",
+        "default_base_url": "https://api.strale.io",
+        "strale_dev_files": 0,
+        "capabilities()": 298,
+        "capability('email-validate')": {
+          "slug": "email-validate",
+          "price_cents": 3
+        },
+        "balance()_with_invalid_key": "UnauthorizedError 401",
+        "verdict": "pass"
+      },
+      "straleio-langchain@0.1.1": {
+        "release_run": "https://github.com/strale-io/strale/actions/runs/42208364833",
+        "exports": [
+          "StraleFallbackTool"
+        ],
+        "strale_dev_files": 0,
+        "tool_name": "strale_fallback",
+        "invoke_with_invalid_key": "{\"error\":true,\"error_code\":\"unauthorized\",\"message\":\"Invalid API key.\"}",
+        "verdict": "pass"
+      },
+      "n8n-nodes-strale@1.0.0": {
+        "release_run": "https://github.com/strale-io/strale/actions/runs/42205800264",
+        "scan_community_package": "Package n8n-nodes-strale@1.0.0 has passed all security checks (provenance, source github.com/strale-io/strale@99e00a4, tarball)",
+        "node_description": "strale v1; resources company (lookUp), vatNumber (check), person (screenName)",
+        "credential_test_GET_/v1/wallet/balance_no_key": 401,
+        "capability_routes_200": [
+          "finnish-company-data",
+          "norwegian-company-data",
+          "swedish-company-data",
+          "uk-company-data",
+          "vat-validate",
+          "sanctions-check",
+          "pep-check"
+        ],
+        "strale_dev_files": 0,
+        "not_checked": "client_meta.client_header after a first real paid call through the node (needs a funded key in n8n)",
+        "verdict": "pass"
+      },
+      "strale-capabilities@0.1.1": {
+        "release_run": "https://github.com/strale-io/strale/actions/runs/42208184364",
+        "tarball_download": "404 for about 2 minutes after publish (registry propagation), then 200",
+        "exports": [
+          "capabilities",
+          "categories",
+          "totalCount",
+          "generatedAt",
+          "find",
+          "byCategory",
+          "search"
+        ],
+        "generatedAt": "2026-08-27T21:25:04.684Z",
+        "totalCount": 297,
+        "live_catalogue_count": 298,
+        "live_not_packaged": 16,
+        "packaged_not_live": 15,
+        "strale_dev_files": 0,
+        "verdict": "fail: stale catalog snapshot; fixed on main-bound branch as 0.1.2 (catalog regenerated at release time)"
+      }
+    }
+  }
+}
