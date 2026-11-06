@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput, type CapabilityResult } from "./index.js";
+import { readJsonWithLimit } from "../lib/resource-limits.js";
 
 type Office = "SCB" | "SSB" | "STATFIN";
 type Selection = string | string[];
@@ -152,7 +153,15 @@ function enforceRateLimit(response: Response): void {
   const remaining = response.headers.get("ratelimit-remaining") ?? response.headers.get("x-ratelimit-remaining") ?? response.headers.get("x-rate-limit-remaining");
   if (remaining !== null && Number.isFinite(Number(remaining)) && Number(remaining) <= 0) throw new NordicStatisticsError("rate_limited", "The statistics office rate limit was reached; retry later", { retry_after: retryAfter(response) }, true);
 }
-async function getJson(response: Response): Promise<unknown> { try { return await response.json(); } catch { fail("upstream_invalid_response", "Upstream returned a non-JSON response"); } }
+async function getJson(response: Response): Promise<unknown> {
+  try {
+    return await readJsonWithLimit(response);
+  } catch (error) {
+    // A body over the limit keeps readJsonWithLimit's own refusal; only a parse failure is relabelled.
+    if (error instanceof SyntaxError) fail("upstream_invalid_response", "Upstream returned a non-JSON response");
+    throw error;
+  }
+}
 
 export async function executeNordicStatistics(input: CapabilityInput): Promise<CapabilityResult> {
   const valid = validateNordicInput(input);
