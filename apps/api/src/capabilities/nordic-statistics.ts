@@ -26,21 +26,22 @@ interface OfficeDefinition {
 }
 
 // The paths are deliberately data, rather than accepting caller-controlled URL fragments.
-// Verification status and catalogue sources are recorded beside the fixtures.
+// Every host is fixed (no caller-supplied URL reaches fetch). All 24 paths were verified live on 2026-11-06
+// (metadata GET plus a small json-stat2 POST); see docs/lanes/codex/nordic-statistics-report.md.
 export const NORDIC_OFFICES: Record<Office, OfficeDefinition> = {
   SCB: {
     name: "Statistics Sweden",
     baseUrl: "https://api.scb.se/OV0104/v1/doris/en/ssd/",
     licenceNote: "SCB API data is provided under CC0. Attribution is not required; if given, use ‘Source: Statistics Sweden’. Statistics credited to another agency retain that agency’s attribution requirement.",
     tables: {
-      "BE0101N1": { path: "BE/BE0101/BE0101A/BefolkningNy", label: "Population by year" },
-      "BE0101N2": { path: "BE/BE0101/BE0101A/BefolkningR1860N", label: "Population changes" },
-      "NR0103N1": { path: "NR/NR0103/NR0103E/NR0103ENS2010T01A", label: "Gross domestic product" },
-      "PR0101N1": { path: "PR/PR0101/PR0101A/KPItotM", label: "Consumer Price Index" },
-      "AM0401N1": { path: "AM/AM0401/AM0401A/NAKUBefolkningAr", label: "Labour force status" },
-      "AM0110N1": { path: "AM/AM0110/AM0110A/LonYrkeRegion4A", label: "Average monthly salary" },
-      "BO0501N1": { path: "BO/BO0501/BO0501B/FastprisSHRegionAr", label: "Real-estate prices" },
-      "HA0101N1": { path: "HA/HA0101/HA0101A/HushallKonsumtionENS2010", label: "Household consumption" },
+      "BE0101N1": { path: "BE/BE0101/BE0101A/BefolkningNy", label: "Population by region, marital status, age and sex, 1968-2024" },
+      "BE0101N2": { path: "BE/BE0101/BE0101G/BefUtvKon1749", label: "Population and population changes in Sweden by sex, 1749-2025" },
+      "NR0103N1": { path: "NR/NR0103/NR0103E/NR0103ENS2010T01NA", label: "GDP, expenditure approach (ESA2010), annual" },
+      "PR0101N1": { path: "PR/PR0101/PR0101A/KPI2020M", label: "Consumer Price Index, total, 2020=100, monthly" },
+      "AM0401N1": { path: "AM/AM0401/AM0401A/AKURLBefAr", label: "Labour force survey, population aged 15-74 by labour status, annual" },
+      "AM0110N1": { path: "AM/AM0110/AM0110A/LonYrkeRegion4AN", label: "Average basic salary and monthly salary by region, sector, occupation and sex" },
+      "BO0501N1": { path: "BO/BO0501/BO0501B/FastprisSHRegionAr", label: "Sold one- and two-dwelling buildings by region, annual" },
+      "HA0101N1": { path: "NR/NR0103/NR0103E/NR0103ENS2010T03NAN", label: "Household consumption expenditure by purpose (COICOP), annual" },
     },
   },
   SSB: {
@@ -48,29 +49,29 @@ export const NORDIC_OFFICES: Record<Office, OfficeDefinition> = {
     baseUrl: "https://data.ssb.no/api/v0/en/table/",
     licenceNote: "Statistics Norway API data is licensed under CC BY 4.0. Attribute Statistics Norway, link the licence, and identify Strale’s reshaping.",
     tables: {
-      "07459": { path: "07459", label: "Population" },
-      "05110": { path: "05110", label: "Population by sex and age" },
-      "09189": { path: "09189", label: "Consumer Price Index" },
-      "11721": { path: "11721", label: "Quarterly national accounts" },
-      "08804": { path: "08804", label: "Annual national accounts" },
-      "13760": { path: "13760", label: "Labour force survey" },
-      "11418": { path: "11418", label: "Monthly earnings" },
-      "07221": { path: "07221", label: "House price index" },
+      "07459": { path: "07459", label: "Population by region, sex and age" },
+      "05110": { path: "05110", label: "Population by labour force status, sex and age, quarterly" },
+      "14700": { path: "14700", label: "Consumer Price Index by goods and services, monthly" },
+      "09189": { path: "09189", label: "Final expenditure and gross domestic product, annual" },
+      "05803": { path: "05803", label: "Population 1 January and population changes by year" },
+      "13760": { path: "13760", label: "Labour force, employment and unemployment, persons aged 15-74, monthly" },
+      "11418": { path: "11418", label: "Monthly earnings by occupation, sector and sex, annual" },
+      "07221": { path: "07221", label: "Price index for existing dwellings by region and dwelling type, quarterly" },
     },
   },
   STATFIN: {
     name: "Statistics Finland",
-    baseUrl: "https://pxweb2.stat.fi/PxWeb/api/v1/en/StatFin/",
+    baseUrl: "https://pxdata.stat.fi/PxWeb/api/v1/en/StatFin/",
     licenceNote: "Statistics Finland open data is licensed under CC BY 4.0. Attribute Statistics Finland, name the table and material date, link the licence, and indicate Strale’s reshaping.",
     tables: {
-      "vaerak_12af": { path: "vaerak/statfin_vaerak_pxt_12af.px", label: "Population" },
-      "synt_12dx": { path: "synt/statfin_synt_pxt_12dx.px", label: "Population changes" },
-      "kan_12sv": { path: "kan/statfin_kan_pxt_12sv.px", label: "Gross domestic product" },
-      "khi_11xe": { path: "khi/statfin_khi_pxt_11xe.px", label: "Consumer Price Index" },
-      "tyti_13al": { path: "tyti/statfin_tyti_pxt_13al.px", label: "Labour force status" },
-      "palk_13rb": { path: "palk/statfin_palk_pxt_13rb.px", label: "Earnings" },
-      "ashi_13mu": { path: "ashi/statfin_ashi_pxt_13mu.px", label: "Prices of dwellings" },
-      "ktutk_13a6": { path: "ktutk/statfin_ktutk_pxt_13a6.px", label: "Household consumption" },
+      "vaerak_11ra": { path: "vaerak/11ra.px", label: "Key figures on population by region, 1990-2025" },
+      "synt_12dx": { path: "synt/12dx.px", label: "Vital statistics and population, 1749-2025" },
+      "ntp_15a9": { path: "ntp/15a9.px", label: "Gross domestic product and national income, supply and demand, annual" },
+      "khi_11xt": { path: "khi/11xt.px", label: "Consumer Price Indices, overall index, yearly" },
+      "tyti_13al": { path: "tyti/13al.px", label: "Population aged 15-74 by labour force status and region, annual" },
+      "ktps_14n2": { path: "ktps/14n2.px", label: "Wage and salary indices by industry, annual (2021=100)" },
+      "ashi_13mw": { path: "ashi/13mw.px", label: "Prices per square metre of old dwellings by region and plot ownership, yearly" },
+      "ntp_15ag": { path: "ntp/15ag.px", label: "Household final consumption expenditure (COICOP2018), annual" },
     },
   },
 };
@@ -115,6 +116,15 @@ export function validateNordicInput(input: CapabilityInput) {
   return { office, definition, tableId, table, filters, since: input.since_period as string | undefined, until: input.until_period as string | undefined };
 }
 
+// Offices write periods as 2024, 2024K1 / 2024Q1 and 2024M01; callers use YYYY, YYYY-Qn and YYYY-MM.
+export function normalisePeriod(value: string): string {
+  const q = /^(\d{4})[KQ]([1-4])$/.exec(value);
+  if (q) return `${q[1]}-Q${q[2]}`;
+  const m = /^(\d{4})M(\d{2})$/.exec(value);
+  if (m) return `${m[1]}-${m[2]}`;
+  return value;
+}
+
 function orderedCategories(index: string[] | Record<string, number>): string[] {
   if (Array.isArray(index)) return index;
   return Object.entries(index).sort((a, b) => a[1] - b[1]).map(([code]) => code);
@@ -147,7 +157,7 @@ async function getJson(response: Response): Promise<unknown> { try { return awai
 export async function executeNordicStatistics(input: CapabilityInput): Promise<CapabilityResult> {
   const valid = validateNordicInput(input);
   const url = `${valid.definition.baseUrl}${valid.table.path}`;
-  const request = (init?: RequestInit) => fetch(url, { ...init, redirect: "error", signal: AbortSignal.timeout(12_000), headers: { "User-Agent": "Strale/1.0 (+https://strale.dev)", ...(init?.headers ?? {}) } });
+  const request = (init?: RequestInit) => fetch(url, { ...init, redirect: "error", signal: AbortSignal.timeout(12_000), headers: { "User-Agent": "Strale/1.0 (+https://strale.io)", ...(init?.headers ?? {}) } });
   try {
     const metadataResponse = await request();
     if (metadataResponse.status === 429) throw new NordicStatisticsError("rate_limited", "The statistics office rate limit was reached; retry later", { retry_after: retryAfter(metadataResponse) }, true);
@@ -159,7 +169,7 @@ export async function executeNordicStatistics(input: CapabilityInput): Promise<C
     const query = Object.entries(valid.filters).map(([code, values]) => ({ code, selection: { filter: "item", values } }));
     const time = variables.find(v => v.time || /^(time|tid|år|year|vuosi)$/i.test(v.code));
     if (time && (valid.since || valid.until) && !valid.filters[time.code]) {
-      const values = (time.values ?? []).filter(v => (!valid.since || v >= valid.since) && (!valid.until || v <= valid.until));
+      const values = (time.values ?? []).filter(v => (!valid.since || normalisePeriod(v).slice(0, valid.since.length) >= valid.since) && (!valid.until || normalisePeriod(v).slice(0, valid.until.length) <= valid.until));
       if (!values.length) fail("invalid_input", "No periods match the requested bounds");
       query.push({ code: time.code, selection: { filter: "item", values } });
     }

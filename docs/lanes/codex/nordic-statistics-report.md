@@ -46,3 +46,25 @@ SCB and SSB now document PxWebApi v2 as current, while this implementation pins 
 ## Not performed
 
 Per the brief, I did not run onboarding discovery, database writes, production validation, readiness, or a smoke test. The orchestrator must verify allowlist paths against live catalogues, record real fixtures, run `onboard.ts --discover`, review generated expected fields and reliability, run capability validation/readiness/smoke tests, and complete independent review and deploy verification.
+
+## Live verification (Claude lane)
+
+Date: 2026-11-06. All three APIs were reachable; every allowlisted table was checked with a metadata GET and a small json-stat2 POST using the executor's request shapes (24 of 24 return HTTP 200 with data). The executor was also run live end to end against SSB, SCB (monthly period bounds) and Statistics Finland (yearly bounds).
+
+Changes made:
+
+* **SCB** (8/8 verified). Fixed: `NR0103N1` path to `NR0103E/NR0103ENS2010T01NA`; `PR0101N1` to `KPI2020M` (`KPItotM` is frozen after 2025M12); `AM0401N1` to `AKURLBefAr`; `AM0110N1` to `LonYrkeRegion4AN`; `BE0101N2` to `BE0101G/BefUtvKon1749` (population and population changes); `HA0101N1` to `NR0103E/NR0103ENS2010T03NAN`. Kept: `BE0101N1`, `BO0501N1`. Labels corrected.
+* **SSB** (8/8 verified). Fixed: `09189` and `11721` were mislabelled (national accounts, not CPI/quarterly). Dropped `08804` (external trade, which the allowlist excludes) and `11721` (monthly GDP); added `14700` (CPI, current to 2026M09; `03013` stops at 2025M12) and `05803` (population and population changes). Kept `07459`, `05110`, `13760`, `11418`, `07221`. The known-answer ContentsCode is `Personer1`, not `Population`.
+* **Statistics Finland** (8/8 verified). Base host changed to the official `pxdata.stat.fi`; the table path form is `folder/NN.px`, not `statfin_<folder>_pxt_NN.px` (that form returns 400). Mapping: `vaerak_11ra`, `synt_12dx`, `ntp_15a9` (annual GDP), `khi_11xt`, `tyti_13al`, `ktps_14n2` (wage and salary index; the guessed `palk` folder does not exist), `ashi_13mw` (regional, replaces the postcode-level `13mu`), `ntp_15ag` (household consumption; `ktutk` is a stale 2012-2022 survey). Aliases were renamed to match.
+* Executor: user agent now `https://strale.io`; `since_period` / `until_period` now match the offices' period codes (`2024K1`, `2024M01`) against the documented `YYYY-Qn` / `YYYY-MM` forms (before, quarterly and monthly bounds never matched).
+* Fixtures are real recorded responses (see the fixtures README); tests replay them.
+* Limitation worth knowing: variables that are not eliminable (for example SCB `ContentsCode`, SSB `ContentsCode`) must be supplied in `filters`, otherwise the office returns 400 and the capability reports `upstream_unavailable`. Eliminable variables left out are aggregated by the office.
+* SCB and SSB list PxWebApi v2 as current; the v1/v0 endpoints used here still work as of today. Migration is a later decision.
+
+Known-answer query (verified live): `{office: "SSB", table: "07459", filters: {Region: "0", ContentsCode: "Personer1", Tid: "2024"}}` returns one observation, 5,550,203 persons.
+
+Licences (read from the official pages on 2026-11-06): SCB CC0, no attribution required, https://www.scb.se/en/services/open-data-api/ ; SSB CC BY 4.0 ("Like the rest of ssb.no, the APIs use the license CC BY 4.0"), https://www.ssb.no/en/api ; Statistics Finland CC BY 4.0, source must be mentioned, https://stat.fi/en/services/statistical-data-services/open-data-and-interfaces . All three vendor-terms records are correct; the Statistics Finland record's host moved to `pxdata.stat.fi`.
+
+Egress lint: `lint:no-unguarded-user-fetch` and the SSRF inventory pass without annotation (hosts are fixed; no caller URL reaches fetch).
+
+Still needing a database: `onboard.ts --discover`, `validate-capability`, `checkReadiness`, smoke test, and the independent review.

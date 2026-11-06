@@ -77,7 +77,7 @@ test_fixtures:
     input:
       office: SSB
       table: '07459'
-      filters: {Region: '0', ContentsCode: Population, Tid: '2024'}
+      filters: {Region: '0', ContentsCode: Personer1, Tid: '2024'}
     expected_fields:
       - {field: office, operator: equals, value: SSB, reliability: guaranteed}
       - {field: table, operator: equals, value: '07459', reliability: guaranteed}
@@ -87,7 +87,7 @@ test_fixtures:
   health_check_input:
     office: SSB
     table: '07459'
-    filters: {Region: '0', ContentsCode: Population, Tid: '2024'}
+    filters: {Region: '0', ContentsCode: Personer1, Tid: '2024'}
 output_field_reliability:
   office: guaranteed
   table: guaranteed

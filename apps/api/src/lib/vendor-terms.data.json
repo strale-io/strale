@@ -343,7 +343,7 @@
     "resale": "permitted",
     "terms_url": "https://www.scb.se/en/services/open-data-api/",
     "accessed": "2026-11-06",
-    "how_read": "Read the official English Statistics Sweden Open data via API page through the web search reader on 2026-11-06; direct API requests from the build container were blocked by its CONNECT proxy.",
+    "how_read": "Fetched the official English Statistics Sweden Open data via API page (https://www.scb.se/en/services/open-data-api/) directly on 2026-11-06 and read the licence statement; the API host was also exercised live (metadata GET and json-stat2 POST for all eight allowlisted tables).",
     "findings": ["The official page says SCB uses CC0 for API data, allowing use and dissemination without source attribution. If attribution is chosen it recommends ‘Source: Statistics Sweden’. Statistics attributed to another agency require that agency to be named, and processed data must not be presented as sourced by Statistics Sweden."],
     "decision_ref": "DEC-20261023-A; portfolio plan item 2.10",
     "basis": "published_terms"
@@ -356,20 +356,20 @@
     "resale": "permitted",
     "terms_url": "https://www.ssb.no/en/api",
     "accessed": "2026-11-06",
-    "how_read": "Read Statistics Norway’s official English Public APIs page through the web search reader on 2026-11-06; direct API requests from the build container were blocked by its CONNECT proxy.",
+    "how_read": "Fetched Statistics Norway’s official English Public APIs page (https://www.ssb.no/en/api) directly on 2026-11-06 and read the licence statement (“Like the rest of ssb.no, the APIs use the license CC BY 4.0”); the v0 API host was also exercised live for all eight allowlisted tables.",
     "findings": ["Statistics Norway’s Public APIs page says its open, registration-free APIs use CC BY 4.0. The linked current PxWebApi v2 guide repeats CC BY 4.0 and identifies v2 as current; the executor conservatively attributes Statistics Norway, links the licence and identifies Strale’s reshaping."],
     "decision_ref": "DEC-20261023-A; portfolio plan item 2.10",
     "basis": "published_terms"
   },
   {
     "vendor": "Statistics Finland",
-    "hosts": ["pxweb2.stat.fi"],
-    "url_prefixes": ["https://pxweb2.stat.fi/PxWeb/api/v1/"],
+    "hosts": ["pxdata.stat.fi"],
+    "url_prefixes": ["https://pxdata.stat.fi/PxWeb/api/v1/"],
     "capabilities": ["nordic-statistics"],
     "resale": "permitted",
     "terms_url": "https://stat.fi/en/services/statistical-data-services/open-data-and-interfaces",
     "accessed": "2026-11-06",
-    "how_read": "Read Statistics Finland’s official English Open data and interfaces page through the web search reader on 2026-11-06; direct API requests from the build container were blocked by its CONNECT proxy.",
+    "how_read": "Fetched Statistics Finland’s official English Open data and interfaces page (https://stat.fi/en/services/statistical-data-services/open-data-and-interfaces) directly on 2026-11-06 and read the licence statement (“uses the open data licence – CC BY 4.0 … provided that the source is mentioned”); the page links the PxWeb database at pxdata.stat.fi, which was exercised live for all eight allowlisted tables.",
     "findings": ["Statistics Finland states that it uses the CC BY 4.0 open-data licence and permits use in every way provided the source is mentioned. Its published terms require the source, table or product, material version date, CC BY 4.0 reference and licence hyperlink; Strale identifies its reshaping."],
     "decision_ref": "DEC-20261023-A; portfolio plan item 2.10",
     "basis": "published_terms"
