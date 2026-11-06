@@ -13,7 +13,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { hasSubstance } from "./company-enrich.js";
+import { enrichCompanyHtml, hasSubstance, mergeCompanyEnrichment, siteMetadataFields } from "./company-enrich.js";
+import { extractStructuredCompanyMetadata } from "../lib/company-enrich/structured-metadata.js";
 
 const ALL_NULL = {
   company_name: null,
@@ -75,5 +76,70 @@ describe("hasSubstance — accepts", () => {
         tech_stack: ["Google Cloud"],
       }),
     ).toBe(true);
+  });
+});
+
+describe("structured metadata merge", () => {
+  it("keeps publisher metadata when Claude returns conflicting values", async () => {
+    const html = `
+      <meta name="description" content="SEO from the site">
+      <script type="application/ld+json">{"@type":"Organization","name":"Site Name","description":"Site description","logo":"/logo.png","email":"hello@example.com","address":{"addressLocality":"Stockholm"}}</script>
+    `;
+    let receivedPrompt = "";
+    const result = await enrichCompanyHtml(html, "https://example.com", "example.com", async (prompt) => {
+      receivedPrompt = prompt;
+      return {
+        company_name: "Invented Name",
+        description: "Invented description",
+        logo_url: "https://wrong.test/logo.png",
+        email: "invented@wrong.test",
+        address: { city: "Invented City" },
+        industry: "Software",
+      };
+    });
+
+    expect(receivedPrompt).toContain('"company_name":"Site Name"');
+    expect(receivedPrompt).toContain("authoritative; preserve these values and fill only gaps");
+    expect(result.output).toMatchObject({
+      company_name: "Site Name",
+      description: "Site description",
+      seo_description: "SEO from the site",
+      logo_url: "https://example.com/logo.png",
+      email: "hello@example.com",
+      address: { street: null, city: "Stockholm", region: null, postal_code: null, country: null },
+      industry: "Software",
+    });
+  });
+
+  it("uses Claude for ordinary gaps but never for invented contact or address fields", () => {
+    const structured = extractStructuredCompanyMetadata("", "https://example.com");
+    expect(mergeCompanyEnrichment({
+      description: "Claude description",
+      email: "made-up@example.com",
+      logo_url: "https://example.com/made-up.png",
+      address: { city: "Made up" },
+      specialties: ["SaaS"],
+    }, structured, "https://example.com")).toMatchObject({
+      description: "Claude description",
+      email: null,
+      logo_url: null,
+      address: { street: null, city: null, region: null, postal_code: null, country: null },
+      specialties: ["SaaS"],
+    });
+  });
+
+  it("does not turn sparse image metadata into a substantive paid result", () => {
+    const structured = extractStructuredCompanyMetadata('<meta property="og:image" content="/cover.png">', "https://example.com");
+    const output = mergeCompanyEnrichment({}, structured, "https://example.com");
+    expect(output).toMatchObject({ description: null, cover_image_url: "https://example.com/cover.png" });
+    expect(hasSubstance(output)).toBe(false);
+  });
+
+  it("attributes only the fields actually supplied by site metadata", () => {
+    const structured = extractStructuredCompanyMetadata(`
+      <meta property="og:site_name" content="Site Name">
+      <script type="application/ld+json">{"@type":"Organization","address":{"addressCountry":"SE"}}</script>
+    `, "https://example.com");
+    expect(siteMetadataFields(structured)).toEqual(["company_name", "address.country"]);
   });
 });
