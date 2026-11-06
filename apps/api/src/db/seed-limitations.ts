@@ -165,14 +165,14 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "If you use a private CA, compare the returned issuer fingerprint against your internal CA's known fingerprint" },
 
   // ── domain-reputation ──
-  { capabilitySlug: "domain-reputation", category: "accuracy", severity: "info",
-    title: "A single blocklist appearance may not indicate actual malicious activity",
-    limitationText: "Reputation scores aggregate multiple blocklists — a single listing may not indicate actual malicious activity",
-    workaround: "Check which specific blocklist flagged the domain in the response details and verify the listing reason before blocking" },
+  { capabilitySlug: "domain-reputation", category: "accuracy", severity: "warning",
+    title: "No blocklist or threat-intelligence lookup",
+    limitationText: "The score comes only from the domain's DNS records (A, MX, SPF, DMARC), one HTTPS request for security headers, and name patterns such as suspicious TLDs. It does not consult blocklists, threat-intelligence feeds or domain age, so a high score does not mean the domain is safe.",
+    workaround: "For phishing or malware screening, combine this with a dedicated blocklist or threat-intelligence source; use whois-lookup for domain age" },
   { capabilitySlug: "domain-reputation", category: "freshness", severity: "info",
-    title: "Blocklist data refreshes daily, so resolved issues may still show negative reputation for 24-48 hours",
-    limitationText: "Blocklist data refreshed daily — recently resolved issues may still show negative reputation for 24-48 hours",
-    workaround: "If a domain was recently cleaned, re-check after 48 hours and use the trend direction to assess improvement" },
+    title: "Computed live on every call",
+    limitationText: "Every call reads the domain's current DNS and HTTPS responses, so a fixed record shows at once, and a timeout or temporary DNS failure lowers the score for that call only.",
+    workaround: "If a result looks wrong for a domain that normally works, re-run the check before acting on the score" },
 
   // ── sanctions-check ──
   { capabilitySlug: "sanctions-check", category: "freshness", severity: "info",
