@@ -40,7 +40,7 @@ export const FRI_ONLY_OFF: ReadonlySet<string> = new Set([
 ]);
 
 function isWeekend(date: Date, countryCode: string): boolean {
-  const day = date.getDay(); // 0=Sun, 6=Sat
+  const day = date.getUTCDay(); // 0=Sun, 6=Sat; UTC, because dates are parsed as UTC midnight
   if (FRI_SAT_WEEKEND.has(countryCode)) return day === 5 || day === 6;
   if (FRI_ONLY_OFF.has(countryCode)) return day === 5;
   return day === 0 || day === 6; // Standard Sat-Sun
@@ -52,7 +52,7 @@ function formatDate(d: Date): string {
 
 function addDays(d: Date, n: number): Date {
   const result = new Date(d);
-  result.setDate(result.getDate() + n);
+  result.setUTCDate(result.getUTCDate() + n);
   return result;
 }
 
@@ -72,7 +72,7 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
     throw inputRefusal("Invalid date format. Use YYYY-MM-DD.", "date", "Send 'date' as a valid calendar date in YYYY-MM-DD format.");
   }
 
-  const year = date.getFullYear();
+  const year = date.getUTCFullYear();
 
   // Fetch holidays for this country+year
   let holidays: any[] = [];
