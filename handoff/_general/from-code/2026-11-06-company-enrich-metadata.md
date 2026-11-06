@@ -95,3 +95,15 @@ Still open: a meta or icon inside an HTML comment can still win (review N2/M1).
 **Tests:** four new tests fail on fd80ee8f; comment-flood timing tests stay under 1 s.
 
 **Follow-up, not in this change:** `apps/api/src/capabilities/lib/readability-convert.ts` (used by the free `url-to-markdown`) hands whole fetched pages to jsdom. Nesting and attribute floods may stall it in the same way. Measure it at `MAX_FETCHED_HTML_BYTES` and bound it with a depth limiter, a worker with a timeout, or a smaller cap. An attempt to queue this as a suggested task timed out, so it is recorded here.
+
+## After the review of 9495c926 (PASS-WITH-FIXES, fixes applied)
+
+**Fixes applied:**
+- **Lowercasing done once.** `stripHtmlComments` now also returns the lowercased copy, built from the same slices, so the page is not lowercased twice.
+- **Unquoted attribute values run to whitespace.** The value class is now `[^\s>]+`, which matches the state in `tagEnd`. `content=O'Brien` reads "O'Brien".
+- **The metadata scans read the first 4 MB of the page (`METADATA_SCAN_LIMIT`).** This brings the worst known 16 MB page from about 0.85 s to about 0.5 s. The cap is stated in the manifest limitation. The run-2 test that found JSON-LD at the end of a 10 MB page now uses 3 MB, and a new test pins the cap.
+
+**Accepted low items:**
+- A `<!--` inside an attribute value, `<title>` or `<textarea>`, with no later `-->`, drops the rest of the page. The result is null, never a dead value billed.
+- Raw `<style>` text in an attribute, or an SVG style holding a comment, followed by a real style block, can surface a commented-out block. This is contrived.
+- Bogus comments (`<!- ->`, `<?php ?>`) are read as markup.

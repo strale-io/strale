@@ -165,7 +165,7 @@ limitations:
       Check provenance.field_sources in the response and independently verify critical data points against the listed
       sources
   - title: Homepage publication limits metadata coverage
-    text: Coverage depends on content and structured metadata published by the company's homepage and its /about page; contact, address and image fields that are not published are null.
+    text: Coverage depends on content and structured metadata published by the company's homepage and its /about page; contact, address and image fields that are not published are null. Structured metadata is read from the first 4 MB of the homepage.
     category: coverage
     severity: info
     workaround: Use the null fields as an explicit signal that the homepage or its /about page did not publish that metadata.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
-import { buildBoundedMetadataHtml, extractStructuredCompanyMetadata, METADATA_HTML_LIMIT, stripScriptAndStyleBlocks } from "./structured-metadata.js";
+import { buildBoundedMetadataHtml, extractStructuredCompanyMetadata, METADATA_HTML_LIMIT, METADATA_SCAN_LIMIT, stripScriptAndStyleBlocks } from "./structured-metadata.js";
 
 const PAGE = "https://example.com/";
 
@@ -106,8 +106,8 @@ describe("extractStructuredCompanyMetadata", () => {
     expect(metadata.social_links).toEqual({ linkedin: null, twitter: "https://social.twitter.com/acme", github: null });
   });
 
-  it("bounds jsdom input while finding JSON-LD at the end of a 10 MB page", () => {
-    const html = `<head><meta property="og:site_name" content="Bounded Co"></head>${"x".repeat(10 * 1024 * 1024)}<script type="application/ld+json">{"@type":"Organization","name":"Tail Co"}</script>`;
+  it("bounds jsdom input while finding JSON-LD late in a large page", () => {
+    const html = `<head><meta property="og:site_name" content="Bounded Co"></head>${"x".repeat(3 * 1024 * 1024)}<script type="application/ld+json">{"@type":"Organization","name":"Tail Co"}</script>`;
     let parserInputLength = 0;
     const metadata = extractStructuredCompanyMetadata(html, PAGE, (boundedHtml) => {
       parserInputLength = boundedHtml.length;
@@ -116,6 +116,11 @@ describe("extractStructuredCompanyMetadata", () => {
     expect(metadata.company_name).toBe("Tail Co");
     expect(parserInputLength).toBeGreaterThan(0);
     expect(parserInputLength).toBeLessThanOrEqual(METADATA_HTML_LIMIT);
+  });
+
+  it("reads metadata from the first METADATA_SCAN_LIMIT of the page only (stated limitation)", () => {
+    const html = `<head><meta property="og:site_name" content="Bounded Co"></head>${"x".repeat(METADATA_SCAN_LIMIT)}<script type="application/ld+json">{"@type":"Organization","name":"Tail Co"}</script>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE).company_name).toBe("Bounded Co");
   });
 
   it("accepts organization variants, prefers the site-matching node, and normalizes address forms", () => {
@@ -365,6 +370,18 @@ describe("buildBoundedMetadataHtml", () => {
     const started = performance.now();
     extractStructuredCompanyMetadata(html, PAGE);
     expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it("keeps a quote inside an unquoted value, as a browser does", () => {
+    const html = `<html><head><meta property=og:site_name content=O'Brien></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE).company_name).toBe("O'Brien");
+  });
+
+  it("finishes the worst known 16 MB page well under a second", () => {
+    const block = `<script type="application/ld+json">{"x":"${"<".repeat(200_000)}"}</script>`;
+    const html = (block + "<!-- --!>-->").repeat(Math.ceil(16 * 1024 * 1024 / (block.length + 12)));
+    const { ms } = timed(html);
+    expect(ms).toBeLessThan(1_000);
   });
 
   it("does not take <header> for <head> on a page that omits the head tag", () => {

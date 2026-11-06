@@ -33,6 +33,12 @@ const ICON_TAG_LIMIT = 4 * 1024;
 export const METADATA_HTML_LIMIT = 1_500 * 1024;
 /** How far into the page the head is searched before it is stripped and capped. */
 const HEAD_SCAN_LIMIT = 2 * 1024 * 1024;
+/**
+ * How much of the page the metadata scans read. Head tags and JSON-LD sit at
+ * the top of a page; a cap keeps every linear pass over a hostile 16 MB page
+ * (runs of "<" are the slow case for indexOf) well under a second.
+ */
+export const METADATA_SCAN_LIMIT = 4 * 1024 * 1024;
 
 /**
  * Lowercases for tag matching while keeping every position aligned with the
@@ -63,8 +69,18 @@ export function asciiLowerCase(text: string): string {
  * position is cached until the cursor passes it, so the pass stays linear.
  */
 export function stripHtmlComments(source: string): string {
+  return stripHtmlCommentsWithLower(source).text;
+}
+
+/** As stripHtmlComments, also returning the lowercased copy built from the same slices. */
+function stripHtmlCommentsWithLower(source: string): { text: string; lower: string } {
   const lower = asciiLowerCase(source);
   const pieces: string[] = [];
+  const lowerPieces: string[] = [];
+  const keep = (from: number, to?: number) => {
+    pieces.push(source.slice(from, to));
+    lowerPieces.push(lower.slice(from, to));
+  };
   let cursor = 0;
   let nextComment = -2;
   let nextScript = -2;
@@ -79,12 +95,12 @@ export function stripHtmlComments(source: string): string {
     nextStyle = refresh(nextStyle, "<style", cursor);
     const candidates = [nextComment, nextScript, nextStyle].filter((p) => p >= 0);
     if (candidates.length === 0) {
-      pieces.push(source.slice(cursor));
+      keep(cursor);
       break;
     }
     const start = Math.min(...candidates);
     if (start === nextComment) {
-      pieces.push(source.slice(cursor, start));
+      keep(cursor, start);
       if (lower.startsWith("<!-->", start)) {
         cursor = start + 5;
         continue;
@@ -105,13 +121,13 @@ export function stripHtmlComments(source: string): string {
     const close = lower.indexOf(closeTag, start + 1);
     const closeEnd = close < 0 ? -1 : lower.indexOf(">", close);
     if (closeEnd < 0) {
-      pieces.push(source.slice(cursor));
+      keep(cursor);
       break;
     }
-    pieces.push(source.slice(cursor, closeEnd + 1));
+    keep(cursor, closeEnd + 1);
     cursor = closeEnd + 1;
   }
-  return pieces.join("");
+  return { text: pieces.join(""), lower: lowerPieces.join("") };
 }
 
 /**
@@ -269,7 +285,7 @@ function quotesBalanced(tag: string): boolean {
 // The lookbehind anchors a name to the start of a token: an unanchored
 // `[a-zA-Z-]+` retried from every position of a long letter run, which made a
 // 4 KB tag cost milliseconds and a page of them tens of seconds.
-const LINK_ATTRIBUTE = /(?<=[\s"'\/])([^\s"'>\/=]+)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
+const LINK_ATTRIBUTE = /(?<=[\s"'\/])([^\s"'>\/=]+)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/g;
 /** Icon-looking tags examined per page, whether or not they yield an icon. */
 const ICON_CANDIDATE_LIMIT = 64;
 
@@ -382,8 +398,9 @@ export function buildBoundedMetadataHtml(
   // Everything below reads the page as a browser would see it: commented-out
   // tags (a theme's placeholder og:site_name, a rebrand's old JSON-LD) are
   // not statements the site makes.
-  html = stripHtmlComments(html);
-  const lower = asciiLowerCase(html);
+  const live = stripHtmlCommentsWithLower(html.slice(0, METADATA_SCAN_LIMIT));
+  html = live.text;
+  const lower = live.lower;
   // "<head" alone would also match "<header", and HTML5 lets a page omit the
   // <head> tag, so require the tag name to end there.
   const headMatch = /<head[\s>]/.exec(lower);
