@@ -71,6 +71,10 @@
 //                   The lane pool is NOT part of the stop path: a session never sends work to
 //                   another agent unless the founder asks (founder decision 2026-10-08).
 //
+// Cloud parent folder: in a Claude Code cloud session, pre-tool-use and session-start in the hook's own primary checkout
+// also wire <parent>/.claude/settings.json (`--via-parent`) for turns that start in the checkout's parent folder; see
+// "Parent-folder wiring" below and templates/cloud-runner/README.md.
+//
 // The dispatcher's own errors fail open too (exit 0, stderr note), and every child and the
 // dispatcher itself run under a deadline below the host's hook timeout.
 //
@@ -78,7 +82,7 @@
 // overrides every child timeout; WOW_SESSION_MARKER_TTL_HOURS bounds peer-marker age.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
-  closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync,
+  closeSync, existsSync, linkSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
@@ -198,8 +202,167 @@ export function ownCheckoutRoot(self = SELF) {
   const root = path.dirname(dir);
   return path.basename(dir) === "scripts" && path.basename(root) !== ".claude" ? root : null;
 }
+// The checkout that holds this hook in either layout: wow-core's own (<root>/scripts) or a consumer's (<root>/.claude/scripts),
+// a primary checkout or a worktree; null for any other copy (the user-level Codex install in ~/.codex/wow-core).
+export function hookCheckoutRoot(self = SELF) {
+  const dir = path.dirname(self);
+  if (path.basename(dir) !== "scripts") return null;
+  const up = path.dirname(dir);
+  const root = path.basename(up) === ".claude" ? path.dirname(up) : up;
+  return existsSync(path.join(root, ".git")) ? root : null;
+}
+// Compared after realpath: the hook's own path is the real one (node resolves the main module), while a payload cwd or
+// CLAUDE_PROJECT_DIR may go through a symlink or, on Windows, an 8.3 short name (RUNNER~1).
+const realDir = (value) => { try { return normDir(realpathSync.native(value)); } catch { return normDir(value); } };
+const sameDir = (a, b) => Boolean(a && b) && realDir(a) === realDir(b);
+// The host's project directory (CLAUDE_PROJECT_DIR). In a turn that starts in the parent folder of this hook's checkout
+// (see "Parent-folder wiring" below) the host names the parent: read it as the checkout, so the spawn rule's master
+// exemption and roster refusal hold there exactly as in a turn started in the checkout.
+export function hostProjectDir(env = process.env, self = SELF) {
+  const dir = typeof env.CLAUDE_PROJECT_DIR === "string" && env.CLAUDE_PROJECT_DIR ? path.resolve(env.CLAUDE_PROJECT_DIR) : null;
+  const own = hookCheckoutRoot(self);
+  return dir && own && sameDir(path.dirname(own), dir) ? own : dir;
+}
 // The host project is wow-core AND this hook is wow-core's own copy: the only test for the master's exemptions.
 const isWowCoreHost = (projectDir) => Boolean(projectDir && ownCheckoutRoot() && isWowCore(projectDir));
+
+// ---- Parent-folder wiring (evidence 2026-11-05) ----
+// In a Claude Code cloud session every turn starts a fresh Claude Code process in the session's primary working
+// directory, which moves between the checkout (/home/user/<repo>) and its parent folder (/home/user): to the parent once
+// the session has attached more repositories, and after shell commands that end outside the checkout. A turn started in
+// the parent loaded no project settings, so no hook of this file ran there (the wow-core master's own system/init events
+// showed /home/user at 20:42, 20:53 and 20:55Z; the Codex dispatcher's push attach of strale-io/strale was refused by the
+// classifier at ~20:30Z although this hook allows that payload). So, in a cloud session, this hook's FIRST call in its own
+// primary checkout (pre-tool-use for every profile, session-start too for full consumers) writes
+// <parent>/.claude/settings.json: the same wow-hook entries as the checkout's own .claude/settings.json (event, matcher,
+// timeout; derived from it on every call in the owning checkout or a parent turn, so they cannot drift), by the absolute path of this hook and with
+// `--via-parent`, plus the checkout's permissions.deny list exactly (deny only: it can only narrow; parentDenyFor). Nothing
+// else is copied: no allow, ask or defaultMode, status line or project-owned hook. Ownership: the file carries PARENT_OWNER_KEY naming the checkout; a file without it is never touched
+// (one warning line per container). First checkout wins: a file owned by another checkout is left alone, silently, so a
+// second repository in the same session never replaces the first's wiring; only the owning checkout rewrites it, and
+// only when its derived entries change. A failure prints one line and the hook carries on.
+export const PARENT_OWNER_KEY = "$wow-core-parent-hooks";
+export const VIA_PARENT = "--via-parent";
+const DISPATCHER_COMMAND = /^node\s+(?:"\$CLAUDE_PROJECT_DIR\/((?:\.claude\/)?scripts\/wow-hook\.mjs)"|((?:\.claude\/)?scripts\/wow-hook\.mjs))\s+([a-z-]+)(?:\s+--tool\s+claude)?$/;
+const SAFE_PATH = /^[A-Za-z0-9._@+~/: -]+$/; // the path goes inside double quotes in a shell command: no $, `, ", \ or !
+const toPosix = (p) => p.replace(/\\/g, "/");
+
+// The parent's hooks object for the checkout's settings text: only this hook's own entries, rewritten by absolute path.
+export function parentHooksFor(settingsText, root, self = SELF) {
+  const settings = JSON.parse(settingsText);
+  const out = {};
+  for (const [event, groups] of Object.entries(settings?.hooks ?? {})) {
+    if (!Array.isArray(groups)) continue;
+    for (const group of groups) {
+      const hooks = [];
+      for (const hook of Array.isArray(group?.hooks) ? group.hooks : []) {
+        const m = hook?.type === "command" && typeof hook.command === "string" ? hook.command.trim().match(DISPATCHER_COMMAND) : null;
+        if (!m || !MODES.includes(m[3]) || !sameDir(path.resolve(root, m[1] ?? m[2]), self)) continue;
+        hooks.push({ type: "command", command: `node "${toPosix(self)}" ${m[3]} --tool claude ${VIA_PARENT}`, ...(Number.isFinite(hook.timeout) ? { timeout: hook.timeout } : {}) });
+      }
+      if (hooks.length) (out[event] ??= []).push({ ...(typeof group.matcher === "string" && group.matcher ? { matcher: group.matcher } : {}), hooks });
+    }
+  }
+  return out;
+}
+
+// The checkout's permissions.deny list, exactly, and nothing else of its permissions: a deny can only narrow what a
+// parent turn may do (the hard-stop list, #251: mail send, deletes, hand merges), while allow, ask and defaultMode would
+// widen or change it, so they are never copied (coordinator 2026-11-05). Re-derived on every call, like the hooks.
+export function parentDenyFor(settingsText) {
+  const deny = JSON.parse(settingsText)?.permissions?.deny;
+  return Array.isArray(deny) ? deny.filter((entry) => typeof entry === "string") : [];
+}
+
+// Why a parent file owned by another checkout deserves a look, or null: it carries anything this hook never writes (a key
+// besides the owner key, hooks and permissions.deny; permissions other than deny), or its owner is not an existing
+// primary checkout. Such a file is still left alone (first checkout wins), but not silently.
+function otherOwnerConcern(text, checkout) {
+  const parsed = JSON.parse(text);
+  const extra = Object.keys(parsed).filter((key) => ![PARENT_OWNER_KEY, "hooks", "permissions"].includes(key));
+  const perms = parsed.permissions;
+  if (perms !== undefined) {
+    if (!perms || typeof perms !== "object" || Array.isArray(perms)) extra.push("permissions");
+    else extra.push(...Object.keys(perms).filter((key) => key !== "deny").map((key) => `permissions.${key}`));
+  }
+  if (extra.length) return `it carries ${extra.join(", ")}, which wow-core never writes there`;
+  let primary = false;
+  try { primary = statSync(path.join(checkout, ".git")).isDirectory(); } catch { /* not a checkout */ }
+  return primary ? null : "that is not an existing primary checkout";
+}
+
+// Prints `message` once per container for this parent file and kind (a stamp file under the OS temp folder).
+function noteOnce(kind, file, message, env) {
+  const dir = typeof env.WOW_PARENT_HOOKS_STATE_DIR === "string" && env.WOW_PARENT_HOOKS_STATE_DIR ? env.WOW_PARENT_HOOKS_STATE_DIR : os.tmpdir();
+  const stamp = path.join(dir, `wow-parent-hooks-${createHash("sha256").update(`${kind}\n${file}`).digest("hex").slice(0, 16)}.noted`);
+  try { closeSync(openSync(stamp, "wx")); } catch (error) { if (error?.code === "EEXIST") return; }
+  note(message);
+}
+
+// { status, file } — written | updated | current | other-checkout | foreign | skipped | failed. Never throws.
+// create: false (a --via-parent call) only refreshes a file this checkout already owns; it never creates one, so a
+// by-hand --via-parent run cannot make its checkout the owner (only the seeding call from the checkout's own wiring can).
+export function ensureParentHooks({ root, self = SELF, env = process.env, create = true }) {
+  const parent = path.dirname(root);
+  const file = path.join(parent, ".claude", "settings.json");
+  try {
+    if (env.CLAUDE_CODE_REMOTE !== "true" || isLinkedWorktree(root)) return { status: "skipped", file };
+    // Never the user's own settings (loaded in every turn, so the hooks would run twice) or a filesystem root.
+    if (sameDir(parent, os.homedir()) || path.dirname(parent) === parent || !SAFE_PATH.test(toPosix(self))) return { status: "skipped", file };
+    let existing = null;
+    try { existing = readFileSync(file, "utf8"); } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    if (existing === null && !create) return { status: "skipped", file };
+    if (existing !== null) {
+      let owner;
+      try { owner = JSON.parse(existing)?.[PARENT_OWNER_KEY]; } catch { owner = undefined; }
+      if (!owner || typeof owner !== "object" || typeof owner.checkout !== "string") {
+        noteOnce("foreign", file, `${file} was not written by wow-core; left as it is, so a turn that starts in ${parent} runs none of this checkout's hooks.`, env);
+        return { status: "foreign", file };
+      }
+      if (!sameDir(owner.checkout, root)) {
+        const why = otherOwnerConcern(existing, owner.checkout);
+        if (why) noteOnce("other-checkout", file, `${file} is owned by another checkout (${owner.checkout}) but ${why}; left as it is. Remove it if no wow-core checkout wrote it.`, env);
+        return { status: "other-checkout", file };
+      }
+    }
+    const checkoutText = readFileSync(path.join(root, ".claude", "settings.json"), "utf8");
+    const hooks = parentHooksFor(checkoutText, root, self);
+    const deny = parentDenyFor(checkoutText);
+    if (existing === null && !Object.keys(hooks).length) return { status: "skipped", file };
+    const text = `${JSON.stringify({
+      [PARENT_OWNER_KEY]: { checkout: toPosix(root), note: `Written by ${toPosix(self)} for cloud turns that start in this folder; it is rewritten from ${toPosix(path.join(root, ".claude/settings.json"))}. Remove this file to unwire.` },
+      ...(deny.length ? { permissions: { deny } } : {}),
+      hooks,
+    }, null, 2)}\n`;
+    if (existing === text) return { status: "current", file };
+    mkdirSync(path.dirname(file), { recursive: true });
+    const temp = `${file}.${process.pid}-${createHash("sha256").update(`${Date.now()}${Math.random()}`).digest("hex").slice(0, 8)}.tmp`;
+    writeFileSync(temp, text);
+    try {
+      if (existing !== null) { renameSync(temp, file); return { status: "updated", file }; }
+      // Create: a hard link appears whole or not at all and refuses an existing file, so the first checkout wins a race.
+      try { linkSync(temp, file); } catch (error) {
+        if (error?.code === "EEXIST") return { status: "other-checkout", file };
+        writeFileSync(file, text, { flag: "wx" });
+      }
+      return { status: "written", file };
+    } finally { try { rmSync(temp, { force: true }); } catch { /* ignore */ } }
+  } catch (error) {
+    noteOnce("failed", file, `could not write ${file} (${String(error?.message ?? error).split("\n")[0]}); a turn that starts in ${parent} runs none of this checkout's hooks.`, env);
+    return { status: "failed", file };
+  }
+}
+
+// Whether a `--via-parent` call (the copy wired into the parent folder) should act: only when the host's project is
+// that parent folder. In a turn whose project is the checkout the checkout's own wiring runs, so this copy does nothing
+// and no hook runs twice. Without CLAUDE_PROJECT_DIR, only when the payload cwd is not inside the checkout: that fallback
+// also skips a parent turn whose shell has moved into the checkout (the host normally sets CLAUDE_PROJECT_DIR).
+export function parentWiringApplies({ own, found, env = process.env }) {
+  if (!own) return false;
+  const dir = typeof env.CLAUDE_PROJECT_DIR === "string" && env.CLAUDE_PROJECT_DIR ? env.CLAUDE_PROJECT_DIR : null;
+  if (dir) return sameDir(path.dirname(own), dir);
+  return !sameDir(found, own);
+}
 export const isConsumer = (root) =>
   has(root, ".claude/wow-core.version") || has(root, ".claude/wow-core.partial") || isWowCore(root);
 const firstExisting = (root, rels) => rels.find((rel) => has(root, rel)) ?? null;
@@ -449,7 +612,7 @@ export function spawnDecision(payload, env = process.env, now = Date.now(), { ex
     // master) never starts a roster master: the founder does, in its own project, so it is not this
     // session's child in the app (founder 2026-11-02, takeover step 5). wow-core's own row is exempt by its
     // repository name: this file also ships to comms consumers, which may be public, so it names no owner.
-    const projectDir = typeof env.CLAUDE_PROJECT_DIR === "string" && env.CLAUDE_PROJECT_DIR ? path.resolve(env.CLAUDE_PROJECT_DIR) : null;
+    const projectDir = hostProjectDir(env);
     const target = githubRepo(input.source_url);
     // The lease-named PC helper (exemptCaps) starts PC sessions in project repositories on the
     // founder's PC; those are one-job sessions, never masters (2026-11-04: the probe was refused here).
@@ -1227,38 +1390,39 @@ async function handoffLines(root, input) {
 
 // root is null when the payload cwd is outside any wow-core consumer: the shell policy and marker
 // refresh are skipped, but a `git -C <primary-checkout> commit` is still guarded against the
-// TARGET repo's presence markers.
+// TARGET repo's presence markers. workDir is where the shell policy and the bus children look: the
+// payload cwd, or this hook's checkout when the cwd is that checkout's parent folder.
 // Codex sends its shell payload without a tool_name: a payload with no name and a string command is its Bash.
 const ROUTED_TOOL = (name, input) => name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string")
   || name === ADD_REPO_TOOL || isCreateSession(name) || isConfirmTrust(name);
-async function preToolUse(root, payload, cwd) {
+async function preToolUse(root, payload, cwd, workDir = cwd) {
   // The settings route every tool here ("*") for the old-account fence; everything else below is per tool.
-  const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd });
+  const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd: workDir });
   if (fence.fenced) return `${JSON.stringify(denyResponse(fence.reason))}\n`;
   if (!ROUTED_TOOL(payload?.tool_name, payload?.tool_input)) return "";
   if (payload?.tool_name === ADD_REPO_TOOL) {
-    const decision = busAttachDecision(payload.tool_input) ?? await codexDispatcherAttachDecision({ input: payload.tool_input, cwd });
+    const decision = busAttachDecision(payload.tool_input) ?? await codexDispatcherAttachDecision({ input: payload.tool_input, cwd: workDir });
     return decision ? `${JSON.stringify(decision)}\n` : "";
   }
   if (isCreateSession(payload?.tool_name)) {
-    return `${JSON.stringify(spawnDecision(payload, process.env, Date.now(), { exemptCaps: await isLeasedPcHelper(payload, cwd) }))}\n`;
+    return `${JSON.stringify(spawnDecision(payload, process.env, Date.now(), { exemptCaps: await isLeasedPcHelper(payload, workDir) }))}\n`;
   }
   if (isConfirmTrust(payload?.tool_name)) {
-    const gate = await pcHelperGate({ cwd });
+    const gate = await pcHelperGate({ cwd: workDir });
     const hookSpecificOutput = { hookEventName: "PreToolUse", permissionDecision: gate.allow ? "allow" : "deny", permissionDecisionReason: gate.reason };
     return `${JSON.stringify({ hookSpecificOutput })}\n`;
   }
   const command = payload?.tool_input?.command;
   const leaseAccount = leaseAccountGuard(command);
   if (leaseAccount) return `${JSON.stringify(denyResponse(leaseAccount))}\n`;
-  const helperLease = await pcHelperLeaseGuard({ command, cwd });
+  const helperLease = await pcHelperLeaseGuard({ command, cwd: workDir });
   if (helperLease) return `${JSON.stringify(denyResponse(helperLease))}\n`;
   if (root) touchMarker(root, payload.session_id);
   const policy = root ? firstExisting(root, [".claude/hooks/guard-bash-policy.mjs", "hooks/guard-bash-policy.mjs"]) : null;
   if (policy) {
     try {
       const { evaluate, response } = await import(pathToFileURL(path.resolve(root, policy)).href);
-      const reason = evaluate(command, cwd);
+      const reason = evaluate(command, workDir);
       if (reason) return `${JSON.stringify(response(reason))}\n`;
     } catch (error) {
       note(`bash policy failed, allowing: ${error?.message ?? error}`);
@@ -1267,16 +1431,30 @@ async function preToolUse(root, payload, cwd) {
   const guard = guardSharedTree({ command, sid: payload.session_id, cwd });
   for (const warning of guard.warnings) note(warning);
   if (guard.reason) return `${JSON.stringify(denyResponse(guard.reason))}\n`;
-  const pushReason = await pushCheck({ command, cwd, fresh: fence.fresh, transcriptPath: payload?.transcript_path, leaseAccount: fence.account });
+  const pushReason = await pushCheck({ command, cwd: workDir, fresh: fence.fresh, transcriptPath: payload?.transcript_path, leaseAccount: fence.account });
   return pushReason ? `${JSON.stringify(denyResponse(pushReason))}\n` : "";
 }
 
-export async function dispatch(mode, raw, tool) {
+export async function dispatch(mode, raw, tool, { viaParent = false, env = process.env } = {}) {
   const payload = parsePayload(raw);
   const cwd = typeof payload.cwd === "string" && payload.cwd && existsSync(payload.cwd) ? payload.cwd : process.cwd();
   const found = findRoot(cwd);
-  const root = found && isConsumer(found) ? found : null;
-  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd);
+  const own = hookCheckoutRoot();
+  // The copy wired into the parent folder acts only in a turn whose project is that folder (no hook runs twice).
+  if (viaParent && !parentWiringApplies({ own, found, env })) return "";
+  // A cwd that is this hook's checkout's parent folder (no repository there) resolves to that checkout, so a turn that
+  // starts in the parent gets the same root, shell policy, markers and Stop gate as one started in the checkout.
+  const fromParent = !found && Boolean(own) && sameDir(path.dirname(own), cwd);
+  const repoRoot = fromParent ? own : found;
+  const root = repoRoot && isConsumer(repoRoot) ? repoRoot : null;
+  const workDir = fromParent ? own : cwd;
+  // Keep the parent folder wired for turns that start there: from the checkout's own wiring (the host's project is the
+  // checkout and the cwd is in it; a by-hand run must pass CLAUDE_PROJECT_DIR=<checkout>, so a script or an attached
+  // repository's hook cannot make the wrong checkout the owner), and from the parent wiring itself, so a session whose
+  // turns all start in the parent still follows the checkout's settings (ownership limits that write to this checkout's file).
+  const seeding = !viaParent && sameDir(found, own) && sameDir(env.CLAUDE_PROJECT_DIR, own);
+  if (tool === "claude" && (mode === "pre-tool-use" || mode === "session-start") && (seeding || viaParent)) ensureParentHooks({ root: own, env, create: seeding });
+  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir);
   if (!root) return "";
   switch (mode) {
     case "post-tool-use":
@@ -1293,7 +1471,7 @@ export async function dispatch(mode, raw, tool) {
     case "stop":
       if (isLane(root)) return "";
       // A fenced session cannot act, so the handoff gate would only make it spend more turns on the old account.
-      if ((await fenceCheck({ toolName: "Stop", transcriptPath: payload?.transcript_path, cwd })).fenced) return "";
+      if ((await fenceCheck({ toolName: "Stop", transcriptPath: payload?.transcript_path, cwd: workDir })).fenced) return "";
       return stop(root, raw.trim() ? raw : "{}", tool);
     default:
       return "";
@@ -1325,7 +1503,7 @@ export async function run(forcedTool) {
     const raw = await readStdin();
     trustCall = mode === "pre-tool-use" && isConfirmTrust(parsePayload(raw)?.tool_name);
     const tool = forcedTool ?? detectTool(process.argv, process.env, parsePayload(raw));
-    finish(await dispatch(mode, raw, tool));
+    finish(await dispatch(mode, raw, tool, { viaParent: process.argv.includes(VIA_PARENT) }));
   } catch (error) {
     note(`internal error, ${trustCall ? "denying the trust call (fail-closed)" : "fail-open"}: ${String(error?.stack ?? error).split("\n")[0]}`);
     finish(trustCall ? denyTrustOnFailure("hit an internal error") : "");
