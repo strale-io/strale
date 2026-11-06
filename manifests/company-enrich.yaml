@@ -95,7 +95,7 @@ output_schema:
     specialties:
       type: array
       items: { type: string }
-data_source: The homepage and its /about page structured metadata and Claude analysis
+data_source: "Structured metadata from the company homepage (JSON-LD, Open Graph, meta tags), plus Claude analysis of the homepage and its /about page"
 data_source_type: api
 transparency_tag: ai_generated
 freshness_category: live-fetch

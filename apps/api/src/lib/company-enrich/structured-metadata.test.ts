@@ -154,12 +154,43 @@ describe("buildBoundedMetadataHtml", () => {
     expect(bounded.length).toBeLessThan(129 * 1024);
   });
 
-  it("stops after the first unclosed script while bounding its content", () => {
-    const html = '<script type="application/ld+json">' + '<script '.repeat(Math.ceil(2 * 1024 * 1024 / 8));
+  it.each([
+    ["with a leading JSON-LD opener", '<script type="application/ld+json">'],
+    ["with no JSON-LD opener", ""],
+  ])("stops after the first unclosed script (%s)", (_label, lead) => {
+    // Complete "<script>" openings with no closing tag: the input that made the
+    // run-2 scan re-search to the end of the page for every opening.
+    const html = lead + "<script>".repeat(Math.ceil(2 * 1024 * 1024 / 8));
     const diagnostics = { scriptOpeningsVisited: 0 };
     const bounded = buildBoundedMetadataHtml(html, diagnostics);
     expect(bounded.length).toBeGreaterThan(0);
     expect(bounded.length).toBeLessThanOrEqual(METADATA_HTML_LIMIT);
     expect(diagnostics.scriptOpeningsVisited).toBe(1);
+  });
+
+  const bodyOrganization = `<script type="application/ld+json">${JSON.stringify({
+    "@type": "Organization",
+    name: "Body LD Co",
+    email: "hello@example.com",
+    logo: "/logo.png",
+  })}</script>`;
+
+  it("keeps body JSON-LD when a long head is full of inline CSS", () => {
+    const css = `<style>${"a{color:red}".repeat(Math.ceil(200 * 1024 / 12))}</style>`;
+    const html = `<html><head><title>T</title>${css}<meta property="og:site_name" content="Acme Site"></head><body>${bodyOrganization}</body></html>`;
+    const metadata = extractStructuredCompanyMetadata(html, PAGE);
+    expect(metadata).toMatchObject({ company_name: "Body LD Co", email: "hello@example.com", logo_url: "https://example.com/logo.png" });
+    // Stripping the inline CSS keeps the head's own meta tags inside the cap.
+    expect(buildBoundedMetadataHtml(html)).toContain('og:site_name');
+  });
+
+  it("keeps positions aligned on a page with characters that lowercase to two code units", () => {
+    const html = `<html><head><title>İstanbul İzmir İnegöl</title></head><body><p>İİİ</p>${bodyOrganization}</body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Body LD Co", email: "hello@example.com" });
+  });
+
+  it("does not take <header> for <head> on a page that omits the head tag", () => {
+    const html = `<!doctype html><meta property="og:site_name" content="Acme Co"><meta name="description" content="What Acme does."><header><nav>Menu</nav></header><main>Body</main>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme Co", description: "What Acme does." });
   });
 });

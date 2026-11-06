@@ -189,6 +189,13 @@ describe("structured metadata merge", () => {
     expect(text.length).toBeLessThan(2 * 1024 * 1024);
   });
 
+  it("keeps script content out of the text on a page with İ before the script", () => {
+    const text = pageHtmlToText("<p>İİİ Before</p><script>var secret_code_here = 1;</script><p>After</p>");
+    expect(text).toContain("Before");
+    expect(text).toContain("After");
+    expect(text).not.toContain("secret_code_here");
+  });
+
   it("does not turn sparse image metadata into a substantive paid result", () => {
     const structured = extractStructuredCompanyMetadata('<meta property="og:image" content="/cover.png">', "https://example.com");
     const output = mergeCompanyEnrichment({}, structured, "https://example.com");

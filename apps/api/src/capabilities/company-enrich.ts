@@ -11,6 +11,7 @@ import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { STRALE_USER_AGENT, siteAccessRefusal } from "../lib/site-access.js";
 import { assertPlainPreflightAllowed, assertRenderedTargetAllowed, looksLikeJsChallenge } from "./lib/web-provider.js";
 import {
+  asciiLowerCase,
   extractStructuredCompanyMetadata,
   hasStructuredMetadata,
   type StructuredCompanyMetadata,
@@ -151,7 +152,8 @@ export async function enrichCompanyHtml(
 /** Converts a bounded prefix of publisher HTML to text without backtracking regexes. */
 export function pageHtmlToText(html: string): string {
   const source = html.slice(0, PAGE_HTML_LIMIT);
-  const lower = source.toLowerCase();
+  // ASCII-only lowercasing keeps positions aligned with `source` ("İ" would not).
+  const lower = asciiLowerCase(source);
   let cursor = 0;
   const blockPieces: string[] = [];
   while (cursor < source.length) {

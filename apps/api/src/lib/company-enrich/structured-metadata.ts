@@ -32,6 +32,44 @@ const JSON_LD_COUNT_LIMIT = 20;
 const ICON_COUNT_LIMIT = 8;
 const ICON_TAG_LIMIT = 4 * 1024;
 export const METADATA_HTML_LIMIT = 1_500 * 1024;
+/** How far into the page the head is searched before it is stripped and capped. */
+const HEAD_SCAN_LIMIT = 2 * 1024 * 1024;
+
+/**
+ * Lowercases A-Z only. `String#toLowerCase` can change a string's length
+ * ("İ" becomes two code units), so positions found in its result would cut the
+ * original string in the wrong place. ASCII is all the tag scans need.
+ */
+export function asciiLowerCase(text: string): string {
+  return text.replace(/[A-Z]+/g, (run) => run.toLowerCase());
+}
+
+/**
+ * Drops every <script> and <style> block from a slice of HTML, in one linear
+ * pass. An unclosed block ends the slice, as it would for a browser.
+ */
+function stripScriptAndStyleBlocks(source: string): string {
+  const lower = asciiLowerCase(source);
+  const pieces: string[] = [];
+  let cursor = 0;
+  while (cursor < source.length) {
+    const script = lower.indexOf("<script", cursor);
+    const style = lower.indexOf("<style", cursor);
+    const start = script < 0 ? style : style < 0 ? script : Math.min(script, style);
+    if (start < 0) {
+      pieces.push(source.slice(cursor));
+      break;
+    }
+    pieces.push(source.slice(cursor, start));
+    const closeTag = start === script ? "</script" : "</style";
+    const close = lower.indexOf(closeTag, start + 1);
+    if (close < 0) break;
+    const closeEnd = lower.indexOf(">", close);
+    if (closeEnd < 0) break;
+    cursor = closeEnd + 1;
+  }
+  return pieces.join("");
+}
 const ORGANIZATION_TYPES = new Set([
   "organization", "corporation", "localbusiness", "store",
   // Common direct and nested LocalBusiness descendants. Schema.org does not
@@ -138,21 +176,27 @@ function list(value: unknown): string[] {
 
 /** Selects the small, metadata-bearing portions that jsdom is allowed to parse. */
 export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpeningsVisited: number }): string {
-  const lower = html.toLowerCase();
-  let head = "";
+  const lower = asciiLowerCase(html);
   const jsonLd: string[] = [];
   const icons: string[] = [];
-  const headStart = lower.indexOf("<head");
-  let headEnd = -1;
+  // "<head" alone would also match "<header", and HTML5 lets a page omit the
+  // <head> tag, so require the tag name to end there.
+  const headMatch = /<head[\s>]/.exec(lower);
+  const headStart = headMatch ? headMatch.index : -1;
+  let headRegion: string;
   if (headStart >= 0) {
     const headClose = lower.indexOf("</head>", headStart);
-    headEnd = headClose >= 0 ? headClose + 7 : Math.min(html.length, headStart + HEAD_LIMIT);
-    head = html.slice(headStart, Math.min(headEnd, headStart + HEAD_LIMIT));
+    const headEnd = headClose >= 0 ? headClose + 7 : Math.min(html.length, headStart + HEAD_SCAN_LIMIT);
+    headRegion = html.slice(headStart, Math.min(headEnd, headStart + HEAD_SCAN_LIMIT));
   } else {
     // HTML fragments are common in tests and malformed publisher responses;
     // treat their leading bytes as the implicit head without widening the cap.
-    head = html.slice(0, HEAD_LIMIT);
+    headRegion = html.slice(0, HEAD_SCAN_LIMIT);
   }
+  // Inline scripts and styles carry no metadata here (JSON-LD is collected
+  // below on its own), and inlined critical CSS can be hundreds of KB: strip
+  // them before capping, so the cap keeps the meta and link tags.
+  const head = stripScriptAndStyleBlocks(headRegion).slice(0, HEAD_LIMIT);
 
   let cursor = 0;
   let scriptCount = 0;
@@ -182,7 +226,6 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
     const end = lower.indexOf(">", start);
     if (end < 0) break;
     cursor = end + 1;
-    if (headStart >= 0 && start >= headStart && start < headEnd) continue;
     const tagLength = end + 1 - start;
     if (tagLength > ICON_TAG_LIMIT) continue;
     const tag = lower.slice(start, end + 1);
@@ -192,18 +235,18 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
   const prefix = "<!doctype html><html>";
   const suffix = "</html>";
   const join = (pieces: string[]) => `${prefix}${pieces.filter(Boolean).join("\n")}${suffix}`;
-  // Head metadata and the (small, count-bounded) icon set are the most useful
-  // fallbacks. Spend the remaining parser budget on JSON-LD, trimming it first.
-  const fixed = [head, ...icons];
+  // Icons and JSON-LD go first and the head last, so a head that a cap cuts
+  // mid-tag can only spoil itself, never swallow the blocks after it. JSON-LD
+  // is trimmed first when the parser budget runs out; the head is cut last.
   const keptJsonLd: string[] = [];
   for (const block of jsonLd) {
-    if (join([...fixed, ...keptJsonLd, block]).length > METADATA_HTML_LIMIT) break;
+    if (join([...icons, ...keptJsonLd, block, head]).length > METADATA_HTML_LIMIT) break;
     keptJsonLd.push(block);
   }
-  let bounded = join([...fixed, ...keptJsonLd]);
+  let bounded = join([...icons, ...keptJsonLd, head]);
   if (bounded.length > METADATA_HTML_LIMIT) {
-    const availableHead = Math.max(0, METADATA_HTML_LIMIT - join(icons).length - (head ? 1 : 0));
-    bounded = join([head.slice(0, availableHead), ...icons]);
+    const availableHead = Math.max(0, METADATA_HTML_LIMIT - join([...icons, ...keptJsonLd]).length - 1);
+    bounded = join([...icons, ...keptJsonLd, head.slice(0, availableHead)]);
   }
   return bounded.slice(0, METADATA_HTML_LIMIT);
 }
