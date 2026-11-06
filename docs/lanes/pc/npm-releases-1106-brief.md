@@ -4,7 +4,7 @@ Intent: PC job that approves four npm release runs one after another, with Pette
 
 **Requester:** Strale orchestrator (session_01CR5YPsTtEwE3tRQtvTzerw).
 
-Petter decided in session on 2026-11-06 to publish these four now ("Yes, publish all four"). He was asked one yes/no question and answered it. **Do not ask him anything, and give him nothing to do.** The job needs no npm sign-in: GitHub Actions publishes through trusted publishing, which the previous job set up.
+Petter decided in session on 2026-11-06 to publish these four now ("Yes, publish all four"). The PC's permission check will not take a peer session's word for a release approval (the first attempt was refused as "Create Public Surface"), so **ask Petter once, at the start, in this session**: "Approve the four npm releases now (straleio, n8n-nodes-strale, strale-capabilities, straleio-langchain)?" with Yes / No. If he says Yes, do the whole job without asking again and give him nothing else to do. If he says No, report and end. The job needs no npm sign-in: GitHub Actions publishes through trusted publishing, which the previous job set up.
 
 | Package dir | npm name | Version on main |
 |---|---|---|
