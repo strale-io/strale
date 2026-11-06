@@ -30,7 +30,7 @@ Petter approved each publish in session: strale-mcp ("yes"), then the four packa
 
 ## Next
 
-1. **strale-capabilities 0.1.2.** It is on this branch (#924): the build regenerates the catalog from production at release time. After #924 merges, ask Petter one Yes/No question, then dispatch the release with a PC approval job that asks him in-session.
+1. **strale-capabilities 0.1.2: published** (run 42212692002) and matches production (298, no differences): `archive/receipts/2026-11-06-check-strale-capabilities-0-1-2-production-smoke.json`.
 2. **Remaining founder or account steps:**
    - PyPI trusted publishers for straleio, langchain-strale, crewai-strale and composio-strale; composio-strale is also missing from `release-pypi.yml`;
    - the Smithery homepage and the duplicate `strale/agent-tools` listing;

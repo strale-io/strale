@@ -1,0 +1,44 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "663de5402e1185143ffaec1fd08fd7ef2b8857a9"
+  },
+  "at": "2026-11-06T11:52:01.728Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/smoke5/receipt.json"
+  },
+  "summary": {
+    "package": "strale-capabilities",
+    "version": "0.1.2",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/42212692002",
+    "provenance": "https://slsa.dev/provenance/v1",
+    "install": "clean directory outside the repo, npm i strale-capabilities@0.1.2",
+    "catalog_generated_at": "2026-11-06T11:47:59.778Z",
+    "generated_during_release_run": true,
+    "totalCount": 298,
+    "live_catalogue_count": 298,
+    "find_email_validate": true,
+    "search_vat_results": 12,
+    "supersedes_finding": "archive/receipts/2026-11-06-check-npm-four-packages-production-smoke.json (0.1.1 stale snapshot)",
+    "verdict": "pass"
+  },
+  "topic": "strale-capabilities-0-1-2-production-smoke",
+  "raw": {
+    "package": "strale-capabilities",
+    "version": "0.1.2",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/42212692002",
+    "provenance": "https://slsa.dev/provenance/v1",
+    "install": "clean directory outside the repo, npm i strale-capabilities@0.1.2",
+    "catalog_generated_at": "2026-11-06T11:47:59.778Z",
+    "generated_during_release_run": true,
+    "totalCount": 298,
+    "live_catalogue_count": 298,
+    "live_not_packaged": [],
+    "packaged_not_live": [],
+    "find_email_validate": true,
+    "search_vat_results": 12,
+    "supersedes_finding": "archive/receipts/2026-11-06-check-npm-four-packages-production-smoke.json (0.1.1 stale snapshot)",
+    "verdict": "pass"
+  }
+}
