@@ -81,9 +81,11 @@ version is published once by Petter from a logged-in npm session:
 
 1. In a clean checkout of `main`: `npm ci`, then
    `npm --workspace=packages/<dir> run build`.
-2. `npm publish --workspace=packages/<dir> --access public`. A local publish
-   carries no provenance attestation; later versions published from this
-   workflow do.
+2. `npm publish --workspace=packages/<dir> --access public --provenance=false`.
+   The flag is required: the package sets `publishConfig.provenance: true`,
+   and outside a CI provider npm stops with `EUSAGE Automatic provenance
+   generation not supported for provider: null`. A local publish carries no
+   provenance attestation; later versions published from this workflow do.
 3. On the new package's settings page, add the Trusted Publisher exactly as in
    step 2 above.
 

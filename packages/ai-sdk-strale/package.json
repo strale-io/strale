@@ -51,7 +51,7 @@
     "url": "https://github.com/strale-io/strale/issues"
   },
   "engines": {
-    "node": ">=20.3.0"
+    "node": ">=22.0.0"
   },
   "publishConfig": {
     "access": "public",

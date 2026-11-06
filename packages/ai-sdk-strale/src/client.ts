@@ -19,9 +19,9 @@ export interface StraleToolsOptions {
    * calls when no API key is set: the payment is the authentication, and the
    * wrapper's own spending limit applies.
    */
-  x402Fetch?: typeof fetch;
+  x402Fetch?: FetchLike;
   /** Plain fetch used for every other request. Defaults to globalThis.fetch. */
-  fetch?: typeof fetch;
+  fetch?: FetchLike;
   /** API origin. Defaults to https://api.strale.io. */
   baseUrl?: string;
   /** Highest price in EUR cents an API-key call may be charged: an integer from 1 to 2000. Default 200 (€2.00). */
@@ -30,10 +30,17 @@ export interface StraleToolsOptions {
   timeoutMs?: number;
 }
 
+/**
+ * The fetch shape Strale calls: always a URL string. Narrower than
+ * `typeof fetch`, so wrappers typed `(input: RequestInfo, ...)`, such as
+ * x402-fetch's `wrapFetchWithPayment`, type-check without a cast.
+ */
+export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
 export interface ResolvedOptions {
   apiKey?: string;
-  x402Fetch?: typeof fetch;
-  fetch: typeof fetch;
+  x402Fetch?: FetchLike;
+  fetch: FetchLike;
   baseUrl: string;
   maxPriceCents: number;
   timeoutMs: number;
@@ -65,7 +72,7 @@ export interface HttpResult {
 export async function request(
   opts: ResolvedOptions,
   path: string,
-  init: { method?: "GET" | "POST"; body?: unknown; auth?: boolean; via?: typeof fetch; signal?: AbortSignal } = {},
+  init: { method?: "GET" | "POST"; body?: unknown; auth?: boolean; via?: FetchLike; signal?: AbortSignal } = {},
 ): Promise<HttpResult> {
   const headers: Record<string, string> = {
     Accept: "application/json",
