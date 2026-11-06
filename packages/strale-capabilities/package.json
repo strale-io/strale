@@ -1,11 +1,12 @@
 {
   "name": "strale-capabilities",
-  "version": "0.1.1",
-  "description": "Catalog of available Strale capabilities \u2014 IBAN validation, VAT checks, company data across supported countries, sanctions screening, and more. Use with strale-mcp or the Strale REST API.",
+  "version": "0.1.2",
+  "description": "Catalog of available Strale capabilities — IBAN validation, VAT checks, company data across supported countries, sanctions screening, and more. Use with strale-mcp or the Strale REST API.",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "generate": "node generate.js"
+    "generate": "node generate.js",
+    "build": "node generate.js"
   },
   "keywords": [
     "strale",

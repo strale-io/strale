@@ -20,6 +20,11 @@ async function main() {
 
   const data = await resp.json();
   const capabilities = data.capabilities || [];
+  // The release workflow runs this as the package's build step, so a failed or
+  // empty fetch must stop the release instead of publishing an empty catalog.
+  if (capabilities.length === 0) {
+    throw new Error("The catalog came back empty; refusing to write capabilities.json");
+  }
 
   const categories = [
     ...new Set(capabilities.map((c) => c.category).filter(Boolean)),
