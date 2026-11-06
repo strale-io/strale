@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 51 (49 topics with a current answer, 1 historical).
+Total files: 52 (50 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -26,6 +26,7 @@ Total files: 51 (49 topics with a current answer, 1 historical).
 | bundesapi-civic-tech-audit | [2026-05-06-bundesapi-civic-tech-audit.md](2026-05-06-bundesapi-civic-tech-audit.md) | Is the bundesAPI civic-tech stack a credible fallback data source for DE Counterparty Assurance if OpenRegister's audit-retention question can't be resolved? | 2026-05-06 | 0 |
 | claude-connector-directory-requirements | [2026-10-29-claude-connector-directory-requirements.md](2026-10-29-claude-connector-directory-requirements.md) | What does Anthropic's Claude connector directory require of a remote MCP server today, and where does Strale's connector stand against each requirement? | 2026-10-29 | 0 |
 | codebase-architecture-review | [2026-10-27-codebase-architecture-review.md](2026-10-27-codebase-architecture-review.md) | How sound are Strale's codebase and architecture (robustness, maintainability, error detection, autonomy, text truthfulness, quality), and which changes give the highest return? | 2026-10-27 | 0 |
+| customer-promise-inventory | [2026-11-06-customer-promise-inventory.md](2026-11-06-customer-promise-inventory.md) | What does Strale promise its customers, in its own words, how much harm follows if each promise is broken, how can each be proven, and what evidence do we hold today? | 2026-11-06 | 0 |
 | cy-registry-build-path | [2026-05-07-cy-registry-build-path.md](2026-05-07-cy-registry-build-path.md) | What is the build path for ingesting Cyprus's DRCOR company registry open data? | 2026-05-07 | 0 |
 | delegate-competitive-analysis | [2026-10-23-delegate-competitive-analysis.md](2026-10-23-delegate-competitive-analysis.md) | What does Delegate (dlgt.io) offer, build and say that Strale should add, copy or deliberately avoid, across capabilities, product and go-to-market? | 2026-10-23 | 0 |
 | distribution-listings-audit | [2026-11-06-distribution-listings-audit.md](2026-11-06-distribution-listings-audit.md) | Which places where agents and developers find Strale still show stale or untrue text after the move to strale.io and the 2026-11-06 npm releases, and what can the repository, a session or only Petter fix? | 2026-11-06 | 0 |
