@@ -1,0 +1,44 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "ce40b4502119e29ae6ee0668d77f884bf8614086"
+  },
+  "at": "2026-11-06T10:46:22.530Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/smoke.json"
+  },
+  "summary": {
+    "package": "strale-mcp",
+    "version": "0.2.11",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/42203249324",
+    "published_at": "2026-11-06T10:44:46Z",
+    "provenance_predicate": "https://slsa.dev/provenance/v1",
+    "install": "npx -y strale-mcp@0.2.11 in an empty directory, stdio, initialize + tools/list",
+    "tools_listed": 9,
+    "degradations_logged": 0,
+    "public_urls_in_dist": "signup, docs and security links name https://strale.io; strale.dev appears only in a source comment",
+    "verdict": "pass"
+  },
+  "topic": "strale-mcp-0-2-11-production-smoke",
+  "raw": {
+    "package": "strale-mcp",
+    "version": "0.2.11",
+    "release_run": "https://github.com/strale-io/strale/actions/runs/42203249324",
+    "published_at": "2026-11-06T10:44:46Z",
+    "provenance_predicate": "https://slsa.dev/provenance/v1",
+    "install": "npx -y strale-mcp@0.2.11 in an empty directory, stdio, initialize + tools/list",
+    "startup_stderr": [
+      "[strale-mcp] Loaded 298 capabilities, 96 solutions, 298 cap trust, 96 sol trust from https://api.strale.io",
+      "[strale-mcp] Server running on stdio (298 capabilities, 96 solutions)"
+    ],
+    "server_info": {
+      "name": "strale",
+      "version": "0.2.11"
+    },
+    "tools_listed": 9,
+    "degradations_logged": 0,
+    "public_urls_in_dist": "signup, docs and security links name https://strale.io; strale.dev appears only in a source comment",
+    "verdict": "pass"
+  }
+}
