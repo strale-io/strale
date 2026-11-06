@@ -42,3 +42,23 @@ fatf-gafi.org answers bots with a Cloudflare challenge (`cf-mitigated: challenge
 - The clone starts shallow, so `context:generate` and the context check report `*_NOT_ANCESTOR`. Run `git fetch --unshallow origin main` first. `OPERATOR_ACTION_PREPARED_REF_INVALID` needs `git fetch origin ad67e433f0bdb894999293ab3286aff8ab858ed6`.
 - `context:generate` refuses the primary checkout. Work in a batch worktree (`strale-wt-recurring`).
 - `BWS_ACCESS_TOKEN` is set but no `bws` CLI is installed. `STRALE_OPS_READ_TOKEN` does not exist yet, and ops-read has no capability-field check.
+
+## Later the same evening (same session)
+
+- **Merged and live:**
+  - #952: Serper renewal reconciliation, block 0147, ledger M090.
+  - #954: FATF lists.
+  - #956: EU high-risk list from the 2026-01-29 consolidation; Myanmar labelled "high".
+  
+  Production served `720648b0` after #955; later merges deploy the same way.
+- **#958:** an EDD recommendation floor for EU-listed and call-for-action countries, with DPRK and Iran raised to at least "high". Its review passed, and auto-merge is on.
+- **Lease:** the gmail lease of 2026-11-06T22:10:51Z names `strale:session_01Ms71ZkYLtEVEsZBfEXzD9i`. Run the check without `--parent`.
+- **DQ-39 scheduled task disabled:** `trig_013VyLUKWy4R4RGrKkG75BG3`. It was bound to an archived session, and DQ-39 closed on 2026-10-28; firing it would have moved or switched off the Serper tools.
+- **Codex (dispatcher `session_01Ms71ZkgxYwvXNPwXQ4mezS`):**
+  - The `swallowed-failures-wave2` brief (4f342c01) was withdrawn. It is billing-path work, so promise-audit rule 5 keeps it with Claude. The dispatcher confirmed it never received or ran it.
+  - `url-to-markdown-parse-bound` was queued at 23:46 Swedish time as task `task_e_6aee58cc7388832998dd61ec621b3a41`. The result lands on `codex/url-to-markdown-parse-bound`.
+  - **Next:** run an untrusted-input review, open the PR, then report to the wow-core master: "Codex works for Strale: <slug> → <PR>".
+- **Plans:** Petter asked for them to be regenerated after archiving the old sessions.
+  - #957 holds the figure-free revenue plan and the robustness program R1–R7.
+  - The full revenue plan, with figures, was sent to Petter as a file and stays out of the repository, as decided on 2026-11-06.
+- **Open question to Petter:** did his yes to DQ-42 cover delisting `eu-trademark-search` (option 3)?

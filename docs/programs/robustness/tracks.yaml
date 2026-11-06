@@ -1,0 +1,254 @@
+schema_version: 1
+program: robustness
+program_status: active
+updated: 2026-11-06
+tracks:
+  - id: T1
+    title: "R1: Untrusted-input bounds (url-to-markdown parse bound first)"
+    status: active
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator; Codex builds, Claude reviews (DEC-20261101-A).
+      Check the head of codex/url-to-markdown-parse-bound. It sat at its brief
+      commit 627d8402 at the last check (orchestrator state, 2026-11-06 about 21:05
+      Swedish time). When the head moves, run an independent untrusted-input
+      review in a separate context. The brief, on that branch at
+      docs/lanes/codex/url-to-markdown-parse-bound-brief.md, asks for three
+      things. First, measure before and after. Second, add a linear pre-pass
+      before jsdom that bounds nesting depth, attributes per tag and attribute
+      length, or else a worker with a hard timeout. Third, throw rather than
+      return empty Markdown. Hold the review to the lesson from company-enrich
+      (#947): parse time is what matters, not size. Fix the findings, then open
+      the PR with auto-merge. If no result arrives within the run limit of 3
+      briefs, Claude builds it from the same brief. Then sweep the other places
+      that hand fetched markup to jsdom (lib/company-enrich/structured-metadata.ts,
+      which builds its DOM from bounded HTML since #947, and lib/nta-corporate.ts, which bounds the
+      response before building a DOM) and record each one's bound in a single
+      receipt. Unverified: the jsdom timings in the brief (16 KB nested div 1.5 s,
+      1.4 MB attribute flood 452 s) were measured during the company-enrich
+      reviews; url-to-markdown itself has not been measured, and the brief's
+      first step does that."
+    resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
+    exit:
+      - "A receipt shows every adversarial input in the brief (nested div 16, 32
+        and 64 KB, nested formatting tags 16 and 32 KB, a 1 MB attribute flood, 16
+        MB of flat tags) finishing well under 1 s or throwing unbilled, with a
+        fail-before run on the unfixed file."
+      - "Normal pages convert exactly as before; the existing url-to-markdown and
+        readability tests pass."
+      - "Every jsdom call site on fetched or caller-supplied markup in
+        apps/api/src has a stated bound in the sweep receipt, or a fix."
+    evidence: []
+  - id: T2
+    title: "R2: Data currency of hard-coded reference lists and vendor terms"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator. (1) #954 (FATF lists) merged 2026-11-06.
+      #956 merged 2026-11-06: the EU high-risk list in
+      aml-risk-score taken from the 2026-01-29 consolidation of Delegated
+      Regulation (EU) 2016/1675, and Myanmar as high, not prohibited. It passed an
+      independent review (PASS-WITH-NITS); it corrected reference data to the
+      official published lists and narrowed the Myanmar label (DEC-20260822-A).
+      After deploy, call the tool for RU and BB and confirm the EU flag follows
+      the Annex (DEC-20260504-C). Nit 1 (EDD, not SDD, for EU-listed
+      countries) is pending in #958.
+      Nit 2, exposing FATF_LISTS_AS_OF and EU_HIGH_RISK_AS_OF in the output, is
+      in scope here. (2) Add RECURRING.yaml due-list rows for a FATF re-check after
+      each plenary (February, June and October) and an EU-list re-check when the
+      Commission amends the Annex. Name the sources: FATF statements, and FinCEN
+      or another public relay when fatf-gafi.org shows its Cloudflare challenge,
+      which is never worked around (DEC-20261023-A). (3) Inventory every
+      hard-coded reference dataset under apps/api/src/capabilities and lib: lists,
+      rate tables, thresholds, embedded estimates such as country-trade-data's.
+      Give each a source, an as-of date and a review cadence, and record
+      SECRECY_JURISDICTIONS as a list with no published source. (4) Vendor terms.
+      apps/api/src/lib/vendor-terms.data.json has 18 rows with accessed dates
+      from 2026-09-06 to 2026-11-06 (Jina AI was already removed and is
+      prohibited, #732). Add a re-read cadence per row."
+    resume_file: handoff/_general/from-code/2026-11-06-strale-master-takeover.md
+    exit:
+      - "#956 is merged and a post-deploy receipt shows the EU flag on the
+        Annex's jurisdictions and none on the delisted ones."
+      - "An inventory receipt lists every hard-coded reference dataset with
+        source, as-of date and cadence, and each dataset older than its cadence
+        is refreshed or has a recorded reason."
+      - "RECURRING.yaml carries the FATF plenary row, the EU-list row and a
+        vendor-terms re-read row, each with a procedure."
+      - "Every vendor-terms row has an accessed date inside its cadence."
+    evidence: []
+  - id: T3
+    title: "R3: Alert and signal correctness"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator. Four signals, most urgent first.
+      (1) Serper. Block 0147 (#952, merged) replaced the stale May expiry that made
+      the vendor tower report CRITICAL for a paid-up vendor. Run npm run
+      vendor:status after deploy and record Serper healthy with expiry 2027-05-05
+      as a receipt. (2) The x402 settlement-drop alert (#950, draft, do not merge).
+      Three review rounds found the same class of bug: the baseline drops during
+      a real outage. Redesign it as a per-payer burst cap, against that payer's
+      own typical day, with a floor, leaving other payers untouched, as its PR
+      body says. Give it tests for the shapes reviewed in rounds 1 to 3: ramp,
+      deep outage, slow degradation, quiet weekend, every-other-day buyer,
+      two-day buyer, a job across three buckets, steady payers, and a missing
+      bucket column. (3) production-watch has failed about 20 consecutive runs on
+      a known, deliberate issue (#856, ingest-ee-directors, until RIK answers),
+      so a new failure there would not show. Make an acknowledged known failure
+      expire and stop masking other findings. (4) weekly-drift has failed two
+      scheduled runs. Its own logs show different causes from the 2026-11-06
+      check-in. Run 40334936804 (2026-10-26) failed on the manifest-drift sweep.
+      Run 41485423344 (2026-11-02) failed on the upstream-recordings sweep,
+      because usgs-earthquake-search's recording is keyed by a URL that carries a
+      start date and so goes stale. The robots sweep is report-only and outside
+      the aggregate exit. Fix the recording key, rerun, and record the
+      misattribution under LESSONS F1."
+    resume_file: handoff/_general/from-code/2026-11-06-checkin-morning.md
+    exit:
+      - "A vendor:status receipt after the block 0147 deploy shows no false
+        CRITICAL."
+      - "The x402 settlement watch has a merged per-payer design, with a test per
+        reviewed shape that fails against the 7-day mean, and a receipt from its
+        first week in production with no false page."
+      - "production-watch and weekly-drift each have a green scheduled run on
+        healthy production, and a known failure no longer hides a new one,
+        demonstrated by a forced-mismatch receipt."
+    evidence: []
+  - id: T4
+    title: "R4: Listed tools that can only refuse, and dark tools that cannot be promoted"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator. Promotion and delisting a tool that earns
+      nothing are the session's (CHARTER); delisting a revenue earner and a new
+      vendor or account are Petter's (DEC-20260812-A). Decide each tool from its
+      executor and a receipt. (1) eu-trademark-search refuses every call: its
+      only source is disallowed by robots.txt
+      (archive/receipts/2026-10-30-check-source-robots-access.json). Petter said
+      yes to the free EUIPO API account (DQ-42). Prepare the form to its final
+      button. Delisting until the API path ships is Petter's call: it earned
+      revenue before 10-28 (DQ-42); asked in chat on 2026-11-06. (2) customs-duty-lookup.
+      Its TARIC path is disallowed and it answers from the Access2Markets
+      fallback, so check that its provenance and limitations say so.
+      (3) container-track loses Maersk only; state it in limitations.
+      (4) exchange-rate failed 94 of 302 x402 calls in six days (31%), all
+      uncharged: 31 timeouts, about 50 refusals for currencies ECB does not
+      carry, and 2 ECB 500s. Fix the timeout. Either narrow the input schema to
+      the currencies it serves, or find a terms-checked source for the rest; a
+      paid source is Petter's. (5) Find the causes for forex-history and
+      currency-convert (Frankfurter 522), domain-age-check (16 of 213, cause
+      unverified) and image-to-text (upstream 400 on base64, caller or encoding
+      unverified). (6) invoice-counterparty-check (DQ-41) is dark-launched on a
+      paid upstream, so it can never earn a harness green week. Design a
+      promotion path from real-call or piggyback evidence. If that changes
+      DEC-20260812-A's first-green-week rule, record it as a decision. Answer
+      quality is promise-audit T6's; this track acts on listing state."
+    resume_file: handoff/_general/from-code/2026-11-06-checkin-morning.md
+    exit:
+      - "Each named tool has a receipt with its decision (fixed, narrowed,
+        delisted or promoted) and the evidence behind it."
+      - "A fresh robots sweep shows no listed tool whose only source is
+        disallowed."
+      - "exchange-rate's paid failure rate over seven days is under the quality
+        floor's quarantine line, or the tool is narrowed or quarantined."
+      - "invoice-counterparty-check is promoted or has a recorded rule that
+        decides when it will be."
+    evidence: []
+  - id: T5
+    title: "R5: Account-independent recurring work and monitoring"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator. Petter's rule of 2026-11-06: no
+      account-bound routines. (1) Build the daily business-summary email as an
+      API job (lane item 1, not started). Model it on
+      apps/api/src/lib/external-outage-digest.ts, with its scheduler call in
+      test-scheduler.ts and a job-heartbeats entry. Take the numbers from
+      lib/metrics/commercial.ts and x402 volume from x402_settlement_id. Then
+      replace the 'not built yet' row in RECURRING.yaml. Verify after deploy:
+      the heartbeat row and one delivered email. (2) The scheduled-outcomes
+      check (npm run scheduled:outcomes) runs only inside the daily-run
+      session. Run it from a scheduled workflow, or fold it into
+      production-watch, so a red scheduled workflow opens an issue without an
+      account. (3) Run the overdue due-list rows; weekly-review was last run on
+      2026-08-23. Record each run in RECURRING.yaml in the PR that carries its
+      output. (4) Prove the due-list works on a second account: the first session
+      on the next account sees and runs the overdue rows."
+    resume_file: handoff/_general/from-code/2026-11-06-petter-decisions-growth.md
+    exit:
+      - "The business-summary job runs in production with a heartbeat, and a
+        receipt shows one delivered email."
+      - "A red scheduled workflow raises an issue from a scheduled check, shown
+        by a forced-failure receipt."
+      - "RECURRING.yaml has no row marked not built, and no due-list row is
+        overdue by more than one cadence after a run from a second account."
+    evidence: []
+  - id: T6
+    title: "R6: Single points of failure and vendor concentration"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator. A second LLM provider or any paid fallback
+      is a vendor commitment and stays Petter's. Start from §2.2 and §8.2 of the
+      2026-10-27 architecture review, whose figures are dated and need
+      re-measuring: about 88 executors on Anthropic, 34 to 37 on Browserless, 8 on
+      Serper, and 3 compliance flagships on Dilisense. There is one Postgres with
+      a pool of 30, and 10 setInterval jobs run in every replica without a lease.
+      Steps: (1) a per-vendor blast-radius view in vendor:status, so the daily
+      run shows which listed tools one vendor takes down; (2) close the vendor
+      tower's data gaps from the 2026-11-06 check-in: no Anthropic or CDP spend
+      reading, no account record for cobalt-intelligence, einsearch or
+      sec-api-io, and eSortcode answering 403 with uk-cop-check suspended;
+      (3) check whether §5 design 2 exists (auto-suspend on 3 or more config or
+      401/403 failures in an hour for one provider, through
+      suspendRequiredCapabilities, with refunds under existing policy), and build
+      it if not; (4) move the lease-less setInterval jobs under the job
+      coordinator, after reading the replica count from Railway (unverified)."
+    resume_file: docs/research/2026-10-27-codebase-architecture-review.md
+    exit:
+      - "vendor:status prints a blast-radius line per vendor, and a receipt
+        compares it with the manifests."
+      - "Every vendor a listed tool depends on has a vendor-tower account record
+        or a recorded reason."
+      - "A forced credential failure in a test suspends exactly that provider's
+        tools and restores them on recovery."
+      - "No scheduled job runs without a lease, shown by a receipt."
+    evidence: []
+  - id: T7
+    title: "R7: Resource and cost trims"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator. Reversible trims inside delegated
+      authority; any new recurring cost is Petter's. (1) Measure the browser
+      service's idle memory, the Railway service chromium that also serves
+      BROWSERLESS_API_KEY. Unverified: about 3.7 GB idle, per the orchestrator
+      state of 2026-11-06. Cap or trim it, then rerun the screenshot-url and
+      html-to-pdf correctness tests. Railway write access may need Petter.
+      (2) Postgres retention of harness calls. Start with a read-only size
+      check. Any retention change is a bulk operation under DEC-20260504-B:
+      estimate the backlog, then throttle or pre-drain. (3) The model-price
+      claim in the lost plan is unverified, and its content is not in the repo.
+      Check it against apps/api/src/lib/models.ts and the per-call cost records
+      from platform-hardening T5 before any LLM role changes, and record the
+      result. (4) Declare keyless or free upstreams as zero cost, so margin reads
+      for the best sellers; the check-in records unknown-cost share 1 for six of
+      them."
+    resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
+    exit:
+      - "Each trim has a before and after receipt, and the dependent tools' tests
+        pass after it."
+      - "The retention change ships with its backlog estimate and a throttled or
+        pre-drained plan, and its first run is recorded."
+      - "The model-price claim is confirmed or refuted in a receipt before any
+        models.ts role change."
+      - "Margin is readable for every tool with a free upstream."
+    evidence: []
