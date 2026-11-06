@@ -115,4 +115,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0144_correctAiLabelAndDependencyAuditText: { policy: "once", reason: "two UPDATEs guarded on the old value (one capability tag, one limitation text); a re-run must not undo a later edit" },
   runMigration0145_vaspRoutingLatency: { policy: "once", reason: "fills a NULL avg_latency_ms on two named rows; a later measured value must never be overwritten" },
   runMigration0146_polishCompanyDataAlgorithmic: { policy: "once", reason: "two UPDATEs of one capability row (tag and type), each guarded on its old value; a re-run must not undo a later edit" },
+  runMigration0147_reconcileSerperRenewal: { policy: "once", reason: "one UPDATE guarded on the May pack's expiry; a re-run must not undo a later top-up reconciliation or reset the live counter" },
 };
