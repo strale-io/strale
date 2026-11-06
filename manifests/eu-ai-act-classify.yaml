@@ -20,11 +20,11 @@ input_schema:
 output_schema:
   type: object
   example:
-    timeline: No mandatory compliance deadline, but voluntary codes of conduct may apply.
+    timeline: No compliance deadline specific to this risk level, but voluntary codes of conduct may apply.
     prohibited: false
     risk_level: minimal
     obligations:
-      - No mandatory obligations under the EU AI Act.
+      - No obligations specific to this risk level under the EU AI Act.
       - Voluntary codes of conduct encouraged (Article 95).
     recommendations:
       - Although not legally required, consider adopting voluntary codes of conduct (Article 95).

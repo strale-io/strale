@@ -1,7 +1,26 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // ─── EU AI Act classification — pure algorithmic, rule-based ─────────────────
-// Based on Regulation (EU) 2024/1689 (EU AI Act)
+// Based on Regulation (EU) 2024/1689 (EU AI Act) as amended by Regulation (EU)
+// 2026/1744 of 8 July 2026 (Digital Omnibus on AI, OJ L 24.7.2026), read on
+// EUR-Lex on 2026-11-06 (https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng).
+// Its amended Article 113 sets the dates used below:
+//   - Article 5 prohibitions in force since 2 February 2025 (the new points
+//     5(1)(ba) and (bb), not modelled here, apply from 2 December 2026);
+//   - Chapter III Sections 1-3 for Article 6(2) / Annex III high-risk systems
+//     apply from 2 December 2027 (Article 6(1) / Annex I systems: 2 August 2028);
+//   - Article 50 transparency obligations apply from 2 August 2026, the
+//     general application date, which the amendment left unchanged.
+// Article 4 (AI literacy, replaced by the amendment) applies to all providers
+// and deployers whatever the risk level, so the minimal-risk answer does not
+// say there are no obligations at all.
+// Update on each amending act or Commission guideline and move this date.
+export const EU_AI_ACT_AS_OF = "2026-11-06";
+
+export const HIGH_RISK_ANNEX_III_TIMELINE =
+  "Obligations apply from 2 December 2027 (Article 113 as amended by Regulation (EU) 2026/1744)";
+export const PROHIBITION_TIMELINE = "Prohibited from 2 February 2025";
+export const TRANSPARENCY_TIMELINE = "Transparency obligations apply from 2 August 2026";
 
 interface ClassificationResult {
   system_description_summary: string;
@@ -31,12 +50,15 @@ interface RiskRule {
 const UNACCEPTABLE_RULES: RiskRule[] = [
   {
     risk_level: "unacceptable",
-    category: "Social scoring by public authorities",
+    // Article 5(1)(c) prohibits social scoring by any provider or deployer,
+    // not only public authorities; Article 5(1)(d) is the separate
+    // predictive-policing prohibition and does not apply to social scoring.
+    category: "Social scoring",
     keywords: ["social scoring", "social credit", "citizen scoring"],
-    applicable_articles: ["Article 5(1)(c)", "Article 5(1)(d)"],
+    applicable_articles: ["Article 5(1)(c)"],
     obligations: ["System is prohibited and must not be placed on the market or used"],
     conformity_assessment_needed: false,
-    timeline: "Prohibited from 2 February 2025",
+    timeline: PROHIBITION_TIMELINE,
   },
   {
     risk_level: "unacceptable",
@@ -45,7 +67,7 @@ const UNACCEPTABLE_RULES: RiskRule[] = [
     applicable_articles: ["Article 5(1)(a)"],
     obligations: ["System is prohibited — uses subliminal techniques to distort behavior"],
     conformity_assessment_needed: false,
-    timeline: "Prohibited from 2 February 2025",
+    timeline: PROHIBITION_TIMELINE,
   },
   {
     risk_level: "unacceptable",
@@ -54,7 +76,7 @@ const UNACCEPTABLE_RULES: RiskRule[] = [
     applicable_articles: ["Article 5(1)(b)"],
     obligations: ["System is prohibited — exploits vulnerabilities of specific groups"],
     conformity_assessment_needed: false,
-    timeline: "Prohibited from 2 February 2025",
+    timeline: PROHIBITION_TIMELINE,
   },
   {
     risk_level: "unacceptable",
@@ -63,7 +85,7 @@ const UNACCEPTABLE_RULES: RiskRule[] = [
     applicable_articles: ["Article 5(1)(h)", "Article 5(2)", "Article 5(3)"],
     obligations: ["System is prohibited for law enforcement in publicly accessible spaces (with narrow exceptions)"],
     conformity_assessment_needed: false,
-    timeline: "Prohibited from 2 February 2025",
+    timeline: PROHIBITION_TIMELINE,
   },
   {
     risk_level: "unacceptable",
@@ -72,7 +94,7 @@ const UNACCEPTABLE_RULES: RiskRule[] = [
     applicable_articles: ["Article 5(1)(f)"],
     obligations: ["System is prohibited — emotion recognition in workplace or educational settings"],
     conformity_assessment_needed: false,
-    timeline: "Prohibited from 2 February 2025",
+    timeline: PROHIBITION_TIMELINE,
   },
 ];
 
@@ -84,7 +106,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 1", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -93,7 +115,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 2", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -102,7 +124,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 3", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -111,7 +133,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 4", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity", "Inform workers' representatives"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -120,7 +142,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 5", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -129,7 +151,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 6", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity", "Fundamental rights impact assessment"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -138,7 +160,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 7", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity", "Fundamental rights impact assessment"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
   {
     risk_level: "high",
@@ -147,7 +169,7 @@ const HIGH_RISK_RULES: RiskRule[] = [
     applicable_articles: ["Annex III, Area 8", "Article 6(2)"],
     obligations: ["Risk management system", "Data governance", "Technical documentation", "Record-keeping", "Transparency", "Human oversight", "Accuracy/robustness/cybersecurity"],
     conformity_assessment_needed: true,
-    timeline: "Obligations apply from 2 August 2026",
+    timeline: HIGH_RISK_ANNEX_III_TIMELINE,
   },
 ];
 
@@ -163,7 +185,7 @@ const LIMITED_RISK_RULES: RiskRule[] = [
       "Disclose deepfakes and synthetic media",
     ],
     conformity_assessment_needed: false,
-    timeline: "Transparency obligations apply from 2 August 2026",
+    timeline: TRANSPARENCY_TIMELINE,
   },
 ];
 
@@ -260,12 +282,12 @@ function classifySystem(description: string): ClassificationResult {
     matched_keywords: [],
     applicable_articles: ["Article 95 (Codes of conduct for minimal-risk AI)"],
     obligations: [
-      "No mandatory obligations under the EU AI Act.",
+      "No obligations specific to this risk level under the EU AI Act.",
       "Voluntary codes of conduct encouraged (Article 95).",
     ],
     conformity_assessment_needed: false,
     prohibited: false,
-    timeline: "No mandatory compliance deadline, but voluntary codes of conduct may apply.",
+    timeline: "No compliance deadline specific to this risk level, but voluntary codes of conduct may apply.",
     recommendations: [
       "Although not legally required, consider adopting voluntary codes of conduct (Article 95).",
       "Maintain good AI development practices (transparency, fairness, safety).",

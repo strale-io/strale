@@ -33,7 +33,9 @@ output_schema:
       - Employer contributions (arbetsgivaravgifter) 31.42% cover pension, health, parental insurance, etc.
       - Municipal tax varies 29-35%; 32% used as average.
       - State income tax 20% applies above SEK 614,000 (2024).
-      - Reduced employer contributions for young employees (<23) and seniors (>65).
+      - >-
+        Reduced employer contributions for employees aged 19-23 (20.81% on pay up to SEK 25,000 a month, 1 April 2026
+        to 30 September 2027) and for older employees.
     effective_tax_rate: 0
     net_salary_estimate: 1
     total_employer_cost: 1.31
