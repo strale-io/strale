@@ -26,8 +26,8 @@ jobs:
     title: Daily operating run and CEO brief
     runs_as: due-list
     cadence_days: 1
-    last_run: 2026-11-01
-    evidence: docs/company/briefs/2026-11-01.md
+    last_run: 2026-11-06
+    evidence: docs/company/briefs/2026-11-06.md (PR #952, the run of about 22:09 Swedish time)
     procedure: docs/company/DAILY-RUN.md
     note: One line when green, a brief only when something changed or a decision waits (DEC-20261024-A). Step A2 (inbox) runs only where DAILY-RUN.md says; other sessions skip it in one line.
 
