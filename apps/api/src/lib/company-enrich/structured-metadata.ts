@@ -26,7 +26,6 @@ const TEXT_LIMIT = 2_000;
 const SPECIALTY_LIMIT = 50;
 const SPECIALTY_TEXT_LIMIT = 100;
 const SPECIALTIES_TOTAL_LIMIT = 2_000;
-const HEAD_LIMIT = 128 * 1024;
 const JSON_LD_LIMIT = 256 * 1024;
 const JSON_LD_COUNT_LIMIT = 20;
 const ICON_COUNT_LIMIT = 8;
@@ -241,13 +240,67 @@ function rebuildIconLink(tag: string): string | null {
 }
 
 /** Selects the small, metadata-bearing portions that jsdom is allowed to parse. */
+/** The meta keys the extractor reads; nothing else is passed to the parser. */
+const META_KEYS = new Set([
+  "og:site_name", "og:title", "og:description", "og:image",
+  "twitter:title", "twitter:description", "twitter:image", "description",
+]);
+/** Meta-looking tags examined per page, and kept, and the length of one value. */
+const META_CANDIDATE_LIMIT = 256;
+const META_KEPT_LIMIT = 32;
+const META_VALUE_LIMIT = 4 * 1024;
+const TITLE_LIMIT = 2 * 1024;
+
+/**
+ * Finds the ">" that ends a tag, skipping ones inside quoted values, within
+ * `limit` characters. Callers cap how many tags they examine, so the total
+ * work is bounded by that cap times `limit`.
+ */
+function tagEnd(text: string, start: number, limit: number): number {
+  let quote: string | null = null;
+  const stop = Math.min(text.length, start + limit);
+  for (let i = start + 1; i < stop; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === quote) quote = null;
+    } else if (c === '"' || c === "'") {
+      quote = c;
+    } else if (c === ">") {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function tagAttributes(tag: string): Map<string, string> {
+  const attributes = new Map<string, string>();
+  for (const match of tag.matchAll(LINK_ATTRIBUTE)) {
+    const name = match[1]!.toLowerCase();
+    const raw = match[2]!;
+    if (!attributes.has(name)) {
+      attributes.set(name, raw.startsWith('"') || raw.startsWith("'") ? raw.slice(1, -1) : raw);
+    }
+  }
+  return attributes;
+}
+
+/**
+ * Builds the only input jsdom ever parses: tags constructed here from values
+ * read out of the page, never the page's own markup. Publisher markup (deep
+ * nesting, attribute floods, a JSON-LD script closed early with
+ * "</script x>") makes the HTML parser superlinear, and a cap on the input's
+ * length does not cap its parse time. What reaches the parser is flat:
+ *  - up to 32 <meta> tags whose key the extractor reads, values quoted;
+ *  - one <title> with "<" escaped;
+ *  - up to 8 icon <link> tags, rebuilt from rel and href;
+ *  - JSON-LD blocks in a fixed opening tag, each cut at its first "</script"
+ *    so nothing inside can end it early, trimmed first when the budget runs out.
+ */
 export function buildBoundedMetadataHtml(
   html: string,
-  diagnostics?: { scriptOpeningsVisited: number; iconCandidates?: number },
+  diagnostics?: { scriptOpeningsVisited: number; iconCandidates?: number; metaCandidates?: number },
 ): string {
   const lower = asciiLowerCase(html);
-  const jsonLd: string[] = [];
-  const icons: string[] = [];
   // "<head" alone would also match "<header", and HTML5 lets a page omit the
   // <head> tag, so require the tag name to end there.
   const headMatch = /<head[\s>]/.exec(lower);
@@ -261,36 +314,70 @@ export function buildBoundedMetadataHtml(
     headRegionEnd = Math.min(headEnd, headStart + HEAD_SCAN_LIMIT);
   } else {
     // HTML fragments are common in tests and malformed publisher responses;
-    // treat their leading bytes as the implicit head without widening the cap.
+    // treat their leading bytes as the implicit head.
     headRegionEnd = Math.min(html.length, HEAD_SCAN_LIMIT);
   }
-  const headRegion = html.slice(headRegionStart, headRegionEnd);
-  // Inline scripts and styles carry no metadata here (JSON-LD is collected
-  // below on its own), and inlined critical CSS can be hundreds of KB: strip
-  // them before capping, so the cap keeps the meta and link tags.
-  const head = stripScriptAndStyleBlocks(headRegion).slice(0, HEAD_LIMIT);
+  // Inline scripts and styles carry no metadata (JSON-LD is collected below on
+  // its own), so meta tags are read from the head with them removed.
+  const head = stripScriptAndStyleBlocks(html.slice(headRegionStart, headRegionEnd));
+  const headLower = asciiLowerCase(head);
 
+  const metas: string[] = [];
+  let metaCandidates = 0;
   let cursor = 0;
-  let scriptCount = 0;
-  while (scriptCount < JSON_LD_COUNT_LIMIT) {
+  while (metas.length < META_KEPT_LIMIT) {
+    const start = headLower.indexOf("<meta", cursor);
+    if (start < 0) break;
+    if (++metaCandidates > META_CANDIDATE_LIMIT) break;
+    if (diagnostics) diagnostics.metaCandidates = metaCandidates;
+    const end = tagEnd(headLower, start, ICON_TAG_LIMIT + META_VALUE_LIMIT);
+    if (end < 0) {
+      cursor = start + 5;
+      continue;
+    }
+    cursor = end + 1;
+    const attributes = tagAttributes(head.slice(start, end + 1));
+    const key = (attributes.get("property") ?? attributes.get("name") ?? "").toLowerCase();
+    const content = attributes.get("content");
+    if (!META_KEYS.has(key) || content === undefined) continue;
+    metas.push(`<meta property="${escapeAttribute(key)}" content="${escapeAttribute(content.slice(0, META_VALUE_LIMIT))}">`);
+  }
+
+  let title = "";
+  const titleStart = headLower.indexOf("<title");
+  if (titleStart >= 0) {
+    const titleOpenEnd = headLower.indexOf(">", titleStart);
+    const titleClose = titleOpenEnd < 0 ? -1 : headLower.indexOf("</title", titleOpenEnd + 1);
+    if (titleClose >= 0) {
+      const text = head.slice(titleOpenEnd + 1, Math.min(titleClose, titleOpenEnd + 1 + TITLE_LIMIT));
+      title = `<title>${text.replace(/</g, "&lt;")}</title>`;
+    }
+  }
+
+  const jsonLd: string[] = [];
+  cursor = 0;
+  while (jsonLd.length < JSON_LD_COUNT_LIMIT) {
     const start = lower.indexOf("<script", cursor);
     if (start < 0) break;
     if (diagnostics) diagnostics.scriptOpeningsVisited += 1;
     const openEnd = lower.indexOf(">", start);
     if (openEnd < 0) break;
-    const close = lower.indexOf("</script>", openEnd + 1);
-    const opening = lower.slice(start, openEnd + 1);
-    if (opening.includes("application/ld+json")) {
+    // A browser ends a script at "</script" followed by space, "/" or ">", so
+    // the content is cut at the first "</script" whatever follows it.
+    const close = lower.indexOf("</script", openEnd + 1);
+    if (lower.slice(start, openEnd + 1).includes("application/ld+json")) {
       const contentEnd = Math.min(close < 0 ? html.length : close, openEnd + 1 + JSON_LD_LIMIT);
-      jsonLd.push(`${html.slice(start, openEnd + 1)}${html.slice(openEnd + 1, contentEnd)}</script>`);
-      scriptCount += 1;
+      jsonLd.push(`<script type="application/ld+json">${html.slice(openEnd + 1, contentEnd)}</script>`);
     }
     // With no close, every later apparent opening is content of this script.
     // Stopping here keeps the scan linear and matches browser parsing.
     if (close < 0) break;
-    cursor = close + 9;
+    const closeEnd = lower.indexOf(">", close);
+    if (closeEnd < 0) break;
+    cursor = closeEnd + 1;
   }
 
+  const icons: string[] = [];
   cursor = 0;
   let iconCandidates = 0;
   while (icons.length < ICON_COUNT_LIMIT) {
@@ -314,21 +401,16 @@ export function buildBoundedMetadataHtml(
 
   const prefix = "<!doctype html><html>";
   const suffix = "</html>";
-  const join = (pieces: string[]) => `${prefix}${pieces.filter(Boolean).join("\n")}${suffix}`;
-  // Icons and JSON-LD go first and the head last, so a head that a cap cuts
-  // mid-tag can only spoil itself, never swallow the blocks after it. JSON-LD
-  // is trimmed first when the parser budget runs out; the head is cut last.
+  const fixed = [...metas, title, ...icons].filter(Boolean);
+  // Lengths are summed rather than re-joined per block (one "\n" per piece).
+  let length = prefix.length + suffix.length + fixed.reduce((sum, piece) => sum + piece.length + 1, 0);
   const keptJsonLd: string[] = [];
   for (const block of jsonLd) {
-    if (join([...icons, ...keptJsonLd, block, head]).length > METADATA_HTML_LIMIT) break;
+    if (length + block.length + 1 > METADATA_HTML_LIMIT) break;
     keptJsonLd.push(block);
+    length += block.length + 1;
   }
-  let bounded = join([...icons, ...keptJsonLd, head]);
-  if (bounded.length > METADATA_HTML_LIMIT) {
-    const availableHead = Math.max(0, METADATA_HTML_LIMIT - join([...icons, ...keptJsonLd]).length - 1);
-    bounded = join([...icons, ...keptJsonLd, head.slice(0, availableHead)]);
-  }
-  return bounded.slice(0, METADATA_HTML_LIMIT);
+  return `${prefix}${[...fixed, ...keptJsonLd].join("\n")}${suffix}`.slice(0, METADATA_HTML_LIMIT);
 }
 
 /**

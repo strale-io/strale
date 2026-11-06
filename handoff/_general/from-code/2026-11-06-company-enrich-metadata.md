@@ -40,3 +40,22 @@ The review found three issues, each fixed:
 - **`&amp;` double-escaped.** Icon hrefs were escaped again, so `&amp;` came out as a literal "&amp;" in the URL. The re-emitted value now escapes only `"`, since entities stay for the parser to decode.
 - **Tests.** Five new tests (ampersand in a head icon and in a body icon, `xml:href`, letter and dash runs) fail on 61a2b3f3.
 - **Noted, not fixed (pre-existing).** The JSON-LD scan does not track attribute quoting, so a publisher can embed a JSON-LD-looking script inside a quoted attribute. The publisher controls its own page either way.
+
+## After the converging review of ebad7b4f (FAIL, fixed by design change)
+
+**The finding.** The review found that every scanner and regex was linear, but jsdom itself was superlinear on publisher markup. The 1.5 MB cap limited how much it read, not how long it took. These inputs ran for seconds to minutes, or overflowed the stack:
+- deep nesting in the head;
+- an attribute flood on a JSON-LD opening tag;
+- a JSON-LD script closed early with `</script x>`, followed by markup.
+
+**The fix.** `buildBoundedMetadataHtml` now passes jsdom no publisher markup. The parser input is built only from tags constructed from values read off the page:
+- up to 32 `<meta>` tags, only for the keys the extractor reads, with values quoted. They are found with a quote-aware tag-end scan, with at most 256 candidates.
+- one `<title>`, with `<` escaped;
+- up to 8 icon links, rebuilt as before;
+- JSON-LD in a fixed opening tag, each block cut at its first `</script` (any close form). The budget is now summed arithmetically.
+
+**Tests.** Seven new tests. Six fail on ebad7b4f, at 13 to 79 s each; the seventh, a meta tag with thousands of attributes, already passed there. All the earlier timing cases stay under 200 ms.
+
+**Noted, not fixed.**
+- An icon inside an HTML comment can still win over the real icon (review M1). It is still a URL the page published.
+- A page whose only content is a meta description is billed. That is page-published data, so this is a product choice, recorded here.

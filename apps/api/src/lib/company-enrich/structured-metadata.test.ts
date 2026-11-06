@@ -256,6 +256,40 @@ describe("buildBoundedMetadataHtml", () => {
     },
   );
 
+  const organizationLd = `<script type="application/ld+json">${JSON.stringify({ "@type": "Organization", name: "LDCO", email: "a@example.com" })}</script>`;
+  const timed = (html: string) => {
+    const started = performance.now();
+    const metadata = extractStructuredCompanyMetadata(html, PAGE);
+    return { metadata, ms: performance.now() - started };
+  };
+
+  it.each([
+    ["nested <div> in the head", `<html><head>${"<div>".repeat(8 * 1024)}${organizationLd}</head><body></body></html>`],
+    ["nested formatting tags in the head", `<html><head>${"<b><i><u><a>".repeat(4 * 1024)}${organizationLd}</head><body></body></html>`],
+    ["nested <div> with no head tag", `${"<div>".repeat(8 * 1024)}${organizationLd}`],
+    ["a meta tag with thousands of distinct attributes", `<html><head><meta ${Array.from({ length: 12_000 }, (_, i) => `a${i}=x`).join(" ")}>${organizationLd}</head><body></body></html>`],
+    ["a JSON-LD opening tag with thousands of attributes", `<html><head></head><body><script type="application/ld+json" ${Array.from({ length: 50_000 }, (_, i) => `a${i}`).join(" ")}>{"@type":"Organization","name":"LDCO","email":"a@example.com"}</script></body></html>`],
+  ])("parses no publisher markup: %s", (_label, html) => {
+    // Each of these took seconds to minutes, or overflowed the stack, when the
+    // page's own markup reached the HTML parser.
+    const { metadata, ms } = timed(html);
+    expect(metadata).toMatchObject({ company_name: "LDCO", email: "a@example.com" });
+    expect(ms).toBeLessThan(2_000);
+  });
+
+  it("a JSON-LD script closed early with </script x> cannot inject markup", () => {
+    const html = `<html><head></head><body><script type="application/ld+json">{"@type":"Organization","name":"LDCO"}</script x>${"<div>".repeat(8 * 1024)}</script>${organizationLd}</body></html>`;
+    const { metadata, ms } = timed(html);
+    expect(metadata.company_name).toBe("LDCO");
+    expect(ms).toBeLessThan(2_000);
+  });
+
+  it("reads meta tags beyond the first 128 KB of a long head, and one with > in its value", () => {
+    // 200 KB of other head tags; the meta scan stops only after 256 meta tags.
+    const html = `<html><head>${'<link rel="preload" href="/x.js">'.repeat(Math.ceil(200 * 1024 / 33))}<meta name="description" content="Tools &gt; data, a > b"></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ seo_description: "Tools > data, a > b" });
+  });
+
   it("does not take <header> for <head> on a page that omits the head tag", () => {
     const html = `<!doctype html><meta property="og:site_name" content="Acme Co"><meta name="description" content="What Acme does."><header><nav>Menu</nav></header><main>Body</main>`;
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme Co", description: "What Acme does." });
