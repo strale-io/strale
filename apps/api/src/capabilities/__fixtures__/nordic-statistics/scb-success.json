@@ -1,0 +1,1 @@
+{"version":"2.0","class":"dataset","label":"National population","updated":"2026-01-02T00:00:00Z","id":["area","time"],"size":[1,2],"value":[100,101],"dimension":{"area":{"label":"Area","category":{"index":["TOTAL"],"label":{"TOTAL":"Whole country"}}},"time":{"label":"Year","category":{"index":["2023","2024"]}}}}
