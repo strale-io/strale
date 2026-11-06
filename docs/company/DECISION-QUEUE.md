@@ -70,6 +70,8 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
 
+*Answer (2026-11-06, delisting):* Petter answered in the Strale master session (session_01Ms71ZkYLtEVEsZBfEXzD9i): "yes, delist eu-trademark-search if it cant be fixed". It cannot be fixed today, because the only permitted fix is the rebuild on EUIPO's official Trademark Search API and that needs the account. So `eu-trademark-search` is delisted: added to DEACTIVATED in `auto-register.ts`, its reason recorded in the database by startup block 0148, and its description marked "Currently unavailable". Relist it when the EUIPO API rebuild ships. Still open: creating the free EUIPO developer account. A session fills the form up to its final button; Petter clicks it.
+
 *What is established (2026-10-30 morning run, production read-only):*
 - Since the 2026-10-28 fetch-hardening deploy, tools that read a public page as their source check its robots.txt (DEC-20261023-A adoption work). `eu-trademark-search` renders `euipo.europa.eu/eSearch/`, and EUIPO's robots.txt has `disallow: /eSearch/` for every agent. The production parser refuses it; a registered account's paid call failed with exactly that on 2026-10-29 13:40Z and was not charged.
 - It earned €5.50 from x402 buyers between 10-16 and 10-22 (11 calls, all completed). It cannot earn anything now, and it is still listed for sale. The harness cannot see this: the tool is paid-prepaid and refuses internal test calls.

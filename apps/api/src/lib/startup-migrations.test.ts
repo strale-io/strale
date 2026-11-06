@@ -134,7 +134,7 @@ const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DES
 // Tools delisted after blocks 0123/0124 froze their copy. Their manifests gain
 // the "Currently unavailable. " prefix that public-descriptions.test.ts
 // requires of every DEACTIVATED slug; the frozen block data does not change.
-const DELISTED_AFTER_0124 = new Set(["price-compare"]);
+const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search"]);
 const pinnedManifestDescription = (slug: string, description: string) =>
   DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description;
 const dialect = new PgDialect();
@@ -1521,6 +1521,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0145_vaspRoutingLatency",
       "runMigration0146_polishCompanyDataAlgorithmic",
       "runMigration0147_reconcileSerperRenewal",
+      "runMigration0148_deactivateEuTrademarkSearch",
     ]);
   });
 });
@@ -2460,7 +2461,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(147);
+    expect(Math.max(...numbers)).toBe(148);
   });
 });
 
