@@ -4,86 +4,44 @@ import { readPageHtml } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
 import { STRALE_USER_AGENT, assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
 import { looksLikeJsChallenge } from "./lib/web-provider.js";
+import { detectTechnologies, extractCookieNames, groupByCategory } from "./lib/tech-detect.js";
+import { hostnameOf, lookupTechDns, registrableGuess, type TechDns } from "./lib/tech-dns.js";
 
 /**
  * Tech Stack Detection — identify technologies used by a website.
  *
- * Analyzes HTTP response headers, HTML meta tags, script sources,
- * and link elements to detect CMS, frameworks, analytics, CDN,
- * payment providers, and other technologies.
+ * Reads ONE public fetch of the homepage (response headers, Set-Cookie names,
+ * HTML: meta tags, script and link URLs, inline markers) and the domain's
+ * public DNS records (MX, TXT, NS, CNAME), and matches them against the
+ * hand-written signature table in lib/tech-signatures.ts. A version is
+ * reported when the page or a header states one.
  *
- * No external API needed, no LLM, no Browserless — direct HTTP
- * fetch + pattern matching. Zero external cost.
+ * No external API, no LLM, no Browserless, no second page: direct HTTP fetch,
+ * public DNS and pattern matching. Zero external cost.
  */
 
-interface TechMatch {
-  name: string;
-  category: string;
-  confidence: "high" | "medium" | "low";
-  evidence: string;
+/** What this capability can and cannot see, repeated in every result. */
+export const TECH_STACK_COVERAGE_NOTE =
+  "Detected from one fetch of the homepage, its response headers and public DNS records (MX, TXT, NS, CNAME). " +
+  "It lists what those show, not every technology the company uses: tools loaded only after JavaScript runs, " +
+  "on other pages or on the server are not visible.";
+
+const NON_HTML_CONTENT_TYPE = /^(?:image|audio|video)\/|^application\/(?:pdf|zip|octet-stream|gzip)/i;
+
+// Names reported before the signature table existed; kept in the two signals
+// below so a tool that was a chat widget or marketing automation stays one.
+const LEGACY_CHAT_WIDGETS = ["Intercom", "Drift", "Crisp", "Zendesk"];
+const LEGACY_MARKETING_AUTOMATION = ["HubSpot", "Marketo", "Pardot", "Mailchimp", "Optimizely"];
+
+function dnsSummary(dns: TechDns) {
+  return {
+    status: dns.overall,
+    records_found: { mx: dns.mx.length, txt: dns.txt.length, ns: dns.ns.length, cname: dns.cname.length },
+    failed_lookups: dns.failures.map((f) => f.type),
+  };
 }
-
-const HEADER_RULES: Array<{ header: string; pattern: RegExp; name: string; category: string }> = [
-  { header: "server", pattern: /nginx/i, name: "Nginx", category: "hosting" },
-  { header: "server", pattern: /apache/i, name: "Apache", category: "hosting" },
-  { header: "server", pattern: /cloudflare/i, name: "Cloudflare", category: "cdn" },
-  { header: "server", pattern: /microsoft-iis/i, name: "Microsoft IIS", category: "hosting" },
-  { header: "server", pattern: /vercel/i, name: "Vercel", category: "hosting" },
-  { header: "server", pattern: /netlify/i, name: "Netlify", category: "hosting" },
-  { header: "x-powered-by", pattern: /express/i, name: "Express.js", category: "framework" },
-  { header: "x-powered-by", pattern: /next\.js/i, name: "Next.js", category: "framework" },
-  { header: "x-powered-by", pattern: /php/i, name: "PHP", category: "framework" },
-  { header: "x-powered-by", pattern: /asp\.net/i, name: "ASP.NET", category: "framework" },
-  { header: "cf-ray", pattern: /.+/, name: "Cloudflare", category: "cdn" },
-  { header: "x-amz-cf-id", pattern: /.+/, name: "Amazon CloudFront", category: "cdn" },
-  { header: "x-fastly-request-id", pattern: /.+/, name: "Fastly", category: "cdn" },
-  { header: "x-vercel-id", pattern: /.+/, name: "Vercel", category: "hosting" },
-  { header: "x-netlify-request-id", pattern: /.+/, name: "Netlify", category: "hosting" },
-  { header: "strict-transport-security", pattern: /.+/, name: "HSTS", category: "security" },
-];
-
-const HTML_RULES: Array<{ pattern: RegExp; name: string; category: string; confidence: "high" | "medium" | "low" }> = [
-  // Analytics
-  { pattern: /google-analytics\.com|gtag\(|googletagmanager\.com/i, name: "Google Analytics", category: "analytics", confidence: "high" },
-  { pattern: /hotjar\.com/i, name: "Hotjar", category: "analytics", confidence: "high" },
-  { pattern: /segment\.com\/analytics/i, name: "Segment", category: "analytics", confidence: "high" },
-  { pattern: /mixpanel\.com/i, name: "Mixpanel", category: "analytics", confidence: "high" },
-  { pattern: /plausible\.io/i, name: "Plausible", category: "analytics", confidence: "high" },
-  { pattern: /amplitude\.com/i, name: "Amplitude", category: "analytics", confidence: "high" },
-  // CMS / Ecommerce
-  { pattern: /wp-content|wp-includes/i, name: "WordPress", category: "cms", confidence: "high" },
-  { pattern: /cdn\.shopify\.com/i, name: "Shopify", category: "ecommerce", confidence: "high" },
-  { pattern: /squarespace-cdn|squarespace\.com/i, name: "Squarespace", category: "cms", confidence: "high" },
-  { pattern: /wixstatic\.com|wix\.com/i, name: "Wix", category: "cms", confidence: "high" },
-  { pattern: /webflow\.com/i, name: "Webflow", category: "cms", confidence: "high" },
-  { pattern: /hubspot\.com|hubspot\.net/i, name: "HubSpot", category: "marketing", confidence: "high" },
-  // Frameworks
-  { pattern: /_next\/static|__next/i, name: "Next.js", category: "framework", confidence: "high" },
-  { pattern: /_nuxt\/|__nuxt/i, name: "Nuxt.js", category: "framework", confidence: "high" },
-  { pattern: /gatsby-/i, name: "Gatsby", category: "framework", confidence: "medium" },
-  { pattern: /ng-version/i, name: "Angular", category: "framework", confidence: "high" },
-  // Payment
-  { pattern: /js\.stripe\.com/i, name: "Stripe", category: "payment", confidence: "high" },
-  { pattern: /paypal\.com\/sdk/i, name: "PayPal", category: "payment", confidence: "high" },
-  // Marketing / Chat
-  { pattern: /widget\.intercom\.io/i, name: "Intercom", category: "marketing", confidence: "high" },
-  { pattern: /js\.driftt\.com/i, name: "Drift", category: "marketing", confidence: "high" },
-  { pattern: /client\.crisp\.chat/i, name: "Crisp", category: "marketing", confidence: "high" },
-  { pattern: /static\.zdassets\.com|zendesk/i, name: "Zendesk", category: "marketing", confidence: "high" },
-  { pattern: /mktdns\.com|marketo/i, name: "Marketo", category: "marketing", confidence: "high" },
-  { pattern: /pardot\.com/i, name: "Pardot", category: "marketing", confidence: "high" },
-  { pattern: /cdn\.optimizely\.com/i, name: "Optimizely", category: "marketing", confidence: "high" },
-  // Monitoring
-  { pattern: /sentry\.io|browser\.sentry-cdn/i, name: "Sentry", category: "monitoring", confidence: "high" },
-  { pattern: /datadoghq\.com/i, name: "Datadog", category: "monitoring", confidence: "high" },
-  { pattern: /newrelic\.com/i, name: "New Relic", category: "monitoring", confidence: "high" },
-  // Auth
-  { pattern: /auth0\.com/i, name: "Auth0", category: "security", confidence: "high" },
-  // CSS
-  { pattern: /tailwindcss|tailwind/i, name: "Tailwind CSS", category: "css", confidence: "medium" },
-  { pattern: /bootstrap\.min|bootstrap\.css/i, name: "Bootstrap", category: "css", confidence: "high" },
-];
 
 registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
   const url = (input.url as string)?.trim() ?? "";
@@ -129,54 +87,55 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
     await discardBody(resp, "tech-stack-detect: redirect target disallowed by robots.txt");
     throw err;
   }
+
+  const contentType = resp.headers.get("content-type") ?? "";
+  if (NON_HTML_CONTENT_TYPE.test(contentType)) {
+    await discardBody(resp, "tech-stack-detect: non-HTML content type");
+    throw inputRefusal(
+      `${target} returned ${contentType.split(";")[0]}, not a web page.`,
+      "url",
+      "Send 'url' (or 'domain') as the address of an HTML page, such as the site's homepage.",
+    );
+  }
+
+  // Public DNS runs alongside the body read. The domain's MX, TXT and NS
+  // describe the organisation, so they are read from the registrable domain;
+  // CNAMEs from the host asked for and the host the fetch ended on.
+  const inputHost = hostnameOf(target);
+  const finalHost = hostnameOf(resp.url || target);
+  const dnsPromise = lookupTechDns({
+    domain: registrableGuess(inputHost.replace(/^www\./, "")),
+    cnameHosts: [inputHost, finalHost],
+  });
+
   const html = await readPageHtml(resp);
   if (looksLikeJsChallenge(html)) throw siteAccessRefusal(target, { kind: "challenge" });
-  const technologies: TechMatch[] = [];
-  const seen = new Set<string>();
-
-  // HTTP headers
-  for (const rule of HEADER_RULES) {
-    const value = resp.headers.get(rule.header);
-    if (value && rule.pattern.test(value) && !seen.has(rule.name)) {
-      seen.add(rule.name);
-      technologies.push({
-        name: rule.name,
-        category: rule.category,
-        confidence: "high",
-        evidence: `HTTP header ${rule.header}`,
-      });
-    }
+  if (html.trim().length === 0) {
+    throw new Error(`${target} returned an empty page (HTTP ${resp.status}), so there is nothing to analyse. Check the URL serves a page to automated requests.`);
   }
 
-  // HTML patterns (first 200KB)
-  const htmlSlice = html.slice(0, 200000);
-  for (const rule of HTML_RULES) {
-    if (rule.pattern.test(htmlSlice) && !seen.has(rule.name)) {
-      seen.add(rule.name);
-      technologies.push({
-        name: rule.name,
-        category: rule.category,
-        confidence: rule.confidence,
-        evidence: "HTML content pattern",
-      });
-    }
-  }
+  const headers: Record<string, string> = {};
+  resp.headers.forEach((value, name) => { headers[name.toLowerCase()] = value; });
+  const cookieNames = extractCookieNames(resp.headers.getSetCookie?.() ?? []);
+  const dns = await dnsPromise;
 
-  // Meta generator
-  const genMatch = htmlSlice.match(/<meta[^>]+name=["']generator["'][^>]+content=["']([^"']+)/i);
-  if (genMatch) {
-    const genName = genMatch[1].trim();
-    if (!seen.has(genName)) {
-      seen.add(genName);
-      technologies.push({ name: genName, category: "cms", confidence: "high", evidence: "meta generator tag" });
-    }
-  }
+  const technologies = detectTechnologies({ headers, cookieNames, html, dns });
+  const byCategory = groupByCategory(technologies);
 
-  // Group by category
-  const byCategory: Record<string, string[]> = {};
-  for (const tech of technologies) {
-    if (!byCategory[tech.category]) byCategory[tech.category] = [];
-    byCategory[tech.category].push(tech.name);
+  // A DNS fault is reported, never folded into an empty list: an empty
+  // result with failed lookups must not read as "this domain uses nothing".
+  const warnings: string[] = [];
+  if (dns.overall === "unavailable" || dns.overall === "partial") {
+    warnings.push(
+      `Public DNS lookups failed (${dns.failures.map((f) => `${f.type}: ${f.code}`).join(", ")}). ` +
+      "Technologies that only DNS shows (email provider, DNS host, hosting by CNAME) may be missing from this result.",
+    );
+  }
+  if (technologies.length === 0) {
+    warnings.push(
+      "No technology was recognised in the homepage, its headers or public DNS. That does not mean none is in use: " +
+      "tools loaded after JavaScript runs, on other pages or on the server are not visible to this check.",
+    );
   }
 
   return {
@@ -187,11 +146,16 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
       by_category: byCategory,
       signals: {
         has_analytics: (byCategory.analytics || []).length > 0,
-        has_chat_widget: technologies.some(t => ["Intercom", "Drift", "Crisp", "Zendesk"].includes(t.name)),
+        has_chat_widget: technologies.some(t => t.category === "chat" || LEGACY_CHAT_WIDGETS.includes(t.name)),
         has_payment_processing: (byCategory.payment || []).length > 0,
-        has_marketing_automation: technologies.some(t => ["HubSpot", "Marketo", "Pardot", "Mailchimp", "Optimizely"].includes(t.name)),
+        has_marketing_automation: technologies.some(t => t.category === "marketing-automation" || LEGACY_MARKETING_AUTOMATION.includes(t.name)),
         has_error_monitoring: (byCategory.monitoring || []).length > 0,
+        has_tag_manager: (byCategory["tag-manager"] || []).length > 0,
+        has_consent_management: (byCategory.consent || []).length > 0,
       },
+      dns: dnsSummary(dns),
+      warnings,
+      coverage_note: TECH_STACK_COVERAGE_NOTE,
     },
     provenance: {
       source: "tech-stack-detect:algorithmic",

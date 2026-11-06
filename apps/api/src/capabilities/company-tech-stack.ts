@@ -5,9 +5,20 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
-import * as dns from "node:dns/promises";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { detectTechnologies, extractCookieNames, type TechMatch } from "./lib/tech-detect.js";
+import { lookupTechDns, registrableGuess } from "./lib/tech-dns.js";
+import { normalizeTechName } from "./lib/tech-signatures.js";
+
+const COVERAGE_NOTE =
+  "Detected from the rendered homepage, its response headers and public DNS records (MX, TXT, NS, CNAME), " +
+  "with an AI summary of the same material. It lists what those show, not every technology the company uses.";
+
+/** The first deterministic detection in a category, for filling a summary field the model left empty. */
+function firstIn(detected: TechMatch[], ...categories: string[]): string | null {
+  return detected.find((t) => categories.includes(t.category))?.name ?? null;
+}
 
 registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim();
@@ -19,13 +30,18 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   // Fetch HTML + headers in parallel with DNS
   const [html, dnsResults] = await Promise.all([
     fetchRenderedHtml(fullUrl),
-    resolveDns(cleanDomain),
+    lookupTechDns({
+      domain: registrableGuess(cleanDomain.replace(/^www\./, "")),
+      cnameHosts: [cleanDomain],
+      includeA: true,
+    }),
   ]);
 
   // Extract HTTP headers by doing a HEAD request. Runs only after
   // fetchRenderedHtml succeeded, i.e. after its robots.txt and block checks
   // passed (DEC-20261023-A); identifies as Strale like every other route.
   let headers: Record<string, string> = {};
+  let cookieNames: string[] = [];
   try {
     const headRes = await safeFetch(fullUrl, {
       method: "HEAD",
@@ -33,8 +49,14 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
       signal: AbortSignal.timeout(10000),
     });
     await discardBody(headRes, "company-tech-stack: HEAD");
-    headRes.headers.forEach((v, k) => { headers[k] = v; });
+    headRes.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+    cookieNames = extractCookieNames(headRes.headers.getSetCookie?.() ?? []);
   } catch { /* ignore */ }
+
+  // Signature matching on the same material (lib/tech-signatures.ts). It is
+  // deterministic and carries versions; the model below adds a summary and
+  // anything the signatures do not know.
+  const detected = detectTechnologies({ headers, cookieNames, html, dns: dnsResults });
 
   // Extract signals from HTML
   const signals: string[] = [];
@@ -75,6 +97,14 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
+  const dnsRecords = {
+    a: dnsResults.a,
+    mx: dnsResults.mx,
+    txt: dnsResults.txt,
+    cname: dnsResults.cname,
+    ns: dnsResults.ns,
+  };
+
   const client = createAnthropicClient({ apiKey });
   const output = await extractJsonWithLlm({
     client,
@@ -85,7 +115,8 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
 Domain: ${cleanDomain}
 Detected framework markers: ${markers.join(", ") || "none"}
 HTTP header signals: ${headerSignals.join(", ") || "none"}
-DNS records: ${JSON.stringify(dnsResults).slice(0, 500)}
+DNS records: ${JSON.stringify(dnsRecords).slice(0, 700)}
+Already identified by signature matching (do not repeat these in detected_technologies): ${detected.map((t) => (t.version ? `${t.name} ${t.version}` : t.name)).join(", ") || "none"}
 
 Script/link sources (sample):
 ${signals.slice(0, 30).join("\n")}
@@ -111,20 +142,50 @@ Return JSON:
     truncationGuidance: "This domain's page yielded too much signal for one call — this is unusual and likely means the target page is unusually large.",
     parseFailureError: () => new Error("Failed to analyze tech stack."),
   });
-  output.dns_records = dnsResults;
+
+  // detected_technologies: signature matches first (with versions), then
+  // whatever else the model named that they do not already cover.
+  const known = new Set(detected.map((t) => normalizeTechName(t.name)));
+  const modelTechs = (Array.isArray(output.detected_technologies) ? output.detected_technologies : [])
+    .filter((t): t is Record<string, unknown> => !!t && typeof t === "object" && typeof (t as Record<string, unknown>).name === "string")
+    .filter((t) => !known.has(normalizeTechName(String(t.name))))
+    .map((t) => ({
+      name: String(t.name),
+      category: typeof t.category === "string" ? t.category : "other",
+      confidence: typeof t.confidence === "string" ? t.confidence : "low",
+      version: typeof t.version === "string" ? t.version : null,
+      evidence: "AI analysis of the page excerpt and signals",
+    }));
+  output.detected_technologies = [
+    ...detected.map((t) => ({ name: t.name, category: t.category, confidence: t.confidence, version: t.version, evidence: t.evidence })),
+    ...modelTechs,
+  ];
+
+  // Summary fields the model left empty are filled from signature matches.
+  const analytics = new Set<string>(Array.isArray(output.analytics) ? output.analytics.map(String) : []);
+  for (const t of detected) if (t.category === "analytics") analytics.add(t.name);
+  output.analytics = [...analytics];
+  output.cdn ||= firstIn(detected, "cdn");
+  output.payment_processor ||= firstIn(detected, "payment");
+  output.email_provider ||= firstIn(detected, "email");
+  output.chat_widget ||= firstIn(detected, "chat");
+
+  output.dns_records = dnsRecords;
   output.http_headers_analyzed = headerSignals;
+  output.dns_status = {
+    status: dnsResults.overall,
+    failed_lookups: dnsResults.failures.map((f) => f.type),
+  };
+  output.warnings = dnsResults.overall === "unavailable" || dnsResults.overall === "partial"
+    ? [
+        `Public DNS lookups failed (${dnsResults.failures.map((f) => `${f.type}: ${f.code}`).join(", ")}). ` +
+        "Technologies that only DNS shows (email provider, DNS host, hosting by CNAME) may be missing from this result.",
+      ]
+    : [];
+  output.coverage_note = COVERAGE_NOTE;
 
   return {
     output,
     provenance: { source: "html-analysis", fetched_at: new Date().toISOString() },
   };
 });
-
-async function resolveDns(domain: string): Promise<Record<string, unknown>> {
-  const results: Record<string, unknown> = {};
-  try { results.a = await dns.resolve4(domain); } catch { results.a = []; }
-  try { results.mx = await dns.resolveMx(domain); } catch { results.mx = []; }
-  try { results.txt = (await dns.resolveTxt(domain)).map((r) => r.join("")); } catch { results.txt = []; }
-  try { results.cname = await dns.resolveCname(domain); } catch { results.cname = []; }
-  return results;
-}

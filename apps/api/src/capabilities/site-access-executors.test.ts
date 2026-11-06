@@ -35,6 +35,17 @@ vi.mock("../lib/metered-vendor-fetch.js", () => ({
   meteredVendorFetch: browserlessFetchMock,
   vendorReachabilityFetch: browserlessFetchMock,
 }));
+// tech-stack-detect and company-tech-stack also read public DNS. Stubbed so
+// these suites stay offline; lib/tech-dns.test.ts covers the lookups.
+vi.mock("./lib/tech-dns.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./lib/tech-dns.js")>()),
+  lookupTechDns: vi.fn(async () => ({
+    mx: [], txt: [], ns: [], cname: [], a: [],
+    status: { a: "empty", mx: "empty", txt: "empty", ns: "empty", cname: "empty" },
+    overall: "ok",
+    failures: [],
+  })),
+}));
 vi.mock("../lib/url-validator.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/url-validator.js")>()),
   validateUrl: vi.fn().mockResolvedValue(undefined),
