@@ -26,3 +26,10 @@ The review of 28e9d4a4 found that the new head-strip helper was quadratic: about
 - Icon links are taken from outside the head only, since the head carries its own. An icon tag cut inside a quoted attribute (a data-URI SVG favicon) is dropped, so it can no longer swallow the JSON-LD after it.
 - `asciiLowerCase` takes the native fast path unless a string's length changes, and maps "İ" before lowercasing. 16 MB of mixed case takes 38 ms, or 311 ms with an "İ" present.
 - The four new tests fail on 28e9d4a4.
+
+## After the review of 38559e38 (PASS-WITH-FIXES, fixed)
+
+The review found three issues, each fixed:
+- **Icons in the head.** The head-icon skip lost icons beyond the 128 KB kept slice. The skip is removed. Each icon `<link>` is now re-emitted from its parsed `rel` and `href`, quoted and escaped, so a malformed tag with a stray quote in an unquoted value cannot leave the parser input open.
+- **"İ" in the fast lowercasing.** It mapped "İ" to "i", so "</scrİpt>" could close a block. "İ" and the Kelvin sign are now swapped for U+FFFD, a single code unit that lowercases to itself. The review's sweep of every code point found that these two are the only non-ASCII characters that lowercase to ASCII.
+- **Tests.** Three new tests fail on 38559e38.

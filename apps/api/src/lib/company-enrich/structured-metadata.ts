@@ -36,19 +36,19 @@ export const METADATA_HTML_LIMIT = 1_500 * 1024;
 const HEAD_SCAN_LIMIT = 2 * 1024 * 1024;
 
 /**
- * Lowercases A-Z only. `String#toLowerCase` can change a string's length
- * ("İ" becomes two code units), so positions found in its result would cut the
- * original string in the wrong place. ASCII is all the tag scans need.
+ * Lowercases for tag matching while keeping every position aligned with the
+ * input. On V8 the only characters whose lowercase changes length is "İ"
+ * (U+0130), and the only non-ASCII characters that lowercase to ASCII are
+ * "İ" (to "i") and the Kelvin sign U+212A (to "k"); either could make a
+ * scan see "</script>" where the page has none. Both are swapped for U+FFFD,
+ * one code unit that lowercases to itself, before the native lowercase.
  */
 export function asciiLowerCase(text: string): string {
-  const lowered = text.toLowerCase();
-  // Lowercasing never shortens a string, so equal lengths mean every position
-  // maps one to one. Only a character such as "İ" makes it longer.
+  const safe = /[\u0130\u212A]/.test(text) ? text.replace(/[\u0130\u212A]/g, "\uFFFD") : text;
+  const lowered = safe.toLowerCase();
   if (lowered.length === text.length) return lowered;
-  // "İ" (U+0130) is the character that lowercases to two code units; mapped to
-  // "I" first, it keeps its single position.
-  const dotless = text.replace(/\u0130/g, "I").toLowerCase();
-  if (dotless.length === text.length) return dotless;
+  // Not reached on V8 today; kept so a runtime with other casing data still
+  // gets aligned positions rather than a silent misread.
   return text.replace(/[A-Z]+/g, (run) => run.toLowerCase());
 }
 
@@ -204,6 +204,32 @@ function quotesBalanced(tag: string): boolean {
   return open === null;
 }
 
+const LINK_ATTRIBUTE = /([a-zA-Z-]+)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
+
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Re-emits an icon <link> from its parsed rel and href only, quoted and
+ * escaped, so nothing in a malformed publisher tag (a stray quote in an
+ * unquoted value, say) can leave the parser input open and swallow the
+ * JSON-LD after it. The tag is at most ICON_TAG_LIMIT long.
+ */
+function rebuildIconLink(tag: string): string | null {
+  let rel: string | null = null;
+  let href: string | null = null;
+  for (const match of tag.matchAll(LINK_ATTRIBUTE)) {
+    const name = match[1]!.toLowerCase();
+    const raw = match[2]!;
+    const value = raw.startsWith('"') || raw.startsWith("'") ? raw.slice(1, -1) : raw;
+    if (name === "rel" && rel === null) rel = value;
+    if (name === "href" && href === null) href = value;
+  }
+  if (!rel || !href || !/icon/i.test(rel)) return null;
+  return `<link rel="${escapeAttribute(rel)}" href="${escapeAttribute(href)}">`;
+}
+
 /** Selects the small, metadata-bearing portions that jsdom is allowed to parse. */
 export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpeningsVisited: number }): string {
   const lower = asciiLowerCase(html);
@@ -259,16 +285,14 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
     const end = lower.indexOf(">", start);
     if (end < 0) break;
     cursor = end + 1;
-    // The head slice already carries its own icon links intact.
-    if (start >= headRegionStart && start < headRegionEnd) continue;
     const tagLength = end + 1 - start;
     if (tagLength > ICON_TAG_LIMIT) continue;
     const tag = lower.slice(start, end + 1);
     // Ending at the first ">" cuts a tag whose quoted attribute holds one (a
-    // data-URI SVG favicon). Such a fragment would leave a quote open and
-    // swallow everything after it in the parser input, so it is dropped.
-    if (tag.includes("<", 1) || !quotesBalanced(tag)) continue;
-    if (tag.includes("icon")) icons.push(html.slice(start, end + 1));
+    // data-URI SVG favicon); such a fragment is not a whole tag.
+    if (!tag.includes("icon") || tag.includes("<", 1) || !quotesBalanced(tag)) continue;
+    const rebuilt = rebuildIconLink(html.slice(start, end + 1));
+    if (rebuilt) icons.push(rebuilt);
   }
 
   const prefix = "<!doctype html><html>";

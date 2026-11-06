@@ -209,6 +209,27 @@ describe("buildBoundedMetadataHtml", () => {
     expect(diagnostics.searches).toBeLessThanOrEqual(3 * count + 4);
   });
 
+  it("still finds an icon that sits beyond the head's kept slice", () => {
+    const html = `<html><head>${'<meta name="x" content="y">'.repeat(Math.ceil(200 * 1024 / 27))}<link rel="icon" href="/late.png"></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ logo_url: "https://example.com/late.png" });
+  });
+
+  it("a malformed body icon with a stray quote does not hide the JSON-LD", () => {
+    const ld = `<script type="application/ld+json">${JSON.stringify({ "@type": "Organization", name: "LDCO", email: "a@example.com" })}</script>`;
+    for (const icon of [`<link rel=icon x=a"b title="c>d" href=/z.png>`, `<link rel=icon x=a'b title='c>d' href=/z.png>`]) {
+      const html = `<html><head><meta property="og:site_name" content="OGNAME"></head><body>${icon}${ld}</body></html>`;
+      expect(extractStructuredCompanyMetadata(html, PAGE), icon).toMatchObject({ company_name: "LDCO", email: "a@example.com" });
+    }
+  });
+
+  it('a JSON-LD value containing "</scr\u0130pt>" does not end the block early', () => {
+    // "İ" lowercases to "i", so a scan on a natively lowercased copy would see
+    // "</script>" inside the value and cut the JSON short.
+    const ld = `<script type="application/ld+json">{"@type":"Organization","name":"A</scr\u0130pt>B","email":"a@example.com"}</script>`;
+    const metadata = extractStructuredCompanyMetadata(`<html><head>${ld}</head><body></body></html>`, PAGE);
+    expect(metadata).toMatchObject({ company_name: "A</scr\u0130pt>B", email: "a@example.com" });
+  });
+
   it("does not take <header> for <head> on a page that omits the head tag", () => {
     const html = `<!doctype html><meta property="og:site_name" content="Acme Co"><meta name="description" content="What Acme does."><header><nav>Menu</nav></header><main>Body</main>`;
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme Co", description: "What Acme does." });
