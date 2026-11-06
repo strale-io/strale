@@ -26,14 +26,24 @@ input_schema:
 output_schema:
   type: object
   example:
-    note: >-
-      ESMA's non-compliant CASP register is not currently available or may not yet be published. This does not confirm
-      compliance.
-    matches: []
-    data_available: false
-    entity_name_searched: Google
-    on_non_compliant_list: false
-    register_last_updated: null
+    matches:
+      - nca: Financial Services and Markets Authority (FSMA)
+        lei: null
+        website: www.bank-bit.com
+        home_country: BE
+        entity_name: Bank Bit
+        decision_date: 29/06/2026
+        infringement: Bank Bit provides crypto-asset services in Belgium without the required MiCAR license. Bank Bit is in breach of section 59 MiCAR
+        commercial_name: Bank Bit
+        record_last_updated: 07/09/2026
+    register_stale: false
+    data_available: true
+    register_entries: 189
+    register_age_days: 1
+    entity_name_searched: Bank Bit
+    on_non_compliant_list: true
+    register_source_url: https://www.esma.europa.eu/sites/default/files/2024-12/NCASP.csv
+    register_last_updated: "2026-11-05T14:09:31.000Z"
   properties:
     matches:
       type: array
@@ -45,7 +55,7 @@ output_schema:
       type: boolean
     register_last_updated:
       type: string
-data_source: ESMA Crypto-Asset Service Providers (CASP) Register
+data_source: ESMA Interim MiCA Register (CASPS.csv and NCASP.csv, esma.europa.eu)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -67,11 +77,28 @@ output_field_reliability:
   on_non_compliant_list: common
   register_last_updated: common
 limitations:
-  - title: null
+  - title: Interim register, published weekly
     text: >-
-      Output reflects ESMA Crypto-Asset Service Providers (CASP) Register at query time. Dependent on upstream API
-      availability; may degrade if the provider rate-limits or is temporarily unavailable.
+      Reads ESMA's interim MiCA register (the NCASP.csv file on ESMA's MiCA page), which lists entities that national
+      competent authorities have reported as providing crypto-asset services without authorisation. It is
+      republished weekly and is interim; ESMA plans to fold it into its own IT systems. Not being on the list does
+      not confirm compliance.
+    category: freshness
+    severity: info
+    workaround: null
+  - title: Stale or unavailable register
+    text: >-
+      `register_last_updated` is the file's publication date. Past 45 days the answer carries `register_stale: true`
+      and a note; past 120 days, or when ESMA cannot be read, the call fails (and is not charged) instead of
+      answering from old data.
     category: availability
+    severity: info
+    workaround: null
+  - title: Name matching
+    text: >-
+      Matches by website, then a case-insensitive name contains on the legal and commercial name; at most three
+      matches are returned.
+    category: coverage
     severity: info
     workaround: null
 
