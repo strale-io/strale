@@ -51,7 +51,6 @@ import "./dns-lookup.js";
 import "./email-auth-check.js";
 import "./email-deliverability-check.js";
 import "./domain-reputation.js";
-import "./company-tech-stack.js";
 import "./email-pattern-discover.js";
 import "./email-reputation-score.js";
 import "./email-validate.js";
@@ -158,16 +157,11 @@ describe.each(["ETIMEOUT", "ESERVFAIL"])("a resolver failure (%s) throws, unbill
     await expectUnbilledUpstreamFailure(run("domain-reputation", { domain: "example.com" }), code);
   });
 
-  it("company-tech-stack, before the paid LLM call", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
-    dns.resolve4.mockResolvedValue([IP]);
-    dns.resolveMx.mockImplementation(reject(code));
-    await expectUnbilledUpstreamFailure(run("company-tech-stack", { domain: "example.com" }), code);
-    expect(llmMock).not.toHaveBeenCalled();
-    // Review round 1: the paid Browserless render must not run either, or a
-    // DNS outage plus its retry costs two renders.
-    expect(renderMock).not.toHaveBeenCalled();
-  });
+  // company-tech-stack is not in this family any more: since #938 it reads DNS
+  // through lib/tech-dns.ts and reports a resolver fault in the result
+  // (dns_status plus a warning) beside its page detections, instead of
+  // throwing. company-tech-stack.test.ts ("states a DNS fault in the result")
+  // covers that; either is an honest answer under the audit's rule.
 
   it("email-pattern-discover, on the MX lookup", async () => {
     dns.resolveMx.mockImplementation(reject(code));
@@ -355,16 +349,6 @@ describe("a real negative keeps today's output, and is still billed", () => {
       issues: ["No SPF record", "No DMARC record", "HTTPS connection failed"],
       issue_count: 3,
     });
-  });
-
-  it("company-tech-stack: empty record types reach the model as empty", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
-    dns.resolve4.mockResolvedValue([IP]);
-    for (const fn of [dns.resolveMx, dns.resolveTxt, dns.resolveCname]) fn.mockImplementation(reject("ENODATA"));
-    const result = await run("company-tech-stack", { domain: "example.com" });
-    expect(result.output.dns_records).toEqual({ a: [IP], mx: [], txt: [], cname: [] });
-    expect(renderMock).toHaveBeenCalledTimes(1);
-    expect(llmMock).toHaveBeenCalledTimes(1);
   });
 
   it("email-pattern-discover: no MX", async () => {

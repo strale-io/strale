@@ -138,3 +138,7 @@ Waves 2 and 3 follow:
   - the past-charges measurement.
 
 Next authorised action: an independent review of this branch, then open the PR | Owner: Strale orchestrator | Blocker: none.
+
+## Merge with #938 (2026-11-06, 16:20 Swedish time)
+
+#938 (tech-stack coverage) rewrote `company-tech-stack.ts` on main and reads DNS through `lib/tech-dns.ts`, which reports a resolver fault in the result (`dns_status`, a warning) next to its page detections instead of throwing. The conflict was resolved by taking main's file: under the audit's rule a failed leg either throws or is marked degraded, and #938 marks it. Row 13 is therefore fixed by #938, not by this PR; wave 1's two company-tech-stack cases were removed from `dns-family.upstream-failures.test.ts`, and `company-tech-stack.test.ts` ("states a DNS fault in the result") covers the case. The DNS-before-render ordering from review round 1 no longer matters, because a DNS fault no longer throws after a paid render.
