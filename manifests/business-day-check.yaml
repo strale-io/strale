@@ -62,7 +62,7 @@ output_field_reliability:
   previous_business_day: guaranteed
 limitations:
   - title: Weekend definition varies by country
-    text: Uses standard Sat-Sun weekends for most countries; Fri-Sat for Middle Eastern countries. Some countries with mixed weekends may not be fully accurate.
+    text: Uses Sat-Sun weekends for most countries, Fri-Sat for the Gulf and some other Middle Eastern and South Asian countries (the UAE is Sat-Sun since 2022), and Friday only for Iran. Countries not in the table (for example Israel and Nepal) are treated as Sat-Sun, and some rows are marked unverified in the code.
     category: accuracy
     severity: info
   - title: Holiday data from Nager.Date
