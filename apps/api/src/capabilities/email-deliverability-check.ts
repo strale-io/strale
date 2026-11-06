@@ -1,6 +1,7 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
+import { dnsOrEmpty, requireAnyLeg, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // F-0-006 Bucket C: pure DNS resolution (MX, SPF, DMARC records) on the
 // user's email domain. No HTTP fetch, no socket to the resolved IP.
@@ -17,6 +18,10 @@ const DKIM_SELECTORS = [
   "dkim",
   "mail",
 ];
+
+// Every DNS lookup below goes through dnsOrEmpty: a record the domain does not
+// have reads as absent, and a resolver that could not answer throws (unbilled,
+// retried) instead of reading as "no SPF / no DMARC / not blacklisted".
 
 // Common DNS blocklists
 const DNSBLS = [
@@ -39,31 +44,22 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
   const issues: string[] = [];
   const recommendations: string[] = [];
 
-  // 1. Check if domain resolves (non-fatal — some hosting environments block resolve4)
-  let ipAddresses: string[] = [];
-  try {
-    ipAddresses = await dns.resolve4(domain);
-  } catch {
-    // Try resolve6 as fallback
-    try {
-      const ipv6 = await dns.resolve6(domain);
-      ipAddresses = ipv6;
-    } catch {
-      // Domain may still have MX/TXT records even without A/AAAA — continue
+  // 1. Check if domain resolves. No A record falls back to AAAA; having
+  // neither is not fatal, since a domain may still receive email via MX.
+  let ipAddresses: string[] = await dnsOrEmpty(() => dns.resolve4(domain), "DNS A query");
+  const hasIpv4 = ipAddresses.length > 0;
+  if (!hasIpv4) {
+    ipAddresses = await dnsOrEmpty(() => dns.resolve6(domain), "DNS AAAA query");
+    if (ipAddresses.length === 0) {
       issues.push("Domain has no A/AAAA records (may still receive email via MX)");
     }
   }
 
   // 2. MX records
-  let mxRecords: Array<{ priority: number; exchange: string }> = [];
-  try {
-    const mx = await dns.resolveMx(domain);
-    mxRecords = mx
+  const mxRecords: Array<{ priority: number; exchange: string }> =
+    (await dnsOrEmpty(() => dns.resolveMx(domain), "DNS MX query"))
       .sort((a, b) => a.priority - b.priority)
       .map((r) => ({ priority: r.priority, exchange: r.exchange }));
-  } catch {
-    // No MX records
-  }
 
   if (mxRecords.length > 0) {
     score += 20;
@@ -77,8 +73,8 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
   let spfExists = false;
   let spfValid = false;
   let spfMechanism: string | null = null;
-  try {
-    const txtRecords = await dns.resolveTxt(domain);
+  {
+    const txtRecords = await dnsOrEmpty(() => dns.resolveTxt(domain), "DNS TXT query");
     const spfEntry = txtRecords
       .map((r) => r.join(""))
       .find((r) => r.startsWith("v=spf1"));
@@ -104,8 +100,6 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
         recommendations.push("Change SPF from +all to -all or ~all immediately.");
       }
     }
-  } catch {
-    // No TXT records
   }
 
   if (!spfExists) {
@@ -117,8 +111,8 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
   let dmarcExists = false;
   let dmarcRecord: string | null = null;
   let dmarcPolicy: string | null = null;
-  try {
-    const dmarcTxt = await dns.resolveTxt(`_dmarc.${domain}`);
+  {
+    const dmarcTxt = await dnsOrEmpty(() => dns.resolveTxt(`_dmarc.${domain}`), "DNS DMARC TXT query");
     const dmarcEntry = dmarcTxt
       .map((r) => r.join(""))
       .find((r) => r.startsWith("v=DMARC1"));
@@ -143,8 +137,6 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
         }
       }
     }
-  } catch {
-    // No DMARC record
   }
 
   if (!dmarcExists) {
@@ -157,7 +149,7 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
   let dkimSelectorFound: string | null = null;
   const dkimChecks = await Promise.allSettled(
     DKIM_SELECTORS.map(async (selector) => {
-      const records = await dns.resolveTxt(`${selector}._domainkey.${domain}`);
+      const records = await dnsOrEmpty(() => dns.resolveTxt(`${selector}._domainkey.${domain}`), "DNS DKIM TXT query");
       const dkimEntry = records
         .map((r) => r.join(""))
         .find((r) => r.includes("v=DKIM1") || r.includes("k=rsa") || r.includes("p="));
@@ -173,6 +165,12 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
       break;
     }
   }
+  // A selector the resolver could not answer for might be the one that holds
+  // the key, so "No DKIM record found" is only said when every probe answered.
+  if (!dkimDetected) {
+    const failed = dkimChecks.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failed) throw failed.reason;
+  }
 
   if (dkimDetected) {
     score += 15;
@@ -181,40 +179,56 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
     recommendations.push("Configure DKIM signing and publish a DKIM DNS record. Note: custom selectors may exist but were not detected.");
   }
 
-  // 6. Blacklist check
+  // 6. Blacklist check. DNSBLs are keyed by reversed IPv4 octets, so only an
+  // IPv4 address can be checked (an IPv6 address reversed by "." is not a
+  // query any list answers). NXDOMAIN means not listed; a 127.255.255.x
+  // answer is the list refusing the query (Spamhaus: public resolver, typo or
+  // rate limit), not a listing; any other failure leaves that list unknown.
+  // If every list failed there is no blocklist answer at all, and the call
+  // throws rather than report "not blacklisted".
   let blacklisted = false;
-  const blacklistResults: Array<{ name: string; listed: boolean }> = [];
+  const blacklistResults: Array<{ name: string; listed: boolean | null; error?: string }> = [];
+  let blacklistsUnknown = 0;
 
-  if (ipAddresses.length > 0) {
+  if (hasIpv4) {
     const ip = ipAddresses[0];
     const reversedIp = ip.split(".").reverse().join(".");
 
     const blChecks = await Promise.allSettled(
       DNSBLS.map(async (dnsbl) => {
-        try {
-          await dns.resolve4(`${reversedIp}.${dnsbl}`);
-          // If it resolves, the IP is listed
-          return { name: dnsbl, listed: true };
-        } catch {
-          // NXDOMAIN = not listed (this is the expected good outcome)
-          return { name: dnsbl, listed: false };
+        const answers = await dnsOrEmpty(() => dns.resolve4(`${reversedIp}.${dnsbl}`), `DNSBL ${dnsbl} query`);
+        if (answers.length > 0 && answers.every((a) => a.startsWith("127.255.255."))) {
+          throw new UpstreamUnavailableError(`DNSBL ${dnsbl}`, `the list refused the query (${answers[0]}).`, { code: answers[0] });
         }
+        return { name: dnsbl, listed: answers.length > 0 };
       }),
     );
+    requireAnyLeg(blChecks, "DNS blocklists");
 
-    for (const result of blChecks) {
+    blChecks.forEach((result, i) => {
       if (result.status === "fulfilled") {
         blacklistResults.push(result.value);
         if (result.value.listed) blacklisted = true;
       } else {
-        // If check itself failed, assume not listed
-        blacklistResults.push({ name: "unknown", listed: false });
+        const code = result.reason instanceof UpstreamUnavailableError ? result.reason.code : null;
+        blacklistResults.push({ name: DNSBLS[i], listed: null, error: code ?? "query failed" });
+        blacklistsUnknown++;
       }
+    });
+    if (blacklistsUnknown > 0) {
+      issues.push(`Blocklist check incomplete: ${blacklistsUnknown} of ${DNSBLS.length} lists did not answer, so their listing status is unknown`);
     }
   }
 
-  if (!blacklisted) {
-    score += 20;
+  // An IPv6-only domain has an address no list was asked about. Unchecked is
+  // not clean, so it earns no blocklist credit. (A domain with no address at
+  // all has nothing to list and keeps its historical credit.)
+  const ipv6Unchecked = !hasIpv4 && ipAddresses.length > 0;
+  if (ipv6Unchecked) {
+    issues.push("Blocklist check not performed: the domain resolves only to IPv6, and the checked lists cover IPv4 only");
+  } else if (!blacklisted) {
+    // Credit only the lists that answered: an unanswered list is not a clean one.
+    score += blacklistsUnknown === 0 ? 20 : Math.round((20 * (DNSBLS.length - blacklistsUnknown)) / DNSBLS.length);
   } else {
     issues.push("Domain IP is listed on one or more DNS blocklists");
     recommendations.push("Request delisting from the blocklists. Investigate potential abuse or misconfiguration.");

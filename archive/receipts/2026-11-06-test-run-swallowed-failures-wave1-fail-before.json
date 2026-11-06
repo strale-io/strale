@@ -1,0 +1,1375 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "node_modules/.bin/vitest",
+    "commit": "62f1b1d00f38326307a8c70e1bd57f2bc7f4a316"
+  },
+  "at": "2026-11-06T14:18:14.311Z",
+  "inputs": {
+    "files": [
+      "apps/api/src/lib/upstream-result.test.ts",
+      "apps/api/src/capabilities/dns-family.upstream-failures.test.ts",
+      "apps/api/src/capabilities/compliance.upstream-failures.test.ts"
+    ],
+    "source_files_at": "16362762"
+  },
+  "summary": {
+    "passed": 53,
+    "failed": 47,
+    "total": 100,
+    "code": "16 changed source files restored from 16362762",
+    "failed_are": "every transient-failure test",
+    "passed_include": "every real-negative test"
+  },
+  "topic": "swallowed-failures-wave1-fail-before",
+  "raw": {
+    "numTotalTestSuites": 17,
+    "numPassedTestSuites": 4,
+    "numFailedTestSuites": 13,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 100,
+    "numPassedTests": 53,
+    "numFailedTests": 47,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1793974681224,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENOTFOUND as the answer",
+            "status": "passed",
+            "title": "treats ENOTFOUND as the answer",
+            "duration": 1.3792320000000018,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENODATA as the answer",
+            "status": "passed",
+            "title": "treats ENODATA as the answer",
+            "duration": 0.2097510000000966,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADNAME as the answer",
+            "status": "passed",
+            "title": "treats EBADNAME as the answer",
+            "duration": 0.12117699999998877,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ETIMEOUT as no answer",
+            "status": "passed",
+            "title": "treats ETIMEOUT as no answer",
+            "duration": 0.15102100000012797,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESERVFAIL as no answer",
+            "status": "passed",
+            "title": "treats ESERVFAIL as no answer",
+            "duration": 0.09414600000013706,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EREFUSED as no answer",
+            "status": "passed",
+            "title": "treats EREFUSED as no answer",
+            "duration": 4.137846000000081,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECONNREFUSED as no answer",
+            "status": "passed",
+            "title": "treats ECONNREFUSED as no answer",
+            "duration": 0.27563199999985954,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EAI_AGAIN as no answer",
+            "status": "passed",
+            "title": "treats EAI_AGAIN as no answer",
+            "duration": 0.0963289999999688,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECANCELLED as no answer",
+            "status": "passed",
+            "title": "treats ECANCELLED as no answer",
+            "duration": 0.3510309999999208,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADRESP as no answer",
+            "status": "passed",
+            "title": "treats EBADRESP as no answer",
+            "duration": 0.12102599999980157,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESOMETHINGNEW as no answer",
+            "status": "passed",
+            "title": "treats ESOMETHINGNEW as no answer",
+            "duration": 0.1470200000001114,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats an error without a resolver code as no answer",
+            "status": "passed",
+            "title": "treats an error without a resolver code as no answer",
+            "duration": 0.12040400000000773,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull passes a successful answer through",
+            "status": "passed",
+            "title": "passes a successful answer through",
+            "duration": 1.0598560000000816,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENOTFOUND",
+            "status": "passed",
+            "title": "returns the empty answer for ENOTFOUND",
+            "duration": 0.2725949999999102,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENODATA",
+            "status": "passed",
+            "title": "returns the empty answer for ENODATA",
+            "duration": 0.18587799999977506,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ETIMEOUT",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ETIMEOUT",
+            "duration": 0.9122839999999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESERVFAIL",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESERVFAIL",
+            "duration": 3.037736999999879,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EREFUSED",
+            "duration": 0.32692599999995764,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECONNREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECONNREFUSED",
+            "duration": 0.19059100000004037,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EAI_AGAIN",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EAI_AGAIN",
+            "duration": 0.145383000000038,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECANCELLED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECANCELLED",
+            "duration": 0.16835200000014083,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EBADRESP",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EBADRESP",
+            "duration": 0.11684900000000198,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "duration": 0.20931500000006054,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull rethrows our own defect unchanged rather than blaming the resolver",
+            "status": "passed",
+            "title": "rethrows our own defect unchanged rather than blaming the resolver",
+            "duration": 0.6667039999999815,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg returns the answering legs when at least one answered",
+            "status": "passed",
+            "title": "returns the answering legs when at least one answered",
+            "duration": 0.3946699999999055,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg throws when every leg failed, naming the codes and never the legs' messages",
+            "status": "passed",
+            "title": "throws when every leg failed, naming the codes and never the legs' messages",
+            "duration": 0.3274900000001253,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg treats no legs as no outage",
+            "status": "passed",
+            "title": "treats no legs as no outage",
+            "duration": 0.0942489999999907,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "duration": 2.0826700000000073,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "duration": 7.676731000000018,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 2.6844049999999697,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.2855130000000372,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.7846059999999397,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.8891739999999118,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.7632000000000971,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.6141620000000785,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "status": "failed",
+            "title": "Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "duration": 0.7592220000001362,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { success: false, …(5) }\n(2 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:105:21\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2025:60\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "status": "passed",
+            "title": "Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "duration": 0.3227389999999559,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure carries a non-retryable verdict through to the outcome",
+            "status": "failed",
+            "title": "carries a non-retryable verdict through to the outcome",
+            "duration": 0.6610319999999774,
+            "failureMessages": [
+              "AssertionError: expected { success: false, …(7) } to match object { …(3) }\n(5 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:124:35\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict retries a retryable UpstreamUnavailableError once",
+            "status": "failed",
+            "title": "retries a retryable UpstreamUnavailableError once",
+            "duration": 4.29084499999999,
+            "failureMessages": [
+              "Error: promise rejected \"UpstreamUnavailableError: Upstream unavai… { …(3) }\" instead of resolving\n    at _Assertion.__VITEST_RESOLVES__ (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1710:17)\n    at _Assertion.propertyGetter (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1570:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1659:22)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts:136:82\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict does not retry a non-retryable one",
+            "status": "passed",
+            "title": "does not retry a non-retryable one",
+            "duration": 0.7703690000000734,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793974682534,
+        "endTime": 1793974682572.7703,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws, retryable, when every ESMA path fails with a server error",
+            "status": "failed",
+            "title": "throws, retryable, when every ESMA path fails with a server error",
+            "duration": 66.82745299999988,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"entity_name_searched\":\"Example Crypto\",\"match_found\":false,\"authorized\":false,\"matches\":[],\"register_last_updated\":null,\"note\":\"ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:69:17\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws, not retryable, when every monthly path answers 404 (the files moved)",
+            "status": "failed",
+            "title": "throws, not retryable, when every monthly path answers 404 (the files moved)",
+            "duration": 10.777807999999823,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"entity_name_searched\":\"Example Crypto\",\"match_found\":false,\"authorized\":false,\"matches\":[],\"register_last_updated\":null,\"note\":\"ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:77:17\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws on a timeout and on an HTML page served with 200",
+            "status": "failed",
+            "title": "throws on a timeout and on an HTML page served with 200",
+            "duration": 5.998841000000084,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"entity_name_searched\":\"Example Crypto\",\"match_found\":false,\"authorized\":false,\"matches\":[],\"register_last_updated\":null,\"note\":\"ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:91:17\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws when the file parses to no rows",
+            "status": "failed",
+            "title": "throws when the file parses to no rows",
+            "duration": 18.93251699999996,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"entity_name_searched\":\"Example Crypto\",\"match_found\":false,\"authorized\":false,\"matches\":[],\"register_last_updated\":\"2026-11-06T14:18:02.513Z\",\"note\":\"ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:99:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify a register that loaded and does not list the entity is a billed 'not authorised'",
+            "status": "passed",
+            "title": "a register that loaded and does not list the entity is a billed 'not authorised'",
+            "duration": 14.321087000000034,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify a listed entity is found",
+            "status": "passed",
+            "title": "a listed entity is found",
+            "duration": 4.510500000000093,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify still answers from a stale cache when ESMA goes down after a good read",
+            "status": "passed",
+            "title": "still answers from a stale cache when ESMA goes down after a good read",
+            "duration": 9.10004200000003,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-non-compliant-check"
+            ],
+            "fullName": "vasp-non-compliant-check throws when the register cannot be read",
+            "status": "failed",
+            "title": "throws when the register cannot be read",
+            "duration": 14.2729589999999,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"entity_name_searched\":\"Example Crypto\",\"on_non_compliant_list\":false,\"data_available\":false,\"matches\":[],\"register_last_updated\":null,\"note\":\"ESMA's non-compliant CASP register is not currently available or may not yet be published. This does not confirm compliance.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:133:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-non-compliant-check"
+            ],
+            "fullName": "vasp-non-compliant-check a published list with no entries is a billed, available negative",
+            "status": "failed",
+            "title": "a published list with no entries is a billed, available negative",
+            "duration": 18.625990999999885,
+            "failureMessages": [
+              "AssertionError: expected { …(6) } to match object { on_non_compliant_list: false, …(3) }\n(3 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:140:20\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-non-compliant-check"
+            ],
+            "fullName": "vasp-non-compliant-check a listed entity is reported",
+            "status": "passed",
+            "title": "a listed entity is reported",
+            "duration": 3.5662089999998443,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the company search answers HTTP 429",
+            "status": "failed",
+            "title": "throws, unbilled, when the company search answers HTTP 429",
+            "duration": 56.11690599999997,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"query\":\"Example Ltd\",\"country_code\":\"GB\",\"supported_country\":true,\"found\":false,\"message\":\"Company not found in Companies House.\",\"data_source\":\"companies-house-uk\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:165:17\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the company search answers HTTP 500",
+            "status": "failed",
+            "title": "throws, unbilled, when the company search answers HTTP 500",
+            "duration": 4.697501999999986,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"query\":\"Example Ltd\",\"country_code\":\"GB\",\"supported_country\":true,\"found\":false,\"message\":\"Company not found in Companies House.\",\"data_source\":\"companies-house-uk\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:165:17\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the company search answers HTTP 503",
+            "status": "failed",
+            "title": "throws, unbilled, when the company search answers HTTP 503",
+            "duration": 2.8497630000001664,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"query\":\"Example Ltd\",\"country_code\":\"GB\",\"supported_country\":true,\"found\":false,\"message\":\"Company not found in Companies House.\",\"data_source\":\"companies-house-uk\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:32:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:30:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:165:17\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, rather than 'not found', when the search rejects our request",
+            "status": "failed",
+            "title": "throws, rather than 'not found', when the search rejects our request",
+            "duration": 4.966556999999966,
+            "failureMessages": [
+              "Error: promise resolved \"{ output: { …(6) }, …(1) }\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1747:17)\n    at _Assertion.propertyGetter (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1570:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1659:22)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:172:76\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the insolvency endpoint answers HTTP 503",
+            "status": "failed",
+            "title": "throws, unbilled, when the insolvency endpoint answers HTTP 503",
+            "duration": 7.470178000000033,
+            "failureMessages": [
+              "AssertionError: expected 'Error' to be 'UpstreamUnavailableError' // Object.is equality\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:38:31)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:178:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check a search that answered with no company is still the billed 'not found' envelope",
+            "status": "passed",
+            "title": "a search that answered with no company is still the billed 'not found' envelope",
+            "duration": 14.545791999999892,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check a 404 from the insolvency endpoint is still 'no proceedings'",
+            "status": "passed",
+            "title": "a 404 from the insolvency endpoint is still 'no proceedings'",
+            "duration": 6.525171,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a failed VR read (HTTP 503) is marked degraded with the true reason, not 'likely sole trader'",
+            "status": "failed",
+            "title": "a failed VR read (HTTP 503) is marked degraded with the true reason, not 'likely sole trader'",
+            "duration": 48.65846600000009,
+            "failureMessages": [
+              "AssertionError: expected 'ARES VR view returned no active statu…' to contain 'ARES VR view could not be read (HTTP …'\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:241:44\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a failed VR read (timeout) is marked degraded with the true reason, not 'likely sole trader'",
+            "status": "failed",
+            "title": "a failed VR read (timeout) is marked degraded with the true reason, not 'likely sole trader'",
+            "duration": 7.261387999999897,
+            "failureMessages": [
+              "AssertionError: expected 'ARES VR view returned no active statu…' to contain 'ARES VR view could not be read (timeo…'\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts:241:44\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a VR 404 keeps its 'not in the commercial register' reason",
+            "status": "passed",
+            "title": "a VR 404 keeps its 'not in the commercial register' reason",
+            "duration": 4.672984000000042,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a VR read that answered binds tier 2",
+            "status": "passed",
+            "title": "a VR read that answered binds tier 2",
+            "duration": 4.8339189999999235,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "the outcome module files UpstreamUnavailableError as unbilled",
+            "status": "passed",
+            "title": "the outcome module files UpstreamUnavailableError as unbilled",
+            "duration": 1.0609790000000885,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793974682411,
+        "endTime": 1793974682743.061,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled mx-lookup",
+            "status": "failed",
+            "title": "mx-lookup",
+            "duration": 20.95211500000005,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"mx_records\":[],\"email_provider\":\"unknown\",\"a_records\":[\"93.184.216.34\"],\"aaaa_records\":[],\"nameservers\":[],\"spf_record\":null,\"dmarc_record\":null,\"soa\":null,\"has_ipv6\":false,\"has_mx\":false,\"has_spf\":false,\"has_dmarc\":false}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:117:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled dns-lookup (free tier)",
+            "status": "failed",
+            "title": "dns-lookup (free tier)",
+            "duration": 1.2160449999998946,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"a_records\":[\"93.184.216.34\"],\"aaaa_records\":[],\"mx_records\":[],\"ns_records\":[],\"txt_records\":[],\"cname_records\":[],\"has_spf\":false,\"has_dmarc\":false}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:123:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-auth-check, on the DMARC lookup",
+            "status": "failed",
+            "title": "email-auth-check, on the DMARC lookup",
+            "duration": 1.6368549999999686,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"has_mx\":false,\"mx_hosts\":[],\"spf_status\":\"present\",\"spf_record\":\"v=spf1 -all\",\"dmarc_status\":\"missing\",\"dmarc_present\":false,\"dmarc_record\":null,\"dmarc_policy\":null,\"dmarc_effective_policy\":null,\"dmarc_inherited_from\":null,\"dmarc_subdomain_policy\":null,\"dmarc_pct\":null,\"dkim_checked_selectors\":[\"default\",\"google\",\"selector1\",\"selector2\",\"k1\",\"s1\",\"dkim\"],\"dkim_found\":[],\"dkim_note\":\"DKIM probed via common selectors only — a miss does not prove the domain has no DKIM; pass dkim_selector for an exact check\",\"auth_summary\":\"incomplete\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:130:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-deliverability-check, on the SPF lookup",
+            "status": "failed",
+            "title": "email-deliverability-check, on the SPF lookup",
+            "duration": 5.2898139999999785,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"score\":0,\"grade\":\"F\",\"mx_records\":[],\"spf\":{\"exists\":false,\"record\":null,\"valid\":false,\"mechanism\":null},\"dmarc\":{\"exists\":false,\"record\":null,\"policy\":null},\"dkim\":{\"detected\":false,\"selector_found\":null},\"blacklisted\":true,\"blacklists_checked\":[{\"name\":\"zen.spamhaus.org\",\"listed\":true},{\"name\":\"bl.spamcop.net\",\"listed\":true},{\"name\":\"b.barracudacentral.org\",\"listed\":true}],\"issues\":[\"No MX records found\",\"No SPF record found\",\"No DMARC record found\",\"No DKIM record found for common selectors\",\"Domain IP is listed on one or more DNS blocklists\"],\"recommendations\":[\"Configure MX records pointing to your mail server.\",\"Add a TXT record with v=spf1 specifying your authorized mail servers.\",\"Add a DMARC record at _dmarc.example.com with at minimum v=DMARC1; p=none; rua=mailto:dmarc@example.com\",\"Configure DKIM signing and publish a DKIM DNS record. Note: custom selectors may exist but were not detected.\",\"Request delisting from the blocklists. Investigate potential abuse or misconfiguration.\"]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:138:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-deliverability-check, when every blocklist errored",
+            "status": "failed",
+            "title": "email-deliverability-check, when every blocklist errored",
+            "duration": 0.6086029999999027,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"score\":20,\"grade\":\"F\",\"mx_records\":[],\"spf\":{\"exists\":false,\"record\":null,\"valid\":false,\"mechanism\":null},\"dmarc\":{\"exists\":false,\"record\":null,\"policy\":null},\"dkim\":{\"detected\":false,\"selector_found\":null},\"blacklisted\":false,\"blacklists_checked\":[{\"name\":\"zen.spamhaus.org\",\"listed\":false},{\"name\":\"bl.spamcop.net\",\"listed\":false},{\"name\":\"b.barracudacentral.org\",\"listed\":false}],\"issues\":[\"No MX records found\",\"No SPF record found\",\"No DMARC record found\",\"No DKIM record found for common selectors\"],\"recommendations\":[\"Configure MX records pointing to your mail server.\",\"Add a TXT record with v=spf1 specifying your authorized mail servers.\",\"Add a DMARC record at _dmarc.example.com with at minimum v=DMARC1; p=none; rua=mailto:dmarc@example.com\",\"Configure DKIM signing and publish a DKIM DNS record. Note: custom selectors may exist but were not detected.\"]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:145:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled domain-reputation, on the TXT lookup",
+            "status": "failed",
+            "title": "domain-reputation, on the TXT lookup",
+            "duration": 4.950430000000097,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"reputation_score\":80,\"grade\":\"B\",\"checks\":{\"resolves\":true,\"ip_addresses\":[\"93.184.216.34\"],\"has_mx\":false,\"mx_count\":0,\"has_spf\":false,\"has_dmarc\":false,\"https_works\":false},\"issues\":[\"HTTPS connection failed\"],\"issue_count\":1}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:151:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled domain-reputation, on the A lookup",
+            "status": "failed",
+            "title": "domain-reputation, on the A lookup",
+            "duration": 0.5364489999999478,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"reputation_score\":50,\"grade\":\"D\",\"checks\":{\"resolves\":false,\"has_mx\":false,\"mx_count\":0,\"has_spf\":false,\"has_dmarc\":false,\"https_works\":false},\"issues\":[\"Domain does not resolve to any IP address\",\"HTTPS connection failed\"],\"issue_count\":2}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:156:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled company-tech-stack, before the paid LLM call",
+            "status": "failed",
+            "title": "company-tech-stack, before the paid LLM call",
+            "duration": 2.7376220000001013,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"detected_technologies\":[],\"dns_records\":{\"a\":[\"93.184.216.34\"],\"mx\":[],\"txt\":[],\"cname\":[]},\"http_headers_analyzed\":[]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:163:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-pattern-discover, on the MX lookup",
+            "status": "failed",
+            "title": "email-pattern-discover, on the MX lookup",
+            "duration": 0.7403170000000046,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"accepts_email\":false,\"mx_records\":[],\"email_provider\":null,\"patterns\":[],\"common_pattern_addresses\":[],\"recommendation\":\"example.com does not have MX records configured. This domain may not accept email.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:169:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-reputation-score, on the MX lookup",
+            "status": "failed",
+            "title": "email-reputation-score, on the MX lookup",
+            "duration": 0.6655809999999747,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"email\":\"jane@example.com\",\"email_valid\":true,\"reputation_score\":40,\"risk_level\":\"medium\",\"domain\":\"example.com\",\"provider_type\":\"custom\",\"factors\":[{\"factor\":\"custom_domain\",\"impact\":5,\"detail\":\"Custom domain — likely corporate email\"},{\"factor\":\"mx_lookup_failed\",\"impact\":-15,\"detail\":\"MX lookup failed — domain may not exist\"}]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:174:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-validate (free tier), on the MX lookup",
+            "status": "failed",
+            "title": "email-validate (free tier), on the MX lookup",
+            "duration": 1.2038800000000265,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"valid\":false,\"email\":\"jane@example.com\",\"format_valid\":true,\"domain\":\"example.com\",\"has_mx_records\":false,\"mx_records\":[],\"is_disposable\":false,\"is_role_address\":false,\"is_free_provider\":false}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:179:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled mx-lookup",
+            "status": "failed",
+            "title": "mx-lookup",
+            "duration": 0.28758700000003046,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"mx_records\":[],\"email_provider\":\"unknown\",\"a_records\":[\"93.184.216.34\"],\"aaaa_records\":[],\"nameservers\":[],\"spf_record\":null,\"dmarc_record\":null,\"soa\":null,\"has_ipv6\":false,\"has_mx\":false,\"has_spf\":false,\"has_dmarc\":false}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:117:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled dns-lookup (free tier)",
+            "status": "failed",
+            "title": "dns-lookup (free tier)",
+            "duration": 0.24443099999984952,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"a_records\":[\"93.184.216.34\"],\"aaaa_records\":[],\"mx_records\":[],\"ns_records\":[],\"txt_records\":[],\"cname_records\":[],\"has_spf\":false,\"has_dmarc\":false}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:123:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-auth-check, on the DMARC lookup",
+            "status": "failed",
+            "title": "email-auth-check, on the DMARC lookup",
+            "duration": 0.40381999999999607,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"has_mx\":false,\"mx_hosts\":[],\"spf_status\":\"present\",\"spf_record\":\"v=spf1 -all\",\"dmarc_status\":\"missing\",\"dmarc_present\":false,\"dmarc_record\":null,\"dmarc_policy\":null,\"dmarc_effective_policy\":null,\"dmarc_inherited_from\":null,\"dmarc_subdomain_policy\":null,\"dmarc_pct\":null,\"dkim_checked_selectors\":[\"default\",\"google\",\"selector1\",\"selector2\",\"k1\",\"s1\",\"dkim\"],\"dkim_found\":[],\"dkim_note\":\"DKIM probed via common selectors only — a miss does not prove the domain has no DKIM; pass dkim_selector for an exact check\",\"auth_summary\":\"incomplete\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:130:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-deliverability-check, on the SPF lookup",
+            "status": "failed",
+            "title": "email-deliverability-check, on the SPF lookup",
+            "duration": 0.25300800000013624,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"score\":0,\"grade\":\"F\",\"mx_records\":[],\"spf\":{\"exists\":false,\"record\":null,\"valid\":false,\"mechanism\":null},\"dmarc\":{\"exists\":false,\"record\":null,\"policy\":null},\"dkim\":{\"detected\":false,\"selector_found\":null},\"blacklisted\":true,\"blacklists_checked\":[{\"name\":\"zen.spamhaus.org\",\"listed\":true},{\"name\":\"bl.spamcop.net\",\"listed\":true},{\"name\":\"b.barracudacentral.org\",\"listed\":true}],\"issues\":[\"No MX records found\",\"No SPF record found\",\"No DMARC record found\",\"No DKIM record found for common selectors\",\"Domain IP is listed on one or more DNS blocklists\"],\"recommendations\":[\"Configure MX records pointing to your mail server.\",\"Add a TXT record with v=spf1 specifying your authorized mail servers.\",\"Add a DMARC record at _dmarc.example.com with at minimum v=DMARC1; p=none; rua=mailto:dmarc@example.com\",\"Configure DKIM signing and publish a DKIM DNS record. Note: custom selectors may exist but were not detected.\",\"Request delisting from the blocklists. Investigate potential abuse or misconfiguration.\"]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:138:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-deliverability-check, when every blocklist errored",
+            "status": "failed",
+            "title": "email-deliverability-check, when every blocklist errored",
+            "duration": 0.3796980000001895,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"score\":20,\"grade\":\"F\",\"mx_records\":[],\"spf\":{\"exists\":false,\"record\":null,\"valid\":false,\"mechanism\":null},\"dmarc\":{\"exists\":false,\"record\":null,\"policy\":null},\"dkim\":{\"detected\":false,\"selector_found\":null},\"blacklisted\":false,\"blacklists_checked\":[{\"name\":\"zen.spamhaus.org\",\"listed\":false},{\"name\":\"bl.spamcop.net\",\"listed\":false},{\"name\":\"b.barracudacentral.org\",\"listed\":false}],\"issues\":[\"No MX records found\",\"No SPF record found\",\"No DMARC record found\",\"No DKIM record found for common selectors\"],\"recommendations\":[\"Configure MX records pointing to your mail server.\",\"Add a TXT record with v=spf1 specifying your authorized mail servers.\",\"Add a DMARC record at _dmarc.example.com with at minimum v=DMARC1; p=none; rua=mailto:dmarc@example.com\",\"Configure DKIM signing and publish a DKIM DNS record. Note: custom selectors may exist but were not detected.\"]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:145:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled domain-reputation, on the TXT lookup",
+            "status": "failed",
+            "title": "domain-reputation, on the TXT lookup",
+            "duration": 0.31435400000009395,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"reputation_score\":80,\"grade\":\"B\",\"checks\":{\"resolves\":true,\"ip_addresses\":[\"93.184.216.34\"],\"has_mx\":false,\"mx_count\":0,\"has_spf\":false,\"has_dmarc\":false,\"https_works\":false},\"issues\":[\"HTTPS connection failed\"],\"issue_count\":1}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:151:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled domain-reputation, on the A lookup",
+            "status": "failed",
+            "title": "domain-reputation, on the A lookup",
+            "duration": 0.20057599999995546,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"reputation_score\":50,\"grade\":\"D\",\"checks\":{\"resolves\":false,\"has_mx\":false,\"mx_count\":0,\"has_spf\":false,\"has_dmarc\":false,\"https_works\":false},\"issues\":[\"Domain does not resolve to any IP address\",\"HTTPS connection failed\"],\"issue_count\":2}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:156:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled company-tech-stack, before the paid LLM call",
+            "status": "failed",
+            "title": "company-tech-stack, before the paid LLM call",
+            "duration": 0.4143500000000131,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"detected_technologies\":[],\"dns_records\":{\"a\":[\"93.184.216.34\"],\"mx\":[],\"txt\":[],\"cname\":[]},\"http_headers_analyzed\":[]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:163:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-pattern-discover, on the MX lookup",
+            "status": "failed",
+            "title": "email-pattern-discover, on the MX lookup",
+            "duration": 0.177408000000014,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"domain\":\"example.com\",\"accepts_email\":false,\"mx_records\":[],\"email_provider\":null,\"patterns\":[],\"common_pattern_addresses\":[],\"recommendation\":\"example.com does not have MX records configured. This domain may not accept email.\"}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:169:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-reputation-score, on the MX lookup",
+            "status": "failed",
+            "title": "email-reputation-score, on the MX lookup",
+            "duration": 0.26193899999998393,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"email\":\"jane@example.com\",\"email_valid\":true,\"reputation_score\":40,\"risk_level\":\"medium\",\"domain\":\"example.com\",\"provider_type\":\"custom\",\"factors\":[{\"factor\":\"custom_domain\",\"impact\":5,\"detail\":\"Custom domain — likely corporate email\"},{\"factor\":\"mx_lookup_failed\",\"impact\":-15,\"detail\":\"MX lookup failed — domain may not exist\"}]}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:174:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-validate (free tier), on the MX lookup",
+            "status": "failed",
+            "title": "email-validate (free tier), on the MX lookup",
+            "duration": 0.6361190000000079,
+            "failureMessages": [
+              "Error: expected a throw, got a billable result: {\"valid\":false,\"email\":\"jane@example.com\",\"format_valid\":true,\"domain\":\"example.com\",\"has_mx_records\":false,\"mx_records\":[],\"is_disposable\":false,\"is_role_address\":false,\"is_free_provider\":false}\n    at err (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:84:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at expectUnbilledUpstreamFailure (/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:82:15)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:179:5\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed mx-lookup: NXDOMAIN everywhere",
+            "status": "passed",
+            "title": "mx-lookup: NXDOMAIN everywhere",
+            "duration": 1.5298670000001948,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed mx-lookup: A record only, every other type ENODATA",
+            "status": "passed",
+            "title": "mx-lookup: A record only, every other type ENODATA",
+            "duration": 0.44941500000004453,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed dns-lookup: A record only, every other type ENODATA",
+            "status": "passed",
+            "title": "dns-lookup: A record only, every other type ENODATA",
+            "duration": 0.34754900000007183,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed dns-lookup: NXDOMAIN still refuses as 'No DNS records found'",
+            "status": "passed",
+            "title": "dns-lookup: NXDOMAIN still refuses as 'No DNS records found'",
+            "duration": 0.7440549999998893,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-auth-check: no records of any kind",
+            "status": "passed",
+            "title": "email-auth-check: no records of any kind",
+            "duration": 0.4575279999999111,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-deliverability-check: resolves, no mail records, not listed (NXDOMAIN on every list)",
+            "status": "passed",
+            "title": "email-deliverability-check: resolves, no mail records, not listed (NXDOMAIN on every list)",
+            "duration": 0.5981649999998808,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed domain-reputation: resolves, no MX and no TXT at all (historical: no SPF/DMARC penalty)",
+            "status": "passed",
+            "title": "domain-reputation: resolves, no MX and no TXT at all (historical: no SPF/DMARC penalty)",
+            "duration": 11.618893999999955,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed domain-reputation: TXT without SPF and NXDOMAIN on _dmarc is penalised as before",
+            "status": "passed",
+            "title": "domain-reputation: TXT without SPF and NXDOMAIN on _dmarc is penalised as before",
+            "duration": 0.4890290000000732,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed company-tech-stack: empty record types reach the model as empty",
+            "status": "passed",
+            "title": "company-tech-stack: empty record types reach the model as empty",
+            "duration": 0.4017749999998159,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-pattern-discover: no MX",
+            "status": "passed",
+            "title": "email-pattern-discover: no MX",
+            "duration": 0.36639400000012756,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-reputation-score: NXDOMAIN keeps the mx_lookup_failed factor",
+            "status": "passed",
+            "title": "email-reputation-score: NXDOMAIN keeps the mx_lookup_failed factor",
+            "duration": 0.36776499999996304,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-validate: NXDOMAIN is still undeliverable",
+            "status": "passed",
+            "title": "email-validate: NXDOMAIN is still undeliverable",
+            "duration": 0.31041400000003705,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-deliverability-check: an errored blocklist is unknown, never 'not listed'"
+            ],
+            "fullName": "email-deliverability-check: an errored blocklist is unknown, never 'not listed' one list timing out is reported unknown, and not credited",
+            "status": "failed",
+            "title": "one list timing out is reported unknown, and not credited",
+            "duration": 4.55322000000001,
+            "failureMessages": [
+              "AssertionError: expected [ …(3) ] to deeply equal [ …(3) ]\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:420:39\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-deliverability-check: an errored blocklist is unknown, never 'not listed'"
+            ],
+            "fullName": "email-deliverability-check: an errored blocklist is unknown, never 'not listed' a Spamhaus refusal code (127.255.255.254) is not a listing",
+            "status": "failed",
+            "title": "a Spamhaus refusal code (127.255.255.254) is not a listing",
+            "duration": 0.9576139999999214,
+            "failureMessages": [
+              "AssertionError: expected true to be false // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:432:32\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-deliverability-check: an errored blocklist is unknown, never 'not listed'"
+            ],
+            "fullName": "email-deliverability-check: an errored blocklist is unknown, never 'not listed' a real listing is still a listing",
+            "status": "passed",
+            "title": "a real listing is still a listing",
+            "duration": 0.7950919999998405,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-validate-bulk inherits the fix through the shared checkMx"
+            ],
+            "fullName": "email-validate-bulk inherits the fix through the shared checkMx marks a timed-out domain mx_checked:false instead of reporting it has no MX",
+            "status": "failed",
+            "title": "marks a timed-out domain mx_checked:false instead of reporting it has no MX",
+            "duration": 2.8761779999999817,
+            "failureMessages": [
+              "AssertionError: expected { valid: false, …(8) } to match object { email: 'jane@example.com', …(1) }\n(8 matching properties omitted from actual)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1283:10)\n    at Proxy.<anonymous> (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/chai/index.js:1700:25)\n    at /home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts:449:19\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793974682576,
+        "endTime": 1793974682647.8762,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts"
+      }
+    ]
+  }
+}

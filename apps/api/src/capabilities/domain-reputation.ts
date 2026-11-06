@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { promises as dns } from "dns";
+import dns from "node:dns/promises";
+import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { validateHost } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 
@@ -14,41 +15,40 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
   const issues: string[] = [];
   let score = 100;
 
+  // DNS checks go through dnsOrEmpty: a record the domain does not have reads
+  // as absent (and is penalised as before), while a resolver that could not
+  // answer throws (unbilled, retried) instead of costing the domain points.
+
   // 1. DNS resolution check
-  try {
-    const addrs = await dns.resolve4(domain);
+  const addrs = await dnsOrEmpty(() => dns.resolve4(domain), "DNS A query");
+  if (addrs.length > 0) {
     checks.resolves = true;
     checks.ip_addresses = addrs;
-  } catch {
+  } else {
     checks.resolves = false;
     issues.push("Domain does not resolve to any IP address");
     score -= 30;
   }
 
   // 2. MX record check
-  try {
-    const mx = await dns.resolveMx(domain);
-    checks.has_mx = mx.length > 0;
-    checks.mx_count = mx.length;
-  } catch {
-    checks.has_mx = false;
-    checks.mx_count = 0;
-  }
+  const mx = await dnsOrEmpty(() => dns.resolveMx(domain), "DNS MX query");
+  checks.has_mx = mx.length > 0;
+  checks.mx_count = mx.length;
 
-  // 3. SPF check
-  try {
-    const txt = await dns.resolveTxt(domain);
+  // 3. SPF check. A domain with no TXT records at all keeps its historical
+  // treatment (has_spf and has_dmarc false, no DMARC lookup, no penalty);
+  // changing that scoring is out of scope for the swallowed-failure fix.
+  const txt = await dnsOrEmpty(() => dns.resolveTxt(domain), "DNS TXT query");
+  if (txt.length > 0) {
     const flat = txt.map(t => t.join(""));
     checks.has_spf = flat.some(t => t.startsWith("v=spf1"));
     checks.has_dmarc = false;
     // Also check _dmarc subdomain
-    try {
-      const dmarc = await dns.resolveTxt(`_dmarc.${domain}`);
-      checks.has_dmarc = dmarc.some(t => t.join("").startsWith("v=DMARC1"));
-    } catch { /* no DMARC */ }
+    const dmarc = await dnsOrEmpty(() => dns.resolveTxt(`_dmarc.${domain}`), "DNS DMARC TXT query");
+    checks.has_dmarc = dmarc.some(t => t.join("").startsWith("v=DMARC1"));
     if (!checks.has_spf) { issues.push("No SPF record"); score -= 10; }
     if (!checks.has_dmarc) { issues.push("No DMARC record"); score -= 10; }
-  } catch {
+  } else {
     checks.has_spf = false;
     checks.has_dmarc = false;
   }

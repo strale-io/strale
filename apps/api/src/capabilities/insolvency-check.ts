@@ -1,4 +1,19 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { UpstreamUnavailableError } from "../lib/upstream-result.js";
+
+/**
+ * A Companies House response that is not an answer. Rate limiting and 5xx are
+ * the register being unavailable (retryable); any other status is a rejection
+ * of our request, kept in the existing "Companies House error" wording.
+ */
+function companiesHouseFailure(endpoint: "search" | "insolvency", status: number): Error {
+  if (status === 429 || status >= 500) {
+    return new UpstreamUnavailableError(`Companies House ${endpoint} API`, `HTTP ${status}; retry shortly.`, {
+      code: `HTTP ${status}`,
+    });
+  }
+  return new Error(`Companies House ${endpoint === "search" ? "search " : ""}error: HTTP ${status}`);
+}
 
 registerCapability("insolvency-check", async (input: CapabilityInput) => {
   const companyName = ((input.company_name as string) ?? (input.name as string) ?? (input.task as string) ?? "").trim();
@@ -30,10 +45,12 @@ registerCapability("insolvency-check", async (input: CapabilityInput) => {
         },
         signal: AbortSignal.timeout(10000),
       });
-      if (searchRes.ok) {
-        const searchData = (await searchRes.json()) as any;
-        number = searchData.items?.[0]?.company_number;
-      }
+      // A failed search is no answer. It used to fall through to `found:
+      // false` ("Company not found in Companies House"), a billed negative
+      // on a 429 or 5xx (2026-11-06 swallowed-failures audit, row 3).
+      if (!searchRes.ok) throw companiesHouseFailure("search", searchRes.status);
+      const searchData = (await searchRes.json()) as any;
+      number = searchData.items?.[0]?.company_number;
     }
 
     if (!number) {
@@ -80,7 +97,7 @@ registerCapability("insolvency-check", async (input: CapabilityInput) => {
     }
 
     if (!res.ok) {
-      throw new Error(`Companies House error: HTTP ${res.status}`);
+      throw companiesHouseFailure("insolvency", res.status);
     }
 
     const data = (await res.json()) as any;

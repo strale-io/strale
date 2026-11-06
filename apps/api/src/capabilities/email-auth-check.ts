@@ -1,5 +1,6 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
-import { promises as dns } from "node:dns";
+import dns from "node:dns/promises";
+import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // F-0-006 Bucket C: pure DNS resolution (TXT/MX) on a user-supplied
@@ -25,13 +26,11 @@ const COMMON_DKIM_SELECTORS = ["default", "google", "selector1", "selector2", "k
 
 const DOMAIN_RE = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/i;
 
+// A name with no TXT record reads as empty; a resolver that could not answer
+// throws, so a SERVFAIL is never reported as SPF/DMARC/DKIM "missing".
 async function txtRecords(name: string): Promise<string[]> {
-  try {
-    const records = await dns.resolveTxt(name);
-    return records.map((chunks) => chunks.join(""));
-  } catch {
-    return [];
-  }
+  const records = await dnsOrEmpty(() => dns.resolveTxt(name), "DNS TXT query");
+  return records.map((chunks) => chunks.join(""));
 }
 
 interface DmarcTags {
@@ -129,7 +128,7 @@ registerCapability("email-auth-check", async (input: CapabilityInput) => {
   const [rootTxt, dmarc, mx] = await Promise.all([
     txtRecords(domain),
     resolveDmarc(domain),
-    dns.resolveMx(domain).catch(() => [] as { exchange: string; priority: number }[]),
+    dnsOrEmpty(() => dns.resolveMx(domain), "DNS MX query"),
   ]);
 
   const spfRecords = rootTxt.filter((r) => /^v=spf1(\s|$)/i.test(r));

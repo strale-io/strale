@@ -1,7 +1,8 @@
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { promises as dns } from "node:dns";
+import dns from "node:dns/promises";
+import { dnsOrEmpty } from "../lib/upstream-result.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 
@@ -58,32 +59,29 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
   // Remove www prefix
   targetDomain = targetDomain.replace(/^www\./, "");
 
-  // Step 1: Check MX records
-  let mxRecords: string[] = [];
+  // Step 1: Check MX records. No MX record reads as "does not accept email";
+  // a resolver that could not answer throws instead (unbilled, retried).
   let emailProvider: string | null = null;
-  try {
-    const mx = await dns.resolveMx(targetDomain);
-    mxRecords = mx.sort((a, b) => a.priority - b.priority).map(r => r.exchange);
+  const mxRecords: string[] = (await dnsOrEmpty(() => dns.resolveMx(targetDomain), "DNS MX query"))
+    .sort((a, b) => a.priority - b.priority)
+    .map(r => r.exchange);
 
-    // Detect email provider from MX
-    const mxJoined = mxRecords.join(" ").toLowerCase();
-    if (mxJoined.includes("google") || mxJoined.includes("gmail")) {
-      emailProvider = "Google Workspace";
-    } else if (mxJoined.includes("outlook") || mxJoined.includes("microsoft")) {
-      emailProvider = "Microsoft 365";
-    } else if (mxJoined.includes("protonmail") || mxJoined.includes("proton")) {
-      emailProvider = "ProtonMail";
-    } else if (mxJoined.includes("zoho")) {
-      emailProvider = "Zoho Mail";
-    } else if (mxJoined.includes("mimecast")) {
-      emailProvider = "Mimecast";
-    } else if (mxJoined.includes("barracuda")) {
-      emailProvider = "Barracuda";
-    } else if (mxJoined.includes("pphosted") || mxJoined.includes("proofpoint")) {
-      emailProvider = "Proofpoint";
-    }
-  } catch {
-    // No MX records
+  // Detect email provider from MX
+  const mxJoined = mxRecords.join(" ").toLowerCase();
+  if (mxJoined.includes("google") || mxJoined.includes("gmail")) {
+    emailProvider = "Google Workspace";
+  } else if (mxJoined.includes("outlook") || mxJoined.includes("microsoft")) {
+    emailProvider = "Microsoft 365";
+  } else if (mxJoined.includes("protonmail") || mxJoined.includes("proton")) {
+    emailProvider = "ProtonMail";
+  } else if (mxJoined.includes("zoho")) {
+    emailProvider = "Zoho Mail";
+  } else if (mxJoined.includes("mimecast")) {
+    emailProvider = "Mimecast";
+  } else if (mxJoined.includes("barracuda")) {
+    emailProvider = "Barracuda";
+  } else if (mxJoined.includes("pphosted") || mxJoined.includes("proofpoint")) {
+    emailProvider = "Proofpoint";
   }
 
   if (mxRecords.length === 0) {

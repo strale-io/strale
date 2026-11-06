@@ -1,0 +1,28 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "node_modules/.bin/vitest",
+    "commit": "62f1b1d00f38326307a8c70e1bd57f2bc7f4a316"
+  },
+  "at": "2026-11-06T14:18:22.658Z",
+  "inputs": {
+    "command": "cd apps/api && npx vitest run"
+  },
+  "summary": {
+    "passed": 8703,
+    "failed": 0,
+    "skipped": 455,
+    "total": 9158,
+    "files_passed": 431
+  },
+  "topic": "swallowed-failures-wave1-full-api-suite",
+  "raw": {
+    "test_files_passed": 431,
+    "test_files_skipped": 46,
+    "tests_passed": 8703,
+    "tests_skipped": 455,
+    "tests_total": 9158,
+    "tests_failed": 0,
+    "exit_code": 0
+  }
+}

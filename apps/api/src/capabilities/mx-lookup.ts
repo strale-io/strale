@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
+import { dnsOrEmpty, dnsOrNull } from "../lib/upstream-result.js";
 
 // F-0-006 Bucket C: pure DNS resolution on the user domain. No socket
 // to the resolved IP. validateHost not required.
@@ -20,24 +21,18 @@ registerCapability("mx-lookup", async (input: CapabilityInput) => {
     soa: { nsname: string; hostmaster: string; serial: number; refresh: number; retry: number; expire: number; minttl: number } | null;
   }
 
-  const results: DnsResults = { mx: [], a: [], aaaa: [], ns: [], txt: [], soa: null };
-
-  // Run all DNS queries in parallel
-  const [mx, a, aaaa, ns, txt, soa] = await Promise.allSettled([
-    dns.resolveMx(cleaned),
-    dns.resolve4(cleaned),
-    dns.resolve6(cleaned),
-    dns.resolveNs(cleaned),
-    dns.resolveTxt(cleaned),
-    dns.resolveSoa(cleaned),
+  // Run all DNS queries in parallel. A record type the domain does not have
+  // comes back empty; a resolver that could not answer throws, so a timeout
+  // is never reported as "this domain has no MX" (unbilled, retried).
+  const [mx, a, aaaa, ns, txt, soa] = await Promise.all([
+    dnsOrEmpty(() => dns.resolveMx(cleaned), "DNS MX query"),
+    dnsOrEmpty(() => dns.resolve4(cleaned), "DNS A query"),
+    dnsOrEmpty(() => dns.resolve6(cleaned), "DNS AAAA query"),
+    dnsOrEmpty(() => dns.resolveNs(cleaned), "DNS NS query"),
+    dnsOrEmpty(() => dns.resolveTxt(cleaned), "DNS TXT query"),
+    dnsOrNull(() => dns.resolveSoa(cleaned), "DNS SOA query"),
   ]);
-
-  if (mx.status === "fulfilled") results.mx = mx.value.sort((a, b) => a.priority - b.priority);
-  if (a.status === "fulfilled") results.a = a.value;
-  if (aaaa.status === "fulfilled") results.aaaa = aaaa.value;
-  if (ns.status === "fulfilled") results.ns = ns.value;
-  if (txt.status === "fulfilled") results.txt = txt.value;
-  if (soa.status === "fulfilled") results.soa = soa.value;
+  const results: DnsResults = { mx: mx.sort((a, b) => a.priority - b.priority), a, aaaa, ns, txt, soa };
 
   // Detect email provider from MX records
   const mxHosts = results.mx.map(r => r.exchange.toLowerCase());

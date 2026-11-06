@@ -17,23 +17,11 @@ registerCapability("vasp-non-compliant-check", async (input: CapabilityInput) =>
 
   const website = ((input.website as string) ?? "").trim() || undefined;
 
+  // Throws UpstreamUnavailableError when the register cannot be read: an
+  // outage is never sold as `on_non_compliant_list: false`. An empty list
+  // here is ESMA's published list having no entries, which is an answer.
   const records = await getNonCompliantData();
   const now = new Date().toISOString();
-
-  // Non-compliant list may not exist yet — handle gracefully
-  if (records.length === 0) {
-    return {
-      output: {
-        entity_name_searched: entityName,
-        on_non_compliant_list: false,
-        data_available: false,
-        matches: [],
-        register_last_updated: null,
-        note: "ESMA's non-compliant CASP register is not currently available or may not yet be published. This does not confirm compliance.",
-      },
-      provenance: { source: "esma.europa.eu (MiCA non-compliant register)", fetched_at: now },
-    };
-  }
 
   const matches = searchNonCompliant(records, entityName, website);
 

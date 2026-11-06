@@ -2,9 +2,17 @@
  * Shared VASP/CASP data cache from ESMA CSV files.
  * Downloads and caches the EU MiCA register of authorized CASPs.
  * CSV is refreshed every 6 hours; stale cache used if ESMA is down.
+ *
+ * When ESMA cannot be read and there is no cache, the getters THROW
+ * `UpstreamUnavailableError`. They used to return `[]`, which vasp-verify
+ * billed as `authorized: false` and vasp-non-compliant-check billed as
+ * `on_non_compliant_list: false`: a compliance negative fabricated from an
+ * outage (2026-11-06 swallowed-failures audit, rows 1 and 2).
  */
 
 import { logWarn } from "../../lib/log.js";
+import { discardBody } from "../../lib/safe-fetch.js";
+import { UpstreamUnavailableError } from "../../lib/upstream-result.js";
 
 export interface CASPRecord {
   nca: string;
@@ -81,25 +89,52 @@ function getNonCompliantUrls(): string[] {
   return urls;
 }
 
-async function fetchCSV(urls: string[]): Promise<string | null> {
+type CsvFetch = { csv: string } | { csv: null; failures: string[] };
+
+/**
+ * Try each monthly path, newest first. A 404 is ordinary (ESMA has not
+ * published in that month's folder), so the next path is tried; every other
+ * failure is recorded too, so the caller can say why there is no register.
+ */
+async function fetchCSV(urls: string[]): Promise<CsvFetch> {
+  const failures: string[] = [];
   for (const url of urls) {
+    const month = url.match(/\/(\d{4}-\d{2})\//)?.[1] ?? url;
     try {
       const resp = await fetch(url, {
         headers: { "User-Agent": "Strale/1.0 (compliance-check)" },
         signal: AbortSignal.timeout(30000),
       });
-      if (resp.ok) {
-        const text = await resp.text();
-        // Verify it's actually CSV, not an HTML error page
-        if (text.length > 10 && !text.trimStart().startsWith("<!DOCTYPE") && !text.trimStart().startsWith("<html")) {
-          return text;
-        }
+      if (!resp.ok) {
+        await discardBody(resp, "vasp-data: non-2xx");
+        failures.push(`${month}: HTTP ${resp.status}`);
+        continue;
       }
-    } catch {
-      // Try next URL
+      const text = await resp.text();
+      // Verify it's actually CSV, not an HTML error page
+      if (text.length > 10 && !text.trimStart().startsWith("<!DOCTYPE") && !text.trimStart().startsWith("<html")) {
+        return { csv: text };
+      }
+      failures.push(`${month}: HTML page instead of CSV`);
+    } catch (err) {
+      failures.push(`${month}: ${err instanceof Error && err.name === "TimeoutError" ? "timeout" : "network error"}`);
     }
   }
-  return null;
+  return { csv: null, failures };
+}
+
+/**
+ * The register could not be read. Retrying is pointless only when every path
+ * answered 404, which means the files moved rather than that ESMA is down.
+ */
+function registerUnavailable(register: string, failures: string[]): UpstreamUnavailableError {
+  const allGone = failures.length > 0 && failures.every((f) => f.endsWith("HTTP 404"));
+  return new UpstreamUnavailableError(
+    `ESMA ${register}`,
+    `no copy of the register could be read (${failures.join("; ")}). ` +
+      "This is not an answer about the entity; retry later.",
+    { code: allGone ? "HTTP 404" : null, retryable: !allGone },
+  );
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -109,17 +144,16 @@ export async function getCASPData(): Promise<CASPRecord[]> {
     return _caspCache;
   }
 
-  const csv = await fetchCSV(getCASPUrls());
-  if (!csv) {
+  const fetched = await fetchCSV(getCASPUrls());
+  if (fetched.csv === null) {
     if (_caspCache.length > 0) {
       logWarn("vasp-data-stale-cache", "ESMA CSV unavailable, using stale cache");
       return _caspCache;
     }
-    return [];
+    throw registerUnavailable("MiCA CASP register", fetched.failures);
   }
 
-  const lines = csv.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return _caspCache.length > 0 ? _caspCache : [];
+  const lines = fetched.csv.split("\n").filter((l) => l.trim().length > 0);
 
   // Skip header row
   const records: CASPRecord[] = [];
@@ -142,6 +176,17 @@ export async function getCASPData(): Promise<CASPRecord[]> {
     });
   }
 
+  // The authorised-CASP register is not empty, so a file that parsed to no
+  // rows changed shape; reporting "not authorised" from it would be the same
+  // fabricated negative as an outage.
+  if (records.length === 0) {
+    if (_caspCache.length > 0) {
+      logWarn("vasp-data-stale-cache", "ESMA CSV parsed to no rows, using stale cache");
+      return _caspCache;
+    }
+    throw registerUnavailable("MiCA CASP register", ["the file parsed to no register rows"]);
+  }
+
   _caspCache = records;
   _caspFetchedAt = Date.now();
   return _caspCache;
@@ -152,14 +197,22 @@ export async function getNonCompliantData(): Promise<NonCompliantRecord[]> {
     return _ncCache;
   }
 
-  const csv = await fetchCSV(getNonCompliantUrls());
-  if (!csv) {
-    if (_ncCache.length > 0) return _ncCache;
-    return []; // Non-compliant list may not exist yet
+  const fetched = await fetchCSV(getNonCompliantUrls());
+  if (fetched.csv === null) {
+    if (_ncCache.length > 0) {
+      logWarn("vasp-data-stale-cache", "ESMA non-compliant CSV unavailable, using stale cache");
+      return _ncCache;
+    }
+    throw registerUnavailable("MiCA non-compliant entities register", fetched.failures);
   }
 
-  const lines = csv.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return _ncCache.length > 0 ? _ncCache : [];
+  const lines = fetched.csv.split("\n").filter((l) => l.trim().length > 0);
+  // A header with no rows is a published, empty list: a real answer.
+  if (lines.length < 2) {
+    _ncCache = [];
+    _ncFetchedAt = Date.now();
+    return [];
+  }
 
   const records: NonCompliantRecord[] = [];
   for (let i = 1; i < lines.length; i++) {
@@ -173,6 +226,12 @@ export async function getNonCompliantData(): Promise<NonCompliantRecord[]> {
       website: fields[3] ?? "",
       infringement: fields[4] ?? "",
     });
+  }
+
+  // Rows present but none parsed: the file changed shape, which is no answer.
+  if (records.length === 0) {
+    if (_ncCache.length > 0) return _ncCache;
+    throw registerUnavailable("MiCA non-compliant entities register", ["the file's rows did not parse"]);
   }
 
   _ncCache = records;

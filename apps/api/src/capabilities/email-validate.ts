@@ -1,6 +1,7 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolveMx } from "node:dns/promises";
+import { dnsOrEmpty } from "../lib/upstream-result.js";
 
 // Comprehensive email regex (RFC 5322 simplified)
 // Exported so email-validate-bulk can pre-extract domains for MX caching
@@ -66,16 +67,20 @@ function suggestDomain(domain: string): string | null {
   return bestMatch;
 }
 
+/**
+ * MX for a domain. A negative answer (no such domain, no MX) is `has_mx:
+ * false`; a resolver that could not answer throws `UpstreamUnavailableError`,
+ * so a timeout never reads as "this address is undeliverable".
+ *
+ * Shared: email-validate-bulk already catches a throw here and marks the
+ * domain `mx_checked: false`, and email-finder lets it propagate unbilled.
+ */
 export async function checkMx(domain: string): Promise<{ has_mx: boolean; mx_records: string[] }> {
-  try {
-    const records = await resolveMx(domain);
-    const exchanges = records
-      .sort((a, b) => a.priority - b.priority)
-      .map((r) => r.exchange);
-    return { has_mx: exchanges.length > 0, mx_records: exchanges.slice(0, 5) };
-  } catch {
-    return { has_mx: false, mx_records: [] };
-  }
+  const records = await dnsOrEmpty(() => resolveMx(domain), "DNS MX query");
+  const exchanges = records
+    .sort((a, b) => a.priority - b.priority)
+    .map((r) => r.exchange);
+  return { has_mx: exchanges.length > 0, mx_records: exchanges.slice(0, 5) };
 }
 
 const FREE_PROVIDERS = new Set([

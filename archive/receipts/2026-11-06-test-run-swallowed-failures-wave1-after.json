@@ -1,0 +1,1278 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "node_modules/.bin/vitest",
+    "commit": "62f1b1d00f38326307a8c70e1bd57f2bc7f4a316"
+  },
+  "at": "2026-11-06T14:18:14.069Z",
+  "inputs": {
+    "files": [
+      "apps/api/src/lib/upstream-result.test.ts",
+      "apps/api/src/capabilities/dns-family.upstream-failures.test.ts",
+      "apps/api/src/capabilities/compliance.upstream-failures.test.ts"
+    ]
+  },
+  "summary": {
+    "passed": 100,
+    "failed": 0,
+    "total": 100,
+    "code": "fixed branch"
+  },
+  "topic": "swallowed-failures-wave1-after",
+  "raw": {
+    "numTotalTestSuites": 17,
+    "numPassedTestSuites": 17,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 100,
+    "numPassedTests": 100,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1793974661855,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws, retryable, when every ESMA path fails with a server error",
+            "status": "passed",
+            "title": "throws, retryable, when every ESMA path fails with a server error",
+            "duration": 174.7522600000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws, not retryable, when every monthly path answers 404 (the files moved)",
+            "status": "passed",
+            "title": "throws, not retryable, when every monthly path answers 404 (the files moved)",
+            "duration": 21.054927000000134,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws on a timeout and on an HTML page served with 200",
+            "status": "passed",
+            "title": "throws on a timeout and on an HTML page served with 200",
+            "duration": 8.669638000000077,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify throws when the file parses to no rows",
+            "status": "passed",
+            "title": "throws when the file parses to no rows",
+            "duration": 7.957936999999902,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify a register that loaded and does not list the entity is a billed 'not authorised'",
+            "status": "passed",
+            "title": "a register that loaded and does not list the entity is a billed 'not authorised'",
+            "duration": 5.98671800000011,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify a listed entity is found",
+            "status": "passed",
+            "title": "a listed entity is found",
+            "duration": 9.386820999999827,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-verify"
+            ],
+            "fullName": "vasp-verify still answers from a stale cache when ESMA goes down after a good read",
+            "status": "passed",
+            "title": "still answers from a stale cache when ESMA goes down after a good read",
+            "duration": 6.81847300000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-non-compliant-check"
+            ],
+            "fullName": "vasp-non-compliant-check throws when the register cannot be read",
+            "status": "passed",
+            "title": "throws when the register cannot be read",
+            "duration": 18.004220000000032,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-non-compliant-check"
+            ],
+            "fullName": "vasp-non-compliant-check a published list with no entries is a billed, available negative",
+            "status": "passed",
+            "title": "a published list with no entries is a billed, available negative",
+            "duration": 5.059036999999989,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "vasp-non-compliant-check"
+            ],
+            "fullName": "vasp-non-compliant-check a listed entity is reported",
+            "status": "passed",
+            "title": "a listed entity is reported",
+            "duration": 4.450620000000072,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the company search answers HTTP 429",
+            "status": "passed",
+            "title": "throws, unbilled, when the company search answers HTTP 429",
+            "duration": 20.260872000000063,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the company search answers HTTP 500",
+            "status": "passed",
+            "title": "throws, unbilled, when the company search answers HTTP 500",
+            "duration": 5.933404999999993,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the company search answers HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled, when the company search answers HTTP 503",
+            "duration": 12.33551199999988,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, rather than 'not found', when the search rejects our request",
+            "status": "passed",
+            "title": "throws, rather than 'not found', when the search rejects our request",
+            "duration": 3.780907999999954,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check throws, unbilled, when the insolvency endpoint answers HTTP 503",
+            "status": "passed",
+            "title": "throws, unbilled, when the insolvency endpoint answers HTTP 503",
+            "duration": 6.610643999999866,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check a search that answered with no company is still the billed 'not found' envelope",
+            "status": "passed",
+            "title": "a search that answered with no company is still the billed 'not found' envelope",
+            "duration": 6.16576299999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "insolvency-check"
+            ],
+            "fullName": "insolvency-check a 404 from the insolvency endpoint is still 'no proceedings'",
+            "status": "passed",
+            "title": "a 404 from the insolvency endpoint is still 'no proceedings'",
+            "duration": 2.620646000000079,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a failed VR read (HTTP 503) is marked degraded with the true reason, not 'likely sole trader'",
+            "status": "passed",
+            "title": "a failed VR read (HTTP 503) is marked degraded with the true reason, not 'likely sole trader'",
+            "duration": 64.14618900000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a failed VR read (timeout) is marked degraded with the true reason, not 'likely sole trader'",
+            "status": "passed",
+            "title": "a failed VR read (timeout) is marked degraded with the true reason, not 'likely sole trader'",
+            "duration": 5.107427000000143,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a VR 404 keeps its 'not in the commercial register' reason",
+            "status": "passed",
+            "title": "a VR 404 keeps its 'not in the commercial register' reason",
+            "duration": 6.655635000000075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "cz-company-data"
+            ],
+            "fullName": "cz-company-data a VR read that answered binds tier 2",
+            "status": "passed",
+            "title": "a VR read that answered binds tier 2",
+            "duration": 5.005648000000065,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [],
+            "fullName": "the outcome module files UpstreamUnavailableError as unbilled",
+            "status": "passed",
+            "title": "the outcome module files UpstreamUnavailableError as unbilled",
+            "duration": 0.26343800000017836,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793974663310,
+        "endTime": 1793974663712.2634,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/compliance.upstream-failures.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled mx-lookup",
+            "status": "passed",
+            "title": "mx-lookup",
+            "duration": 2.789737000000059,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled dns-lookup (free tier)",
+            "status": "passed",
+            "title": "dns-lookup (free tier)",
+            "duration": 3.3094740000001366,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-auth-check, on the DMARC lookup",
+            "status": "passed",
+            "title": "email-auth-check, on the DMARC lookup",
+            "duration": 1.1776870000001054,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-deliverability-check, on the SPF lookup",
+            "status": "passed",
+            "title": "email-deliverability-check, on the SPF lookup",
+            "duration": 0.683610999999928,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-deliverability-check, when every blocklist errored",
+            "status": "passed",
+            "title": "email-deliverability-check, when every blocklist errored",
+            "duration": 0.6699330000001282,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled domain-reputation, on the TXT lookup",
+            "status": "passed",
+            "title": "domain-reputation, on the TXT lookup",
+            "duration": 6.794315000000097,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled domain-reputation, on the A lookup",
+            "status": "passed",
+            "title": "domain-reputation, on the A lookup",
+            "duration": 0.448126000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled company-tech-stack, before the paid LLM call",
+            "status": "passed",
+            "title": "company-tech-stack, before the paid LLM call",
+            "duration": 0.8224149999998644,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-pattern-discover, on the MX lookup",
+            "status": "passed",
+            "title": "email-pattern-discover, on the MX lookup",
+            "duration": 0.6719880000000558,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-reputation-score, on the MX lookup",
+            "status": "passed",
+            "title": "email-reputation-score, on the MX lookup",
+            "duration": 0.5031400000000303,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ETIMEOUT) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ETIMEOUT) throws, unbilled email-validate (free tier), on the MX lookup",
+            "status": "passed",
+            "title": "email-validate (free tier), on the MX lookup",
+            "duration": 0.49931900000001406,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled mx-lookup",
+            "status": "passed",
+            "title": "mx-lookup",
+            "duration": 0.2905329999998685,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled dns-lookup (free tier)",
+            "status": "passed",
+            "title": "dns-lookup (free tier)",
+            "duration": 0.29114899999990485,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-auth-check, on the DMARC lookup",
+            "status": "passed",
+            "title": "email-auth-check, on the DMARC lookup",
+            "duration": 0.545694999999796,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-deliverability-check, on the SPF lookup",
+            "status": "passed",
+            "title": "email-deliverability-check, on the SPF lookup",
+            "duration": 0.16265500000008615,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-deliverability-check, when every blocklist errored",
+            "status": "passed",
+            "title": "email-deliverability-check, when every blocklist errored",
+            "duration": 0.3950489999999718,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled domain-reputation, on the TXT lookup",
+            "status": "passed",
+            "title": "domain-reputation, on the TXT lookup",
+            "duration": 0.22247300000003634,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled domain-reputation, on the A lookup",
+            "status": "passed",
+            "title": "domain-reputation, on the A lookup",
+            "duration": 0.1260930000000826,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled company-tech-stack, before the paid LLM call",
+            "status": "passed",
+            "title": "company-tech-stack, before the paid LLM call",
+            "duration": 0.1439029999999093,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-pattern-discover, on the MX lookup",
+            "status": "passed",
+            "title": "email-pattern-discover, on the MX lookup",
+            "duration": 0.09799199999997654,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-reputation-score, on the MX lookup",
+            "status": "passed",
+            "title": "email-reputation-score, on the MX lookup",
+            "duration": 0.18846099999996113,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a resolver failure (ESERVFAIL) throws, unbilled"
+            ],
+            "fullName": "a resolver failure (ESERVFAIL) throws, unbilled email-validate (free tier), on the MX lookup",
+            "status": "passed",
+            "title": "email-validate (free tier), on the MX lookup",
+            "duration": 0.11673999999993612,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed mx-lookup: NXDOMAIN everywhere",
+            "status": "passed",
+            "title": "mx-lookup: NXDOMAIN everywhere",
+            "duration": 1.125235999999859,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed mx-lookup: A record only, every other type ENODATA",
+            "status": "passed",
+            "title": "mx-lookup: A record only, every other type ENODATA",
+            "duration": 0.34260600000015984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed dns-lookup: A record only, every other type ENODATA",
+            "status": "passed",
+            "title": "dns-lookup: A record only, every other type ENODATA",
+            "duration": 0.4342790000000605,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed dns-lookup: NXDOMAIN still refuses as 'No DNS records found'",
+            "status": "passed",
+            "title": "dns-lookup: NXDOMAIN still refuses as 'No DNS records found'",
+            "duration": 0.6866959999999835,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-auth-check: no records of any kind",
+            "status": "passed",
+            "title": "email-auth-check: no records of any kind",
+            "duration": 0.4760109999999713,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-deliverability-check: resolves, no mail records, not listed (NXDOMAIN on every list)",
+            "status": "passed",
+            "title": "email-deliverability-check: resolves, no mail records, not listed (NXDOMAIN on every list)",
+            "duration": 0.5046809999998914,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed domain-reputation: resolves, no MX and no TXT at all (historical: no SPF/DMARC penalty)",
+            "status": "passed",
+            "title": "domain-reputation: resolves, no MX and no TXT at all (historical: no SPF/DMARC penalty)",
+            "duration": 13.853409000000056,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed domain-reputation: TXT without SPF and NXDOMAIN on _dmarc is penalised as before",
+            "status": "passed",
+            "title": "domain-reputation: TXT without SPF and NXDOMAIN on _dmarc is penalised as before",
+            "duration": 6.499856000000136,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed company-tech-stack: empty record types reach the model as empty",
+            "status": "passed",
+            "title": "company-tech-stack: empty record types reach the model as empty",
+            "duration": 1.1198879999999463,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-pattern-discover: no MX",
+            "status": "passed",
+            "title": "email-pattern-discover: no MX",
+            "duration": 0.35114199999998164,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-reputation-score: NXDOMAIN keeps the mx_lookup_failed factor",
+            "status": "passed",
+            "title": "email-reputation-score: NXDOMAIN keeps the mx_lookup_failed factor",
+            "duration": 0.5805230000000847,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a real negative keeps today's output, and is still billed"
+            ],
+            "fullName": "a real negative keeps today's output, and is still billed email-validate: NXDOMAIN is still undeliverable",
+            "status": "passed",
+            "title": "email-validate: NXDOMAIN is still undeliverable",
+            "duration": 0.8981080000000929,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-deliverability-check: an errored blocklist is unknown, never 'not listed'"
+            ],
+            "fullName": "email-deliverability-check: an errored blocklist is unknown, never 'not listed' one list timing out is reported unknown, and not credited",
+            "status": "passed",
+            "title": "one list timing out is reported unknown, and not credited",
+            "duration": 1.3829619999999068,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-deliverability-check: an errored blocklist is unknown, never 'not listed'"
+            ],
+            "fullName": "email-deliverability-check: an errored blocklist is unknown, never 'not listed' a Spamhaus refusal code (127.255.255.254) is not a listing",
+            "status": "passed",
+            "title": "a Spamhaus refusal code (127.255.255.254) is not a listing",
+            "duration": 0.6794930000000932,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-deliverability-check: an errored blocklist is unknown, never 'not listed'"
+            ],
+            "fullName": "email-deliverability-check: an errored blocklist is unknown, never 'not listed' a real listing is still a listing",
+            "status": "passed",
+            "title": "a real listing is still a listing",
+            "duration": 0.4100700000001325,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "email-validate-bulk inherits the fix through the shared checkMx"
+            ],
+            "fullName": "email-validate-bulk inherits the fix through the shared checkMx marks a timed-out domain mx_checked:false instead of reporting it has no MX",
+            "status": "passed",
+            "title": "marks a timed-out domain mx_checked:false instead of reporting it has no MX",
+            "duration": 4.483289999999897,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793974663305,
+        "endTime": 1793974663360.4834,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/capabilities/dns-family.upstream-failures.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENOTFOUND as the answer",
+            "status": "passed",
+            "title": "treats ENOTFOUND as the answer",
+            "duration": 1.5447379999998248,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ENODATA as the answer",
+            "status": "passed",
+            "title": "treats ENODATA as the answer",
+            "duration": 0.22250500000018292,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADNAME as the answer",
+            "status": "passed",
+            "title": "treats EBADNAME as the answer",
+            "duration": 0.10718199999996614,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ETIMEOUT as no answer",
+            "status": "passed",
+            "title": "treats ETIMEOUT as no answer",
+            "duration": 0.14241199999992205,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESERVFAIL as no answer",
+            "status": "passed",
+            "title": "treats ESERVFAIL as no answer",
+            "duration": 0.10367900000005648,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EREFUSED as no answer",
+            "status": "passed",
+            "title": "treats EREFUSED as no answer",
+            "duration": 0.08062399999994341,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECONNREFUSED as no answer",
+            "status": "passed",
+            "title": "treats ECONNREFUSED as no answer",
+            "duration": 0.12514699999996992,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EAI_AGAIN as no answer",
+            "status": "passed",
+            "title": "treats EAI_AGAIN as no answer",
+            "duration": 0.07807200000002013,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ECANCELLED as no answer",
+            "status": "passed",
+            "title": "treats ECANCELLED as no answer",
+            "duration": 0.315900000000056,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats EBADRESP as no answer",
+            "status": "passed",
+            "title": "treats EBADRESP as no answer",
+            "duration": 0.11229900000012094,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats ESOMETHINGNEW as no answer",
+            "status": "passed",
+            "title": "treats ESOMETHINGNEW as no answer",
+            "duration": 0.13701900000000933,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isDnsNegative"
+            ],
+            "fullName": "isDnsNegative treats an error without a resolver code as no answer",
+            "status": "passed",
+            "title": "treats an error without a resolver code as no answer",
+            "duration": 0.10563700000011522,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull passes a successful answer through",
+            "status": "passed",
+            "title": "passes a successful answer through",
+            "duration": 1.0791079999999056,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENOTFOUND",
+            "status": "passed",
+            "title": "returns the empty answer for ENOTFOUND",
+            "duration": 0.254184000000123,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull returns the empty answer for ENODATA",
+            "status": "passed",
+            "title": "returns the empty answer for ENODATA",
+            "duration": 0.16911099999992985,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ETIMEOUT",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ETIMEOUT",
+            "duration": 0.7918369999999868,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESERVFAIL",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESERVFAIL",
+            "duration": 0.340172000000166,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EREFUSED",
+            "duration": 0.2241109999999935,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECONNREFUSED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECONNREFUSED",
+            "duration": 0.1607680000001892,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EAI_AGAIN",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EAI_AGAIN",
+            "duration": 0.12354200000004312,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ECANCELLED",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ECANCELLED",
+            "duration": 0.4373760000000857,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for EBADRESP",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for EBADRESP",
+            "duration": 0.19074999999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "status": "passed",
+            "title": "throws UpstreamUnavailableError for ESOMETHINGNEW",
+            "duration": 0.12951199999997698,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "dnsOrEmpty / dnsOrNull"
+            ],
+            "fullName": "dnsOrEmpty / dnsOrNull rethrows our own defect unchanged rather than blaming the resolver",
+            "status": "passed",
+            "title": "rethrows our own defect unchanged rather than blaming the resolver",
+            "duration": 0.20540299999993294,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg returns the answering legs when at least one answered",
+            "status": "passed",
+            "title": "returns the answering legs when at least one answered",
+            "duration": 0.17793799999981275,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg throws when every leg failed, naming the codes and never the legs' messages",
+            "status": "passed",
+            "title": "throws when every leg failed, naming the codes and never the legs' messages",
+            "duration": 0.28084599999988313,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "requireAnyLeg"
+            ],
+            "fullName": "requireAnyLeg treats no legs as no outage",
+            "status": "passed",
+            "title": "treats no legs as no outage",
+            "duration": 0.07433100000002923,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ETIMEOUT). This says nothing about the domain's records; retry shortly.",
+            "duration": 1.2496479999999792,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESERVFAIL). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.7006440000000111,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.2993059999998877,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECONNREFUSED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.13420700000006036,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EAI_AGAIN). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.12938099999996666,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ECANCELLED). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.09928999999988264,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (EBADRESP). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.16933499999981905,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: DNS MX query: the resolver gave no answer (ESOMETHINGNEW). This says nothing about the domain's records; retry shortly.",
+            "duration": 0.1057299999999941,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "status": "passed",
+            "title": "Upstream unavailable: Companies House search API: HTTP 429; retry shortly.",
+            "duration": 0.13154499999996005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "status": "passed",
+            "title": "Upstream unavailable: ESMA MiCA CASP register: no copy of the register could be read (2026-11: HTTP 404; 2026-10: HTTP 503). This is not an answer about the entity; retry later.",
+            "duration": 0.1564699999998993,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "UpstreamUnavailableError is filed as an unbilled, retryable provider failure"
+            ],
+            "fullName": "UpstreamUnavailableError is filed as an unbilled, retryable provider failure carries a non-retryable verdict through to the outcome",
+            "status": "passed",
+            "title": "carries a non-retryable verdict through to the outcome",
+            "duration": 0.11644299999989016,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict retries a retryable UpstreamUnavailableError once",
+            "status": "passed",
+            "title": "retries a retryable UpstreamUnavailableError once",
+            "duration": 2.6454170000001795,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "retry policy honours the executor's verdict"
+            ],
+            "fullName": "retry policy honours the executor's verdict does not retry a non-retryable one",
+            "status": "passed",
+            "title": "does not retry a non-retryable one",
+            "duration": 1.020136999999977,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793974663453,
+        "endTime": 1793974663468.02,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a850b34ad8c487495/apps/api/src/lib/upstream-result.test.ts"
+      }
+    ]
+  }
+}

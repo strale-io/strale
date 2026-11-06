@@ -18,22 +18,10 @@ registerCapability("vasp-verify", async (input: CapabilityInput) => {
   const website = ((input.website as string) ?? "").trim() || undefined;
   const lei = ((input.lei as string) ?? "").trim() || undefined;
 
+  // Throws UpstreamUnavailableError when the register cannot be read: an
+  // outage is never sold as `authorized: false` (it used to be, with a note).
   const records = await getCASPData();
   const now = new Date().toISOString();
-
-  if (records.length === 0) {
-    return {
-      output: {
-        entity_name_searched: entityName,
-        match_found: false,
-        authorized: false,
-        matches: [],
-        register_last_updated: getCASPCacheAge(),
-        note: "ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.",
-      },
-      provenance: { source: "esma.europa.eu (MiCA CASP register)", fetched_at: now },
-    };
-  }
 
   const matches = searchCASP(records, entityName, website, lei);
 

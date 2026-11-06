@@ -9,6 +9,7 @@
 import { APIError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import { remainingCallMs } from "./call-cost.js";
 import { logWarn } from "./log.js";
+import { UpstreamUnavailableError } from "./upstream-result.js";
 
 export interface RetryOptions {
   /** Max number of retries after the first attempt. Default: 1 */
@@ -51,6 +52,9 @@ const NON_RETRYABLE: RegExp[] = [
 ];
 
 function isRetryable(error: Error, extraPatterns: RegExp[]): boolean {
+  // The executor already decided: a swallowed-failure fix that throws this
+  // says whether a second attempt could get an answer (lib/upstream-result.ts).
+  if (error instanceof UpstreamUnavailableError) return error.retryable;
   // SDK 0.78 exports these classes; do not infer SDK status from JSON text.
   if (error instanceof APIConnectionTimeoutError || error instanceof APIConnectionError) return true;
   if (error instanceof APIError) return error.status !== undefined &&
