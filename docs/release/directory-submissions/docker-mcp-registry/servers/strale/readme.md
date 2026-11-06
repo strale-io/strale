@@ -1,1 +1,1 @@
-Docs: https://strale.dev/docs
+Docs: https://strale.io/docs

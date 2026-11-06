@@ -11,7 +11,8 @@
     "packages/mcp-server",
     "packages/langchain-strale",
     "packages/crewai-strale",
-    "packages/semantic-kernel-strale"
+    "packages/langchain",
+    "packages/n8n-nodes-strale"
   ],
   "excludeFolders": [
     "node_modules",

@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 50 (48 topics with a current answer, 1 historical).
+Total files: 51 (49 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -28,6 +28,7 @@ Total files: 50 (48 topics with a current answer, 1 historical).
 | codebase-architecture-review | [2026-10-27-codebase-architecture-review.md](2026-10-27-codebase-architecture-review.md) | How sound are Strale's codebase and architecture (robustness, maintainability, error detection, autonomy, text truthfulness, quality), and which changes give the highest return? | 2026-10-27 | 0 |
 | cy-registry-build-path | [2026-05-07-cy-registry-build-path.md](2026-05-07-cy-registry-build-path.md) | What is the build path for ingesting Cyprus's DRCOR company registry open data? | 2026-05-07 | 0 |
 | delegate-competitive-analysis | [2026-10-23-delegate-competitive-analysis.md](2026-10-23-delegate-competitive-analysis.md) | What does Delegate (dlgt.io) offer, build and say that Strale should add, copy or deliberately avoid, across capabilities, product and go-to-market? | 2026-10-23 | 0 |
+| distribution-listings-audit | [2026-11-06-distribution-listings-audit.md](2026-11-06-distribution-listings-audit.md) | Which places where agents and developers find Strale still show stale or untrue text after the move to strale.io and the 2026-11-06 npm releases, and what can the repository, a session or only Petter fix? | 2026-11-06 | 0 |
 | distribution-strategy | [2026-10-27-distribution-strategy.md](2026-10-27-distribution-strategy.md) | How does Strale get agents and developers calling it, and paying, fastest and most cheaply over the next 90 days, given what it is today? | 2026-10-27 | 0 |
 | dk-cvr-breaker-false-recovery-investigation | [2026-05-07-dk-phase2-understand.md](2026-05-07-dk-phase2-understand.md) | Why did the danish-company-data circuit breaker appear stuck open, and what does the Phase 2 investigation establish about its real state? | 2026-05-07 | 0 |
 | es-registry-build-path-verify | [2026-05-07-es-registry-build-path-verify.md](2026-05-07-es-registry-build-path-verify.md) | Does the chosen ES registry data path (opendata.registradores.org plus BORME plus sede.registradores.org self-build) still hold up under a fresh technical-viability probe? | 2026-05-07 | 0 |

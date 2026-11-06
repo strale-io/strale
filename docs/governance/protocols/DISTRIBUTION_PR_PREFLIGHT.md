@@ -31,10 +31,11 @@ Checkbox:
 - `strale-mcp` (npm) — the MCP server (stdio), plus the hosted remote server at `https://api.strale.io/mcp`; does not claim any framework integration. Added 2026-10-29 after a production smoke test of 0.2.9 (`npx -y strale-mcp@0.2.9`: initialize, tools/list, a free `iban-validate` call)
 - `n8n-nodes-strale` (npm; source in `packages/n8n-nodes-strale` from 1.0.0, earlier releases from the `strale-io/n8n-nodes-strale` repo) — implements n8n's `INodeType` / `ICredentialType` from `n8n-workflow`
 - `straleio` — generic Python SDK; does not claim any framework integration
-- `@strale/sdk` (npm) — generic TypeScript SDK
+- `straleio` (npm) — generic TypeScript SDK; does not claim any framework integration
+- `straleio-langchain` (npm) — `StraleFallbackTool` extends LangChain's `Tool` (`@langchain/core/tools`); production smoke test of 0.1.1 passed 2026-11-06 (`archive/receipts/2026-11-06-check-npm-four-packages-production-smoke.json`)
 
 **Deprecated / yanked** (do NOT reference in new PRs):
-- `strale-semantic-kernel` (npm) — deprecation decided 2026-10-29; npm flag pending (see `docs/release/directory-submissions/package-housekeeping.md`): built on `semantic-kernel` on npm, an unofficial community port (`afshinm/semantic-kernel-js`), not Microsoft's
+- `strale-semantic-kernel` (npm) — deprecated on npm 2026-11-06 (decided 2026-10-29; see `docs/release/directory-submissions/package-housekeeping.md`): built on `semantic-kernel` on npm, an unofficial community port (`afshinm/semantic-kernel-js`), not Microsoft's
 - `pydantic-ai-strale` — yanked 2026-04-22
 - `google-adk-strale` — yanked 2026-04-22
 - `openai-agents-strale` — yanked 2026-04-22

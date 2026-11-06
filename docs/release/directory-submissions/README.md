@@ -1,4 +1,4 @@
-# Directory submissions prepared 2026-10-29 (distribution T12)
+# Directory submissions prepared 2026-10-29, refreshed 2026-11-06 (distribution T12)
 
 Four client catalogues where an install happens inside the tool a builder
 already uses. Each submission below is **prepared, not opened**: this cloud
@@ -12,31 +12,44 @@ and `docs/research/2026-10-27-distribution-strategy-sweeps/directories.md`
 (`docker-mcp-registry-pr`, `cline-marketplace-submission`,
 `awesome-remote-mcp-servers-pr`, `cursor-plugin-submission`).
 
-## What production serves today (checked 2026-10-29)
+**Refreshed 2026-11-06** after the move to strale.io (DEC-20261105-A) and the
+npm releases of that day (`strale-mcp` 0.2.11, `straleio` 0.1.4,
+`straleio-langchain` 0.1.1, `n8n-nodes-strale` 1.0.0, `strale-capabilities`
+0.1.2). Every URL below now names `strale.io`; `strale.dev` answers a redirect
+(302 on 2026-11-06) and must not be used in new text. Nothing here was
+submitted: all four stay with whoever holds the GitHub and Cursor accounts.
+The survey of live listings, including which are stale, is
+`docs/research/2026-11-06-distribution-listings-audit.md`.
 
-Every submission references only these. Each was checked with a live request.
+## What production serves today (checked 2026-11-06)
+
+Every submission references only these. Each was checked with a live request on 2026-11-06; the rows that changed since 2026-10-29 are marked.
 
 | Item | Check | Result |
 | --- | --- | --- |
-| Remote MCP server `https://api.strale.io/mcp` | `initialize` | 200, `serverInfo` `strale` 0.2.9 |
-| Its tools | `tools/list` | 9 tools, each with a `title` and annotations: `strale_ping`, `strale_getting_started`, `strale_execute`, `strale_search`, `strale_balance`, `strale_methodology`, `strale_trust_profile`, `strale_transaction`, `strale_web3_assurance` |
+| Remote MCP server `https://api.strale.io/mcp` | `initialize` | 200, `serverInfo` `strale` 0.2.11 (changed) |
+| Its tools | `tools/list` | the same 9 tools, each with a `title` and annotations: `strale_ping`, `strale_getting_started`, `strale_execute`, `strale_search`, `strale_balance`, `strale_methodology`, `strale_trust_profile`, `strale_transaction`, `strale_web3_assurance` |
 | A free call without a key | `tools/call strale_execute iban-validate` with no header, and with `Authorization: Bearer ` (empty) | valid result, `price_cents: 0` |
-| A placeholder key | the same call with `Authorization: Bearer ${STRALE_API_KEY}` (unexpanded) or `Bearer bogus` | refused: `Invalid API key format` |
-| npm `strale-mcp` | `npx -y strale-mcp@0.2.9` over stdio: initialize, tools/list, free call with `STRALE_API_KEY` empty | works; stderr `Loaded 297 capabilities, 96 solutions, 297 cap trust, 96 sol trust` |
-| `https://strale.dev/signup`, `/docs` | GET | 200 |
-| `https://strale.dev/apple-touch-icon.png` | GET | 200, PNG 180×180 |
-| `https://strale.dev/strale.jpg` (used by the April Docker PR) | GET | 200 but `text/html`: the site's fallback page, not an image |
-| Glama connector `io.github.strale-io/strale` | GET page and `badges/score.svg` | 200, 200 `image/svg+xml` |
+| A placeholder key | the same call with `Authorization: Bearer ${STRALE_API_KEY}` or `Bearer <STRALE_API_KEY>` (unexpanded) | **changed:** a valid anonymous result, `price_cents: 0` (on 2026-10-29 it was refused). `Bearer bogus` is still refused: `Invalid API key format` |
+| npm `strale-mcp` | `npx -y strale-mcp@0.2.11` over stdio: initialize, tools/list (receipt `archive/receipts/2026-11-06-check-strale-mcp-0-2-11-production-smoke.json`) | works; stderr `Loaded 298 capabilities, 96 solutions, 298 cap trust, 96 sol trust`, no logged degradation |
+| `https://strale.io/signup`, `/docs` | GET | 200 |
+| `https://strale.io/apple-touch-icon.png` | GET | 200, PNG 180×180 |
+| `https://strale.io/strale.jpg` (used by the April Docker PR as `strale.dev/strale.jpg`) | GET | 404: still not an image, so the April PR's icon stays broken |
+| Glama connector `io.github.strale-io/strale` | GET page and `badges/score.svg` | 200, 200 `image/svg+xml`; the page shows the current registry description |
 | Free allowance | `GET /v1/platform/facts` → `static.free_tier_monthly_limit` | 300 |
+| Homepage | `GET https://strale.io/`, `/llms.txt` | 200, 200 |
 
-The placeholder finding shapes two submissions: an unexpanded `${VAR}` header
-turns an anonymous caller into a refused one. The Cursor plugin therefore
-ships without a header. The Docker entry marks the key optional: Docker's
-gateway (`docker/mcp-gateway` `pkg/mcp/remote.go`) expands an unset
-optional secret to an empty string and sends `Authorization: Bearer `,
-which the server treats as anonymous (checked above). If the server treated a `Bearer ${...}` or `Bearer <...>`
-value as no key, both could carry the header by default; that is an auth-path
-change for a separate batch, not this one.
+The placeholder finding shaped two submissions. On 2026-10-29 an unexpanded
+`${VAR}` header turned an anonymous caller into a refused one, so the Cursor
+plugin ships without a header, and the Docker entry marks the key optional:
+Docker's gateway (`docker/mcp-gateway` `pkg/mcp/remote.go`) expands an unset
+optional secret to an empty string and sends `Authorization: Bearer `, which
+the server treats as anonymous (checked above). **As of 2026-11-06 the server
+also treats an unexpanded `Bearer ${...}` or `Bearer <...>` value as no key**,
+so both entries could now carry the header by default. The files stay as they
+are (they work either way); a later change can add the header to the Cursor
+plugin once a session has re-run that check against the version Cursor users
+get.
 
 Copy for every submission was checked against `docs/company/claims.yaml`: no
 counts of tools, countries or catalogue size, no trial-credit amount, no
@@ -86,7 +99,7 @@ against `main`.
  - [Store API](https://store-api.com/mcp-guide) `https://store-api.com/mcp`
    [![Store API MCP connector](https://glama.ai/mcp/connectors/com.store-api/store-api/badges/score.svg)](https://glama.ai/mcp/connectors/com.store-api/store-api)
    🔓 - Ask 58 models, including GPT, Claude and Gemini, and generate images; calls need a prepaid key.
-+- [Strale](https://strale.dev?utm_source=awesome-remote-mcp-servers&utm_medium=listing&utm_campaign=distribution-t12) `https://api.strale.io/mcp?src=awesome-remote`
++- [Strale](https://strale.io?utm_source=awesome-remote-mcp-servers&utm_medium=listing&utm_campaign=distribution-t12) `https://api.strale.io/mcp?src=awesome-remote`
 +  [![Strale MCP connector](https://glama.ai/mcp/connectors/io.github.strale-io/strale/badges/score.svg)](https://glama.ai/mcp/connectors/io.github.strale-io/strale)
 +  🔓 - Company records, EU VAT checks, sanctions and PEP screening, validators and web page reading; free tools need no key.
  - [Superpowers](https://superpowers.tools) `https://superpowers.tools/mcp`
@@ -125,13 +138,13 @@ neighbours with paid calls use 🔓 and say so in the sentence.
 **Target:** `https://github.com/docker/mcp-registry/pull/2202` ("Add Strale
 (remote MCP server)", opened 2026-04-01 by `petterlindstrom79`, head commit
 `56e0556`). State on 2026-10-29: **open, no reviews**; only the author's two
-follow-up comments (2026-04-03, 2026-04-07).
+follow-up comments (2026-04-03, 2026-04-07). On 2026-11-06 the PR could not be re-read from a cloud session (repository access not enabled, github.com refused), but `hub.docker.com/mcp/server/strale` answers 404, so the server is not in Docker's catalogue yet.
 
 **Why update rather than open a new PR:** a second PR for the same server
 would be a duplicate. The open one needs fixing anyway:
 
-- `about.icon` points at `https://strale.dev/strale.jpg`, which returns the
-  site's HTML fallback page; Docker's validator (`cmd/validate isIconValid`)
+- `about.icon` points at `https://strale.dev/strale.jpg`, which returned the
+  site's HTML fallback page when checked (the file is also a 404 on `strale.io`); Docker's validator (`cmd/validate isIconValid`)
   decodes the image and fails on HTML;
 - `tools.json` is missing, which `CONTRIBUTING.md` lists as required for
   remote servers;
@@ -212,7 +225,7 @@ scripts/validate-template.mjs` passes and names Cursor's Slack or
   `provenance`, and three don'ts (regex-only IBAN/VAT "validation",
   screening results presented as decisions, keys in source);
 - `assets/logo.png` (400×400, the production favicon mark from
-  `strale.dev/favicon.svg`) and `assets/logo.svg`;
+  `strale.io/favicon.svg`) and `assets/logo.svg`;
 - `README.md`, `LICENSE` (MIT, Moonlighter AB).
 
 Not run: the template's `validate-template.mjs` (external code; this session
