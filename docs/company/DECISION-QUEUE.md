@@ -56,7 +56,9 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *Consequence:* renewing costs about $10.40 a month including VAT, against a few euros of income from these tools today. Longer term, another search provider sells a $50 balance that never expires, which at our volume would last years instead of six months; that needs their written permission to resell first, and is a separate decision. Lapsing saves that and removes web search from the catalogue on 8 November.
 
-**DQ-43** · `your_call` · owner Petter · raised 2026-10-30 · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+**DQ-43** · `answered` · owner Petter · raised 2026-10-30 · answered 2026-11-06 (yes) · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+
+*Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
 
 *Settled:* the Japan qualified-invoice-issuer check is portfolio plan item 1.13, approved under DEC-20261024-B. The NTA invoice-system office replied on 2026-10-29 (OUTBOX row `nta-invoice-app-id`): the invoice Web-API permission can be added to the corporate-number application ID we already hold, through the application-ID change notification (`https://www.invoice-kohyo.nta.go.jp/web-api/pre-change`, email-change fields left empty), with our 2026-10-27 email text uploaded as a Word file as the usage document.
 
@@ -64,7 +66,9 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *What I need:* your go for this form. A local session then fills it up to the final button and prepares the Word file; you submit.
 
-**DQ-42** · `your_call` · owner Petter · raised 2026-10-30 — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+**DQ-42** · `answered` · owner Petter · raised 2026-10-30 · answered 2026-11-06 (yes, free EUIPO account) — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+
+*Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
 
 *What is established (2026-10-30 morning run, production read-only):*
 - Since the 2026-10-28 fetch-hardening deploy, tools that read a public page as their source check its robots.txt (DEC-20261023-A adoption work). `eu-trademark-search` renders `euipo.europa.eu/eSearch/`, and EUIPO's robots.txt has `disallow: /eSearch/` for every agent. The production parser refuses it; a registered account's paid call failed with exactly that on 2026-10-29 13:40Z and was not charged.

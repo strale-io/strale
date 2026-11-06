@@ -1161,6 +1161,20 @@
         "capabilities.avg_latency_ms"
       ],
       "sha256": "bfc712c7b8745f0193fd2b6b58bf7f0d1a46c918c2a705c7cef695b817ba9caa"
+    },
+    {
+      "id": "M089",
+      "function": "runMigration0147_reconcileSerperRenewal",
+      "title": "Reconcile Serper Renewal",
+      "added": "2026-11-06",
+      "columns_written": [
+        "vendor_accounts.expires_at",
+        "vendor_accounts.included_units",
+        "vendor_accounts.metadata",
+        "vendor_accounts.remaining_units",
+        "vendor_accounts.used_units"
+      ],
+      "sha256": "d4a1b6a5da879d3254fba5e4f21cce60bc1cbc6f9d66553da5cae494730fd5e4"
     }
   ],
   "known_overlaps": [
@@ -1710,6 +1724,46 @@
         "M087"
       ],
       "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+    },
+    {
+      "column": "vendor_accounts.expires_at",
+      "blocks": [
+        "M040",
+        "M089"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M089 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.included_units",
+      "blocks": [
+        "M040",
+        "M089"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M089 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.metadata",
+      "blocks": [
+        "M040",
+        "M089"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M089 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.remaining_units",
+      "blocks": [
+        "M040",
+        "M089"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M089 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.used_units",
+      "blocks": [
+        "M040",
+        "M089"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M089 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
     }
   ]
 }
