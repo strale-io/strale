@@ -80,7 +80,7 @@ test_fixtures:
   # Published as the x402 example input (x402-discovery-metadata.ts,
   # REVIEWED_PUBLIC_INPUT_EXAMPLES): a real listed company, not a placeholder.
   health_check_input:
-    entity_name: "Spotify AB"
+    entity_name: "Nordvik Handel AB (fictional)"
     entity_type: "company"
     country_code: "SE"
 output_field_reliability:

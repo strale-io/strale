@@ -172,8 +172,8 @@ export function publicExampleFailure(manifest: DiscoveryManifest, schema: Record
  */
 export const REVIEWED_PUBLIC_INPUT_EXAMPLES: Readonly<Record<string, { value: unknown; reason: string }>> = {
   "aml-risk-score": {
-    value: { entity_name: "Spotify AB", entity_type: "company", country_code: "SE" },
-    reason: "A listed company, no flags set. The tool scores the inputs it is given and looks nothing up, so the name is never matched to a person.",
+    value: { entity_name: "Nordvik Handel AB (fictional)", entity_type: "company", country_code: "SE" },
+    reason: "A fictional company name, no flags set. The tool scores the inputs it is given and looks nothing up, so the name is never matched to a person.",
   },
   "ens-resolve": {
     value: { name: "vitalik.eth" },

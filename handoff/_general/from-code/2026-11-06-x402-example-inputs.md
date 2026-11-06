@@ -16,7 +16,7 @@ Neither discovery file nor catalogue carries an example input. So a client had n
 
 ## Change
 
-- `manifests/aml-risk-score.yaml`: `health_check_input` was `{Test Company, SE}`, now `{entity_name: "Spotify AB", entity_type: "company", country_code: "SE"}`.
+- `manifests/aml-risk-score.yaml`: `health_check_input` was `{Test Company, SE}`, now `{entity_name: "Nordvik Handel AB (fictional)", entity_type: "company", country_code: "SE"}`.
 - `manifests/ens-resolve.yaml`: had no `health_check_input`; now `{name: "vitalik.eth"}`.
 - `manifests/country-tax-rates.yaml`: unchanged. `US` was already a real, accepted code and is published.
 - `apps/api/src/lib/x402-discovery-metadata.ts`: new `REVIEWED_PUBLIC_INPUT_EXAMPLES` (two rows, each with a reason). It lets exactly those two input examples through the tool-level and field-name screens, only while the manifest `health_check_input` equals the row. Size limit, placeholder check and input-schema check still run. Output examples of both tools stay withheld. New `publishedInputExample()` is the one reader for the challenge and the 400 body.
@@ -26,7 +26,7 @@ Neither discovery file nor catalogue carries an example input. So a client had n
 
 ## Needs an independent reviewer (tier 2: privacy screen)
 
-`REVIEWED_PUBLIC_INPUT_EXAMPLES` is a deliberate hole in the public-example privacy screen, for two tools the screen withholds by class. The alternative is to publish no example for them and keep refusals. The choice of "Spotify AB" as the AML example name is the orchestrator's/Petter's to confirm; the tool only scores the flags and country it is given and looks nothing up.
+`REVIEWED_PUBLIC_INPUT_EXAMPLES` is a deliberate hole in the public-example privacy screen, for two tools the screen withholds by class. The alternative is to publish no example for them and keep refusals. The orchestrator replaced the first choice, a real listed company, with the fictional "Nordvik Handel AB (fictional)": an AML risk example should not name a real company. The tool only scores the flags and country it is given and looks nothing up.
 
 ## What reaches production on deploy
 

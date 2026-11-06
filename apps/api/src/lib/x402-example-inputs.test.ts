@@ -41,7 +41,7 @@ const manifests = readdirSync(manifestDirectory).filter(file => file.endsWith(".
 const manifest = (slug: string) => manifests.find(item => item.slug === slug)!;
 
 const EXPECTED = {
-  "aml-risk-score": { entity_name: "Spotify AB", entity_type: "company", country_code: "SE" },
+  "aml-risk-score": { entity_name: "Nordvik Handel AB (fictional)", entity_type: "company", country_code: "SE" },
   "country-tax-rates": { country_code: "US" },
   "ens-resolve": { name: "vitalik.eth" },
 } as const;
@@ -54,7 +54,7 @@ describe("the three tools probe402 reported publish a real example", () => {
 
   it("aml-risk-score: the executor accepts the example and scores it", async () => {
     const { output } = await getExecutor("aml-risk-score")!(EXPECTED["aml-risk-score"] as Record<string, unknown>) as { output: Record<string, unknown> };
-    expect(output).toMatchObject({ entity_name: "Spotify AB", entity_type: "company", country_code: "SE", risk_level: "low" });
+    expect(output).toMatchObject({ entity_name: "Nordvik Handel AB (fictional)", entity_type: "company", country_code: "SE", risk_level: "low" });
     expect(typeof output.risk_score).toBe("number");
   });
 
@@ -103,7 +103,7 @@ describe("no published input example is a placeholder", () => {
     for (const bad of ["string", "Example", "example_name", "<name>", "{{name}}", "0x0000000000000000000000000000000000000000", "Test Company", "xxx"]) {
       expect(PLACEHOLDER.some(pattern => pattern.test(bad)), bad).toBe(true);
     }
-    for (const good of ["vitalik.eth", "Spotify AB", "SE", "US", "example.com", "https://example.com/a", "testing"]) {
+    for (const good of ["vitalik.eth", "Nordvik Handel AB (fictional)", "SE", "US", "example.com", "https://example.com/a", "testing"]) {
       expect(PLACEHOLDER.some(pattern => pattern.test(good)), good).toBe(false);
     }
   });
