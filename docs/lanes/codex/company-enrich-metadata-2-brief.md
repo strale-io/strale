@@ -3,7 +3,7 @@ Intent: Codex builder brief, round 2: fix the independent review's findings on t
 # Brief: company-enrich metadata, review fixes
 
 - **Requester:** the Strale orchestrator (session_01CR5YPsTtEwE3tRQtvTzerw).
-- **Branch:** push only `codex/company-enrich-metadata-r2`. It starts from your round-1 commit 9da8e8f7. Never push `main`, and never label, approve, merge or comment.
+- **Branch:** push only `codex/company-enrich-metadata-2`. It starts from your round-1 commit 9da8e8f7. Never push `main`, and never label, approve, merge or comment.
 - **Data:** this brief and the repository only. There are no secrets. All tests stay offline, with synthetic HTML and a mocked Claude call.
 - **Round 1:** `docs/lanes/codex/company-enrich-metadata-brief.md` and your report. An independent review found two blockers and several should-fix items. Fix all of them.
 
@@ -52,4 +52,4 @@ Intent: Codex builder brief, round 2: fix the independent review's findings on t
 - The new tests pass, and they fail on 9da8e8f7.
 - The existing company-enrich and structured-metadata tests still pass.
 - `npm run typecheck` passes. Build `packages/mcp-server` and `packages/sdk-typescript` first.
-- `docs/lanes/codex/company-enrich-metadata-r2-report.md` maps each numbered item to its change and its test, and lists anything not done.
+- `docs/lanes/codex/company-enrich-metadata-2-report.md` maps each numbered item to its change and its test, and lists anything not done.
