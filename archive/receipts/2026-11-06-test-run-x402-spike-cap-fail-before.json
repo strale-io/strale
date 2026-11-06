@@ -1,0 +1,124 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "node_modules/.bin/vitest",
+    "commit": "d9e0d66fad0f581c0196cee2429b1566ad765183"
+  },
+  "at": "2026-11-06T20:03:59.853Z",
+  "inputs": {
+    "files": [
+      "apps/api/src/jobs/x402-settlement-watch.integration.test.ts"
+    ],
+    "code": "apps/api/src/jobs/x402-settlement-watch.ts restored from origin/main 119421ee",
+    "database": "throwaway local Postgres 16, schema via drizzle-kit push plus startup migrations"
+  },
+  "summary": {
+    "passed": 4,
+    "failed": 1,
+    "total": 5,
+    "failed_is": "one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)"
+  },
+  "topic": "x402-spike-cap-fail-before",
+  "raw": {
+    "numTotalTestSuites": 2,
+    "numPassedTestSuites": 0,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 5,
+    "numPassedTests": 4,
+    "numFailedTests": 1,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1793995430463,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one buyer pausing is a warning that names the buyer share, not a critical page",
+            "status": "passed",
+            "title": "one buyer pausing is a warning that names the buyer share, not a critical page",
+            "duration": 51.796115999999984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres a broad drop across buyers stays critical and carries the payer breakdown",
+            "status": "passed",
+            "title": "a broad drop across buyers stays critical and carries the payer breakdown",
+            "duration": 21.768016999999986,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres nobody else settling at all stays critical even when the top buyer explains the volume",
+            "status": "passed",
+            "title": "nobody else settling at all stays critical even when the top buyer explains the volume",
+            "duration": 20.03886799999998,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)",
+            "status": "failed",
+            "title": "one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)",
+            "duration": 35.966256000000044,
+            "failureMessages": [
+              "AssertionError: expected 'concentrated' to be 'healthy' // Object.is equality\n    at /home/user/strale/.claude/worktrees/agent-a17236b558daed9b5/apps/api/src/jobs/x402-settlement-watch.integration.test.ts:162:26\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///home/user/strale/.claude/worktrees/agent-a17236b558daed9b5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres under the minimum baseline nothing is sent",
+            "status": "passed",
+            "title": "under the minimum baseline nothing is sent",
+            "duration": 8.956464000000096,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793995431212,
+        "endTime": 1793995431350.9565,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a17236b558daed9b5/apps/api/src/jobs/x402-settlement-watch.integration.test.ts"
+      }
+    ]
+  }
+}
