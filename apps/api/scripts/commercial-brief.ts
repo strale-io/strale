@@ -22,7 +22,7 @@ const REPO = resolve(HERE, "../../..");
 config({ path: resolve(REPO, ".env") });
 
 const {
-  monthlyFreeFunnel, marginPerTool, discreteWeeks, growth, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
+  monthlyFreeFunnel, marginPerTool, discreteWeeks, growth, payerTrend, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
   trailingQuietWindow,
   startOfIsoWeek,
 } = await import("../src/lib/metrics/commercial.js");
@@ -39,6 +39,7 @@ async function main() {
   const weeksM = await discreteWeeks(6, now);
   const weeks = weeksM.status === "unavailable" ? [] : weeksM.value;
   const g = growth(weeks);
+  const payerTrendResult = payerTrend(weeks);
 
   // The payer questions are answered on the LAST COMPLETED ISO week, for the
   // same reason growth() refuses a partial week for revenue: on a Monday the
@@ -114,7 +115,7 @@ async function main() {
 
   if (asJson) {
     console.log(JSON.stringify({
-      freeFunnel, margins, weeks, growth: g,
+      freeFunnel, margins, weeks, growth: g, payerTrend: payerTrendResult,
       concentration: conc ? { ...conc, newPayerKeys: [...conc.newPayerKeys] } : null,
       quiet,
       quietNarrowedSince: quietNarrowedSince ? quietNarrowedSince.toISOString() : null,
@@ -136,10 +137,11 @@ async function main() {
   } else {
     for (const w of weeks) {
       const tag = w.partial ? `  [in progress, day ${w.daysElapsed} of 7 — NOT comparable]` : "";
-      console.log(`  ${w.startsOn}  ${eur(w.cents).padStart(9)}  ${String(w.calls).padStart(5)} calls${tag}`);
+      console.log(`  ${w.startsOn}  ${eur(w.cents).padStart(9)}  ${String(w.payers).padStart(3)} payers  ${String(w.calls).padStart(5)} calls${tag}`);
     }
   }
   console.log(`\nGrowth: ${g.kind}${g.kind === "not_comparable" ? ` — ${g.why}` : ""}`);
+  console.log(`Payer trend: ${payerTrendResult.verdict === "insufficient" ? "insufficient completed weeks" : payerTrendResult.sentence}`);
 
   console.log("\nPayers, last completed week (the week in progress cannot answer these)");
   if (!conc) {
