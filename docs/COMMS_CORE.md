@@ -32,34 +32,40 @@ message is the conversation and nothing routes it.
 - **A message to an archived or replaced session fails** (`session_inactive`, probe 2026-10-30):
   look up the current session (the lease for masters; `list_sessions` and `parent_session_id` for
   lanes) and send again.
-- **Never make a fleet session trusted-device-only, with one exception.** A cloud session can message a PC
-  session only after the founder approves a trust card, which permanently limits it to trusted devices
-  (`elevated_session_untrusted_device`; cinver 2026-10-22: the master missed messages for an hour). So no
-  master, lane or other session calls `confirm_repository_trust`, and the founder declines such cards from
-  them. The one exception (founder 2026-11-04, "approve the PC helper exception") is the standing "PC helper
-  (fleet)" session, one per account, that starts every PC session (`docs/fleet-roster.md` "PC helper"): a
-  card per PC job would cost the founder a click each time, and a master that clicked it would lose its
-  messages. The helper holds no scheduled tasks, is never a master, and nothing depends on messaging it (it
-  listens by polling the bus). Mechanism, in two layers. The hook: `wow-hook.mjs` gates that tool in wow-core's
-  own settings (no static deny there, because a deny overrides the hook's allow) and allows it only when
-  `WOW_ACCOUNT_LABEL` is the leased account's and this session is the FIRST `pc-helper:<id>` entry of the
-  account's lease period (`bus.mjs lease --authority`; a later different entry is ignored, and a period that begins
-  within 24 hours of an earlier period of the same account, an A→B→A flip, has none), reading the bus
-  repository from `WOW_BUS_REPO` only; it denies everything else, failing closed on a missing label, session
-  id or bus, a timeout or an internal error. Only the lease's `wow-core` session (the takeover) may write a
-  `pc-helper` entry or change the `wow-core` entry inside the account's lease period: the Bash guard denies
-  both to every other session, and `lease --authority` counts only the `wow-core` entry of the period's FIRST
-  lease (the takeover's `--take`) and only helper entries written under it. A `--take` for a different
-  account starts a new period and stays allowed (that is a takeover). The wow-core master named at the
-  period's start is the lease authority until the next account switch; if it dies mid-period, re-run the
-  takeover on the next account (as for a dead helper), because a replacement wow-core or helper entry in
-  the same period is ignored by design. The helper is exempt from the
-  session-start caps (below, "The cap"). Consumers keep the static deny in `settings.template.json`; the helper
-  runs in wow-core only. The limit, stated plainly: the hook stops honest mistakes and the obvious self-grant,
-  but a session can edit its own repository's hooks or post through another route, so the real boundary is
-  the founder's card. The takeover reports the helper's session link; he clicks Allow only on that card,
-  once per account switch, and declines any other trust card. A session already elevated is replaced at the
-  next takeover or restart and is never named in the lease (the helper excepted).
+- **Never make a fleet session trusted-device-only, except a master that needs the PC.** A cloud session can
+  start or message a PC session only after the founder approves a trust card, which permanently limits it to
+  trusted devices (`elevated_session_untrusted_device`; cinver 2026-10-22: the master missed messages for an
+  hour), and then other sessions cannot message it and scheduled tasks bound to it fail. So no lane or other
+  session calls `confirm_repository_trust`, and the founder declines such cards from them. The one exception
+  (founder 2026-11-06, "Masters use PC directly"; replaces the standing PC helper of 2026-11-04, whose relay
+  stalled every PC job of 5 and 6 Nov) is the master of a project listed in `docs/fleet-roster.md` "Needs the
+  founder's PC": it asks once per account switch, at its first PC need, and starts its own PC sessions (roster
+  "A master's PC session"). The accepted cost: that master opens only on trusted devices, so it moves its bound
+  scheduled tasks to fresh sessions per run first and reads its lanes on PRs and the bus. Mechanism, in two
+  layers. The hook: `wow-hook.mjs` gates that tool (neither wow-core's settings nor the consumer template deny it,
+  because a deny overrides the hook's allow; a sync lists a consumer's old deny under `PERMISSIONS TO REMOVE BY
+  HAND`) and allows it only when `WOW_ACCOUNT_LABEL` is the leased account's and this session is the FIRST lease
+  entry, in the account's lease period, of a project in that roster table (`bus.mjs lease --authority` `masters`:
+  only entries written under the period's first `wow-core` entry count, a later different entry is ignored, and a
+  period that begins within 24 hours of an earlier period of the same account, an A→B→A flip, names none). It reads
+  the table as committed on `origin/main` of a wow-core checkout (its own, or the one beside a consumer's checkout:
+  every master session has wow-core as its second repository) and the bus repository from `WOW_BUS_REPO` only; it
+  denies everything else, failing closed on a missing label, session id, roster or bus, a timeout or an internal
+  error. A master restarted mid-period is not the first entry and gets no card until the next switch. The lease
+  authority: only the lease's `wow-core` session (the takeover) may write a `codex-dispatcher` entry or change the
+  `wow-core` entry inside the account's lease period; the Bash guard denies both to every other session, and
+  `lease --authority` counts only the `wow-core` entry of the period's FIRST lease (the takeover's `--take`) and
+  only entries written under it. A `--take` for a different account starts a new period and stays allowed (that is
+  a takeover). If that wow-core master dies mid-period, re-run the takeover on the next account, because a
+  replacement wow-core entry in the same period is ignored by design. The limit,
+  stated plainly: the Bash guard refuses a PC project's first entry to every session but the takeover (review
+  2026-11-06), yet anything on the account can post a LEASE line by another route and a session can edit its own
+  repository's hooks. A forged first entry does not only lock the forger to trusted devices: it locks the real
+  master out of the PC for the whole period, which the takeover's check after its re-take reports (takeover step
+  6a). So the hook stops honest mistakes and lanes, not a forger; the real boundary is the founder's card. He
+  approves it from the Claude desktop app or claude.ai in a browser on a trusted device (never the phone app,
+  where an Allow is refused, `elevate_not_confirmed`, 2026-11-06), only on a card titled by a master he knows
+  needs the PC, and declines any other.
 - **No prompts for routine messaging** (founder 2026-10-30, #192): the same settings pre-approve
   `SendMessage`, `send_message`, `send_later`, `get_session`, `list_sessions` and `list_events`. A
   sync never writes permissions into an existing project's settings; it lists the missing entries
@@ -103,8 +109,7 @@ the PreToolUse cap in `wow-hook.mjs` approves it (promoted from cinver-io/cinver
 #211). It is in no allow list, so a hook that crashes, times out or is an older copy falls back to a
 prompt, never to an uncapped yes. The cap: at most 10 starts per session and 25 per container per UTC
 day, each claiming its own slot file atomically; depth master (0) → lane (1) → reviewer (2), no
-deeper. The lease-named PC helper alone is exempt from the two counts (it starts one session per PC job for as long
-as the account's lease period lasts; the depth limit and the tags still apply to it). The hook writes `[wow-spawn-depth: N]` into each child's first prompt, tags the child
+deeper. A master's PC session counts like any lane (roster "A master's PC session"). The hook writes `[wow-spawn-depth: N]` into each child's first prompt, tags the child
 `wow-task` (the caller cannot choose; PACE_CORE §5 "Close what you open") and reads a session's depth
 from that tag. It refuses a wow-core session starting a roster master's repository: the founder starts
 masters (founder 2026-11-02). A start without a GitHub `source_url` is refused, except the wow-core

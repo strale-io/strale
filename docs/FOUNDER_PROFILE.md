@@ -47,3 +47,8 @@ had no such file, so they guessed, and asked him technical questions he cannot j
 - When he must act: plain language, one recommendation, a yes/no he can answer with one word, and
   exact steps: which app, window, tab or session, and the text to paste. Keep his steps off the
   terminal wherever the platform allows.
+- **Never hand him git, shell or PowerShell commands** (founder 2026-11-06: a master asked him to remove a
+  worktree and delete a branch by hand). GitHub work (branches, PRs, labels) a cloud session does itself;
+  work on his PC (worktrees, local files, local tools) goes into a PC session its master starts
+  (`docs/fleet-roster.md` "A master's PC session"), batched into the next PC job when it is only cleanup. The
+  only things he types are in Claude, a sign-in page or a product's own screen.
