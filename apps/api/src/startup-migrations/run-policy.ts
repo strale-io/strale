@@ -111,4 +111,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0140_deactivatePriceCompare: { policy: "once", reason: "one guarded UPDATE of a single row; a re-run must not re-delist price-compare after an operator relisted it on a permitted source" },
   runMigration0141_dropCapabilityHealthCompatView: { policy: "once", reason: "one DROP VIEW; it creates nothing and a re-run on a database where the view is already gone changes nothing" },
   runMigration0142_canadianPaidCallSuites: { policy: "once", reason: "two guarded UPDATEs of named test_suites rows; a re-run must not undo a person re-parking or re-activating them" },
+  runMigration0143_publishDomainReputationText: { policy: "once", reason: "guarded UPDATEs of the domain-reputation and domain-trust rows plus a diff of one capability's limitations; a re-run must not undo a later edit to that text" },
 };

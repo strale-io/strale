@@ -1120,6 +1120,25 @@
         "test_suites.test_status"
       ],
       "sha256": "df69c9b3b47e58c404ee686e667ae18dc26d2b7523a5daad5420dea866f3883a"
+    },
+    {
+      "id": "M086",
+      "function": "runMigration0143_publishDomainReputationText",
+      "title": "Publish Domain Reputation Text",
+      "added": "2026-11-06",
+      "columns_written": [
+        "capabilities.data_source",
+        "capability_limitations.capability_slug",
+        "capability_limitations.category",
+        "capability_limitations.limitation_text",
+        "capability_limitations.severity",
+        "capability_limitations.sort_order",
+        "capability_limitations.title",
+        "capability_limitations.updated_at",
+        "capability_limitations.workaround",
+        "solutions.long_description"
+      ],
+      "sha256": "f779079233e4007c695086195cd7044fad96c4d02caa4756521a8cf0a90c6a33"
     }
   ],
   "known_overlaps": [
@@ -1585,9 +1604,10 @@
       "column": "solutions.long_description",
       "blocks": [
         "M064",
-        "M066"
+        "M066",
+        "M086"
       ],
-      "note": "M064 (0121, 2026-10-23) rewrote kyb-complete-se's long_description once (ledgered), guarded on the exact pre-repair text. M066 (0123, 2026-10-26, catalogue copy) rewrites the long_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value; for kyb-complete-se that guard is M064's own target, so on a fresh database they apply in order (M064, then M066). They cannot fight: M064 never fires again, and M066's new text is not M064's old text (startup-migrations.test.ts asserts the chain)."
+      "note": "M064 (0121, 2026-10-23) rewrote kyb-complete-se's long_description once (ledgered), guarded on the exact pre-repair text. M066 (0123, 2026-10-26, catalogue copy) rewrites the long_description of web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families once (ledgered), each row guarded on its exact 2026-10-26 production value; for kyb-complete-se that guard is M064's own target, so on a fresh database they apply in order (M064, then M066). They cannot fight: M064 never fires again, and M066's new text is not M064's old text (startup-migrations.test.ts asserts the chain). M086 (0143, 2026-11-06) rewrites the long_description of the single solution 'domain-trust' once (run policy once), guarded on the exact 2026-11-06 production text; neither M064 (kyb-complete-se) nor M066 (web-extract-clean and the kyb-essentials/kyb-complete/invoice-verify families) touches that slug, so it cannot fight them."
     },
     {
       "column": "transactions.integrity_hash",
@@ -1644,6 +1664,14 @@
         "M085"
       ],
       "note": "M040 (0111, vendor control tower) sets active = false only for screenshot-url and html-to-pdf schema_check suites in live mode. M085 (0142, 2026-11-02) sets active = false only for one row: id f4bba1a4-afc3-4019-ad6c-da22f11d0cdd, canadian-company-data known_bad. Disjoint by capability_slug; both only ever write false, so they cannot fight."
+    },
+    {
+      "column": "capabilities.data_source",
+      "blocks": [
+        "M065",
+        "M086"
+      ],
+      "note": "M065 (0122, 2026-10-23, DQ-36) rewrites data_source only for slug = 'sanctions-check', guarded on the exact old OFSI wording, once (ledgered). M086 (0143, 2026-11-06) rewrites data_source only for slug = 'domain-reputation', guarded on IS DISTINCT FROM its new text, once (run policy once; Petter's 2026-11-06 approval to publish the narrowed text). The slugs are disjoint, so they cannot fight. Neither runs again after its first applied boot; the boot manifest text sync refuses the compliance-category domain-reputation row until approved."
     }
   ]
 }
