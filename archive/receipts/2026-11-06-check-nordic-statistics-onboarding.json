@@ -1,0 +1,131 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a9bf4c1414eabd6a4994bce153ac6bddf9576111"
+  },
+  "at": "2026-11-06T14:54:22.527Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/onb/receipt-in.json"
+  },
+  "summary": {
+    "slug": "nordic-statistics",
+    "workflow_run": "https://github.com/strale-io/strale/actions/runs/42237783118",
+    "mode": "onboard",
+    "discover": true,
+    "status": "success"
+  },
+  "topic": "nordic-statistics-onboarding",
+  "raw": {
+    "slug": "nordic-statistics",
+    "workflow_run": "https://github.com/strale-io/strale/actions/runs/42237783118",
+    "mode": "onboard",
+    "discover": true,
+    "status": "success",
+    "verification": {
+      "passed": true,
+      "entries": [
+        {
+          "status": "passed"
+        }
+      ]
+    },
+    "readiness": {
+      "slug": "nordic-statistics",
+      "ready": true,
+      "deactivated": false,
+      "dimensions": {
+        "has_executor": true,
+        "has_db_row": true,
+        "is_active": true,
+        "has_test_suites": true,
+        "test_suite_count": 5,
+        "has_latency_estimate": true,
+        "avg_latency_ms": 900,
+        "has_transparency_tag": true,
+        "transparency_tag": "algorithmic",
+        "has_input_schema": true,
+        "has_output_schema": true,
+        "has_reliability": true,
+        "reliability_missing_fields": [],
+        "has_limitations": true,
+        "limitation_count": 6
+      },
+      "issues": []
+    },
+    "generatedTestTypes": [
+      "known_answer",
+      "schema_check",
+      "negative",
+      "edge_case",
+      "dependency_health"
+    ],
+    "rows": {
+      "created": [
+        {
+          "table": "capability_limitations",
+          "count": 1,
+          "names": [
+            "Curated tables only"
+          ]
+        },
+        {
+          "table": "capability_limitations",
+          "count": 1,
+          "names": [
+            "Published figures can be revised"
+          ]
+        },
+        {
+          "table": "capability_limitations",
+          "count": 1,
+          "names": [
+            "Requests are capped"
+          ]
+        },
+        {
+          "table": "capability_limitations",
+          "count": 1,
+          "names": [
+            "Licences and attribution differ"
+          ]
+        },
+        {
+          "table": "capability_limitations",
+          "count": 1,
+          "names": [
+            "Labels vary by source"
+          ]
+        },
+        {
+          "table": "capability_limitations",
+          "count": 1,
+          "names": [
+            "Not all Nordic countries are covered"
+          ]
+        },
+        {
+          "table": "capabilities",
+          "count": 1,
+          "names": [
+            "nordic-statistics"
+          ]
+        },
+        {
+          "table": "test_suites",
+          "count": 5,
+          "names": [
+            "nordic-statistics-known-answer",
+            "nordic-statistics-schema-check",
+            "nordic-statistics-negative-empty",
+            "nordic-statistics-edge-empty-field",
+            "nordic-statistics-dependency-health"
+          ]
+        }
+      ],
+      "updated": [],
+      "deleted": []
+    },
+    "errors": []
+  }
+}
