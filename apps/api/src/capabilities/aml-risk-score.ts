@@ -173,6 +173,38 @@ registerCapability("aml-risk-score", async (input: CapabilityInput) => {
     recommendation = "Standard Due Diligence (SDD) sufficient. Review per normal schedule.";
   }
 
+  // List membership sets a due-diligence floor that the points score does not.
+  // EU obliged entities must apply enhanced due diligence to business
+  // relationships and transactions involving a country on the EU list of
+  // high-risk third countries (Directive (EU) 2015/849, Art. 18a), and FATF's
+  // call for action asks for at least enhanced due diligence on every listed
+  // jurisdiction. A low or medium score must not read as "SDD sufficient" for
+  // these countries, so the recommendation is raised; risk_score and
+  // risk_level are unchanged.
+  const scoredBelowHigh = riskLevel === "low" || riskLevel === "medium";
+  const basis: string[] = [];
+  if (FATF_COUNTERMEASURES.has(countryCode)) {
+    basis.push(`FATF calls for countermeasures against ${countryCode}, beyond enhanced due diligence`);
+  } else if (FATF_BLACK_LIST.has(countryCode)) {
+    basis.push(`FATF calls for enhanced due diligence on ${countryCode} (call for action)`);
+  }
+  if (EU_HIGH_RISK.has(countryCode)) {
+    basis.push(`EU obliged entities must apply EDD to relationships involving ${countryCode}, an EU high-risk third country (Directive (EU) 2015/849, Art. 18a)`);
+  }
+  if (FATF_COUNTERMEASURES.has(countryCode) && scoredBelowHigh) {
+    // FATF calls for countermeasures, not only enhanced due diligence, and
+    // jurisdiction_risk below reads "prohibited"; a "medium" level would
+    // contradict both.
+    riskLevel = "high";
+  }
+  if (scoredBelowHigh && basis.length > 0) {
+    recommendation = `Enhanced Due Diligence (EDD) required, regardless of the score: ${basis.join("; ")}.`;
+  } else if (FATF_COUNTERMEASURES.has(countryCode)) {
+    // Already high or critical: keep that advice (e.g. senior management
+    // approval) and add the countermeasures basis.
+    recommendation = `${recommendation} ${basis.join("; ")}.`;
+  }
+
   // Jurisdiction risk summary
   let jurisdictionRisk = "standard";
   if (FATF_COUNTERMEASURES.has(countryCode)) jurisdictionRisk = "prohibited";
