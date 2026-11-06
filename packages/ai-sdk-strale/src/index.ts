@@ -213,7 +213,7 @@ function failure(
   // Only an unauthenticated caller needs telling how to pay; a key holder's
   // 402 is a budget or balance answer, already explained by the server.
   if ((status === 401 || status === 402) && !ctx.hasKey) {
-    const x402Path = ctx.slug ? (ctx.kind === "solution" ? `/x402/solutions/${ctx.slug}` : `/x402/${ctx.slug}`) : undefined;
+    const x402Path = ctx.slug ? (ctx.kind === "solution" ? `/x402/solutions/${encodeURIComponent(ctx.slug)}` : `/x402/${encodeURIComponent(ctx.slug)}`) : undefined;
     out.how_to_pay =
       "Create the tools with an apiKey (or set STRALE_API_KEY), or pass x402Fetch: a fetch that settles x402 " +
       "challenges in USDC on Base. Free tools need neither." + (x402Path ? ` x402 endpoint: ${x402Path}` : "");
