@@ -11,7 +11,7 @@ Proactivity level 5. Batch worktree `strale-wt-checkin-1106` on `chore/checkin-2
    - Root `npm run typecheck`: 5 errors, all `src/routes/mcp.ts` implicit-any (the known unbuilt-workspace `strale-mcp` phantom, same as the 11-01 record); none in changed files. CI is the gate.
    - **Ledger id collision:** PR #949 also uses M089 (block 0146). Whichever merges second must merge `main`, renumber its ledger id (M090) and add the earlier block to the order test. Mine skips block number 0146 to avoid a number collision. Done 2026-11-06 by the Strale master (session_01Ms71ZkYLtEVEsZBfEXzD9i): #949 merged first, so block 0147 is M090.
    - Deploy dependency (DEC-20260504-C): the block is in `BLOCKS` (`startup-migrations.ts`), which `runStartupMigrations()` runs at boot from `index.ts`. Post-deploy check owed: `npm run vendor:status` shows Serper healthy, 49,000 remaining or less, expiry 2027-05-05, no CRITICAL.
-2. **PR #949 (polish-company-data relabel to algorithmic, Petter-approved decision 10) reviewed: PASS** by a fresh read-only agent in a separate context, head de8140d4, all checks green. **Merge was refused by this session's permission classifier ("Merge Without Review")**; not worked around. Owner: next orchestrator session or Petter; it is ready. Post-merge check: `GET /v1/capabilities/polish-company-data` shows `algorithmic`.
+2. **PR #949 (polish-company-data relabel to algorithmic, Petter-approved decision 10) reviewed: PASS** by a fresh read-only agent in a separate context, head de8140d4, all checks green. **Merge was refused by this session's permission classifier ("Merge Without Review")**; not worked around. Owner: next orchestrator session or Petter; it is ready. Post-merge check: `GET /v1/capabilities/polish-company-data` shows `algorithmic`. **Update (Strale master, later the same evening):** #949 was merged at 22:49 Swedish time and is live (production reads `algorithmic`).
 3. **This PR also needs a merge this session cannot make**, for the same reason. It is opened with the evidence; owner as above.
 
 ## Business (commercial-brief, about 21:11Z)
@@ -41,13 +41,13 @@ Read-only through the Microsoft 365 connector (search tool only; no send tool in
 
 ## Stale work
 
-- Open PRs: #949 (reviewed PASS, merge blocked here — above); #950 draft (do not merge; redesign per its body); #905 draft probe brief; #730 and #682 M4/T7 (cutover, held). #855 from the 11-01 record is gone from the open list.
+- Open PRs: #949 (reviewed PASS; merged later the same evening by the Strale master); #950 draft (do not merge; redesign per its body); #905 draft probe brief; #730 and #682 M4/T7 (cutover, held). #855 from the 11-01 record is gone from the open list.
 - Codex branches `swallowed-failures-wave2`, `url-to-markdown-parse-bound`: no result (dispatcher bus note 20:08Z); stale `codex/company-enrich-metadata*` need deletion by Petter or the dispatcher (403 from sessions).
 - B2b hygiene and B3 graveyard not re-run tonight (late start; the 11-01 run found only baseline-protected `m4/*`, `b3-*`, `rescue/*`). Next morning run.
 
 ## Decisions (E)
 
-- DQ-42 and DQ-43 marked `answered` (Petter yes, 2026-11-06, decision 8 of the orchestrator's decisions handoff). DQ-41 unchanged (onboarding runs wait on Petter's workflow clicks, bus items). DQ-44 already answered.
+- DQ-42 and DQ-43 marked `answered` (Petter yes, 2026-11-06, decision 8 of the orchestrator's decisions handoff). DQ-41: this run first read it as waiting on Petter's workflow clicks; wrong, the four tools were onboarded on 2026-10-30 (run 41035841605) and are dark-launched, see DQ-41's dated update. DQ-44 already answered.
 - No delisting, no refunds, no production writes.
 
 ## Process notes
@@ -57,7 +57,7 @@ Read-only through the Microsoft 365 connector (search tool only; no send tool in
 
 ## Next session
 
-1. Merge #949 and this PR (or get the merge permission), then post-deploy: `vendor:status` Serper healthy with expiry 2027-05-05; `polish-company-data` reads `algorithmic`.
+1. Done for #949 (merged, verified). Merge this PR, then post-deploy: `vendor:status` Serper healthy with expiry 2027-05-05; `polish-company-data` reads `algorithmic`.
 2. Robots-disallowed listed tools: read `customs-duty-lookup` and `container-track` executors; delist what has no permitted path.
 3. `exchange-rate` timeouts (31 paid in 6 days) and the currency-source gap.
 4. Zero-cost declaration for free upstreams, so margin reads.
