@@ -31,7 +31,9 @@ pushes the tag.
 ## strale-mcp 0.2.11
 
 The packed tarball differs from published 0.2.10 only in the version and the
-strale.dev to strale.io URLs from #917 (README, dist/tools.js and its map,
-package.json homepage and author). After merge: tag `strale-mcp@0.2.11` on the
+URL changes from #917: strale.dev to strale.io, and the methodology links
+(`/trust/methodology`, `/methodology`) moved to `https://strale.io/security`
+(README, dist/tools.js and its map, package.json homepage and author). The
+independent review confirmed nothing else changed. After merge: tag `strale-mcp@0.2.11` on the
 merge commit; the run waits in `npm-release` for Petter's approval; then the
 production contract smoke test and a receipt.
