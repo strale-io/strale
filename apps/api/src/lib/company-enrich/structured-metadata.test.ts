@@ -290,6 +290,38 @@ describe("buildBoundedMetadataHtml", () => {
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ seo_description: "Tools > data, a > b" });
   });
 
+  it("a quote inside an unquoted meta value does not pair attributes across tags", () => {
+    const html = `<html><head><meta name=author content=O'Brien><meta property="og:site_name" content="Acme"><meta name=keywords content=it's><meta name="description" content="SEO"></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme", seo_description: "SEO" });
+  });
+
+  it("reads a meta tag that carries both property and name", () => {
+    const html = `<html><head><meta property="foo" name="description" content="SEO text"></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ seo_description: "SEO text" });
+  });
+
+  it("a > inside the title tag's own attribute does not leak into the title hint", () => {
+    const html = `<html><head><title data-x="a>b">Real Title</title></head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE).title_hints).toEqual(["Real Title"]);
+  });
+
+  it("<!--<script> inside one JSON-LD value does not hide the blocks after it", () => {
+    const first = `<script type="application/ld+json">{"@type":"WebSite","name":"<!--<script>"}</script>`;
+    const html = `<html><head>${first}${organizationLd}</head><body></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "LDCO", email: "a@example.com" });
+  });
+
+  it("keeps a JSON-LD string with < in it intact", () => {
+    const ld = `<script type="application/ld+json">{"@type":"Organization","name":"A <B> Co","email":"a@example.com"}</script>`;
+    expect(extractStructuredCompanyMetadata(`<html><head>${ld}</head><body></body></html>`, PAGE).company_name).toBe("A <B> Co");
+  });
+
+  it("lowercases a page made of millions of İ quickly", () => {
+    const { ms } = timed("\u0130".repeat(8 * 1024 * 1024) + organizationLd);
+    // A global regex replace over every match took about a second here.
+    expect(ms).toBeLessThan(1_000);
+  });
+
   it("does not take <header> for <head> on a page that omits the head tag", () => {
     const html = `<!doctype html><meta property="og:site_name" content="Acme Co"><meta name="description" content="What Acme does."><header><nav>Menu</nav></header><main>Body</main>`;
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme Co", description: "What Acme does." });

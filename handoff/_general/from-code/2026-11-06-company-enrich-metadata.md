@@ -59,3 +59,19 @@ The review found three issues, each fixed:
 **Noted, not fixed.**
 - An icon inside an HTML comment can still win over the real icon (review M1). It is still a URL the page published.
 - A page whose only content is a meta description is billed. That is page-published data, so this is a product choice, recorded here.
+
+## After the review of e5367a0f (FAIL on two narrow items, fixed)
+
+The review confirmed that jsdom now receives only constructed tags. Every nesting, attribute-flood and early-close case runs in 30 to 200 ms at 16 MB. Two blockers remained, now fixed:
+
+- **"İ" and the Kelvin sign were slow.** The global regex replace in `asciiLowerCase` took about 1 s on a 16 MB page of "İ". It now uses split and join.
+- **`tagEnd` opened a quote on any quote character.** So `content=O'Brien` paired attributes across tags and billed a wrong `company_name`. A quote now opens a value only right after `=`, as in the HTML tokenizer.
+
+Three non-blocking items are also fixed:
+- A meta tag that carries both `property` and `name` emits both keys.
+- The title opening tag is ended with `tagEnd`.
+- A `<` in JSON-LD content becomes `<`. That is valid JSON inside strings, and it stops `<!--<script>` from swallowing later blocks.
+
+Five new tests fail on e5367a0f.
+
+Still open: a meta or icon inside an HTML comment can still win (review N2/M1).

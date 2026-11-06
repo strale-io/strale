@@ -43,7 +43,11 @@ const HEAD_SCAN_LIMIT = 2 * 1024 * 1024;
  * one code unit that lowercases to itself, before the native lowercase.
  */
 export function asciiLowerCase(text: string): string {
-  const safe = /[\u0130\u212A]/.test(text) ? text.replace(/[\u0130\u212A]/g, "\uFFFD") : text;
+  // split/join, not a global regex replace: millions of matches made the
+  // replace cost about a second on a 16 MB page.
+  const safe = text.includes("\u0130") || text.includes("\u212A")
+    ? text.split("\u0130").join("\uFFFD").split("\u212A").join("\uFFFD")
+    : text;
   const lowered = safe.toLowerCase();
   if (lowered.length === text.length) return lowered;
   // Not reached on V8 today; kept so a runtime with other casing data still
@@ -258,15 +262,25 @@ const TITLE_LIMIT = 2 * 1024;
  */
 function tagEnd(text: string, start: number, limit: number): number {
   let quote: string | null = null;
+  // As in the HTML tokenizer, a quote opens a value only right after "="
+  // (whitespace allowed); one inside an unquoted value, as in
+  // content=O'Brien, is an ordinary character.
+  let afterEquals = false;
   const stop = Math.min(text.length, start + limit);
   for (let i = start + 1; i < stop; i++) {
-    const c = text[i];
+    const c = text[i]!;
     if (quote) {
       if (c === quote) quote = null;
-    } else if (c === '"' || c === "'") {
+      continue;
+    }
+    if (c === ">") return i;
+    if (afterEquals && (c === '"' || c === "'")) {
       quote = c;
-    } else if (c === ">") {
-      return i;
+      afterEquals = false;
+    } else if (c === "=") {
+      afterEquals = true;
+    } else if (c !== " " && c !== "\t" && c !== "\n" && c !== "\r" && c !== "\f") {
+      afterEquals = false;
     }
   }
   return -1;
@@ -337,16 +351,23 @@ export function buildBoundedMetadataHtml(
     }
     cursor = end + 1;
     const attributes = tagAttributes(head.slice(start, end + 1));
-    const key = (attributes.get("property") ?? attributes.get("name") ?? "").toLowerCase();
     const content = attributes.get("content");
-    if (!META_KEYS.has(key) || content === undefined) continue;
-    metas.push(`<meta property="${escapeAttribute(key)}" content="${escapeAttribute(content.slice(0, META_VALUE_LIMIT))}">`);
+    if (content === undefined) continue;
+    // A tag may carry both: property="og:description" name="description".
+    const keys = new Set([attributes.get("property"), attributes.get("name")]
+      .filter((key): key is string => Boolean(key))
+      .map((key) => key.toLowerCase())
+      .filter((key) => META_KEYS.has(key)));
+    for (const key of keys) {
+      if (metas.length >= META_KEPT_LIMIT) break;
+      metas.push(`<meta property="${escapeAttribute(key)}" content="${escapeAttribute(content.slice(0, META_VALUE_LIMIT))}">`);
+    }
   }
 
   let title = "";
   const titleStart = headLower.indexOf("<title");
   if (titleStart >= 0) {
-    const titleOpenEnd = headLower.indexOf(">", titleStart);
+    const titleOpenEnd = tagEnd(headLower, titleStart, ICON_TAG_LIMIT);
     const titleClose = titleOpenEnd < 0 ? -1 : headLower.indexOf("</title", titleOpenEnd + 1);
     if (titleClose >= 0) {
       const text = head.slice(titleOpenEnd + 1, Math.min(titleClose, titleOpenEnd + 1 + TITLE_LIMIT));
@@ -367,7 +388,11 @@ export function buildBoundedMetadataHtml(
     const close = lower.indexOf("</script", openEnd + 1);
     if (lower.slice(start, openEnd + 1).includes("application/ld+json")) {
       const contentEnd = Math.min(close < 0 ? html.length : close, openEnd + 1 + JSON_LD_LIMIT);
-      jsonLd.push(`<script type="application/ld+json">${html.slice(openEnd + 1, contentEnd)}</script>`);
+      // "<" is valid JSON only inside a string, where "\\u003c" means the
+      // same; escaping it keeps "<!--<script>" in a value from switching the
+      // tokenizer into the escaped-script state that swallows later blocks.
+      const content = html.slice(openEnd + 1, contentEnd).split("<").join("\\u003c");
+      jsonLd.push(`<script type="application/ld+json">${content}</script>`);
     }
     // With no close, every later apparent opening is content of this script.
     // Stopping here keeps the scan linear and matches browser parsing.
