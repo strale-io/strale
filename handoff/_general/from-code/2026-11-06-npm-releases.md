@@ -36,3 +36,12 @@ Petter approved each publish in session: strale-mcp ("yes"), then the four packa
    - the Smithery homepage and the duplicate `strale/agent-tools` listing;
    - first publishes of strale-cli and strale-ai-sdk.
 3. **Follow-up:** let `publish-mcp-registry.yml` also run after a successful hand-started strale-mcp release, so the manual run is not needed.
+
+## Second release round (afternoon)
+
+Petter approved this round in session ("3. Release the two packages"). It carries the listing fixes from #929:
+
+- **strale-mcp 0.2.12:** `websiteUrl` in `server.json`, for the official MCP registry. No code change.
+- **straleio-langchain 0.1.2:** its first npm README, plus `homepage` and description. No code change.
+
+After each publish, run the production smoke test, write the receipt, and dispatch `publish-mcp-registry.yml` by hand from main, because a hand-started release skips it.
