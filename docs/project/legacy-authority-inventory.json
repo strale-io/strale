@@ -349,7 +349,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "329ec4301b7d52f42f25bd858ff88f61473bb16652db8eae18398133748c8260",
+      "sha256": "5870cc11e17349b8915f3025585fb4761cf57835baad3a7f3346d20d90e6b622",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -514,6 +514,7 @@
         "docs/programs/platform-hardening/tracks.yaml",
         "docs/programs/promise-audit/PROGRAM.md",
         "docs/programs/promise-audit/tracks.yaml",
+        "docs/programs/robustness/PROGRAM.md",
         "docs/programs/robustness/tracks.yaml",
         "docs/release/directory-submissions/package-housekeeping.md",
         "docs/remediation/ORCHESTRATOR.md",

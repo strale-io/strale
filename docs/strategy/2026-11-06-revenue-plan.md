@@ -26,9 +26,9 @@ This plan was rebuilt from `origin/main` 69c16913 and keeps the original order. 
 
 **What the baseline shows, without figures:**
 - Last complete week (10-26) was the best on record. This week will close well below it.
-- Most of last week's gain came from two one-off bulk days.
+- Most of last week's rise came from the largest payer's daily spend; two one-off bulk days added most of the rest (GOALS.md, entry of 2026-11-01; check-in).
 - One payer's steady daily spend is now almost all of this week's revenue. Concentration is moving away from the M1 limit, not towards it.
-- Four other payers bought on more than one day (check-in). The repeat-payer revenue share that M2 measures is not recorded: unknown.
+- In the last complete week a few other payers bought on more than one day (check-in). The repeat-payer revenue share that M2 measures is not recorded: unknown.
 - **Free use:** 11 free tools, with the monthly per-IP limit given in `/v1/platform/facts`. The free allowance has been live since 10-28; no free-caller count has been recorded since: unknown.
 - **Margin:** it cannot be read for the six best sellers. `mx-lookup`, `weather-lookup`, `fear-greed-index`, `domain-age-check`, `forex-history` and `exchange-rate` have an unknown-cost share of 1 (check-in). `toolMargin` in `apps/api/src/lib/metrics/commercial.ts` needs 20 known-cost calls, so margin will read only from new calls.
 
@@ -36,11 +36,11 @@ This plan was rebuilt from `origin/main` 69c16913 and keeps the original order. 
 
 | By the week of 11-30 | Confidence |
 |---|---|
-| Daily business numbers and the due-list running, independent of any account | high |
+| Daily business numbers and the due-list running, independent of any account (robustness R5) | high |
 | No listed tool that can only refuse; FX tools fail under 5% of paid calls, excluding caller input | moderate |
 | D1 to D8 executed, each with a receipt | moderate (Petter's clicks) |
 | Weekly revenue in weeks 3 and 4 at the level of the full plan's floor | moderate (one payer) |
-| Five or more other payers buying on two or more days | low |
+| The M1 payer count reached, with repeat buyers among them | low |
 | Largest payer's share clearly lower than today | low |
 
 ## 3. Week by week
@@ -62,11 +62,11 @@ This plan was rebuilt from `origin/main` 69c16913 and keeps the original order. 
 |---|---|---|---|---|
 | `exchange-rate`: fix the timeout, then add a terms-checked source for NGN, KWD, BHD, JOD, KES and BDT. Also `currency-convert` (34 failures) and `forex-history` (16, Frankfurter 522) | `exchange-rate`: 94 of 302 paid calls failed (31%), of which 31 were timeouts and about 50 were unsupported currencies. Third run in a row (check-in) | S; P if the source has a cost | Under 5% fail over 7 days | brief 2026-11-06 §4 |
 | `domain-age-check`: 16 of 213 failed (thrown errors, so uncharged), cause `unverified:` | Check-in | S | Cause recorded, failures halved | robustness R4 |
-| Robots-disallowed sources on listed tools: `eu-trademark-search` (€0.50) refuses every paid call; `customs-duty-lookup` (€0.20) has an Access2Markets fallback (`customs-duty-lookup.ts:50-57`) and `container-track` (€0.05) loses only its Maersk path | Check-in; listings audit row 34. All three still listed at 22:33Z on 11-06 | S: make provenance and limitations say what each reaches (robustness R4); delisting `eu-trademark-search` per DQ-42 (§6) | The weekly-drift robots sweep passes; no listed tool refuses every call | D8, DQ-42, #747, robustness R4 |
-| Swallowed failures: build wave 2 on Claude; ship wave 3 (rows 26, 27, 29, 34); then the lint, the perturbation replays, and counting and refunding past charges | 36 paid tools break "a failed call is not charged" (`docs/research/2026-11-06-customer-promise-inventory.md`, P-001). Wave 1 fixed 13 (#939; row 13 by #938) | S, with independent review | PA T1 exit criteria, each with a receipt | PA T1 |
-| Declare the free upstreams zero-cost (mechanism `unverified:`) | Margin cannot be read | S | All six have 20 or more new known-cost calls | check-in, next-session item 4 |
+| Robots-disallowed sources on listed tools: `eu-trademark-search` (€0.50) refuses every paid call; `customs-duty-lookup` (€0.20) has an Access2Markets fallback (`customs-duty-lookup.ts:50-57`) and `container-track` (€0.05) loses only its Maersk path | Check-in (paying-failures and robots findings). All three still listed at 23:33 Swedish time on 11-06 (`/v1/capabilities/<slug>`) | S: make provenance and limitations say what each reaches (robustness R4); delisting `eu-trademark-search` is Petter's (DQ-42, §6) | The weekly-drift robots sweep passes; no listed tool refuses every call | D8, DQ-42, #747, robustness R4 |
+| Swallowed failures: build wave 2 on Claude; ship wave 3 (rows 26, 27, 29, 34); then the lint, the perturbation replays, and counting and refunding past charges | 36 paid tools break "a failed call is not charged" (`docs/research/2026-11-06-customer-promise-inventory.md`, P-001). Wave 1 fixed 13 audit rows (#939; row 13 by #938) | S, with independent review | PA T1 exit criteria, each with a receipt | PA T1 |
+| Declare the free upstreams zero-cost (mechanism `unverified:`; robustness R7) | Margin cannot be read | S | All six have 20 or more new known-cost calls | check-in, next-session item 4 |
 
-Wave 2 was briefed to Codex on 2026-11-06, which promise-audit rule 5 does not allow ("money paths ... are built by Claude"). The Codex dispatcher confirms it never received or ran it; the Strale master withdrew it, and wave 2 is built by Claude.
+Wave 2 was briefed to Codex on 2026-11-06, which promise-audit rule 5 does not allow ("money paths ... are built by Claude"). The Codex dispatcher confirms it never received or ran it; the Strale master withdrew it on 2026-11-06 (recorded in `handoff/_general/from-code/2026-11-06-strale-master-takeover.md`), and wave 2 is built by Claude.
 
 ### Week 3 (23 to 29 Nov): open listings
 
@@ -75,7 +75,7 @@ Decided items can land earlier; this week closes each one with a receipt. "Audit
 | Item | Why | Owner | Done when | Link |
 |---|---|---|---|---|
 | strale.dev to 301, and the Search Console change of address | It answers 302 (audit H) | P-click | curl shows 301 | D1, dist T2 |
-| PyPI trusted publishers, then four releases (and composio in `release-pypi.yml`) | PyPI pages carry strale.dev and stale counts (audit rows 17 to 20) | P-click, then S | A smoke receipt for each | D2, dist T12 |
+| PyPI trusted publishers, then four releases (and composio in `release-pypi.yml`) | PyPI pages carry strale.dev, some with stale counts (audit rows 17 to 20) | P-click, then S | A smoke receipt for each | D2, dist T12 |
 | The first publish of `strale-ai-sdk` and `strale-cli`, then the vercel/ai registry PR | Fixes merged (#955); not on npm | P publishes, S tests | Smoke receipts | D3, dist T7 |
 | Zapier and n8n submissions | Both built | P-click | Submitted (n8n review takes up to 4 weeks) | D4, dist T6, T9 |
 | The Claude connector directory, eligibility first | It may need a paid plan (dist T5) | S checks, P-click | Submitted, or back to P if it costs money | D5, dist T5 |
@@ -90,7 +90,7 @@ Decided items can land earlier; this week closes each one with a receipt. "Audit
 | Grow paid use of the Serper tools: x402 metadata and examples, and a weekly read of calls against credits | D9; about 5% of a pack was used (brief 2026-11-01) | S | Above the week-1 baseline | D9, dist T3 |
 | Put the four DQ-41 tools on sale: the free three self-promote; `invoice-counterparty-check` needs a promotion path | Dark-launched (DQ-41, 2026-11-06 update) | S | Listed, or the reason recorded | DQ-41 |
 | New payers by source tag, from listing arrival to first paid call | Tags are live (dist T1) | S | A weekly rollup | dist T1, T3; GOALS E1, E2 |
-| o11 integration through a normal account, with no agreement (what o11 is: `unverified:`) | D11 | S, P-click | Live, with the 90-day hold kept | D11 |
+| o11 integration through a normal account, with no agreement (what o11 is: `unverified:`) | D11 | S, P-click | Live, with the 90-day hold kept | D11 (Petter's account click, listed in §6) |
 
 D10 (`polish-company-data` labelled `algorithmic`) is done and live (#949).
 
@@ -117,7 +117,7 @@ If only the currency gap remains, take the source question to Petter. If the lar
 
 ## 6. What needs Petter
 
-1. **Already decided, needs his clicks:** D1 to D8, and running the narrow MCP publish workflow (dist T8).
+1. **Already decided, needs his clicks:** D1 to D8, the D11 account click, and running the narrow MCP publish workflow (dist T8).
 2. **Open, asked in chat on 2026-11-06:** whether his yes to DQ-42 covered its recommended option 3 (delist `eu-trademark-search` now and rebuild it on the EUIPO API) or only the account. If yes, a session delists it; if no, it stays listed until the API rebuild.
 
 Not escalated: the currency gap. A session first searches for a source whose terms permit resale (DEC-20261023-A); only if every option costs money does it come to Petter, with a priced recommendation against the weekly envelope in BUDGET.md.
