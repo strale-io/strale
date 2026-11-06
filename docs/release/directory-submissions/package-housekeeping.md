@@ -14,7 +14,12 @@ with "Deprecated: use strale-mcp"; moved to the deprecated list in
 `docs/governance/protocols/DISTRIBUTION_PR_PREFLIGHT.md`. No version bump
 and no new release: deprecating does not need one.
 
-**Still to do (an npm owner of `strale-semantic-kernel`; one command):**
+**Done 2026-11-06:** Petter ran the deprecation from a signed-in npm session
+(`handoff/_general/from-code/2026-11-06-npm-releases.md`): versions 0.1.0 to
+0.1.4 are deprecated, and `npm view strale-semantic-kernel deprecated`
+prints the message (checked 2026-11-06). The register row
+`pkg-semantic-kernel-strale` can move to `withdrawn`. The command below is kept
+for the record:
 
 ```bash
 npm deprecate strale-semantic-kernel@"*" "Deprecated: built on an unofficial community port of Semantic Kernel (npm semantic-kernel), not a Microsoft package. Use the Strale MCP server instead: https://api.strale.io/mcp or npx strale-mcp"

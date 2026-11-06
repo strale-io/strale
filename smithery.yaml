@@ -17,3 +17,6 @@ startCommand:
 # Remote HTTP transport is also available at:
 # https://api.strale.io/mcp?src=smithery
 # Publish via Smithery URL-based publishing at smithery.ai/new
+# The listing's display name, description, homepage and icon are set on the
+# Smithery account, not in this file (audit 2026-11-06:
+# docs/research/2026-11-06-distribution-listings-audit.md).

@@ -2,6 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.strale-io/web-reader",
   "title": "Strale Web Page Reader",
+  "websiteUrl": "https://strale.io?src=mcp-registry",
   "description": "Read a public web page as Markdown or text, with its links, metadata or requested fields.",
   "repository": {
     "url": "https://github.com/strale-io/strale",

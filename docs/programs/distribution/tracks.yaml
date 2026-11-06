@@ -26,28 +26,33 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Source texts, MCP annotations and the claims guard merged in
-      PR #771. The descriptor and registry half is already done, which the
-      previous wording missed: both server.json copies read 0.2.9, npm
-      strale-mcp 0.2.9 is published, and the official MCP registry entry
-      io.github.strale-io/strale 0.2.9 went live on 2026-10-28 and is isLatest.
-      The two broken upstream listings were repaired on 2026-10-30 and wait on
-      their maintainers: PipedreamHQ/pipedream#22383 removes the dead
-      /v1/quality method and the claims it backed, and
-      activepieces/activepieces#17060 removes the Trust Profile action, whose
-      /v1/internal/trust route answers 401 to every caller, plus four stale
-      descriptions. Remaining and blocked on Petter, in
-      handoff/_general/from-code/2026-10-30-d1-distribution-hygiene-upstream.md:
-      three npm packages are prepared and unpublished because the
-      trusted-publisher entry is missing (straleio 0.1.4, straleio-langchain
-      0.1.1) or points at the retired standalone repository (n8n-nodes-strale
-      1.0.0), and only a logged-in npmjs.com session can create it. After that
-      a session pushes the tag and he approves the npm-release environment.
-      Also his: the PyPI trusted publisher for langchain-strale, the first
-      strale-cli publish, the strale-semantic-kernel deprecation, the Smithery
-      duplicate listing strale/agent-tools, and the Smithery and 402 Index
-      listing edits, which are account-side. Post-publish production smoke
-      tests are owed on each package the moment it ships."
+    next_action: "Registry half done: strale-mcp 0.2.11 is the latest version in the
+      official MCP registry (published 2026-11-06). npm releases of 2026-11-06
+      (handoff/_general/from-code/2026-11-06-npm-releases.md; receipts
+      archive/receipts/2026-11-06-check-strale-mcp-0-2-11-production-smoke.json
+      and archive/receipts/2026-11-06-check-npm-four-packages-production-smoke.json):
+      strale-mcp 0.2.11, straleio 0.1.4, straleio-langchain 0.1.1,
+      n8n-nodes-strale 1.0.0; strale-capabilities 0.1.2 matches production
+      (archive/receipts/2026-11-06-check-strale-capabilities-0-1-2-production-smoke.json).
+      npm trusted publishers are set for those four and strale-semantic-kernel
+      is deprecated. The listings audit of 2026-11-06 is
+      docs/research/2026-11-06-distribution-listings-audit.md. Still wrong
+      outside the repository: Smithery strale-io/strale and the duplicate
+      strale/agent-tools (stale descriptions, SQS wording in an 8-tool
+      snapshot, no homepage), the Glama server page, mcp.so and Context7
+      (all carry the retired Trust and quality text), and the 402 Index
+      listing (168 endpoints, none domain-verified, provider spelled two
+      ways). The audit has the steps for Petter, and a 402 Index domain-claim
+      API route a session can run after one yes. In the repository, the next
+      strale-mcp release carries the new websiteUrl in server.json, and
+      straleio-langchain needs 0.1.2 for its README (the 0.1.1 package has
+      none). The PyPI pages of straleio, langchain-strale, crewai-strale and
+      composio-strale still show strale.dev and the old counts until their
+      releases (repo has 0.1.5, 0.2.0, 0.1.5, 0.1.5), which wait on the PyPI
+      trusted publishers (Petter, signed in on pypi.org). Remaining first
+      publishes: strale-cli and strale-ai-sdk. strale.dev answers 302, not the
+      301 DEC-20261105-A describes (Petter owns the redirect rule). Post-publish
+      production smoke tests are owed on each package the moment it ships."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - No source text or integration carries a retired claim or calls a removed
@@ -162,7 +167,9 @@ tracks:
     next_action: "Package strale-ai-sdk 0.1.0 built in packages/ai-sdk-strale
       (PR for branch feat/d6-ai-sdk-package) with tool() search and execute,
       API key or x402 fetch, header strale-ai-sdk/0.1.0, offline mock-model
-      test in CI. Next, Petter publishes the first version (a new package has
+      test in CI. Still unpublished on 2026-11-06 (npm answers 404); the npm
+      trusted publishers set that day cover other packages, not this one. Next,
+      Petter publishes the first version (a new package has
       no trusted publisher yet, see docs/release/npm-publishing.md) and adds
       the trusted publisher. Then run the smoke test on the published
       version, open the vercel/ai Tools Registry PR and set day 30 and day 60
@@ -206,23 +213,22 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: n8n-nodes-strale 1.0.0 merged in PR 817 (commit 58e0e92d,
-      2026-10-29) at packages/n8n-nodes-strale with three fixed operations
-      ported from the Zapier jobs, X-Strale-Client n8n-nodes-strale/1.0.0, n8n
-      lint rules and a local scanner pass. Publish waits on Petter for three
-      acts, asked in a PR 817 comment because the bus returned 403. First, add the npm trusted publisher for
-      n8n-nodes-strale (strale-io/strale, release-npm.yml, environment
-      npm-release). Second, approve the npm-release run for tag
-      n8n-nodes-strale@1.0.0. Third, submit on the n8n Creator Portal with the
-      contents in docs/company/drafts/distribution/05-n8n-creator-portal-submission.md.
-      After publish, run the npm-publishing.md n8n contract and record it here,
-      then deprecate 0.1.x and archive strale-io/n8n-nodes-strale. Baseline
+    next_action: "n8n-nodes-strale 1.0.0 is published (2026-11-06, release run
+      42205800264, trusted publishing with provenance; the n8n scanner
+      passed: archive/receipts/2026-11-06-check-npm-four-packages-production-smoke.json).
+      Not checked: client_meta.client_header of a first paid call through the
+      node, which needs a funded key in n8n. Remaining, all Petter: submit on
+      the n8n Creator Portal with docs/company/drafts/distribution/05-n8n-creator-portal-submission.md
+      (updated 2026-11-06; reviews take up to four weeks), then deprecate
+      0.1.0 to 0.1.4 (not deprecated yet on npm) and archive
+      strale-io/n8n-nodes-strale (steps in
+      docs/research/2026-11-06-distribution-listings-audit.md). Baseline
       2026-10-29 is npm 8 downloads a week, 12 a month, 882 lifetime, 0.1.4
       failing the current n8n scanner with 7 errors, and no calls attributable
       to the node because 0.1.x sends no client header. Day-90 check against
       D8 thresholds counts installs and accounts calling in 3 separate months.
       Monthly sanctions re-screening and finance or compliance targeting stay
-      held.
+      held."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Verified or unverified outcome, installs and monthly callers are
@@ -284,15 +290,23 @@ tracks:
     depends_on:
       - T2
     owner: session
-    next_action: langchain-strale 0.2.0 merged in PR 830; publish it to PyPI
-      under the §9 item 7 grant with the steps in handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md
-      and run its smoke test. Housekeeping prepared 2026-10-29 (strale-semantic-kernel
-      deprecation notice, crewai and composio frozen, register rows updated); an
-      npm owner runs the npm deprecate command in docs/release/directory-submissions/package-housekeeping.md.
-      The four directory submissions (awesome-remote-mcp-servers, Docker PR 2202
-      update, Cursor plugin, Cline) are ready in docs/release/directory-submissions/README.md
-      for whoever holds the GitHub and Cursor accounts; record each outcome in
-      the register. Petter deletes the three merged branches in GitHub UI (§9 item 9).
+    next_action: "langchain-strale 0.2.0 is merged but not on PyPI (live is 0.1.4);
+      straleio, crewai-strale and composio-strale also have unpublished repo
+      versions (0.1.5 each) while PyPI shows 0.1.4 with strale.dev links and
+      250+ counts. All four wait on PyPI trusted publishers, which only a
+      signed-in owner can add (steps in
+      docs/research/2026-11-06-distribution-listings-audit.md, step F), and
+      composio-strale is missing from release-pypi.yml. Then publish under the
+      section 9 item 7 grant with the steps in
+      handoff/_general/from-code/2026-10-29-langchain-strale-0.2.0.md and run the
+      smoke test. strale-semantic-kernel is deprecated on npm (2026-11-06,
+      docs/release/directory-submissions/package-housekeeping.md); crewai and
+      composio stay frozen. The four directory submissions (awesome-remote-mcp-servers,
+      Docker PR 2202 update, Cursor plugin, Cline) were refreshed for strale.io and
+      the 2026-11-06 versions in docs/release/directory-submissions/README.md and are
+      still unsubmitted, for whoever holds the GitHub and Cursor accounts; record
+      each outcome in the register. Petter deletes the three merged branches in
+      GitHub UI (section 9 item 9)."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - Housekeeping package and registry corrections and PR outcomes are
