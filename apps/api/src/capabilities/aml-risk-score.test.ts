@@ -16,7 +16,7 @@ import { getExecutor } from "./index.js";
 async function score(country_code: string) {
   const fn = getExecutor("aml-risk-score")!;
   const res = (await fn({ entity_name: "Example Holdings", entity_type: "company", country_code })) as {
-    output: { jurisdiction_risk: string; risk_factors: { factor: string }[] };
+    output: { jurisdiction_risk: string; risk_factors: { factor: string }[]; risk_level: string; recommendation: string };
   };
   return res.output;
 }
@@ -97,5 +97,37 @@ describe("aml-risk-score EU high-risk list (consolidated 2026-01-29)", () => {
       expect(out.risk_factors.map((f) => f.factor), cc).toContain("eu_high_risk");
       expect(out.jurisdiction_risk, cc).toBe("elevated");
     }
+  });
+});
+
+describe("aml-risk-score due-diligence floor for listed countries", () => {
+  it("an EU-listed country with no other factor gets EDD, not 'SDD sufficient'", async () => {
+    for (const cc of ["RU", "DZ", "NA"]) {
+      const out = await score(cc);
+      expect(out.risk_level, cc).toBe("low");
+      expect(out.recommendation, cc).toMatch(/^Enhanced Due Diligence \(EDD\) required/);
+      expect(out.recommendation, cc).toContain("Art. 18a");
+      expect(out.recommendation, cc).not.toMatch(/SDD/);
+    }
+  });
+
+  it("Myanmar (FATF call for action, enhanced due diligence) gets EDD", async () => {
+    const out = await score("MM");
+    expect(out.risk_level).toBe("medium");
+    expect(out.recommendation).toMatch(/^Enhanced Due Diligence \(EDD\) required/);
+    expect(out.recommendation).toContain("FATF call for action");
+  });
+
+  it("a grey-listed country not on the EU list keeps the score-based recommendation", async () => {
+    // Kuwait: FATF increased monitoring, not on the EU Annex of 2026-01-29.
+    expect(EU_HIGH_RISK.has("KW")).toBe(false);
+    const out = await score("KW");
+    expect(out.recommendation).toMatch(/^Standard Due Diligence/);
+  });
+
+  it("an unlisted country keeps 'SDD sufficient'", async () => {
+    const out = await score("SE");
+    expect(out.risk_level).toBe("low");
+    expect(out.recommendation).toBe("Standard Due Diligence (SDD) sufficient. Review per normal schedule.");
   });
 });

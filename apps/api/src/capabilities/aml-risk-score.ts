@@ -173,6 +173,23 @@ registerCapability("aml-risk-score", async (input: CapabilityInput) => {
     recommendation = "Standard Due Diligence (SDD) sufficient. Review per normal schedule.";
   }
 
+  // List membership sets a due-diligence floor that the points score does not.
+  // EU obliged entities must apply enhanced due diligence to business
+  // relationships and transactions involving a country on the EU list of
+  // high-risk third countries (Directive (EU) 2015/849, Art. 18a), and FATF's
+  // call for action asks for at least enhanced due diligence on every listed
+  // jurisdiction. A low or medium score must not read as "SDD sufficient" for
+  // these countries, so the recommendation is raised; risk_score and
+  // risk_level are unchanged.
+  if (riskLevel === "low" || riskLevel === "medium") {
+    const basis: string[] = [];
+    if (FATF_BLACK_LIST.has(countryCode)) basis.push("FATF call for action");
+    if (EU_HIGH_RISK.has(countryCode)) basis.push("EU high-risk third country list (Directive (EU) 2015/849, Art. 18a)");
+    if (basis.length > 0) {
+      recommendation = `Enhanced Due Diligence (EDD) required: ${countryCode} is on the ${basis.join(" and the ")}. Apply EDD regardless of the score.`;
+    }
+  }
+
   // Jurisdiction risk summary
   let jurisdictionRisk = "standard";
   if (FATF_COUNTERMEASURES.has(countryCode)) jurisdictionRisk = "prohibited";
