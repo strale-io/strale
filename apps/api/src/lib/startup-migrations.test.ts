@@ -1520,6 +1520,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0144_correctAiLabelAndDependencyAuditText",
       "runMigration0145_vaspRoutingLatency",
       "runMigration0146_polishCompanyDataAlgorithmic",
+      "runMigration0147_reconcileSerperRenewal",
     ]);
   });
 });
@@ -2459,7 +2460,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(146);
+    expect(Math.max(...numbers)).toBe(147);
   });
 });
 

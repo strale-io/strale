@@ -56,7 +56,9 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *Consequence:* renewing costs about $10.40 a month including VAT, against a few euros of income from these tools today. Longer term, another search provider sells a $50 balance that never expires, which at our volume would last years instead of six months; that needs their written permission to resell first, and is a separate decision. Lapsing saves that and removes web search from the catalogue on 8 November.
 
-**DQ-43** · `your_call` · owner Petter · raised 2026-10-30 · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+**DQ-43** · `answered` · owner Petter · raised 2026-10-30 · answered 2026-11-06 (yes) · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+
+*Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
 
 *Settled:* the Japan qualified-invoice-issuer check is portfolio plan item 1.13, approved under DEC-20261024-B. The NTA invoice-system office replied on 2026-10-29 (OUTBOX row `nta-invoice-app-id`): the invoice Web-API permission can be added to the corporate-number application ID we already hold, through the application-ID change notification (`https://www.invoice-kohyo.nta.go.jp/web-api/pre-change`, email-change fields left empty), with our 2026-10-27 email text uploaded as a Word file as the usage document.
 
@@ -64,7 +66,9 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *What I need:* your go for this form. A local session then fills it up to the final button and prepares the Word file; you submit.
 
-**DQ-42** · `your_call` · owner Petter · raised 2026-10-30 — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+**DQ-42** · `answered` · owner Petter · raised 2026-10-30 · answered 2026-11-06 (yes, free EUIPO account) — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+
+*Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
 
 *What is established (2026-10-30 morning run, production read-only):*
 - Since the 2026-10-28 fetch-hardening deploy, tools that read a public page as their source check its robots.txt (DEC-20261023-A adoption work). `eu-trademark-search` renders `euipo.europa.eu/eSearch/`, and EUIPO's robots.txt has `disallow: /eSearch/` for every agent. The production parser refuses it; a registered account's paid call failed with exactly that on 2026-10-29 13:40Z and was not charged.
@@ -90,6 +94,8 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 *What I need:* the one-time key set in both places. After that, running the onboarding (mode `onboard` for the four slugs, then mode `limitations`, slugs `all`) is a delegated `capability_onboarding` action the next session can trigger and verify.
 
 **Update 2026-10-28 (morning run):** still blocked — `POST /v1/internal/onboarding/run` → 503 `not_configured`; `GET /v1/capabilities/entity-resolve` → 404. **The ask has narrowed to the four new tools.** #776 (merged 2026-10-27) applies reviewed manifest text after every deploy; it ran on the deployed tip `f2270a61` (322 of 356 rows carry its hash) and the strict drift sweep shows no limitation drift on any writable tool. Not applied, by design: the 22 compliance/risk-synthesis tools the sync treats as report-only (their rewritten wording stays with Petter under CHARTER.md), the four new tools, and the six 2026-05-16 manifests not in the table. **Note for the session that runs the button:** its `limitations` mode has no report-only guard, so run it for named non-compliance slugs only, never `all`, unless Petter has approved publishing the compliance wording.
+
+**Update 2026-11-06 (Strale master, evidence):** the ask is done. The onboarding key was set and the button has run: Actions run 41035841605 (2026-10-30, success) onboarded `eurostat-data`, `entity-resolve`, `company-status-check` and `invoice-counterparty-check`; a repeat run tonight (42279405310) answered `already_exists` for all four. No onboarding run is waiting for approval (`gh run list --status waiting` and `--status pending` return nothing). The four tools are dark-launched, so `GET /v1/capabilities/<slug>` answers 404 by design (DEC-20260812-A); the free three promote themselves after a green week, and `invoice-counterparty-check` (paid upstream, no harness green week) needs a promotion path, which is session work. Nothing here waits on Petter; this item stays `your_call` only until he closes it (DEC-20260822-A part 4).
 
 **DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · answered 2026-10-26, open until the registers reply — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
 
