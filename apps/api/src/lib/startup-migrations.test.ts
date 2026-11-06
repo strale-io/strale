@@ -1519,6 +1519,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0143_publishDomainReputationText",
       "runMigration0144_correctAiLabelAndDependencyAuditText",
       "runMigration0145_vaspRoutingLatency",
+      "runMigration0146_polishCompanyDataAlgorithmic",
       "runMigration0147_reconcileSerperRenewal",
     ]);
   });

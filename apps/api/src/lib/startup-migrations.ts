@@ -135,6 +135,7 @@ import { runMigration0142_canadianPaidCallSuites } from "../startup-migrations/b
 import { runMigration0143_publishDomainReputationText } from "../startup-migrations/blocks/0143-publish-domain-reputation-text.js";
 import { runMigration0144_correctAiLabelAndDependencyAuditText } from "../startup-migrations/blocks/0144-correct-ai-label-and-dependency-audit-text.js";
 import { runMigration0145_vaspRoutingLatency } from "../startup-migrations/blocks/0145-vasp-routing-latency.js";
+import { runMigration0146_polishCompanyDataAlgorithmic } from "../startup-migrations/blocks/0146-polish-company-data-algorithmic.js";
 import { runMigration0147_reconcileSerperRenewal } from "../startup-migrations/blocks/0147-reconcile-serper-renewal.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
@@ -231,6 +232,7 @@ export * from "../startup-migrations/blocks/0142-canadian-paid-call-suites.js";
 export * from "../startup-migrations/blocks/0143-publish-domain-reputation-text.js";
 export * from "../startup-migrations/blocks/0144-correct-ai-label-and-dependency-audit-text.js";
 export * from "../startup-migrations/blocks/0145-vasp-routing-latency.js";
+export * from "../startup-migrations/blocks/0146-polish-company-data-algorithmic.js";
 export * from "../startup-migrations/blocks/0147-reconcile-serper-renewal.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
@@ -329,6 +331,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0143_publishDomainReputationText,
   runMigration0144_correctAiLabelAndDependencyAuditText,
   runMigration0145_vaspRoutingLatency,
+  runMigration0146_polishCompanyDataAlgorithmic,
   runMigration0147_reconcileSerperRenewal,
 ];
 

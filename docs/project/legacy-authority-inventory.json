@@ -255,7 +255,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "4ca320d173f1afde2aed2f4b93c45950d4bad0d4fdea52a1ddfc402cc7d233d0",
+      "sha256": "05c29f8644949181dd472a816c8eade34aa3643ade2e819d3eb07f20b250ea79",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -465,6 +465,7 @@
         "apps/api/src/startup-migrations/blocks/0114-release-corrected-dependency-health-fixtures.ts",
         "apps/api/src/startup-migrations/blocks/0141-drop-capability-health-compat-view.ts",
         "apps/api/src/startup-migrations/blocks/0142-canadian-paid-call-suites.ts",
+        "apps/api/src/startup-migrations/blocks/0146-polish-company-data-algorithmic.ts",
         "apps/api/test/guard-production-write-access.test.ts",
         "apps/api/vitest.config.ts",
         "config/env-manifest.schema.json",
