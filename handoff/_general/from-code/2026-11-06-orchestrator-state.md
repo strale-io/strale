@@ -21,19 +21,23 @@ Intent: orchestrator state at the account switch on 2026-11-06, about 21:10 Swed
 | codex/url-to-markdown-parse-bound | 627d8402 | Not at 21:05 | Same, as an untrusted-input review. Lessons from company-enrich: jsdom must never parse raw publisher markup unbounded, and parse time is what matters, not size. |
 | codex/company-enrich-metadata, -2, -r2 | (merged via #947) | Done | Stale branches. Deleting them returns 403 from sessions; Petter or the dispatcher can delete them. |
 
-## Lane (in-session background agent, items 1–7 of the decisions file)
+## Lane results (stopped early at the account limit)
 
-It was told to commit and push all work in progress, and to end each PR body with "Resume here" and "Next authorised action" lines. Its items:
-
-1. Daily business-summary email (production job).
-2. `docs/company/RECURRING.yaml` due-list, plus a check at session start.
-3. The x402 alert baseline (#950).
-4. The polish label (#949).
-5. FATF lists in `aml-risk-score`.
-6. Integrity checks on `strale-ai-sdk` and `strale-cli`.
-7. PC browser-forms brief on `lanes/pc-forms-1106`.
-
-Check each item's PR for its "Resume here" line. Item 7, once its PR exists, is launched as a PC job with the fixed PC prompt (wow-core #268).
+- **#949 polish-company-data label** (block 0146, ledger M089), branch `fix/polish-company-data-algorithmic`.
+  - State: complete, and its checks pass. The lane re-checked that no path calls a model.
+  - Not yet reviewed. Auto-merge is off.
+  - Next: an independent review in a separate context, then auto-merge. After deploy, confirm `transparency_tag` = algorithmic.
+- **#950 x402 settlement-drop alert**, branch `fix/x402-settlement-median-baseline`.
+  - State: back in draft. **Do not merge.** Three review rounds each found the same class of bug: a fix that keeps a one-off burst out of the baseline also hides real outages or real ramps.
+  - Next, per the review: a new design that caps a burst **per payer**, against that payer's own typical day, with a floor, leaving other payers untouched. The PR body lists every finding.
+- **Not started** (each next step is in the lane's final report, repeated here):
+  - **Item 1, daily business-summary email.** Model it on `apps/api/src/lib/external-outage-digest.ts`, using its scheduler call in `test-scheduler.ts` and its job-heartbeats entry. The numbers come from `lib/metrics/commercial.ts`. x402 volume comes from `x402_settlement_id`.
+  - **Item 2, the `docs/company/RECURRING.yaml` due-list.** Add an overdue check to `scripts/handoff/orient.mjs`.
+  - **Item 5, the FATF lists in `aml-risk-score`.** Fetch them from fatf-gafi.org and update them with the source date. This tool is compliance-category, so check whether the boot text sync is report-only for it.
+  - **Item 6, the integrity checks** for `strale-ai-sdk` and `strale-cli` (`check-framework-packages.mjs` plus the pre-flight). Publish nothing.
+  - **Item 7, the PC browser-forms brief** (`docs/lanes/pc/forms-1106-brief.md`).
+  - **Petter's yeses** cover the forms: Zapier, Claude directory eligibility (no new spend), the Coinbase form, EUIPO and the Japan NTA form. The job fills each form up to its final button only.
+- **Private plans.** The full revenue and robustness plans exist only in the old session's scratchpad. Pushing them to `strale-io/strale-context-archive` was blocked as data exfiltration. Petter decides where they are kept. If they are lost, they can be regenerated: the prompts are in this session's transcript, and the decisions are already in the repo.
 
 ## Waiting on Petter (he has the click-paths)
 
