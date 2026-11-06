@@ -56,6 +56,26 @@ if (existsSync(programsDir)) {
   }
 }
 
+const recurringFile = join(root, "docs", "company", "RECURRING.yaml");
+if (existsSync(recurringFile)) {
+  let YAML = null;
+  try { YAML = (await import("yaml")).default; } catch { YAML = null; }
+  if (!YAML) lines.push("Recurring work: docs/company/RECURRING.yaml present, but the yaml package is missing (npm ci)");
+  else {
+    try {
+      const { overdueJobs, stockholmToday, validateRecurring } = await import("./recurring.mjs");
+      const doc = YAML.parse(readFileSync(recurringFile, "utf8"));
+      const problems = validateRecurring(doc);
+      if (problems.length) lines.push(`Recurring work: RECURRING.yaml is invalid — ${oneLine(problems.join("; "))}`);
+      const due = overdueJobs(doc, stockholmToday());
+      if (due.length) {
+        lines.push(`Recurring work due (docs/company/RECURRING.yaml) — run these before other work, then set last_run:`);
+        for (const job of due) lines.push(`  ${job.id}: last run ${job.lastRun}, ${job.daysSince} day(s) ago, every ${job.cadenceDays} day(s) → ${job.procedure}`);
+      } else lines.push("Recurring work: nothing due (docs/company/RECURRING.yaml)");
+    } catch (error) { lines.push(`Recurring work: RECURRING.yaml could not be read (${String(error.message).split("\n")[0]})`); }
+  }
+}
+
 const stateDir = join(root, ".claude", "state", "handoff");
 for (const provider of ["codex", "claude"]) {
   const last = join(stateDir, `last-${provider}.json`);

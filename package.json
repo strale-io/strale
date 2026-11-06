@@ -67,7 +67,7 @@
     "migrations:check": "node apps/api/scripts/check-migration-ledger.mjs",
     "migrations:test": "node --test apps/api/scripts/migration-ledger.test.mjs",
     "handoff:check": "node scripts/handoff/handoff-check.mjs",
-    "handoff:test": "node --test scripts/handoff/handoff-check.test.mjs scripts/handoff/regenerate-indexes.test.mjs",
+    "handoff:test": "node --test scripts/handoff/handoff-check.test.mjs scripts/handoff/regenerate-indexes.test.mjs scripts/handoff/recurring.test.mjs",
     "handoff:orient": "node scripts/handoff/orient.mjs",
     "handoff:baseline": "node scripts/handoff/handoff-check.mjs baseline",
     "hooks:install": "node scripts/handoff/install-hooks.mjs",

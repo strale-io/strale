@@ -19,6 +19,12 @@ the authority and the task is wrong.
 
 Authority above this file: [CHARTER.md](CHARTER.md). Ranking: [GOALS.md](GOALS.md).
 
+**Account-independent scheduling (Petter, 2026-11-06).** Scheduled tasks are bound
+to one account and miss while another account is in use, so the daily run is a
+`due-list` row in [RECURRING.yaml](RECURRING.yaml). Session start prints it when
+it is overdue; whichever session sees that runs it, then sets `last_run` and
+`evidence` on the row in the same PR as the run's output.
+
 ---
 
 ## The one structural rule
