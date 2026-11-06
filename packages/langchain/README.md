@@ -2,7 +2,7 @@
 
 A [LangChain](https://js.langchain.com) tool for [Strale](https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1): give a LangChain agent one tool that can call Strale's pay-per-call tools with your Strale API key.
 
-`StraleFallbackTool` extends LangChain's `Tool` class (from `@langchain/core/tools`) and calls Strale through the [`straleio`](https://www.npmjs.com/package/straleio) client. It does nothing else: one class, no other exports.
+`StraleFallbackTool` extends LangChain's `Tool` class (from `@langchain/core/tools`) and calls Strale through the [`straleio`](https://www.npmjs.com/package/straleio) client. It does nothing else: one class and its options type (`StraleFallbackToolOptions`).
 
 ## Install
 
