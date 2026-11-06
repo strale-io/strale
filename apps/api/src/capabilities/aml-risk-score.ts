@@ -1,13 +1,46 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
-// FATF Grey List (jurisdictions under increased monitoring) — updated periodically
-const FATF_GREY_LIST = new Set([
-  "BG", "BF", "CM", "CD", "HR", "HT", "KE", "ML", "MZ", "NG",
-  "PH", "SN", "ZA", "SS", "SY", "TZ", "VN", "YE",
+// FATF lists as published after the plenary of 28-30 October 2026.
+// Update after every FATF plenary (February, June, October) and move this date.
+// Sources: FATF "Jurisdictions under Increased Monitoring - 30 October 2026" and
+// "High-Risk Jurisdictions subject to a Call for Action - 30 October 2026"
+// (fatf-gafi.org; its pages refuse automated reads behind a bot challenge, so
+// the list was read from the FinCEN release of 30 October 2026, which confirms
+// the four removals and an unchanged call-for-action list, and from the
+// ComplyAdvantage plenary note of 30 October 2026 (updated 2 November), which
+// lists all 18). The June 2026 list had 22 jurisdictions; Bulgaria, Cote
+// d'Ivoire, the Democratic Republic of the Congo and Monaco were removed, and
+// none were added.
+export const FATF_LISTS_AS_OF = "2026-10-30";
+
+// FATF Grey List (jurisdictions under increased monitoring), ISO 3166-1 alpha-2.
+export const FATF_GREY_LIST: ReadonlySet<string> = new Set([
+  "AO", // Angola
+  "BO", // Bolivia
+  "BA", // Bosnia and Herzegovina
+  "CM", // Cameroon
+  "HT", // Haiti
+  "IQ", // Iraq
+  "KE", // Kenya
+  "KW", // Kuwait
+  "LA", // Lao PDR
+  "LB", // Lebanon
+  "NP", // Nepal
+  "PG", // Papua New Guinea
+  "SS", // South Sudan
+  "SY", // Syria
+  "VE", // Venezuela
+  "VN", // Vietnam
+  "VG", // Virgin Islands (UK)
+  "YE", // Yemen
 ]);
 
-// FATF Black List (call for action)
-const FATF_BLACK_LIST = new Set(["KP", "IR", "MM"]);
+// FATF Black List (high-risk jurisdictions subject to a call for action).
+export const FATF_BLACK_LIST: ReadonlySet<string> = new Set([
+  "KP", // Democratic People's Republic of Korea
+  "IR", // Iran
+  "MM", // Myanmar
+]);
 
 // High-risk jurisdictions from EU list
 const EU_HIGH_RISK = new Set([
