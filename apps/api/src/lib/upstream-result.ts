@@ -1,0 +1,142 @@
+/**
+ * A failed upstream must never look like an empty answer.
+ *
+ * Billing charges a capability call that resolves and never one that throws
+ * (`lib/execution-outcome.ts`). So an executor that catches an upstream
+ * failure and returns `[]`, `found: false` or `listed: false` sells the
+ * customer a fabricated negative: it is charged, it is not retried
+ * (`lib/retry.ts` retries only a throw), and the breaker and the quality floor
+ * record it as a success, so monitoring cannot see it. The 2026-11-06 audit
+ * (`archive/sessions/2026-11-06-swallowed-upstream-failures-audit.md`) found
+ * 38 capabilities doing this.
+ *
+ * The rule these helpers implement: a real negative answer stays an answer,
+ * and anything else throws `UpstreamUnavailableError`, which takes the proven
+ * failure path on every rail (no charge, one retry, counted against the
+ * capability's health as `provider_unavailable`).
+ *
+ * The error's wording is load-bearing. Error text is still classified by
+ * string in several places (the failure taxonomy, the breaker's user-input
+ * list, the retry policy's non-retryable list), so the message always opens
+ * with "Upstream unavailable" (the taxonomy's `upstream` rule) and must never
+ * contain "not found", "invalid", "missing" or "required", which would file it
+ * as the caller's fault. `upstream-result.test.ts` pins that.
+ */
+
+export class UpstreamUnavailableError extends Error {
+  /** The upstream that failed, in words an operator recognises ("DNS MX query", "ESMA MiCA CASP register"). */
+  readonly upstream: string;
+  /** The upstream's own failure code when it had one (`ETIMEOUT`, `ESERVFAIL`, `HTTP 503`). */
+  readonly code: string | null;
+  /**
+   * Whether a retry could plausibly get an answer. False for a failure that is
+   * deterministic for now (every monthly ESMA path answering 404), so the rail
+   * does not spend a second round of upstream calls on it.
+   */
+  readonly retryable: boolean;
+
+  constructor(
+    upstream: string,
+    detail: string,
+    options: { code?: string | null; retryable?: boolean; cause?: unknown } = {},
+  ) {
+    super(`Upstream unavailable: ${upstream}: ${detail}`, { cause: options.cause });
+    this.name = "UpstreamUnavailableError";
+    this.upstream = upstream;
+    this.code = options.code ?? null;
+    this.retryable = options.retryable ?? true;
+  }
+}
+
+/**
+ * Resolver codes that ARE the answer. Everything else from `node:dns/promises`
+ * (ETIMEOUT, ESERVFAIL, EREFUSED, ECONNREFUSED, ECANCELLED, EBADRESP, EOF, ...)
+ * means the resolver could not answer, and is rethrown.
+ *
+ * - ENOTFOUND: NXDOMAIN, the name does not exist.
+ * - ENODATA: the name exists and has no record of the queried type.
+ * - EBADNAME: the name is malformed, so no record can exist. That is a fact
+ *   about the caller's input, not an outage; filing it as upstream failure
+ *   would count the caller's typo against the capability. It keeps today's
+ *   negative output.
+ */
+const DNS_NEGATIVE_CODES = new Set(["ENOTFOUND", "ENODATA", "EBADNAME"]);
+
+function errorCode(err: unknown): string | null {
+  const code = (err as { code?: unknown } | null)?.code;
+  return typeof code === "string" && code.length > 0 ? code : null;
+}
+
+/** True when a `node:dns/promises` rejection is a definitive "no such record". */
+export function isDnsNegative(err: unknown): boolean {
+  const code = errorCode(err);
+  return code !== null && DNS_NEGATIVE_CODES.has(code);
+}
+
+/**
+ * The error to throw for a DNS rejection that is not a negative answer.
+ *
+ * An error with no resolver code is returned unchanged: that is our own code
+ * breaking (a TypeError, say), and relabelling it as an upstream outage would
+ * hide a defect behind the provider.
+ */
+export function dnsUnavailable(err: unknown, label: string): Error {
+  const code = errorCode(err);
+  if (code === null) return err instanceof Error ? err : new Error(String(err));
+  return new UpstreamUnavailableError(
+    label,
+    `the resolver gave no answer (${code}). This says nothing about the domain's records; retry shortly.`,
+    { code, cause: err },
+  );
+}
+
+/**
+ * Run a DNS query; a negative answer becomes `[]`, any other failure throws.
+ *
+ * Use it wherever an executor used to write `try { await dns.resolveX(d) }
+ * catch { return [] }`.
+ */
+export async function dnsOrEmpty<T>(fn: () => Promise<T[]>, label = "DNS query"): Promise<T[]> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (isDnsNegative(err)) return [];
+    throw dnsUnavailable(err, label);
+  }
+}
+
+/** `dnsOrEmpty` for the record types that resolve to one object (SOA). */
+export async function dnsOrNull<T>(fn: () => Promise<T>, label = "DNS query"): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (isDnsNegative(err)) return null;
+    throw dnsUnavailable(err, label);
+  }
+}
+
+/**
+ * For a lookup that asks several independent sources: when every one of them
+ * failed there is no answer at all, so throw rather than report the empty
+ * union. Returns the fulfilled values, in order, when at least one leg
+ * answered; the caller decides how to mark the legs that did not.
+ *
+ * An empty `results` list is returned as-is: no legs asked is not an outage.
+ */
+export function requireAnyLeg<T>(results: PromiseSettledResult<T>[], label: string): T[] {
+  const fulfilled = results.filter((r): r is PromiseFulfilledResult<T> => r.status === "fulfilled");
+  if (results.length > 0 && fulfilled.length === 0) {
+    // Codes or error names only, never the legs' messages: a leg's text could
+    // carry a phrase ("not found") that files the whole failure as the caller's.
+    const reasons = results.map((r) => {
+      const reason = (r as PromiseRejectedResult).reason;
+      return errorCode(reason) ?? (reason instanceof Error ? reason.name : "error");
+    });
+    throw new UpstreamUnavailableError(
+      label,
+      `all ${results.length} sources failed (${[...new Set(reasons)].join(", ")}).`,
+      { code: errorCode((results[0] as PromiseRejectedResult).reason) },
+    );
+  }
+  return fulfilled.map((r) => r.value);
+}

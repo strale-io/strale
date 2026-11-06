@@ -43,6 +43,7 @@ import {
 } from "../capabilities/guarded-executor.js";
 import { CAPABILITY_OUTPUT_CONTRACTS } from "./capability-output-contracts.js";
 import { isCapabilityRefusal } from "./capability-refusal.js";
+import { UpstreamUnavailableError } from "./upstream-result.js";
 import {
   CALLER_ATTRIBUTABLE,
   classifyTransactionFailure,
@@ -327,6 +328,22 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
       retryable: false,
       fault: "strale",
       counts_against_capability: false,
+    };
+  }
+
+  // The executor positively identified an upstream that could not answer
+  // (lib/upstream-result.ts). Claimed by type before the string taxonomy: the
+  // taxonomy would file it `upstream` (or `timeout`) and the transient test
+  // below would miss resolver codes such as ESERVFAIL, landing it in
+  // provider_rejected and suppressing the retry the executor asked for.
+  if (error instanceof UpstreamUnavailableError) {
+    return {
+      ...base,
+      failure_class: "provider_unavailable",
+      billable: false,
+      retryable: error.retryable,
+      fault: "provider",
+      counts_against_capability: true,
     };
   }
 

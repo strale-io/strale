@@ -1,5 +1,7 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import dns from "node:dns/promises";
+import { dnsUnavailable, isDnsNegative } from "../lib/upstream-result.js";
 
 // Disposable email domain list (subset — comprehensive enough for scoring)
 const DISPOSABLE_DOMAINS = new Set([
@@ -75,9 +77,10 @@ registerCapability("email-reputation-score", async (input: CapabilityInput) => {
     score += 5;
   }
 
-  // Check MX records
+  // Check MX records. A negative answer (no such domain, no MX) keeps its
+  // historical factor; a resolver that could not answer throws instead of
+  // docking the address 15 points for our failure (unbilled, retried).
   try {
-    const dns = await import("node:dns/promises");
     const mx = await dns.resolveMx(domain);
     if (mx.length > 0) {
       factors.push({ factor: "valid_mx", impact: 10, detail: `${mx.length} MX record(s) found` });
@@ -86,7 +89,8 @@ registerCapability("email-reputation-score", async (input: CapabilityInput) => {
       factors.push({ factor: "no_mx", impact: -20, detail: "No MX records — domain cannot receive email" });
       score -= 20;
     }
-  } catch {
+  } catch (err) {
+    if (!isDnsNegative(err)) throw dnsUnavailable(err, "DNS MX query");
     factors.push({ factor: "mx_lookup_failed", impact: -15, detail: "MX lookup failed — domain may not exist" });
     score -= 15;
   }

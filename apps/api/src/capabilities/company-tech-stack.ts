@@ -5,7 +5,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
-import * as dns from "node:dns/promises";
+import dns from "node:dns/promises";
+import { dnsOrEmpty } from "../lib/upstream-result.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
@@ -120,11 +121,14 @@ Return JSON:
   };
 });
 
+// A record type the domain does not have reads as empty; a resolver that could
+// not answer throws, before the paid LLM call, rather than handing the model
+// empty records to infer "no email provider" or "no CDN" from.
 async function resolveDns(domain: string): Promise<Record<string, unknown>> {
   const results: Record<string, unknown> = {};
-  try { results.a = await dns.resolve4(domain); } catch { results.a = []; }
-  try { results.mx = await dns.resolveMx(domain); } catch { results.mx = []; }
-  try { results.txt = (await dns.resolveTxt(domain)).map((r) => r.join("")); } catch { results.txt = []; }
-  try { results.cname = await dns.resolveCname(domain); } catch { results.cname = []; }
+  results.a = await dnsOrEmpty(() => dns.resolve4(domain), "DNS A query");
+  results.mx = await dnsOrEmpty(() => dns.resolveMx(domain), "DNS MX query");
+  results.txt = (await dnsOrEmpty(() => dns.resolveTxt(domain), "DNS TXT query")).map((r) => r.join(""));
+  results.cname = await dnsOrEmpty(() => dns.resolveCname(domain), "DNS CNAME query");
   return results;
 }
