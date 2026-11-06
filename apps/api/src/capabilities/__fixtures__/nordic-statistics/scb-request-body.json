@@ -1,0 +1,1 @@
+{"query":[{"code":"Region","selection":{"filter":"item","values":["00"]}},{"code":"ContentsCode","selection":{"filter":"item","values":["BE0101N1"]}},{"code":"Tid","selection":{"filter":"item","values":["2023","2024"]}}],"response":{"format":"json-stat2"}}
