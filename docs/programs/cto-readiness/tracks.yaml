@@ -1094,10 +1094,12 @@ tracks:
       inconclusive (exit 2) instead of a false mismatch; an internal entry left of a
       lone public one gives null (never the edge), and any header whose public-entry
       count is not 2 logs a throttled, address-free xff-shape-unexpected warning.
-      Next: run `node apps/api/scripts/verify-ip-probe.mjs` from a fixed-egress machine
-      (the PC) before merge (exit 0 shows the header still has the receipt's shape and
-      resolves the caller), merge AFTER the switch-over PR #917 (shared route files),
-      then re-run it after deploy: that run is the real gate, revert on exit 1. Each batch: plant the failure first, then the
+      The pre-merge probe passed from the PC on 2026-11-06 (exit 0, fixed egress,
+      identity = own IP, no spoofed value reached identity; #920 comment 6681027869),
+      and #917 is merged. Next: after #920 deploys, re-run the probe from the PC
+      (PC-REQUEST with brief docs/lanes/pc/wp12-identity-probe-brief.md at the merge
+      commit) and check production for per-client ipHash; that run is the real gate,
+      revert on exit 1. Then batch 5. Each batch: plant the failure first, then the
       guard, then the discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
