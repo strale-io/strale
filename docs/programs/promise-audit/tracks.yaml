@@ -1,0 +1,225 @@
+schema_version: 1
+program: promise-audit
+program_status: active
+updated: 2026-11-06
+tracks:
+  - id: T1
+    title: "T1: Money promises (charge only on success, refunds, caps)"
+    status: active
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator (the billing path is never given to a Codex
+      lane). Land wave 1 from branch fix/swallowed-upstream-failures-wave1
+      (lib/upstream-result.ts helpers dnsOrEmpty, settleLeg and requireAnyLeg, a
+      degraded marker that outcomeFromOutput treats as unbillable, and the
+      required_signal_fields manifest key), taking rows 1 to 3 of
+      archive/sessions/2026-11-06-swallowed-upstream-failures-audit.md first
+      (vasp-verify, vasp-non-compliant-check, insolvency-check: a negative
+      compliance answer for a failed upstream), then the rest. Then, in this order:
+      (1) the shrinking-baseline lint for empty-value catch handlers under
+      src/capabilities; (2) the perturbation replays (http_503, http_429,
+      network_error, blocked_200, DNS ETIMEOUT) in test-helpers/upstream-replay.ts
+      over every network executor, each a DEC-20260504-A test that fails against the
+      unfixed code; (3) measure past charges: billed calls from the 38 paths since
+      the earliest affected release, matched to provider errors near the call time,
+      with the refund decision per policy and the DEC-20260504-B drain plan;
+      (4) the wallet-rail sweep of every paid tool's debit against its listed price
+      (P-011) and the dry-run price against the charge (P-008). Write each result
+      as a receipt. When the wave-1 handoff exists under
+      handoff/_general/from-code/, set resume_file to it."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - Every network executor under apps/api/src/capabilities either throws or
+        returns a marker the billing path treats as unbillable under every
+        perturbation in the replay set, shown by a receipt with zero failures.
+      - The lint is wired into CI with a baseline that can only shrink.
+      - A receipt states how many billed calls came from the swallowed-failure
+        paths and what was refunded or decided; the decision is recorded.
+      - P-001, P-002, P-003 and P-061 have a receipt each and move to verified in
+        the next inventory revision.
+    evidence: []
+  - id: T2
+    title: "T2: Compliance-answer correctness (reference answers)"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator designs and runs; a Codex lane may build the
+      runner harness and fixture files from the spec (no credentials, no production
+      access). First deliverable is a reference-answer spec with case lists taken
+      from primary sources: sanctions-check at least 30 listed names across the
+      OFAC, EU, UN and UK lists with aliases and transliterations plus 10 clean
+      controls including common names; pep-check the same shape by region with
+      relatives and close associates; adverse-media-check a named set; company
+      registries, three reference entities per country (live, dissolved, name
+      collision) for all 25 countries, starting from
+      docs/research/2026-05-06-live-registry-coverage-audit.md; insolvency-check
+      UK companies in administration, in liquidation and clean; vasp-verify and
+      vasp-non-compliant-check entries from the ESMA register; vat-validate valid,
+      expired and malformed numbers per member state; plus a forced upstream failure
+      for each. Then one production run inside the EUR 25 cap, written as a
+      receipt per family."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - Every listed-entity reference case for sanctions and PEP returns a match, and
+        no clean control returns a hit above the documented false-positive rate; any
+        miss is traced to Dilisense and recorded.
+      - Each registry reference entity returns the expected status, and every forced
+        upstream failure throws or is unusable.
+      - One receipt per family (sanctions, PEP, adverse media, registries,
+        insolvency, VASP, VAT); P-017 to P-027 have their statuses restated from
+        those receipts.
+    evidence: []
+  - id: T3
+    title: "T3: Evidence, provenance and audit records"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator, with a Codex lane for the static scans (no
+      secrets needed). Run four checks and write each as a receipt: (1) a static
+      contract over every executor that a success carries provenance.source and
+      fetched_at, plus a read-only production count of the last 14 days of
+      successes with null provenance, by capability; (2) a tag-versus-executor scan
+      (no tool tagged algorithmic imports the Anthropic client; starting with
+      env-template-generate and annual-report-extract) and a data_source-versus-hosts
+      scan (starting with dependency-audit); (3) a chain-verification walk over a
+      production sample and a redacted range, and a mutation test that an altered
+      row is reported; (4) a table mapping each regulatory statement on the audit
+      page (EU AI Act Articles 12, 13, 14 and 50; GDPR Articles 30, 15 and 17) to
+      the audit-body field that carries it, with any unmapped statement handed to
+      T7 as a narrowing candidate, not edited here. Confirm acquisition_method and
+      the data-access lane are present in provenance on every tool
+      (DEC-20261023-A)."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - Provenance coverage is 100% of tools in the static contract and the
+        production count of null provenance is zero or explained per tool.
+      - Zero transparency-tag mismatches and zero data_source mismatches remain, or
+        each is a recorded narrowing.
+      - The chain verifies on the sample, and the mutation test fails against an
+        altered row.
+      - Every audit-page regulatory statement maps to a populated field or is queued
+        for narrowing.
+    evidence: []
+  - id: T4
+    title: "T4: Privacy and data promises"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator; Petter decides any change to the Privacy
+      Policy or Terms. Turn the retention comment in
+      apps/web/src/content/retention.ts into a receipt: a read-only production
+      count of calls older than 90 days that still hold content, by capability,
+      repeated monthly. Then an end-to-end erasure on a throwaway account (with a
+      legal hold, and the chain verifying after); a dispute round trip and the age of
+      undecided rows in dispute_requests; the sub-processor list compared with
+      GET /v1/platform/facts (log_sink_shipping is false in production on
+      2026-11-06) and with every vendor in STATIC_FACTS.vendors; and a written
+      register of the contractual evidence behind 'we do not use your data to train
+      models' (a clause reference per vendor), the DPA and the rights-request log.
+      Prepare, for Petter, the reconciliation of Privacy section 6, the audit page
+      and the Security page on retention, and the Privacy sub-processor update
+      (last reviewed 30 April 2026)."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - A retention receipt shows no call older than 90 days holding content beyond
+        the one-day sweep lag, or lists the exceptions.
+      - Erasure, dispute and redaction each have a receipt from a production round
+        trip.
+      - The sub-processor list, the platform facts and the contractual-evidence
+        register agree, or the differences are in Petter's queue with the diff.
+      - P-045 to P-060 have statuses restated from receipts.
+    evidence: []
+  - id: T5
+    title: "T5: Availability and speed claims"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+    owner: session
+    next_action: "Owner: orchestrator; a Codex lane may write the burst and timing
+      scripts (no secrets). List every number and sentence we publish about
+      availability and speed (10 requests a second, 300 calls a month, EUR 100 an
+      hour, 10-second background threshold, 30 and 60 second timeouts, the 5 to 60
+      clamp, the 202 poll, 'cached results or a structured error') and prove each on
+      production with a throwaway key, one receipt per group. Locate or settle the
+      sync-to-async cut: the REST docs say 10 seconds, DEC-22 says under 5 seconds,
+      and no 10-second constant was found in lib/do/dispatch.ts. Measure, from 30
+      days of transactions, p50 and p95 latency and the failure rate per paid tool
+      as internal figures only; the claims register forbids publishing an average
+      latency or an uptime percentage and that stays. The Terms sentence on upstream
+      failure is proven by T1's perturbation set and is not repeated here."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - Each published number has a production receipt, or is narrowed under T7.
+      - The sync-to-async threshold is one documented value that code and docs agree
+        on.
+      - Per-tool latency and failure-rate figures exist as a receipt and are not
+        published.
+    evidence: []
+  - id: T6
+    title: "T6: Per-tool answer quality and the monthly benchmark"
+    status: queued
+    gate: none
+    depends_on:
+      - T1
+    owner: session
+    next_action: "Owner: orchestrator; a Codex lane builds the runner and fixture
+      format from the spec, the orchestrator runs it with production access. Open by
+      pulling 90 days of revenue by tool from the read-only production credential
+      (this session had no access to it), and the list of tools shown on the
+      homepage, in the agent card and in the directories (Glama, Smithery, the MCP
+      registry, 402 Index, Bazaar; see
+      docs/research/2026-11-06-distribution-listings-audit.md). Take the top 25 by
+      revenue, the top 25 by listing exposure and the homepage tools (for example
+      swedish-company-data, vat-validate, iban-validate, url-to-markdown,
+      exchange-rate, dns-lookup, invoice-extract, sanctions-check), and give each at
+      least five reference cases: a normal answer, a not-found, an upstream-failure
+      simulation, an edge input and one independent cross-check against the primary
+      source or an external benchmark. Run it inside the EUR 25 cap and write the
+      receipt; then schedule the same run monthly in the daily-run framework, with a
+      scoreboard and a threshold per tool."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - A first benchmark receipt covers every tool in the set with a pass rate per
+        tool and a stated threshold.
+      - The monthly run is scheduled, and a tool below its threshold raises a ticket
+        or is quarantined under the quality floor.
+      - tech-stack-detect and the tools with benchmark failures from 2026-11-06 are
+        in the set.
+    evidence: []
+  - id: T7
+    title: "T7: Claims hygiene (narrow what cannot be proven)"
+    status: queued
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: "Owner: orchestrator; docs-only narrowing is inside DEC-20260822-A,
+      and a stronger claim, a regulator-facing claim, or any edit to the Terms or the
+      Privacy Policy is Petter's, with the diff prepared. Start with the defects the
+      inventory already found: README.md 'an IP-based daily rate limit' to the
+      monthly allowance; the env-template-generate transparency tag and source text
+      (and annual-report-extract before it is relisted); the dependency-audit source
+      text and limitation; the three contact addresses and the stale
+      petterlindstrom79 GitHub link in the API llms.txt; and the diff of served
+      limitation text against manifests for every compliance, KYB, KYC and
+      methodology tool, as one approval request to Petter in the way block 0143 did
+      for domain-reputation. Then, for each promise in the inventory still
+      unverified or known broken at the end of T1 to T5, either narrow the wording
+      or record why not, and add a needs_evidence row to docs/company/claims.yaml
+      naming the receipt as its evidence. Decide, with Petter, whether the
+      unqualified sentences 'a call that fails costs nothing' and 'charged only when
+      the call succeeds' stay on the site until T1 exits, as the Terms already hedge
+      them. Keep npm run claims:check green."
+    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    exit:
+      - Every promise in the inventory is verified by a receipt, narrowed, or
+        recorded as a decision with its reason.
+      - claims.yaml carries a row with a receipt path for each promise family that
+        stays on the site.
+      - Petter's queue holds the prepared diffs for the Terms, the Privacy Policy
+        and the compliance-category limitation text, if any remain.
+    evidence: []
