@@ -49,6 +49,11 @@ export interface DiscreteWeek {
   startsOn: string;
   cents: number;
   /**
+   * Distinct payer identities with a completed paid call in the week. Revenue
+   * whose `ACTOR_KEY_SQL` identity is NULL is not attributed to a payer.
+   */
+  payers: number;
+  /**
    * Every completed external call in the week, free-tier included. NOT the
    * same denominator as `PayerFacts.calls`, which counts paid calls only —
    * printing the two adjacent without saying so invites a wrong ratio.
@@ -85,10 +90,12 @@ export async function discreteWeeks(count = 5, now = new Date()): Promise<Measur
     };
   }
   const from = startOfIsoWeek(new Date(now.getTime() - (count - 1) * 7 * 86_400_000));
-  const r = await rows<{ wk: string; cents: string; calls: string }>(sql`
+  const r = await rows<{ wk: string; cents: string; calls: string; payers: string }>(sql`
     SELECT to_char(date_trunc('week', t.created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS wk,
            COALESCE(SUM(t.price_cents), 0)::int AS cents,
-           COUNT(*)::int AS calls
+           COUNT(*)::int AS calls,
+           COUNT(DISTINCT ${sql.raw(ACTOR_KEY_SQL)})
+             FILTER (WHERE t.price_cents > 0)::int AS payers
     FROM transactions t
     WHERE t.status = 'completed'
       AND t.created_at >= ${iso(from)} AND t.created_at <= ${iso(now)}
@@ -109,6 +116,7 @@ export async function discreteWeeks(count = 5, now = new Date()): Promise<Measur
       startsOn: wk,
       cents: Number(hit?.cents ?? 0),
       calls: Number(hit?.calls ?? 0),
+      payers: Number(hit?.payers ?? 0),
       partial: wk === currentWeek,
       daysElapsed: wk === currentWeek ? elapsedDaysInIsoWeek(now) : 7,
     });
@@ -150,6 +158,38 @@ export type GrowthVerdict =
   | { kind: "falling"; consecutive: number; latestFullCents: number; priorCents: number }
   | { kind: "flat"; latestFullCents: number; priorCents: number }
   | { kind: "not_comparable"; why: string };
+
+export type PayerTrendVerdict =
+  | { verdict: "insufficient" }
+  | {
+      verdict: "rising" | "flat" | "falling";
+      lastCompleted: number;
+      previous: number;
+      sentence: string;
+    };
+
+/** Compare the two newest completed weeks without drawing a trend from a partial week. */
+export function payerTrend(weeks: DiscreteWeek[]): PayerTrendVerdict {
+  const completed = weeks.filter((week) => !week.partial);
+  if (completed.length < 2) return { verdict: "insufficient" };
+
+  const lastCompleted = completed[0]!.payers;
+  const previous = completed[1]!.payers;
+  const verdict = lastCompleted > previous ? "rising" : lastCompleted < previous ? "falling" : "flat";
+  const customers = `${lastCompleted} different ${lastCompleted === 1 ? "customer" : "customers"}`;
+  const comparison = verdict === "rising"
+    ? `up from ${previous}`
+    : verdict === "falling"
+      ? `down from ${previous}`
+      : `the same as ${previous}`;
+
+  return {
+    verdict,
+    lastCompleted,
+    previous,
+    sentence: `${customers} paid last week, ${comparison} the week before.`,
+  };
+}
 
 /**
  * Growth as a direction with a reason, never as a bare percentage.

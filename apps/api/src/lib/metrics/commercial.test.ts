@@ -9,13 +9,58 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  growth, interpret, startOfIsoWeek, elapsedDaysInIsoWeek, activatingSlugs,
+  growth, payerTrend, interpret, startOfIsoWeek, elapsedDaysInIsoWeek, activatingSlugs,
   resolveQuietLookback, trailingQuietWindow, daysQuietAt,
   type DiscreteWeek, type Concentration, type PayerFacts,
 } from "./commercial.js";
 
 const week = (startsOn: string, cents: number, opts: Partial<DiscreteWeek> = {}): DiscreteWeek => ({
-  startsOn, cents, calls: Math.round(cents / 8), partial: false, daysElapsed: 7, ...opts,
+  startsOn, cents, payers: 0, calls: Math.round(cents / 8), partial: false, daysElapsed: 7, ...opts,
+});
+
+describe("payer trend uses completed weeks only", () => {
+  it("is insufficient with fewer than two completed weeks", () => {
+    expect(payerTrend([week("2026-11-02", 100, { payers: 8, partial: true })])).toEqual({ verdict: "insufficient" });
+    expect(payerTrend([week("2026-11-02", 100, { payers: 1 })])).toEqual({ verdict: "insufficient" });
+  });
+
+  it("ignores a large partial week rather than calling the trend rising", () => {
+    expect(payerTrend([
+      week("2026-11-02", 1000, { payers: 100, partial: true }),
+      week("2026-10-26", 200, { payers: 2 }),
+      week("2026-10-19", 300, { payers: 3 }),
+    ])).toMatchObject({ verdict: "falling", lastCompleted: 2, previous: 3 });
+  });
+
+  it("reports a rise with plural wording", () => {
+    expect(payerTrend([
+      week("2026-10-26", 300, { payers: 3 }),
+      week("2026-10-19", 100, { payers: 1 }),
+    ])).toEqual({
+      verdict: "rising", lastCompleted: 3, previous: 1,
+      sentence: "3 different customers paid last week, up from 1 the week before.",
+    });
+  });
+
+  it("reports a flat count", () => {
+    expect(payerTrend([
+      week("2026-10-26", 200, { payers: 2 }),
+      week("2026-10-19", 200, { payers: 2 }),
+    ])).toMatchObject({
+      verdict: "flat", lastCompleted: 2, previous: 2,
+      sentence: "2 different customers paid last week, the same as 2 the week before.",
+    });
+  });
+
+  it("reports a fall with singular wording", () => {
+    expect(payerTrend([
+      week("2026-10-26", 100, { payers: 1 }),
+      week("2026-10-19", 300, { payers: 3 }),
+    ])).toEqual({
+      verdict: "falling", lastCompleted: 1, previous: 3,
+      sentence: "1 different customer paid last week, down from 3 the week before.",
+    });
+  });
 });
 
 const conc = (o: Partial<Concentration> = {}): Concentration => ({
