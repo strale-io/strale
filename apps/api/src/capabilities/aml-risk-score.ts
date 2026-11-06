@@ -42,13 +42,56 @@ export const FATF_BLACK_LIST: ReadonlySet<string> = new Set([
   "MM", // Myanmar
 ]);
 
-// High-risk jurisdictions from EU list
-const EU_HIGH_RISK = new Set([
-  "AF", "BS", "BW", "KH", "GH", "IQ", "JM", "MU", "NI", "PK",
-  "PA", "TT", "UG", "BB", "GI", "ZW",
+// FATF calls for countermeasures (not only enhanced due diligence) against
+// these call-for-action jurisdictions; Myanmar is on the call-for-action list
+// but subject to enhanced due diligence, so it is scored "high", not
+// "prohibited" (FATF call-for-action statement, 30 October 2026).
+export const FATF_COUNTERMEASURES: ReadonlySet<string> = new Set(["KP", "IR"]);
+
+// EU list of high-risk third countries: the Annex to Commission Delegated
+// Regulation (EU) 2016/1675, consolidated text of 29 January 2026 (CELEX
+// 02016R1675-20260129, amendments up to (EU) 2026/46 and (EU) 2026/83), read
+// on EUR-Lex on 2026-11-06. The Commission's AML page (last updated 9 January
+// 2026) names no later amending act. Update when the Commission adopts the next
+// delegated regulation and move this date. All four categories are listed.
+export const EU_HIGH_RISK_AS_OF = "2026-01-29";
+export const EU_HIGH_RISK: ReadonlySet<string> = new Set([
+  // I. Written high-level political commitment and an FATF action plan
+  "AF", // Afghanistan
+  "DZ", // Algeria
+  "AO", // Angola
+  "BO", // Bolivia
+  "VG", // British Virgin Islands
+  "CM", // Cameroon
+  "CI", // Cote d'Ivoire
+  "CD", // Democratic Republic of the Congo
+  "HT", // Haiti
+  "KE", // Kenya
+  "LA", // Laos
+  "LB", // Lebanon
+  "MC", // Monaco
+  "MM", // Myanmar
+  "NA", // Namibia
+  "NP", // Nepal
+  "SS", // South Sudan
+  "SY", // Syria
+  "TT", // Trinidad and Tobago
+  "VU", // Vanuatu
+  "VE", // Venezuela
+  "VN", // Vietnam
+  "YE", // Yemen
+  // II. Political commitment, seeking technical assistance (FATF public statement)
+  "IR", // Iran
+  // III. Ongoing and substantial risks, repeatedly failed to address them
+  "KP", // Democratic People's Republic of Korea
+  // IV. Not on FATF lists, but FATF membership suspended
+  "RU", // Russian Federation
 ]);
 
-// Tax haven / secrecy jurisdictions (common in shell company structures)
+// Tax haven / secrecy jurisdictions (common in shell company structures).
+// Strale's own selection, not taken from a published list; it carries no
+// source or as-of date. A sourced replacement (for example the EU list of
+// non-cooperative jurisdictions for tax purposes) is open follow-up work.
 const SECRECY_JURISDICTIONS = new Set([
   "KY", "VG", "BM", "JE", "GG", "IM", "LI", "MC", "PA", "BZ",
   "SC", "MH", "WS", "VU", "TC",
@@ -132,7 +175,8 @@ registerCapability("aml-risk-score", async (input: CapabilityInput) => {
 
   // Jurisdiction risk summary
   let jurisdictionRisk = "standard";
-  if (FATF_BLACK_LIST.has(countryCode)) jurisdictionRisk = "prohibited";
+  if (FATF_COUNTERMEASURES.has(countryCode)) jurisdictionRisk = "prohibited";
+  else if (FATF_BLACK_LIST.has(countryCode)) jurisdictionRisk = "high";
   else if (FATF_GREY_LIST.has(countryCode)) jurisdictionRisk = "high";
   else if (EU_HIGH_RISK.has(countryCode) || SECRECY_JURISDICTIONS.has(countryCode)) jurisdictionRisk = "elevated";
 

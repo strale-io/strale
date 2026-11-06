@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { FATF_BLACK_LIST, FATF_GREY_LIST, FATF_LISTS_AS_OF } from "./aml-risk-score.js";
+import {
+  EU_HIGH_RISK,
+  EU_HIGH_RISK_AS_OF,
+  FATF_BLACK_LIST,
+  FATF_COUNTERMEASURES,
+  FATF_GREY_LIST,
+  FATF_LISTS_AS_OF,
+} from "./aml-risk-score.js";
 import { getExecutor } from "./index.js";
 
 // Pins the FATF lists to the 30 October 2026 publication (see the source note
@@ -49,5 +56,46 @@ describe("aml-risk-score FATF lists (as of 2026-10-30)", () => {
     const black = await score("KP");
     expect(black.jurisdiction_risk).toBe("prohibited");
     expect(black.risk_factors.map((f) => f.factor)).toContain("fatf_blacklist");
+  });
+
+  it("only countermeasure jurisdictions are prohibited; Myanmar (enhanced due diligence) is high", async () => {
+    expect([...FATF_COUNTERMEASURES].sort()).toEqual(["IR", "KP"]);
+    for (const cc of FATF_COUNTERMEASURES) expect(FATF_BLACK_LIST.has(cc)).toBe(true);
+    expect((await score("IR")).jurisdiction_risk).toBe("prohibited");
+    const mm = await score("MM");
+    expect(mm.jurisdiction_risk).toBe("high");
+    expect(mm.risk_factors.map((f) => f.factor)).toContain("fatf_blacklist");
+  });
+});
+
+describe("aml-risk-score EU high-risk list (consolidated 2026-01-29)", () => {
+  it("carries the consolidation date", () => {
+    expect(EU_HIGH_RISK_AS_OF).toBe("2026-01-29");
+  });
+
+  it("is the 26 jurisdictions of the Annex to Delegated Regulation (EU) 2016/1675", () => {
+    expect([...EU_HIGH_RISK].sort()).toEqual([
+      "AF", "AO", "BO", "CD", "CI", "CM", "DZ", "HT", "IR", "KE", "KP", "LA", "LB",
+      "MC", "MM", "NA", "NP", "RU", "SS", "SY", "TT", "VE", "VG", "VN", "VU", "YE",
+    ]);
+  });
+
+  it("jurisdictions the EU removed are no longer scored as EU high-risk", async () => {
+    // Removed by (EU) 2025/1184: BB, GI, JM, PA, UG (also PH, SN, AE); by
+    // 2026/83: BF, ML, MZ, NG, ZA, TZ. Earlier entries in the old list (BS,
+    // BW, KH, GH, MU, NI, PK, ZW) are not on the current Annex either.
+    for (const cc of ["BB", "GI", "JM", "PA", "UG", "BS", "BW", "KH", "GH", "MU", "NI", "PK", "ZW"]) {
+      const out = await score(cc);
+      expect(out.risk_factors.map((f) => f.factor), cc).not.toContain("eu_high_risk");
+    }
+  });
+
+  it("an EU-only listing (not on a FATF list) scores as EU high-risk and elevated", async () => {
+    for (const cc of ["RU", "DZ", "NA", "TT", "VU", "AF"]) {
+      expect(FATF_GREY_LIST.has(cc) || FATF_BLACK_LIST.has(cc), cc).toBe(false);
+      const out = await score(cc);
+      expect(out.risk_factors.map((f) => f.factor), cc).toContain("eu_high_risk");
+      expect(out.jurisdiction_risk, cc).toBe("elevated");
+    }
   });
 });
