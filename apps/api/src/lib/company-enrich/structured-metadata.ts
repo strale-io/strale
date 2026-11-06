@@ -204,10 +204,20 @@ function quotesBalanced(tag: string): boolean {
   return open === null;
 }
 
-const LINK_ATTRIBUTE = /([a-zA-Z-]+)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
+// The lookbehind anchors a name to the start of a token: an unanchored
+// `[a-zA-Z-]+` retried from every position of a long letter run, which made a
+// 4 KB tag cost milliseconds and a page of them tens of seconds.
+const LINK_ATTRIBUTE = /(?<=[\s"'\/])([a-zA-Z-]+)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
+/** Icon-looking tags examined per page, whether or not they yield an icon. */
+const ICON_CANDIDATE_LIMIT = 64;
 
+/**
+ * The value is raw source text, so its entities ("&amp;") are left for the
+ * parser to decode. The re-emitted attribute is always double-quoted, so a
+ * double quote is the only character that needs escaping.
+ */
 function escapeAttribute(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return value.replace(/"/g, "&quot;");
 }
 
 /**
@@ -231,7 +241,10 @@ function rebuildIconLink(tag: string): string | null {
 }
 
 /** Selects the small, metadata-bearing portions that jsdom is allowed to parse. */
-export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpeningsVisited: number }): string {
+export function buildBoundedMetadataHtml(
+  html: string,
+  diagnostics?: { scriptOpeningsVisited: number; iconCandidates?: number },
+): string {
   const lower = asciiLowerCase(html);
   const jsonLd: string[] = [];
   const icons: string[] = [];
@@ -279,6 +292,7 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
   }
 
   cursor = 0;
+  let iconCandidates = 0;
   while (icons.length < ICON_COUNT_LIMIT) {
     const start = lower.indexOf("<link", cursor);
     if (start < 0) break;
@@ -290,7 +304,10 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
     const tag = lower.slice(start, end + 1);
     // Ending at the first ">" cuts a tag whose quoted attribute holds one (a
     // data-URI SVG favicon); such a fragment is not a whole tag.
-    if (!tag.includes("icon") || tag.includes("<", 1) || !quotesBalanced(tag)) continue;
+    if (!tag.includes("icon")) continue;
+    if (++iconCandidates > ICON_CANDIDATE_LIMIT) break;
+    if (diagnostics) diagnostics.iconCandidates = iconCandidates;
+    if (tag.includes("<", 1) || !quotesBalanced(tag)) continue;
     const rebuilt = rebuildIconLink(html.slice(start, end + 1));
     if (rebuilt) icons.push(rebuilt);
   }

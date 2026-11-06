@@ -230,6 +230,32 @@ describe("buildBoundedMetadataHtml", () => {
     expect(metadata).toMatchObject({ company_name: "A</scr\u0130pt>B", email: "a@example.com" });
   });
 
+  it.each([
+    ["head", `<html><head><link rel="icon" href="/f.png?a=1&amp;b=2"></head><body></body></html>`],
+    ["body", `<html><head></head><body><link rel="icon" href="/f.png?a=1&amp;b=2"></body></html>`],
+  ])("keeps an &amp; in a %s icon URL as one ampersand", (_label, html) => {
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ logo_url: "https://example.com/f.png?a=1&b=2" });
+  });
+
+  it("reads href, not xml:href, from an icon link", () => {
+    const html = `<html><head></head><body><link rel="icon" xml:href="/bad.png" href="/good.png"></body></html>`;
+    expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ logo_url: "https://example.com/good.png" });
+  });
+
+  it.each([["letter", "a"], ["dash", "-"]])(
+    "bounds the work on 4 KB icon tags full of a %s run",
+    (_label, ch) => {
+      const tag = `<link icon ${ch.repeat(4000)}>`;
+      const html = tag.repeat(Math.ceil(4 * 1024 * 1024 / tag.length));
+      const diagnostics = { scriptOpeningsVisited: 0, iconCandidates: 0 };
+      const started = performance.now();
+      buildBoundedMetadataHtml(html, diagnostics);
+      expect(diagnostics.iconCandidates).toBeLessThanOrEqual(64);
+      // Unanchored, the attribute pattern took about 23 s on this page.
+      expect(performance.now() - started).toBeLessThan(2_000);
+    },
+  );
+
   it("does not take <header> for <head> on a page that omits the head tag", () => {
     const html = `<!doctype html><meta property="og:site_name" content="Acme Co"><meta name="description" content="What Acme does."><header><nav>Menu</nav></header><main>Body</main>`;
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Acme Co", description: "What Acme does." });

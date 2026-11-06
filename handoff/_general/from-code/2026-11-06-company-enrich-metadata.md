@@ -33,3 +33,10 @@ The review found three issues, each fixed:
 - **Icons in the head.** The head-icon skip lost icons beyond the 128 KB kept slice. The skip is removed. Each icon `<link>` is now re-emitted from its parsed `rel` and `href`, quoted and escaped, so a malformed tag with a stray quote in an unquoted value cannot leave the parser input open.
 - **"İ" in the fast lowercasing.** It mapped "İ" to "i", so "</scrİpt>" could close a block. "İ" and the Kelvin sign are now swapped for U+FFFD, a single code unit that lowercases to itself. The review's sweep of every code point found that these two are the only non-ASCII characters that lowercase to ASCII.
 - **Tests.** Three new tests fail on 38559e38.
+
+## After the review of 61a2b3f3 (FAIL, fixed)
+
+- **ReDoS in the icon-attribute pattern.** Its unanchored attribute name backtracked on long letter and dash runs; 4 MB of such tags took 9 s and 23 s. The name is now anchored by a lookbehind. As a second guard, at most 64 icon-looking tags are examined per page.
+- **`&amp;` double-escaped.** Icon hrefs were escaped again, so `&amp;` came out as a literal "&amp;" in the URL. The re-emitted value now escapes only `"`, since entities stay for the parser to decode.
+- **Tests.** Five new tests (ampersand in a head icon and in a body icon, `xml:href`, letter and dash runs) fail on 61a2b3f3.
+- **Noted, not fixed (pre-existing).** The JSON-LD scan does not track attribute quoting, so a publisher can embed a JSON-LD-looking script inside a quoted attribute. The publisher controls its own page either way.
