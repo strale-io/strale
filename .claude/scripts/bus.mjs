@@ -202,9 +202,9 @@ function parseMessage(comment) {
 function messageBody(comment) { return parseMessage(comment)?.body ?? withoutFooter(comment.body); }
 
 // One line, nothing after it but the cloud footer: `LEASE account=<label> sessions=<project>:<id>,...`.
-// A key is a project name, `pc-helper` for the account's standing PC helper session (COMMS_CORE §1; the wow-hook
-// trust gate reads that entry, founder 2026-11-04) or `codex-dispatcher` for the fleet's Codex dispatcher (the
-// wow-hook push attach reads it, founder 2026-11-05). Nothing else treats them differently.
+// A key is a project name (the master of that project; the wow-hook trust gate reads it, founder 2026-11-06) or
+// `codex-dispatcher` for the fleet's Codex dispatcher (the wow-hook push attach reads it, founder 2026-11-05).
+// Nothing else treats them differently.
 export function parseLease(body) {
   const match = withoutFooter(body).trim().match(/^LEASE account=([a-z0-9][a-z0-9-]{0,62}) sessions=(\S+)$/);
   if (!match) return null;
@@ -241,13 +241,15 @@ export function leaseVerdict(lease, session, parent, account) {
     ? { active: true, line: `active: the lease (${since}) names ${named.project}:${named.session}` }
     : { active: false, line: `stand down: the lease (${since}) names neither this session nor its parent; turn off this session's own scheduled tasks, say so in one line to your master or on your PR, and stop` };
 }
-// Who may be the PC helper (founder 2026-11-04; COMMS_CORE §1, the wow-hook trust gate). Anything may post a LEASE
-// line, so the newest lease alone cannot name the helper: only the FIRST `pc-helper` entry of the current account
-// period counts. The period is the run of consecutive leases naming the newest lease's account (it starts at the
-// lease that changed the account); a later, different `pc-helper` entry in it is ignored. Returns the newest
-// lease's account, the `wow-core` entry of the period's first lease (the takeover session, who alone may write
-// a pc-helper entry or change the wow-core entry inside the period) and that first helper.
-// A period that starts within 24 hours after an earlier period of the same account (A→B→A) has no helper at all.
+// Who holds a lease-bound role in the current account period (COMMS_CORE §1; the wow-hook trust gate and the Codex
+// dispatcher's push attach). Anything may post a LEASE line, so the newest lease alone names nobody: only the FIRST
+// entry of each key in the current account period counts. The period is the run of consecutive leases naming the
+// newest lease's account (it starts at the lease that changed the account); a later, different entry for a key in it
+// is ignored. Returns the newest lease's account, the `wow-core` entry of the period's first lease (the takeover
+// session, who alone may write a codex-dispatcher entry or change the wow-core entry inside the period), the first
+// `codex-dispatcher` entry and `masters`, the first entry of every other key (a project's master, founder 2026-11-06:
+// a master whose project needs the founder's PC asks for his trust card itself).
+// A period that starts within 24 hours after an earlier period of the same account (A→B→A) names no one at all.
 export function leaseAuthority(comments) {
   const leases = [...comments].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || Number(a.id) - Number(b.id))
     .map((comment) => { const message = parseMessage(comment); const lease = message && parseLease(message.body); return lease ? { id: comment.id, createdAt: comment.created_at, ...lease } : null; })
@@ -257,23 +259,27 @@ export function leaseAuthority(comments) {
   let start = leases.length - 1;
   while (start > 0 && leases[start - 1].account === newest.account) start--;
   const entry = (lease, project) => lease.sessions.find((row) => row.project === project)?.session ?? null;
-  // An A→B→A flip: a period that begins within 24 hours of an earlier period of the SAME account has no helper
+  // An A→B→A flip: a period that begins within 24 hours of an earlier period of the SAME account has no role
   // authority (a real takeover never returns to an account inside a day; a forged account flip would).
   let prev = start - 1;
   while (prev > 0 && leases[prev - 1].account === leases[start - 1]?.account) prev--;
   const prevPeriodStart = start > 0 ? leases[prev].createdAt : null;
   const began = Date.parse(leases[start].createdAt);
   const flipped = leases.slice(0, start).some((lease) => lease.account === newest.account && began - Date.parse(lease.createdAt) < 24 * 3_600_000);
-  // Only a lease that still carries the period's wow-core entry can name the helper: a swapped-in wow-core session
-  // writes lines whose wow-core entry differs, so its pc-helper entry (and any built on its line) never counts.
-  // The Codex dispatcher (`codex-dispatcher`, founder 2026-11-05; the wow-hook push attach) is named the same way.
-  const authority = entry(leases[start], 'wow-core');
-  const firstOf = (key) => (flipped || !authority ? null : leases.slice(start).find((lease) => entry(lease, 'wow-core') === authority && entry(lease, key)) ?? null);
-  const first = firstOf('pc-helper');
-  const dispatcher = firstOf('codex-dispatcher');
+  // Only a lease that still carries the period's wow-core entry can name a role: a swapped-in wow-core session
+  // writes lines whose wow-core entry differs, so its entries (and any built on its line) never count.
   // The wow-core entry of the period's FIRST lease (the takeover's --take) is the authority: a later change to the
-  // wow-core entry inside the period (a session swapping itself in with --add) is ignored, as for the helper.
-  return { account: newest.account, periodStart: leases[start].createdAt, prevPeriodStart, wowCore: entry(leases[start], 'wow-core'), pcHelper: first ? entry(first, 'pc-helper') : null, pcHelperLease: first ? first.id : null,
+  // wow-core entry inside the period (a session swapping itself in with --add) is ignored.
+  const authority = entry(leases[start], 'wow-core');
+  const counted = flipped || !authority ? [] : leases.slice(start).filter((lease) => entry(lease, 'wow-core') === authority);
+  const dispatcher = counted.find((lease) => entry(lease, 'codex-dispatcher')) ?? null;
+  const masters = {};
+  for (const lease of counted) {
+    for (const row of lease.sessions) {
+      if (row.project !== 'wow-core' && row.project !== 'codex-dispatcher' && !Object.hasOwn(masters, row.project)) masters[row.project] = row.session;
+    }
+  }
+  return { account: newest.account, periodStart: leases[start].createdAt, prevPeriodStart, wowCore: authority, masters,
     codexDispatcher: dispatcher ? entry(dispatcher, 'codex-dispatcher') : null, codexDispatcherLease: dispatcher ? dispatcher.id : null, ...(flipped ? { flipped: true } : {}) };
 }
 // A master restarted after the takeover adds itself: the newest lease with its project's entry replaced.
