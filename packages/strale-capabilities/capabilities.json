@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-06T11:18:35.992Z",
+  "generated_at": "2026-11-06T11:19:46.184Z",
   "total_count": 298,
   "categories": [
     "agent-tooling",
@@ -387,26 +387,6 @@
         "properties": {
           "password": {
             "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "slug": "nl-housing-stats",
-      "name": "Dutch Housing Statistics",
-      "description": "Get Dutch housing statistics by municipality from CBS: average sale prices, homes sold, owner-occupied and rental stock, and trends over time.",
-      "category": "data-extraction",
-      "price_cents": 3,
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "city": {
-            "type": "string",
-            "description": "Dutch municipality name (e.g. 'Amsterdam')"
-          },
-          "gm_code": {
-            "type": "string",
-            "description": "CBS municipality code (e.g. 'GM0363')"
           }
         }
       }
@@ -2230,39 +2210,6 @@
       }
     },
     {
-      "slug": "gleif-l2-children-lookup",
-      "name": "LEI Subsidiaries Lookup",
-      "description": "List reported direct and ultimate child entities for an LEI in GLEIF, returning names, LEIs and available relationship details.",
-      "category": "compliance",
-      "price_cents": 5,
-      "input_schema": {
-        "type": "object",
-        "required": [],
-        "properties": {
-          "lei": {
-            "type": "string",
-            "description": "20-character LEI of the entity to look up children for. Canonical input."
-          },
-          "level": {
-            "type": "string",
-            "description": "Optional. Either \"direct\" (immediate children) or \"ultimate\" (full descendant tree). Default direct."
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Optional max number of children to return per page (default 20, max 200)."
-          },
-          "company_name": {
-            "type": "string",
-            "description": "Optional fallback input — company name to search GLEIF for if no LEI is known. Resolves to an LEI internally."
-          },
-          "jurisdiction": {
-            "type": "string",
-            "description": "Optional ISO country code (e.g. \"LU\") to disambiguate name search."
-          }
-        }
-      }
-    },
-    {
       "slug": "uk-filing-events",
       "name": "UK Filing History",
       "description": "Get a UK company's recent filings at Companies House: accounts, officer changes, confirmation statements, charges and more.",
@@ -2337,27 +2284,34 @@
       }
     },
     {
-      "slug": "flatten-json",
-      "name": "JSON Flattener",
-      "description": "Flatten nested JSON into dot-notation keys, e.g. {a:{b:[1,2]}} becomes {'a.b.0':1,'a.b.1':2}. Choose the delimiter and how arrays are handled.",
-      "category": "data-processing",
-      "price_cents": 2,
+      "slug": "gleif-l2-children-lookup",
+      "name": "LEI Subsidiaries Lookup",
+      "description": "List reported direct and ultimate child entities for an LEI in GLEIF, returning names, LEIs and available relationship details.",
+      "category": "compliance",
+      "price_cents": 5,
       "input_schema": {
         "type": "object",
-        "required": [
-          "data"
-        ],
+        "required": [],
         "properties": {
-          "data": {
-            "description": "Nested JSON object"
-          },
-          "delimiter": {
+          "lei": {
             "type": "string",
-            "description": "Default '.'"
+            "description": "20-character LEI of the entity to look up children for. Canonical input."
           },
-          "array_handling": {
+          "level": {
             "type": "string",
-            "description": "'index' or 'stringify'"
+            "description": "Optional. Either \"direct\" (immediate children) or \"ultimate\" (full descendant tree). Default direct."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Optional max number of children to return per page (default 20, max 200)."
+          },
+          "company_name": {
+            "type": "string",
+            "description": "Optional fallback input — company name to search GLEIF for if no LEI is known. Resolves to an LEI internally."
+          },
+          "jurisdiction": {
+            "type": "string",
+            "description": "Optional ISO country code (e.g. \"LU\") to disambiguate name search."
           }
         }
       }
@@ -2490,25 +2444,6 @@
       }
     },
     {
-      "slug": "sepa-xml-validate",
-      "name": "SEPA XML Validation",
-      "description": "Validate SEPA XML files (pain.001 credit transfers and pain.008 direct debits): structure, IBANs, BICs, amounts and transaction counts.",
-      "category": "validation",
-      "price_cents": 2,
-      "input_schema": {
-        "type": "object",
-        "required": [
-          "xml"
-        ],
-        "properties": {
-          "xml": {
-            "type": "string",
-            "description": "SEPA XML string"
-          }
-        }
-      }
-    },
-    {
       "slug": "vat-rate-lookup",
       "name": "VAT Rate Lookup",
       "description": "Look up VAT rates in EU and EEA countries: standard, reduced and zero rates, and the rate for a given category.",
@@ -2614,30 +2549,6 @@
           "expected_schema": {
             "type": "object",
             "description": "JSON Schema to validate against"
-          }
-        }
-      }
-    },
-    {
-      "slug": "uptime-check",
-      "name": "Uptime Check",
-      "description": "Check whether a URL is up: status code, latency, redirects, TLS and server headers.",
-      "category": "monitoring",
-      "price_cents": 2,
-      "input_schema": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "url": {
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "timeout_ms": {
-            "type": "integer"
           }
         }
       }
@@ -2893,6 +2804,32 @@
       }
     },
     {
+      "slug": "flatten-json",
+      "name": "JSON Flattener",
+      "description": "Flatten nested JSON into dot-notation keys, e.g. {a:{b:[1,2]}} becomes {'a.b.0':1,'a.b.1':2}. Choose the delimiter and how arrays are handled.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Nested JSON object"
+          },
+          "delimiter": {
+            "type": "string",
+            "description": "Default '.'"
+          },
+          "array_handling": {
+            "type": "string",
+            "description": "'index' or 'stringify'"
+          }
+        }
+      }
+    },
+    {
       "slug": "phone-normalize",
       "name": "Phone Number Normaliser",
       "description": "Normalise a phone number to E.164, detect its country and line type, and check its format.",
@@ -2979,6 +2916,26 @@
           "url": {
             "type": "string",
             "description": "Company website URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "nl-housing-stats",
+      "name": "Dutch Housing Statistics",
+      "description": "Get Dutch housing statistics by municipality from CBS: average sale prices, homes sold, owner-occupied and rental stock, and trends over time.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "Dutch municipality name (e.g. 'Amsterdam')"
+          },
+          "gm_code": {
+            "type": "string",
+            "description": "CBS municipality code (e.g. 'GM0363')"
           }
         }
       }
@@ -3072,6 +3029,30 @@
       }
     },
     {
+      "slug": "uptime-check",
+      "name": "Uptime Check",
+      "description": "Check whether a URL is up: status code, latency, redirects, TLS and server headers.",
+      "category": "monitoring",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "timeout_ms": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
       "slug": "screenshot-url",
       "name": "Web Page Screenshot",
       "description": "Take a full-page or visible-area screenshot of a URL. Handles cookie banners, lazy loading and single-page apps. Returns a base64 PNG.",
@@ -3139,6 +3120,31 @@
           "gemi_number": {
             "type": "string",
             "description": "Greek GEMI registry number (6-14 digits)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "employment-cost-estimate",
+      "name": "Employment Cost Estimate",
+      "description": "Estimate the total employer cost and the net salary for a role in 20+ countries, including social contributions, pension and income tax.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "gross_salary",
+          "country_code"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "gross_salary": {
+            "type": "number"
           }
         }
       }
@@ -3263,6 +3269,35 @@
       }
     },
     {
+      "slug": "currency-convert",
+      "name": "Currency Converter",
+      "description": "Convert an amount between currencies at European Central Bank rates. Returns the converted amount and the rate.",
+      "category": "financial",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "amount",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Target currency (ISO 4217)"
+          },
+          "from": {
+            "type": "string",
+            "description": "Source currency (ISO 4217)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount to convert"
+          }
+        }
+      }
+    },
+    {
       "slug": "changelog-generate",
       "name": "Changelog Generator",
       "description": "Write a user-facing changelog from git commits, grouped by type, in Keep a Changelog, semantic or bullet format.",
@@ -3320,31 +3355,6 @@
       }
     },
     {
-      "slug": "employment-cost-estimate",
-      "name": "Employment Cost Estimate",
-      "description": "Estimate the total employer cost and the net salary for a role in 20+ countries, including social contributions, pension and income tax.",
-      "category": "data-extraction",
-      "price_cents": 3,
-      "input_schema": {
-        "type": "object",
-        "required": [
-          "gross_salary",
-          "country_code"
-        ],
-        "properties": {
-          "currency": {
-            "type": "string"
-          },
-          "country_code": {
-            "type": "string"
-          },
-          "gross_salary": {
-            "type": "number"
-          }
-        }
-      }
-    },
-    {
       "slug": "page-exists",
       "name": "Page Existence Check",
       "description": "Assess whether a URL returns page content or missing-page signals. Returns an existence result, confidence and supporting checks.",
@@ -3382,6 +3392,25 @@
           "dic": {
             "type": "string",
             "description": "Czech DIČ (CZ + 8-10 digits) or bare IČO (8 digits)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sepa-xml-validate",
+      "name": "SEPA XML Validation",
+      "description": "Validate SEPA XML files (pain.001 credit transfers and pain.008 direct debits): structure, IBANs, BICs, amounts and transaction counts.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "xml"
+        ],
+        "properties": {
+          "xml": {
+            "type": "string",
+            "description": "SEPA XML string"
           }
         }
       }
@@ -3808,35 +3837,6 @@
           },
           "table_schema": {
             "type": "string"
-          }
-        }
-      }
-    },
-    {
-      "slug": "currency-convert",
-      "name": "Currency Converter",
-      "description": "Convert an amount between currencies at European Central Bank rates. Returns the converted amount and the rate.",
-      "category": "financial",
-      "price_cents": 2,
-      "input_schema": {
-        "type": "object",
-        "required": [
-          "amount",
-          "from",
-          "to"
-        ],
-        "properties": {
-          "to": {
-            "type": "string",
-            "description": "Target currency (ISO 4217)"
-          },
-          "from": {
-            "type": "string",
-            "description": "Source currency (ISO 4217)"
-          },
-          "amount": {
-            "type": "number",
-            "description": "Amount to convert"
           }
         }
       }

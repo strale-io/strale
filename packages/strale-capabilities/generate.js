@@ -13,7 +13,7 @@ const API_URL = "https://api.strale.io/v1/capabilities";
 
 async function main() {
   console.log(`Fetching capabilities from ${API_URL}...`);
-  const resp = await fetch(API_URL);
+  const resp = await fetch(API_URL, { signal: AbortSignal.timeout(30_000) });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
   }
