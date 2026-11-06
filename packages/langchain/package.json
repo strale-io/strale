@@ -1,6 +1,6 @@
 {
   "name": "straleio-langchain",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "LangChain tool for Strale: let a LangChain agent call pay-per-call tools with a Strale API key.",
   "homepage": "https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
   "type": "module",
