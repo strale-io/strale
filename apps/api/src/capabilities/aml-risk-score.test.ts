@@ -106,6 +106,7 @@ describe("aml-risk-score due-diligence floor for listed countries", () => {
       const out = await score(cc);
       expect(out.risk_level, cc).toBe("low");
       expect(out.recommendation, cc).toMatch(/^Enhanced Due Diligence \(EDD\) required/);
+      expect(out.recommendation, cc).toContain("EU obliged entities must apply EDD");
       expect(out.recommendation, cc).toContain("Art. 18a");
       expect(out.recommendation, cc).not.toMatch(/SDD/);
     }
@@ -115,7 +116,27 @@ describe("aml-risk-score due-diligence floor for listed countries", () => {
     const out = await score("MM");
     expect(out.risk_level).toBe("medium");
     expect(out.recommendation).toMatch(/^Enhanced Due Diligence \(EDD\) required/);
-    expect(out.recommendation).toContain("FATF call for action");
+    expect(out.recommendation).toContain("FATF calls for enhanced due diligence on MM");
+    expect(out.recommendation).not.toContain("countermeasures");
+  });
+
+  it("DPRK and Iran (countermeasures) are at least high and say countermeasures", async () => {
+    for (const cc of ["KP", "IR"]) {
+      const out = await score(cc);
+      expect(out.jurisdiction_risk, cc).toBe("prohibited");
+      expect(out.risk_level, cc).toBe("high");
+      expect(out.recommendation, cc).toContain(`FATF calls for countermeasures against ${cc}`);
+    }
+  });
+
+  it("a critical score for a countermeasure country keeps its critical advice and adds the basis", async () => {
+    const fn = getExecutor("aml-risk-score")!;
+    const res = (await fn({ entity_name: "Example Holdings", country_code: "IR", sanctions_match: true })) as {
+      output: { risk_level: string; recommendation: string };
+    };
+    expect(res.output.risk_level).toBe("critical");
+    expect(res.output.recommendation).toContain("Senior management approval needed");
+    expect(res.output.recommendation).toContain("FATF calls for countermeasures against IR");
   });
 
   it("a grey-listed country not on the EU list keeps the score-based recommendation", async () => {

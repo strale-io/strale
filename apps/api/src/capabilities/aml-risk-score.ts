@@ -181,13 +181,28 @@ registerCapability("aml-risk-score", async (input: CapabilityInput) => {
   // jurisdiction. A low or medium score must not read as "SDD sufficient" for
   // these countries, so the recommendation is raised; risk_score and
   // risk_level are unchanged.
-  if (riskLevel === "low" || riskLevel === "medium") {
-    const basis: string[] = [];
-    if (FATF_BLACK_LIST.has(countryCode)) basis.push("FATF call for action");
-    if (EU_HIGH_RISK.has(countryCode)) basis.push("EU high-risk third country list (Directive (EU) 2015/849, Art. 18a)");
-    if (basis.length > 0) {
-      recommendation = `Enhanced Due Diligence (EDD) required: ${countryCode} is on the ${basis.join(" and the ")}. Apply EDD regardless of the score.`;
-    }
+  const scoredBelowHigh = riskLevel === "low" || riskLevel === "medium";
+  const basis: string[] = [];
+  if (FATF_COUNTERMEASURES.has(countryCode)) {
+    basis.push(`FATF calls for countermeasures against ${countryCode}, beyond enhanced due diligence`);
+  } else if (FATF_BLACK_LIST.has(countryCode)) {
+    basis.push(`FATF calls for enhanced due diligence on ${countryCode} (call for action)`);
+  }
+  if (EU_HIGH_RISK.has(countryCode)) {
+    basis.push(`EU obliged entities must apply EDD to relationships involving ${countryCode}, an EU high-risk third country (Directive (EU) 2015/849, Art. 18a)`);
+  }
+  if (FATF_COUNTERMEASURES.has(countryCode) && scoredBelowHigh) {
+    // FATF calls for countermeasures, not only enhanced due diligence, and
+    // jurisdiction_risk below reads "prohibited"; a "medium" level would
+    // contradict both.
+    riskLevel = "high";
+  }
+  if (scoredBelowHigh && basis.length > 0) {
+    recommendation = `Enhanced Due Diligence (EDD) required, regardless of the score: ${basis.join("; ")}.`;
+  } else if (FATF_COUNTERMEASURES.has(countryCode)) {
+    // Already high or critical: keep that advice (e.g. senior management
+    // approval) and add the countermeasures basis.
+    recommendation = `${recommendation} ${basis.join("; ")}.`;
   }
 
   // Jurisdiction risk summary
