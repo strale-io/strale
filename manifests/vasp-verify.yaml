@@ -29,12 +29,31 @@ input_schema:
 output_schema:
   type: object
   example:
-    note: ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.
-    matches: []
-    authorized: false
-    match_found: false
+    matches:
+      - nca: Commission de Surveillance du Secteur Financier (CSSF)
+        lei: 984500F14CA4571AAC11
+        services:
+          - a. providing custody and administration of crypto-assets on behalf of clients
+        website: https.//coinbase.com
+        home_country: LU
+        legal_basis: null
+        commercial_name: Coinbase
+        entity_name: Coinbase Luxembourg S.A.
+        authorization_date: 20/06/2025
+        authorization_end_date: null
+        authorization_in_force: true
+        passporting_countries:
+          - DE
+          - FR
+        record_last_updated: 22/01/2026
+    authorized: true
+    match_found: true
+    register_stale: false
+    register_entries: 397
+    register_age_days: 1
     entity_name_searched: Coinbase
-    register_last_updated: null
+    register_source_url: https://www.esma.europa.eu/sites/default/files/2024-12/CASPS.csv
+    register_last_updated: "2026-11-05T14:07:51.000Z"
   properties:
     matches:
       type: array
@@ -46,7 +65,7 @@ output_schema:
       type: string
     register_last_updated:
       type: string
-data_source: ESMA Crypto-Asset Service Providers (CASP) Register
+data_source: ESMA Interim MiCA Register (CASPS.csv and NCASP.csv, esma.europa.eu)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -68,11 +87,35 @@ output_field_reliability:
   entity_name_searched: common
   register_last_updated: common
 limitations:
-  - title: null
+  - title: Interim register, published weekly
     text: >-
-      Output reflects ESMA Crypto-Asset Service Providers (CASP) Register at query time. Dependent on upstream API
-      availability; may degrade if the provider rate-limits or is temporarily unavailable.
+      Reads ESMA's interim MiCA register (the CASPS.csv file on ESMA's MiCA page). ESMA republishes it weekly from
+      what national competent authorities report, so a very recent authorisation may not be listed yet. It is an
+      interim file that ESMA plans to fold into its own IT systems; the source will then change.
+    category: freshness
+    severity: info
+    workaround: null
+  - title: Withdrawn authorisations stay listed
+    text: >-
+      ESMA keeps a withdrawn authorisation in the file with its withdrawal date. `authorized` is true only when a
+      matching record has no withdrawal date or one still ahead; each match reports `authorization_end_date` and
+      `authorization_in_force`. An end-date cell that is not a date counts as not in force.
+    category: coverage
+    severity: info
+    workaround: null
+  - title: Stale or unavailable register
+    text: >-
+      `register_last_updated` is the file's publication date. Past 45 days the answer carries `register_stale: true`
+      and a note; past 120 days, or when ESMA cannot be read, the call fails (and is not charged) instead of
+      answering from old data.
     category: availability
+    severity: info
+    workaround: null
+  - title: Name matching
+    text: >-
+      Matches by LEI, then website, then a case-insensitive name contains on the legal and commercial name; at most
+      three matches are returned. Prefer an LEI for an exact answer.
+    category: coverage
     severity: info
     workaround: null
 

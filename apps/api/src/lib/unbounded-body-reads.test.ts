@@ -271,7 +271,6 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
     // capability-facing vendor clients
     "capabilities/lib/etherscan-client.ts": 1,
     "capabilities/lib/openapi-resolver.ts": 3,
-    "capabilities/lib/vasp-data.ts": 1,
     "capabilities/lib/vat-providers/brreg.ts": 1,
     "capabilities/lib/vat-providers/hmrc.ts": 2,
     "capabilities/lib/vat-providers/uid-ch.ts": 2,

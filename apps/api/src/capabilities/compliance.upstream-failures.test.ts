@@ -56,11 +56,17 @@ afterEach(() => {
 
 // ─── vasp-verify / vasp-non-compliant-check (lib/vasp-data.ts) ──────────────
 
+// ESMA's real column names (the layout is asserted in vasp-register.test.ts).
+const CASP_HEADER =
+  "ae_competentAuthority,ae_homeMemberState,ae_lei_name,ae_lei,ae_lei_cou_code,ae_commercial_name,ae_address,ae_website,ae_website_platform,ac_authorisationNotificationDate,ac_authorisationEndDate,ac_serviceCode,ac_serviceCode_cou,ac_comments,ac_lastupdate,ac_legal_basis";
 const CASP_CSV = [
-  "NCA,Country,Entity,LEI,Home,Commercial,Address,Website,AuthDate,Services,Passporting",
-  "BaFin,DE,Example Crypto GmbH,529900EXAMPLE0000001,DE,ExampleX,Berlin,https://examplex.de,2025-01-01,custody|exchange,FR|IT",
-].join("\n");
-const NC_HEADER = "Entity,Commercial,Home,Website,Infringement";
+  CASP_HEADER,
+  "BaFin,DE,Example Crypto GmbH,529900EXAMPLE0000001,DE,ExampleX,Berlin,https://examplex.de,,01/01/2025,,a. custody | c. exchange,FR|IT,,01/11/2026,Article 63",
+].join("\r\n");
+const NC_HEADER =
+  "ae_competentAuthority,ae_homeMemberState,ae_lei_name,ae_lei,ae_lei_cou_code,ae_commercial_name,ae_website,ae_infrigment,ae_reason,ae_decision_date,ae_comments,ae_lastupdate";
+// A register file ESMA published just now; the age rule is tested in vasp-register.test.ts.
+const withDate = (body: string) => new Response(body, { status: 200, headers: { "last-modified": new Date().toUTCString() } });
 
 describe("vasp-verify", () => {
   it("throws, retryable, when every ESMA path fails with a server error", async () => {
@@ -71,36 +77,38 @@ describe("vasp-verify", () => {
     expect(err.message).toContain("HTTP 503");
   });
 
-  it("throws, not retryable, when every monthly path answers 404 (the files moved)", async () => {
+  it("throws, not retryable, when the register path and ESMA's page both answer 404 (the files moved)", async () => {
     fetchMock.mockImplementation(async () => status(404, "<!DOCTYPE html><html></html>"));
     const exec = await load("vasp-verify", "./vasp-verify.js");
     const err = await expectUnbilledUpstreamFailure(exec({ entity_name: "Example Crypto" }));
     expect(err.retryable).toBe(false);
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("throws on a timeout and on an HTML page served with 200", async () => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes("CASPS")) {
-        if (fetchMock.mock.calls.length % 2) throw Object.assign(new Error("aborted"), { name: "TimeoutError" });
-        return status(200, "<!DOCTYPE html><html>maintenance</html>");
-      }
-      return status(404);
+  it("throws on a timeout", async () => {
+    fetchMock.mockImplementation(async () => {
+      throw Object.assign(new Error("aborted"), { name: "TimeoutError" });
     });
     const exec = await load("vasp-verify", "./vasp-verify.js");
     const err = await expectUnbilledUpstreamFailure(exec({ entity_name: "Example Crypto" }));
     expect(err.message).toMatch(/timeout/);
+  });
+
+  it("throws on an HTML page served with 200", async () => {
+    fetchMock.mockImplementation(async () => status(200, "<!DOCTYPE html><html>maintenance</html>"));
+    const exec = await load("vasp-verify", "./vasp-verify.js");
+    const err = await expectUnbilledUpstreamFailure(exec({ entity_name: "Example Crypto" }));
     expect(err.message).toMatch(/HTML page instead of CSV/);
   });
 
   it("throws when the file parses to no rows", async () => {
-    fetchMock.mockImplementation(async () => status(200, "NCA,Country\nsingle-field-row"));
+    fetchMock.mockImplementation(async () => withDate(`${CASP_HEADER}\r\n`));
     const exec = await load("vasp-verify", "./vasp-verify.js");
     await expectUnbilledUpstreamFailure(exec({ entity_name: "Example Crypto" }));
   });
 
   it("a register that loaded and does not list the entity is a billed 'not authorised'", async () => {
-    fetchMock.mockImplementation(async () => status(200, CASP_CSV));
+    fetchMock.mockImplementation(async () => withDate(CASP_CSV));
     const exec = await load("vasp-verify", "./vasp-verify.js");
     const { output } = await exec({ entity_name: "Unknown Exchange Ltd" });
     expect(output).toMatchObject({ match_found: false, authorized: false, matches: [], register_entries: 1 });
@@ -108,7 +116,7 @@ describe("vasp-verify", () => {
   });
 
   it("a listed entity is found", async () => {
-    fetchMock.mockImplementation(async () => status(200, CASP_CSV));
+    fetchMock.mockImplementation(async () => withDate(CASP_CSV));
     const exec = await load("vasp-verify", "./vasp-verify.js");
     const { output } = await exec({ entity_name: "Example Crypto" });
     expect(output).toMatchObject({ match_found: true, authorized: true });
@@ -116,7 +124,7 @@ describe("vasp-verify", () => {
 
   it("still answers from a stale cache when ESMA goes down after a good read", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    fetchMock.mockImplementation(async () => status(200, CASP_CSV));
+    fetchMock.mockImplementation(async () => withDate(CASP_CSV));
     const exec = await load("vasp-verify", "./vasp-verify.js");
     await exec({ entity_name: "Example Crypto" });
     vi.setSystemTime(Date.now() + 7 * 60 * 60 * 1000);
@@ -134,7 +142,7 @@ describe("vasp-non-compliant-check", () => {
   });
 
   it("a published list with no entries is a billed, available negative", async () => {
-    fetchMock.mockImplementation(async () => status(200, `${NC_HEADER}\n`));
+    fetchMock.mockImplementation(async () => withDate(`${NC_HEADER}\r\n`));
     const exec = await load("vasp-non-compliant-check", "./vasp-non-compliant-check.js");
     const { output } = await exec({ entity_name: "Example Crypto" });
     expect(output).toMatchObject({ on_non_compliant_list: false, data_available: true, matches: [], register_entries: 0 });
@@ -143,7 +151,9 @@ describe("vasp-non-compliant-check", () => {
 
   it("a listed entity is reported", async () => {
     fetchMock.mockImplementation(async () =>
-      status(200, `${NC_HEADER}\nShady Coins Ltd,ShadyX,MT,https://shadyx.io,Unauthorised CASP services`),
+      withDate(
+        `${NC_HEADER}\r\nMFSA,MT,Shady Coins Ltd,,MT,ShadyX,https://shadyx.io,No,Unauthorised CASP services,01/10/2026,,02/10/2026`,
+      ),
     );
     const exec = await load("vasp-non-compliant-check", "./vasp-non-compliant-check.js");
     const { output } = await exec({ entity_name: "Shady Coins" });

@@ -1,0 +1,333 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "ad5663b6947b4735f89e059a6347b044a710e346"
+  },
+  "at": "2026-11-06T14:31:12.810Z",
+  "inputs": {
+    "executors": [
+      "vasp-verify",
+      "vasp-non-compliant-check"
+    ],
+    "live": true
+  },
+  "summary": {
+    "ok": true,
+    "checks": 6,
+    "authorised_found": 2,
+    "withdrawn_flagged_not_authorised": 1,
+    "unlisted_negative": 1,
+    "non_compliant_found": 1,
+    "non_compliant_unlisted_negative": 1,
+    "casp_register_entries": 397,
+    "non_compliant_register_entries": 189,
+    "source": "https://www.esma.europa.eu/sites/default/files/2024-12/CASPS.csv + NCASP.csv",
+    "register_last_updated": "2026-11-05T14:07:51Z",
+    "note": "vasp-verify Coinbase, Bitpanda (by LEI), Stratos (withdrawn 24/04/2026); vasp-non-compliant-check Bank Bit (listed), Google (not listed)"
+  },
+  "topic": "esma-casp-source-live",
+  "raw": {
+    "vasp_verify_authorised_coinbase": {
+      "input": {
+        "entity_name": "Coinbase"
+      },
+      "output": {
+        "entity_name_searched": "Coinbase",
+        "match_found": true,
+        "authorized": true,
+        "matches": [
+          {
+            "entity_name": "Coinbase Luxembourg S.A.",
+            "commercial_name": "Coinbase",
+            "home_country": "LU",
+            "lei": "984500F14CA4571AAC11",
+            "website": "https.//coinbase.com",
+            "authorization_date": "20/06/2025",
+            "authorization_end_date": null,
+            "authorization_in_force": true,
+            "legal_basis": null,
+            "services": [
+              "a. providing custody and administration of crypto-assets on behalf of clients",
+              "c. exchange of crypto-assets for funds",
+              "d. exchange of crypto-assets for other crypto-assets",
+              "e. execution of orders for crypto-assets on behalf of clients",
+              "f. placing of crypto-assets",
+              "g. reception and transmission of orders for crypto-assets on behalf of clients",
+              "j. providing transfer services for crypto-assets on behalf of clients"
+            ],
+            "passporting_countries": [
+              "AT",
+              "BE",
+              "BG",
+              "HR",
+              "CY",
+              "CZ",
+              "DK",
+              "EE",
+              "FI",
+              "FR",
+              "DE",
+              "GR",
+              "HU",
+              "IS",
+              "IE",
+              "IT",
+              "LV",
+              "LI",
+              "LT",
+              "LU",
+              "MT",
+              "NL",
+              "NO",
+              "PL",
+              "PT",
+              "RO",
+              "SK",
+              "SI",
+              "ES",
+              "SE"
+            ],
+            "nca": "Commission de Surveillance du Secteur Financier (CSSF)",
+            "record_last_updated": "22/01/2026"
+          }
+        ],
+        "register_entries": 397,
+        "register_last_updated": "2026-11-05T14:07:51.000Z",
+        "register_age_days": 1,
+        "register_stale": false,
+        "register_fetched_at": "2026-11-06T14:30:58.926Z",
+        "register_source_url": "https://www.esma.europa.eu/sites/default/files/2024-12/CASPS.csv"
+      },
+      "provenance": {
+        "source": "esma.europa.eu (MiCA CASP register)",
+        "fetched_at": "2026-11-06T14:30:59.703Z"
+      }
+    },
+    "vasp_verify_authorised_bitpanda_by_lei": {
+      "input": {
+        "entity_name": "Bitpanda",
+        "lei": "5493007WZ7IFULIL8G21"
+      },
+      "output": {
+        "entity_name_searched": "Bitpanda",
+        "match_found": true,
+        "authorized": true,
+        "matches": [
+          {
+            "entity_name": "Bitpanda GmbH",
+            "commercial_name": "Bitpanda",
+            "home_country": "AT",
+            "lei": "5493007WZ7IFULIL8G21",
+            "website": "https://www.bitpanda.com",
+            "authorization_date": "09/04/2025",
+            "authorization_end_date": null,
+            "authorization_in_force": true,
+            "legal_basis": "Article 63 - CASP authorisation",
+            "services": [
+              "a. providing custody and administration of crypto-assets on behalf of clients",
+              "c. exchange of crypto-assets for funds",
+              "d. exchange of crypto-assets for other crypto-assets",
+              "e. execution of orders for crypto-assets on behalf of clients",
+              "f. placing of crypto-assets",
+              "g. reception and transmission of orders for crypto-assets on behalf of clients",
+              "j. providing transfer services for crypto-assets on behalf of clients"
+            ],
+            "passporting_countries": [
+              "AT",
+              "BE",
+              "BG",
+              "CY",
+              "CZ",
+              "DE",
+              "DK",
+              "EE",
+              "ES",
+              "FI",
+              "FR",
+              "GR",
+              "HR",
+              "HU",
+              "IE",
+              "IS",
+              "IT",
+              "LI",
+              "LT",
+              "LU",
+              "LV",
+              "MT",
+              "NL",
+              "NO",
+              "PL",
+              "PT",
+              "RO",
+              "SE",
+              "SI",
+              "SK"
+            ],
+            "nca": "Austrian Financial Market Authority (FMA)",
+            "record_last_updated": "18/04/2025"
+          }
+        ],
+        "register_entries": 397,
+        "register_last_updated": "2026-11-05T14:07:51.000Z",
+        "register_age_days": 1,
+        "register_stale": false,
+        "register_fetched_at": "2026-11-06T14:30:58.926Z",
+        "register_source_url": "https://www.esma.europa.eu/sites/default/files/2024-12/CASPS.csv"
+      },
+      "provenance": {
+        "source": "esma.europa.eu (MiCA CASP register)",
+        "fetched_at": "2026-11-06T14:30:59.704Z"
+      }
+    },
+    "vasp_verify_withdrawn_stratos": {
+      "input": {
+        "entity_name": "Stratos Europe"
+      },
+      "output": {
+        "entity_name_searched": "Stratos Europe",
+        "match_found": true,
+        "authorized": false,
+        "matches": [
+          {
+            "entity_name": "Stratos Europe Ltd",
+            "commercial_name": "Tradu",
+            "home_country": "CY",
+            "lei": "549300LZMQXXYV4JJ603",
+            "website": "https://www.tradu.com/eu/",
+            "authorization_date": "14/10/2025",
+            "authorization_end_date": "24/04/2026",
+            "authorization_in_force": false,
+            "legal_basis": null,
+            "services": [
+              "providing custody and administration of crypto-assets on behalf of clients",
+              "exchange of crypto-assets for funds",
+              "exchange of crypto-assets for other crypto assets"
+            ],
+            "passporting_countries": [
+              "AT",
+              "BE",
+              "BG",
+              "CY",
+              "CZ",
+              "DE",
+              "DK",
+              "EE",
+              "EL",
+              "ES",
+              "FI",
+              "FR",
+              "HR",
+              "HU",
+              "IE",
+              "IS",
+              "IT",
+              "LI",
+              "LT",
+              "LU",
+              "LV",
+              "MT",
+              "NL",
+              "NO",
+              "PL",
+              "PT",
+              "RO",
+              "SE",
+              "SI",
+              "SK"
+            ],
+            "nca": "Cyprus Securities and Exchange Commission (CySEC)",
+            "record_last_updated": "21/05/2026"
+          }
+        ],
+        "register_entries": 397,
+        "register_last_updated": "2026-11-05T14:07:51.000Z",
+        "register_age_days": 1,
+        "register_stale": false,
+        "register_fetched_at": "2026-11-06T14:30:58.926Z",
+        "register_source_url": "https://www.esma.europa.eu/sites/default/files/2024-12/CASPS.csv",
+        "note": "ESMA lists this entity, but every matching record carries a withdrawal date: no authorisation is in force."
+      },
+      "provenance": {
+        "source": "esma.europa.eu (MiCA CASP register)",
+        "fetched_at": "2026-11-06T14:30:59.704Z"
+      }
+    },
+    "vasp_verify_unlisted": {
+      "input": {
+        "entity_name": "Definitely Not A Registered Exchange Ltd"
+      },
+      "output": {
+        "entity_name_searched": "Definitely Not A Registered Exchange Ltd",
+        "match_found": false,
+        "authorized": false,
+        "matches": [],
+        "register_entries": 397,
+        "register_last_updated": "2026-11-05T14:07:51.000Z",
+        "register_age_days": 1,
+        "register_stale": false,
+        "register_fetched_at": "2026-11-06T14:30:58.926Z",
+        "register_source_url": "https://www.esma.europa.eu/sites/default/files/2024-12/CASPS.csv"
+      },
+      "provenance": {
+        "source": "esma.europa.eu (MiCA CASP register)",
+        "fetched_at": "2026-11-06T14:30:59.704Z"
+      }
+    },
+    "vasp_non_compliant_listed_bank_bit": {
+      "input": {
+        "entity_name": "Bank Bit"
+      },
+      "output": {
+        "entity_name_searched": "Bank Bit",
+        "on_non_compliant_list": true,
+        "data_available": true,
+        "matches": [
+          {
+            "entity_name": "Bank Bit",
+            "commercial_name": "Bank Bit",
+            "home_country": "BE",
+            "lei": null,
+            "website": "www.bank-bit.com",
+            "infringement": "Bank Bit provides crypto-asset services in Belgium without the required MiCAR license. Bank Bit is in breach of section 59 MiCAR",
+            "decision_date": "29/06/2026",
+            "nca": "Financial Services and Markets Authority (FSMA)",
+            "record_last_updated": "07/09/2026"
+          }
+        ],
+        "register_entries": 189,
+        "register_last_updated": "2026-11-05T14:09:31.000Z",
+        "register_age_days": 1,
+        "register_stale": false,
+        "register_fetched_at": "2026-11-06T14:30:59.704Z",
+        "register_source_url": "https://www.esma.europa.eu/sites/default/files/2024-12/NCASP.csv"
+      },
+      "provenance": {
+        "source": "esma.europa.eu (MiCA non-compliant register)",
+        "fetched_at": "2026-11-06T14:30:59.922Z"
+      }
+    },
+    "vasp_non_compliant_unlisted_google": {
+      "input": {
+        "entity_name": "Google"
+      },
+      "output": {
+        "entity_name_searched": "Google",
+        "on_non_compliant_list": false,
+        "data_available": true,
+        "matches": [],
+        "register_entries": 189,
+        "register_last_updated": "2026-11-05T14:09:31.000Z",
+        "register_age_days": 1,
+        "register_stale": false,
+        "register_fetched_at": "2026-11-06T14:30:59.704Z",
+        "register_source_url": "https://www.esma.europa.eu/sites/default/files/2024-12/NCASP.csv"
+      },
+      "provenance": {
+        "source": "esma.europa.eu (MiCA non-compliant register)",
+        "fetched_at": "2026-11-06T14:30:59.922Z"
+      }
+    }
+  }
+}
