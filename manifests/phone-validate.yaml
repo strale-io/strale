@@ -22,6 +22,9 @@ output_schema:
   properties:
     valid:
       type: boolean
+    reason:
+      type: string
+      description: Stable reason code when a numbering-plan exception makes the number invalid
     e164:
       type: string
     national_format:
@@ -65,6 +68,7 @@ test_fixtures:
     phone_number: "+46701234567"
 output_field_reliability:
   valid: guaranteed
+  reason: rare
   e164: guaranteed
   national_format: guaranteed
   international_format: guaranteed
@@ -75,6 +79,10 @@ output_field_reliability:
   is_possible: guaranteed
   input: guaranteed
 limitations:
+  - title: Reserved fictional ranges are not valid
+    text: Reserved fictional number ranges are reported as not valid.
+    category: accuracy
+    severity: info
   - title: A valid result does not prove the number is in service
     text: >-
       Valid means the number fits the country's numbering plan. It does not show that

@@ -2,9 +2,16 @@ import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import {
   parsePhoneNumberFromString,
-  getCountryCallingCode,
   type CountryCode,
 } from "libphonenumber-js";
+
+const RESERVED_NUMBER_RANGES = [
+  {
+    countryCallingCode: "1",
+    pattern: /^\+1\d{3}55501\d{2}$/,
+    reason: "reserved_fictional_range",
+  },
+] as const;
 
 // Country name lookup
 const COUNTRY_NAMES: Record<string, string> = {
@@ -47,12 +54,16 @@ registerCapability("phone-validate", async (input: CapabilityInput) => {
 
   const phoneType = phone.getType() ?? "unknown";
   const country = phone.country ?? null;
+  const e164 = phone.format("E.164");
+  const reservedRange = RESERVED_NUMBER_RANGES.find(
+    (range) => phone.countryCallingCode === range.countryCallingCode && range.pattern.test(e164),
+  );
 
   return {
     output: {
-      valid: phone.isValid(),
+      valid: reservedRange ? false : phone.isValid(),
       input: phoneNumber,
-      e164: phone.format("E.164"),
+      e164,
       national_format: phone.formatNational(),
       international_format: phone.formatInternational(),
       country_code: country,
@@ -60,6 +71,7 @@ registerCapability("phone-validate", async (input: CapabilityInput) => {
       phone_type: phoneType,
       carrier: null, // carrier data requires paid service
       is_possible: phone.isPossible(),
+      ...(reservedRange ? { reason: reservedRange.reason } : {}),
     },
     provenance: { source: "libphonenumber-js", fetched_at: new Date().toISOString() },
   };
