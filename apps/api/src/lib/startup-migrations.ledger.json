@@ -1161,6 +1161,16 @@
         "capabilities.avg_latency_ms"
       ],
       "sha256": "bfc712c7b8745f0193fd2b6b58bf7f0d1a46c918c2a705c7cef695b817ba9caa"
+    },
+    {
+      "id": "M089",
+      "function": "runMigration0146_polishCompanyDataAlgorithmic",
+      "title": "Polish Company Data Algorithmic",
+      "added": "2026-11-06",
+      "columns_written": [
+        "capabilities.transparency_tag"
+      ],
+      "sha256": "c7229d6f30fc6476db1ffb7781b1aa91269a917348b54bad01490ac12b2a7823"
     }
   ],
   "known_overlaps": [
@@ -1710,6 +1720,14 @@
         "M087"
       ],
       "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+    },
+    {
+      "column": "capabilities.transparency_tag",
+      "blocks": [
+        "M087",
+        "M089"
+      ],
+      "note": "Disjoint by slug (2026-11-06): M087 (block 0144) writes only slug = 'env-template-generate' from 'algorithmic' to 'ai_generated'; M089 (block 0146) writes only slug = 'polish-company-data' from 'ai_generated' to 'algorithmic'. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
     }
   ]
 }

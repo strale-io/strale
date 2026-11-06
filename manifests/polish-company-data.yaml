@@ -62,7 +62,7 @@ output_schema:
       type: string
 data_source: KRS / Krajowy Rejestr Sądowy (Polish National Court Register)
 data_source_type: api
-transparency_tag: ai_generated
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: scraping-stable-target
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
