@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
-import { buildBoundedMetadataHtml, extractStructuredCompanyMetadata, METADATA_HTML_LIMIT } from "./structured-metadata.js";
+import { buildBoundedMetadataHtml, extractStructuredCompanyMetadata, METADATA_HTML_LIMIT, stripScriptAndStyleBlocks } from "./structured-metadata.js";
 
 const PAGE = "https://example.com/";
 
@@ -187,6 +187,26 @@ describe("buildBoundedMetadataHtml", () => {
   it("keeps positions aligned on a page with characters that lowercase to two code units", () => {
     const html = `<html><head><title>İstanbul İzmir İnegöl</title></head><body><p>İİİ</p>${bodyOrganization}</body></html>`;
     expect(extractStructuredCompanyMetadata(html, PAGE)).toMatchObject({ company_name: "Body LD Co", email: "hello@example.com" });
+  });
+
+  it.each([
+    ["in the head", (ld: string) => `<html><head><link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><text>A</text></svg>">${ld}<meta property="og:site_name" content="OGNAME"></head><body></body></html>`],
+    ["in the body", (ld: string) => `<html><head><meta property="og:site_name" content="OGNAME"></head><body><link rel="icon" href='data:image/svg+xml,<svg><text>A</text></svg>'>${ld}</body></html>`],
+  ])("a data-URI SVG favicon %s does not hide the JSON-LD", (_label, page) => {
+    const ld = `<script type="application/ld+json">${JSON.stringify({ "@type": "Organization", name: "LDCO", email: "a@example.com" })}</script>`;
+    expect(extractStructuredCompanyMetadata(page(ld), PAGE)).toMatchObject({ company_name: "LDCO", email: "a@example.com" });
+  });
+
+  it.each([
+    ["<style></style>", "style blocks only"],
+    ["<script></script>", "script blocks only"],
+  ])("strips %s repeated with a bounded number of searches (%s)", (block) => {
+    const count = Math.ceil(2 * 1024 * 1024 / block.length);
+    const diagnostics = { searches: 0 };
+    expect(stripScriptAndStyleBlocks(block.repeat(count) + "<meta>", diagnostics)).toBe("<meta>");
+    // Two searches per block (its close and that close's ">"), one per block
+    // for the next opening of its kind, and one for the absent kind.
+    expect(diagnostics.searches).toBeLessThanOrEqual(3 * count + 4);
   });
 
   it("does not take <header> for <head> on a page that omits the head tag", () => {

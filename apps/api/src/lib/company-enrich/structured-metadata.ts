@@ -41,30 +41,47 @@ const HEAD_SCAN_LIMIT = 2 * 1024 * 1024;
  * original string in the wrong place. ASCII is all the tag scans need.
  */
 export function asciiLowerCase(text: string): string {
+  const lowered = text.toLowerCase();
+  // Lowercasing never shortens a string, so equal lengths mean every position
+  // maps one to one. Only a character such as "İ" makes it longer.
+  if (lowered.length === text.length) return lowered;
+  // "İ" (U+0130) is the character that lowercases to two code units; mapped to
+  // "I" first, it keeps its single position.
+  const dotless = text.replace(/\u0130/g, "I").toLowerCase();
+  if (dotless.length === text.length) return dotless;
   return text.replace(/[A-Z]+/g, (run) => run.toLowerCase());
 }
 
 /**
  * Drops every <script> and <style> block from a slice of HTML, in one linear
- * pass. An unclosed block ends the slice, as it would for a browser.
+ * pass: the next position of each opening tag is searched for once and reused
+ * until the cursor passes it, so a page full of one kind cannot make every
+ * step re-scan to the end looking for the other. An unclosed block ends the
+ * slice, as it would for a browser.
  */
-function stripScriptAndStyleBlocks(source: string): string {
+export function stripScriptAndStyleBlocks(source: string, diagnostics?: { searches: number }): string {
   const lower = asciiLowerCase(source);
   const pieces: string[] = [];
   let cursor = 0;
+  let nextScript = -2;
+  let nextStyle = -2;
+  const find = (needle: string, from: number) => {
+    if (diagnostics) diagnostics.searches += 1;
+    return lower.indexOf(needle, from);
+  };
   while (cursor < source.length) {
-    const script = lower.indexOf("<script", cursor);
-    const style = lower.indexOf("<style", cursor);
-    const start = script < 0 ? style : style < 0 ? script : Math.min(script, style);
+    if (nextScript !== -1 && nextScript < cursor) nextScript = find("<script", cursor);
+    if (nextStyle !== -1 && nextStyle < cursor) nextStyle = find("<style", cursor);
+    const start = nextScript < 0 ? nextStyle : nextStyle < 0 ? nextScript : Math.min(nextScript, nextStyle);
     if (start < 0) {
       pieces.push(source.slice(cursor));
       break;
     }
     pieces.push(source.slice(cursor, start));
-    const closeTag = start === script ? "</script" : "</style";
-    const close = lower.indexOf(closeTag, start + 1);
+    const closeTag = start === nextScript ? "</script" : "</style";
+    const close = find(closeTag, start + 1);
     if (close < 0) break;
-    const closeEnd = lower.indexOf(">", close);
+    const closeEnd = find(">", close);
     if (closeEnd < 0) break;
     cursor = closeEnd + 1;
   }
@@ -174,6 +191,19 @@ function list(value: unknown): string[] {
   return result;
 }
 
+function quotesBalanced(tag: string): boolean {
+  let open: string | null = null;
+  for (let i = 0; i < tag.length; i++) {
+    const c = tag[i];
+    if (open) {
+      if (c === open) open = null;
+    } else if (c === '"' || c === "'") {
+      open = c;
+    }
+  }
+  return open === null;
+}
+
 /** Selects the small, metadata-bearing portions that jsdom is allowed to parse. */
 export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpeningsVisited: number }): string {
   const lower = asciiLowerCase(html);
@@ -183,16 +213,19 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
   // <head> tag, so require the tag name to end there.
   const headMatch = /<head[\s>]/.exec(lower);
   const headStart = headMatch ? headMatch.index : -1;
-  let headRegion: string;
+  let headRegionStart = 0;
+  let headRegionEnd: number;
   if (headStart >= 0) {
     const headClose = lower.indexOf("</head>", headStart);
     const headEnd = headClose >= 0 ? headClose + 7 : Math.min(html.length, headStart + HEAD_SCAN_LIMIT);
-    headRegion = html.slice(headStart, Math.min(headEnd, headStart + HEAD_SCAN_LIMIT));
+    headRegionStart = headStart;
+    headRegionEnd = Math.min(headEnd, headStart + HEAD_SCAN_LIMIT);
   } else {
     // HTML fragments are common in tests and malformed publisher responses;
     // treat their leading bytes as the implicit head without widening the cap.
-    headRegion = html.slice(0, HEAD_SCAN_LIMIT);
+    headRegionEnd = Math.min(html.length, HEAD_SCAN_LIMIT);
   }
+  const headRegion = html.slice(headRegionStart, headRegionEnd);
   // Inline scripts and styles carry no metadata here (JSON-LD is collected
   // below on its own), and inlined critical CSS can be hundreds of KB: strip
   // them before capping, so the cap keeps the meta and link tags.
@@ -226,9 +259,15 @@ export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpe
     const end = lower.indexOf(">", start);
     if (end < 0) break;
     cursor = end + 1;
+    // The head slice already carries its own icon links intact.
+    if (start >= headRegionStart && start < headRegionEnd) continue;
     const tagLength = end + 1 - start;
     if (tagLength > ICON_TAG_LIMIT) continue;
     const tag = lower.slice(start, end + 1);
+    // Ending at the first ">" cuts a tag whose quoted attribute holds one (a
+    // data-URI SVG favicon). Such a fragment would leave a quote open and
+    // swallow everything after it in the parser input, so it is dropped.
+    if (tag.includes("<", 1) || !quotesBalanced(tag)) continue;
     if (tag.includes("icon")) icons.push(html.slice(start, end + 1));
   }
 

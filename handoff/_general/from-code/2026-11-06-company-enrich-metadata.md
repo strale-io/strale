@@ -18,3 +18,11 @@ Intent: ship company-enrich structured metadata (JSON-LD, Open Graph, meta tags 
   - Social links the model returns still pass through without a host check, as on main.
   - The org-type list misses NGO and EducationalOrganization.
   - The manifest changes reach production through the boot text sync (category company-data). `output_field_reliability` changes need the onboarding backfill after merge.
+
+## After the review of 28e9d4a4 (FAIL, fixed)
+
+The review of 28e9d4a4 found that the new head-strip helper was quadratic: about 76 s on a 2 MB head of repeated `<style></style>`. Changes made:
+- The helper now caches the next `<script` and `<style` positions. Measured times are now 20 to 55 ms, and a search-count test bounds the work.
+- Icon links are taken from outside the head only, since the head carries its own. An icon tag cut inside a quoted attribute (a data-URI SVG favicon) is dropped, so it can no longer swallow the JSON-LD after it.
+- `asciiLowerCase` takes the native fast path unless a string's length changes, and maps "İ" before lowercasing. 16 MB of mixed case takes 38 ms, or 311 ms with an "İ" present.
+- The four new tests fail on 28e9d4a4.
