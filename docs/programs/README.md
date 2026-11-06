@@ -13,6 +13,7 @@ decided. Project truth lives in `docs/project/` (candidate until M4) and
 | [Platform hardening](platform-hardening/PROGRAM.md) | `platform-hardening/tracks.yaml` | active from 2026-10-27; H1 watch production |
 | [Distribution](distribution/PROGRAM.md) | `distribution/tracks.yaml` | active from 2026-10-27; D1 active, D0 in the same unmerged PR |
 | [Promise audit](promise-audit/PROGRAM.md) | `promise-audit/tracks.yaml` | active from 2026-11-06; T1 money promises active, wave 1 of the swallowed-failure fix in flight |
+| [Robustness](robustness/PROGRAM.md) | `robustness/tracks.yaml` | active from 2026-11-06; R1 untrusted-input bounds active (url-to-markdown parse bound, Codex result pending) |
 | [Remediation](../remediation/REMEDIATION-LEDGER.md) | legacy program; per-package YAML under `../remediation/packages/`, not a track register | closure tracked by CTO-readiness track T4 |
 
 Rules:
