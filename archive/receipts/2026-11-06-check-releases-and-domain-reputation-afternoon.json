@@ -1,0 +1,58 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "16362762137e4e0135ad4cfb0cd7bff9b4c1c4ab"
+  },
+  "at": "2026-11-06T13:50:54.629Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/afternoon.json"
+  },
+  "summary": {
+    "checked_at": "2026-11-06T13:50:00Z"
+  },
+  "topic": "releases-and-domain-reputation-afternoon",
+  "raw": {
+    "checked_at": "2026-11-06T13:50:00Z",
+    "strale-mcp@0.2.12": {
+      "release_run": "https://github.com/strale-io/strale/actions/runs/42227189644",
+      "install": "npx -y strale-mcp@0.2.12 in an empty directory, stdio initialize + tools/list",
+      "startup_stderr": "[strale-mcp] Loaded 298 capabilities, 96 solutions, 298 cap trust, 96 sol trust from https://api.strale.io",
+      "server_info": {
+        "name": "strale",
+        "version": "0.2.12"
+      },
+      "tools_listed": 9,
+      "mcp_registry_latest": {
+        "version": "0.2.12",
+        "websiteUrl": "https://strale.io?src=mcp-registry"
+      },
+      "verdict": "pass"
+    },
+    "straleio-langchain@0.1.2": {
+      "release_run": "https://github.com/strale-io/strale/actions/runs/42227995432",
+      "files": [
+        "README.md",
+        "dist",
+        "package.json"
+      ],
+      "homepage": "https://strale.io?src=npm-readme&utm_source=npm-readme&utm_medium=listing&utm_campaign=distribution-d0-d1",
+      "npm_readme_present": true,
+      "invoke_with_invalid_key": "{\"error\":true,\"error_code\":\"unauthorized\",\"message\":\"Invalid API key.\"}",
+      "verdict": "pass"
+    },
+    "domain-reputation_publish": {
+      "prs": [
+        "strale-io/strale#927",
+        "strale-io/strale#930"
+      ],
+      "approval": "Petter, in session 2026-11-06",
+      "checked_at": "2026-11-06T13:26:00Z",
+      "data_source_live": "DNS records (A, MX, SPF, DMARC) and the domain's HTTPS security headers, plus domain-name pattern checks; no threat-intelligence feeds or blocklists",
+      "domain_trust_long_description_has_new_text": true,
+      "domain_trust_long_description_has_old_phrase": false,
+      "not_checked": "capability_limitations rows (not public; needs the read-only DB role)",
+      "verdict": "pass"
+    }
+  }
+}
