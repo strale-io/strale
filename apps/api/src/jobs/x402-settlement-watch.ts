@@ -10,9 +10,10 @@
  * the platform watched that number; this job is the tripwire.
  *
  * Every TICK, compare settled-x402-transaction count over the trailing 24h
- * against the daily average of the 7 days before that. If the baseline is
- * meaningful (≥ MIN_BASELINE_PER_DAY) and the last 24h came in under
- * ALERT_RATIO of it, page via sendAlert — at most once per ALERT_COOLDOWN_MS
+ * against the MEDIAN of the seven daily totals before that (see "Robust
+ * baseline" below). If the baseline is meaningful (≥ MIN_BASELINE_PER_DAY)
+ * and the last 24h came in under ALERT_RATIO of it, page via sendAlert — at
+ * most once per ALERT_COOLDOWN_MS
  * so a sustained dip doesn't spam. The remedy is in the alert text: check
  * the x402-payment-payload-version log counter, and if v1 payloads stopped
  * arriving right when a challenge-version change deployed, flip
@@ -70,7 +71,37 @@ const MAX_EXCLUDED_BUYERS = 2;
 const OTHERS_NEAR_BASELINE_RATIO = 0.7;
 const MIN_OTHERS_PER_DAY = 3;
 
-type PayerRow = { payer: string | null; last24h: number; prior7d: number };
+// Robust baseline (incident 2026-11-03): the baseline used to be the 7-day
+// mean. One buyer ran a single large job on 2026-10-30, many times a normal
+// day, and that one day lifted the mean so far that on 2026-11-03 an ordinary
+// day read as a drop below half of it, hours after the buyer was back. A mean
+// lets one burst set the bar for a week. The baseline is now the median of the
+// seven daily totals (each day a 24h bucket counted back from now), so up to
+// three unusual days cannot move it, whichever way they go. Per-payer
+// baselines are medians of that payer's own seven days, and the "everyone
+// else" baseline is the median of everyone else's combined daily totals, so
+// the concentration test reads the same robust figure.
+export const BASELINE_DAYS = 7;
+
+/** Settled count per payer: the last 24h, and each of the 7 days before it (index 0 = 24–48h ago). */
+export type PayerRow = { payer: string | null; last24h: number; priorDaily: number[] };
+
+/** Median of a list of counts; 0 for an empty list. */
+export function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
+/** Day-by-day totals across rows, always BASELINE_DAYS long (missing days are 0). */
+function dailyTotals(rows: PayerRow[]): number[] {
+  const totals = new Array<number>(BASELINE_DAYS).fill(0);
+  for (const r of rows) for (let d = 0; d < BASELINE_DAYS; d++) totals[d]! += r.priorDaily[d] ?? 0;
+  return totals;
+}
+
+const priorSum = (r: PayerRow) => r.priorDaily.reduce((a, n) => a + n, 0);
 
 export type VolumeVerdict =
   | { kind: "no_baseline" | "healthy"; last24h: number; baselinePerDay: number }
@@ -93,29 +124,35 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 /** Pure decision over per-payer counts. Exported for unit tests. */
 export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
   const last24h = rows.reduce((a, r) => a + r.last24h, 0);
-  const baselinePerDay = rows.reduce((a, r) => a + r.prior7d, 0) / 7;
+  const baselinePerDay = median(dailyTotals(rows));
   if (baselinePerDay < MIN_BASELINE_PER_DAY) return { kind: "no_baseline", last24h, baselinePerDay };
   if (last24h >= baselinePerDay * ALERT_RATIO) return { kind: "healthy", last24h, baselinePerDay };
 
   // Unattributed rows (pre-hash x402 rows, or no payer extracted) are never a
   // "buyer" to exclude; they count with everyone else.
   const known = rows.filter((r) => r.payer !== null);
-  const ranked = [...known].sort((a, b) => b.prior7d - a.prior7d || b.last24h - a.last24h);
-  const top = ranked.slice(0, MAX_EXCLUDED_BUYERS).filter((r) => r.prior7d > 0);
+  // Ranked by the payer's typical day (its own median), so a buyer whose
+  // volume was one burst does not outrank the steady buyer whose pause it is.
+  const ranked = [...known].sort((a, b) =>
+    median(b.priorDaily) - median(a.priorDaily) || priorSum(b) - priorSum(a) || b.last24h - a.last24h);
+  const top = ranked.slice(0, MAX_EXCLUDED_BUYERS).filter((r) => priorSum(r) > 0);
   const topBuyers = top.map((r) => ({
     payerHashPrefix: (r.payer as string).slice(0, 8),
-    baselinePerDay: round1(r.prior7d / 7),
+    baselinePerDay: round1(median(r.priorDaily)),
     last24h: r.last24h,
-    share: r.prior7d / 7 / baselinePerDay,
+    // A payer's count is at most the total on every day, so its median is at
+    // most the total's median and the share stays within 0–1.
+    share: median(r.priorDaily) / baselinePerDay,
   }));
 
   let excluded = 0;
   let othersLast24h = last24h;
   let othersBaselinePerDay = baselinePerDay;
   for (let k = 1; k <= top.length; k++) {
-    const removed = top.slice(0, k);
-    const oLast = last24h - removed.reduce((a, r) => a + r.last24h, 0);
-    const oBase = baselinePerDay - removed.reduce((a, r) => a + r.prior7d, 0) / 7;
+    const removed = new Set(top.slice(0, k));
+    const others = rows.filter((r) => !removed.has(r));
+    const oLast = others.reduce((a, r) => a + r.last24h, 0);
+    const oBase = median(dailyTotals(others));
     if (oBase >= MIN_OTHERS_PER_DAY && oLast >= 1 && oLast >= oBase * OTHERS_NEAR_BASELINE_RATIO) {
       excluded = k;
       othersLast24h = oLast;
@@ -129,7 +166,7 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
     last24h,
     baselinePerDay,
     distinctPayers24h: known.filter((r) => r.last24h > 0).length,
-    distinctPayers7d: known.filter((r) => r.prior7d > 0).length,
+    distinctPayers7d: known.filter((r) => priorSum(r) > 0).length,
     topBuyers,
     excluded,
     othersLast24h,
@@ -153,26 +190,29 @@ function describeBuyers(v: Extract<VolumeVerdict, { kind: "concentrated" | "broa
 
 export async function checkX402SettlementVolume(opts: { db?: Database } = {}): Promise<VolumeVerdict> {
   const db = opts.db ?? getDb();
+  // d1 is 24–48h ago, d7 is 7–8 days ago: seven whole 24h buckets counted
+  // back from now, so the median compares like with like.
   const rows = await db.execute(sql`
     SELECT
       x402_payer_hash AS payer,
-      COUNT(*) FILTER (
-        WHERE created_at >= now() - interval '24 hours'
-      ) AS last_24h,
-      COUNT(*) FILTER (
-        WHERE created_at >= now() - interval '8 days'
-          AND created_at < now() - interval '24 hours'
-      ) AS prior_7d
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours') AS last_24h,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '48 hours' AND created_at < now() - interval '24 hours') AS d1,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '72 hours' AND created_at < now() - interval '48 hours') AS d2,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '96 hours' AND created_at < now() - interval '72 hours') AS d3,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '120 hours' AND created_at < now() - interval '96 hours') AS d4,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '144 hours' AND created_at < now() - interval '120 hours') AS d5,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '168 hours' AND created_at < now() - interval '144 hours') AS d6,
+      COUNT(*) FILTER (WHERE created_at >= now() - interval '192 hours' AND created_at < now() - interval '168 hours') AS d7
     FROM transactions
     WHERE x402_settlement_id IS NOT NULL
-      AND created_at >= now() - interval '8 days'
+      AND created_at >= now() - interval '192 hours'
     GROUP BY x402_payer_hash
   `);
   const verdict = classifyVolume(
     (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
       payer: (r.payer as string | null) ?? null,
       last24h: Number(r.last_24h ?? 0),
-      prior7d: Number(r.prior_7d ?? 0),
+      priorDaily: ["d1", "d2", "d3", "d4", "d5", "d6", "d7"].map((k) => Number(r[k] ?? 0)),
     })),
   );
   const { last24h, baselinePerDay } = verdict;
@@ -198,7 +238,7 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
 
   const totals =
     `Settled x402 transactions in the last 24h: ${last24h}. ` +
-    `Trailing 7-day baseline: ~${Math.round(baselinePerDay)}/day. `;
+    `Baseline (median day of the 7 before): ~${Math.round(baselinePerDay)}/day. `;
 
   if (verdict.kind === "concentrated") {
     const share = Math.round(

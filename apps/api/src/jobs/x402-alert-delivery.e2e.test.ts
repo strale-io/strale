@@ -26,7 +26,11 @@ vi.mock("resend", () => ({
 
 const BUS_FORMAT = /^From ([a-z0-9][a-z0-9-]{0,62}):\n\n([\s\S]*)$/;
 
-type Row = { payer: string | null; last_24h: number; prior_7d: number };
+type Row = { payer: string | null; last_24h: number; d1: number; d2: number; d3: number; d4: number; d5: number; d6: number; d7: number };
+
+/** A payer settling `perDay` on each of the seven baseline days. */
+const row = (payer: string, last24h: number, perDay: number): Row =>
+  ({ payer, last_24h: last24h, d1: perDay, d2: perDay, d3: perDay, d4: perDay, d5: perDay, d6: perDay, d7: perDay });
 
 /** A database that answers the watch query with `rows` and records every statement. */
 function fakeDb(rows: Row[]) {
@@ -62,14 +66,14 @@ function fakeGithub() {
 
 // Broad: every payer fell off. Concentrated: the one big buyer paused, the rest settle.
 const BROAD: Row[] = [
-  { payer: "a".repeat(64), last_24h: 5, prior_7d: 700 },
-  { payer: "b".repeat(64), last_24h: 1, prior_7d: 140 },
-  { payer: "c".repeat(64), last_24h: 0, prior_7d: 70 },
+  row("a".repeat(64), 5, 100),
+  row("b".repeat(64), 1, 20),
+  row("c".repeat(64), 0, 10),
 ];
 const CONCENTRATED: Row[] = [
-  { payer: "a".repeat(64), last_24h: 0, prior_7d: 700 },
-  { payer: "b".repeat(64), last_24h: 20, prior_7d: 140 },
-  { payer: "c".repeat(64), last_24h: 10, prior_7d: 70 },
+  row("a".repeat(64), 0, 100),
+  row("b".repeat(64), 20, 20),
+  row("c".repeat(64), 10, 10),
 ];
 
 async function fresh() {
@@ -147,7 +151,7 @@ describe("x402 volume watch, end to end to delivery", () => {
     process.env.BUS_GITHUB_TOKEN = "github_pat_fake";
     process.env.BUS_REPO = "example-owner/example-bus";
     const { watch, bus } = await fresh();
-    const healthy = BROAD.map((r) => ({ ...r, last_24h: Math.round(r.prior_7d / 7) }));
+    const healthy = BROAD.map((r) => ({ ...r, last_24h: r.d1 }));
     expect((await watch.checkX402SettlementVolume({ db: fakeDb(healthy).db })).kind).toBe("healthy");
     await bus.settleBusDeliveries();
     expect(sendMock).not.toHaveBeenCalled();
