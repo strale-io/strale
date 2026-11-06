@@ -35,6 +35,8 @@
 //                   session started before the current lease period on another account, or before
 //                   the previous period when the fleet returned to this account: DENY every tool
 //                   but the few to go quiet; fail open, PACE_CORE §2a "The old-account fence").
+//                   mcp__*: DENY a tool that matches a hard-stop entry of permissions.deny on any instance of
+//                   its connector (a -<hex> instance suffix or claude_ai_ prefix on the server; hardStopEntry).
 //                   Bash: a lease write must name WOW_ACCOUNT_LABEL; hooks/guard-bash-policy.mjs, then the shared-tree commit guard
 //                   (BLOCK `git commit` in the PRIMARY checkout while another live session
 //                   holds it; worktrees and solo sessions are never blocked), then the push
@@ -50,7 +52,8 @@
 //                   mcp__claude-code-remote__confirm_repository_trust: ALLOW only for the lease-named
 //                   master of a project the roster lists under "Needs the founder's PC" (trustGate:
 //                   WOW_ACCOUNT_LABEL is the leased account's AND the period's first lease entry for
-//                   that project is this session, CLAUDE_CODE_REMOTE_SESSION_ID); DENY for everything
+//                   that project is this session, CLAUDE_CODE_REMOTE_SESSION_ID), or for the period's
+//                   first wow-core entry in wow-core's own checkout (founder 2026-11-06); DENY for everything
 //                   else and whenever that cannot be established (fail CLOSED), citing COMMS_CORE §1.
 //                   Founder 2026-11-06, "Masters use PC directly"; replaces the PC helper of 2026-11-04.
 //   post-tool-use, post-tool-use-failure
@@ -300,6 +303,53 @@ export function parentDenyFor(settingsText) {
   const deny = JSON.parse(settingsText)?.permissions?.deny;
   return Array.isArray(deny) ? deny.filter((entry) => typeof entry === "string") : [];
 }
+
+// ---- hard stops on every instance of a connector ----
+// The hard-stop deny list (#251: never send, post or invite; never pay or accept terms; never delete or publish without
+// the founder's yes) names each connector tool by its server name, exactly. The platform names a second account of the
+// same claude.ai connector with an instance suffix (seen live 2026-11-06: mcp__Microsoft_365-fe0a0ef2__outlook_send_mail,
+// the founder's second mailbox), and the local CLI adds a claude_ai_ prefix, so an exact entry never matched those.
+// mcpRuleParts reduces a name to { server, tool }, lower case, the server without a leading claude_ai_ and a trailing
+// -<hex> instance suffix; a server-only entry (mcp__X) or mcp__X__* covers every tool of X. The patterns are the
+// checkout's own permissions.deny (no second, hand-kept list), so only a tool that matches an entry is ever refused.
+export function mcpRuleParts(name) {
+  if (typeof name !== "string" || !name.startsWith("mcp__")) return null;
+  const rest = name.slice("mcp__".length);
+  const cut = rest.indexOf("__");
+  // Plugin servers are mcp__plugin_<plugin>_<server> (plugin names are kebab-case, so the lazy match stops at the first
+  // underscore after the plugin name). Only the -<hex> instance suffix has been seen live; other shapes (_2, (2)) are not
+  // covered, and an over-strip can only add a deny, never remove one.
+  const server = (cut < 0 ? rest : rest.slice(0, cut)).toLowerCase().replace(/^plugin_[a-z0-9-]+?_/, "").replace(/^claude_ai_/, "").replace(/-[0-9a-f]+$/, "");
+  const tool = cut < 0 ? "*" : rest.slice(cut + 2).toLowerCase();
+  return server && tool ? { server, tool } : null;
+}
+
+// The deny entry that a call to `toolName` matches on another instance of its connector, or null.
+export function hardStopEntry(toolName, deny) {
+  const call = mcpRuleParts(toolName);
+  if (!call || call.tool === "*" || !Array.isArray(deny)) return null;
+  for (const entry of deny) {
+    const rule = mcpRuleParts(entry);
+    if (rule && rule.server === call.server && (rule.tool === "*" || rule.tool === call.tool)) return entry;
+  }
+  return null;
+}
+
+// The hard-stop patterns for this call: the permissions.deny list of the hook's own checkout and of the payload's
+// repository (in a parent-folder turn, the union with every wired sibling checkout, as the parent file carries). A
+// settings file that cannot be read or parsed adds nothing.
+function hardStopDeny({ own, repoRoot, parentTurn }) {
+  const deny = [];
+  for (const root of [...new Set([own, repoRoot].filter(Boolean))]) {
+    try {
+      const text = readFileSync(path.join(root, ".claude", "settings.json"), "utf8");
+      deny.push(...(parentTurn && root === own ? parentDenyUnion(text, own) : parentDenyFor(text)));
+    } catch { /* adds nothing */ }
+  }
+  return deny;
+}
+
+export const hardStopReason = (toolName, entry) => `wow-core: ${toolName} is a hard stop: it matches the deny entry ${entry}, which covers every account and instance of that connector (permissions.deny; the founder's hard stops, 2026-11-05: never send, post or invite, never pay or accept terms, never delete or publish without his yes). The founder does this himself: prepare a draft or the exact step and ask him.`;
 
 // The parent file's deny list: the owner's list exactly, then each new entry of every other existing primary checkout directly
 // under the parent that has wow-core wiring (a consumer's .claude/scripts/wow-hook.mjs or wow-core's scripts/wow-hook.mjs),
@@ -669,6 +719,8 @@ function pruneOldDays(base, today) {
   } catch { /* best effort */ }
 }
 
+// The roster's fixed PC prompt (docs/fleet-roster.md "A master's PC session" step 3), as a master sends it.
+const PC_JOB_PROMPT = /^Run git fetch and git checkout --detach [0-9a-f]{7,40}, read docs\/lanes\/pc\/[a-z0-9-]+-brief\.md there, do that one job; report on the PR of \S+ with To orchestrator: comments; end\.$/;
 export function spawnDecision(payload, env = process.env, now = Date.now()) {
   try {
     const sid = safeId(payload?.session_id);
@@ -701,19 +753,24 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     if (childDepth > SPAWN_LIMITS.maxDepth) {
       return denyResponse(`wow-core: session depth ${depth} may not start sessions (master → lane → reviewer, no deeper; founder 2026-11-01). Use a subagent instead.`);
     }
-    // A master's PC session (create_session on its project's bridge environment, docs/fleet-roster.md "Needs the
-    // founder's PC") is a lane like any other here: the same caps, depth and tags (founder 2026-11-06).
+    // A master's PC session (create_session on its project's bridge environment with the roster's fixed PC prompt,
+    // docs/fleet-roster.md "A master's PC session") does not count toward the per-session cap (founder 2026-11-06,
+    // "yes": short PC jobs used up the Strale orchestrator's 10 starts and it handed the work to him); the PC limits
+    // them (PACE_CORE §2a, two heavy jobs) and the per-container day cap, depth and tags still apply.
+    // Only a master (depth 0) starts PC sessions (roster), and only the whole fixed prompt counts, depth tag removed.
+    const pcJob = depth === 0 && typeof input.environment_id === "string" && input.environment_id !== ""
+      && PC_JOB_PROMPT.test(String(input.prompt ?? "").replace(DEPTH_TAG, "").trim());
     const base = env.WOW_SPAWN_DIR || path.join(os.homedir(), ".wow-core", "spawn");
     const container = safeId(env.CLAUDE_CODE_CONTAINER_ID) || safeId(os.hostname()) || "local";
     const today = new Date(now).toISOString().slice(0, 10);
     pruneOldDays(base, today);
-    const sessionSlot = claimSlot(path.join(base, `session-${sid}`), SPAWN_LIMITS.perSession);
-    if (!sessionSlot) return denyResponse(`wow-core: this session has started ${SPAWN_LIMITS.perSession} sessions, the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
+    const sessionSlot = pcJob ? null : claimSlot(path.join(base, `session-${sid}`), SPAWN_LIMITS.perSession);
+    if (!pcJob && !sessionSlot) return denyResponse(`wow-core: this session has started ${SPAWN_LIMITS.perSession} sessions, the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
     let daySlot;
     try { daySlot = claimSlot(path.join(base, `container-${container}-${today}`), SPAWN_LIMITS.perContainerDay); }
-    catch (error) { rmSync(sessionSlot, { force: true }); throw error; }
+    catch (error) { if (sessionSlot) rmSync(sessionSlot, { force: true }); throw error; }
     if (!daySlot) {
-      rmSync(sessionSlot, { force: true });
+      if (sessionSlot) rmSync(sessionSlot, { force: true });
       return denyResponse(`wow-core: this container has started ${SPAWN_LIMITS.perContainerDay} sessions today (UTC ${today}), the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
     }
     const prompt = String(input.prompt ?? "").replace(DEPTH_TAG, "").trimEnd();
@@ -724,7 +781,7 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     const updatedInput = { ...input, prompt: `${prompt}${prompt ? "\n\n" : ""}[wow-spawn-depth: ${childDepth}]`,
       tags: [...tags, "wow-task"] };
     return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
-      permissionDecisionReason: `wow-core: session start ${Number(path.basename(sessionSlot)) + 1}/${SPAWN_LIMITS.perSession} for this session, ${Number(path.basename(daySlot)) + 1}/${SPAWN_LIMITS.perContainerDay} for this container today, child depth ${childDepth}`,
+      permissionDecisionReason: `wow-core: ${pcJob ? "PC job (not counted toward the per-session cap)" : `session start ${Number(path.basename(sessionSlot)) + 1}/${SPAWN_LIMITS.perSession} for this session`}, ${Number(path.basename(daySlot)) + 1}/${SPAWN_LIMITS.perContainerDay} for this container today, child depth ${childDepth}`,
       updatedInput } };
   } catch (error) {
     return denyResponse(`wow-core: the session-start cap could not check this call (${error?.message ?? error}), so it is refused (fail closed). Use a subagent, or ask the founder.`);
@@ -976,7 +1033,9 @@ export function leaseAccountGuard(command, env = process.env) {
 // consumer's copy in <checkout>/.claude/scripts, the wow-core checkout beside that checkout, which every master
 // session has as its second repository), lists a repository whose lease key (the name after the slash) has this
 // session as its FIRST entry in the account's lease period (`bus.mjs lease --authority` `masters`; ids compare after
-// the first underscore: the platform shows one session as session_<x> and cse_<x>). The hook does not care which
+// the first underscore: the platform shows one session as session_<x> and cse_<x>); OR this session is the period's
+// first wow-core entry (`wowCore`) and this copy is wow-core's own checkout (founder 2026-11-06: only a trusted session
+// can message the trusted masters). The hook does not care which
 // checkout's copy runs: every copy reads the same roster and lease. Everything else, including any failure to
 // establish that, DENIES. The founder still answers the card, and he is the boundary: anything on the account can post
 // a LEASE line, so a session that posts the period's first entry for a project by a route the Bash guard below
@@ -1047,13 +1106,20 @@ async function leasedAuthority({ cwd, env, run }) {
 }
 
 // { allow, reason }. `run` and `roster` are injectable for tests.
-export async function trustGate({ cwd, env = process.env, run = runChild, roster = committedPcRoster }) {
-  const refuse = (why) => ({ allow: false, reason: `wow-core: confirm_repository_trust is refused: ${why}. Only the lease-named master of a project the roster lists under "${PC_SECTION}" asks for the founder's trust card, once per account switch; a lane or any other session never does, because the card limits that session to trusted devices for good (COMMS_CORE §1). Carry on without it, or ask your master.` });
+// The period's wow-core session (the lease authority) may also ask, from wow-core's own checkout only (founder
+// 2026-11-06): once the masters are trusted, the platform accepts messages into them only from trusted sessions, so an
+// untrusted wow-core master could no longer steer them and the founder became the messenger.
+export async function trustGate({ cwd, env = process.env, run = runChild, roster = committedPcRoster, self = SELF }) {
+  const refuse = (why) => ({ allow: false, reason: `wow-core: confirm_repository_trust is refused: ${why}. Only the lease-named master of a project the roster lists under "${PC_SECTION}", or the period's wow-core master in wow-core's own checkout, asks for the founder's trust card, once per account switch; a lane or any other session never does, because the card limits that session to trusted devices for good (COMMS_CORE §1). Carry on without it, or ask your master.` });
   try {
+    const first = await leasedAuthority({ cwd, env, run });
+    if (first.ok && !first.authority.flipped && first.authority.wowCore && suffixOf(first.authority.wowCore) === first.mine && ownCheckoutRoot(self)) {
+      return { allow: true, reason: `wow-core: this session is the wow-core master of the account's lease period (wow-core:${first.authority.wowCore}, account ${first.label}), asking so it can still reach the trusted masters; the founder answers the card, from the desktop app or a browser on a trusted device` };
+    }
     let pcRepos;
     try { pcRepos = rosterPcRepos(roster()); } catch (error) { return refuse(`the roster could not be read from ${ROSTER_SOURCE} (${String(error?.message ?? error).split("\n")[0]})`); }
     if (!pcRepos.size) return refuse(`the roster on ${ORIGIN_MAIN} lists no repository under "${PC_SECTION}"`);
-    const who = await leasedAuthority({ cwd, env, run });
+    const who = first;
     if (!who.ok) return refuse(who.why);
     if (who.authority.flipped) return refuse("the account's lease period began within 24 hours of an earlier period of the same account (an A to B to A switch), so it names no master");
     const masters = who.authority.masters && typeof who.authority.masters === "object" ? who.authority.masters : {};
@@ -1509,10 +1575,14 @@ async function handoffLines(root, input) {
 // Codex sends its shell payload without a tool_name: a payload with no name and a string command is its Bash.
 const ROUTED_TOOL = (name, input) => name === "Bash" || ((name === undefined || name === null) && typeof input?.command === "string")
   || name === ADD_REPO_TOOL || isCreateSession(name) || isConfirmTrust(name);
-async function preToolUse(root, payload, cwd, workDir = cwd) {
+async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}) {
   // The settings route every tool here ("*") for the old-account fence; everything else below is per tool.
   const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd: workDir });
   if (fence.fenced) return `${JSON.stringify(denyResponse(fence.reason))}\n`;
+  if (typeof payload?.tool_name === "string" && payload.tool_name.startsWith("mcp__")) {
+    const entry = hardStopEntry(payload.tool_name, hardStopDeny(stops));
+    if (entry) return `${JSON.stringify(denyResponse(hardStopReason(payload.tool_name, entry)))}\n`;
+  }
   if (!ROUTED_TOOL(payload?.tool_name, payload?.tool_input)) return "";
   if (payload?.tool_name === ADD_REPO_TOOL) {
     const decision = busAttachDecision(payload.tool_input) ?? await codexDispatcherAttachDecision({ input: payload.tool_input, cwd: workDir });
@@ -1568,7 +1638,7 @@ export async function dispatch(mode, raw, tool, { viaParent = false, env = proce
   // turns all start in the parent still follows the checkout's settings (ownership limits that write to this checkout's file).
   const seeding = !viaParent && sameDir(found, own) && sameDir(env.CLAUDE_PROJECT_DIR, own);
   if (tool === "claude" && (mode === "pre-tool-use" || mode === "session-start") && (seeding || viaParent)) ensureParentHooks({ root: own, env, create: seeding });
-  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir);
+  if (mode === "pre-tool-use") return preToolUse(root, payload, cwd, workDir, { own, repoRoot, parentTurn: viaParent || fromParent });
   if (!root) return "";
   switch (mode) {
     case "post-tool-use":

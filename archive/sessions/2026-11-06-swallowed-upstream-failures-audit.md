@@ -1,3 +1,5 @@
+> Copied verbatim on 2026-11-06 from the orchestrator session's scratchpad so the promise audit can cite it by repository path. The wave-1 fix lane (`fix/swallowed-upstream-failures-wave1`) owns the remedy; this file is the finding, not the fix.
+
 # Audit: capabilities that bill a success when the upstream failed (2026-11-06)
 
 **Scope.** A read-only audit of `apps/api/src/capabilities/*.ts` at `16362762`. The orchestrator commissioned it after an external benchmark found `tech-stack-detect` returning `technologies: []` for a site it could not read.
