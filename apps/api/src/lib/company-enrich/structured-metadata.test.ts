@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
-import { extractStructuredCompanyMetadata } from "./structured-metadata.js";
+import { buildBoundedMetadataHtml, extractStructuredCompanyMetadata, METADATA_HTML_LIMIT } from "./structured-metadata.js";
 
 const PAGE = "https://example.com/";
 
@@ -70,6 +70,14 @@ describe("extractStructuredCompanyMetadata", () => {
     expect(extractStructuredCompanyMetadata(html, "https://shop.example.co.uk").email).toBe("hello@example.co.uk");
   });
 
+  it.each([
+    ["vercel.app", "https://acme.vercel.app", "ceo@evil.vercel.app"],
+    ["github.io", "https://acme.github.io", "ceo@evil.github.io"],
+  ])("rejects a sibling on the shared %s private suffix", (_suffix, page, email) => {
+    const html = `<script type="application/ld+json">${JSON.stringify({ "@type": "Organization", email })}</script>`;
+    expect(extractStructuredCompanyMetadata(html, page).email).toBeNull();
+  });
+
   it("returns the complete nullable shape for an empty page", () => {
     expect(extractStructuredCompanyMetadata("", PAGE)).toEqual({
       company_name: null,
@@ -106,7 +114,8 @@ describe("extractStructuredCompanyMetadata", () => {
       return new JSDOM(boundedHtml);
     });
     expect(metadata.company_name).toBe("Tail Co");
-    expect(parserInputLength).toBeLessThanOrEqual(6 * 1024 * 1024);
+    expect(parserInputLength).toBeGreaterThan(0);
+    expect(parserInputLength).toBeLessThanOrEqual(METADATA_HTML_LIMIT);
   });
 
   it("accepts organization variants, prefers the site-matching node, and normalizes address forms", () => {
@@ -119,5 +128,38 @@ describe("extractStructuredCompanyMetadata", () => {
     })}</script>`, PAGE);
     expect(metadata.company_name).toBe("Right");
     expect(metadata.address).toEqual({ street: "Main Street 1", city: null, region: null, postal_code: null, country: null });
+  });
+});
+
+describe("buildBoundedMetadataHtml", () => {
+  it("keeps at most eight bounded icon tags outside the head", () => {
+    const html = "<head></head><body>" + '<link rel="icon" href="/a">'.repeat(Math.ceil(4 * 1024 * 1024 / 27));
+    const bounded = buildBoundedMetadataHtml(html);
+    expect(bounded.length).toBeGreaterThan(0);
+    expect(bounded.length).toBeLessThanOrEqual(METADATA_HTML_LIMIT);
+    expect(bounded.match(/<link/gi)).toHaveLength(8);
+  });
+
+  it("drops a single icon tag over four kilobytes", () => {
+    const bounded = buildBoundedMetadataHtml(`<head></head><body><link rel="icon" href="${"a".repeat(16 * 1024 * 1024)}">`);
+    expect(bounded.length).toBeGreaterThan(0);
+    expect(bounded.length).toBeLessThanOrEqual(METADATA_HTML_LIMIT);
+    expect(bounded).not.toContain("<link");
+  });
+
+  it("limits a missing-close head to 128 KB", () => {
+    const html = "<head>" + '<meta name="x" content="y">'.repeat(Math.ceil(1024 * 1024 / 27));
+    const bounded = buildBoundedMetadataHtml(html);
+    expect(bounded.length).toBeGreaterThan(0);
+    expect(bounded.length).toBeLessThan(129 * 1024);
+  });
+
+  it("stops after the first unclosed script while bounding its content", () => {
+    const html = '<script type="application/ld+json">' + '<script '.repeat(Math.ceil(2 * 1024 * 1024 / 8));
+    const diagnostics = { scriptOpeningsVisited: 0 };
+    const bounded = buildBoundedMetadataHtml(html, diagnostics);
+    expect(bounded.length).toBeGreaterThan(0);
+    expect(bounded.length).toBeLessThanOrEqual(METADATA_HTML_LIMIT);
+    expect(diagnostics.scriptOpeningsVisited).toBe(1);
   });
 });

@@ -26,9 +26,12 @@ const TEXT_LIMIT = 2_000;
 const SPECIALTY_LIMIT = 50;
 const SPECIALTY_TEXT_LIMIT = 100;
 const SPECIALTIES_TOTAL_LIMIT = 2_000;
-const HEAD_LIMIT = 512 * 1024;
+const HEAD_LIMIT = 128 * 1024;
 const JSON_LD_LIMIT = 256 * 1024;
 const JSON_LD_COUNT_LIMIT = 20;
+const ICON_COUNT_LIMIT = 8;
+const ICON_TAG_LIMIT = 4 * 1024;
+export const METADATA_HTML_LIMIT = 1_500 * 1024;
 const ORGANIZATION_TYPES = new Set([
   "organization", "corporation", "localbusiness", "store",
   // Common direct and nested LocalBusiness descendants. Schema.org does not
@@ -75,8 +78,8 @@ function ownDomainEmail(value: unknown, pageUrl: string): string | null {
   if (!email || !/^[^\s@]+@[^\s@]+$/.test(email)) return null;
   const emailHost = email.split("@")[1];
   const pageHost = new URL(pageUrl).hostname.toLowerCase().replace(/^www\./, "");
-  const pageDomain = getDomain(pageHost);
-  const emailDomain = getDomain(emailHost);
+  const pageDomain = getDomain(pageHost, { allowPrivateDomains: true });
+  const emailDomain = getDomain(emailHost, { allowPrivateDomains: true });
   return pageDomain && emailDomain && pageDomain === emailDomain ? email : null;
 }
 
@@ -134,19 +137,21 @@ function list(value: unknown): string[] {
 }
 
 /** Selects the small, metadata-bearing portions that jsdom is allowed to parse. */
-export function buildBoundedMetadataHtml(html: string): string {
+export function buildBoundedMetadataHtml(html: string, diagnostics?: { scriptOpeningsVisited: number }): string {
   const lower = html.toLowerCase();
-  const pieces: string[] = [];
+  let head = "";
+  const jsonLd: string[] = [];
+  const icons: string[] = [];
   const headStart = lower.indexOf("<head");
   let headEnd = -1;
   if (headStart >= 0) {
     const headClose = lower.indexOf("</head>", headStart);
     headEnd = headClose >= 0 ? headClose + 7 : Math.min(html.length, headStart + HEAD_LIMIT);
-    pieces.push(html.slice(headStart, Math.min(headEnd, headStart + HEAD_LIMIT)));
+    head = html.slice(headStart, Math.min(headEnd, headStart + HEAD_LIMIT));
   } else {
     // HTML fragments are common in tests and malformed publisher responses;
     // treat their leading bytes as the implicit head without widening the cap.
-    pieces.push(html.slice(0, HEAD_LIMIT));
+    head = html.slice(0, HEAD_LIMIT);
   }
 
   let cursor = 0;
@@ -154,29 +159,53 @@ export function buildBoundedMetadataHtml(html: string): string {
   while (scriptCount < JSON_LD_COUNT_LIMIT) {
     const start = lower.indexOf("<script", cursor);
     if (start < 0) break;
+    if (diagnostics) diagnostics.scriptOpeningsVisited += 1;
     const openEnd = lower.indexOf(">", start);
     if (openEnd < 0) break;
     const close = lower.indexOf("</script>", openEnd + 1);
-    cursor = close < 0 ? openEnd + 1 : close + 9;
     const opening = lower.slice(start, openEnd + 1);
-    if (!opening.includes("application/ld+json")) continue;
-    const contentEnd = Math.min(close < 0 ? html.length : close, openEnd + 1 + JSON_LD_LIMIT);
-    pieces.push(`${html.slice(start, openEnd + 1)}${html.slice(openEnd + 1, contentEnd)}</script>`);
-    scriptCount += 1;
+    if (opening.includes("application/ld+json")) {
+      const contentEnd = Math.min(close < 0 ? html.length : close, openEnd + 1 + JSON_LD_LIMIT);
+      jsonLd.push(`${html.slice(start, openEnd + 1)}${html.slice(openEnd + 1, contentEnd)}</script>`);
+      scriptCount += 1;
+    }
+    // With no close, every later apparent opening is content of this script.
+    // Stopping here keeps the scan linear and matches browser parsing.
+    if (close < 0) break;
+    cursor = close + 9;
   }
 
   cursor = 0;
-  while (true) {
+  while (icons.length < ICON_COUNT_LIMIT) {
     const start = lower.indexOf("<link", cursor);
     if (start < 0) break;
     const end = lower.indexOf(">", start);
     if (end < 0) break;
     cursor = end + 1;
     if (headStart >= 0 && start >= headStart && start < headEnd) continue;
+    const tagLength = end + 1 - start;
+    if (tagLength > ICON_TAG_LIMIT) continue;
     const tag = lower.slice(start, end + 1);
-    if (tag.includes("icon")) pieces.push(html.slice(start, end + 1));
+    if (tag.includes("icon")) icons.push(html.slice(start, end + 1));
   }
-  return `<!doctype html><html>${pieces.join("\n")}</html>`;
+
+  const prefix = "<!doctype html><html>";
+  const suffix = "</html>";
+  const join = (pieces: string[]) => `${prefix}${pieces.filter(Boolean).join("\n")}${suffix}`;
+  // Head metadata and the (small, count-bounded) icon set are the most useful
+  // fallbacks. Spend the remaining parser budget on JSON-LD, trimming it first.
+  const fixed = [head, ...icons];
+  const keptJsonLd: string[] = [];
+  for (const block of jsonLd) {
+    if (join([...fixed, ...keptJsonLd, block]).length > METADATA_HTML_LIMIT) break;
+    keptJsonLd.push(block);
+  }
+  let bounded = join([...fixed, ...keptJsonLd]);
+  if (bounded.length > METADATA_HTML_LIMIT) {
+    const availableHead = Math.max(0, METADATA_HTML_LIMIT - join(icons).length - (head ? 1 : 0));
+    bounded = join([head.slice(0, availableHead), ...icons]);
+  }
+  return bounded.slice(0, METADATA_HTML_LIMIT);
 }
 
 /**
