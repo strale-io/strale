@@ -79,7 +79,7 @@ Full reference: [`packages/sdk-python/README.md`](packages/sdk-python/README.md)
 
 A subset of capabilities (email/IBAN/crypto-address validation, DNS lookup,
 JSON repair, URL-to-markdown, and more) work with no signup, no API key, and
-no wallet — only an IP-based daily rate limit. Read the current list from
+no wallet — only an IP-based monthly allowance. Read the current list from
 `GET /v1/platform/facts` (`free_tier_slugs`), not from a number in this
 file. Get a key and trial credits at [strale.io](https://strale.io?src=gh-readme&utm_source=gh-readme&utm_medium=listing&utm_campaign=distribution-d0-d1) when
 you need the rest of the catalog.

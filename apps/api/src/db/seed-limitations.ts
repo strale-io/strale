@@ -1079,8 +1079,8 @@ export const LIMITATIONS: LimitationDef[] = [
 
   // ── dependency-audit ──
   { capabilitySlug: "dependency-audit", category: "accuracy", severity: "info",
-    title: "AI audit covers declared dependencies only — transitive vulnerability chains and runtime dependencies are not detected",
-    limitationText: "AI-based audit of declared dependencies — cannot detect transitive vulnerability chains or runtime-only dependencies",
+    title: "Transitive and runtime dependencies are not checked",
+    limitationText: "Checks only the dependencies declared in the file, against the npm or PyPI registry and OSV.dev; it cannot detect transitive vulnerability chains or runtime-only dependencies",
     workaround: "Supplement with npm audit or pip-audit for vulnerability scanning that includes transitive dependencies" },
 
   // ── dockerfile-generate ──

@@ -133,6 +133,7 @@ import { runMigration0140_deactivatePriceCompare } from "../startup-migrations/b
 import { runMigration0141_dropCapabilityHealthCompatView } from "../startup-migrations/blocks/0141-drop-capability-health-compat-view.js";
 import { runMigration0142_canadianPaidCallSuites } from "../startup-migrations/blocks/0142-canadian-paid-call-suites.js";
 import { runMigration0143_publishDomainReputationText } from "../startup-migrations/blocks/0143-publish-domain-reputation-text.js";
+import { runMigration0144_correctAiLabelAndDependencyAuditText } from "../startup-migrations/blocks/0144-correct-ai-label-and-dependency-audit-text.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -226,6 +227,7 @@ export * from "../startup-migrations/blocks/0140-deactivate-price-compare.js";
 export * from "../startup-migrations/blocks/0141-drop-capability-health-compat-view.js";
 export * from "../startup-migrations/blocks/0142-canadian-paid-call-suites.js";
 export * from "../startup-migrations/blocks/0143-publish-domain-reputation-text.js";
+export * from "../startup-migrations/blocks/0144-correct-ai-label-and-dependency-audit-text.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -321,6 +323,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0141_dropCapabilityHealthCompatView,
   runMigration0142_canadianPaidCallSuites,
   runMigration0143_publishDomainReputationText,
+  runMigration0144_correctAiLabelAndDependencyAuditText,
 ];
 
 /**
