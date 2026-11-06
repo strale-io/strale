@@ -1086,11 +1086,21 @@ tracks:
       The header shape is now measured: archive/receipts/2026-11-05-audit-xff-shape-production.json
       (X-Forwarded-For is exactly "<client>, <railway-edge>", the client-supplied header is
       replaced, client = left-most = second from right; the temporary measurement from
-      #915 is removed). Next: batch 4 again, client = entries[len-2] (one trusted
-      appended hop) with the left-most fallback when there is one entry, tests from the
-      receipt's shapes, and the identity probe run BEFORE merge from a stable-egress
-      machine. Each batch: plant the failure first, then the guard, then the
-      discriminating test.
+      #915 is removed). Batch 4 redo is open as a draft PR on
+      claude/quirky-davinci-gha13h: lib/client-ip.ts takes the public entry one hop
+      left of the edge (one public entry alone is the client), tests pin the
+      receipt's shape and fail against both #910's right-most rule and the old
+      left-most rule, and verify-ip-probe.mjs reports rotating egress as
+      inconclusive (exit 2) instead of a false mismatch; an internal entry left of a
+      lone public one gives null (never the edge), and any header whose public-entry
+      count is not 2 logs a throttled, address-free xff-shape-unexpected warning.
+      The pre-merge probe passed from the PC on 2026-11-06 (exit 0, fixed egress,
+      identity = own IP, no spoofed value reached identity; #920 comment 6681027869),
+      and #917 is merged. Next: after #920 deploys, re-run the probe from the PC
+      (PC-REQUEST with brief docs/lanes/pc/wp12-identity-probe-brief.md at the merge
+      commit) and check production for per-client ipHash; that run is the real gate,
+      revert on exit 1. Then batch 5. Each batch: plant the failure first, then the
+      guard, then the discriminating test.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code

@@ -32,6 +32,7 @@ import { build402Response, extractPaymentHeader, hashPaymentHeader, isX402Config
 import type { AppEnv } from "../types.js";
 import { executeAsync, executeFreeTier, executeFreeTierAuthenticated, executeSync } from "../lib/do/dispatch.js";
 import { replaySyncRequest } from "../lib/do/idempotency.js";
+import { clientIpOrNull } from "../lib/client-ip.js";
 
 // F-0-009 Stage 2: integrity hashing moved to jobs/integrity-hash-retry.ts.
 
@@ -145,7 +146,7 @@ doRoute.post(
   // tagged directory-submission URLs.
   c.set("clientMeta", extractClientMeta(c.req, {
     src: c.req.query("src"),
-    ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+    ip: (clientIpOrNull(c) ?? undefined),
   }) ?? null);
   const requestContext = {
     referer: c.req.header("referer") ?? c.req.header("referrer") ?? null,
@@ -153,10 +154,7 @@ doRoute.post(
     userAgent,
     // Hash IP for aggregate pattern analysis (never store raw IPs)
     ipHash: (() => {
-      const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
-        ?? c.req.header("cf-connecting-ip")
-        ?? c.req.header("x-real-ip")
-        ?? null;
+      const ip = clientIpOrNull(c);
       return ip ? createHash("sha256").update(ip).digest("hex").slice(0, 16) : null;
     })(),
     acceptLanguage: c.req.header("accept-language")?.split(",")[0]?.trim() ?? null,

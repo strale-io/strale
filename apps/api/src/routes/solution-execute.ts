@@ -46,6 +46,7 @@ import * as walletService from "../lib/wallet-service.js";
 import * as reservations from "../lib/wallet-reservations.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import type { AppEnv } from "../types.js";
+import { clientIpOrNull } from "../lib/client-ip.js";
 
 export const solutionExecuteRoute = new Hono<AppEnv>();
 
@@ -217,7 +218,7 @@ solutionExecuteRoute.post(
             idempotencyFingerprint,
             clientMeta: extractClientMeta(c.req, {
               src: c.req.query("src"),
-              ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+              ip: (clientIpOrNull(c) ?? undefined),
             }) ?? null,
             input: inputForPersistence(sol.slug, inputs as Record<string, unknown>),
             priceCents: sol.priceCents,
