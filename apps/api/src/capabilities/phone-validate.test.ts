@@ -29,6 +29,16 @@ describe("phone-validate reserved fictional ranges", () => {
     },
   );
 
+  it.each(["+15555550150", "+10555550150"])(
+    "does not give the fictional reason to %s, which is invalid for another cause",
+    async (phoneNumber) => {
+      const result = await validatePhone({ phone_number: phoneNumber });
+
+      expect(result.output.valid).toBe(false);
+      expect(result.output).not.toHaveProperty("reason");
+    },
+  );
+
   it("leaves a non-NANP number unchanged", async () => {
     const result = await validatePhone({ phone_number: "+46701234567" });
 

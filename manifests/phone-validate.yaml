@@ -79,8 +79,11 @@ output_field_reliability:
   is_possible: guaranteed
   input: guaranteed
 limitations:
-  - title: Reserved fictional ranges are not valid
-    text: Reserved fictional number ranges are reported as not valid.
+  - title: North American fictional numbers are not valid
+    text: >-
+      North American numbers in the reserved fictional range 555-0100 to 555-0199 (any area code) are
+      reported as not valid, with reason reserved_fictional_range. Fictional ranges in other countries
+      are not checked separately.
     category: accuracy
     severity: info
   - title: A valid result does not prove the number is in service

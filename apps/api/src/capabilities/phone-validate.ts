@@ -55,13 +55,18 @@ registerCapability("phone-validate", async (input: CapabilityInput) => {
   const phoneType = phone.getType() ?? "unknown";
   const country = phone.country ?? null;
   const e164 = phone.format("E.164");
-  const reservedRange = RESERVED_NUMBER_RANGES.find(
-    (range) => phone.countryCallingCode === range.countryCallingCode && range.pattern.test(e164),
-  );
+  const planValid = phone.isValid();
+  // Only a number that is otherwise valid gets the fictional-range reason, so
+  // an invalid area code is never reported as "fictional".
+  const reservedRange = planValid
+    ? RESERVED_NUMBER_RANGES.find(
+        (range) => phone.countryCallingCode === range.countryCallingCode && range.pattern.test(e164),
+      )
+    : undefined;
 
   return {
     output: {
-      valid: reservedRange ? false : phone.isValid(),
+      valid: reservedRange ? false : planValid,
       input: phoneNumber,
       e164,
       national_format: phone.formatNational(),
