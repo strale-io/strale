@@ -28,6 +28,33 @@ export interface CountryEntry {
 // ISO 3166-1 entries. The eu_member / schengen / eurozone flags are stored per
 // entry below rather than derived from membership sets — three such sets used
 // to sit here unreferenced, and were dropped in the extraction.
+//
+// ─── Source and date (membership flags and currencies) ──────────────────────
+//
+// Checked on 2026-11-06:
+// - eu_member: 27 member states, per european-union.europa.eu "EU countries".
+// - schengen: 29 states (25 EU members plus IS, LI, NO, CH; not CY or IE), per
+//   home-affairs.ec.europa.eu "Schengen area". Bulgaria and Romania are full
+//   members since 1 January 2025 (Council decision of 12 December 2024 lifting
+//   internal land border checks; Commission news item of 3 January 2025).
+// - eurozone: 21 states, per ecb.europa.eu "Introduction to the euro".
+//   Bulgaria adopted the euro on 1 January 2026 (Council decision of
+//   8 July 2025, conversion rate 1.95583 BGN per EUR; ECB press release
+//   8 July 2025). Andorra, Monaco, San Marino, Vatican City, Montenegro and
+//   Kosovo use the euro but are not euro-area members, so their flag is false.
+// - Zimbabwe's currency code is ZWG (Zimbabwe Gold), which replaced ZWL on
+//   25 June 2024 (ISO 4217 Amendment 177; Reserve Bank of Zimbabwe statement).
+//
+// The French outermost regions in this table (RE, MQ, GP, GF, YT) carry
+// eu_member: false and eurozone: false although they are part of the EU and
+// use the euro; that is a modelling choice of this table, not a date issue.
+//
+// Unverified as of 2026-11-06: every other field (names, codes, regions,
+// capitals, other currencies, calling codes, TLDs, languages, UN membership).
+// Re-check on each ISO 3166/4217 amendment and on 1 January (euro and
+// Schengen accessions take effect then), and move this date.
+export const COUNTRIES_AS_OF = "2026-11-06";
+
 export const COUNTRIES: CountryEntry[] = [
   { name: "Afghanistan", alpha_2: "AF", alpha_3: "AFG", numeric: "004", region: "Asia", subregion: "Southern Asia", capital: "Kabul", currency_code: "AFN", currency_name: "Afghan Afghani", calling_code: "+93", tld: ".af", languages: ["Pashto", "Dari"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Albania", alpha_2: "AL", alpha_3: "ALB", numeric: "008", region: "Europe", subregion: "Southern Europe", capital: "Tirana", currency_code: "ALL", currency_name: "Albanian Lek", calling_code: "+355", tld: ".al", languages: ["Albanian"], eu_member: false, schengen: false, eurozone: false, un_member: true },
@@ -59,7 +86,7 @@ export const COUNTRIES: CountryEntry[] = [
   { name: "Botswana", alpha_2: "BW", alpha_3: "BWA", numeric: "072", region: "Africa", subregion: "Southern Africa", capital: "Gaborone", currency_code: "BWP", currency_name: "Botswana Pula", calling_code: "+267", tld: ".bw", languages: ["English", "Tswana"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Brazil", alpha_2: "BR", alpha_3: "BRA", numeric: "076", region: "Americas", subregion: "South America", capital: "Brasília", currency_code: "BRL", currency_name: "Brazilian Real", calling_code: "+55", tld: ".br", languages: ["Portuguese"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Brunei", alpha_2: "BN", alpha_3: "BRN", numeric: "096", region: "Asia", subregion: "South-Eastern Asia", capital: "Bandar Seri Begawan", currency_code: "BND", currency_name: "Brunei Dollar", calling_code: "+673", tld: ".bn", languages: ["Malay"], eu_member: false, schengen: false, eurozone: false, un_member: true },
-  { name: "Bulgaria", alpha_2: "BG", alpha_3: "BGR", numeric: "100", region: "Europe", subregion: "Eastern Europe", capital: "Sofia", currency_code: "BGN", currency_name: "Bulgarian Lev", calling_code: "+359", tld: ".bg", languages: ["Bulgarian"], eu_member: true, schengen: false, eurozone: false, un_member: true },
+  { name: "Bulgaria", alpha_2: "BG", alpha_3: "BGR", numeric: "100", region: "Europe", subregion: "Eastern Europe", capital: "Sofia", currency_code: "EUR", currency_name: "Euro", calling_code: "+359", tld: ".bg", languages: ["Bulgarian"], eu_member: true, schengen: true, eurozone: true, un_member: true },
   { name: "Burkina Faso", alpha_2: "BF", alpha_3: "BFA", numeric: "854", region: "Africa", subregion: "Western Africa", capital: "Ouagadougou", currency_code: "XOF", currency_name: "CFA Franc BCEAO", calling_code: "+226", tld: ".bf", languages: ["French"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Burundi", alpha_2: "BI", alpha_3: "BDI", numeric: "108", region: "Africa", subregion: "Eastern Africa", capital: "Gitega", currency_code: "BIF", currency_name: "Burundian Franc", calling_code: "+257", tld: ".bi", languages: ["Kirundi", "French"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Cabo Verde", alpha_2: "CV", alpha_3: "CPV", numeric: "132", region: "Africa", subregion: "Western Africa", capital: "Praia", currency_code: "CVE", currency_name: "Cape Verdean Escudo", calling_code: "+238", tld: ".cv", languages: ["Portuguese"], eu_member: false, schengen: false, eurozone: false, un_member: true },
@@ -171,7 +198,7 @@ export const COUNTRIES: CountryEntry[] = [
   { name: "Poland", alpha_2: "PL", alpha_3: "POL", numeric: "616", region: "Europe", subregion: "Eastern Europe", capital: "Warsaw", currency_code: "PLN", currency_name: "Polish Złoty", calling_code: "+48", tld: ".pl", languages: ["Polish"], eu_member: true, schengen: true, eurozone: false, un_member: true },
   { name: "Portugal", alpha_2: "PT", alpha_3: "PRT", numeric: "620", region: "Europe", subregion: "Southern Europe", capital: "Lisbon", currency_code: "EUR", currency_name: "Euro", calling_code: "+351", tld: ".pt", languages: ["Portuguese"], eu_member: true, schengen: true, eurozone: true, un_member: true },
   { name: "Qatar", alpha_2: "QA", alpha_3: "QAT", numeric: "634", region: "Asia", subregion: "Western Asia", capital: "Doha", currency_code: "QAR", currency_name: "Qatari Riyal", calling_code: "+974", tld: ".qa", languages: ["Arabic"], eu_member: false, schengen: false, eurozone: false, un_member: true },
-  { name: "Romania", alpha_2: "RO", alpha_3: "ROU", numeric: "642", region: "Europe", subregion: "Eastern Europe", capital: "Bucharest", currency_code: "RON", currency_name: "Romanian Leu", calling_code: "+40", tld: ".ro", languages: ["Romanian"], eu_member: true, schengen: false, eurozone: false, un_member: true },
+  { name: "Romania", alpha_2: "RO", alpha_3: "ROU", numeric: "642", region: "Europe", subregion: "Eastern Europe", capital: "Bucharest", currency_code: "RON", currency_name: "Romanian Leu", calling_code: "+40", tld: ".ro", languages: ["Romanian"], eu_member: true, schengen: true, eurozone: false, un_member: true },
   { name: "Russia", alpha_2: "RU", alpha_3: "RUS", numeric: "643", region: "Europe", subregion: "Eastern Europe", capital: "Moscow", currency_code: "RUB", currency_name: "Russian Ruble", calling_code: "+7", tld: ".ru", languages: ["Russian"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Rwanda", alpha_2: "RW", alpha_3: "RWA", numeric: "646", region: "Africa", subregion: "Eastern Africa", capital: "Kigali", currency_code: "RWF", currency_name: "Rwandan Franc", calling_code: "+250", tld: ".rw", languages: ["Kinyarwanda", "French", "English"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Saudi Arabia", alpha_2: "SA", alpha_3: "SAU", numeric: "682", region: "Asia", subregion: "Western Asia", capital: "Riyadh", currency_code: "SAR", currency_name: "Saudi Riyal", calling_code: "+966", tld: ".sa", languages: ["Arabic"], eu_member: false, schengen: false, eurozone: false, un_member: true },
@@ -213,7 +240,7 @@ export const COUNTRIES: CountryEntry[] = [
   { name: "Vietnam", alpha_2: "VN", alpha_3: "VNM", numeric: "704", region: "Asia", subregion: "South-Eastern Asia", capital: "Hanoi", currency_code: "VND", currency_name: "Vietnamese Đồng", calling_code: "+84", tld: ".vn", languages: ["Vietnamese"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Yemen", alpha_2: "YE", alpha_3: "YEM", numeric: "887", region: "Asia", subregion: "Western Asia", capital: "Sana'a", currency_code: "YER", currency_name: "Yemeni Rial", calling_code: "+967", tld: ".ye", languages: ["Arabic"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   { name: "Zambia", alpha_2: "ZM", alpha_3: "ZMB", numeric: "894", region: "Africa", subregion: "Eastern Africa", capital: "Lusaka", currency_code: "ZMW", currency_name: "Zambian Kwacha", calling_code: "+260", tld: ".zm", languages: ["English"], eu_member: false, schengen: false, eurozone: false, un_member: true },
-  { name: "Zimbabwe", alpha_2: "ZW", alpha_3: "ZWE", numeric: "716", region: "Africa", subregion: "Eastern Africa", capital: "Harare", currency_code: "ZWL", currency_name: "Zimbabwean Dollar", calling_code: "+263", tld: ".zw", languages: ["English", "Shona", "Ndebele"], eu_member: false, schengen: false, eurozone: false, un_member: true },
+  { name: "Zimbabwe", alpha_2: "ZW", alpha_3: "ZWE", numeric: "716", region: "Africa", subregion: "Eastern Africa", capital: "Harare", currency_code: "ZWG", currency_name: "Zimbabwe Gold", calling_code: "+263", tld: ".zw", languages: ["English", "Shona", "Ndebele"], eu_member: false, schengen: false, eurozone: false, un_member: true },
   // Additional territories
   { name: "Puerto Rico", alpha_2: "PR", alpha_3: "PRI", numeric: "630", region: "Americas", subregion: "Caribbean", capital: "San Juan", currency_code: "USD", currency_name: "US Dollar", calling_code: "+1-787", tld: ".pr", languages: ["Spanish", "English"], eu_member: false, schengen: false, eurozone: false, un_member: false },
   { name: "Guam", alpha_2: "GU", alpha_3: "GUM", numeric: "316", region: "Oceania", subregion: "Micronesia", capital: "Hagåtña", currency_code: "USD", currency_name: "US Dollar", calling_code: "+1-671", tld: ".gu", languages: ["English", "Chamorro"], eu_member: false, schengen: false, eurozone: false, un_member: false },

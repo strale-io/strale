@@ -29,12 +29,12 @@ output_schema:
     reduced_rates:
       - rate: 6
         categories:
+          - food
           - books
           - cultural_events
           - transport
       - rate: 12
         categories:
-          - food
           - restaurant_food
           - accommodation
     standard_rate: 25
