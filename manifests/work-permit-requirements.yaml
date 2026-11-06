@@ -102,7 +102,7 @@ output_field_reliability:
 limitations:
   - title: >-
       Immigration guidance needs official confirmation
-    text: AI-generated guidance on immigration rules — requirements change frequently and vary by individual circumstances
+    text: Rule-based guidance from a reference table of immigration rules — requirements change frequently and vary by individual circumstances
     category: accuracy
     severity: warning
     workaround: >-

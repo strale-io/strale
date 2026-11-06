@@ -60,6 +60,8 @@ describe("work-permit-requirements reference data (as of 2026-11-06)", () => {
     const ch = await check("CH", "GB", "visit");
     expect(ch.visa_required).toBe(false);
     expect(ch.notes.join(" ")).toContain("Electronic Travel Authorisation");
+    // Saudi Arabia is not on the UK visa-national list (Appendix Visitor).
+    expect((await check("SA", "GB", "visit")).visa_required).toBe(false);
   });
 
   it("US visits follow the DHS Visa Waiver Program list", async () => {

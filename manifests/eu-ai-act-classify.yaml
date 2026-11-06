@@ -88,7 +88,7 @@ limitations:
     text: Based on AI Act text as of latest published version — implementing regulations may change interpretation
     category: freshness
     severity: info
-    workaround: Monitor the EU AI Office website for delegated acts and compare against the version_date field in the response
+    workaround: Monitor the EU AI Office website for delegated acts and amendments to Regulation (EU) 2024/1689
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

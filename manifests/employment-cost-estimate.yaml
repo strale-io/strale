@@ -110,7 +110,7 @@ output_field_reliability:
 limitations:
   - title: Actual employment costs can differ from estimates
     text: >-
-      AI-generated estimates based on general knowledge — actual costs vary by industry, company size, and specific
+      Rule-based estimates from a reference table of employer contribution rates — actual costs vary by industry, company size, and specific
       benefits packages
     category: accuracy
     severity: info

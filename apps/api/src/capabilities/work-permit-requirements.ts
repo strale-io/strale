@@ -43,7 +43,7 @@ export const UK_SKILLED_WORKER_NOTE =
 export const DE_BLUE_CARD_NOTE =
   "Germany: EU Blue Card available for qualified professionals (min. salary EUR 50,700 / EUR 45,934.20 for shortage occupations in 2026).";
 export const SE_SALARY_NOTE =
-  "Sweden: Work permit requires a job offer with a salary of at least 90% of the median salary (SEK 34,470 a month from 16 June 2026) and terms at least on par with Swedish collective agreements or practice in the occupation.";
+  "Sweden: Work permit generally requires a job offer with a salary of at least 90% of the median salary (SEK 34,470 a month from 16 June 2026), with lower thresholds for some listed occupations and transitional extensions, and terms at least on par with Swedish collective agreements or practice in the occupation.";
 export const UK_ETA_NOTE =
   "An Electronic Travel Authorisation (ETA) is usually required to visit the UK without a visa.";
 
@@ -70,7 +70,7 @@ const SCHENGEN_WAIVER = new Set([
 // UK visit: nationalities in SCHENGEN_WAIVER that are on the UK visa national
 // list, and Switzerland, which is not (Appendix Visitor: Visa national list).
 const UK_VISA_NATIONALS_IN_WAIVER = new Set(["CO", "UA"]);
-const UK_NON_VISA_EXTRA = new Set(["CH"]);
+const UK_NON_VISA_EXTRA = new Set(["CH", "SA"]); // not on the UK visa-national list (Immigration Rules, Appendix Visitor: visa national list)
 
 // US Visa Waiver Program designated countries (dhs.gov, 42 countries).
 export const US_VWP: ReadonlySet<string> = new Set([
@@ -236,7 +236,6 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
     freeMovement = true;
     summary = `Swiss citizens have free movement rights in the EU/EEA under the bilateral agreement. Registration with local authorities required.`;
   }
-  // EU citizen → UK (post-Brexit)
   // Ireland <-> UK: Common Travel Area (no permission needed to live or work)
   else if ((nationality === "IE" && isDestUK) || (isNatUK && destination === "IE")) {
     visaRequired = false;
@@ -244,6 +243,7 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
     freeMovement = true;
     summary = `Under the Common Travel Area, ${natName} citizens can live and work in ${destName} without a visa or permission.`;
   }
+  // EU citizen → UK (post-Brexit)
   else if (isNatEU && isDestUK) {
     if (purpose === "visit") {
       visaRequired = false;
