@@ -38,7 +38,7 @@ describe("employment-cost-estimate employer rates (as of 2026-11-06)", () => {
     ["ES", 30.65],
     ["PL", 20.48],
     ["PT", 23.75],
-  ])("%s employer social rate is %s%%", async (cc, rate) => {
+  ])("%s employer social rate is %s percent", async (cc, rate) => {
     expect((await estimate(cc)).employer_contributions.social_security_percent).toBe(rate);
   });
 
