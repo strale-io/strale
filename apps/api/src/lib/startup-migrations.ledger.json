@@ -1151,6 +1151,16 @@
         "capability_limitations.updated_at"
       ],
       "sha256": "92a1a389848161aaaa6cccda6396129aa8c0ee184105f6a9010d98df42a3fcf6"
+    },
+    {
+      "id": "M088",
+      "function": "runMigration0145_vaspRoutingLatency",
+      "title": "Vasp Routing Latency",
+      "added": "2026-11-06",
+      "columns_written": [
+        "capabilities.avg_latency_ms"
+      ],
+      "sha256": "bfc712c7b8745f0193fd2b6b58bf7f0d1a46c918c2a705c7cef695b817ba9caa"
     }
   ],
   "known_overlaps": [

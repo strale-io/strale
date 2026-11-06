@@ -113,4 +113,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0142_canadianPaidCallSuites: { policy: "once", reason: "two guarded UPDATEs of named test_suites rows; a re-run must not undo a person re-parking or re-activating them" },
   runMigration0143_publishDomainReputationText: { policy: "once", reason: "guarded UPDATEs of the domain-reputation and domain-trust rows plus a diff of one capability's limitations; a re-run must not undo a later edit to that text" },
   runMigration0144_correctAiLabelAndDependencyAuditText: { policy: "once", reason: "two UPDATEs guarded on the old value (one capability tag, one limitation text); a re-run must not undo a later edit" },
+  runMigration0145_vaspRoutingLatency: { policy: "once", reason: "fills a NULL avg_latency_ms on two named rows; a later measured value must never be overwritten" },
 };

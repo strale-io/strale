@@ -1518,6 +1518,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0142_canadianPaidCallSuites",
       "runMigration0143_publishDomainReputationText",
       "runMigration0144_correctAiLabelAndDependencyAuditText",
+      "runMigration0145_vaspRoutingLatency",
     ]);
   });
 });
@@ -2457,7 +2458,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(144);
+    expect(Math.max(...numbers)).toBe(145);
   });
 });
 
