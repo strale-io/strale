@@ -23,8 +23,16 @@ The `2024-12` folder is the stable one, not a month guess. Last-Modified was 202
 
 ## Evidence
 
-- Offline tests: `apps/api/src/capabilities/vasp-register.test.ts` (35, all fail on the old module) with fixtures trimmed from the live files under `apps/api/src/capabilities/__fixtures__/vasp/`; `compliance.upstream-failures.test.ts` updated to ESMA's real layout.
+- Offline tests: `apps/api/src/capabilities/vasp-register.test.ts` (38; 32 of the first 35 fail on the old module, and 3 of the 4 added after review fail on the pre-review commit b69cc51b) with fixtures trimmed from the live files under `apps/api/src/capabilities/__fixtures__/vasp/`; `compliance.upstream-failures.test.ts` updated to ESMA's real layout.
 - Live run of both executors against the real source: `archive/receipts/2026-11-06-check-esma-casp-source-live.json` (Coinbase Luxembourg and Bitpanda by LEI authorised; Stratos Europe withdrawn 24/04/2026 reported listed but not authorised; an unlisted name; Bank Bit on the non-compliant list; Google not).
 - `validate-capability.ts` needs a database and was not run; the manifests are covered by the manifest tests.
 
 Next authorised action: review and merge this branch after the wave-1 PR (#939) lands, then re-run the live check and the onboarding backfill for the two manifests | Owner: Strale orchestrator | Blocker: wave 1 (#939) merge
+
+## After the independent review (PASS, two medium findings)
+
+- Name matching is whole-word in both directions. A plain substring test let "Residue Capital Ltd" match the commercial name "DUE" and "Gateway Frauds Inc" match "Gate", each answering `authorized: true`. The non-compliant search keeps its looser forward match, because there a false hit only produces a warning to check.
+- A record whose end-date cell is not a date gets its own note ("does not hold a readable date"), not the withdrawal-date note.
+- A response that a redirect took off `www.esma.europa.eu` is refused, and the page-link check also refuses a non-default port and userinfo.
+- A website match against a bare registry suffix such as `com.mt` or `co.uk` no longer counts as the same site.
+- Not changed: a website match still outranks the name (by design), and the file's age still prefers Last-Modified over the newest record date.

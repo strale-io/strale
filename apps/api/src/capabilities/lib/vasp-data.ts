@@ -275,6 +275,16 @@ function isHtml(text: string): boolean {
  * path no longer serves the file (404, 410, an HTML page instead of CSV), the
  * only ones that justify reading ESMA's page for a new link.
  */
+/** https on ESMA's own host and default port; nothing else is fetched or followed. */
+function isEsmaUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" && url.hostname === "www.esma.europa.eu" && url.port === "" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchText(url: string, accept: string): Promise<FileFetch> {
   const name = shortName(url);
   let resp: Response;
@@ -289,6 +299,11 @@ async function fetchText(url: string, accept: string): Promise<FileFetch> {
       failure: `${name}: ${err instanceof Error && err.name === "TimeoutError" ? "timeout" : "network error"}`,
       moved: false,
     };
+  }
+  // fetch follows redirects; the address it ended on must still be ESMA's.
+  if (resp.url && !isEsmaUrl(resp.url)) {
+    await discardBody(resp, "vasp-data: redirected off ESMA");
+    return { ok: false, failure: `${name}: redirected off the ESMA site`, moved: false };
   }
   if (!resp.ok) {
     await discardBody(resp, "vasp-data: non-2xx");
@@ -327,7 +342,7 @@ async function discoverFileUrl(file: string, failures: string[]): Promise<string
   }
   try {
     const url = new URL(href, ESMA_MICA_PAGE_URL);
-    if (url.protocol !== "https:" || url.hostname !== "www.esma.europa.eu" || !url.pathname.startsWith("/sites/default/files/")) {
+    if (!isEsmaUrl(url.href) || !url.pathname.startsWith("/sites/default/files/")) {
       failures.push(`MiCA page: link to ${file} leaves ESMA's file store`);
       return null;
     }
@@ -534,6 +549,11 @@ export function getNonCompliantRegister(): Promise<RegisterSnapshot<NonCompliant
  * An end-date cell that is not a date (the file has one such row) cannot be
  * read as "no withdrawal", so it counts as not in force.
  */
+/** True when the record's end-date cell holds something that is not a date. */
+export function hasUnreadableEndDate(record: CASPRecord): boolean {
+  return Boolean(record.authorizationEndDate) && parseRegisterDate(record.authorizationEndDate) === null;
+}
+
 export function isAuthorisationActive(record: CASPRecord, now: Date = new Date()): boolean {
   if (!record.authorizationEndDate) return true;
   const end = parseRegisterDate(record.authorizationEndDate);
@@ -557,8 +577,21 @@ function domainsOf(url: string): string[] {
     .filter((d) => d.includes("."));
 }
 
+/** Labels that sit under a country code as a registry suffix ("com.mt", "co.uk"). */
+const REGISTRY_SECOND_LEVEL = new Set(["com", "co", "org", "net", "gov", "ac", "edu", "ltd", "plc"]);
+
+/** A parent domain that names a registrant, not a bare registry suffix such as "com.mt". */
+function isRegistrableParent(domain: string): boolean {
+  const labels = domain.split(".");
+  if (labels.length < 2) return false;
+  return !(labels.length === 2 && REGISTRY_SECOND_LEVEL.has(labels[0]!));
+}
+
 function sameSite(a: string, b: string): boolean {
-  return a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+  if (a === b) return true;
+  if (a.endsWith(`.${b}`)) return isRegistrableParent(b);
+  if (b.endsWith(`.${a}`)) return isRegistrableParent(a);
+  return false;
 }
 
 function websiteMatches(recordWebsite: string, wanted: string): boolean {
@@ -568,13 +601,31 @@ function websiteMatches(recordWebsite: string, wanted: string): boolean {
   return recordDomains.some((r) => wantedDomains.some((w) => sameSite(r, w)));
 }
 
+function words(text: string): string[] {
+  return text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
+/** True when `needle`'s words appear, in order and adjacent, among `haystack`'s words. */
+function containsWords(haystack: string[], needle: string[]): boolean {
+  if (needle.length === 0 || needle.length > haystack.length) return false;
+  for (let i = 0; i + needle.length <= haystack.length; i++) {
+    if (needle.every((w, j) => haystack[i + j] === w)) return true;
+  }
+  return false;
+}
+
+/**
+ * Whole-word matching in both directions: "Coinbase" finds "Coinbase Europe
+ * Limited", and "Coinbase Global Inc" finds the commercial name "Coinbase".
+ * A plain substring test let "Residue Capital Ltd" match "DUE" and "Gateway
+ * Frauds Inc" match "Gate", and a match here can answer `authorized: true`.
+ */
 function nameMatches(searchLower: string, ...names: string[]): boolean {
+  const query = words(searchLower);
+  if (query.length === 0) return false;
   return names.some((raw) => {
-    const name = raw.toLowerCase();
-    if (!name) return false;
-    // The reverse direction ("Coinbase Global Inc" finds "Coinbase") needs a
-    // name long enough to mean something; an empty one would match everything.
-    return name.includes(searchLower) || (name.length >= 3 && searchLower.includes(name));
+    const name = words(raw);
+    return containsWords(name, query) || containsWords(query, name);
   });
 }
 

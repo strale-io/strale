@@ -232,6 +232,26 @@ describe("vasp-verify against the recorded register", () => {
     const exec = await verify();
     const { output } = await exec({ entity_name: "Payhound" });
     expect(output).toMatchObject({ match_found: true, authorized: false });
+    // The cell holds text, not a withdrawal date, and the note must not claim one.
+    const note = (output as { note: string }).note;
+    expect(note).toMatch(/does not hold a readable date/);
+    expect(note).not.toMatch(/withdrawal date/);
+  });
+
+  it("matches names by whole words in both directions", async () => {
+    const exec = await verify();
+    const longer = await exec({ entity_name: "Coinbase Global Inc" });
+    expect(longer.output).toMatchObject({ match_found: true, authorized: true });
+    const shorter = await exec({ entity_name: "coinbase" });
+    expect(shorter.output).toMatchObject({ match_found: true, authorized: true });
+  });
+
+  it("a name that only contains a listed name inside a word is not that entity", async () => {
+    const exec = await verify();
+    for (const entity_name of ["Bitstampede Trading Ltd", "Superbitpanda Holdings", "Coinbaseline Ltd"]) {
+      const { output } = await exec({ entity_name });
+      expect(output, entity_name).toMatchObject({ match_found: false, authorized: false });
+    }
   });
 
   it("an in-force row is not crowded out by a withdrawn one", async () => {
@@ -307,6 +327,17 @@ describe("when ESMA moves or loses the files", () => {
     const err = await expectUnavailable(exec({ entity_name: "Coinbase" }));
     expect(err.message).toMatch(/leaves ESMA's file store/);
     expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([CASP_URL, PAGE_URL]);
+  });
+
+  it("refuses a file that a redirect took off the ESMA site", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      const resp = answer(url);
+      if (url === CASP_URL) Object.defineProperty(resp, "url", { value: "https://example.com/CASPS.csv" });
+      return resp;
+    });
+    const exec = await verify();
+    const err = await expectUnavailable(exec({ entity_name: "Coinbase" }));
+    expect(err.message).toMatch(/redirected off the ESMA site/);
   });
 
   it("an HTML page served with 200 at the fixed path is treated as moved", async () => {

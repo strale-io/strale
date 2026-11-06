@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { getCASPRegister, isAuthorisationActive, searchCASP } from "./lib/vasp-data.js";
+import { getCASPRegister, hasUnreadableEndDate, isAuthorisationActive, searchCASP } from "./lib/vasp-data.js";
 
 // F-0-006 Bucket D: reads from a local CASP dataset (lib/vasp-data.ts);
 // no outbound network call uses the user input as a destination.
@@ -31,7 +31,11 @@ registerCapability("vasp-verify", async (input: CapabilityInput) => {
 
   const notes: string[] = [];
   if (matches.length > 0 && !authorized) {
-    notes.push("ESMA lists this entity, but every matching record carries a withdrawal date: no authorisation is in force.");
+    notes.push(
+      matches.some(hasUnreadableEndDate)
+        ? "ESMA lists this entity, but a matching record's authorisation end-date cell does not hold a readable date, so no authorisation can be confirmed as in force."
+        : "ESMA lists this entity, but every matching record carries a withdrawal date: no authorisation is in force.",
+    );
   }
   if (register.stale) {
     notes.push(
