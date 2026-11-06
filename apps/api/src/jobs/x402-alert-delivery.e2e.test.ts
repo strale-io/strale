@@ -26,11 +26,14 @@ vi.mock("resend", () => ({
 
 const BUS_FORMAT = /^From ([a-z0-9][a-z0-9-]{0,62}):\n\n([\s\S]*)$/;
 
-type Row = { payer: string | null; last_24h: number; d1: number; d2: number; d3: number; d4: number; d5: number; d6: number; d7: number };
+/** One (payer, whole days back, count) bucket, as the watch query returns it. */
+type Row = { payer: string | null; day_ago: number; n: number };
 
-/** A payer settling `perDay` on each of the seven baseline days. */
-const row = (payer: string, last24h: number, perDay: number): Row =>
-  ({ payer, last_24h: last24h, d1: perDay, d2: perDay, d3: perDay, d4: perDay, d5: perDay, d6: perDay, d7: perDay });
+/** A payer settling `perDay` on each of the seven baseline days and `last24h` in the last day. */
+const payerBuckets = (payer: string, last24h: number, perDay: number): Row[] => [
+  { payer, day_ago: 0, n: last24h },
+  ...[1, 2, 3, 4, 5, 6, 7].map((day_ago) => ({ payer, day_ago, n: perDay })),
+];
 
 /** A database that answers the watch query with `rows` and records every statement. */
 function fakeDb(rows: Row[]) {
@@ -66,14 +69,14 @@ function fakeGithub() {
 
 // Broad: every payer fell off. Concentrated: the one big buyer paused, the rest settle.
 const BROAD: Row[] = [
-  row("a".repeat(64), 5, 100),
-  row("b".repeat(64), 1, 20),
-  row("c".repeat(64), 0, 10),
+  ...payerBuckets("a".repeat(64), 5, 100),
+  ...payerBuckets("b".repeat(64), 1, 20),
+  ...payerBuckets("c".repeat(64), 0, 10),
 ];
 const CONCENTRATED: Row[] = [
-  row("a".repeat(64), 0, 100),
-  row("b".repeat(64), 20, 20),
-  row("c".repeat(64), 10, 10),
+  ...payerBuckets("a".repeat(64), 0, 100),
+  ...payerBuckets("b".repeat(64), 20, 20),
+  ...payerBuckets("c".repeat(64), 10, 10),
 ];
 
 async function fresh() {
@@ -151,7 +154,7 @@ describe("x402 volume watch, end to end to delivery", () => {
     process.env.BUS_GITHUB_TOKEN = "github_pat_fake";
     process.env.BUS_REPO = "example-owner/example-bus";
     const { watch, bus } = await fresh();
-    const healthy = BROAD.map((r) => ({ ...r, last_24h: r.d1 }));
+    const healthy = [...payerBuckets("a".repeat(64), 100, 100), ...payerBuckets("b".repeat(64), 20, 20), ...payerBuckets("c".repeat(64), 10, 10)];
     expect((await watch.checkX402SettlementVolume({ db: fakeDb(healthy).db })).kind).toBe("healthy");
     await bus.settleBusDeliveries();
     expect(sendMock).not.toHaveBeenCalled();

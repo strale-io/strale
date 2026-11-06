@@ -4,7 +4,7 @@
  * x402-settlement-watch.integration.test.ts; these pin the edge cases.
  */
 import { describe, expect, it } from "vitest";
-import { classifyVolume, median, type PayerRow } from "./x402-settlement-watch.js";
+import { baselineDays, classifyVolume, rowsFromBuckets, type PayerRow } from "./x402-settlement-watch.js";
 
 /** A payer with the same count on each of the seven baseline days. */
 const perDay = (payer: string | null, base: number, last24h: number): PayerRow =>
@@ -15,14 +15,6 @@ const daily = (payer: string | null, priorDaily: number[], last24h: number): Pay
 
 /** The pre-fix rule, kept here only to show the replayed case fired under it. */
 const meanBaseline = (rows: PayerRow[]) => rows.reduce((a, r) => a + r.priorDaily.reduce((x, n) => x + n, 0), 0) / 7;
-
-describe("median", () => {
-  it("is the middle value, the mean of the middle two, or 0 for nothing", () => {
-    expect(median([5, 1, 9])).toBe(5);
-    expect(median([4, 1, 9, 6])).toBe(5);
-    expect(median([])).toBe(0);
-  });
-});
 
 describe("classifyVolume", () => {
   it("is healthy at or above half the baseline, and silent under the minimum", () => {
@@ -58,6 +50,40 @@ describe("classifyVolume", () => {
   });
 });
 
+describe("baselineDays", () => {
+  it("keeps every day of an ordinary week", () => {
+    expect(baselineDays([100, 100, 100, 100, 100, 45, 45])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(baselineDays([0, 0, 0, 0, 0, 0, 0])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    // Three busy days are a buyer, not a burst.
+    expect(baselineDays([0, 0, 0, 0, 900, 900, 900])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    // A slow degradation: the healthy days are not bursts.
+    expect(baselineDays([30, 30, 30, 30, 100, 100, 100])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it("leaves out one burst day, or two when a job straddles a bucket boundary, never more", () => {
+    expect(baselineDays([105, 105, 105, 1005, 105, 105, 105])).toEqual([0, 1, 2, 4, 5, 6]);
+    expect(baselineDays([105, 105, 600, 500, 105, 105, 105])).toEqual([0, 1, 4, 5, 6]);
+    expect(baselineDays([10, 10, 10, 10, 1000, 3000, 9000])).toEqual([0, 1, 2, 3, 4]);
+  });
+});
+
+describe("rowsFromBuckets", () => {
+  it("folds (payer, days ago) buckets into rows, with bucket 0 as the last 24h", () => {
+    const rows = rowsFromBuckets([
+      { payer: "a", dayAgo: 0, n: 4 },
+      { payer: "a", dayAgo: -1, n: 1 }, // clock skew: a row slightly in the future
+      { payer: "a", dayAgo: 1, n: 7 },
+      { payer: "a", dayAgo: 7, n: 2 },
+      { payer: "a", dayAgo: 8, n: 99 }, // outside the window
+      { payer: null, dayAgo: 3, n: 5 },
+    ]);
+    expect(rows).toEqual([
+      { payer: "a", last24h: 5, priorDaily: [7, 0, 0, 0, 0, 0, 2] },
+      { payer: null, last24h: 0, priorDaily: [0, 0, 5, 0, 0, 0, 0] },
+    ]);
+  });
+});
+
 describe("classifyVolume, robust baseline (incident 2026-11-03)", () => {
   // Replay of the shape, with round illustrative counts rather than production
   // figures: one big buyer settles a steady amount a day, a few small payers
@@ -89,14 +115,38 @@ describe("classifyVolume, robust baseline (incident 2026-11-03)", () => {
     const v = classifyVolume([perDay("steady", 100, 0), daily("burst", [0, 0, 0, 900, 0, 0, 0], 0), perDay("c", 5, 5)]);
     expect(v.kind).toBe("concentrated");
     if (v.kind !== "concentrated") throw new Error("unreachable");
-    expect(v.topBuyers[0]!.payerHashPrefix).toBe("steady");
+    expect(v.topBuyers.map((b) => b.payerHashPrefix)).toEqual(["steady", "c"]);
     expect(v.excluded).toBe(1);
-    expect(v.topBuyers[0]!.share).toBeLessThanOrEqual(1);
+    expect(v.topBuyers.reduce((a, b) => a + b.share, 0)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("classifyVolume, what the plain mean already got right stays right (review of the median design)", () => {
+  it("a quiet weekend day does not page", () => {
+    const v = classifyVolume([daily("a", [100, 100, 100, 100, 100, 45, 45], 45)]);
+    expect(v.kind).toBe("healthy");
+    expect(v.baselinePerDay).toBe(meanBaseline([daily("a", [100, 100, 100, 100, 100, 45, 45], 0)]));
   });
 
-  it("a quiet day or two in the baseline does not lower the bar either", () => {
-    const v = classifyVolume([daily("a", [100, 0, 100, 100, 0, 100, 100], 40)]);
-    expect(v.baselinePerDay).toBe(100);
+  it("a slow degradation keeps paging as long as the mean did", () => {
+    // Four days at 30% of normal: the healthy days stay in the baseline.
+    const history = [30, 30, 30, 30, 100, 100, 100];
+    expect(classifyVolume([daily("a", history, 25)]).baselinePerDay).toBe(meanBaseline([daily("a", history, 0)]));
+    expect(classifyVolume([daily("a", history, 25)]).kind).toBe("broad");
+  });
+
+  it("a buyer active on three of the seven days still counts, so its stop pages", () => {
+    const v = classifyVolume([daily("new", [500, 500, 500, 0, 0, 0, 0], 0)]);
     expect(v.kind).toBe("broad");
+  });
+
+  it("shares of two excluded buyers never add up to more than the whole", () => {
+    const v = classifyVolume([
+      daily("a", [10, 10, 10, 10, 0, 0, 0], 0),
+      daily("b", [0, 0, 0, 10, 10, 10, 10], 0),
+      perDay("c", 5, 5),
+    ]);
+    if (v.kind !== "concentrated" && v.kind !== "broad") throw new Error("expected a drop");
+    expect(v.topBuyers.reduce((a, b) => a + b.share, 0)).toBeLessThanOrEqual(1);
   });
 });

@@ -34,8 +34,8 @@ let checkX402SettlementVolume: typeof import("./x402-settlement-watch.js")["chec
 
 class Rollback extends Error {}
 
-/** `burst` adds `count` extra rows inside the 24h bucket that starts `hoursBack` ago. */
-type Seed = { payer: string | null; prior7d: number; last24h: number; burst?: { hoursBack: number; count: number } };
+/** `burst` adds `count` extra rows in the middle of the 24h bucket `daysBack` whole days ago (1 = 24–48h back). */
+type Seed = { payer: string | null; prior7d: number; last24h: number; burst?: { daysBack: number; count: number } };
 
 /** Insert settled x402 rows: prior7d spread evenly over the seven 24h buckets 24h–8d back, last24h in the last few hours. */
 async function seed(tx: Database, seeds: Seed[]): Promise<void> {
@@ -52,7 +52,7 @@ async function seed(tx: Database, seeds: Seed[]): Promise<void> {
       await tx.execute(sql`
         INSERT INTO transactions (status, input, price_cents, payment_method, x402_settlement_id, x402_payer_hash, created_at)
         SELECT 'completed', '{}'::jsonb, 1, 'x402', ${`watch-test-${i}-burst-`} || g, ${s.payer},
-               now() - ${`${s.burst.hoursBack} hours`}::interval + interval '1 hour'
+               now() - ${`${s.burst.daysBack * 24 + 12} hours`}::interval
           FROM generate_series(1, ${s.burst.count}) g
       `);
     }
@@ -155,7 +155,7 @@ describeMaybe("x402 settlement watch against disposable Postgres", () => {
     // Round illustrative counts: the big buyer's one job on one day was ten
     // times its normal day, and four days later it is back after a short pause.
     const { verdict, ledger } = await runScenario([
-      { payer: BIG, prior7d: 7 * 100, last24h: 60, burst: { hoursBack: 120, count: 900 } },
+      { payer: BIG, prior7d: 7 * 100, last24h: 60, burst: { daysBack: 4, count: 900 } },
       { payer: SMALL_1, prior7d: 7 * 3, last24h: 3 },
       { payer: SMALL_2, prior7d: 7 * 2, last24h: 2 },
     ]);

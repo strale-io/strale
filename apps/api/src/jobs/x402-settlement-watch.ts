@@ -10,11 +10,11 @@
  * the platform watched that number; this job is the tripwire.
  *
  * Every TICK, compare settled-x402-transaction count over the trailing 24h
- * against the MEDIAN of the seven daily totals before that (see "Robust
- * baseline" below). If the baseline is meaningful (≥ MIN_BASELINE_PER_DAY)
- * and the last 24h came in under ALERT_RATIO of it, page via sendAlert — at
- * most once per ALERT_COOLDOWN_MS
- * so a sustained dip doesn't spam. The remedy is in the alert text: check
+ * against the daily average of the 7 days before that, leaving out up to two
+ * burst days (see "Robust baseline" below). If the baseline is meaningful
+ * (≥ MIN_BASELINE_PER_DAY) and the last 24h came in under ALERT_RATIO of it,
+ * page via sendAlert — at most once per ALERT_COOLDOWN_MS so a sustained dip
+ * doesn't spam. The remedy is in the alert text: check
  * the x402-payment-payload-version log counter, and if v1 payloads stopped
  * arriving right when a challenge-version change deployed, flip
  * X402_CHALLENGE_VERSION back and redeploy.
@@ -71,28 +71,39 @@ const MAX_EXCLUDED_BUYERS = 2;
 const OTHERS_NEAR_BASELINE_RATIO = 0.7;
 const MIN_OTHERS_PER_DAY = 3;
 
-// Robust baseline (incident 2026-11-03): the baseline used to be the 7-day
-// mean. One buyer ran a single large job on 2026-10-30, many times a normal
-// day, and that one day lifted the mean so far that on 2026-11-03 an ordinary
-// day read as a drop below half of it, hours after the buyer was back. A mean
-// lets one burst set the bar for a week. The baseline is now the median of the
-// seven daily totals (each day a 24h bucket counted back from now), so up to
-// three unusual days cannot move it, whichever way they go. Per-payer
-// baselines are medians of that payer's own seven days, and the "everyone
-// else" baseline is the median of everyone else's combined daily totals, so
-// the concentration test reads the same robust figure.
+// Robust baseline (incident 2026-11-03): the baseline used to be the plain
+// 7-day mean. One buyer ran a single large job on 2026-10-30, many times a
+// normal day, and that one day lifted the mean so far that on 2026-11-03 an
+// ordinary day read as a drop below half of it, hours after the buyer was
+// back. The baseline is still the mean of the seven daily totals (24h buckets
+// counted back from now), but a BURST day is left out first: the busiest day,
+// when it is more than BURST_FACTOR times the average of the other days. Up to
+// MAX_BURST_DAYS are left out that way, because a one-off job can straddle a
+// bucket boundary.
+//
+// Why not the median (tried first, rejected in review): a median of seven
+// days sits at the weekday level when weekends are quieter, so every quiet
+// weekend would page; after four degraded days it adopts the degraded level
+// and stops re-paging during a slow outage; and volume present on three or
+// fewer days (a new or every-other-day buyer) vanishes from it, so that
+// buyer stopping is never seen. Why not always drop the busiest days: during
+// a slow degradation the busiest days are the healthy ones, so the bar would
+// fall to the degraded level two days sooner than the mean lets it. Dropping
+// only a day far above the rest changes nothing on an ordinary week: quiet,
+// weekend and degraded days stay in the average exactly as before.
+//
+// The cost, accepted: a buyer whose whole history is one or two days looks
+// like a burst, so it is not in the baseline until a third day.
+//
+// The same days are dropped for every payer, so per-payer baselines add up to
+// the total: "everyone else" is the total minus the excluded buyers, and the
+// top buyers' shares sum to at most 1.
 export const BASELINE_DAYS = 7;
+export const MAX_BURST_DAYS = 2;
+export const BURST_FACTOR = 3;
 
-/** Settled count per payer: the last 24h, and each of the 7 days before it (index 0 = 24–48h ago). */
+/** Settled count per payer: the last 24h, and each of the BASELINE_DAYS days before it (index 0 = 24–48h ago). */
 export type PayerRow = { payer: string | null; last24h: number; priorDaily: number[] };
-
-/** Median of a list of counts; 0 for an empty list. */
-export function median(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-}
 
 /** Day-by-day totals across rows, always BASELINE_DAYS long (missing days are 0). */
 function dailyTotals(rows: PayerRow[]): number[] {
@@ -101,7 +112,50 @@ function dailyTotals(rows: PayerRow[]): number[] {
   return totals;
 }
 
+/**
+ * Indices of the days the baseline averages. Repeatedly, up to MAX_BURST_DAYS
+ * times: the busiest remaining day (on a tie, the older one) is left out when
+ * it is more than BURST_FACTOR times the average of the days still kept
+ * without it; the first day that is not a burst stops the loop.
+ */
+export function baselineDays(totals: number[]): number[] {
+  let kept = totals.map((_, d) => d);
+  for (let i = 0; i < MAX_BURST_DAYS && kept.length > 1; i++) {
+    const busiest = kept.reduce((best, d) => (totals[d]! > totals[best]! || (totals[d] === totals[best] && d > best) ? d : best));
+    const rest = kept.filter((d) => d !== busiest);
+    const restAverage = rest.reduce((a, d) => a + totals[d]!, 0) / rest.length;
+    if (!(totals[busiest]! > BURST_FACTOR * restAverage)) break;
+    kept = rest;
+  }
+  return kept;
+}
+
+/** A row's average over the kept days. */
+function averageOver(row: PayerRow, days: number[]): number {
+  return days.reduce((a, d) => a + (row.priorDaily[d] ?? 0), 0) / days.length;
+}
+
 const priorSum = (r: PayerRow) => r.priorDaily.reduce((a, n) => a + n, 0);
+
+/**
+ * Fold (payer, days-ago, count) buckets into per-payer rows. Bucket 0 is the
+ * last 24h (a row a little in the future from clock skew counts there too);
+ * 1..BASELINE_DAYS fill priorDaily; anything older is ignored.
+ */
+export function rowsFromBuckets(buckets: Array<{ payer: string | null; dayAgo: number; n: number }>): PayerRow[] {
+  const byPayer = new Map<string | null, PayerRow>();
+  for (const b of buckets) {
+    if (b.dayAgo > BASELINE_DAYS) continue;
+    let row = byPayer.get(b.payer);
+    if (!row) {
+      row = { payer: b.payer, last24h: 0, priorDaily: new Array<number>(BASELINE_DAYS).fill(0) };
+      byPayer.set(b.payer, row);
+    }
+    if (b.dayAgo <= 0) row.last24h += b.n;
+    else row.priorDaily[b.dayAgo - 1]! += b.n;
+  }
+  return [...byPayer.values()];
+}
 
 export type VolumeVerdict =
   | { kind: "no_baseline" | "healthy"; last24h: number; baselinePerDay: number }
@@ -124,35 +178,32 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 /** Pure decision over per-payer counts. Exported for unit tests. */
 export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
   const last24h = rows.reduce((a, r) => a + r.last24h, 0);
-  const baselinePerDay = median(dailyTotals(rows));
+  const days = baselineDays(dailyTotals(rows));
+  const baseline = new Map(rows.map((r) => [r, averageOver(r, days)]));
+  const baselinePerDay = rows.reduce((a, r) => a + baseline.get(r)!, 0);
   if (baselinePerDay < MIN_BASELINE_PER_DAY) return { kind: "no_baseline", last24h, baselinePerDay };
   if (last24h >= baselinePerDay * ALERT_RATIO) return { kind: "healthy", last24h, baselinePerDay };
 
   // Unattributed rows (pre-hash x402 rows, or no payer extracted) are never a
   // "buyer" to exclude; they count with everyone else.
   const known = rows.filter((r) => r.payer !== null);
-  // Ranked by the payer's typical day (its own median), so a buyer whose
-  // volume was one burst does not outrank the steady buyer whose pause it is.
   const ranked = [...known].sort((a, b) =>
-    median(b.priorDaily) - median(a.priorDaily) || priorSum(b) - priorSum(a) || b.last24h - a.last24h);
-  const top = ranked.slice(0, MAX_EXCLUDED_BUYERS).filter((r) => priorSum(r) > 0);
+    baseline.get(b)! - baseline.get(a)! || priorSum(b) - priorSum(a) || b.last24h - a.last24h);
+  const top = ranked.slice(0, MAX_EXCLUDED_BUYERS).filter((r) => baseline.get(r)! > 0);
   const topBuyers = top.map((r) => ({
     payerHashPrefix: (r.payer as string).slice(0, 8),
-    baselinePerDay: round1(median(r.priorDaily)),
+    baselinePerDay: round1(baseline.get(r)!),
     last24h: r.last24h,
-    // A payer's count is at most the total on every day, so its median is at
-    // most the total's median and the share stays within 0–1.
-    share: median(r.priorDaily) / baselinePerDay,
+    share: baseline.get(r)! / baselinePerDay,
   }));
 
   let excluded = 0;
   let othersLast24h = last24h;
   let othersBaselinePerDay = baselinePerDay;
   for (let k = 1; k <= top.length; k++) {
-    const removed = new Set(top.slice(0, k));
-    const others = rows.filter((r) => !removed.has(r));
-    const oLast = others.reduce((a, r) => a + r.last24h, 0);
-    const oBase = median(dailyTotals(others));
+    const removed = top.slice(0, k);
+    const oLast = last24h - removed.reduce((a, r) => a + r.last24h, 0);
+    const oBase = baselinePerDay - removed.reduce((a, r) => a + baseline.get(r)!, 0);
     if (oBase >= MIN_OTHERS_PER_DAY && oLast >= 1 && oLast >= oBase * OTHERS_NEAR_BASELINE_RATIO) {
       excluded = k;
       othersLast24h = oLast;
@@ -190,30 +241,27 @@ function describeBuyers(v: Extract<VolumeVerdict, { kind: "concentrated" | "broa
 
 export async function checkX402SettlementVolume(opts: { db?: Database } = {}): Promise<VolumeVerdict> {
   const db = opts.db ?? getDb();
-  // d1 is 24–48h ago, d7 is 7–8 days ago: seven whole 24h buckets counted
-  // back from now, so the median compares like with like.
+  // One bucket per (payer, whole 24h periods back from now): 0 is the last
+  // 24h, 1..BASELINE_DAYS the baseline days. Epoch arithmetic, so a DST change
+  // cannot stretch a bucket, and the bucket count follows BASELINE_DAYS.
   const rows = await db.execute(sql`
     SELECT
       x402_payer_hash AS payer,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours') AS last_24h,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '48 hours' AND created_at < now() - interval '24 hours') AS d1,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '72 hours' AND created_at < now() - interval '48 hours') AS d2,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '96 hours' AND created_at < now() - interval '72 hours') AS d3,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '120 hours' AND created_at < now() - interval '96 hours') AS d4,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '144 hours' AND created_at < now() - interval '120 hours') AS d5,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '168 hours' AND created_at < now() - interval '144 hours') AS d6,
-      COUNT(*) FILTER (WHERE created_at >= now() - interval '192 hours' AND created_at < now() - interval '168 hours') AS d7
+      FLOOR(EXTRACT(EPOCH FROM (now() - created_at)) / 86400)::int AS day_ago,
+      COUNT(*)::int AS n
     FROM transactions
     WHERE x402_settlement_id IS NOT NULL
-      AND created_at >= now() - interval '192 hours'
-    GROUP BY x402_payer_hash
+      AND created_at > now() - make_interval(hours => ${(BASELINE_DAYS + 1) * 24})
+    GROUP BY 1, 2
   `);
   const verdict = classifyVolume(
-    (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
-      payer: (r.payer as string | null) ?? null,
-      last24h: Number(r.last_24h ?? 0),
-      priorDaily: ["d1", "d2", "d3", "d4", "d5", "d6", "d7"].map((k) => Number(r[k] ?? 0)),
-    })),
+    rowsFromBuckets(
+      (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
+        payer: (r.payer as string | null) ?? null,
+        dayAgo: Number(r.day_ago ?? 0),
+        n: Number(r.n ?? 0),
+      })),
+    ),
   );
   const { last24h, baselinePerDay } = verdict;
 
@@ -238,7 +286,7 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
 
   const totals =
     `Settled x402 transactions in the last 24h: ${last24h}. ` +
-    `Baseline (median day of the 7 before): ~${Math.round(baselinePerDay)}/day. `;
+    `Baseline (daily average of the 7 days before, burst days left out): ~${Math.round(baselinePerDay)}/day. `;
 
   if (verdict.kind === "concentrated") {
     const share = Math.round(
