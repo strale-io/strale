@@ -1,0 +1,38 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b933eb39a041917c85a6f0cb0719d80f3cae7c99"
+  },
+  "at": "2026-11-06T10:16:19.500Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user/5f7f9f8c-c37d-5951-aa96-887587ae1819/scratchpad/probe-postdeploy.json"
+  },
+  "summary": {
+    "ok": true
+  },
+  "topic": "wp12-batch4-postdeploy-identity-probe",
+  "raw": {
+    "ok": true,
+    "summary": {
+      "probe": "apps/api/scripts/verify-ip-probe.mjs (from origin/main 99e00a48)",
+      "where": "founder PC, fixed egress, no VPN",
+      "exit": 0,
+      "production_commit": "99e00a48 (descends from #920 317d7cd4; no apps/api/src change between)"
+    },
+    "raw": {
+      "conclusion": "PASS: every identity is this machine's own IP, and no client-typed value reached it.",
+      "fixed_egress": true,
+      "identity_is_probe_own_ip": true,
+      "spoofed_value_reached_identity": false,
+      "calls": {
+        "baseline": 200,
+        "spoofed-single": 200,
+        "spoofed-multi": 200
+      },
+      "distinct_ipHash_count": 1,
+      "source": "PC session session_01CR5YPpdnyQN8QNUaWqxzWw transcript, 2026-11-06 09:56Z (its PR comment was blocked by its permission check)",
+      "cloud_corroboration": "8 cloud calls at 317d7cd4 gave 6 distinct ipHash values, all hashes of the cloud session's own egress addresses, none an edge address"
+    }
+  }
+}

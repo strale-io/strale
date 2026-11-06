@@ -13,13 +13,18 @@ const API_URL = "https://api.strale.io/v1/capabilities";
 
 async function main() {
   console.log(`Fetching capabilities from ${API_URL}...`);
-  const resp = await fetch(API_URL);
+  const resp = await fetch(API_URL, { signal: AbortSignal.timeout(30_000) });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
   }
 
   const data = await resp.json();
   const capabilities = data.capabilities || [];
+  // The release workflow runs this as the package's build step, so a failed or
+  // empty fetch must stop the release instead of publishing an empty catalog.
+  if (capabilities.length === 0) {
+    throw new Error("The catalog came back empty; refusing to write capabilities.json");
+  }
 
   const categories = [
     ...new Set(capabilities.map((c) => c.category).filter(Boolean)),

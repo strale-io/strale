@@ -3,7 +3,7 @@
  *
  * @example
  * const strale = require("strale-capabilities");
- * console.log(strale.totalCount); // 251
+ * console.log(strale.totalCount); // size of the snapshot this release was built from
  * console.log(strale.find("iban-validate"));
  * console.log(strale.byCategory("compliance"));
  * console.log(strale.search("VAT"));

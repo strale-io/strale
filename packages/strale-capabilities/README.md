@@ -16,7 +16,7 @@ npm install strale-capabilities
 const strale = require("strale-capabilities");
 
 // Total count
-console.log(strale.totalCount); // 251
+console.log(strale.totalCount); // size of the snapshot this release was built from
 
 // Find by slug
 const iban = strale.find("iban-validate");
