@@ -65,9 +65,10 @@ if (existsSync(recurringFile)) {
     try {
       const { overdueJobs, stockholmToday, validateRecurring } = await import("./recurring.mjs");
       const doc = YAML.parse(readFileSync(recurringFile, "utf8"));
-      const problems = validateRecurring(doc);
+      const today = stockholmToday();
+      const problems = validateRecurring(doc, today);
       if (problems.length) lines.push(`Recurring work: RECURRING.yaml is invalid — ${oneLine(problems.join("; "))}`);
-      const due = overdueJobs(doc, stockholmToday());
+      const due = overdueJobs(doc, today);
       if (due.length) {
         lines.push(`Recurring work due (docs/company/RECURRING.yaml) — run these before other work, then set last_run:`);
         for (const job of due) lines.push(`  ${job.id}: last run ${job.lastRun}, ${job.daysSince} day(s) ago, every ${job.cadenceDays} day(s) → ${job.procedure}`);

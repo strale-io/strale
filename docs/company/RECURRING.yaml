@@ -16,7 +16,9 @@
 #                  and runs them, so a job runs late rather than not at all.
 #
 # Recording a run: set `last_run` (and `evidence`, the file the run produced) in
-# the same PR as the run's output. Only due-list rows carry last_run.
+# the same PR as the run's output. Only due-list rows carry last_run. Until that
+# PR merges, other sessions still see the row as due: before running a due job,
+# check open PRs and today's handoff files for a run already in flight.
 # Validated by scripts/handoff/recurring.test.mjs (npm run handoff:test, in CI).
 version: 1
 jobs:
@@ -34,7 +36,7 @@ jobs:
     runs_as: due-list
     cadence_days: 1
     last_run: 2026-11-06
-    evidence: handoff/_general/from-code/2026-11-06-outbox-sent.md
+    evidence: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     procedure: docs/operations/accounts-and-email.md
     note: Only the session with the Microsoft 365 connector runs this (DEC-20261027-C). A session without it reports the row as overdue and leaves it.
 
@@ -84,6 +86,11 @@ jobs:
     title: Stale branch report
     runs_as: github-action
     where: .github/workflows/stale-branches.yml
+
+  - id: m3-digest-shadow
+    title: Repo-native digest shadow run (M3)
+    runs_as: github-action
+    where: .github/workflows/m3-digest-shadow.yml
 
   - id: web-daily-rebuild
     title: Daily website rebuild

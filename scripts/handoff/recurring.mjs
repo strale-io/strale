@@ -19,7 +19,10 @@ function isoOf(value) {
   return typeof value === "string" ? value : null;
 }
 
-export function validateRecurring(doc) {
+// todayIso is optional: given, a last_run in the future is refused, because
+// it would silence the job until that date.
+export function validateRecurring(doc, todayIso) {
+  const today = todayIso === undefined ? null : dayNumber(todayIso);
   const problems = [];
   if (!doc || doc.version !== 1 || !Array.isArray(doc.jobs)) return ["RECURRING.yaml must have version: 1 and a jobs list"];
   const seen = new Set();
@@ -32,7 +35,9 @@ export function validateRecurring(doc) {
     if (!RUNS_AS.has(job.runs_as)) problems.push(`${at}: runs_as must be one of ${[...RUNS_AS].join(", ")}`);
     if (job.runs_as === "due-list") {
       if (!Number.isInteger(job.cadence_days) || job.cadence_days < 1) problems.push(`${at}: cadence_days must be a whole number of days, at least 1`);
-      if (dayNumber(isoOf(job.last_run) ?? "") === null) problems.push(`${at}: last_run must be a YYYY-MM-DD date`);
+      const last = dayNumber(isoOf(job.last_run) ?? "");
+      if (last === null) problems.push(`${at}: last_run must be a YYYY-MM-DD date`);
+      else if (today !== null && last > today) problems.push(`${at}: last_run ${isoOf(job.last_run)} is in the future, which would hide the job until then`);
       if (typeof job.procedure !== "string" || !job.procedure.trim()) problems.push(`${at}: procedure (the file that says how to run it) is required`);
     } else {
       if (typeof job.where !== "string" || !job.where.trim()) problems.push(`${at}: where (the job or workflow) is required`);
@@ -48,7 +53,7 @@ export function overdueJobs(doc, todayIso) {
   const today = dayNumber(todayIso);
   if (today === null) throw new Error(`today must be YYYY-MM-DD, got ${todayIso}`);
   const due = [];
-  for (const job of doc?.jobs ?? []) {
+  for (const job of Array.isArray(doc?.jobs) ? doc.jobs : []) {
     if (job?.runs_as !== "due-list") continue;
     const lastIso = isoOf(job.last_run);
     const last = dayNumber(lastIso ?? "");
@@ -61,5 +66,7 @@ export function overdueJobs(doc, todayIso) {
 
 // Swedish calendar date (CLAUDE.md: times for Petter are Europe/Stockholm).
 export function stockholmToday(now = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const part = (type) => parts.find((p) => p.type === type).value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
