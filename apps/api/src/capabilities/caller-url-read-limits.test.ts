@@ -36,6 +36,16 @@ vi.mock("../lib/robots-txt.js", () => ({
   assertRobotsAllowed: vi.fn(async () => {}),
   assertRedirectAllowed: vi.fn(async () => {}),
 }));
+// tech-stack-detect also reads public DNS; stubbed so this suite stays offline.
+vi.mock("./lib/tech-dns.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./lib/tech-dns.js")>()),
+  lookupTechDns: vi.fn(async () => ({
+    mx: [], txt: [], ns: [], cname: [], a: [],
+    status: { a: "empty", mx: "empty", txt: "empty", ns: "empty", cname: "empty" },
+    overall: "ok",
+    failures: [],
+  })),
+}));
 vi.mock("../lib/url-validator.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/url-validator.js")>()),
   validateUrl: vi.fn().mockResolvedValue(undefined),
