@@ -1,0 +1,98 @@
+# Recurring work — the account-independent due-list.
+#
+# Petter, 2026-11-06 (handoff/_general/from-code/2026-11-06-petter-decisions-growth.md):
+# Claude Code routines are bound to one account, and he rotates three accounts,
+# each active about 2 to 2.5 days, so routines miss most of the time. Recurring
+# work therefore runs in one of three account-independent ways, and every
+# recurring job is listed here with the way it runs:
+#
+#   api-job        a production job inside the API (deterministic numbers, alerts).
+#                  Its own heartbeat (apps/api/src/lib/job-heartbeats.ts) tracks runs.
+#   github-action  a scheduled workflow in .github/workflows (repo and catalogue checks).
+#                  The workflow's run history and production-watch track runs.
+#   due-list       judgment work a session does. `last_run` is the date (YYYY-MM-DD,
+#                  Swedish date) of the last completed run. The first session on any
+#                  account sees overdue rows at session start (scripts/handoff/orient.mjs)
+#                  and runs them, so a job runs late rather than not at all.
+#
+# Recording a run: set `last_run` (and `evidence`, the file the run produced) in
+# the same PR as the run's output. Only due-list rows carry last_run. Until that
+# PR merges, other sessions still see the row as due: before running a due job,
+# check open PRs and today's handoff files for a run already in flight.
+# Validated by scripts/handoff/recurring.test.mjs (npm run handoff:test, in CI).
+version: 1
+jobs:
+  - id: daily-run
+    title: Daily operating run and CEO brief
+    runs_as: due-list
+    cadence_days: 1
+    last_run: 2026-11-06
+    evidence: docs/company/briefs/2026-11-06.md (PR #952, the run of about 22:09 Swedish time)
+    procedure: docs/company/DAILY-RUN.md
+    note: One line when green, a brief only when something changed or a decision waits (DEC-20261024-A). Step A2 (inbox) runs only where DAILY-RUN.md says; other sessions skip it in one line.
+
+  - id: inbox-and-outbox
+    title: Inbox sweep and OUTBOX follow-ups (DAILY-RUN step A2)
+    runs_as: due-list
+    cadence_days: 1
+    last_run: 2026-11-06
+    evidence: handoff/_general/from-code/2026-11-06-orchestrator-state.md
+    procedure: docs/operations/accounts-and-email.md
+    note: Only the session with the Microsoft 365 connector runs this (DEC-20261027-C). A session without it reports the row as overdue and leaves it.
+
+  - id: weekly-review
+    title: Sunday synthesis — GOALS.md review and the week's readout
+    runs_as: due-list
+    cadence_days: 7
+    last_run: 2026-08-23
+    evidence: docs/company/GOALS.md
+    procedure: docs/company/GOALS.md
+    note: GOALS.md line 3 ("next review at each Sunday synthesis"). Not run since 2026-08-23.
+
+  - id: budget-ledger
+    title: Weekly budget ledger read
+    runs_as: due-list
+    cadence_days: 7
+    last_run: 2026-11-05
+    evidence: docs/company/BUDGET.md
+    procedure: docs/company/BUDGET.md
+
+  - id: data-source-digest-email
+    title: Daily data-source (external outage) summary email
+    runs_as: api-job
+    where: apps/api/src/lib/external-outage-digest.ts
+
+  - id: business-summary-email
+    title: Daily business-summary email (revenue, payers, x402 volume, top tools)
+    runs_as: api-job
+    where: not built yet — model on apps/api/src/lib/external-outage-digest.ts (orchestrator handoff 2026-11-06, item 1)
+
+  - id: weekly-drift
+    title: Weekly drift sweep (platform facts, manifests, output schemas)
+    runs_as: github-action
+    where: .github/workflows/weekly-drift.yml
+
+  - id: production-watch
+    title: Deploy, background-job and production watch
+    runs_as: github-action
+    where: .github/workflows/production-watch.yml
+
+  - id: package-contract
+    title: Published-package contract smoke test
+    runs_as: github-action
+    where: .github/workflows/package-contract.yml
+
+  - id: stale-branches
+    title: Stale branch report
+    runs_as: github-action
+    where: .github/workflows/stale-branches.yml
+
+  - id: m3-digest-shadow
+    title: Repo-native digest shadow run (M3)
+    runs_as: github-action
+    where: .github/workflows/m3-digest-shadow.yml
+
+  - id: web-daily-rebuild
+    title: Daily website rebuild
+    runs_as: github-action
+    where: .github/workflows/web-daily-rebuild.yml
