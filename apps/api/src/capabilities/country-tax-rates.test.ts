@@ -13,6 +13,8 @@ type Out = {
   withholding_tax: { dividend: number; interest: number; royalty: number };
   social_security: { employer: number; employee: number };
   currency: string;
+  tax_year: string;
+  last_updated: string;
 };
 
 async function rates(country_code: string): Promise<Out> {
@@ -22,6 +24,12 @@ async function rates(country_code: string): Promise<Out> {
 }
 
 describe("country-tax-rates (as of 2026-11-06)", () => {
+  it("labels its output with the verification date, not a stale year", async () => {
+    const out = await rates("SE");
+    expect(out.last_updated).toBe(TAX_DATA_AS_OF);
+    expect(out.tax_year).toBe("2026");
+  });
+
   it("carries the verification date", () => {
     expect(TAX_DATA_AS_OF).toBe("2026-11-06");
   });
