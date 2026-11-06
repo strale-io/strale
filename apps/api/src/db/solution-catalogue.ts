@@ -1564,7 +1564,7 @@ export const SOLUTIONS: SolutionDef[] = [
     description:
       "Given a domain, answer 'is this domain trustworthy?' — registration age, DNS, SSL, reputation score, and HTTP security headers.",
     longDescription:
-      "Checks five trust signals for any domain: WHOIS registration age and registrar, DNS configuration health, SSL certificate validity, reputation score from threat intelligence feeds, and HTTP security header grade. Use for phishing detection, link safety checks, brand protection, or any time your agent needs to evaluate whether a domain is trustworthy before interacting with it.",
+      "Checks five trust signals for any domain: WHOIS registration age and registrar, DNS configuration health, SSL certificate validity, a DNS-and-HTTPS hygiene score (no blocklist or threat-intelligence lookup), and HTTP security header grade. Use for phishing detection, link safety checks, brand protection, or any time your agent needs to evaluate whether a domain is trustworthy before interacting with it.",
     agentDescription:
       "is this domain trustworthy, check domain trust, domain reputation check, is this website safe to visit, phishing check, link safety verification, should I trust this domain",
     category: "security-risk",
