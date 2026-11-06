@@ -58,7 +58,7 @@ Scope: `apps/api/src/capabilities/**` (including `lib/`, `providers/`) and `apps
 | Dataset | What is wrong |
 |---|---|
 | `vat-rate-lookup` VAT_RATES (B) | EE 22% (24% since 1 Jul 2025); RO 19% / 5% / 9% (21% / 11% since 1 Aug 2025); FI 10% books and medicine and 14% food (13.5% since 1 Jan 2026; 10% now only press); SE food 12% (6% since 1 Apr 2026, through 2027); BG currency BGN (euro since 1 Jan 2026). SK reduced [10] likely stale too (2025 rates 19% / 5%; not re-checked). |
-| `country-tax-rates` TAX_DATA (B) | Same VAT errors for EE, RO, FI, SE, SK; EE corporate 20% (22% from 2025); LT corporate 15% (16% from 2025). |
+| `country-tax-rates` TAX_DATA (B) | Same VAT errors for EE, RO, FI, SE, SK; EE corporate 20% (22% from 2025); LT corporate 15% (17% for 2026 per the Commission's TEDB; this file first said 16%, the 2025 rate — corrected in #963). |
 | `eu-ai-act-classify` (A, 20c) | Says Annex III obligations "apply from 2 August 2026"; Regulation (EU) 2026/1744 (Digital Omnibus on AI, OJ 24 Jul 2026) moved them to 2 December 2027. |
 | `work-permit-requirements` (A) | UK Skilled Worker "GBP 26,200" (gov.uk now: GBP 41,700); Germany Blue Card "EUR 45,300 / 41,041.80 ... in 2024" (2026: EUR 50,700 / 45,934.20). |
 | `financial-year-dates` (A) | Sweden "tax filing May 1 (calendar year companies)"; Skatteverket: calendar-year AB files by 1 August. Croatia VAT threshold still in HRK (euro since 2023). |
@@ -169,7 +169,7 @@ Scope: `apps/api/src/capabilities/**` (including `lib/`, `providers/`) and `apps
 
 2. **`country-tax-rates.ts` TAX_DATA (B, 2c): STALE.**
    - It carries the same VAT errors (EE, RO, FI, SE, and likely SK).
-   - **Corporate rates:** Lithuania is **16%** from 2025 (code: 15%) and Estonia is **22%** (22/78) from 2025 (code: 20%). These come from secondary sources ([PwC tax summaries, LT](https://taxsummaries.pwc.com/Lithuania/Corporate/Taxes-on-corporate-income), [Tax Foundation](https://taxfoundation.org/data/all/eu/corporate-income-tax-rates-europe), [Cobalt Baltic Tax Card 2026](https://www.cobalt.legal/wp-content/uploads/2026/02/Baltic-Tax-Card-2026.pdf)); the VMI and EMTA pages were not surfaced.
+   - **Corporate rates:** Lithuania is **17%** for 2026 per the Commission's TEDB (16% in 2025; this file first said 16%, corrected after the #963 fix queried TEDB) (code: 15%) and Estonia is **22%** (22/78) from 2025 (code: 20%). These come from secondary sources ([PwC tax summaries, LT](https://taxsummaries.pwc.com/Lithuania/Corporate/Taxes-on-corporate-income), [Tax Foundation](https://taxfoundation.org/data/all/eu/corporate-income-tax-rates-europe), [Cobalt Baltic Tax Card 2026](https://www.cobalt.legal/wp-content/uploads/2026/02/Baltic-Tax-Card-2026.pdf)); the VMI and EMTA pages were not surfaced.
    - The other ~45 countries were not checked row by row.
 
 3. **`eu-ai-act-classify.ts` rules (A, 20c, the most expensive class-A tool here): STALE.**
