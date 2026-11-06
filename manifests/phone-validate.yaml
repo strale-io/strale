@@ -22,6 +22,9 @@ output_schema:
   properties:
     valid:
       type: boolean
+    reason:
+      type: string
+      description: Stable reason code when a numbering-plan exception makes the number invalid
     e164:
       type: string
     national_format:
@@ -65,6 +68,7 @@ test_fixtures:
     phone_number: "+46701234567"
 output_field_reliability:
   valid: guaranteed
+  reason: rare
   e164: guaranteed
   national_format: guaranteed
   international_format: guaranteed
@@ -75,6 +79,13 @@ output_field_reliability:
   is_possible: guaranteed
   input: guaranteed
 limitations:
+  - title: North American fictional numbers are not valid
+    text: >-
+      North American numbers in the reserved fictional range 555-0100 to 555-0199 (any area code) are
+      reported as not valid, with reason reserved_fictional_range. Fictional ranges in other countries
+      are not checked separately.
+    category: accuracy
+    severity: info
   - title: A valid result does not prove the number is in service
     text: >-
       Valid means the number fits the country's numbering plan. It does not show that
