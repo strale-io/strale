@@ -1,0 +1,453 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "node_modules/.bin/vitest",
+    "commit": "d9e0d66fad0f581c0196cee2429b1566ad765183"
+  },
+  "at": "2026-11-06T20:03:59.948Z",
+  "inputs": {
+    "files": [
+      "apps/api/src/jobs/x402-settlement-watch.integration.test.ts",
+      "apps/api/src/jobs/x402-settlement-watch.test.ts",
+      "apps/api/src/jobs/x402-alert-delivery.e2e.test.ts"
+    ],
+    "code": "branch fix/x402-settlement-median-baseline at d9e0d66f",
+    "database": "throwaway local Postgres 16, schema via drizzle-kit push plus startup migrations"
+  },
+  "summary": {
+    "passed": 31,
+    "failed": 0,
+    "total": 31
+  },
+  "topic": "x402-spike-cap-after",
+  "raw": {
+    "numTotalTestSuites": 10,
+    "numPassedTestSuites": 10,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 31,
+    "numPassedTests": 31,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1793995432227,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery dormant bus: a broad drop emails a CRITICAL and makes no network call",
+            "status": "passed",
+            "title": "dormant bus: a broad drop emails a CRITICAL and makes no network call",
+            "duration": 513.323248,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery bus set: the same CRITICAL also lands on channel strale-planning in bus format",
+            "status": "passed",
+            "title": "bus set: the same CRITICAL also lands on channel strale-planning in bus format",
+            "duration": 23.71126000000004,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery bus set: one buyer pausing is a WARNING on both channels, not a critical",
+            "status": "passed",
+            "title": "bus set: one buyer pausing is a WARNING on both channels, not a critical",
+            "duration": 8.89126699999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery healthy volume sends nothing on either channel",
+            "status": "passed",
+            "title": "healthy volume sends nothing on either channel",
+            "duration": 6.3165310000000545,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793995432487,
+        "endTime": 1793995433039.3167,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a17236b558daed9b5/apps/api/src/jobs/x402-alert-delivery.e2e.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one buyer pausing is a warning that names the buyer share, not a critical page",
+            "status": "passed",
+            "title": "one buyer pausing is a warning that names the buyer share, not a critical page",
+            "duration": 74.10300499999994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres a broad drop across buyers stays critical and carries the payer breakdown",
+            "status": "passed",
+            "title": "a broad drop across buyers stays critical and carries the payer breakdown",
+            "duration": 23.166277000000036,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres nobody else settling at all stays critical even when the top buyer explains the volume",
+            "status": "passed",
+            "title": "nobody else settling at all stays critical even when the top buyer explains the volume",
+            "duration": 17.51792499999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)",
+            "status": "passed",
+            "title": "one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)",
+            "duration": 35.145219,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres under the minimum baseline nothing is sent",
+            "status": "passed",
+            "title": "under the minimum baseline nothing is sent",
+            "duration": 8.15603699999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793995432996,
+        "endTime": 1793995433154.156,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a17236b558daed9b5/apps/api/src/jobs/x402-settlement-watch.integration.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume is healthy at or above half the baseline, and silent under the minimum",
+            "status": "passed",
+            "title": "is healthy at or above half the baseline, and silent under the minimum",
+            "duration": 1.8023430000000644,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume excludes the top two buyers when one alone does not explain the drop",
+            "status": "passed",
+            "title": "excludes the top two buyers when one alone does not explain the drop",
+            "duration": 0.4514239999999745,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume never excludes more than two buyers",
+            "status": "passed",
+            "title": "never excludes more than two buyers",
+            "duration": 0.16727900000000773,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume stays critical when the other payers' own baseline is too small to prove the rail works",
+            "status": "passed",
+            "title": "stays critical when the other payers' own baseline is too small to prove the rail works",
+            "duration": 0.11881099999993694,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume counts unattributed rows with the others and never as a buyer to exclude",
+            "status": "passed",
+            "title": "counts unattributed rows with the others and never as a buyer to exclude",
+            "duration": 0.6933790000000499,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capSpikes"
+            ],
+            "fullName": "capSpikes leaves an ordinary week alone",
+            "status": "passed",
+            "title": "leaves an ordinary week alone",
+            "duration": 0.4924460000000863,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capSpikes"
+            ],
+            "fullName": "capSpikes leaves a ramp and the healthy days of an outage alone (review round 2)",
+            "status": "passed",
+            "title": "leaves a ramp and the healthy days of an outage alone (review round 2)",
+            "duration": 1.088427999999908,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capSpikes"
+            ],
+            "fullName": "capSpikes caps a one-off spike, and both days of one that straddles a bucket boundary",
+            "status": "passed",
+            "title": "caps a one-off spike, and both days of one that straddles a bucket boundary",
+            "duration": 0.2972740000000158,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capSpikes"
+            ],
+            "fullName": "capSpikes never caps the newest or the oldest baseline day",
+            "status": "passed",
+            "title": "never caps the newest or the oldest baseline day",
+            "duration": 0.3800629999999501,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capSpikes"
+            ],
+            "fullName": "capSpikes is continuous: one more call on a spike day never lowers the baseline",
+            "status": "passed",
+            "title": "is continuous: one more call on a spike day never lowers the baseline",
+            "duration": 4.432339999999954,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "rowsFromBuckets"
+            ],
+            "fullName": "rowsFromBuckets folds (payer, days ago) buckets into rows, with bucket 0 as the last 24h",
+            "status": "passed",
+            "title": "folds (payer, days ago) buckets into rows, with bucket 0 as the last 24h",
+            "duration": 0.45299099999999726,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "rowsFromBuckets"
+            ],
+            "fullName": "rowsFromBuckets refuses a malformed bucket instead of losing its count",
+            "status": "passed",
+            "title": "refuses a malformed bucket instead of losing its count",
+            "duration": 0.776252999999997,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) fired under the old mean baseline",
+            "status": "passed",
+            "title": "fired under the old mean baseline",
+            "duration": 0.17404099999998834,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) is healthy now: one burst day does not set the bar for the week",
+            "status": "passed",
+            "title": "is healthy now: one burst day does not set the bar for the week",
+            "duration": 0.1289439999999331,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) still pages when the big buyer really stops, burst or not",
+            "status": "passed",
+            "title": "still pages when the big buyer really stops, burst or not",
+            "duration": 0.3359179999999924,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) a burst by a small payer does not make it outrank the steady buyer",
+            "status": "passed",
+            "title": "a burst by a small payer does not make it outrank the steady buyer",
+            "duration": 0.2740880000000061,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a quiet weekend day does not page",
+            "status": "passed",
+            "title": "a quiet weekend day does not page",
+            "duration": 0.12629699999990862,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a deep outage keeps paging until its last healthy day ages out, as the mean did (review round 2)",
+            "status": "passed",
+            "title": "a deep outage keeps paging until its last healthy day ages out, as the mean did (review round 2)",
+            "duration": 0.17481199999997443,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a rail breaking right after a ramp pages, as the mean did (review round 2)",
+            "status": "passed",
+            "title": "a rail breaking right after a ramp pages, as the mean did (review round 2)",
+            "duration": 0.0697619999999688,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a slow degradation keeps paging as long as the mean did",
+            "status": "passed",
+            "title": "a slow degradation keeps paging as long as the mean did",
+            "duration": 0.12239799999997558,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a buyer active on three of the seven days still counts, so its stop pages",
+            "status": "passed",
+            "title": "a buyer active on three of the seven days still counts, so its stop pages",
+            "duration": 0.06501700000001165,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) shares of two excluded buyers never add up to more than the whole",
+            "status": "passed",
+            "title": "shares of two excluded buyers never add up to more than the whole",
+            "duration": 0.09578499999997803,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1793995433001,
+        "endTime": 1793995433015.0957,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale/.claude/worktrees/agent-a17236b558daed9b5/apps/api/src/jobs/x402-settlement-watch.test.ts"
+      }
+    ]
+  }
+}

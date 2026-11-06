@@ -34,17 +34,26 @@ let checkX402SettlementVolume: typeof import("./x402-settlement-watch.js")["chec
 
 class Rollback extends Error {}
 
-type Seed = { payer: string | null; prior7d: number; last24h: number };
+/** `burst` adds `count` extra rows in the middle of the 24h bucket `daysBack` whole days ago (1 = 24–48h back). */
+type Seed = { payer: string | null; prior7d: number; last24h: number; burst?: { daysBack: number; count: number } };
 
-/** Insert settled x402 rows: prior7d spread over days 2–7 back, last24h in the last few hours. */
+/** Insert settled x402 rows: prior7d spread evenly over the seven 24h buckets 24h–8d back, last24h in the last few hours. */
 async function seed(tx: Database, seeds: Seed[]): Promise<void> {
   for (const [i, s] of seeds.entries()) {
     if (s.prior7d > 0) {
       await tx.execute(sql`
         INSERT INTO transactions (status, input, price_cents, payment_method, x402_settlement_id, x402_payer_hash, created_at)
         SELECT 'completed', '{}'::jsonb, 1, 'x402', ${`watch-test-${i}-prior-`} || g, ${s.payer},
-               now() - interval '2 days' - (g % 5) * interval '1 day' - (g % 23) * interval '1 hour'
+               now() - interval '25 hours' - (g % 7) * interval '24 hours' - (g % 23) * interval '1 hour'
           FROM generate_series(1, ${s.prior7d}) g
+      `);
+    }
+    if (s.burst) {
+      await tx.execute(sql`
+        INSERT INTO transactions (status, input, price_cents, payment_method, x402_settlement_id, x402_payer_hash, created_at)
+        SELECT 'completed', '{}'::jsonb, 1, 'x402', ${`watch-test-${i}-burst-`} || g, ${s.payer},
+               now() - ${`${s.burst.daysBack * 24 + 12} hours`}::interval
+          FROM generate_series(1, ${s.burst.count}) g
       `);
     }
     if (s.last24h > 0) {
@@ -140,6 +149,20 @@ describeMaybe("x402 settlement watch against disposable Postgres", () => {
     expect(verdict.kind).toBe("broad");
     expect(ledger).toEqual([{ key: "x402-settlement-volume-drop", severity: "critical" }]);
     expect(sent[0]!.body).toContain("Distinct paying wallets: 0 in the last 24h, 1 in the 7 days before.");
+  }, 60_000);
+
+  it("one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)", async () => {
+    // Round illustrative counts: the big buyer's one job on one day was ten
+    // times its normal day, and four days later it is back after a short pause.
+    const { verdict, ledger } = await runScenario([
+      { payer: BIG, prior7d: 7 * 100, last24h: 75, burst: { daysBack: 4, count: 900 } },
+      { payer: SMALL_1, prior7d: 7 * 3, last24h: 3 },
+      { payer: SMALL_2, prior7d: 7 * 2, last24h: 2 },
+    ]);
+    expect(verdict.kind).toBe("healthy");
+    expect(verdict.baselinePerDay).toBe(135); // the burst day capped at 3x the days around it
+    expect(ledger).toEqual([]);
+    expect(sent).toEqual([]);
   }, 60_000);
 
   it("under the minimum baseline nothing is sent", async () => {

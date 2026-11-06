@@ -26,7 +26,14 @@ vi.mock("resend", () => ({
 
 const BUS_FORMAT = /^From ([a-z0-9][a-z0-9-]{0,62}):\n\n([\s\S]*)$/;
 
-type Row = { payer: string | null; last_24h: number; prior_7d: number };
+/** One (payer, whole days back, count) bucket, as the watch query returns it. */
+type Row = { payer: string | null; day_ago: number; n: number };
+
+/** A payer settling `perDay` on each of the seven baseline days and `last24h` in the last day. */
+const payerBuckets = (payer: string, last24h: number, perDay: number): Row[] => [
+  { payer, day_ago: 0, n: last24h },
+  ...[1, 2, 3, 4, 5, 6, 7].map((day_ago) => ({ payer, day_ago, n: perDay })),
+];
 
 /** A database that answers the watch query with `rows` and records every statement. */
 function fakeDb(rows: Row[]) {
@@ -62,14 +69,14 @@ function fakeGithub() {
 
 // Broad: every payer fell off. Concentrated: the one big buyer paused, the rest settle.
 const BROAD: Row[] = [
-  { payer: "a".repeat(64), last_24h: 5, prior_7d: 700 },
-  { payer: "b".repeat(64), last_24h: 1, prior_7d: 140 },
-  { payer: "c".repeat(64), last_24h: 0, prior_7d: 70 },
+  ...payerBuckets("a".repeat(64), 5, 100),
+  ...payerBuckets("b".repeat(64), 1, 20),
+  ...payerBuckets("c".repeat(64), 0, 10),
 ];
 const CONCENTRATED: Row[] = [
-  { payer: "a".repeat(64), last_24h: 0, prior_7d: 700 },
-  { payer: "b".repeat(64), last_24h: 20, prior_7d: 140 },
-  { payer: "c".repeat(64), last_24h: 10, prior_7d: 70 },
+  ...payerBuckets("a".repeat(64), 0, 100),
+  ...payerBuckets("b".repeat(64), 20, 20),
+  ...payerBuckets("c".repeat(64), 10, 10),
 ];
 
 async function fresh() {
@@ -147,7 +154,7 @@ describe("x402 volume watch, end to end to delivery", () => {
     process.env.BUS_GITHUB_TOKEN = "github_pat_fake";
     process.env.BUS_REPO = "example-owner/example-bus";
     const { watch, bus } = await fresh();
-    const healthy = BROAD.map((r) => ({ ...r, last_24h: Math.round(r.prior_7d / 7) }));
+    const healthy = [...payerBuckets("a".repeat(64), 100, 100), ...payerBuckets("b".repeat(64), 20, 20), ...payerBuckets("c".repeat(64), 10, 10)];
     expect((await watch.checkX402SettlementVolume({ db: fakeDb(healthy).db })).kind).toBe("healthy");
     await bus.settleBusDeliveries();
     expect(sendMock).not.toHaveBeenCalled();
