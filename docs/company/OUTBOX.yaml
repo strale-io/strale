@@ -22,8 +22,9 @@ threads:
     unblocks: UK VAT number check and GB EORI, portfolio plan 1.11 and 1.15
     sent: 2026-10-27
     sent_by: petter (drafted by session)
-    follow_up_by: 2026-11-07
+    follow_up_by: 2026-11-13
     status: awaiting_reply
+    chased: 2026-11-06 (second chase, sent by Petter)
     note: The sandbox application is due for deletion around 2026-11-12 unless it makes an API call.
   - id: datacircle-benchmark
     to: wayne@datacircle.dev
@@ -32,8 +33,9 @@ threads:
     unblocks: Accurate public benchmark listing
     sent: 2026-10-27
     sent_by: petter (drafted by session)
-    follow_up_by: 2026-11-10
-    status: closed
+    follow_up_by: 2026-11-20
+    status: awaiting_reply
+    replied: 2026-11-06 (sent by Petter); tech-stack fixes live, re-run of that category invited
     reply: 2026-10-27 18:23 CET (inbox). They kept email and phone calls on the Cached lists (no syntax-and-domain category exists) and kept the scores, but added a "What it checks" column naming exactly what our calls test. Company enrichment and tech stack were rerun over x402 (company enrichment Data 33, Performance 14; tech stack Data 56, Performance 66). They asked whether the lists look right and invited us to a provider WhatsApp group. No reply needed to close the thread; the low company-enrichment score is a product follow-up in the 2026-10-28 operating record.
   - id: probe402-refusals
     to: zach@probe402.com
@@ -42,9 +44,9 @@ threads:
     unblocks: Diagnosis of the refusals and probe402's public grade
     sent: 2026-10-27
     sent_by: petter (drafted by session)
-    follow_up_by: 2026-11-10
+    follow_up_by: 2026-11-20
     status: awaiting_reply
-    reply_draft: 2026-11-06, saved in Outlook Drafts by the PC inbox job (docs/lanes/pc/inbox-review-1106-brief.md), for Petter or the inbox routine to send. It reports the fix in strale-io/strale#932, live since 2026-11-06 15:05 Swedish time.
+    replied: 2026-11-06 (sent by Petter); reports the fix in strale-io/strale#932
 
 
   - id: serper-resale-terms
