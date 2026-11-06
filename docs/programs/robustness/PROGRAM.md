@@ -37,7 +37,7 @@ and every exit is met by a receipt under `archive/receipts/` cited in
 | Register ID | Track | Why this order (harm) |
 |---|---|---|
 | T1 | R1: Untrusted-input bounds | One anonymous free-tier call to `url-to-markdown` can hand jsdom hostile markup; the parse is synchronous and blocks the whole API process, so every customer is hit at once. |
-| T2 | R2: Data currency of hard-coded reference lists and vendor terms | A stale list gives a wrong compliance answer in the quiet direction on a paid tool. #954 and #956 (merged 2026-11-06) brought the FATF and EU lists up to date; #958 sets the EDD recommendation floor. |
+| T2 | R2: Data currency of hard-coded reference lists and vendor terms | A stale list gives a wrong compliance answer in the quiet direction on a paid tool. #954 and #956 (merged 2026-11-06) brought the FATF and EU lists up to date; the EDD recommendation floor is pending in #958. |
 | T3 | R3: Alert and signal correctness | A false alarm, or a watch that is always red, hides the next real failure (LESSONS F1, the largest family; CHARTER: repair the instrument first). |
 | T4 | R4: Listed tools that can only refuse | A listed tool whose source refuses fails every buyer who picks it, and stays visible in directories. The calls are not charged, so the harm is failure, not money. |
 | T5 | R5: Account-independent recurring work and monitoring | Without it, measurement and judgment work stop for most days of each account rotation. The harm is delay, not a wrong answer. |
@@ -49,7 +49,7 @@ and every exit is met by a receipt under `archive/receipts/` cited in
 | Item | Owner |
 |---|---|
 | Swallowed upstream failures: wave 2 (billing path, so built by Claude under promise-audit rule 5; the Codex brief `4f342c01` was withdrawn and never ran), wave 3, rows 26, 27, 29 and 34 waiting on the degraded marker, the catch-handler lint, replay perturbations, past-charge measurement | promise-audit T1 |
-| Compliance reference answers (the `aml-risk-score` EDD floor for EU-listed countries landed in #958) | promise-audit T2 |
+| Compliance reference answers (the `aml-risk-score` EDD floor for EU-listed countries is pending in #958) | promise-audit T2 |
 | Published availability and speed numbers | promise-audit T5 |
 | Per-tool answer-quality benchmark | promise-audit T6 |
 | Input-schema validation (`INPUT_VALIDATION_MODE` to enforce), robots.txt and SSRF fetch hardening | platform-hardening T6 (H6) |
