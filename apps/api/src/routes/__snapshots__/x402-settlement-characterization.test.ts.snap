@@ -170,7 +170,7 @@ exports[`H7b capability settlement characterization > confirmed decline: no sett
 
 exports[`H7b capability settlement characterization > failed execution never opens an intent or settles 1`] = `
 {
-  "body": "{"error":"execution failed","error_code":"execution_failed","details":{"retryable":true,"next_step":"Retry with exponential backoff; contact support with the transaction_id if the failure continues."},"charged":false,"input_schema":{"type":"object","properties":{"value":{"type":"string"}},"required":["value"]},"example":{"value":"example_value"},"hint":"https://api.strale.io/x402/catalog"}",
+  "body": "{"error":"execution failed","error_code":"execution_failed","details":{"retryable":true,"next_step":"Retry with exponential backoff; contact support with the transaction_id if the failure continues."},"charged":false,"input_schema":{"type":"object","properties":{"value":{"type":"string"}},"required":["value"]},"hint":"https://api.strale.io/x402/catalog"}",
   "events": [
     "verify",
     "claim",

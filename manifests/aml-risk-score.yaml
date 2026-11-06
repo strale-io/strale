@@ -77,8 +77,11 @@ test_fixtures:
       - field: recommendation
         operator: not_null
         reliability: guaranteed
+  # Published as the x402 example input (x402-discovery-metadata.ts,
+  # REVIEWED_PUBLIC_INPUT_EXAMPLES): a real listed company, not a placeholder.
   health_check_input:
-    entity_name: "Test Company"
+    entity_name: "Spotify AB"
+    entity_type: "company"
     country_code: "SE"
 output_field_reliability:
   entity_name: guaranteed

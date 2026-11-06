@@ -49,7 +49,7 @@ import {
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
-import { discoverySchema, exampleFailure, getDiscoveryMetadata, type DiscoveryMetadata } from "../lib/x402-discovery-metadata.js";
+import { discoverySchema, exampleFailure, getDiscoveryMetadata, publishedInputExample, type DiscoveryMetadata } from "../lib/x402-discovery-metadata.js";
 import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
@@ -349,60 +349,37 @@ export async function extractInputs(
 // ─── Bazaar discovery extension builder ─────────────────────────────────────
 
 /**
- * Generate an example input object from a JSON Schema's properties.
- * Used by schema-error responses. Public challenge examples instead come from
- * screened manifest health inputs via x402-discovery-metadata.ts.
+ * The example a 400 carries: the screened manifest example when one is
+ * published, else a request built only from values the schema itself declares
+ * (enum, default), else none.
+ *
+ * It never invents a value. This used to emit `example_<field>` for every
+ * string, 0 for every number. Agents substitute nothing into a template they
+ * treat as valid, so paid calls arrived as `example_name`, `example_abn`,
+ * `example_country_code` and were refused by the executor ('Invalid label
+ * "example_name"', 'Invalid ABN format: "example_abn"'; probe402, October 2026).
+ * Booleans without a declared default are still omitted: `true` for an opt-in
+ * flag taught agents to set it (us-company-data `allow_low_confidence`).
  */
-function generateExampleFromSchema(
+function exampleForBadRequest(
+  identity: { kind: "capability" | "solution"; slug: string } | undefined,
   schema: Record<string, unknown> | null,
-): Record<string, unknown> {
-  if (!schema) return {};
-  const props = (schema as any).properties;
-  if (!props) return {};
-
-  // Agents treat the example as a request template and substitute their own
-  // values into it, so it must be a VALID minimal request, not a field tour:
-  //
-  //  - When the schema declares anyOf/oneOf required-groups (either/or
-  //    capabilities), emit only the first branch's fields. Emitting every
-  //    alternative at once ({url, domain}) contradicts the "Provide one of"
-  //    error it ships alongside.
-  //  - Booleans without a declared default are OMITTED, not set to true.
-  //    Emitting `true` for opt-in flags taught agents to set them — for
-  //    us-company-data that meant handing every 400 recipient
-  //    `allow_low_confidence: true`, the exact bypass of the wrong-company
-  //    guard this capability exists to enforce.
-  const branches = ((schema as any).anyOf ?? (schema as any).oneOf) as
-    | Array<{ required?: string[] }>
-    | undefined;
-  const firstBranch = Array.isArray(branches)
-    ? branches.find((b) => Array.isArray(b?.required) && b.required.length > 0)
-    : undefined;
-  const includeKeys = firstBranch?.required
-    ? new Set(firstBranch.required)
-    : null;
-
+): Record<string, unknown> | undefined {
+  const published = publishedInputExample(identity, schema);
+  if (published !== undefined) return published as Record<string, unknown>;
+  const props = (schema as any)?.properties;
+  if (!props || typeof props !== "object") return undefined;
+  const branches = ((schema as any).anyOf ?? (schema as any).oneOf) as Array<{ required?: string[] }> | undefined;
+  const firstBranch = Array.isArray(branches) ? branches.find((b) => Array.isArray(b?.required) && b.required.length > 0) : undefined;
+  const include = firstBranch?.required ? new Set(firstBranch.required) : null;
   const example: Record<string, unknown> = {};
   for (const [key, prop] of Object.entries(props)) {
-    if (includeKeys && !includeKeys.has(key)) continue;
+    if (include && !include.has(key)) continue;
     const p = prop as any;
-    if (p.enum && p.enum.length > 0) {
-      example[key] = p.enum[0];
-    } else if (p.default !== undefined) {
-      example[key] = p.default;
-    } else if (p.type === "string") {
-      example[key] = `example_${key}`;
-    } else if (p.type === "number" || p.type === "integer") {
-      example[key] = 0;
-    } else if (p.type === "boolean") {
-      continue; // no default declared — omit rather than teach agents to flip flags
-    } else if (p.type === "object") {
-      example[key] = {};
-    } else if (p.type === "array") {
-      example[key] = [];
-    }
+    if (Array.isArray(p?.enum) && p.enum.length > 0) example[key] = p.enum[0];
+    else if (p?.default !== undefined) example[key] = p.default;
   }
-  return example;
+  return exampleFailure(schema ?? undefined, example) ? undefined : example;
 }
 
 /**
@@ -712,7 +689,9 @@ export function schemaBadRequest(
   inputSchema: Record<string, unknown> | null,
   errorCode: "invalid_request" | "execution_failed" = "invalid_request",
   refusal?: Record<string, unknown>,
+  identity?: { kind: "capability" | "solution"; slug: string },
 ) {
+  const example = exampleForBadRequest(identity, inputSchema);
   return c.json(
     {
       error,
@@ -729,7 +708,7 @@ export function schemaBadRequest(
       }),
       charged: false,
       input_schema: inputSchema,
-      example: generateExampleFromSchema(inputSchema),
+      ...(example !== undefined ? { example } : {}),
       hint: `${BASE_URL}/x402/catalog`,
     },
     400,
@@ -1368,7 +1347,7 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   }
   const solValidation = validateX402Input(inputs, sol.inputSchema);
   if (!solValidation.ok) {
-    return schemaBadRequest(c, solValidation.error, sol.inputSchema);
+    return schemaBadRequest(c, solValidation.error, sol.inputSchema, "invalid_request", undefined, { kind: "solution", slug: sol.slug });
   }
 
   // Execute solution steps via shared orchestration module
@@ -1758,7 +1737,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     recordX402Miss({ slug, kind: "x402_bad_input", detail: validation.error,
       ...{ userAgent: c.req.header("user-agent") ?? null,
         ip: clientIpOrNull(c) } });
-    return schemaBadRequest(c, validation.error, cap.inputSchema);
+    return schemaBadRequest(c, validation.error, cap.inputSchema, "invalid_request", undefined, { kind: "capability", slug: cap.slug });
   }
 
   // Execute capability
@@ -1891,7 +1870,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     // the agent this may be an upstream failure, not necessarily bad input
     // — so it can back off instead of mutating a valid request and paying
     // to retry it.
-    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed", refusalDetails(err));
+    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed", refusalDetails(err), { kind: "capability", slug: cap.slug });
   }
 
   const latencyMs = Date.now() - startMs;
