@@ -149,10 +149,59 @@ export function publicExampleFailure(manifest: DiscoveryManifest, schema: Record
   return inputPrivacyFailure(manifest, value, kind) ?? exampleFailure(schema, value);
 }
 
+/**
+ * Input examples that are public by construction, named one by one, for tools
+ * the tool-level screen withholds by class (compliance category,
+ * `processes_personal_data`) and whose field names (`name`, `entity_name`) the
+ * field screen reads as personal data.
+ *
+ * Why this exists: with no published example, agents invent one. The refusals
+ * in `transaction-failure-taxonomy.test.ts` ('Invalid label "example_name"',
+ * 'Invalid ABN format: "example_abn"') are paid calls built from such a guess,
+ * and probe402 reported the same for these tools (OUTBOX row
+ * `probe402-refusals`).
+ *
+ * The exception is deliberately narrow and is not a way around the screen:
+ *  - it applies to one input example, never to an output example;
+ *  - the manifest's `health_check_input` must equal the value below exactly,
+ *    so the manifest stays the single source and an edit there withholds the
+ *    example again until this list is reviewed;
+ *  - the size limit, the placeholder check and the input-schema check still run;
+ *  - every value is a public identifier (a well-known ENS name, a listed
+ *    company) with no private individual in it. Adding a row needs a reason.
+ */
+export const REVIEWED_PUBLIC_INPUT_EXAMPLES: Readonly<Record<string, { value: unknown; reason: string }>> = {
+  "aml-risk-score": {
+    value: { entity_name: "Nordvik Handel AB (fictional)", entity_type: "company", country_code: "SE" },
+    reason: "A fictional company name, no flags set. The tool scores the inputs it is given and looks nothing up, so the name is never matched to a person.",
+  },
+  "ens-resolve": {
+    value: { name: "vitalik.eth" },
+    reason: "A well-known public ENS name, already quoted in the input schema description. ENS records are public on-chain.",
+  },
+};
+
+const PLACEHOLDER_VALUE = /^\s*(?:test|string|example|foo|xxx|value|placeholder)\s*$/i;
+function hasPlaceholderValue(value: unknown): boolean {
+  if (typeof value === "string") return PLACEHOLDER_VALUE.test(value);
+  if (Array.isArray(value)) return value.some(hasPlaceholderValue);
+  if (value && typeof value === "object") return Object.values(value).some(hasPlaceholderValue);
+  return false;
+}
+
+function inputExampleFailure(manifest: DiscoveryManifest, input: unknown): string | undefined {
+  const reviewed = REVIEWED_PUBLIC_INPUT_EXAMPLES[manifest.slug];
+  if (!reviewed || JSON.stringify(reviewed.value) !== JSON.stringify(input)) return publicExampleFailure(manifest, manifest.input_schema, input);
+  // Reviewed row: the personal-data screen is replaced by the review above; the rest still runs.
+  if (Buffer.byteLength(JSON.stringify(input), "utf8") > 1024) return "example exceeds 1024 bytes";
+  if (hasPlaceholderValue(input)) return "placeholder example";
+  return exampleFailure(manifest.input_schema, input);
+}
+
 export function metadataFromManifest(manifest: DiscoveryManifest): DiscoveryMetadata {
   const input = manifest.test_fixtures?.health_check_input;
   const output = manifest.output_schema?.example;
-  const inputOmission = publicExampleFailure(manifest, manifest.input_schema, input);
+  const inputOmission = inputExampleFailure(manifest, input);
   const outputOmission = publicExampleFailure(manifest, manifest.output_schema, output, "output");
   return {
     name: manifest.name, description: manifest.description,
@@ -160,6 +209,16 @@ export function metadataFromManifest(manifest: DiscoveryManifest): DiscoveryMeta
     ...(inputOmission ? { inputOmission } : { inputExample: input }),
     ...(outputOmission ? { outputOmission } : { outputExample: output }),
   };
+}
+
+/**
+ * The screened input example published for a tool, if it also validates against
+ * the schema the route runs with (DB and manifests can drift). One reader for
+ * the 402 challenge and the 400 envelope, so the two cannot disagree.
+ */
+export function publishedInputExample(identity: { kind: "capability" | "solution"; slug: string } | undefined, schema: Record<string, unknown> | null | undefined): unknown {
+  const example = identity ? getDiscoveryMetadata(identity.kind, identity.slug)?.inputExample : undefined;
+  return example !== undefined && !exampleFailure(schema ?? undefined, example) ? example : undefined;
 }
 
 /** Strip annotations that can otherwise leak withheld examples via nested schemas. */

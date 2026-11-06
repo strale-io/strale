@@ -57,6 +57,10 @@ test_fixtures:
       - field: address
         operator: not_null
         reliability: common
+  # Published as the x402 example input (x402-discovery-metadata.ts,
+  # REVIEWED_PUBLIC_INPUT_EXAMPLES): a well-known public ENS name.
+  health_check_input:
+    name: vitalik.eth
 output_field_reliability:
   name: common
   address: common
