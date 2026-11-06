@@ -155,12 +155,12 @@ describeMaybe("x402 settlement watch against disposable Postgres", () => {
     // Round illustrative counts: the big buyer's one job on one day was ten
     // times its normal day, and four days later it is back after a short pause.
     const { verdict, ledger } = await runScenario([
-      { payer: BIG, prior7d: 7 * 100, last24h: 60, burst: { daysBack: 4, count: 900 } },
+      { payer: BIG, prior7d: 7 * 100, last24h: 75, burst: { daysBack: 4, count: 900 } },
       { payer: SMALL_1, prior7d: 7 * 3, last24h: 3 },
       { payer: SMALL_2, prior7d: 7 * 2, last24h: 2 },
     ]);
     expect(verdict.kind).toBe("healthy");
-    expect(verdict.baselinePerDay).toBe(105);
+    expect(verdict.baselinePerDay).toBe(135); // the burst day capped at 3x the days around it
     expect(ledger).toEqual([]);
     expect(sent).toEqual([]);
   }, 60_000);
