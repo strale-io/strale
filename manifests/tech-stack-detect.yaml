@@ -2,6 +2,13 @@
 # refreshed from the live DB row on 2026-08-15 when the anyOf input contract
 # was synced to prod (the DB had drifted to required:[] with no anyOf, so
 # paying agents sent {} and hit a runtime refusal the schema said couldn't happen).
+#
+# 2026-11-06: output schema, reliability and transparency tag rewritten to match
+# what the executor returns (the declared cms/hosting/analytics/css_framework/
+# frontend_framework fields were left over from an earlier LLM-based version and
+# were never emitted); detection now also reads public DNS and reports versions.
+# The description is left as block 0123 (catalogue copy) froze it; changing it
+# needs a new catalogue-copy migration block, not an edit here.
 
 slug: tech-stack-detect
 name: "Tech Stack Detection"
@@ -29,36 +36,86 @@ input_schema:
 output_schema:
   type: object
   example:
-    cdn: null
-    cms: null
-    url: https://google.com
-    hosting: null
-    analytics:
-      - Google Analytics
-    confidence: low
-    css_framework: null
-    meta_framework: null
-    frontend_framework: null
-    other_technologies:
-      - Custom JavaScript
-      - Schema.org markup
-      - Nonce-based CSP
+    url: https://example.com/
+    technologies_detected: 5
+    technologies:
+      - name: Nginx
+        category: hosting
+        confidence: high
+        evidence: HTTP header server
+        version: 1.24.0
+      - name: WordPress
+        category: cms
+        confidence: high
+        evidence: meta generator tag
+        version: 6.4.2
+      - name: Google Tag Manager
+        category: tag-manager
+        confidence: high
+        evidence: HTML content pattern
+        version: null
+      - name: PHP
+        category: framework
+        confidence: medium
+        evidence: implied by WordPress
+        version: null
+      - name: Google Workspace
+        category: email
+        confidence: high
+        evidence: DNS MX record aspmx.l.google.com
+        version: null
+    by_category:
+      hosting:
+        - Nginx
+      cms:
+        - WordPress
+      tag-manager:
+        - Google Tag Manager
+      framework:
+        - PHP
+      email:
+        - Google Workspace
+    signals:
+      has_analytics: false
+      has_chat_widget: false
+      has_payment_processing: false
+      has_marketing_automation: false
+      has_error_monitoring: false
+      has_tag_manager: true
+      has_consent_management: false
+    dns:
+      status: ok
+      records_found:
+        mx: 5
+        txt: 3
+        ns: 2
+        cname: 0
+      failed_lookups: []
+    warnings: []
+    coverage_note: >-
+      Detected from one fetch of the homepage, its response headers and public DNS records (MX, TXT, NS, CNAME).
+      It lists what those show, not every technology the company uses: tools loaded only after JavaScript runs,
+      on other pages or on the server are not visible.
   properties:
-    cms:
-      type: string
     url:
       type: string
-    hosting:
-      type: string
-    analytics:
+    technologies_detected:
+      type: number
+    technologies:
       type: array
-    css_framework:
+    by_category:
+      type: object
+    signals:
+      type: object
+    dns:
+      type: object
+    warnings:
+      type: array
+    coverage_note:
       type: string
-    frontend_framework:
-      type: string
-data_source: HTTP response analysis (headers, JavaScript libraries, meta tags)
+data_source: Homepage HTTP response (headers, cookies, HTML) and public DNS records (MX, TXT, NS, CNAME)
 data_source_type: scrape
-transparency_tag: ai_generated
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: scraping-fragile-target
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
@@ -75,12 +132,15 @@ test_fixtures:
   health_check_input:
     url: https://example.com
 output_field_reliability:
-  cms: guaranteed
   url: guaranteed
-  hosting: guaranteed
-  analytics: guaranteed
-  css_framework: guaranteed
-  frontend_framework: guaranteed
+  technologies_detected: guaranteed
+  technologies: guaranteed
+  by_category: guaranteed
+  signals: guaranteed
+  dns: guaranteed
+  warnings: guaranteed
+  coverage_note: guaranteed
+  technologies.version: common
 limitations:
   - title: Some website sources are unsupported
     text: >-
@@ -89,20 +149,51 @@ limitations:
       is read. Repeating the same request does not return content.
     category: coverage
     severity: warning
+  - title: Sites that block automated access return a refusal
+    text: >-
+      A site that answers with HTTP 401, 403 or 429, shows a bot-check page, or disallows the path in
+      robots.txt is not read, and the call returns a refusal instead of a result. Strale does not retry
+      through another route.
+    category: availability
+    severity: warning
+  - title: Only the homepage is read
+    text: >-
+      One fetch of the homepage is analysed. Tools that load only after JavaScript runs, only on other
+      pages (checkout, app, docs, pricing) or only for signed-in users are not seen, and a page that
+      shows no recognisable technology returns an empty list with a warning, not a claim that none is in use.
+    category: coverage
+    severity: info
+    workaround: Run the call on the specific page address (url) where the tool is expected to load.
   - title: Niche or custom technologies can be missed
-    text: Database covers 1,000+ technologies — niche or custom-built tools may not be identified
+    text: >-
+      Detection uses a fixed table of several hundred common technologies. Niche, custom-built or
+      self-hosted tools are not recognised, and the list is not complete for any site.
     category: coverage
     severity: info
     workaround: >-
       Check the raw HTTP headers in the response for custom X-Powered-By or Server values that indicate unlisted
       technology
-  - title: Server-only technologies are not visible
+  - title: Versions only when the page or a header states them
     text: >-
-      Detection based on HTTP headers, JavaScript libraries, and HTML signatures — technologies loaded conditionally or
-      server-side only may not be detected
+      A version is reported only when the page or a response header states one (a generator tag, a file path,
+      or a header such as Server or X-Powered-By). Many technologies state none, so version is null. A stated
+      version can belong to a bundled library rather than the product itself.
     category: accuracy
     severity: info
-    workaround: Complement with dns-lookup and ssl-check results to infer infrastructure choices not visible in the HTML
+  - title: DNS signals describe the organisation, not the page
+    text: >-
+      Email provider, DNS host and domain-verification hints come from public DNS records (MX, TXT, NS) of the
+      registrable domain and the CNAME of the host. They show services the organisation uses, not what the page
+      loads. If a DNS lookup fails, the result says so under dns and warnings and the DNS-derived items are missing.
+    category: accuracy
+    severity: info
+  - title: Server-only technologies are not visible
+    text: >-
+      Detection based on HTTP headers, cookies, HTML signatures and public DNS — technologies loaded conditionally
+      or server-side only may not be detected
+    category: accuracy
+    severity: info
+    workaround: Complement with ssl-check results to infer infrastructure choices not visible in the HTML
   - title: Pages are limited to 16 MiB of HTML
     text: >-
       Pages with more than 16 MiB of HTML are refused with a caller_input error naming the input

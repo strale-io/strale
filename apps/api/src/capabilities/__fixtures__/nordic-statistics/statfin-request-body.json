@@ -1,0 +1,1 @@
+{"query":[{"code":"contentscode","selection":{"filter":"item","values":["vaerak-vaesto"]}},{"code":"timeperiod_y","selection":{"filter":"item","values":["2024","2025"]}}],"response":{"format":"json-stat2"}}

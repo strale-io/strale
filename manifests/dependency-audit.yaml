@@ -56,7 +56,7 @@ output_schema:
       type: array
     outdated_count:
       type: integer
-data_source: Algorithmic (dependency tree analysis, no external data)
+data_source: npm and PyPI registries, plus OSV.dev for known vulnerabilities (declared dependencies only)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: computed
@@ -112,8 +112,8 @@ limitations:
   - title: >-
       Transitive and runtime dependencies are not checked
     text: >-
-      AI-based audit of declared dependencies — cannot detect transitive vulnerability chains or runtime-only
-      dependencies
+      Checks only the dependencies declared in the file, against the npm or PyPI registry and OSV.dev; it cannot
+      detect transitive vulnerability chains or runtime-only dependencies
     category: accuracy
     severity: info
     workaround: Supplement with npm audit or pip-audit for vulnerability scanning that includes transitive dependencies

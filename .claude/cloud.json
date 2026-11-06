@@ -9,7 +9,7 @@
   "prepare": "npm --workspace=packages/mcp-server run build",
   "env": {
     "AUDIT_HMAC_SECRET": "ci-placeholder-secret-at-least-32-chars-long-0123456789",
-    "FRONTEND_URL": "https://strale.dev"
+    "FRONTEND_URL": "https://strale.io"
   },
   "secrets": [],
   "allowDomains": [

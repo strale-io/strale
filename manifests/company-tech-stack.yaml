@@ -44,12 +44,28 @@ output_schema:
     frontend_framework: null
     detected_technologies:
       - name: Cloudflare
-        category: CDN/Hosting
+        category: cdn
         confidence: high
+        evidence: HTTP header cf-ray
+        version: null
+      - name: Nginx
+        category: hosting
+        confidence: high
+        evidence: HTTP header server
+        version: 1.25.3
       - name: SPF
         category: Email Security
         confidence: high
+        evidence: AI analysis of the page excerpt and signals
+        version: null
     http_headers_analyzed: []
+    dns_status:
+      status: ok
+      failed_lookups: []
+    warnings: []
+    coverage_note: >-
+      Detected from the rendered homepage, its response headers and public DNS records (MX, TXT, NS, CNAME),
+      with an AI summary of the same material. It lists what those show, not every technology the company uses.
   properties:
     cdn:
       type: string
@@ -61,9 +77,15 @@ output_schema:
       type: string
     detected_technologies:
       type: array
-data_source: HTTP fetch + Claude API (technology stack analysis)
+    dns_status:
+      type: object
+    warnings:
+      type: array
+    coverage_note:
+      type: string
+data_source: Rendered homepage, HTTP response headers and public DNS (MX, TXT, NS, CNAME), summarised with Claude API
 data_source_type: scrape
-transparency_tag: ai_generated
+transparency_tag: mixed
 freshness_category: live-fetch
 maintenance_class: scraping-fragile-target
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
@@ -110,6 +132,10 @@ output_field_reliability:
   hosting_provider: guaranteed
   frontend_framework: guaranteed
   detected_technologies: guaranteed
+  detected_technologies.version: common
+  dns_status: guaranteed
+  warnings: guaranteed
+  coverage_note: guaranteed
 limitations:
   - title: Only publicly visible technologies are detected
     text: >-
@@ -118,6 +144,31 @@ limitations:
     category: accuracy
     severity: info
     workaround: Cross-reference with job postings (job-board-search) to infer backend technologies from required skills
+  - title: Only the homepage is read
+    text: >-
+      One rendered fetch of the homepage and its response headers are analysed, with public DNS records. Tools that
+      load only on other pages (checkout, app, docs, pricing) or only for signed-in users are not seen, and the
+      list is not complete for any site.
+    category: coverage
+    severity: info
+  - title: Versions only when the page or a header states them
+    text: >-
+      A version is reported only when the page or a response header states one (a generator tag, a file path,
+      or a header such as Server or X-Powered-By). Many technologies state none, so version is null.
+    category: accuracy
+    severity: info
+  - title: DNS signals describe the organisation, not the page
+    text: >-
+      Email provider, DNS host and domain-verification hints come from public DNS records of the registrable
+      domain and the CNAME of the host. If a DNS lookup fails, the result says so under dns_status and warnings.
+    category: accuracy
+    severity: info
+  - title: Technologies named only by the AI summary are lower confidence
+    text: >-
+      Entries whose evidence reads "AI analysis of the page excerpt and signals" come from a summary of part of the
+      page, not from a matched signature, and can be wrong or generic.
+    category: accuracy
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

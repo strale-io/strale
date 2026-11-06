@@ -1,0 +1,3 @@
+Intent: record the production onboarding of nordic-statistics (PR #936).
+
+The "Onboard capability" workflow (run 42237783118, mode onboard, discover) created the capability row, 6 limitations and 5 test suites. The known answer (SSB 07459, Region 0, Personer1, 2024) verified live, and checkReadiness returned ready with no issues: `archive/receipts/2026-11-06-check-nordic-statistics-onboarding.json`. The manifest is the one the pipeline discovered, with expected_fields generated from live output (it also rewrites the YAML in block style). At 15:58 Swedish time the public `GET /v1/capabilities/nordic-statistics` still answered 404: either the 5-minute catalogue cache or the dark-launch visibility rule (DEC-20260812-A); recheck before announcing it.
