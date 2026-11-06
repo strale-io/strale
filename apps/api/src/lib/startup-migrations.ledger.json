@@ -1168,9 +1168,10 @@
       "title": "Polish Company Data Algorithmic",
       "added": "2026-11-06",
       "columns_written": [
+        "capabilities.capability_type",
         "capabilities.transparency_tag"
       ],
-      "sha256": "c7229d6f30fc6476db1ffb7781b1aa91269a917348b54bad01490ac12b2a7823"
+      "sha256": "be596c763650b0811a4f4ab9f25d2a86a5431f4af0f6b4708ba38286db056bfe"
     }
   ],
   "known_overlaps": [

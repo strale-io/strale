@@ -27,7 +27,19 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * the same value. capabilities.updated_at is not written (blocks 0123, 0143,
  * 0144, 0145).
  *
- * Run policy "once". The UPDATE is guarded on the old value, so a second run
+ * The same row's `capability_type` still read `ai_assisted` (2026-04-20
+ * drift inventory, archive/sessions/audit-reports/manifest_drift_inventory.md;
+ * the column is "hybrid" in capability-field-authority.ts, so the boot sync
+ * preserves a drifted value and nothing has rewritten it since). That value
+ * types the tool "ai" in the audit body (compliance-profile.ts), adds US
+ * processing for Anthropic to its provenance (provenance-builder.ts), and ties
+ * it to Anthropic's health in upstream-health-gate.ts. The manifest says
+ * `data_source_type: api`, which dataSourceTypeToCapType maps to
+ * `stable_api`; this block sets that, guarded on `ai_assisted`, so the label
+ * fix does not leave "AI" on the audit surfaces (independent review of PR
+ * #949, 2026-11-06).
+ *
+ * Run policy "once". Each UPDATE is guarded on its old value, so a second run
  * writes 0 rows and a later edit is never overwritten. One row at most; no
  * bulk operation (DEC-20260504-B). Only strings are bound (DEC-20260504-A).
  */
@@ -43,11 +55,19 @@ export async function runMigration0146_polishCompanyDataAlgorithmic(
      WHERE slug = ${POLISH_COMPANY_DATA_SLUG}
        AND transparency_tag = ${"ai_generated"}
   `);
-  const rows = (res as { count?: number }).count ?? 0;
+  const typeRes = await tx.execute(sql`
+    UPDATE capabilities
+       SET capability_type = ${"stable_api"}
+     WHERE slug = ${POLISH_COMPANY_DATA_SLUG}
+       AND capability_type = ${"ai_assisted"}
+  `);
+  const tagRows = (res as { count?: number }).count ?? 0;
+  const typeRows = (typeRes as { count?: number }).count ?? 0;
+  const done = [tagRows ? "labelled algorithmic" : null, typeRows ? "typed stable_api" : null].filter(Boolean);
   return {
     block: "0146_polishCompanyDataAlgorithmic",
-    outcome: rows === 0 ? "no change (label already corrected)" : "polish-company-data labelled algorithmic",
-    rows_affected: rows,
+    outcome: done.length === 0 ? "no change (label and type already corrected)" : `polish-company-data ${done.join(" and ")}`,
+    rows_affected: tagRows + typeRows,
     duration_ms: Date.now() - startedAt,
   };
 }
