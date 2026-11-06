@@ -44,6 +44,9 @@ threads:
     sent_by: petter (drafted by session)
     follow_up_by: 2026-11-10
     status: awaiting_reply
+    reply_draft: 2026-11-06, saved in Outlook Drafts by the PC inbox job (docs/lanes/pc/inbox-review-1106-brief.md), for Petter or the inbox routine to send. It reports the fix in strale-io/strale#932, live since 2026-11-06 15:05 Swedish time.
+
+
   - id: serper-resale-terms
     to: hello@serper.dev
     subject: Whether Serper's terms permit per-call resale

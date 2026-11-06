@@ -252,7 +252,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "653f5305172f4243b3f33ba7fd03f9a418dece63e292976dd915425dec8ca0b3",
+      "sha256": "68543eac749cbcda8bc433771c3074843cb93fc3743dd01a30fe213aeddd41b5",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -285,6 +285,7 @@
         "design/explorations/2026-09-05-quiet-material-refinement/FOUNDATION.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
         "docs/lanes/pc/account-steps-1106-brief.md",
+        "docs/lanes/pc/inbox-review-1106-brief.md",
         "docs/operations/accounts-and-email.md",
         "docs/operations/distribution-registry.md",
         "docs/operations/distribution-registry.yaml",
