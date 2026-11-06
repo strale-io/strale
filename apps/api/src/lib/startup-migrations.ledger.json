@@ -1139,6 +1139,18 @@
         "solutions.long_description"
       ],
       "sha256": "f779079233e4007c695086195cd7044fad96c4d02caa4756521a8cf0a90c6a33"
+    },
+    {
+      "id": "M087",
+      "function": "runMigration0144_correctAiLabelAndDependencyAuditText",
+      "title": "Correct Ai Label And Dependency Audit Text",
+      "added": "2026-11-06",
+      "columns_written": [
+        "capabilities.transparency_tag",
+        "capability_limitations.limitation_text",
+        "capability_limitations.updated_at"
+      ],
+      "sha256": "92a1a389848161aaaa6cccda6396129aa8c0ee184105f6a9010d98df42a3fcf6"
     }
   ],
   "known_overlaps": [
@@ -1672,6 +1684,22 @@
         "M086"
       ],
       "note": "M065 (0122, 2026-10-23, DQ-36) rewrites data_source only for slug = 'sanctions-check', guarded on the exact old OFSI wording, once (ledgered). M086 (0143, 2026-11-06) rewrites data_source only for slug = 'domain-reputation', guarded on IS DISTINCT FROM its new text, once (run policy once; Petter's 2026-11-06 approval to publish the narrowed text). The slugs are disjoint, so they cannot fight. Neither runs again after its first applied boot; the boot manifest text sync refuses the compliance-category domain-reputation row until approved."
+    },
+    {
+      "column": "capability_limitations.limitation_text",
+      "blocks": [
+        "M086",
+        "M087"
+      ],
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+    },
+    {
+      "column": "capability_limitations.updated_at",
+      "blocks": [
+        "M086",
+        "M087"
+      ],
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
     }
   ]
 }
