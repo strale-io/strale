@@ -27,6 +27,18 @@ import { HtmlTooComplexError } from "./lib/html-parse-bound.js";
 import { htmlToCleanMarkdown, stopConversionWorkers } from "./lib/readability-convert.js";
 import "./url-to-markdown.js";
 
+/**
+ * CPU milliseconds this test process has used since `since` (user + system,
+ * worker threads included). Vitest runs each test file in its own process
+ * (pool: "forks"), so unlike wall-clock time this does not grow when other
+ * test files load the machine: CI at full parallelism timed the same 5,000-deep
+ * conversion at 2.4 s that takes well under 1 s of CPU.
+ */
+const cpuMs = (since: NodeJS.CpuUsage): number => {
+  const d = process.cpuUsage(since);
+  return (d.user + d.system) / 1000;
+};
+
 // The conversion runs in a worker thread that starts on first use; start it
 // here so the timings below measure conversions, not the worker's start-up.
 beforeAll(async () => {
@@ -42,12 +54,12 @@ function page(body: string): Response {
 
 async function run(html: string): Promise<{ ms: number; result: unknown; error: unknown }> {
   safeFetchMock.mockImplementation(async () => page(html));
-  const started = performance.now();
+  const started = process.cpuUsage();
   try {
     const result = await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" });
-    return { ms: performance.now() - started, result, error: null };
+    return { ms: cpuMs(started), result, error: null };
   } catch (error) {
-    return { ms: performance.now() - started, result: null, error };
+    return { ms: cpuMs(started), result: null, error };
   }
 }
 

@@ -25,6 +25,18 @@ import {
 import { convertHtmlToMarkdownSync as htmlToCleanMarkdown } from "./readability-convert-sync.js";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 
+/**
+ * CPU milliseconds this test process has used since `since` (user + system,
+ * worker threads included). Vitest runs each test file in its own process
+ * (pool: "forks"), so unlike wall-clock time this does not grow when other
+ * test files load the machine: CI at full parallelism timed the same 5,000-deep
+ * conversion at 2.4 s that takes well under 1 s of CPU.
+ */
+const cpuMs = (since: NodeJS.CpuUsage): number => {
+  const d = process.cpuUsage(since);
+  return (d.user + d.system) / 1000;
+};
+
 const KB = 1024;
 const fill = (unit: string, bytes: number) => unit.repeat(Math.ceil(bytes / unit.length));
 
@@ -43,12 +55,12 @@ function articlePage(bytes: number): string {
 
 /** Runs the conversion; returns how long it took and whether it threw. */
 function convert(html: string): { ms: number; error: unknown; markdown: string | null } {
-  const started = performance.now();
+  const started = process.cpuUsage();
   try {
     const result = htmlToCleanMarkdown(html, "https://example.test/a");
-    return { ms: performance.now() - started, error: null, markdown: result.markdown };
+    return { ms: cpuMs(started), error: null, markdown: result.markdown };
   } catch (error) {
-    return { ms: performance.now() - started, error, markdown: null };
+    return { ms: cpuMs(started), error, markdown: null };
   }
 }
 
@@ -234,17 +246,17 @@ describe("boundHtmlForParse", () => {
   });
 
   it("refuses a page with more elements or tags than the budget, in one linear pass", () => {
-    const started = performance.now();
+    const started = process.cpuUsage();
     expect(() => boundHtmlForParse("<br>".repeat(HTML_PARSE_LIMITS.maxElements + 1))).toThrow(/more than 30000 elements/);
     expect(() => boundHtmlForParse("</br>".repeat(HTML_PARSE_LIMITS.maxMarkupTokens + 1))).toThrow(/more than 100000 tags/);
-    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(cpuMs(started)).toBeLessThan(1_000);
   });
 
   it("is linear on 16 MB of text with few tags", () => {
     const html = `<p>${fill("plain words and more words ", 16 * 1024 * KB)}</p>`;
-    const started = performance.now();
+    const started = process.cpuUsage();
     expect(boundHtmlForParse(html).html).toBe(html);
-    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(cpuMs(started)).toBeLessThan(1_000);
   });
 
   it("is linear on unterminated constructs", () => {
@@ -255,13 +267,13 @@ describe("boundHtmlForParse", () => {
       `<script>${fill("<!--<script>", 4 * 1024 * KB)}`,
       `<p title="${fill("x", 4 * 1024 * KB)}`,
     ]) {
-      const started = performance.now();
+      const started = process.cpuUsage();
       try {
         boundHtmlForParse(html);
       } catch (error) {
         expect(error).toBeInstanceOf(HtmlTooComplexError);
       }
-      expect(performance.now() - started, html.slice(0, 16)).toBeLessThan(1_000);
+      expect(cpuMs(started), html.slice(0, 16)).toBeLessThan(1_000);
     }
   });
 });
@@ -272,9 +284,9 @@ describe("assertParseWithinBounds (the exact backstop)", () => {
     // pre-pass's simplified model does not follow that, and the backstop,
     // which counts parse5's real stack, catches it.
     const html = boundHtmlForParse(fill("<b><i><u><a>", 32 * KB)).html;
-    const started = performance.now();
+    const started = process.cpuUsage();
     expect(() => assertParseWithinBounds(html)).toThrow(HtmlTooComplexError);
-    expect(performance.now() - started).toBeLessThan(500);
+    expect(cpuMs(started)).toBeLessThan(500);
   });
 
   it("throws on deep nesting it is handed directly", () => {
