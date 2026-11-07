@@ -19,19 +19,28 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
+import { logWarn } from "../../lib/log.js";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
-import type { ReadabilityResult } from "./readability-convert-sync.js";
+import type { MarkdownOptions, ReadabilityResult } from "./readability-convert-sync.js";
 
-export type { ReadabilityResult } from "./readability-convert-sync.js";
+export type { MarkdownOptions, ReadabilityResult } from "./readability-convert-sync.js";
 
 export const CONVERSION_LIMITS = {
   /** Worker threads converting at once. */
   workers: 2,
   /** Wall-clock limit for one conversion, from the moment a worker takes it. */
   timeoutMs: 8_000,
-  /** Heap limit per worker. A 16 MB page with ordinary markup fits well inside. */
+  /** Heap limits per worker (MB). One conversion of the largest input peaks well inside. */
   maxOldGenerationSizeMb: 512,
+  maxYoungGenerationSizeMb: 48,
+  /**
+   * Characters of HTML handed to the converter; the rest of a longer page is
+   * dropped at a tag boundary. The Markdown is cut to 50,000 characters
+   * anyway, and the second R1 review measured 650-775 MB of process memory
+   * for one 15 MB conversion, which two workers would double.
+   */
+  maxInputChars: 4 * 1024 * 1024,
   /** Pages waiting for a worker; beyond this a page is refused at once. */
   maxQueued: 8,
   /** Longest a page waits for a worker before it is refused. */
@@ -54,6 +63,8 @@ interface Job {
   id: number;
   html: string;
   url: string;
+  options?: MarkdownOptions;
+  queuedAt: number;
   resolve: (r: ReadabilityResult) => void;
   reject: (e: unknown) => void;
   queueTimer?: NodeJS.Timeout;
@@ -62,7 +73,7 @@ interface Job {
 // In production this module and the worker are compiled .js. Under tsx (dev,
 // tests) both are TypeScript, and a worker thread does not inherit tsx's
 // loader, so the worker starts from a bootstrap that registers it first.
-function createWorker(options: { resourceLimits: { maxOldGenerationSizeMb: number } }): Worker {
+function createWorker(options: { resourceLimits: { maxOldGenerationSizeMb: number; maxYoungGenerationSizeMb: number } }): Worker {
   const self = fileURLToPath(import.meta.url);
   if (self.endsWith(".ts")) {
     const tsxApi = import.meta.resolve("tsx/esm/api");
@@ -90,7 +101,10 @@ class Slot {
 
   private spawn(): Worker {
     const w = createWorker({
-      resourceLimits: { maxOldGenerationSizeMb: CONVERSION_LIMITS.maxOldGenerationSizeMb },
+      resourceLimits: {
+        maxOldGenerationSizeMb: CONVERSION_LIMITS.maxOldGenerationSizeMb,
+        maxYoungGenerationSizeMb: CONVERSION_LIMITS.maxYoungGenerationSizeMb,
+      },
     });
     w.unref(); // an idle converter never keeps the process alive
     w.on("message", (reply: Reply) => {
@@ -117,8 +131,18 @@ class Slot {
   }
 
   run(job: Job): void {
+    // A worker that cannot start fails this job only; the slot stays free.
+    if (!this.worker) {
+      try {
+        this.worker = this.spawn();
+      } catch (err) {
+        logWarn("readability-worker-spawn-failed", err instanceof Error ? err.message : String(err));
+        job.reject(err);
+        this.onFree();
+        return;
+      }
+    }
     this.job = job;
-    if (!this.worker) this.worker = this.spawn();
     const w = this.worker;
     this.timer = setTimeout(() => {
       // Terminate first so the CPU is released, then answer the caller.
@@ -132,7 +156,7 @@ class Slot {
         ),
       );
     }, CONVERSION_LIMITS.timeoutMs);
-    w.postMessage({ id: job.id, html: job.html, url: job.url });
+    w.postMessage({ id: job.id, html: job.html, url: job.url, options: job.options });
   }
 
   private finish(): void {
@@ -176,11 +200,25 @@ function ensureSlots(): void {
  * Rejects with HtmlTooComplexError past a limit, ConversionBusyError when the
  * queue is full; both are non-billable refusals.
  */
-export function htmlToCleanMarkdown(html: string, url: string): Promise<ReadabilityResult> {
+export function htmlToCleanMarkdown(html: string, url: string, options?: MarkdownOptions): Promise<ReadabilityResult> {
   ensureSlots();
-  if (queue.length >= CONVERSION_LIMITS.maxQueued) return Promise.reject(new ConversionBusyError());
+  const queuedAt = Date.now();
+  // Every refusal is logged with its reason and how long it took, so real
+  // pages that hit the limits show up (second R1 review of #964, F8).
+  const refused = (err: unknown) => {
+    if (err instanceof ResourceLimitError) {
+      logWarn("readability-convert-refused", err.message, {
+        reason: err.name,
+        ms: Date.now() - queuedAt,
+        input_chars: html.length, // never the URL: what customers fetch is not logged
+      });
+    }
+    throw err;
+  };
+  if (queue.length >= CONVERSION_LIMITS.maxQueued) return Promise.reject(new ConversionBusyError()).catch(refused);
+  const input = boundInput(html);
   return new Promise<ReadabilityResult>((resolve, reject) => {
-    const job: Job = { id: nextId++, html, url, resolve, reject };
+    const job: Job = { id: nextId++, html: input, url, options, queuedAt, resolve, reject };
     job.queueTimer = setTimeout(() => {
       const i = queue.indexOf(job);
       if (i >= 0) {
@@ -190,7 +228,15 @@ export function htmlToCleanMarkdown(html: string, url: string): Promise<Readabil
     }, CONVERSION_LIMITS.maxQueueWaitMs);
     queue.push(job);
     dispatch();
-  });
+  }).catch(refused);
+}
+
+/** Cuts the HTML at maxInputChars, at the last "<" before it so no tag is split. */
+export function boundInput(html: string): string {
+  const max = CONVERSION_LIMITS.maxInputChars;
+  if (html.length <= max) return html;
+  const lt = html.lastIndexOf("<", max);
+  return html.slice(0, lt > 0 ? lt : max);
 }
 
 /** Stops every converter (tests, shutdown). Queued pages are refused. */

@@ -16,7 +16,13 @@ tracks:
       The fix moves the whole conversion into a pool of two worker threads with
       an 8 s wall-clock limit, a 512 MB heap limit and a bounded queue
       (lib/readability-convert.ts); past a limit the worker is terminated and
-      the call is refused unbilled. Next: re-review #964 in a separate context,
+      the call is refused unbilled. Review round 2 (FAIL) found two more
+      main-thread regexes on the tool's path (the body-text check in
+      web-provider.ts, 4.1 s on 256 KB; the link strip, 1 s): both fixed, with
+      a 4 MB converter input cap and refusal logs. Open follow-ups: per-caller
+      fairness in the converter pool (one caller can occupy it; needs caller
+      identity in executors), and the same regex chain in
+      browserless-extract.ts htmlToText (other tools). Next: round-3 review,
       merge, then after deploy call url-to-markdown on an ordinary page and
       confirm it converts (DEC-20260504-C), and write the receipt for the exit
       below. Then sweep the other places that hand fetched markup to jsdom

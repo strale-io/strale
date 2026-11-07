@@ -45,8 +45,8 @@ function removeSpans(html: string, tag: string): string {
   return parts.join("");
 }
 
-/** `html.replace(/<[^>]+>/g, " ")`, in one forward pass. */
-function replaceTags(html: string): string {
+/** `html.replace(/<[^>]+>/g, with)`, in one forward pass. */
+function replaceTags(html: string, withText = " "): string {
   const parts: string[] = [];
   let copied = 0;
   let from = 0;
@@ -59,7 +59,7 @@ function replaceTags(html: string): string {
     }
     const gt = html.indexOf(">", lt + 2);
     if (gt < 0) break; // no ">" left: no later "<" can match either
-    parts.push(html.slice(copied, lt), " ");
+    parts.push(html.slice(copied, lt), withText);
     copied = from = gt + 1;
   }
   if (parts.length === 0) return html;
@@ -71,4 +71,39 @@ export function strippedTextLength(html: string): number {
   let text = html;
   for (const tag of ["script", "style", "nav", "footer", "header"]) text = removeSpans(text, tag);
   return replaceTags(text).replace(/\s+/g, " ").trim().length;
+}
+
+/**
+ * What web-provider's plain-fetch tier calls the page's visible text. It
+ * returns exactly what this returns:
+ *
+ *   const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+ *   m ? m[1].replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+ *           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+ *           .replace(/<[^>]+>/g, "").trim()
+ *     : ""
+ *
+ * but in linear time. The body regex rescans to the end of the page from
+ * every "<body", so 256 KB of "<body>" blocked the process for over 4 s and
+ * 1 MB would take about a minute (the second R1 review of #964).
+ */
+export function bodyVisibleText(html: string): string {
+  // The match starts at the first "<body" whose "[^>]*>" can complete, which
+  // is the first one: a later "<body" has no ">" after it if this one does not.
+  // (Searched case-insensitively in place: lowercasing a copy can change its
+  // length for some Unicode characters and shift every index.)
+  const openMatch = /<body/i.exec(html);
+  if (!openMatch) return "";
+  const gt = html.indexOf(">", openMatch.index + 5);
+  if (gt < 0) return "";
+  // Greedy [\s\S]* ends at the last "</body>" after the ">": one forward pass.
+  const closeRe = /<\/body>/gi;
+  closeRe.lastIndex = gt + 1;
+  let close = -1;
+  for (let m = closeRe.exec(html); m; m = closeRe.exec(html)) close = m.index;
+  if (close < 0) return "";
+  let body = html.slice(gt + 1, close);
+  body = removeSpans(body, "script");
+  body = removeSpans(body, "style");
+  return replaceTags(body, "").trim();
 }

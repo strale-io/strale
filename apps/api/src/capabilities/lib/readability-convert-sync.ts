@@ -13,6 +13,25 @@ import { JSDOM } from "jsdom";
 import TurndownService from "turndown";
 import { prepareHtmlForParse } from "./html-parse-bound.js";
 
+export interface MarkdownOptions {
+  /** Keep [text](url) links; false keeps only their text. Default true. */
+  includeLinks?: boolean;
+  /** Keep ![alt](src) images; false drops them. Default true. */
+  includeImages?: boolean;
+}
+
+/**
+ * Strips links and images from the Markdown if asked. These regexes rescan
+ * from every "[" to the end of the text, so 50,000 "[" cost about 1 s; they
+ * run here, in the worker, under its time limit (second R1 review of #964).
+ */
+export function postProcessMarkdown(md: string, { includeLinks = true, includeImages = true }: MarkdownOptions = {}): string {
+  let result = md;
+  if (!includeLinks) result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  if (!includeImages) result = result.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
+  return result;
+}
+
 export interface ReadabilityResult {
   markdown: string;
   title: string;

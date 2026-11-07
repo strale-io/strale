@@ -6,19 +6,20 @@
  * the API's event loop free; readability-convert.ts terminates this worker
  * when a conversion passes its wall-clock limit.
  *
- * Protocol: the parent posts { id, html, url }; the worker answers
+ * Protocol: the parent posts { id, html, url, options }; the worker answers
  * { id, ok: true, result } or { id, ok: false, tooComplex, message }.
  */
 import { parentPort } from "node:worker_threads";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
-import { convertHtmlToMarkdownSync } from "./readability-convert-sync.js";
+import { convertHtmlToMarkdownSync, postProcessMarkdown, type MarkdownOptions } from "./readability-convert-sync.js";
 
 if (!parentPort) throw new Error("readability-worker must run as a worker thread");
 const port = parentPort;
 
-port.on("message", (msg: { id: number; html: string; url: string }) => {
+port.on("message", (msg: { id: number; html: string; url: string; options?: MarkdownOptions }) => {
   try {
-    const result = convertHtmlToMarkdownSync(msg.html, msg.url);
+    const converted = convertHtmlToMarkdownSync(msg.html, msg.url);
+    const result = { ...converted, markdown: postProcessMarkdown(converted.markdown, msg.options) };
     port.postMessage({ id: msg.id, ok: true, result });
   } catch (err) {
     port.postMessage({

@@ -10,8 +10,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
-import { convertHtmlToMarkdownSync } from "./readability-convert-sync.js";
-import { CONVERSION_LIMITS, ConversionBusyError, htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
+import { convertHtmlToMarkdownSync, postProcessMarkdown } from "./readability-convert-sync.js";
+import { boundInput, CONVERSION_LIMITS, ConversionBusyError, htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
 
 const DEFAULTS = { ...CONVERSION_LIMITS };
 const URL_ = "https://example.test/a";
@@ -29,13 +29,20 @@ async function maxEventLoopGap<T>(work: () => Promise<T>): Promise<{ gap: number
     gap = Math.max(gap, now - last);
     last = now;
   }, 10);
+  // Let the interval tick once more after `work` settles: a synchronous block
+  // that ends with the settle is only seen by the tick after it (F5 of the
+  // second R1 review).
+  const settle = async () => {
+    await new Promise((r) => setTimeout(r, 30));
+    clearInterval(timer);
+  };
   try {
     const value = await work();
+    await settle();
     return { gap, value, error: null };
   } catch (error) {
+    await settle();
     return { gap, value: undefined, error };
-  } finally {
-    clearInterval(timer);
   }
 }
 
@@ -85,6 +92,54 @@ describe("htmlToCleanMarkdown in a worker", () => {
     await expect(running).rejects.toBeInstanceOf(HtmlTooComplexError);
     CONVERSION_LIMITS.timeoutMs = DEFAULTS.timeoutMs;
     expect((await queued).markdown).toContain("# Heading");
+    await stopConversionWorkers();
+  }, 30_000);
+
+  it("the gap helper sees a block that ends as the work settles", async () => {
+    // Guards the helper itself: an in-process conversion is exactly this shape.
+    const { gap } = await maxEventLoopGap(async () => {
+      await new Promise((r) => setTimeout(r, 15));
+      const end = performance.now() + 400;
+      while (performance.now() < end) { /* block */ }
+    });
+    expect(gap).toBeGreaterThan(300);
+  });
+
+  it("strips links and images in the worker, with the same result as in-process", async () => {
+    const page = ARTICLE.replace("</article>", '<p>See <a href="https://example.test/x">the docs</a> and <img src="https://example.test/i.png" alt="pic"></p></article>');
+    const expected = convertHtmlToMarkdownSync(page, URL_);
+    const options = { includeLinks: false, includeImages: false };
+    const got = await htmlToCleanMarkdown(page, URL_, options);
+    expect(got.markdown).toBe(postProcessMarkdown(expected.markdown, options));
+    expect(got.markdown).toContain("See the docs");
+    expect(got.markdown).not.toContain("](");
+  });
+
+  it("keeps the event loop free while stripping links from a flood of '['", async () => {
+    // 60,000 "[" in a <pre> reach the Markdown unescaped; the link regex then
+    // rescans from every "[": about 1 s on the main thread before the move.
+    const page = `<html><body><p>${"Readable words for the intro. ".repeat(10)}</p><pre>${"[".repeat(60_000)}</pre></body></html>`;
+    const { gap, error } = await maxEventLoopGap(() => htmlToCleanMarkdown(page, URL_, { includeLinks: false }));
+    expect(error).toBeNull();
+    expect(gap).toBeLessThan(250);
+  }, 20_000);
+
+  it("cuts input past maxInputChars at a tag boundary", () => {
+    CONVERSION_LIMITS.maxInputChars = 20;
+    expect(boundInput("<p>short</p>")).toBe("<p>short</p>");
+    expect(boundInput("<p>aaaa</p><p>bbbbbbbbbbbbbb</p>")).toBe("<p>aaaa</p>");
+  });
+
+  it("refuses a page that waits in the queue past maxQueueWaitMs", async () => {
+    await stopConversionWorkers();
+    CONVERSION_LIMITS.workers = 1;
+    CONVERSION_LIMITS.timeoutMs = 3_000;
+    CONVERSION_LIMITS.maxQueueWaitMs = 500;
+    const running = htmlToCleanMarkdown(SLOW_PAGE, URL_);
+    const started = performance.now();
+    await expect(htmlToCleanMarkdown(ARTICLE, URL_)).rejects.toBeInstanceOf(ConversionBusyError);
+    expect(performance.now() - started).toBeLessThan(2_000);
+    await expect(running).rejects.toBeInstanceOf(HtmlTooComplexError);
     await stopConversionWorkers();
   }, 30_000);
 

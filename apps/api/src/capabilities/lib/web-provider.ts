@@ -105,6 +105,7 @@ import {
   siteAccessRefusal,
 } from "../../lib/site-access.js";
 import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
+import { bodyVisibleText } from "./stripped-text-length.js";
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
@@ -578,16 +579,7 @@ async function fetchPageOnce(
           // Computed LAZILY (#428 /simplify): the strip allocates several full
           // copies of the document, and at the 16 MiB cap that is a lot of
           // churn to spend on a page the two cheap guards are about to reject.
-          const visibleText = () => {
-            const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-            return bodyMatch
-              ? bodyMatch[1]
-                  .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-                  .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-                  .replace(/<[^>]+>/g, "")
-                  .trim()
-              : "";
-          };
+          const visibleText = () => bodyVisibleText(html); // linear (R1)
           // A JS-challenge interstitial ("enable JavaScript and reload") is
           // not content. Accepting it is how eu-regulation-search silently
           // returned "no results" for weeks (P2 triage, 2026-08-12). It used

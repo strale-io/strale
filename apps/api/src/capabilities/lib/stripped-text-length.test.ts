@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { strippedTextLength } from "./stripped-text-length.js";
+import { bodyVisibleText, strippedTextLength } from "./stripped-text-length.js";
 
 /** The regex chain url-to-markdown used before, kept here as the reference. */
 function reference(html: string): number {
@@ -59,5 +59,47 @@ describe("strippedTextLength", () => {
       strippedTextLength(html);
       expect(performance.now() - started, html.slice(0, 8)).toBeLessThan(1_000);
     }
+  });
+});
+
+describe("bodyVisibleText", () => {
+  const regexVersion = (html: string): string => {
+    const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    return m
+      ? m[1]
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, "")
+          .trim()
+      : "";
+  };
+
+  it("returns exactly what the regex chain returns", () => {
+    const cases = [
+      "<html><BODY class=x><p>Hello <b>world</b></p><script>var a = '<p>'</script></Body></html>",
+      "<body><p>a</p></body><body><p>b</p></body>",
+      "<body>no close",
+      "<body",
+      "</body><body>after</body>",
+      "<body><style>p{}</style>x<STYLE>y",
+      "<body><p>İstanbul ß <i>x</i></p></body>",
+      "<bodyx>odd tag</body>",
+    ];
+    for (const html of cases) expect(bodyVisibleText(html), html).toBe(regexVersion(html));
+    const alphabet = ["<", ">", "/", "body", "BODY", "script", "style", "p", "x", " ", "</body>", "<body>"];
+    for (let k = 0; k < 3_000; k++) {
+      let html = "";
+      const n = 1 + Math.floor(Math.random() * 14);
+      for (let j = 0; j < n; j++) html += alphabet[Math.floor(Math.random() * alphabet.length)];
+      expect(bodyVisibleText(html), JSON.stringify(html)).toBe(regexVersion(html));
+    }
+  });
+
+  it("is linear on a flood of <body>", () => {
+    // The regex took over 4 s on this (second R1 review of #964).
+    const html = `<html><body>${"<body>".repeat(43_690)}`;
+    const started = performance.now();
+    bodyVisibleText(html);
+    expect(performance.now() - started).toBeLessThan(200);
   });
 });

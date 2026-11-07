@@ -236,14 +236,6 @@ function mapBrowserlessError(msg: string, url?: string): Error {
   );
 }
 
-/** Post-process markdown to strip links/images if requested. */
-function postProcess(md: string, includeLinks: boolean, includeImages: boolean): string {
-  let result = md;
-  if (!includeLinks) result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-  if (!includeImages) result = result.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
-  return result;
-}
-
 registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.link as string) ?? "").trim();
   if (!url) throw inputRefusal("'url' is required.", "url", "Send 'url' as an absolute HTTP or HTTPS URL to a web page.");
@@ -265,8 +257,9 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const plainHtml = await tryPlainFetch(fullUrl);
 
   if (plainHtml) {
-    const result = await htmlToCleanMarkdown(plainHtml, fullUrl);
-    const markdown = postProcess(result.markdown, includeLinks, includeImages);
+    // Link and image stripping runs in the worker too (R1).
+    const result = await htmlToCleanMarkdown(plainHtml, fullUrl, { includeLinks, includeImages });
+    const markdown = result.markdown;
     const wordCount = markdown.split(/\s+/).filter(Boolean).length;
 
     if (wordCount < 10) {
@@ -299,8 +292,8 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
     throw mapBrowserlessError(err instanceof Error ? err.message : String(err), fullUrl);
   }
 
-  const result = await htmlToCleanMarkdown(browserlessHtml, fullUrl);
-  const browserMarkdown = postProcess(result.markdown, includeLinks, includeImages);
+  const result = await htmlToCleanMarkdown(browserlessHtml, fullUrl, { includeLinks, includeImages });
+  const browserMarkdown = result.markdown;
   const wordCount = browserMarkdown.split(/\s+/).filter(Boolean).length;
 
   if (wordCount < 10 && browserMarkdown.length < 100) {
