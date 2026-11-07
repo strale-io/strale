@@ -29,12 +29,12 @@ output_schema:
     reduced_rates:
       - rate: 6
         categories:
+          - food
           - books
           - cultural_events
           - transport
       - rate: 12
         categories:
-          - food
           - restaurant_food
           - accommodation
     standard_rate: 25
@@ -47,7 +47,7 @@ output_schema:
       type: number
     zero_rated_categories:
       type: array
-data_source: Static database (VAT/GST rates by country, updated quarterly)
+data_source: Static reference table (VAT/GST rates by country; EU rates checked against the European Commission TEDB on 2026-11-06)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
@@ -93,7 +93,7 @@ output_field_reliability:
   zero_rated_categories: guaranteed
 limitations:
   - title: Recent VAT rate changes may be missing
-    text: AI-generated VAT rates — rates change with fiscal policy and may not reflect the most recent adjustments
+    text: Rates come from a hand-kept reference table (EU rates checked against the European Commission TEDB on 2026-11-06) — rates change with fiscal policy and may not reflect changes made after that date; categories that are VAT-exempt in a country return its standard rate
     category: freshness
     severity: info
     workaround: Verify rates against the EU VAT rate database at ec.europa.eu/taxation_customs before use in invoicing systems
