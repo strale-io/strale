@@ -105,6 +105,11 @@ export function buildSearchRequest(
         } results for this query:\n${query}`,
       },
     ],
+    // Explicit, though it is the model's default: Haiku 5.5 runs adaptive
+    // thinking when the request sets none. Stated here so a `thinking`
+    // default registered for this model id (models.ts settings, shared with
+    // other roles) can never turn it off for search.
+    thinking: { type: "adaptive" },
     output_config: { effort: "low", format: FORMAT },
   };
 }
