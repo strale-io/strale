@@ -62,3 +62,27 @@ fatf-gafi.org answers bots with a Cloudflare challenge (`cf-mitigated: challenge
   - #957 holds the figure-free revenue plan and the robustness program R1–R7.
   - The full revenue plan, with figures, was sent to Petter as a file and stays out of the repository, as decided on 2026-11-06.
 - **Open question to Petter:** did his yes to DQ-42 cover delisting `eu-trademark-search` (option 3)?
+
+## Night of 2026-11-07, 00:00–03:30 Swedish time (same session)
+
+- **Merged and live:**
+  - #959: `eu-trademark-search` delisted, as Petter approved.
+  - #961: one IBAN table from the SWIFT registry; the UAE weekend fixed.
+  - #962: legal dates, salary thresholds, filing deadlines, employer costs.
+  - #963: VAT, corporate tax and EU membership from the Commission's TEDB.
+  - #965: the reference-data register `config/reference-data.yaml`, with 82 datasets. `refdata:check` runs in PR CI. Due rows go to the weekly drift issue and to session start (`orient.mjs`).
+  - #966: the sanctions and PEP `lists_queried` disclosure narrowed to the Dilisense catalogue: 120 included lists, the paid development-bank lists removed, Wikidata removed.
+
+  Production served `1ab908a5` (#966) at about 02:45.
+
+  Reference for the last two: #965 (R2 register) and #966 (first due rows).
+- **#964 (R1, url-to-markdown):** after six independent review rounds, the last PASS-WITH-NITS with its nits fixed in 2cc51691, it is ready with auto-merge on.
+  - **What it does:** the conversion runs in one worker (8 s, 384 MB heap, 2 MiB input), behind linear, windowed text checks.
+  - **After merge:** confirm the deploy commit and one ordinary conversion in production.
+  - **R1 stays open:**
+    - per-caller fairness, because one free account can keep the single converter busy;
+    - `browserless-extract.ts` `htmlToText`, which is quadratic and serves 8 tools that fetch a caller's URL. This is the next R1 batch.
+- **DQ-46 (Petter):** publish the narrowed sanctions `data_source`, both sample responses and the PEP limitation. Compliance text is report-only (`manifest-publication-policy.ts`), so publishing it needs his yes, as DQ-36 did.
+- **Flaky test fixed:** the `attribution.test.ts` raw-IP check could fail by chance. It now uses a pinned date.
+- **CI note:** one run lost a vitest fork in `readability-convert.test.ts` after every test had passed. It did not reproduce, the re-run was green, and the review found no code cause. If it recurs, look at runner memory.
+- **Next (R2):** clear the undated harm-A register rows before 2026-12-15. `SECRECY_JURISDICTIONS` still has no source.
