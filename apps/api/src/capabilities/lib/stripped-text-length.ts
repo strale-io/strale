@@ -82,9 +82,43 @@ export function strippedTextLength(html: string): number {
  */
 export const TEXT_CHECK_WINDOW = 512 * 1024;
 
-/** strippedTextLength over the first TEXT_CHECK_WINDOW characters, compared with `n`. */
+/**
+ * End of the text-check window over html[start, limit). A window that ends
+ * inside a <script> or <style> would count the code as visible text, so a
+ * client-rendered page with a large inline state script would pass as a real
+ * page and never reach the renderer (fourth R1 review of #964, F2). When the
+ * window ends inside one, it is moved past that element's closing tag and
+ * extended by another window, at most a few times. Each step is one forward
+ * regex search, so the cost stays linear.
+ */
+function windowEnd(html: string, start: number, limit: number): number {
+  let end = Math.min(limit, start + TEXT_CHECK_WINDOW);
+  for (let step = 0; step < 4 && end < limit; step++) {
+    let moved = false;
+    for (const tag of ["script", "style"]) {
+      // The last opening tag inside the window...
+      const open = new RegExp(`<${tag}`, "gi");
+      open.lastIndex = start;
+      let lastOpen = -1;
+      for (let m = open.exec(html); m && m.index < end; m = open.exec(html)) lastOpen = m.index;
+      if (lastOpen < 0) continue;
+      // ...is it still open at the window's end?
+      const close = new RegExp(`</${tag}>`, "gi");
+      close.lastIndex = lastOpen;
+      const c = close.exec(html);
+      if (!c || c.index + c[0].length <= end) continue;
+      end = Math.min(limit, c.index + c[0].length + TEXT_CHECK_WINDOW);
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  return end;
+}
+
+/** strippedTextLength over the text-check window, compared with `n`. */
 export function hasMoreTextThan(html: string, n: number): boolean {
-  return strippedTextLength(html.length > TEXT_CHECK_WINDOW ? html.slice(0, TEXT_CHECK_WINDOW) : html) > n;
+  const end = windowEnd(html, 0, html.length);
+  return strippedTextLength(end < html.length ? html.slice(0, end) : html) > n;
 }
 
 const isAsciiCI = (html: string, at: number, word: string): boolean => {
@@ -140,10 +174,10 @@ export function bodyVisibleText(html: string): string {
   return span ? stripBody(html.slice(span[0], span[1])) : "";
 }
 
-/** bodyVisibleText(html).length > n, reading at most TEXT_CHECK_WINDOW of the body. */
+/** bodyVisibleText(html).length > n, reading the body's text-check window. */
 export function bodyHasMoreTextThan(html: string, n: number): boolean {
   const span = bodySpan(html);
   if (!span) return false;
-  const end = Math.min(span[1], span[0] + TEXT_CHECK_WINDOW);
+  const end = windowEnd(html, span[0], span[1]);
   return stripBody(html.slice(span[0], end)).length > n;
 }

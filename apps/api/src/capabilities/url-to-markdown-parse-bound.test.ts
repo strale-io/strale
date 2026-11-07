@@ -52,8 +52,9 @@ function page(body: string): Response {
   return new Response(body, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
-async function run(html: string): Promise<{ ms: number; result: unknown; error: unknown }> {
-  safeFetchMock.mockImplementation(async () => page(html));
+/** Runs the tool on `html` (null: keep the fetch mock the test set up). */
+async function run(html: string | null): Promise<{ ms: number; result: unknown; error: unknown }> {
+  if (html !== null) safeFetchMock.mockImplementation(async () => page(html));
   const started = process.cpuUsage();
   try {
     const result = await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" });
@@ -88,6 +89,19 @@ async function maxGap(work: () => Promise<unknown>): Promise<number> {
 }
 
 describe("url-to-markdown keeps the event loop free (R1)", () => {
+  it("sends a client-rendered page with a large inline state script to the renderer", async () => {
+    // Fourth R1 review, F2: the 512 KiB text-check window ended inside the
+    // script and counted it as text, so this page failed with "0 words"
+    // instead of being rendered, as main did.
+    const state = `<script>window.__STATE__=${JSON.stringify("x".repeat(600 * 1024))}</script>`;
+    safeFetchMock.mockImplementation(async () => page(`<html><head>${state}</head><body><div id="root"></div></body></html>`));
+    fetchRenderedHtml.mockResolvedValue(`<html><body><article><h1>Rendered</h1><p>${WORDS}</p></article></body></html>`);
+    const { error, result } = await run(null);
+    expect(error).toBeNull();
+    expect(fetchRenderedHtml).toHaveBeenCalledTimes(1);
+    expect((result as { output: { markdown: string } }).output.markdown).toContain("Readable words");
+  }, 60_000);
+
   it("converts 16 MiB of ordinary text without blocking, and keeps its words", async () => {
     // Third R1 review: the full-page text check cost 2.2 s of main-thread time
     // here, and the converter's input cut dropped the whole page (0 words).

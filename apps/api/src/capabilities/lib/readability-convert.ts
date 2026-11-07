@@ -34,8 +34,9 @@ export const CONVERSION_LIMITS = {
   /**
    * Heap limits per worker (MB). The API runs on a 1 GB Railway box
    * (web-provider.ts). At 256 a dense 1 MiB article ran out of heap; at 384
-   * the time limit binds first. Measured peak with two 15 MB pages converting
-   * at once: 293 MB above the process baseline.
+   * the time limit binds first. One hostile page converting alone measured
+   * +438 MB of process memory, and two at once +850 MB (fourth R1 review), so
+   * only one large page converts at a time (maxLargeAtOnce).
    */
   maxOldGenerationSizeMb: 384,
   maxYoungGenerationSizeMb: 48,
@@ -46,6 +47,14 @@ export const CONVERSION_LIMITS = {
    * of process memory for one 15 MB conversion.
    */
   maxInputChars: 2 * 1024 * 1024,
+  /** Inputs above this many characters count as large. */
+  largeInputChars: 256 * 1024,
+  /**
+   * Large inputs converting at once. A small page (under largeInputChars)
+   * stays well under the heap limit, so the other worker keeps serving small
+   * pages while a large one converts.
+   */
+  maxLargeAtOnce: 1,
   /** Pages waiting for a worker; beyond this a page is refused at once. */
   maxQueued: 8,
   /** Longest a page waits for a worker before it is refused. */
@@ -195,11 +204,16 @@ let nextId = 1;
 let slots: Slot[] = [];
 const queue: Job[] = [];
 
+const isLarge = (job: Job) => job.html.length > CONVERSION_LIMITS.largeInputChars;
+
+/** Hands queued pages to free workers, in order, at most maxLargeAtOnce large ones at a time. */
 function dispatch(): void {
   for (const slot of slots) {
     if (slot.job) continue;
-    const job = queue.shift();
-    if (!job) return;
+    const large = slots.filter((s) => s.job && isLarge(s.job)).length;
+    const i = queue.findIndex((job) => !isLarge(job) || large < CONVERSION_LIMITS.maxLargeAtOnce);
+    if (i < 0) return;
+    const [job] = queue.splice(i, 1);
     if (job.queueTimer) clearTimeout(job.queueTimer);
     slot.run(job);
   }

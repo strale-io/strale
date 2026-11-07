@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bodyVisibleText, strippedTextLength } from "./stripped-text-length.js";
+import { bodyHasMoreTextThan, bodyVisibleText, hasMoreTextThan, strippedTextLength, TEXT_CHECK_WINDOW } from "./stripped-text-length.js";
 
 /** The regex chain url-to-markdown used before, kept here as the reference. */
 function reference(html: string): number {
@@ -101,5 +101,39 @@ describe("bodyVisibleText", () => {
     const started = performance.now();
     bodyVisibleText(html);
     expect(performance.now() - started).toBeLessThan(200);
+  });
+});
+
+describe("the windowed text checks", () => {
+  const W = TEXT_CHECK_WINDOW;
+  const words = "Readable words that a person would want to read. ".repeat(40);
+
+  it("read no further than the window", () => {
+    // Text only after 600 KiB of tags: not seen (a page like this goes to the renderer).
+    const late = `<html><body>${"<i></i>".repeat(Math.ceil((W + 100_000) / 7))}<p>${words}</p></body></html>`;
+    expect(hasMoreTextThan(late, 500)).toBe(false);
+    expect(bodyHasMoreTextThan(late, 200)).toBe(false);
+    expect(strippedTextLength(late)).toBeGreaterThan(500); // the full scan would see it
+  });
+
+  it("do not count an inline script that crosses the window as text", () => {
+    // A client-rendered page: 600 KiB of state, an empty root. It must not pass
+    // as a real page (fourth R1 review, F2).
+    const state = `<script>window.__STATE__=${JSON.stringify("x".repeat(600 * 1024))}</script>`;
+    const shell = `<html><head>${state}</head><body><div id="root"></div></body></html>`;
+    expect(hasMoreTextThan(shell, 500)).toBe(false);
+    const inBody = `<html><body>${state}<div id="root"></div></body></html>`;
+    expect(bodyHasMoreTextThan(inBody, 200)).toBe(false);
+    // ...and still see real text after such a script.
+    const real = `<html><head>${state}</head><body><p>${words}</p></body></html>`;
+    expect(hasMoreTextThan(real, 500)).toBe(true);
+    expect(bodyHasMoreTextThan(`<html><body>${state}<p>${words}</p></body></html>`, 200)).toBe(true);
+  });
+
+  it("agree with the full check on pages inside the window", () => {
+    for (const html of [`<body><p>${words}</p></body>`, "<body><script>x</script>short</body>", "<p>no body</p>"]) {
+      expect(hasMoreTextThan(html, 500)).toBe(strippedTextLength(html) > 500);
+      expect(bodyHasMoreTextThan(html, 200)).toBe(bodyVisibleText(html).length > 200);
+    }
   });
 });

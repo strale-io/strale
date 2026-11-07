@@ -158,6 +158,30 @@ describe("htmlToCleanMarkdown in a worker", () => {
     expect(ok.markdown).toContain("# Heading");
   }, 30_000);
 
+  it("the memory budget: one large conversion at a time, heaps sized for a 1 GB box", () => {
+    // Fourth R1 review: two hostile 15 MB pages at once reached +850 MB.
+    expect(CONVERSION_LIMITS.maxLargeAtOnce).toBe(1);
+    expect(CONVERSION_LIMITS.maxOldGenerationSizeMb + CONVERSION_LIMITS.maxYoungGenerationSizeMb).toBeLessThanOrEqual(512);
+    expect(CONVERSION_LIMITS.maxInputChars).toBeLessThanOrEqual(2 * 1024 * 1024);
+  });
+
+  it("runs only one large page at a time, while small pages keep converting", async () => {
+    await stopConversionWorkers();
+    CONVERSION_LIMITS.workers = 2;
+    CONVERSION_LIMITS.largeInputChars = 1_000; // SLOW_PAGE and ARTICLE count as large
+    CONVERSION_LIMITS.timeoutMs = 1_500;
+    const started = performance.now();
+    const firstLarge = htmlToCleanMarkdown(SLOW_PAGE, URL_);
+    const secondLarge = htmlToCleanMarkdown(ARTICLE, URL_).then(() => performance.now() - started);
+    const small = htmlToCleanMarkdown("<article><h1>Small</h1><p>A small page converts while the large one runs.</p></article>", URL_).then(() => performance.now() - started);
+    await expect(firstLarge).rejects.toBeInstanceOf(HtmlTooComplexError);
+    const smallMs = await small;
+    const secondMs = await secondLarge;
+    expect(smallMs).toBeLessThan(1_400); // did not wait for the large one
+    expect(secondMs).toBeGreaterThan(1_400); // waited until the first large one ended
+    await stopConversionWorkers();
+  }, 30_000);
+
   it("refuses a page that waits in the queue past maxQueueWaitMs", async () => {
     await stopConversionWorkers();
     CONVERSION_LIMITS.workers = 1;

@@ -27,7 +27,11 @@ tracks:
       a caller URL, so it is the next R1 batch). Round 3 (FAIL) found the text
       checks still read whole 16 MiB pages (up to 2.2 s) and memory over a 1 GB
       box; round 4 bounds the checks to 512 KiB, the converter to 2 MiB and a
-      384 MB heap, and fixes the input cut. Next: round-4 review,
+      384 MB heap, and fixes the input cut. Round 4 (FAIL) found two hostile
+      pages still reached +850 MB and a regression for client-rendered pages
+      with large inline state; round 5 converts one large page at a time
+      (+326 MB measured) and extends the text window past a straddling
+      script. Next: round-5 confirmation,
       merge, then after deploy call url-to-markdown on an ordinary page and
       confirm it converts (DEC-20260504-C), and write the receipt for the exit
       below. Then sweep the other places that hand fetched markup to jsdom

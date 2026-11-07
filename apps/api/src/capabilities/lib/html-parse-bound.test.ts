@@ -107,6 +107,9 @@ describe("htmlToCleanMarkdown on adversarial markup", () => {
     // The bound sits well under the worker's limit, so a regression shows.
     expect(error).toBeNull();
     expect(ms).toBeLessThan(CONVERSION_LIMITS.timeoutMs / 4);
+    // The cost grows with the square of depth; the limit itself is the guard
+    // (timing alone did not catch a revert to 256 on every machine).
+    expect(HTML_PARSE_LIMITS.maxDepth).toBeLessThanOrEqual(128);
     expect(markdown).toContain("The text inside the deep nest survives intact.");
   });
 });
