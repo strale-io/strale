@@ -19,7 +19,7 @@ from upstream lists / databases.
 
 | Capability | What it returns | Upstream |
 |---|---|---|
-| `sanctions-check` | Matches against 130+ international sanctions, debarment, and restrictive-measure lists (OFAC SDN, EU Consolidated, UN SC, the UK Sanctions List, SECO, BIS, World Bank, EBRD, ADB, plus 125 national lists) | Dilisense Consolidated Sanctions database |
+| `sanctions-check` | Matches against 120 international and national sanctions and restrictive-measure lists (OFAC SDN, EU Consolidated, UN SC, the UK Sanctions List, SECO, BIS and others; the publisher's catalogue, checked 2026-11-07) | Dilisense Consolidated Sanctions database |
 | `pep-check` | Matches against the consolidated PEP database covering 230+ territories per EU Commission Implementing Decision (EU) 2023/724, including Relatives and Close Associates (RCAs) | Dilisense Consolidated PEP database |
 
 **Output (both)**: `match_count`, `total_results`, structured `matches`

@@ -85,7 +85,7 @@ If price per call is the only variable, a direct route can beat Strale's per-cal
 ## Limits
 
 - **Fuzzy name matching produces false matches on common names.** Pass `country` and, for a person, `birth_date` where you have them.
-- **Per-list freshness is not returned.** Dilisense refreshes its index several times a day, but the answer carries no per-list update time. For a same-day check against a new designation, ask the primary source, such as OFAC or the EU Official Journal.
+- **Per-list freshness is not returned.** Dilisense says it updates its sanctions lists every 60 minutes and its PEP data once a day by default, but the answer carries no per-list update time. For a same-day check against a new designation, ask the primary source, such as OFAC or the EU Official Journal.
 - **The adverse media fallback is weaker evidence.** When it runs, `source` says so and `fallback_reason` gives the reason. Treat those results as a lower standard of evidence for an audit file.
 - **The risk level is a rule of thumb.** It comes from hit counts and severe-category counts, and the thresholds are in `risk_level_thresholds`. It is not a regulatory finding: read `top_articles` before acting on it.
 

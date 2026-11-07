@@ -51,9 +51,9 @@ tracks:
       #963, and the register config/reference-data.yaml with its check
       (npm run refdata:check in CI; due rows in the weekly drift issue). Next:
       (1) after #956's deploy, call aml-risk-score for RU and BB and receipt the EU
-      flag (DEC-20260504-C). (2) Clear the due rows in harm order: first the two
-      Dilisense disclosure rows (snapshot 2026-04-27, due since 2026-10-24), then
-      the undated harm-A rows before their first_review_by of 2026-12-15, with
+      flag (DEC-20260504-C). (2) Clear the due rows in harm order: the two
+      Dilisense disclosure rows were checked on 2026-11-07 and narrowed (the PR
+      after #965); next the undated harm-A rows before their first_review_by of 2026-12-15, with
       SECRECY_JURISDICTIONS replaced by a sourced list or relabelled. (3) Put each
       tool's *_AS_OF date into its output, so callers see the data's age. (4) The
       review follow-ups from #962 and #963: VAT-exempt categories,
