@@ -86,9 +86,11 @@ const MIN_OTHERS_PER_DAY = 3;
 //  - A day is capped at max(SPIKE_CAP_FACTOR x usual, SPIKE_CAP_FLOOR). The
 //    floor means a small payer's days are never touched, and the cap is
 //    never below the floor, so a payer can never be capped away.
-//  - A day above the cap is capped only when the same payer had a usual
-//    baseline day both BEFORE it and AFTER it. That is what a one-off job
-//    looks like: the payer came back to its normal level. The last 24h is
+//  - A day above the cap is capped only when the same payer had a usual day
+//    BEFORE it, and every baseline day AFTER its burst is usual (or empty),
+//    with at least one usual. That is what a one-off job looks like: the
+//    payer came back to its normal level and stayed there. "Usual" is within
+//    a factor SPIKE_CAP_FACTOR of the usual day either way. The last 24h is
 //    never that evidence, because it is what is being judged: a burst
 //    yesterday and a ramp that broke today look the same until a full day
 //    has followed it, so a burst in the newest baseline day is capped only
@@ -109,10 +111,22 @@ const MIN_OTHERS_PER_DAY = 3;
 // when a real drop happened, and the third scaled every payer on a capped day
 // (review round 3).
 //
-// Accepted cost: one payer's own surge that then returns to its usual level
-// for a day is treated as a job, even if it was a short-lived ramp. That is
-// the incident shape, and comparing the last 24h against the payer's usual
-// level is then the right question.
+// The noise gate (MIN_BASELINE_PER_DAY) applies to the RAW mean: capping
+// decides how high the bar is, never whether there is volume worth watching.
+// A real ~13/day stream that stops still pages even if its capped baseline
+// is under 10/day (review round 4).
+//
+// Accepted costs:
+//  - One payer's own surge that then returns to its usual level and stays
+//    there is treated as a job, even if it was a short-lived ramp. That is
+//    the incident shape, and comparing the last 24h against the payer's
+//    usual level is then the right question.
+//  - The day after a big job still alerts once (a burst yesterday and a ramp
+//    that broke today look the same), so the false-alert window per job is
+//    about a day instead of up to seven.
+//  - A payer whose normal rhythm is bursts on fewer than half of its active
+//    days is measured against its quiet-day level, so a dip on a would-be
+//    batch day can read healthy.
 export const BASELINE_DAYS = 7;
 export const CONTEXT_DAYS = 7;
 export const SPIKE_CAP_FACTOR = 3;
@@ -147,7 +161,14 @@ export function capPayerSpikes(row: PayerRow): number[] {
   const isUsual = (n: number) => n > 0 && n <= cap && n * SPIKE_CAP_FACTOR >= usual;
   return days.map((n, d) => {
     if (n <= cap) return n;
-    const after = days.slice(0, d).some(isUsual);
+    // The burst this day belongs to: the run of days above the cap that
+    // contains it. Every baseline day newer than that run must be usual (or
+    // empty), with at least one usual: the payer is back and has stayed back.
+    // One quiet day inside a ramp is therefore not "back" (review round 4).
+    let start = d;
+    while (start > 0 && days[start - 1]! > cap) start--;
+    const newer = days.slice(0, start);
+    const after = newer.some(isUsual) && newer.every((m) => m === 0 || isUsual(m));
     const before = days.slice(d + 1).some(isUsual) || context.some(isUsual);
     return after && before ? cap : n;
   });
@@ -194,13 +215,16 @@ function column(r: Record<string, unknown>, name: string): number {
   return Number.NaN;
 }
 
-/** The raw query rows as buckets; a missing day_ago or n column is refused by rowsFromBuckets. */
+/** The raw query rows as buckets: a missing payer column is refused here, a missing day_ago or n by rowsFromBuckets. */
 export function bucketsFromQueryRows(rows: Array<Record<string, unknown>>) {
-  return rows.map((r) => ({
-    payer: (r.payer as string | null | undefined) ?? null,
-    dayAgo: column(r, "day_ago"),
-    n: column(r, "n"),
-  }));
+  return rows.map((r) => {
+    if (!("payer" in r)) throw new Error("x402-settlement-watch: query row has no payer column");
+    return {
+      payer: (r.payer as string | null) ?? null,
+      dayAgo: column(r, "day_ago"),
+      n: column(r, "n"),
+    };
+  });
 }
 
 export type VolumeVerdict =
@@ -237,7 +261,8 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
   const last24h = sum(rows.map((r) => r.last24h));
   const baselinePerDay = sum(payers.map((p) => p.baseline));
   const cappedPayerDays = sum(payers.map((p) => p.cappedDays));
-  if (baselinePerDay < MIN_BASELINE_PER_DAY) return { kind: "no_baseline", last24h, baselinePerDay, cappedPayerDays };
+  const rawPerDay = sum(payers.map((p) => p.raw)) / BASELINE_DAYS;
+  if (rawPerDay < MIN_BASELINE_PER_DAY) return { kind: "no_baseline", last24h, baselinePerDay, cappedPayerDays };
   if (last24h >= baselinePerDay * ALERT_RATIO) return { kind: "healthy", last24h, baselinePerDay, cappedPayerDays };
 
   // Unattributed rows (pre-hash x402 rows, or no payer extracted) are never a

@@ -284,3 +284,41 @@ describe("classifyVolume, round-3 shapes keep the plain mean", () => {
     expect(classifyVolume(rows).kind).toBe("broad");
   });
 });
+
+describe("review round 4", () => {
+  it("the noise gate uses the raw mean: a real stream that stops pages even when its capped baseline is small", () => {
+    const row = daily("a", [2, 40, 2, 2, 2, 40, 2], 0, [2, 2, 40, 2, 2, 2, 40]);
+    expect(meanBaseline([row])).toBeGreaterThanOrEqual(10);
+    expect(classifyVolume([row]).baselinePerDay).toBeLessThan(10); // the jobs are capped...
+    expect(classifyVolume([row]).kind).toBe("broad"); // ...but the stop still pages
+  });
+
+  it("a quiet day inside a ramp is not the payer coming back, so a ramp that breaks pages", () => {
+    // Index 2 is a weekend lull at the old level; the ramp is days 0-1 and 3-6.
+    const row = daily("a", [100, 100, 10, 100, 100, 100, 100], 25, new Array(7).fill(10));
+    expect(capPayerSpikes(row)).toEqual(row.priorDaily);
+    expect(classifyVolume([row]).kind).toBe("broad");
+    // And on the next day, once the breaking day is itself a baseline day: the
+    // two ramp days after the lull now look like a burst the payer is back
+    // from (accepted cost), but the older ramp days are not, and it still pages.
+    const next = daily("a", [25, 100, 100, 10, 100, 100, 100], 25, [100, 10, 10, 10, 10, 10, 10]);
+    expect(capPayerSpikes(next).slice(3)).toEqual([10, 100, 100, 100]);
+    expect(classifyVolume([next]).kind).toBe("broad");
+  });
+
+  it("a day far below the usual level is not the payer coming back", () => {
+    // usual 100, cap 300: 20 is under usual / SPIKE_CAP_FACTOR.
+    expect(capPayerSpikes(daily("a", [20, 1000, 100, 100, 100, 100, 100], 0))).toEqual([20, 1000, 100, 100, 100, 100, 100]);
+    expect(capPayerSpikes(daily("a", [40, 1000, 100, 100, 100, 100, 100], 0))).toEqual([40, 300, 100, 100, 100, 100, 100]);
+  });
+
+  it("empty days after a burst are neutral, so an every-other-day buyer's job is still capped", () => {
+    expect(capPayerSpikes(daily("a", [100, 0, 100, 1000, 100, 0, 100], 0))).toEqual([100, 0, 100, 300, 100, 0, 100]);
+  });
+
+  it("refuses a query row with no payer column instead of treating every row as unattributed", () => {
+    expect(() => bucketsFromQueryRows([{ day_ago: 1, n: 3 }])).toThrow(/no payer column/);
+    expect(bucketsFromQueryRows([{ payer: null, day_ago: 1, n: 3 }])[0]!.payer).toBeNull();
+  });
+});
+
