@@ -127,6 +127,18 @@ const MIN_OTHERS_PER_DAY = 3;
 //  - A payer whose normal rhythm is bursts on fewer than half of its active
 //    days is measured against its quiet-day level, so a dip on a would-be
 //    batch day can read healthy.
+//  - The usual day is a median over 14 days, so a ramp of up to about six
+//    days that falls back to the pre-ramp level counts as a job once one
+//    usual day has followed it. The first page is unaffected: while a
+//    payer's newest baseline day is above its cap nothing of that payer is
+//    capped, so on the first day of any drop the baseline is the plain mean;
+//    only the repeat page after the cooldown can be lost (review round 5).
+//  - Only the newest of several bursts in one week is capped (an older one
+//    has a burst day after it, not a usual one), so a multi-job week can
+//    still page on an ordinary day, as the plain mean does.
+//  - With almost no other volume, the raw-mean gate lets one job keep the
+//    watch armed for a week, so ordinary near-zero days can page during it,
+//    as they do under the plain mean.
 export const BASELINE_DAYS = 7;
 export const CONTEXT_DAYS = 7;
 export const SPIKE_CAP_FACTOR = 3;
