@@ -199,6 +199,16 @@ describe("registry lifecycle consumers in KYB and invoice narratives", () => {
     expect(output.flags).toEqual([]);
     expect(output.risk_level).toBe("none");
   });
+  it("a model safety decline falls back to the algorithmic assessment, recorded as llm_refusal", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "synthetic-no-network-key");
+    messageCreate.mockResolvedValueOnce({ content: [], stop_reason: "refusal", stop_details: { type: "refusal", category: "general_harms" }, model: "synthetic" } as never);
+    const { output, provenance } = await getDirectExecutor("risk-narrative-generate")!({
+      check_results: { "irish-company-data": { status: "unrecognised" } }, context: "kyb",
+    });
+    expect(messageCreate).toHaveBeenCalledOnce();
+    expect(provenance).toMatchObject({ source: "algorithmic-fallback", fallback_reason: "llm_refusal" });
+    expect(output.risk_level).toBe("none");
+  });
   it("unrecognised registry statuses still reach AI synthesis when a key is available", async () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "synthetic-no-network-key");
     messageCreate.mockResolvedValueOnce({ content: [{ type: "text", text: JSON.stringify({ risk_level: "none", risk_score: 0 }) }], model: "synthetic" } as never);

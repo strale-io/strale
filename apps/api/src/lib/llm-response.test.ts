@@ -28,7 +28,7 @@ describe("messageText", () => {
   it("raises a safety decline as a refusal the platform does not count as its own defect", () => {
     let caught: unknown;
     try {
-      messageText({ content: [], stop_reason: "refusal" as never, stop_details: { type: "refusal", category: "cyber" } });
+      messageText({ content: [], stop_reason: "refusal", stop_details: { type: "refusal", category: "cyber" } });
     } catch (e) {
       caught = e;
     }
@@ -43,7 +43,7 @@ describe("messageText", () => {
   });
 
   it("omits the category when the API gives none", () => {
-    expect(() => messageText({ content: [], stop_reason: "refusal" as never, stop_details: null })).toThrow(
+    expect(() => messageText({ content: [], stop_reason: "refusal", stop_details: null })).toThrow(
       `${MODEL_DECLINED_PREFIX}. Rephrase`,
     );
   });
@@ -59,11 +59,24 @@ describe("no Claude caller reads the answer by position", () => {
     });
   }
 
-  it("every file that calls messages.create( reads text by block type", () => {
-    const files = [...sourceFiles(join(apiRoot, "src")), ...sourceFiles(join(apiRoot, "scripts"))]
-      .filter((path) => readFileSync(path, "utf8").includes("messages.create("));
+  // Any file that calls the Messages API or holds the SDK client. Positional
+  // reads in any spelling: content[0], content.at(0), const [b] = x.content.
+  const positional = /\.content(\[\s*0\s*\]|\.at\(\s*0\s*\))|\[\s*\w+\s*(,[^\]]*)?\]\s*=\s*\w+\.content\b/;
+
+  it("the pattern catches every positional spelling", () => {
+    for (const read of ["r.content[0].text", "r.content.at(0)", "const [first] = r.content;", "const [a, b] = res.content"]) {
+      expect(positional.test(read), read).toBe(true);
+    }
+    expect(positional.test("messageText(r)")).toBe(false);
+  });
+
+  it("every file that uses the Anthropic SDK reads text by block type", () => {
+    const files = [...sourceFiles(join(apiRoot, "src")), ...sourceFiles(join(apiRoot, "scripts"))].filter((path) => {
+      const src = readFileSync(path, "utf8");
+      return src.includes("messages.create(") || src.includes("createAnthropicClient") || src.includes("@anthropic-ai/sdk");
+    });
     expect(files.length).toBeGreaterThan(20);
-    const offenders = files.filter((path) => /\.content\[0\]/.test(readFileSync(path, "utf8")));
+    const offenders = files.filter((path) => positional.test(readFileSync(path, "utf8")));
     expect(offenders.map((path) => relative(apiRoot, path))).toEqual([]);
   });
 });

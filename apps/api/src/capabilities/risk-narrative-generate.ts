@@ -5,6 +5,7 @@ import { extractJsonObject } from "./lib/llm-json.js";
 import { logError, logWarn } from "../lib/log.js";
 import { MODELS, promptDigest } from "../lib/models.js";
 import { messageText } from "../lib/llm-response.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 
 // Cert-audit Y-10 — model pinning for replay determinism.
 // `claude-sonnet-4-6` is a moving alias; the same check_results passed
@@ -405,7 +406,23 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
       ],
     });
 
-    const responseText = messageText(r).trim();
+    let responseText: string;
+    try {
+      responseText = messageText(r).trim();
+    } catch (err) {
+      if (!isCapabilityRefusal(err)) throw err;
+      // The model declined (messageText logs it): the algorithmic
+      // assessment stands in, recorded as such, like a wording-rule violation.
+      const output = algorithmicAssessment(checkResults, context);
+      return {
+        output: { ...output, raw_checks: checkResults },
+        provenance: {
+          source: "algorithmic-fallback",
+          fallback_reason: "llm_refusal",
+          fetched_at: new Date().toISOString(),
+        },
+      };
+    }
 
     // Cert-audit Y-10: regex-check the raw LLM output for prohibited
     // wording before parsing. If the model violated a wording rule

@@ -232,10 +232,15 @@ Only include tracking scripts where detected is true. For potential_issues, cons
     ],
   });
 
-  // Optional-chained: an empty content array (e.g. a safety stop with no
-  // text block) must fall into the non-fatal default path below, not throw
-  // a TypeError that discards the cookies already collected.
-  const responseText = messageText(r).trim();
+  // An empty response, or a model safety decline on this third-party page,
+  // must fall into the non-fatal default path below, not throw and discard
+  // the cookies already collected. messageText logs the decline.
+  let responseText = "";
+  try {
+    responseText = messageText(r).trim();
+  } catch (err) {
+    if (!isCapabilityRefusal(err)) throw err;
+  }
   // Real brace-matching, not the greedy object-capture regex — an unbalanced
   // (truncated) response yields null and we continue with defaults, which is
   // this capability's intended non-fatal degrade.

@@ -3,6 +3,7 @@ import { MODELS } from "../lib/models.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput, getExecutor } from "./index.js";
 import { messageText } from "../lib/llm-response.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 
 // F-0-006 Bucket D: delegates to other capabilities (meta-extract,
 // url-to-markdown) that are themselves migrated. No direct fetch here.
@@ -116,7 +117,13 @@ async function llmExtractCompanyName(text: string, url: string): Promise<string>
       content: `Extract the legal company or organization name from this website title/metadata. Return ONLY the company name, nothing else. If you can't identify a company name, return the most likely organization name.\n\nURL: ${url}\nText: "${text}"`,
     }],
   });
-  const name = messageText(r).trim().replace(/^["']|["']$/g, "");
+  let name = "";
+  try {
+    name = messageText(r).trim().replace(/^["']|["']$/g, "");
+  } catch (err) {
+    // A safety decline on a page title: fall back to the title itself.
+    if (!isCapabilityRefusal(err)) throw err;
+  }
   return name || text.split(/[|–—:]/)[0].trim();
 }
 
