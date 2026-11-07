@@ -9,6 +9,7 @@
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import TurndownService from "turndown";
+import { prepareHtmlForParse } from "./html-parse-bound.js";
 
 export interface ReadabilityResult {
   markdown: string;
@@ -43,11 +44,16 @@ turndown.addRule("preserveCodeBlocks", {
 /**
  * Convert HTML to clean markdown using Readability + Turndown.
  *
+ * The page is bounded before jsdom sees it (html-parse-bound.ts): jsdom
+ * parses synchronously, so hostile markup would otherwise block the process.
+ * A page too complex to convert within the bounds throws HtmlTooComplexError
+ * rather than returning partial or empty Markdown.
+ *
  * @param html - Raw HTML string
  * @param url  - Source URL (used by Readability for resolving relative links)
  */
 export function htmlToCleanMarkdown(html: string, url: string): ReadabilityResult {
-  const dom = new JSDOM(html, { url });
+  const dom = new JSDOM(prepareHtmlForParse(html), { url });
 
   // Try Readability first — extracts main article content
   const clonedDoc = dom.window.document.cloneNode(true) as typeof dom.window.document;

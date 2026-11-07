@@ -2,6 +2,7 @@ import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
+import { strippedTextLength } from "./lib/stripped-text-length.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
@@ -134,16 +135,8 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       throw siteAccessRefusal(url, { kind: "challenge" }, getBlockedSiteHint(url) ?? undefined);
     }
 
-    let stripped = html;
-    stripped = stripped.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
-    stripped = stripped.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-    stripped = stripped.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "");
-    stripped = stripped.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "");
-    stripped = stripped.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "");
-    stripped = stripped.replace(/<[^>]+>/g, " ");
-    const textLength = stripped.replace(/\s+/g, " ").trim().length;
-
-    if (textLength > 500) return html;
+    // Linear: the regex chain this replaced was quadratic on hostile pages.
+    if (strippedTextLength(html) > 500) return html;
 
     return null;
   } catch (err) {
