@@ -27,6 +27,7 @@ Lane started by the Strale master (session_01RFNL6WAcqYWJKtyJRfBGCw), brief item
 - `archive/receipts/2026-11-07-test-run-robots-permitted-sources-fail-before-after.json`: 10 of 12 tests fail on main, 12 of 12 pass after (first commit).
 - `archive/receipts/2026-11-07-test-run-robots-permitted-sources-after-review.json`: after the review fixes, 11 of 13 fail on main, 13 of 13 pass.
 - Independent review (separate context): FAIL on d135d5d4 with three medium findings (HS6 claim, VAT, terms record). All three are fixed in the follow-up commit.
+- Round 2: FAIL on 10e15649. The split-code list never matched production text, because codes render as two-digit groups ("61 09 10 00 10") and the fixture had been typed in screen format. Fixed, with fixtures rebuilt from the real markup: `archive/receipts/2026-11-07-test-run-robots-permitted-sources-picker-codes.json` (2 of 14 fail at 10e15649, 14 of 14 after).
 - `record-upstream.ts --check` was run on all 32 before the fixes (6 strale.dev drifts plus usgs). The four affected slugs were re-recorded and checked clean.
 
 ## Not verified here

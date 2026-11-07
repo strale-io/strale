@@ -50,13 +50,19 @@ const PICKER_MARKER = "a match was identified with an HS code";
 /**
  * The longer codes Access2Markets offers when the given code is split further
  * (its picker page), e.g. ["6109100010", "6109100090"]; null when the page is
- * not a picker.
+ * not a picker. The page puts each two-digit group in its own element, so the
+ * extracted text reads "61 09 10 00 10". Only 8- and 10-digit codes are
+ * offered; the caller's own code, which the picker repeats, is left out.
  */
-export function pickerCodes(pageText: string): string[] | null {
+export function pickerCodes(pageText: string, requestedCode = ""): string[] | null {
   const start = pageText.indexOf(PICKER_MARKER);
   if (start === -1) return null;
-  const codes = pageText.slice(start).match(/\b\d{6}(?: \d{2}){1,2}\b/g) ?? [];
-  return [...new Set(codes.map((c) => c.replace(/ /g, "")))];
+  const end = pageText.indexOf("Quick links", start);
+  const tree = pageText.slice(start, end === -1 ? undefined : end);
+  const codes = (tree.match(/\b\d{2}(?: \d{2}){3,4}\b/g) ?? [])
+    .map((c) => c.replace(/ /g, ""))
+    .filter((c) => c !== requestedCode);
+  return [...new Set(codes)];
 }
 
 export function a2mResultsUrl(hsCode: string, origin: string, destination: string): string {
@@ -118,7 +124,7 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   const pageText = htmlToText(html);
   const section = resultsSection(pageText);
   if (!section || section.text.length < 200) {
-    const offered = pickerCodes(pageText);
+    const offered = pickerCodes(pageText, cleanHsCode);
     if (offered && offered.length > 0) {
       throw new Error(
         `HS code "${hsCode}" is split further in the EU tariff, so it has no single duty. ` +

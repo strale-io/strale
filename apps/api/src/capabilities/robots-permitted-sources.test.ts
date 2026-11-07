@@ -38,11 +38,22 @@ const A2M_RESULTS = `<html><body>
 <p>Sources and copyright</p><p>Mendel Verlag rows would be described here.</p>
 </body></html>`;
 
-/** Access2Markets' picker for a code split further (610910 from Viet Nam, 2026-11-07), trimmed. */
-const A2M_PICKER = `<html><body><p>Product search</p>
-<p>For your search criteria, a match was identified with an HS code. Please continue browsing in the proposed branch of the list of goods and select your product.</p>
-<p>T-shirts, singlets and other vests, knitted or crocheted 6109</p><p>Of cotton 610910</p>
-<p>T-shirts 610910 00 10</p><p>Other 610910 00 90</p></body></html>`;
+/**
+ * Access2Markets' picker for a code split further, in its real markup: each
+ * two-digit group sits in its own span (610910 from Viet Nam and 87120030 from
+ * China, 2026-11-07, trimmed). A fixture typed as "610910 00 10" passed while
+ * production never matched (review of PR #974, round 2).
+ */
+const node = (desc: string, groups: string[]) =>
+  `<li><span class="product-desc">${desc}</span><div class="prod">${groups.map((g) => `<span>${g}</span>`).join("")}</div></li>`;
+const A2M_PICKER = `<html><body><h2>Product search</h2>
+<div class="resultshelp"> For your search criteria, a match was identified with an HS code. Please continue browsing in the proposed branch of the list of goods and select your product. </div>
+<ul>${node("T-shirts, singlets and other vests", ["61", "09"])}${node("Of cotton", ["61", "09", "10"])}
+${node("T-shirts", ["61", "09", "10", "00", "10"])}${node("Other", ["61", "09", "10", "00", "90"])}</ul>
+<p>Quick links</p><p>News 2026 11 07 12 00</p></body></html>`;
+const A2M_PICKER_8 = `<html><body><div> a match was identified with an HS code. </div>
+<ul>${node("Bicycles with ball bearings", ["87", "12", "00", "30"])}${node("Consigned from Indonesia", ["87", "12", "00", "30", "10"])}
+${node("Other", ["87", "12", "00", "30", "90"])}</ul><p>Quick links</p></body></html>`;
 
 const A2M_400 = `<html><body><p>Bad Request Something went wrong</p>
 <p>Wrong parameters, country from and country to are mandatory and must be valid.</p><p>Error 400</p></body></html>`;
@@ -95,6 +106,12 @@ describe("customs-duty-lookup", () => {
     );
     expect(extractJsonWithLlm).not.toHaveBeenCalled();
     expect(pickerCodes("no picker here")).toBeNull();
+  });
+
+  it("a picker that repeats the caller's 8-digit code lists only the longer ones", async () => {
+    fetchRenderedHtml.mockResolvedValue(A2M_PICKER_8);
+    const err = await exec()({ hs_code: "87120030", origin_country: "CN", destination_country: "DE" }).catch((e: Error) => e);
+    expect(String(err)).toMatch(/codes: 8712003010, 8712003090\.$/);
   });
 
   it.each([

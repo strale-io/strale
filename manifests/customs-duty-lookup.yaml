@@ -97,7 +97,8 @@ limitations:
     text: >-
       Access2Markets gives a duty only for a code the EU tariff does not split further. For a split code (for example
       610910, which divides into 6109100010 and 6109100090) the call is refused and the error lists the longer codes
-      to use. resolved_hs_code says which code the answer is for.
+      to use. A code can be split more than once (871200 offers 87120030, which is split again), so the next call
+      may list longer codes still. resolved_hs_code says which code the answer is for.
     category: coverage
     severity: info
     workaround: Call again with one of the codes the error lists.

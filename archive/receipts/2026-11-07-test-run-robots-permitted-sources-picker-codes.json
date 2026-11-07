@@ -1,0 +1,152 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/src/capabilities/robots-permitted-sources.test.ts",
+    "commit": "10e156497de65f3872664624a2136e63b7caa543"
+  },
+  "at": "2026-11-07T22:54:13.050Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/01cb5899-2d68-5ac6-a40c-443470b047d2/scratchpad/receipt-tests3.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 0,
+    "command": "npx vitest run src/capabilities/robots-permitted-sources.test.ts (apps/api)",
+    "note": "Round 2 review of PR #974: picker codes render as two-digit groups (\"61 09 10 00 10\") in production text; fixtures rebuilt from the real markup. Live check of saved pages: 610910 -> 6109100010, 6109100090; 87120030 -> 8712003010, 8712003020, 8712003090."
+  },
+  "topic": "robots-permitted-sources-picker-codes",
+  "raw": {
+    "ok": true,
+    "command": "npx vitest run src/capabilities/robots-permitted-sources.test.ts (apps/api)",
+    "note": "Round 2 review of PR #974: picker codes render as two-digit groups (\"61 09 10 00 10\") in production text; fixtures rebuilt from the real markup. Live check of saved pages: 610910 -> 6109100010, 6109100090; 87120030 -> 8712003010, 8712003020, 8712003090.",
+    "fail_before": {
+      "executors": "customs-duty-lookup.ts at 10e15649",
+      "passed": 12,
+      "failed": 2,
+      "tests": [
+        {
+          "name": "customs-duty-lookup REGRESSION: reads only the Access2Markets results page, never TARIC's disallowed pages",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup asks for a member state when the caller says EU",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup REGRESSION: an Access2Markets error page throws instead of reaching the LLM",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup a code split further is refused with the codes to use, before the LLM",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup a picker that repeats the caller's 8-digit code lists only the longer ones",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"DE\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"CN\",\"destination_country\":\"US\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"8471\",\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup resultsSection cuts the page at the results and stops before the copyright section",
+          "status": "passed"
+        },
+        {
+          "name": "container-track REGRESSION: never fetches maersk.com for a Maersk container",
+          "status": "passed"
+        },
+        {
+          "name": "container-track REGRESSION: no longer sends other carriers to SeaRates",
+          "status": "passed"
+        },
+        {
+          "name": "container-track still reads live status from a permitted carrier page",
+          "status": "passed"
+        }
+      ]
+    },
+    "after": {
+      "executors": "working tree after round-2 fix",
+      "passed": 14,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "customs-duty-lookup REGRESSION: reads only the Access2Markets results page, never TARIC's disallowed pages",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup asks for a member state when the caller says EU",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup REGRESSION: an Access2Markets error page throws instead of reaching the LLM",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup a code split further is refused with the codes to use, before the LLM",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup a picker that repeats the caller's 8-digit code lists only the longer ones",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"DE\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"CN\",\"destination_country\":\"US\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"8471\",\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup resultsSection cuts the page at the results and stops before the copyright section",
+          "status": "passed"
+        },
+        {
+          "name": "container-track REGRESSION: never fetches maersk.com for a Maersk container",
+          "status": "passed"
+        },
+        {
+          "name": "container-track REGRESSION: no longer sends other carriers to SeaRates",
+          "status": "passed"
+        },
+        {
+          "name": "container-track still reads live status from a permitted carrier page",
+          "status": "passed"
+        }
+      ]
+    },
+    "failures": [],
+    "warnings": []
+  }
+}
