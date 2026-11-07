@@ -7,10 +7,12 @@ import type { SQL } from "drizzle-orm";
 import {
   DQ46_NEW_PEP_EXAMPLE_LISTS,
   DQ46_NEW_PEP_LIMITATION_PHRASE,
+  DQ46_NEW_PEP_LIMITATION_TEXT,
+  DQ46_NEW_PEP_LIMITATION_TITLE,
+  DQ46_OLD_PEP_LIMITATION_TEXT,
   DQ46_NEW_SANCTIONS_DATA_SOURCE,
   DQ46_NEW_SANCTIONS_EXAMPLE_LISTS,
   DQ46_OLD_PEP_EXAMPLE_LISTS,
-  DQ46_OLD_PEP_LIMITATION_PHRASE,
   DQ46_OLD_SANCTIONS_DATA_SOURCE,
   DQ46_OLD_SANCTIONS_EXAMPLE_LISTS,
   runMigration0149_publishDilisenseSourceText,
@@ -71,8 +73,8 @@ describe("block 0149: the narrowed sanctions and PEP text is published (DQ-46)",
     expect(JSON.parse(queries[1].params[1] as string)).toEqual(DQ46_OLD_SANCTIONS_EXAMPLE_LISTS);
     expect(queries[2].sql).toMatch(/slug = 'pep-check'/);
     expect(JSON.parse(queries[2].params[1] as string)).toEqual(DQ46_OLD_PEP_EXAMPLE_LISTS);
-    expect(queries[3].sql).toMatch(/capability_slug = 'pep-check'/);
-    expect(queries[3].params).toEqual([DQ46_OLD_PEP_LIMITATION_PHRASE, DQ46_NEW_PEP_LIMITATION_PHRASE, DQ46_OLD_PEP_LIMITATION_PHRASE]);
+    expect(queries[3].sql.replace(/\s+/g, " ")).toMatch(/capability_slug = 'pep-check' AND category = 'freshness' AND active = true AND limitation_text = \$3/);
+    expect(queries[3].params).toEqual([DQ46_NEW_PEP_LIMITATION_TITLE, DQ46_NEW_PEP_LIMITATION_TEXT, DQ46_OLD_PEP_LIMITATION_TEXT]);
     expect(result.block).toBe("0149_publishDilisenseSourceText");
     expect(result.rows_affected).toBe(4);
   });
@@ -94,9 +96,16 @@ describe("block 0149: the narrowed sanctions and PEP text is published (DQ-46)",
     expect(freshness.text.startsWith(DQ46_NEW_PEP_LIMITATION_PHRASE)).toBe(true);
   });
 
+  it("guards the limitation on the production row's exact text, read publicly on 2026-11-07", () => {
+    expect(DQ46_OLD_PEP_LIMITATION_TEXT).toBe("PEP lists updated multiple times per day — recently appointed officials may take up to 48 hours to appear");
+    expect(DQ46_NEW_PEP_LIMITATION_TEXT.startsWith(DQ46_NEW_PEP_LIMITATION_PHRASE)).toBe(true);
+    // The only sentence kept from the old row is its 48-hour lag, unchanged.
+    expect(DQ46_NEW_PEP_LIMITATION_TEXT).toContain("Recently appointed officials may take up to 48 hours to appear.");
+  });
+
   it("the new text only narrows: no unscreened lists, no overstated cadence", () => {
-    const published = JSON.stringify([DQ46_NEW_SANCTIONS_DATA_SOURCE, DQ46_NEW_SANCTIONS_EXAMPLE_LISTS, DQ46_NEW_PEP_EXAMPLE_LISTS, DQ46_NEW_PEP_LIMITATION_PHRASE]);
-    for (const gone of ["World Bank", "EBRD", "ADB", "OFSI", "134", "130+", "multiple times daily", "Wikidata"]) {
+    const published = JSON.stringify([DQ46_NEW_SANCTIONS_DATA_SOURCE, DQ46_NEW_SANCTIONS_EXAMPLE_LISTS, DQ46_NEW_PEP_EXAMPLE_LISTS, DQ46_NEW_PEP_LIMITATION_TITLE, DQ46_NEW_PEP_LIMITATION_TEXT]);
+    for (const gone of ["World Bank", "EBRD", "ADB", "OFSI", "134", "130+", "multiple times", "Wikidata", "OpenSanctions"]) {
       expect(published, gone).not.toContain(gone);
     }
   });

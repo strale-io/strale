@@ -23,15 +23,23 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  *  - capabilities.data_source of sanctions-check (the text block 0122 wrote);
  *  - capabilities.output_schema of sanctions-check and pep-check: only the
  *    sample response's `example.lists_queried` object, compared as JSON;
- *  - capability_limitations.limitation_text of pep-check's freshness row: the
- *    one overstated phrase is replaced, guarded on the phrase being present.
+ *  - capability_limitations title and limitation_text of pep-check's one
+ *    active freshness row, guarded on its exact production text (read from
+ *    the public /v1/public/ops/limitations route on 2026-11-07): "updated
+ *    multiple times per day" becomes the approved "once a day by default"
+ *    wording; the row's existing 48-hour lag sentence is kept unchanged.
+ *
+ * The other production limitation rows of pep-check predate the switch to
+ * Dilisense and still name OpenSanctions and an LLM fallback. They are not
+ * DQ-46's text; publishing the manifest's limitation set is DQ-47.
  *
  * capabilities.updated_at is deliberately not written (same rule as blocks
  * 0123 and 0143: a copy-only change must not read as a changed capability).
  * Run policy "once": a re-run must not undo a later edit.
  *
- * The text below must equal manifests/sanctions-check.yaml and
- * manifests/pep-check.yaml; startup-migrations.test.ts pins both.
+ * The data_source and sample responses below must equal
+ * manifests/sanctions-check.yaml and manifests/pep-check.yaml;
+ * startup-migration-0149.test.ts pins them.
  */
 
 export const DQ46_OLD_SANCTIONS_DATA_SOURCE =
@@ -107,9 +115,16 @@ export const DQ46_NEW_PEP_EXAMPLE_LISTS = {
   last_updated_at: null,
 };
 
-export const DQ46_OLD_PEP_LIMITATION_PHRASE = "Dilisense refreshes the consolidated PEP index multiple times daily";
+/** The approved wording (DQ-46 item 3); the manifest's limitation opens with it too. */
 export const DQ46_NEW_PEP_LIMITATION_PHRASE =
   "Dilisense updates its PEP data once a day by default, and more often for highly important PEPs";
+export const DQ46_OLD_PEP_LIMITATION_TITLE =
+  "PEP lists updated multiple times per day — recently appointed officials may take up to 48 hours";
+export const DQ46_OLD_PEP_LIMITATION_TEXT =
+  "PEP lists updated multiple times per day — recently appointed officials may take up to 48 hours to appear";
+export const DQ46_NEW_PEP_LIMITATION_TITLE =
+  "PEP data is updated once a day by default — recently appointed officials may take up to 48 hours";
+export const DQ46_NEW_PEP_LIMITATION_TEXT = `${DQ46_NEW_PEP_LIMITATION_PHRASE}. Recently appointed officials may take up to 48 hours to appear.`;
 
 export async function runMigration0149_publishDilisenseSourceText(
   tx: MigrationExecutor,
@@ -139,9 +154,12 @@ export async function runMigration0149_publishDilisenseSourceText(
 
   const pepLimitation = await tx.execute(sql`
     UPDATE capability_limitations
-       SET limitation_text = replace(limitation_text, ${DQ46_OLD_PEP_LIMITATION_PHRASE}, ${DQ46_NEW_PEP_LIMITATION_PHRASE})
+       SET title = ${DQ46_NEW_PEP_LIMITATION_TITLE},
+           limitation_text = ${DQ46_NEW_PEP_LIMITATION_TEXT}
      WHERE capability_slug = 'pep-check'
-       AND position(${DQ46_OLD_PEP_LIMITATION_PHRASE} in limitation_text) > 0
+       AND category = 'freshness'
+       AND active = true
+       AND limitation_text = ${DQ46_OLD_PEP_LIMITATION_TEXT}
   `);
 
   const count = (r: unknown) => (r as { count?: number }).count ?? 0;

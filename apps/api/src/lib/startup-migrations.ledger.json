@@ -1206,9 +1206,10 @@
       "columns_written": [
         "capabilities.data_source",
         "capabilities.output_schema",
-        "capability_limitations.limitation_text"
+        "capability_limitations.limitation_text",
+        "capability_limitations.title"
       ],
-      "sha256": "9656fb4cf488443451c378801e78b8fa6c02af47212b329a1146f2ce95af22a6"
+      "sha256": "a026f4604de7fdf793309f9882cd2614d2214be2ce02a381077e6143180e9c9b"
     }
   ],
   "known_overlaps": [
@@ -1754,7 +1755,7 @@
         "M087",
         "M092"
       ],
-      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes only pep-check rows that still contain the old 'multiple times daily' phrase, replacing that phrase once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit)."
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes title and limitation_text of the one active pep-check freshness row whose text equals its 2026-11-07 production text, once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit)."
     },
     {
       "column": "capability_limitations.updated_at",
@@ -1811,6 +1812,14 @@
         "M090"
       ],
       "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M090 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "capability_limitations.title",
+      "blocks": [
+        "M086",
+        "M092"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M092 (block 0149, DQ-46) writes only the one active pep-check freshness row whose text equals its 2026-11-07 production text. Both run once and are guarded on their old values, so neither can rewrite the other's row."
     }
   ]
 }
