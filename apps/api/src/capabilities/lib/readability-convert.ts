@@ -1,86 +1,205 @@
 /**
- * High-quality HTML → Markdown conversion using Readability.js + Turndown.
+ * HTML → Markdown conversion, off the event loop and under a time limit
+ * (robustness R1).
  *
- * Readability extracts the main article content (strips nav, footer, ads, sidebars).
- * Turndown converts the cleaned HTML to well-formatted markdown.
- * Produces output quality comparable to Jina Reader and Firecrawl, at zero API cost.
+ * url-to-markdown is free-tier and keyless, so anyone can point it at a page
+ * built to be slow. The conversion is synchronous (jsdom, Readability,
+ * Turndown) and its cost is not bounded by any limit on the markup: the
+ * independent review of #964 measured 10-80 s for pages that pass every
+ * markup limit (29k flat <div>, 15 MB of text in one <p>). Run on the main
+ * thread, that is 10-80 s in which no other request is served.
+ *
+ * So the conversion runs in a small pool of worker threads
+ * (readability-worker.ts). Each conversion has a wall-clock limit and each
+ * worker a heap limit; past either, the worker is terminated, replaced, and
+ * the caller gets HtmlTooComplexError, a non-billable refusal. When every
+ * worker is busy, a bounded queue holds further pages; a full queue is
+ * refused at once rather than piling up.
  */
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { Worker } from "node:worker_threads";
+import { ResourceLimitError } from "../../lib/resource-limits.js";
+import { HtmlTooComplexError } from "./html-parse-bound.js";
+import type { ReadabilityResult } from "./readability-convert-sync.js";
 
-import { Readability } from "@mozilla/readability";
-import { JSDOM } from "jsdom";
-import TurndownService from "turndown";
-import { prepareHtmlForParse } from "./html-parse-bound.js";
+export type { ReadabilityResult } from "./readability-convert-sync.js";
 
-export interface ReadabilityResult {
-  markdown: string;
-  title: string;
-  usedReadability: boolean;
+export const CONVERSION_LIMITS = {
+  /** Worker threads converting at once. */
+  workers: 2,
+  /** Wall-clock limit for one conversion, from the moment a worker takes it. */
+  timeoutMs: 8_000,
+  /** Heap limit per worker. A 16 MB page with ordinary markup fits well inside. */
+  maxOldGenerationSizeMb: 512,
+  /** Pages waiting for a worker; beyond this a page is refused at once. */
+  maxQueued: 8,
+  /** Longest a page waits for a worker before it is refused. */
+  maxQueueWaitMs: 10_000,
+};
+
+/** Refused because every converter is busy; non-billable, worth retrying. */
+export class ConversionBusyError extends ResourceLimitError {
+  constructor() {
+    super("The page converter is busy with other pages. Please retry in a few seconds.");
+    this.name = "ConversionBusyError";
+  }
 }
 
-const turndown = new TurndownService({
-  headingStyle: "atx",
-  codeBlockStyle: "fenced",
-  bulletListMarker: "-",
-  emDelimiter: "*",
-  strongDelimiter: "**",
-});
+type Reply =
+  | { id: number; ok: true; result: ReadabilityResult }
+  | { id: number; ok: false; tooComplex: boolean; message: string };
 
-turndown.addRule("removeEmptyLinks", {
-  filter: (node) => node.nodeName === "A" && !node.textContent?.trim(),
-  replacement: () => "",
-});
+interface Job {
+  id: number;
+  html: string;
+  url: string;
+  resolve: (r: ReadabilityResult) => void;
+  reject: (e: unknown) => void;
+  queueTimer?: NodeJS.Timeout;
+}
 
-turndown.addRule("preserveCodeBlocks", {
-  filter: (node) => node.nodeName === "PRE",
-  replacement: (_content, node) => {
-    const el = node as unknown as Element;
-    const code = el.querySelector("code");
-    const lang = code?.className?.match(/language-(\w+)/)?.[1] ?? "";
-    const text = code?.textContent ?? el.textContent ?? "";
-    return `\n\`\`\`${lang}\n${text.trim()}\n\`\`\`\n`;
-  },
-});
+// In production this module and the worker are compiled .js. Under tsx (dev,
+// tests) both are TypeScript, and a worker thread does not inherit tsx's
+// loader, so the worker starts from a bootstrap that registers it first.
+function createWorker(options: { resourceLimits: { maxOldGenerationSizeMb: number } }): Worker {
+  const self = fileURLToPath(import.meta.url);
+  if (self.endsWith(".ts")) {
+    const tsxApi = import.meta.resolve("tsx/esm/api");
+    const entry = new URL("./readability-worker.ts", import.meta.url).href;
+    const bootstrap = `import(${JSON.stringify(tsxApi)}).then((m) => { m.register(); return import(${JSON.stringify(entry)}); });`;
+    return new Worker(bootstrap, { ...options, eval: true });
+  }
+  const url = new URL("./readability-worker.js", import.meta.url);
+  if (!existsSync(fileURLToPath(url))) throw new Error(`readability worker missing at ${fileURLToPath(url)}`);
+  return new Worker(url, options);
+}
 
-/**
- * Convert HTML to clean markdown using Readability + Turndown.
- *
- * The page is bounded before jsdom sees it (html-parse-bound.ts): jsdom
- * parses synchronously, so hostile markup would otherwise block the process.
- * A page too complex to convert within the bounds throws HtmlTooComplexError
- * rather than returning partial or empty Markdown.
- *
- * @param html - Raw HTML string
- * @param url  - Source URL (used by Readability for resolving relative links)
- */
-export function htmlToCleanMarkdown(html: string, url: string): ReadabilityResult {
-  const dom = new JSDOM(prepareHtmlForParse(html), { url });
+function tooComplex(message: string): HtmlTooComplexError {
+  const e = new HtmlTooComplexError("over a conversion limit");
+  e.message = message;
+  return e;
+}
 
-  // Try Readability first — extracts main article content
-  const clonedDoc = dom.window.document.cloneNode(true) as typeof dom.window.document;
-  const reader = new Readability(clonedDoc);
-  const article = reader.parse();
+class Slot {
+  private worker: Worker | null = null;
+  job: Job | null = null;
+  private timer: NodeJS.Timeout | null = null;
 
-  let htmlToConvert: string;
-  let title: string;
-  let usedReadability: boolean;
+  constructor(private readonly onFree: () => void) {}
 
-  if (article?.content && (article.textContent?.length ?? 0) > 100) {
-    htmlToConvert = article.content;
-    title = article.title ?? "";
-    usedReadability = true;
-  } else {
-    // Readability failed (common for non-article pages like homepages)
-    const body = dom.window.document.body;
-    for (const tag of ["script", "style", "nav", "footer", "header", "aside", "noscript"]) {
-      body.querySelectorAll(tag).forEach((el) => el.remove());
-    }
-    htmlToConvert = body.innerHTML;
-    title = dom.window.document.title ?? "";
-    usedReadability = false;
+  private spawn(): Worker {
+    const w = createWorker({
+      resourceLimits: { maxOldGenerationSizeMb: CONVERSION_LIMITS.maxOldGenerationSizeMb },
+    });
+    w.unref(); // an idle converter never keeps the process alive
+    w.on("message", (reply: Reply) => {
+      const job = this.job;
+      if (!job || reply.id !== job.id) return;
+      this.finish();
+      if (reply.ok) job.resolve(reply.result);
+      else job.reject(reply.tooComplex ? tooComplex(reply.message) : new Error(reply.message));
+    });
+    // A worker that dies (heap limit, crash) fails its job; the slot respawns
+    // on its next job.
+    const dead = (err: unknown) => {
+      if (this.worker !== w) return;
+      this.worker = null;
+      const job = this.job;
+      if (!job) return;
+      this.finish();
+      const oom = err instanceof Error && /ERR_WORKER_OUT_OF_MEMORY|heap/i.test(`${(err as { code?: string }).code ?? ""} ${err.message}`);
+      job.reject(oom ? tooComplex(new HtmlTooComplexError("it needs more memory than the converter allows").message) : err);
+    };
+    w.on("error", dead);
+    w.on("exit", (code) => dead(new Error(`converter exited with code ${code}`)));
+    return w;
   }
 
-  let markdown = turndown.turndown(htmlToConvert);
-  markdown = markdown.replace(/\n{3,}/g, "\n\n").trim().slice(0, 50000);
+  run(job: Job): void {
+    this.job = job;
+    if (!this.worker) this.worker = this.spawn();
+    const w = this.worker;
+    this.timer = setTimeout(() => {
+      // Terminate first so the CPU is released, then answer the caller.
+      this.worker = null;
+      void w.terminate();
+      const j = this.job;
+      this.finish();
+      j?.reject(
+        tooComplex(
+          new HtmlTooComplexError(`conversion did not finish within ${CONVERSION_LIMITS.timeoutMs / 1000} s`).message,
+        ),
+      );
+    }, CONVERSION_LIMITS.timeoutMs);
+    w.postMessage({ id: job.id, html: job.html, url: job.url });
+  }
 
-  return { markdown, title, usedReadability };
+  private finish(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    this.job = null;
+    this.onFree();
+  }
+
+  async stop(): Promise<void> {
+    if (this.timer) clearTimeout(this.timer);
+    const w = this.worker;
+    const job = this.job;
+    this.worker = null;
+    this.job = null;
+    job?.reject(new ConversionBusyError());
+    if (w) await w.terminate();
+  }
+}
+
+let nextId = 1;
+let slots: Slot[] = [];
+const queue: Job[] = [];
+
+function dispatch(): void {
+  for (const slot of slots) {
+    if (slot.job) continue;
+    const job = queue.shift();
+    if (!job) return;
+    if (job.queueTimer) clearTimeout(job.queueTimer);
+    slot.run(job);
+  }
+}
+
+function ensureSlots(): void {
+  while (slots.length < CONVERSION_LIMITS.workers) slots.push(new Slot(() => setImmediate(dispatch)));
+}
+
+/**
+ * Convert HTML to clean Markdown with Readability + Turndown, in a worker.
+ * Rejects with HtmlTooComplexError past a limit, ConversionBusyError when the
+ * queue is full; both are non-billable refusals.
+ */
+export function htmlToCleanMarkdown(html: string, url: string): Promise<ReadabilityResult> {
+  ensureSlots();
+  if (queue.length >= CONVERSION_LIMITS.maxQueued) return Promise.reject(new ConversionBusyError());
+  return new Promise<ReadabilityResult>((resolve, reject) => {
+    const job: Job = { id: nextId++, html, url, resolve, reject };
+    job.queueTimer = setTimeout(() => {
+      const i = queue.indexOf(job);
+      if (i >= 0) {
+        queue.splice(i, 1);
+        reject(new ConversionBusyError());
+      }
+    }, CONVERSION_LIMITS.maxQueueWaitMs);
+    queue.push(job);
+    dispatch();
+  });
+}
+
+/** Stops every converter (tests, shutdown). Queued pages are refused. */
+export async function stopConversionWorkers(): Promise<void> {
+  for (const job of queue.splice(0)) {
+    if (job.queueTimer) clearTimeout(job.queueTimer);
+    job.reject(new ConversionBusyError());
+  }
+  const old = slots;
+  slots = [];
+  await Promise.all(old.map((s) => s.stop()));
 }

@@ -25,9 +25,15 @@
  *  2. `assertParseWithinBounds`, a parse with parse5 itself (the parser jsdom
  *     uses, with jsdom's options) into a tree that keeps no text, counting the
  *     real open-element stack and tree depth. It throws as soon as either goes
- *     past a hard limit. The model in layer 1 is an approximation; this layer
- *     makes the bound hold even for markup crafted to fool it, at the cost of
- *     a second parse5 pass, which is a small part of the conversion.
+ *     past a hard limit. The model in layer 1 is an approximation (the #964
+ *     review desynced it with an <svg> inside <select>); this layer makes the
+ *     depth and element bounds hold even for markup crafted to fool it, at the
+ *     cost of a second parse5 pass, which is a small part of the conversion.
+ *
+ * These layers shape the tree; they do not bound the time. Both run, with
+ * jsdom, Readability and Turndown, inside a worker thread with a wall-clock
+ * and a heap limit (readability-convert.ts, readability-worker.ts), and that
+ * limit is what keeps a slow page from holding the API.
  */
 
 import { defaultTreeAdapter, parse, type DefaultTreeAdapterMap, type TreeAdapter } from "parse5";
@@ -41,9 +47,11 @@ export const HTML_PARSE_LIMITS = {
   /** Characters kept per attribute value (inline data: images fit). */
   maxAttributeValueLength: 64 * 1024,
   /**
-   * Start tags and comments in one page. Readability costs about 0.1 ms per
-   * element on top of the parse, so this, not the byte cap, is what bounds a
-   * legitimately shaped page: a 1.1 MB API reference page has about 25,600.
+   * Start tags and comments in one page; a 1.1 MB API reference page has
+   * about 25,600. This refuses the plainest markup bombs cheaply. It does not
+   * bound conversion time: Readability's cost grows faster than the element
+   * count (the #964 review measured 9.4 s for 10k flat <div>, 73 s for 29k).
+   * The time bound is the worker's wall-clock limit (readability-convert.ts).
    */
   maxElements: 30_000,
   /** All markup tokens, end tags included. */
@@ -953,7 +961,10 @@ class ParseBoundExceeded extends Error {}
  * deeper than `maxParsedDepth`, or it creates more than twice `maxElements`
  * elements and comments (parse5 adds implied and reopened elements of its
  * own, so the pre-pass count is not the whole story). Aborts at the first
- * violation, so the work done is bounded by the limits rather than the page.
+ * violation of those limits. End tags and text are not counted, so its own
+ * running time still grows with the page (about 1-2 s for 15 MB of text);
+ * like the rest of the conversion, it runs in the worker under its
+ * wall-clock limit.
  */
 export function assertParseWithinBounds(html: string, limits: HtmlParseLimits = HTML_PARSE_LIMITS): void {
   type Node = DefaultTreeAdapterMap["node"] & { boundDepth?: number };

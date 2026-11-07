@@ -265,7 +265,7 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const plainHtml = await tryPlainFetch(fullUrl);
 
   if (plainHtml) {
-    const result = htmlToCleanMarkdown(plainHtml, fullUrl);
+    const result = await htmlToCleanMarkdown(plainHtml, fullUrl);
     const markdown = postProcess(result.markdown, includeLinks, includeImages);
     const wordCount = markdown.split(/\s+/).filter(Boolean).length;
 
@@ -299,7 +299,7 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
     throw mapBrowserlessError(err instanceof Error ? err.message : String(err), fullUrl);
   }
 
-  const result = htmlToCleanMarkdown(browserlessHtml, fullUrl);
+  const result = await htmlToCleanMarkdown(browserlessHtml, fullUrl);
   const browserMarkdown = postProcess(result.markdown, includeLinks, includeImages);
   const wordCount = browserMarkdown.split(/\s+/).filter(Boolean).length;
 
