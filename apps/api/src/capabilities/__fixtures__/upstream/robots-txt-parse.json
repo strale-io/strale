@@ -1,15 +1,15 @@
 {
   "slug": "robots-txt-parse",
-  "recorded_at": "2026-10-29T16:05:07.069Z",
+  "recorded_at": "2026-11-07T22:22:22.307Z",
   "input": {
-    "url": "https://strale.dev/robots.txt"
+    "url": "https://strale.io/robots.txt"
   },
   "redactions": [],
   "exchanges": [
     {
       "request": {
         "method": "GET",
-        "url": "https://strale.dev/robots.txt"
+        "url": "https://strale.io/robots.txt"
       },
       "response": {
         "status": 200,
@@ -18,19 +18,19 @@
           "alt-svc": "h3=\":443\"; ma=86400",
           "cache-control": "public, max-age=14400, must-revalidate",
           "cf-cache-status": "REVALIDATED",
-          "cf-ray": "a5236b80c8c8abef-ATL",
+          "cf-ray": "a56fbc7f6f85e1bd-ORD",
           "content-type": "text/plain; charset=utf-8",
-          "date": "Thu, 29 Oct 2026 16:05:07 GMT",
-          "etag": "W/\"c93521b959a6c47f42f50f2f31a8fc47\"",
+          "date": "Sat, 07 Nov 2026 22:22:22 GMT",
+          "etag": "W/\"e6650f1fca61ad6843c97c5480de1e05\"",
           "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
           "referrer-policy": "strict-origin-when-cross-origin",
-          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=yABUwUbnrv2%2F7a5%2FgtbW57ecX0BGTTqZ3Ec0a3DU5GPugkA24wDnV2FeU8cqzQEpXrvrWJgm7KRwf1ye0f%2Fd3TwyrYcC06sfbA17Kw46cBJELDLYYZ5jZEh7wImr\"}]}",
+          "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=fnIc1OPcUuA1VVeb68c%2FHJisL6YHh0LdvfFNW2w1mlZEJ%2Bo47mrDf7xPuz3CqgD53l27l51ai1%2FRJjwqy%2FAIwjg4sAHhRrsROlHX6FOtIyT3tazYTiAOphJWqcA%3D\"}]}",
           "server": "cloudflare",
-          "strict-transport-security": "max-age=31536000; includeSubDomains",
+          "strict-transport-security": "max-age=31536000",
           "vary": "accept-encoding",
           "x-content-type-options": "nosniff"
         },
-        "body": "# Search engines\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\n# Social\nUser-agent: Twitterbot\nAllow: /\n\nUser-agent: facebookexternalhit\nAllow: /\n\n# AI crawlers welcome\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: Claude-Web\nAllow: /\n\nUser-agent: anthropic-ai\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: Amazonbot\nAllow: /\n\nUser-agent: cohere-ai\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: *\nAllow: /\nAllow: /.well-known/\n\nSitemap: https://strale.dev/sitemap.xml\n",
+        "body": "User-agent: *\nAllow: /\n\nSitemap: https://strale.io/sitemap.xml\n",
         "body_encoding": "utf8"
       }
     }

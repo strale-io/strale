@@ -1,0 +1,60 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/scripts/check-source-robots-access.ts",
+    "commit": "9743a243baf8351df29b7636530a2ad91184eaca"
+  },
+  "at": "2026-11-07T22:36:43.927Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/01cb5899-2d68-5ac6-a40c-443470b047d2/scratchpad/receipt-robots.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 0,
+    "command": "npx tsx apps/api/scripts/check-source-robots-access.ts",
+    "listed_disallowed": 0,
+    "note": "No listed tool is robots-disallowed. Every remaining disallowed finding is on an unlisted tool; see output."
+  },
+  "topic": "source-robots-access-customs-container",
+  "raw": {
+    "ok": true,
+    "command": "npx tsx apps/api/scripts/check-source-robots-access.ts",
+    "listed_disallowed": 0,
+    "note": "No listed tool is robots-disallowed. Every remaining disallowed finding is on an unlisted tool; see output.",
+    "output": [
+      "Checked 31 scrape-backed manifests (17 with no Strale-chosen literal URL, 1 with no single-file executor).",
+      "",
+      "DISALLOWED — 4 URL(s) across 4 capability(ies); 0 of them listed in the public catalogue.",
+      "",
+      "  employer-review-summary    price=25   free=false  [not listed]",
+      "                             https://www.google.com/search?q=STRALEPLACEHOLDER",
+      "                             robots.txt disallows /search?q=STRALEPLACEHOLDER — read apps/api/src/capabilities/employer-review-summary.ts to see whether this is its only path",
+      "  eu-trademark-search        price=50   free=false  [not listed]",
+      "                             https://euipo.europa.eu/eSearch/#basic/STRALEPLACEHOLDER",
+      "                             robots.txt disallows /eSearch/ — read apps/api/src/capabilities/eu-trademark-search.ts to see whether this is its only path",
+      "  salary-benchmark           price=20   free=false  [not listed]",
+      "                             https://www.google.com/search?q=STRALEPLACEHOLDER",
+      "                             robots.txt disallows /search?q=STRALEPLACEHOLDER — read apps/api/src/capabilities/salary-benchmark.ts to see whether this is its only path",
+      "  trustpilot-score           price=10   free=false  [not listed]",
+      "                             https://www.trustpilot.com/review/STRALEPLACEHOLDER",
+      "                             robots.txt disallows /review/STRALEPLACEHOLDER — read apps/api/src/capabilities/trustpilot-score.ts to see whether this is its only path",
+      "",
+      "UNVERIFIED FROM THIS RUNNER — 8 URL(s); never fails --strict, never read as clean:",
+      "  container-track            https://www.msc.com/track-a-shipment?agencyPath=msc&trackingNumber=STRALEPLACEHOLDER  [robots.txt HTTP 403 from this runner — allow-all under RFC 9309, but production's egress may see rules] [LISTED — sellable now]",
+      "  container-track            https://www.oocl.com/eng/ourservices/eservices/cargotracking/Pages/cargotracking.aspx?ctnno=STRALEPLACEHOLDER  [robots.txt HTTP 403 from this runner — allow-all under RFC 9309, but production's egress may see rules] [LISTED — sellable now]",
+      "  container-track            https://elines.coscoshipping.com/ebusiness/cargoTracking?trackingType=CONTAINER&number=STRALEPLACEHOLDER  [robots.txt HTTP 404 from this runner — allow-all under RFC 9309, but production's egress may see rules] [LISTED — sellable now]",
+      "  container-track            https://www.yangming.com/e-service/track-trace/track-trace.aspx?containerNo=STRALEPLACEHOLDER  [robots.txt HTTP 404 from this runner — allow-all under RFC 9309, but production's egress may see rules] [LISTED — sellable now]",
+      "  container-track            https://www.zim.com/tools/track-a-shipment?consnumber=STRALEPLACEHOLDER  [robots.txt HTTP 403 from this runner — allow-all under RFC 9309, but production's egress may see rules] [LISTED — sellable now]",
+      "  eu-court-case-search       https://hudoc.echr.coe.int/eng#{\"fulltext\":[\"STRALEPLACEHOLDER\"]}  [robots.txt HTTP 403 from this runner — allow-all under RFC 9309, but production's egress may see rules] [not listed]",
+      "  price-compare              https://www.pricerunner.STRALEPLACEHOLDER/search?q=STRALEPLACEHOLDER  [host is built per call from a fixed set; check each origin by hand] [not listed]",
+      "  product-search             https://www.google.STRALEPLACEHOLDER/search?q=STRALEPLACEHOLDER&tbm=shop&hl=en  [host is built per call from a fixed set; check each origin by hand] [not listed]",
+      "",
+      "ROBOTS UNAVAILABLE — 2 URL(s); may be transient, never fails --strict:",
+      "  patent-search              https://patents.google.com/patent/STRALEPLACEHOLDER  [robots.txt HTTP 503 — RFC 9309 makes this a complete disallow]",
+      "  patent-search              https://patents.google.com/?q=STRALEPLACEHOLDER&num=STRALEPLACEHOLDER  [robots.txt HTTP 503 — RFC 9309 makes this a complete disallow]"
+    ],
+    "failures": [],
+    "warnings": []
+  }
+}

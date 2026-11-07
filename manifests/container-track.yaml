@@ -49,7 +49,7 @@ output_schema:
       type: boolean
     container_number:
       type: string
-data_source: Shipping line tracking portals (web scraping with rendering fallback)
+data_source: "Carrier tracking pages (MSC, CMA CGM, Hapag-Lloyd), read with rendering; ISO 6346 check-digit validation"
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
@@ -92,6 +92,14 @@ output_field_reliability:
   valid_format: guaranteed
   container_number: guaranteed
 limitations:
+  - title: Live status from three carriers only
+    text: >-
+      Live tracking is read only from the MSC, CMA CGM (including APL) and Hapag-Lloyd websites. For Maersk, whose
+      website does not permit automated access to tracking pages, and for every other carrier, the response
+      validates the number, names the carrier and returns tracking links with status tracking_unavailable.
+    category: coverage
+    severity: warning
+    workaround: Open the returned tracking link for the carrier to check status by hand.
   - title: Carrier website changes can interrupt tracking
     text: >-
       Tracking reads carrier websites, whose page layouts can change without notice and cause

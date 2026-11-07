@@ -373,5 +373,29 @@
     "findings": ["Statistics Finland states that it uses the CC BY 4.0 open-data licence and permits use in every way provided the source is mentioned. Its published terms require the source, table or product, material version date, CC BY 4.0 reference and licence hyperlink; Strale identifies its reshaping."],
     "decision_ref": "DEC-20261023-A; portfolio plan item 2.10",
     "basis": "published_terms"
+  },
+  {
+    "vendor": "European Commission (Access2Markets)",
+    "hosts": [
+      "trade.ec.europa.eu"
+    ],
+    "url_prefixes": [
+      "https://trade.ec.europa.eu/access-to-markets/"
+    ],
+    "capabilities": [
+      "customs-duty-lookup"
+    ],
+    "resale": "unverified",
+    "terms_url": "https://trade.ec.europa.eu/access-to-markets/en/content/sources-and-copyright",
+    "accessed": "2026-11-07",
+    "how_read": "Read the Access2Markets 'Sources and copyright' page and the Commission legal notice (commission.europa.eu/legal-notice_en) in a rendering browser with Strale's honest user agent; checked trade.ec.europa.eu/robots.txt (disallows only /wp-login.php).",
+    "findings": [
+      "Commission legal notice: 'Unless otherwise indicated ... content owned by the EU on this website is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence. This means that reuse is allowed, provided appropriate credit is given and changes are indicated.'",
+      "Sources and copyright table: Tariffs 'EU tariffs' come from 'DG TAXUD, TARIC database'; 'Internal Taxes (for EU Member States)' and 'Import requirements (for EU Member States)' come from 'TARIC SA', which is not shown to be the Commission; tariffs, taxes and formalities of non-EU countries come from 'Mendel*'.",
+      "Footnote, verbatim: '*The information in the Tariffs section, Taxes section or Procedures and Formalities section, may not be used for resale (or in the provision of consultancy services), redistribution, building of databases, storage, or for any purpose other than reference use by a European Union user personally located within one of the Member States ... All other use is prohibited unless explicitly approved in writing by the owner of the data: Copyright: Mendel Verlag GmbH & Co. KG'.",
+      "Next paragraph, verbatim: 'If the computer on which your browser is running is not directly connected to the Internet in the European Union, via an Internet Service Provider located in and incorporated in a Member State of the European Union (or Albania, Bosnia and Herzegovina, Georgia, Moldova, Montenegro, North Macedonia, Serbia, Türkiye and Ukraine), then you are prohibited from viewing the data herein for any purpose.' Strale's rendered fetches run from a US address.",
+      "Strale's reading: the asterisk binds both clauses to the Mendel-sourced rows, so the TARIC-sourced EU import tariff rows are Commission content under CC BY 4.0. The text does not settle this, so resale stays unverified until Access2Markets confirms. customs-duty-lookup reads only the Tariffs rows of EU imports, never the Taxes tab (it is not in the rendered page) or non-EU sections, and returns attribution, licence and source URL in provenance."
+    ],
+    "decision_ref": "DQ-48 (open); DEC-20261023-A, allowed with checks, checks pending; confirmation drafted as docs/company/OUTBOX.yaml a2m-terms-confirmation; weekly-drift robots sweep, issue #747"
   }
 ]

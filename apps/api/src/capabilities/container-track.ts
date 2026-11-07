@@ -176,13 +176,20 @@ function detectCarrier(ownerCode: string, category: string): string | null {
   return null;
 }
 
+/**
+ * Links returned for the caller to open by hand. Only the carriers in
+ * {@link liveTrackingUrl} are ever fetched by Strale.
+ */
 function getTrackingUrls(containerNumber: string, carrier: string | null): Record<string, string> {
   const urls: Record<string, string> = {};
 
   if (carrier) {
     const carrierLower = carrier.toLowerCase();
     if (carrierLower.includes("maersk")) {
-      urls.maersk = `https://www.maersk.com/tracking/${containerNumber}`;
+      // maersk.com/robots.txt disallows /tracking/<number> for every agent, so
+      // Strale neither fetches nor links the per-container page; this is the
+      // tracking form, which robots.txt allows (`Allow: /tracking/$`).
+      urls.maersk = "https://www.maersk.com/tracking/";
     } else if (carrierLower.includes("msc")) {
       urls.msc = `https://www.msc.com/track-a-shipment?agencyPath=msc&trackingNumber=${containerNumber}`;
     } else if (carrierLower.includes("cma") || carrierLower.includes("apl")) {
@@ -201,17 +208,36 @@ function getTrackingUrls(containerNumber: string, carrier: string | null): Recor
       urls.one = `https://ecomm.one-line.com/one-ecom/manage/cargo-tracking?ctrack-field=${containerNumber}`;
     } else if (carrierLower.includes("zim")) {
       urls.zim = `https://www.zim.com/tools/track-a-shipment?consnumber=${containerNumber}`;
-    } else if (carrierLower.includes("hmm") || carrierLower.includes("hyundai")) {
-      urls.hmm = `https://www.hmm21.com/cms/business/ebiz/trackTrace/trackTrace/index.jsp?type=1&number=${containerNumber}`;
     }
+    // HMM: no link. hmm21.com/robots.txt disallows its tracking page
+    // (weekly-drift robots sweep, 2026-11-02 onwards); track_trace covers it.
   }
 
-  // Always include universal trackers
-  urls.searates = `https://www.searates.com/container/tracking/?number=${containerNumber}`;
+  // A carrier-neutral link directory. (SeaRates was dropped on 2026-11-07:
+  // its tracking URL now redirects to DP World's homepage.)
   urls.track_trace = `https://www.track-trace.com/container?number=${containerNumber}`;
 
   return urls;
 }
+
+/**
+ * The one carrier page Strale reads for live status, or null when there is
+ * none. Only carriers whose tracking page robots.txt allows are here:
+ *   - Maersk (and Hamburg Süd) is not: maersk.com/robots.txt disallows
+ *     /tracking/<number> (weekly-drift robots sweep, issue #747).
+ *   - Every other carrier used to fall through to SeaRates, whose tracking URL
+ *     now 301s to DP World's homepage, so those calls read a corporate homepage.
+ */
+function liveTrackingUrl(carrier: string | null, urls: Record<string, string>): string | null {
+  const c = carrier?.toLowerCase() ?? "";
+  if (c.includes("maersk")) return null;
+  if (c.includes("msc")) return urls.msc ?? null;
+  if (c.includes("cma") || c.includes("apl")) return urls.cma_cgm ?? null;
+  if (c.includes("hapag")) return urls.hapag_lloyd ?? null;
+  return null;
+}
+
+export const LIVE_TRACKING_CARRIERS = "MSC, CMA CGM (including APL) and Hapag-Lloyd";
 
 registerCapability("container-track", async (input: CapabilityInput) => {
   const raw = (
@@ -253,85 +279,74 @@ registerCapability("container-track", async (input: CapabilityInput) => {
     };
   }
 
-  // Try to scrape tracking info via Browserless
+  // Read live status from the carrier's own page, where one is permitted.
   let trackingData: Record<string, unknown> | null = null;
   let blockedByCarrier = false;
+  const scrapeUrl = liveTrackingUrl(carrier, trackingUrls);
 
-  try {
-    // Choose the best URL to scrape based on detected carrier
-    let scrapeUrl: string;
-    if (carrier?.toLowerCase().includes("maersk")) {
-      scrapeUrl = trackingUrls.maersk;
-    } else if (carrier?.toLowerCase().includes("msc")) {
-      scrapeUrl = trackingUrls.msc;
-    } else if (carrier?.toLowerCase().includes("cma")) {
-      scrapeUrl = trackingUrls.cma_cgm;
-    } else if (carrier?.toLowerCase().includes("hapag")) {
-      scrapeUrl = trackingUrls.hapag_lloyd;
-    } else {
-      scrapeUrl = trackingUrls.searates;
+  if (scrapeUrl) {
+    try {
+      const html = await fetchRenderedHtml(scrapeUrl, { source: "strale" });
+      const text = htmlToText(html);
+
+      if (text.length >= 200) {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
+
+        const client = createAnthropicClient({ apiKey });
+        // Note: a truncation refusal or parse failure from the helper is
+        // caught by this function's own outer catch below, same as before —
+        // this LLM step is best-effort and falls back to "tracking_unavailable"
+        // either way, so the specific error text here never reaches the caller.
+        trackingData = await extractJsonWithLlm({
+          client,
+          model: MODELS.capability_default.id,
+          maxTokens: 2000,
+          prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
+
+  Return ONLY valid JSON:
+  {
+    "status": "current status (e.g. In Transit, At Port, Delivered, Loaded on Vessel, Discharged, Gate Out, etc.)",
+    "vessel_name": "vessel/ship name or null",
+    "voyage_number": "voyage number or null",
+    "origin_port": "port of loading or null",
+    "destination_port": "port of discharge or null",
+    "eta": "estimated time of arrival or null",
+    "last_location": "last known location or null",
+    "events": [
+      {
+        "timestamp": "date/time or date string",
+        "location": "location name",
+        "status": "event description"
+      }
+    ]
+  }
+
+  If the page shows an error, no results, or tracking data cannot be found, return:
+  {
+    "status": "not_found",
+    "vessel_name": null,
+    "voyage_number": null,
+    "origin_port": null,
+    "destination_port": null,
+    "eta": null,
+    "last_location": null,
+    "events": [],
+    "note": "reason why tracking data was not found"
+  }
+
+  Page text:
+  ${text.slice(0, 12000)}`,
+          truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
+          parseFailureError: () => new Error("Failed to parse container tracking data."),
+        });
+      }
+    } catch (err) {
+      // Tracking scrape failed — return validation results with tracking URLs.
+      // DEC-20261023-A: if the carrier's site refused Strale, say so rather
+      // than implying a transient failure.
+      if (err instanceof SourceBlockedError) blockedByCarrier = true;
     }
-
-    const html = await fetchRenderedHtml(scrapeUrl, { source: "strale" });
-    const text = htmlToText(html);
-
-    if (text.length >= 200) {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-
-      const client = createAnthropicClient({ apiKey });
-      // Note: a truncation refusal or parse failure from the helper is
-      // caught by this function's own outer catch below, same as before —
-      // this LLM step is best-effort and falls back to "tracking_unavailable"
-      // either way, so the specific error text here never reaches the caller.
-      trackingData = await extractJsonWithLlm({
-        client,
-        model: MODELS.capability_default.id,
-        maxTokens: 2000,
-        prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
-
-Return ONLY valid JSON:
-{
-  "status": "current status (e.g. In Transit, At Port, Delivered, Loaded on Vessel, Discharged, Gate Out, etc.)",
-  "vessel_name": "vessel/ship name or null",
-  "voyage_number": "voyage number or null",
-  "origin_port": "port of loading or null",
-  "destination_port": "port of discharge or null",
-  "eta": "estimated time of arrival or null",
-  "last_location": "last known location or null",
-  "events": [
-    {
-      "timestamp": "date/time or date string",
-      "location": "location name",
-      "status": "event description"
-    }
-  ]
-}
-
-If the page shows an error, no results, or tracking data cannot be found, return:
-{
-  "status": "not_found",
-  "vessel_name": null,
-  "voyage_number": null,
-  "origin_port": null,
-  "destination_port": null,
-  "eta": null,
-  "last_location": null,
-  "events": [],
-  "note": "reason why tracking data was not found"
-}
-
-Page text:
-${text.slice(0, 12000)}`,
-        truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
-        parseFailureError: () => new Error("Failed to parse container tracking data."),
-      });
-    }
-  } catch (err) {
-    // Tracking scrape failed — return validation results with tracking URLs.
-    // DEC-20261023-A: if the carrier's site refused Strale, say so rather
-    // than implying a transient failure.
-    if (err instanceof SourceBlockedError) blockedByCarrier = true;
   }
 
   return {
@@ -348,7 +363,9 @@ ${text.slice(0, 12000)}`,
         status: "tracking_unavailable",
         note: blockedByCarrier
           ? "The carrier's website refuses automated access, and Strale does not route around a site's block. Use the tracking URLs above to check manually."
-          : "Live tracking data could not be retrieved. Use the tracking URLs above to check manually.",
+          : !scrapeUrl
+            ? `Strale reads live tracking only for ${LIVE_TRACKING_CARRIERS}. For this carrier, use the tracking URLs above to check manually.`
+            : "Live tracking data could not be retrieved. Use the tracking URLs above to check manually.",
       }),
     },
     provenance: {

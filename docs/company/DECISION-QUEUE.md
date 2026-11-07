@@ -14,6 +14,26 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-48** · `your_call` · owner Petter · raised 2026-11-07 · authorization, not judgement — **our EU customs-duty tool now reads only the Commission's Access2Markets site; its copyright page has a no-resale line that most likely covers only a private publisher's rows, and confirming that means writing to the Commission**
+
+Under the data-access rule (DEC-20261023-A), a per-call read of a public source needs terms that permit it. On 2026-11-07 the weekly robots check showed `customs-duty-lookup`'s first source, the EU TARIC pages, is closed to automated readers. PR #974 moved the tool to Access2Markets, the Commission's trade portal, which robots.txt allows.
+
+*What is established (read 2026-11-07):*
+- The Commission's legal notice licenses its own content CC BY 4.0: reuse is allowed with credit.
+- Access2Markets' "Sources and copyright" page says the EU import tariffs come from the TARIC database (DG TAXUD). Non-EU countries' tariffs come from Mendel Verlag, a private publisher, marked with an asterisk. Member-state tax rows come from "TARIC SA".
+- The asterisked footnote says the information in the Tariffs, Taxes and Procedures sections "may not be used for resale ... redistribution, building of databases". The next paragraph forbids viewing "the data herein" from outside the EU, and our reads run from a US address.
+- My reading: both clauses belong to the asterisked Mendel rows. The tool reads only EU-import tariff rows, never taxes or non-EU rows, and credits the Commission in every answer. The text does not settle this beyond doubt (moderate confidence).
+- Paid call volume for this tool was not measured from this session.
+
+*Options:*
+1. **Ask Access2Markets through its contact form** (the site lists no email address) whether our reading is right. The text is drafted as `a2m-terms-confirmation` in `docs/company/OUTBOX.yaml`. It costs nothing, but it is contact with a counterparty on behalf of Moonlighter AB.
+2. **Accept the reading** and record it as your decision, without asking.
+3. **Pause the tool** until a reply arrives.
+
+*My recommendation:* option 1, with the tool left live while you wait. It reads only Commission tariff rows, credits them, and the exposure is low; this is the same shape as DQ-40's option 1.
+
+*Consequence:* option 1 settles the question in days to weeks. Option 2 keeps a small residual risk on record. Option 3 takes a listed €0.20 tool off sale.
+
 **DQ-47** · `answered` · owner Petter · raised 2026-11-07 · answered 2026-11-07 (approved) — **the PEP check's published limitations still say it runs on OpenSanctions and suggest an "LLM fallback"; neither has been true since April**
 
 *Answer (2026-11-07):* Petter, in session: "approve DQ-47". Published by startup block 0150 (`0150-publish-pep-check-limitations.ts`): it removes the five named rows by exact text and adds the manifest's three, word for word.

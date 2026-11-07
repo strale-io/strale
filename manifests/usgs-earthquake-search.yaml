@@ -85,6 +85,11 @@ test_fixtures:
     input:
       min_magnitude: 5
       limit: 5
+      # A fixed window: without one the executor asks for the last 30 days, so
+      # the request URL changes daily and the recorded-upstream re-check in the
+      # weekly drift sweep reported it "no longer requested" (2026-11-02).
+      start_time: "2026-10-01"
+      end_time: "2026-10-31"
     expected_fields:
       - field: filters
         operator: not_null
