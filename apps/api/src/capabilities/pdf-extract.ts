@@ -10,6 +10,7 @@ import {
   checkedBase64,
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -85,7 +86,7 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
   });
 
   const responseText =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    messageText(response);
 
   const parsed = extractJsonObject(responseText);
   if (!parsed) {

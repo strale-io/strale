@@ -9,6 +9,7 @@ import {
   checkedBase64,
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("resume-parse", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();
@@ -81,7 +82,7 @@ registerCapability("resume-parse", async (input: CapabilityInput) => {
     messages,
   });
 
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const parsedOutput = extractJsonObject(responseText);
   if (!parsedOutput) throw new Error("Failed to parse resume.");
 

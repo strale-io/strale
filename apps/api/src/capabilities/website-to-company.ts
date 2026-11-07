@@ -2,6 +2,7 @@ import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput, getExecutor } from "./index.js";
+import { messageText } from "../lib/llm-response.js";
 
 // F-0-006 Bucket D: delegates to other capabilities (meta-extract,
 // url-to-markdown) that are themselves migrated. No direct fetch here.
@@ -115,7 +116,7 @@ async function llmExtractCompanyName(text: string, url: string): Promise<string>
       content: `Extract the legal company or organization name from this website title/metadata. Return ONLY the company name, nothing else. If you can't identify a company name, return the most likely organization name.\n\nURL: ${url}\nText: "${text}"`,
     }],
   });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
+  const name = messageText(r).trim().replace(/^["']|["']$/g, "");
   return name || text.split(/[|–—:]/)[0].trim();
 }
 

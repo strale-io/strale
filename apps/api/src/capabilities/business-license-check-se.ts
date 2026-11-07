@@ -7,6 +7,7 @@ import {
 } from "./lib/browserless-extract.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
+import { messageText } from "../lib/llm-response.js";
 
 // ─── Swedish business license check via Allabolag.se — Browserless + Claude ──
 
@@ -48,9 +49,7 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   });
 
   const name =
-    response.content[0].type === "text"
-      ? response.content[0].text.trim().replace(/^["']|["']$/g, "")
-      : "";
+    messageText(response).trim().replace(/^["']|["']$/g, "");
   if (!name) throw new Error(`Could not identify a company name from: "${naturalLanguage}".`);
   return name;
 }

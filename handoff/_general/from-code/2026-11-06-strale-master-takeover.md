@@ -86,3 +86,18 @@ fatf-gafi.org answers bots with a Cloudflare challenge (`cf-mitigated: challenge
 - **Flaky test fixed:** the `attribution.test.ts` raw-IP check could fail by chance. It now uses a pinned date.
 - **CI note:** one run lost a vitest fork in `readability-convert.test.ts` after every test had passed. It did not reproduce, the re-run was green, and the review found no code cause. If it recurs, look at runner memory.
 - **Next (R2):** clear the undated harm-A register rows before 2026-12-15. `SECRECY_JURISDICTIONS` still has no source.
+
+## Morning of 2026-11-07 (same session)
+
+- **Merged and live:**
+  - #969 (DQ-46): the narrowed sanctions and PEP text is published. Verified at `13bbaf47`.
+  - #970 (DQ-47): pep-check's public limitations are now exactly the manifest's three, with no OpenSanctions and no "LLM fallback". Verified at `9dd7ecd8`.
+- **AI model upgrade (Petter asked; plan stated, no objection):**
+  - **Prices:** Haiku 5.5 is $0.10/$0.50 per M tokens up to 100K-token prompts, against Haiku 4.5's $1/$5. Sonnet 5.5 is $2/$10, against Sonnet 4.6's $3/$15.
+  - **Step 1, this PR:** every Claude caller reads the answer by block type through `messageText` in `lib/llm-response.ts`, and a model safety decline becomes a registered refusal. On Haiku 4.5 this changes nothing.
+  - **Step 2:** move `capability_default` to Haiku 5.5. Before that, three things are needed:
+    - remove `temperature: 0` (competitor-compare, and llm-extract's option), because Haiku 5.5 rejects it;
+    - decide thinking per role (`disabled` keeps 4.5's behaviour, and the `max_tokens: 10/100` name resolvers need it);
+    - compare old and new outputs on golden inputs.
+  - **Blocked:** no Anthropic key reaches this sandbox, and installing `bws` to read one was refused. The live comparison needs a test-tier key.
+  - **Order after that:** digest (Sonnet 4 → 5.5), then risk-narrative last, with per-flag citation checks.

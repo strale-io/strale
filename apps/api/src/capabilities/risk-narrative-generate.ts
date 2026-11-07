@@ -4,6 +4,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonObject } from "./lib/llm-json.js";
 import { logError, logWarn } from "../lib/log.js";
 import { MODELS, promptDigest } from "../lib/models.js";
+import { messageText } from "../lib/llm-response.js";
 
 // Cert-audit Y-10 — model pinning for replay determinism.
 // `claude-sonnet-4-6` is a moving alias; the same check_results passed
@@ -404,7 +405,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
       ],
     });
 
-    const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+    const responseText = messageText(r).trim();
 
     // Cert-audit Y-10: regex-check the raw LLM output for prohibited
     // wording before parsing. If the model violated a wording rule

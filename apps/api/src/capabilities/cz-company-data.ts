@@ -5,6 +5,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatCZ } from "../lib/vat-derivation.js";
 import { normalizeIco, isValidIcoChecksum } from "../lib/cz-validation.js";
 import { discardBody } from "../lib/safe-fetch.js";
+import { messageText } from "../lib/llm-response.js";
 
 // ARES — Administrativní registr ekonomických subjektů (Czech Ministry of Finance)
 const ARES_API = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty";
@@ -115,9 +116,7 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   });
 
   const name =
-    response.content[0].type === "text"
-      ? response.content[0].text.trim().replace(/^["']|["']$/g, "")
-      : "";
+    messageText(response).trim().replace(/^["']|["']$/g, "");
   if (!name) throw new Error(`Could not identify a company name from: "${naturalLanguage}".`);
   return name;
 }

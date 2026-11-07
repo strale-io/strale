@@ -15,6 +15,7 @@ import { STRALE_USER_AGENT, assertNotBlockStatus } from "../lib/site-access.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";
+import { messageText } from "../lib/llm-response.js";
 
 const API = "https://ariregister.rik.ee/est/api";
 
@@ -157,7 +158,7 @@ async function extractCompanyName(text: string): Promise<string> {
     max_tokens: 100,
     messages: [{ role: "user", content: `Extract the Estonian company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
   });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
+  const name = messageText(r).trim().replace(/^["']|["']$/g, "");
   if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
   return name;
 }

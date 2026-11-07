@@ -9,6 +9,7 @@ import {
   checkedBase64,
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 const EXTRACTION_PROMPT = `You are an expert invoice data extraction system specializing in European invoices.
 
@@ -162,7 +163,7 @@ registerCapability("invoice-extract", async (input: CapabilityInput) => {
   });
 
   const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    messageText(response);
 
   const parsed = extractJsonObject(text);
   if (!parsed) {

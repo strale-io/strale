@@ -26,6 +26,7 @@ export type { MatchConfidence } from "../lib/company-name-match.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
 import type { MatchConfidence } from "../lib/company-name-match.js";
 import { resolveByTicker, resolveByTitle } from "../lib/sec-ticker-map.js";
+import { messageText } from "../lib/llm-response.js";
 
 // A ticker is normally 1-5 chars, but don't hard-fail longer ones — just try
 // the map and fall through on a miss. Deliberately NO case coercion: only
@@ -94,7 +95,7 @@ async function extractCompanyName(text: string): Promise<string> {
     max_tokens: 100,
     messages: [{ role: "user", content: `Extract the US company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
   });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
+  const name = messageText(r).trim().replace(/^["']|["']$/g, "");
   if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
   return name;
 }

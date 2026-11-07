@@ -10,6 +10,7 @@ import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { MAX_DECODED_IMAGE_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -101,7 +102,7 @@ Return JSON:
     ],
   });
 
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const output = extractJsonObject(responseText);
   if (!output) throw new Error("Failed to analyze landing page.");
   output.url = fullUrl;

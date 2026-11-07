@@ -1,6 +1,7 @@
 import { createAnthropicClient } from "../../lib/anthropic-client.js";
 import { MODELS } from "../../lib/models.js";
 import type Anthropic from "@anthropic-ai/sdk";
+import { messageText } from "../../lib/llm-response.js";
 
 /**
  * Shared LLM-backed candidate resolver for name-based registry lookups.
@@ -81,7 +82,7 @@ Respond in strict JSON on a single line:
     messages: [{ role: "user", content: prompt }],
   });
 
-  const text = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const text = messageText(r).trim();
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return { id: null, confidence: "none", reasoning: `Unparseable model output: ${text.slice(0, 100)}` };

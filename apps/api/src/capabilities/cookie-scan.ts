@@ -12,6 +12,7 @@ import {
   htmlToText,
 } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
+import { messageText } from "../lib/llm-response.js";
 
 // ─── Cookie scan — Browserless + HTTP fetch + Claude ─────────────────────────
 
@@ -234,7 +235,7 @@ Only include tracking scripts where detected is true. For potential_issues, cons
   // Optional-chained: an empty content array (e.g. a safety stop with no
   // text block) must fall into the non-fatal default path below, not throw
   // a TypeError that discards the cookies already collected.
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   // Real brace-matching, not the greedy object-capture regex — an unbalanced
   // (truncated) response yields null and we continue with defaults, which is
   // this capability's intended non-fatal degrade.

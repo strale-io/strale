@@ -5,6 +5,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatDK } from "../lib/vat-derivation.js";
 import { firstString } from "./lib/input-aliases.js";
 import { assertSingleResultMatch } from "../lib/company-name-match.js";
+import { messageText } from "../lib/llm-response.js";
 
 // CVR API — Danish Central Business Register
 // NOTE: cvrapi.dk free tier has aggressive quota limits that trigger QUOTA_EXCEEDED
@@ -48,9 +49,7 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   });
 
   const name =
-    response.content[0].type === "text"
-      ? response.content[0].text.trim().replace(/^["']|["']$/g, "")
-      : "";
+    messageText(response).trim().replace(/^["']|["']$/g, "");
   if (!name) throw new Error(`Could not identify a company name from: "${naturalLanguage}".`);
   return name;
 }
