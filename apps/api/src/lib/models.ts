@@ -23,6 +23,22 @@ export interface ModelEntry {
   decision: string;
   /** What this role is used for. */
   purpose: string;
+  /**
+   * Request settings this model needs, applied by createAnthropicClient
+   * (lib/anthropic-client.ts) to every call that names this id. Newer models
+   * reject some request shapes older ones accepted; the settings keep the 90
+   * call sites model-agnostic, so a model change touches only this file.
+   */
+  settings?: ModelRequestSettings;
+}
+
+export interface ModelRequestSettings {
+  /** Sent as `thinking` when the call sets none. `disabled` keeps an older model's no-thinking behaviour on a model that thinks by default. */
+  thinking?: { type: "disabled" } | { type: "adaptive" };
+  /** The model rejects `temperature`, `top_p` and `top_k`: they are dropped before the request. */
+  drop_sampling?: boolean;
+  /** `max_tokens` is multiplied by this and rounded up: a tokenizer that spends more tokens on the same text needs a larger budget for the same output. */
+  max_tokens_scale?: number;
 }
 
 export const MODELS = {
@@ -91,7 +107,7 @@ export function promptDigest(text: string): string {
 }
 
 /** USD per million tokens, standard global API (not batch). Source read 2026-10-27. */
-interface TokenPrice {
+export interface TokenPrice {
   input: number; output: number; cache_write_5m: number; cache_write_1h: number; cache_read: number;
   pinned_at: string; source: string;
   long_prompt?: { threshold: number; input: number; output: number; cache_write_5m: number; cache_write_1h: number; cache_read: number };
@@ -103,4 +119,32 @@ export const MODEL_PRICES: Record<ModelRole, TokenPrice> = {
   digest: { input: 3, output: 15, cache_write_5m: 3.75, cache_write_1h: 6, cache_read: 0.30, pinned_at: "2026-10-27", source: PRICE_SOURCE },
   search_rank: { input: 0.10, output: 0.50, cache_write_5m: 0.125, cache_write_1h: 0.20, cache_read: 0.01, pinned_at: "2026-10-27", source: PRICE_SOURCE,
     long_prompt: { threshold: 100_000, input: 0.50, output: 2.50, cache_write_5m: 0.625, cache_write_1h: 1, cache_read: 0.05 } },
+};
+
+/**
+ * A proposed replacement for a role. It is not used by production code:
+ * apps/api/scripts/compare-models.ts runs a role's capabilities on the
+ * current entry and on the candidate, and the candidate is promoted into
+ * MODELS (and MODEL_PRICES) only after that comparison holds up.
+ */
+export interface ModelCandidate {
+  entry: ModelEntry;
+  price: TokenPrice;
+}
+
+export const MODEL_CANDIDATES: Partial<Record<ModelRole, ModelCandidate>> = {
+  capability_default: {
+    entry: {
+      id: "claude-haiku-5-5",
+      pinned_at: "2026-11-07",
+      decision: "unrecorded",
+      purpose: "Default model for AI-generation/extraction/classification capabilities: Haiku 5.5, a tenth of Haiku 4.5's per-token price.",
+      // Haiku 4.5 ran these calls without thinking; Haiku 5.5 thinks by
+      // default, which would eat the 10- and 100-token budgets of the name
+      // resolvers. It rejects every sampling parameter, and its tokenizer
+      // spends about 30% more tokens on the same text.
+      settings: { thinking: { type: "disabled" }, drop_sampling: true, max_tokens_scale: 1.3 },
+    },
+    price: { ...MODEL_PRICES.search_rank },
+  },
 };

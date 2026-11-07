@@ -101,3 +101,10 @@ fatf-gafi.org answers bots with a Cloudflare challenge (`cf-mitigated: challenge
     - compare old and new outputs on golden inputs.
   - **Blocked:** no Anthropic key reaches this sandbox, and installing `bws` to read one was refused. The live comparison needs a test-tier key.
   - **Order after that:** digest (Sonnet 4 → 5.5), then risk-narrative last, with per-flag citation checks.
+- **Step 1 is live:** #971 (`messageText`, refusals as registered refusals) has merged and production serves `78bbdf55`.
+- **Step 2a (this PR):** wraps calls without changing any model.
+  - **Registry settings:** a model's registry entry carries the request settings it needs (`settings`, applied in `anthropic-client.ts`).
+  - **Candidate slot:** `MODEL_CANDIDATES.capability_default` holds Haiku 5.5 with thinking disabled, sampling dropped and `max_tokens` ×1.3.
+  - **Comparison script:** `apps/api/scripts/compare-models.ts` runs 57 tools on both models: those that call the role, are not deactivated and do not fetch a page.
+- **To run the comparison**, from the PC, which has the key: `cd apps/api && npx tsx scripts/compare-models.ts --role capability_default --out compare.json`. Then `npm run receipt -- --kind audit --topic model-compare-capability-default --from apps/api/compare.json`.
+- **Step 2b:** promote the candidate into `MODELS`/`MODEL_PRICES` only if the comparison shows no regressions. Remove `temperature` (competitor-compare, llm-extract) in the same PR.
