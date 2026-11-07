@@ -22,9 +22,15 @@ import { extractJsonWithLlm } from "./lib/llm-extract.js";
 //     asks about imports INTO an EU member state, whose rows are TARIC's.
 //
 // Access2Markets answers HTTP 400 ("country from and country to are mandatory")
-// unless both an origin and a member-state destination are given, and answers
-// at the 6-digit HS subheading. The old fallback sent destination=EU with an
-// optional origin, so it got that error page and handed it to the LLM.
+// unless both an origin and a member-state destination are given. It answers
+// only at the level where its nomenclature stops splitting: 847130 resolves,
+// but 610910 is split into 6109100010 / 6109100090 and gets a picker page
+// instead of results. The old fallback sent destination=EU with an optional
+// origin, so it got that error page and handed it to the LLM.
+//
+// VAT is not returned: Access2Markets loads its Taxes tab on click, so the
+// rendered page never holds a VAT rate, and its sources page attributes
+// member-state taxes to "TARIC SA", not to the Commission.
 
 /** EU member states (ISO 3166-1 alpha-2), the destinations Access2Markets accepts for an EU import. */
 export const EU_MEMBER_STATES = new Set([
@@ -34,12 +40,24 @@ export const EU_MEMBER_STATES = new Set([
 
 /**
  * The customs duty is the EU's common external tariff, identical in every
- * member state. When the caller names no member state we ask for this one and
- * withhold the VAT rate, which is national.
+ * member state. When the caller names no member state we ask for this one.
  */
 const DEFAULT_DESTINATION = "DE";
 
 const RESULTS_MARKER = "Results for product code";
+const PICKER_MARKER = "a match was identified with an HS code";
+
+/**
+ * The longer codes Access2Markets offers when the given code is split further
+ * (its picker page), e.g. ["6109100010", "6109100090"]; null when the page is
+ * not a picker.
+ */
+export function pickerCodes(pageText: string): string[] | null {
+  const start = pageText.indexOf(PICKER_MARKER);
+  if (start === -1) return null;
+  const codes = pageText.slice(start).match(/\b\d{6}(?: \d{2}){1,2}\b/g) ?? [];
+  return [...new Set(codes.map((c) => c.replace(/ /g, "")))];
+}
 
 export function a2mResultsUrl(hsCode: string, origin: string, destination: string): string {
   const q = new URLSearchParams({ product: hsCode, origin, destination });
@@ -69,7 +87,7 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   const cleanHsCode = hsCode.replace(/[\s.]/g, "");
   if (!/^\d{6,10}$/.test(cleanHsCode)) {
     throw new Error(
-      `Invalid HS code: "${hsCode}". Give 6 to 10 digits (e.g. '8471.30' or '847130'); a 4-digit heading is too broad to carry one duty rate.`,
+      `Invalid HS code: "${hsCode}". Give 6 to 10 digits (e.g. '8471.30' or '6109100010'); a 4-digit heading is too broad to carry one duty rate.`,
     );
   }
 
@@ -97,10 +115,18 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
 
   const sourceUrl = a2mResultsUrl(cleanHsCode, originCountry, queryDestination);
   const html = await fetchRenderedHtml(sourceUrl, { source: "strale" });
-  const section = resultsSection(htmlToText(html));
+  const pageText = htmlToText(html);
+  const section = resultsSection(pageText);
   if (!section || section.text.length < 200) {
+    const offered = pickerCodes(pageText);
+    if (offered && offered.length > 0) {
+      throw new Error(
+        `HS code "${hsCode}" is split further in the EU tariff, so it has no single duty. ` +
+          `Call again with one of these codes: ${offered.slice(0, 25).join(", ")}.`,
+      );
+    }
     throw new Error(
-      `Access2Markets returned no tariff results for HS code "${hsCode}" from ${originCountry}. Check that the code is a valid 6-digit subheading or longer.`,
+      `Access2Markets returned no tariff results for HS code "${hsCode}" from ${originCountry}. Check the code against the EU tariff (6, 8 or 10 digits).`,
     );
   }
 
@@ -122,7 +148,6 @@ Return ONLY valid JSON:
   "preferential_rates": [{"agreement": "agreement or preference name", "rate": "rate as written"}],
   "anti_dumping": true or false (true only if an anti-dumping or countervailing measure is listed for this origin),
   "additional_duties": [{"measure": "measure type as written", "rate": "rate as written"}],
-  "vat_rate": "the import VAT rate if shown, or null",
   "notes": "conditions, footnotes or legal references worth knowing, or null"
 }
 
@@ -138,11 +163,9 @@ ${section.text.slice(0, 12000)}`,
     resolved_hs_code: section.resolvedCode,
     origin_country: originCountry,
     destination: requestedDestination,
+    // Never from the model: the page carries no VAT rate (see the header).
+    vat_rate: null,
   };
-  if (destinationDefaulted) {
-    // VAT is national; the rate on the page is the default member state's.
-    output.vat_rate = null;
-  }
 
   return {
     output,

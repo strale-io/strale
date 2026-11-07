@@ -239,3 +239,34 @@ threads:
       Kind regards,
       Petter Lindstrom
       Moonlighter AB (Strale)
+  - id: a2m-terms-confirmation
+    to: "Access2Markets contact form, https://trade.ec.europa.eu/access-to-markets/en/contact-form (the contact page lists no email address, checked 2026-11-07). A form submission is an outward act: the sending session confirms with Petter first if the routine has no form path."
+    subject: Reuse of EU import tariff rows (TARIC) shown in My Trade Assistant
+    asked: Whether the "may not be used for resale" footnote and the EU-location clause on the Sources and copyright page cover only the Mendel-sourced rows, so that EU import tariff rows (TARIC, DG TAXUD) may be reused per call under the Commission's CC BY 4.0 reuse policy, with attribution, including when the page is read from outside the EU
+    unblocks: customs-duty-lookup data_access checks (pending until answered; PR #974, vendor-terms record "European Commission (Access2Markets)")
+    sent:
+    sent_by:
+    follow_up_by:
+    status: draft
+    body: |
+      Hello,
+
+      Strale (Moonlighter AB, Sweden) offers a per-call EU import duty lookup for
+      software clients. For each request it reads one My Trade Assistant results
+      page (import into an EU member state from a non-EU origin) and returns the
+      EU tariff measures with attribution to the European Commission, Access2Markets
+      and the TARIC database (DG TAXUD).
+
+      Your Sources and copyright page marks the Mendel Verlag sources with an
+      asterisk and says the information in the Tariffs, Taxes and Procedures
+      sections may not be used for resale, and that it may not be viewed from
+      outside the EU. We read both clauses as applying to the asterisked
+      Mendel-sourced rows (non-EU countries' tariffs), and the EU import tariff
+      rows as Commission content under the CC BY 4.0 reuse policy.
+
+      Could you confirm that reading, or tell us if the EU tariff rows are also
+      restricted? We do not read the Taxes or non-EU-country sections.
+
+      Kind regards,
+      Petter Lindstrom
+      Moonlighter AB (Strale)

@@ -1,0 +1,144 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/src/capabilities/robots-permitted-sources.test.ts",
+    "commit": "d135d5d4d54a728ba32261c505112c00ab9cf2c5"
+  },
+  "at": "2026-11-07T22:48:53.821Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/01cb5899-2d68-5ac6-a40c-443470b047d2/scratchpad/receipt-tests2.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 0,
+    "command": "npx vitest run src/capabilities/robots-permitted-sources.test.ts (apps/api)",
+    "note": "After the independent review of PR #974: adds the picker-page test and asserts vat_rate is null even when the model returns one."
+  },
+  "topic": "robots-permitted-sources-after-review",
+  "raw": {
+    "ok": true,
+    "command": "npx vitest run src/capabilities/robots-permitted-sources.test.ts (apps/api)",
+    "note": "After the independent review of PR #974: adds the picker-page test and asserts vat_rate is null even when the model returns one.",
+    "fail_before": {
+      "executors": "origin/main 9743a243",
+      "passed": 2,
+      "failed": 11,
+      "tests": [
+        {
+          "name": "customs-duty-lookup REGRESSION: reads only the Access2Markets results page, never TARIC's disallowed pages",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup asks for a member state when the caller says EU",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup REGRESSION: an Access2Markets error page throws instead of reaching the LLM",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup a code split further is refused with the codes to use, before the LLM",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\"} before any fetch",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"DE\"} before any fetch",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"CN\",\"destination_country\":\"US\"} before any fetch",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"8471\",\"origin_country\":\"CN\"} before any fetch",
+          "status": "failed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup resultsSection cuts the page at the results and stops before the copyright section",
+          "status": "failed"
+        },
+        {
+          "name": "container-track REGRESSION: never fetches maersk.com for a Maersk container",
+          "status": "failed"
+        },
+        {
+          "name": "container-track REGRESSION: no longer sends other carriers to SeaRates",
+          "status": "failed"
+        },
+        {
+          "name": "container-track still reads live status from a permitted carrier page",
+          "status": "passed"
+        }
+      ]
+    },
+    "after": {
+      "executors": "fix/robots-customs-container after review fixes",
+      "passed": 13,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "customs-duty-lookup REGRESSION: reads only the Access2Markets results page, never TARIC's disallowed pages",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup asks for a member state when the caller says EU",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup REGRESSION: an Access2Markets error page throws instead of reaching the LLM",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup a code split further is refused with the codes to use, before the LLM",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"DE\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"847130\",\"origin_country\":\"CN\",\"destination_country\":\"US\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"hs_code\":\"8471\",\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup refuses {\"origin_country\":\"CN\"} before any fetch",
+          "status": "passed"
+        },
+        {
+          "name": "customs-duty-lookup resultsSection cuts the page at the results and stops before the copyright section",
+          "status": "passed"
+        },
+        {
+          "name": "container-track REGRESSION: never fetches maersk.com for a Maersk container",
+          "status": "passed"
+        },
+        {
+          "name": "container-track REGRESSION: no longer sends other carriers to SeaRates",
+          "status": "passed"
+        },
+        {
+          "name": "container-track still reads live status from a permitted carrier page",
+          "status": "passed"
+        }
+      ]
+    },
+    "failures": [],
+    "warnings": []
+  }
+}

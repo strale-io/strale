@@ -17,13 +17,13 @@ input_schema:
   properties:
     hs_code:
       type: string
-      description: "HS code of 6 to 10 digits, e.g. '8471.30'. Duties are read at the 6-digit subheading."
+      description: "HS code of 6, 8 or 10 digits at the level the EU tariff lists it, e.g. '8471.30' or '6109100010'. If the code is split further, the error lists the codes to use."
     origin_country:
       type: string
       description: "ISO 3166-1 alpha-2 code of the non-EU country the goods come from, e.g. 'CN'."
     destination_country:
       type: string
-      description: "EU member state the goods are imported into (ISO alpha-2, e.g. 'SE'), or 'EU' (default). The duty is the same in every member state; the VAT rate is returned only when a member state is named."
+      description: "EU member state the goods are imported into (ISO alpha-2, e.g. 'SE'), or 'EU' (default). The customs duty is the same in every member state."
 output_schema:
   type: object
   example:
@@ -93,13 +93,21 @@ limitations:
     workaround: >-
       Verify extracted duty rates against the official TARIC database and consult a customs broker for complex
       classifications
-  - title: Read at the 6-digit subheading
+  - title: Codes split further must be given in full
     text: >-
-      Access2Markets answers at the 6-digit HS subheading, so a measure that applies only to some 8- or 10-digit
-      codes under it may be listed without saying which. resolved_hs_code says which code the answer is for.
+      Access2Markets gives a duty only for a code the EU tariff does not split further. For a split code (for example
+      610910, which divides into 6109100010 and 6109100090) the call is refused and the error lists the longer codes
+      to use. resolved_hs_code says which code the answer is for.
     category: coverage
     severity: info
-    workaround: For an 8- or 10-digit code with code-specific measures, check the full code in the official TARIC database.
+    workaround: Call again with one of the codes the error lists.
+  - title: No VAT rate
+    text: >-
+      The response carries customs duties only; vat_rate is always null. Import VAT is set by each member state and is
+      not part of the page this tool reads.
+    category: coverage
+    severity: info
+    workaround: Look up the member state's VAT rate separately.
   - title: Imports into the EU only
     text: >-
       Covers goods imported into an EU member state from a non-EU country. It does not cover duties charged by
@@ -121,10 +129,11 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: public_page_read
   upstream_vendor: European Commission (Access2Markets)
-  checks: recorded
+  checks: pending
   checks_note: >-
-    Checked 2026-11-07. Reads one Access2Markets results page per call (trade.ec.europa.eu; robots.txt disallows
-    only /wp-login.php). The EU import tariff rows on it are TARIC data owned by the European Commission, which
-    licenses its content under CC BY 4.0 (commission.europa.eu/legal-notice_en); attribution is in provenance.
-    Only imports into EU member states are queried, so the Mendel Verlag rows (non-EU tariffs, no resale) are
-    never read. TARIC's own pages (ec.europa.eu/taxation_customs/dds2/taric/) are robots-disallowed and not used.
+    Pending (2026-11-07): reads one Access2Markets results page per call (trade.ec.europa.eu; robots.txt disallows
+    only /wp-login.php; TARIC's own pages are robots-disallowed and not used). The EU tariff rows are TARIC data and
+    Commission content is CC BY 4.0, but the Access2Markets sources page also says "The information in the Tariffs
+    section ... may not be used for resale" and prohibits viewing "the data herein" from outside the EU. Strale reads
+    both as binding the Mendel-sourced (non-EU) rows the footnote's asterisk marks; that reading is not confirmed,
+    and the fetch runs from a US address. Open as DQ-48; confirmation drafted as OUTBOX a2m-terms-confirmation.

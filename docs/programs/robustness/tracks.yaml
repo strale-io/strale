@@ -145,8 +145,9 @@ tracks:
       0148) until it is rebuilt on the EUIPO API (DQ-42). (2) customs-duty-lookup
       and (3) container-track: fixed on fix/robots-customs-container, not
       delisted. customs-duty-lookup reads only the Access2Markets results page
-      (TARIC data, CC BY 4.0, vendor-terms record), needs origin_country and
-      throws on A2M's 400 page instead of charging for it. container-track no
+      (TARIC data), needs origin_country and throws on A2M's 400 and picker
+      pages instead of charging for them; its terms are unverified (DQ-48,
+      OUTBOX a2m-terms-confirmation). container-track no
       longer fetches maersk.com or the dead SeaRates redirect; live status is
       MSC, CMA CGM and Hapag-Lloyd only, stated in limitations. Receipts:
       archive/receipts/2026-11-07-check-source-robots-access-customs-container.json

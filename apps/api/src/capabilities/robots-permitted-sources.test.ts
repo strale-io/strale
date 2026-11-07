@@ -25,7 +25,7 @@ vi.mock("./lib/browserless-extract.js", async (importOriginal) => ({
 vi.mock("./lib/llm-extract.js", () => ({ extractJsonWithLlm }));
 
 import { getDirectExecutor } from "./index.js";
-import { resultsSection, a2mResultsUrl } from "./customs-duty-lookup.js";
+import { resultsSection, a2mResultsUrl, pickerCodes } from "./customs-duty-lookup.js";
 import "./container-track.js";
 
 /** The text Access2Markets renders for 8471.30 from China to Sweden (2026-11-07), trimmed. */
@@ -37,6 +37,12 @@ const A2M_RESULTS = `<html><body>
 <p>${"Footnote text about the low-value consignment duty. ".repeat(10)}</p>
 <p>Sources and copyright</p><p>Mendel Verlag rows would be described here.</p>
 </body></html>`;
+
+/** Access2Markets' picker for a code split further (610910 from Viet Nam, 2026-11-07), trimmed. */
+const A2M_PICKER = `<html><body><p>Product search</p>
+<p>For your search criteria, a match was identified with an HS code. Please continue browsing in the proposed branch of the list of goods and select your product.</p>
+<p>T-shirts, singlets and other vests, knitted or crocheted 6109</p><p>Of cotton 610910</p>
+<p>T-shirts 610910 00 10</p><p>Other 610910 00 90</p></body></html>`;
 
 const A2M_400 = `<html><body><p>Bad Request Something went wrong</p>
 <p>Wrong parameters, country from and country to are mandatory and must be valid.</p><p>Error 400</p></body></html>`;
@@ -58,12 +64,14 @@ describe("customs-duty-lookup", () => {
     const url = String(fetchRenderedHtml.mock.calls[0][0]);
     expect(url).toBe("https://trade.ec.europa.eu/access-to-markets/en/results?product=847130&origin=CN&destination=SE");
     expect(url).not.toMatch(/taxation_customs/);
-    expect(r.output).toMatchObject({ hs_code: "847130", resolved_hs_code: "847130", origin_country: "CN", destination: "SE", vat_rate: "25%" });
+    expect(r.output).toMatchObject({ hs_code: "847130", resolved_hs_code: "847130", origin_country: "CN", destination: "SE" });
+    // The page carries no VAT rate, so one from the model is never passed on.
+    expect(r.output.vat_rate).toBeNull();
     expect(r.provenance).toMatchObject({ license: "CC BY 4.0", source_url: url });
     expect(String(r.provenance.attribution)).toMatch(/European Union/);
   });
 
-  it("asks for a member state when the caller says EU, and withholds the national VAT rate", async () => {
+  it("asks for a member state when the caller says EU", async () => {
     fetchRenderedHtml.mockResolvedValue(A2M_RESULTS);
     const r = await exec()({ hs_code: "847130", origin_country: "CN" });
     expect(String(fetchRenderedHtml.mock.calls[0][0])).toMatch(/destination=DE$/);
@@ -78,6 +86,15 @@ describe("customs-duty-lookup", () => {
       /no tariff results/,
     );
     expect(extractJsonWithLlm).not.toHaveBeenCalled();
+  });
+
+  it("a code split further is refused with the codes to use, before the LLM", async () => {
+    fetchRenderedHtml.mockResolvedValue(A2M_PICKER);
+    await expect(exec()({ hs_code: "610910", origin_country: "VN", destination_country: "DE" })).rejects.toThrow(
+      /split further.*6109100010, 6109100090/,
+    );
+    expect(extractJsonWithLlm).not.toHaveBeenCalled();
+    expect(pickerCodes("no picker here")).toBeNull();
   });
 
   it.each([
