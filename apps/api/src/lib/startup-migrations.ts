@@ -138,6 +138,7 @@ import { runMigration0145_vaspRoutingLatency } from "../startup-migrations/block
 import { runMigration0146_polishCompanyDataAlgorithmic } from "../startup-migrations/blocks/0146-polish-company-data-algorithmic.js";
 import { runMigration0147_reconcileSerperRenewal } from "../startup-migrations/blocks/0147-reconcile-serper-renewal.js";
 import { runMigration0148_deactivateEuTrademarkSearch } from "../startup-migrations/blocks/0148-deactivate-eu-trademark-search.js";
+import { runMigration0149_publishDilisenseSourceText } from "../startup-migrations/blocks/0149-publish-dilisense-source-text.js";
 import { LEDGER_BY_FUNCTION, planBlock, readApplied, recordApplied, type LedgerRow } from "../startup-migrations/applied.js";
 import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 
@@ -236,6 +237,7 @@ export * from "../startup-migrations/blocks/0145-vasp-routing-latency.js";
 export * from "../startup-migrations/blocks/0146-polish-company-data-algorithmic.js";
 export * from "../startup-migrations/blocks/0147-reconcile-serper-renewal.js";
 export * from "../startup-migrations/blocks/0148-deactivate-eu-trademark-search.js";
+export * from "../startup-migrations/blocks/0149-publish-dilisense-source-text.js";
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
@@ -336,6 +338,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0146_polishCompanyDataAlgorithmic,
   runMigration0147_reconcileSerperRenewal,
   runMigration0148_deactivateEuTrademarkSearch,
+  runMigration0149_publishDilisenseSourceText,
 ];
 
 /**

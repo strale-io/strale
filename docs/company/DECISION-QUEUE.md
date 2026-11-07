@@ -14,7 +14,29 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-46** · `your_call` · owner Petter · raised 2026-11-07 — **the public description of our sanctions check still names five blacklists we cannot show we screen; a narrower text is drafted for you to approve**
+**DQ-47** · `your_call` · owner Petter · raised 2026-11-07 — **the PEP check's published limitations still say it runs on OpenSanctions and suggest an "LLM fallback"; neither has been true since April**
+
+*Why it is yours:* compliance tools' published text changes only with your approval (the boot sync refuses it, `manifest-publication-policy.ts`), as DQ-36 and DQ-46 did.
+
+*What is established (read from the public route `/v1/public/ops/limitations/capabilities/pep-check` on 2026-11-07, during the independent review of PR #969):*
+1. Production shows five limitation rows for `pep-check`, written before the switch to Dilisense on 2026-04-27 (commit `16ca790`) and never replaced, because compliance rows do not sync.
+2. One says "Coverage depends on OpenSanctions dataset — may not include all national PEP lists". We no longer use OpenSanctions.
+3. One advises to "use the LLM fallback as a secondary signal". There is no LLM fallback.
+4. Two say the same thing about fuzzy name matching.
+5. The fifth, on update frequency, is corrected by DQ-46 (block 0149).
+6. `manifests/pep-check.yaml` carries the current set of three, written for Dilisense: national coverage is not verified for each call; common names can produce false matches; per-list update timestamps are not returned.
+
+*Proposed change:* replace the five production rows with the manifest's three, word for word, the way block 0143 did for `domain-reputation` (rows not in the manifest are removed, missing ones added in manifest order). All three narrow or correct what we say; none adds a claim.
+
+*Options:* approve; edit any of the three texts first; or leave the five rows as they are.
+
+*Recommendation:* approve. A session then writes the startup block and checks the public route after deploy.
+
+*Consequence:* approving removes two false statements about our sources from a compliance tool's public page. Not approving keeps them visible to anyone who checks.
+
+**DQ-46** · `answered` · owner Petter · raised 2026-11-07 · answered 2026-11-07 (approved as written) — **the public description of our sanctions check still names five blacklists we cannot show we screen; a narrower text is drafted for you to approve**
+
+*Answer (2026-11-07):* Petter, in session: "approve DQ-46". Published by startup block 0149 (`0149-publish-dilisense-source-text.ts`, PR #969), which changes each text only if production still holds the old wording: the sanctions data source, both sample responses, and the PEP freshness limitation as it reads in production ("updated multiple times per day" becomes "once a day by default"; its 48-hour lag sentence is kept). The review of #969 found the PEP tool's other published limitations still predate Dilisense; that is DQ-47.
 
 *Why it is yours:* compliance tools' published text only changes with your approval: the boot-time sync reports it and writes nothing (`apps/api/src/lib/manifest-publication-policy.ts`, `isReportOnly`), and the current wording was published under your DQ-36 approval (startup block 0122).
 
