@@ -1,6 +1,41 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
-// ─── Employment cost estimation — pure algorithmic with 2024/2025 tax tables ──
+// ─── Employment cost estimation — pure algorithmic, simplified tax tables ─────
+//
+// Employer contribution rates checked against the issuing authorities on
+// 2026-11-06 (rates in force on that date):
+//   SE  31.42%: Skatteverket "Arbetsgivaravgifter"; reduced 20.81% for ages
+//       19-23 on pay up to SEK 25,000 a month, 1 Apr 2026 - 30 Sep 2027.
+//   NO  14.1% (zone I; 10.6% to 0% in other zones): Skatteetaten
+//       "Arbeidsgiveravgift til folketrygden for 2026".
+//   FI  TyEL employer share 17.10% (average), health insurance 1.91%,
+//       unemployment 0.31% (1.23% on payroll above EUR 2,509,500):
+//       Elaketurvakeskus (ETK) "Lakisaateiset sosiaalivakuutusmaksut Suomessa 2026".
+//   DE  pension 9.3%, health 7.3% + half the 2.9% average supplementary
+//       contribution, unemployment 1.3%, long-term care 1.8%: Techniker
+//       Krankenkasse rate table 2026 (a statutory health insurer; the BMG
+//       page was not reached). The ~0.725% accident figure is unverified.
+//   GB  15% above the GBP 5,000 secondary threshold (from 6 April 2025):
+//       gov.uk "Rates and thresholds for employers 2026 to 2027".
+//   US  Social Security 6.2% up to USD 184,500 (2026) + Medicare 1.45%:
+//       ssa.gov "Contribution and Benefit Base".
+//   CA  CPP 5.95% (CAD 3,500-74,600), CPP2 4% (to CAD 85,000); EI employer 1.4 x
+//       the 1.63% employee rate = 2.282%: canada.ca, 2026 rates.
+//   AU  Superannuation Guarantee 12% from 1 July 2025: ato.gov.au.
+//   IE  Employer PRSI 11.40% (9.15% up to EUR 552 a week) and employee 4.35%
+//       from 1 October 2026: Department of Social Protection, Rates of
+//       Payment 2026 (SW19). MyFutureFund auto-enrolment employer 1.5% from
+//       1 January 2026: gov.ie.
+//   ES  contingencias comunes 23.60%, MEI 0.75%, desempleo 5.50%, FOGASA
+//       0.20%, formacion profesional 0.60% (employer, 2026): seg-social.es.
+//   PL  20.48% (emerytalna 9.76, rentowa 6.50, wypadkowa 1.67, FP 2.45,
+//       FGSP 0.10): zus.pl / biznes.gov.pl.
+//   PT  TSU 23.75% employer, 11% employee: seg-social.pt.
+// Unverified as of 2026-11-06 (left as they were): DK, NL, FR, CH, IT and AT
+// employer rates; the "other" and pension estimates not named above; all
+// income-tax brackets and income-tax notes (they still carry their 2024/2025
+// values).
+export const EMPLOYMENT_COST_RATES_AS_OF = "2026-11-06";
 
 interface CountryTaxProfile {
   name: string;
@@ -30,7 +65,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       "Employer contributions (arbetsgivaravgifter) 31.42% cover pension, health, parental insurance, etc.",
       "Municipal tax varies 29-35%; 32% used as average.",
       "State income tax 20% applies above SEK 614,000 (2024).",
-      "Reduced employer contributions for young employees (<23) and seniors (>65).",
+      "Reduced employer contributions for employees aged 19-23 (20.81% on pay up to SEK 25,000 a month, 1 April 2026 to 30 September 2027) and for older employees.",
     ],
   },
   NO: {
@@ -77,8 +112,8 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   FI: {
     name: "Finland",
     currency: "EUR",
-    employer_social_percent: 18.36, // TyEL + health + unemployment
-    employer_pension_percent: 0, // Included in social (TyEL ~17.35%)
+    employer_social_percent: 19.32, // TyEL 17.10 + health 1.91 + unemployment 0.31 (2026)
+    employer_pension_percent: 0, // Included in social (TyEL ~17.10%)
     employer_other_percent: 0.7, // Group life, accident insurance (typical)
     income_tax_brackets: [
       { up_to: 20_500, rate: 0 }, // Approximate deduction/zero bracket
@@ -89,8 +124,8 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.44 },
     ],
     notes: [
-      "Employer pension (TyEL) ~17.35% for employees aged 17-52 (2024).",
-      "Employer health insurance ~1.16%, unemployment insurance ~0.52% (up to salary cap).",
+      "Employer pension (TyEL) averages 17.10% of pay in 2026; the employer's rate is set by its pension insurer.",
+      "Employer health insurance 1.91%, unemployment insurance 0.31% (1.23% on payroll above EUR 2,509,500) in 2026.",
       "Municipal tax varies 17-24% (used ~20% average).",
       "Progressive state income tax starts at higher income levels.",
     ],
@@ -98,7 +133,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   DE: {
     name: "Germany",
     currency: "EUR",
-    employer_social_percent: 20.325, // pension 9.3 + health 7.3 + unemployment 1.3 + care 1.7 + accident ~0.725
+    employer_social_percent: 21.875, // pension 9.3 + health 7.3 + supplementary ~1.45 + unemployment 1.3 + care 1.8 + accident ~0.725 (unverified)
     employer_pension_percent: 0, // Included in social
     employer_other_percent: 0,
     income_tax_brackets: [
@@ -109,7 +144,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.45 }, // Reichensteuer
     ],
     notes: [
-      "Employer social: pension 9.3%, health 7.3%, unemployment 1.3%, long-term care ~1.7%, accident ~0.725%.",
+      "Employer social (2026): pension 9.3%, health 7.3% plus half the health fund's supplementary contribution (2.9% average, so ~1.45%), unemployment 1.3%, long-term care 1.8%, accident ~0.725%.",
       "Social contributions have income ceilings (Beitragsbemessungsgrenze).",
       "Solidarity surcharge (5.5% of income tax) applies for high earners.",
       "Church tax (~8-9% of income tax) if member of a church.",
@@ -118,7 +153,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   GB: {
     name: "United Kingdom",
     currency: "GBP",
-    employer_social_percent: 13.8, // Employer NI
+    employer_social_percent: 15.0, // Employer Class 1 NI from 6 April 2025
     employer_pension_percent: 3.0, // Auto-enrolment minimum employer contribution
     employer_other_percent: 0,
     income_tax_brackets: [
@@ -128,7 +163,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.45 },
     ],
     notes: [
-      "Employer NI 13.8% on earnings above GBP 9,100/year (Secondary Threshold).",
+      "Employer NI 15% on earnings above GBP 5,000/year (Secondary Threshold).",
       "Auto-enrolment pension: employer min 3%, employee min 5%.",
       "Personal allowance tapered for income above GBP 100,000.",
       "Scotland has different income tax rates (19%, 20%, 21%, 42%, 47%).",
@@ -187,7 +222,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.37 },
     ],
     notes: [
-      "Employer FICA: Social Security 6.2% (up to $168,600 wage base) + Medicare 1.45% (no cap).",
+      "Employer FICA: Social Security 6.2% (up to $184,500 wage base in 2026) + Medicare 1.45% (no cap).",
       "Federal unemployment (FUTA) 6% on first $7,000 (effectively 0.6% with state credit).",
       "State income tax varies 0-13.3% (not included in estimate).",
       "State unemployment insurance varies by state and employer history.",
@@ -197,7 +232,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   CA: {
     name: "Canada",
     currency: "CAD",
-    employer_social_percent: 7.7, // CPP 5.95% + EI 1.66% (approx)
+    employer_social_percent: 8.232, // CPP 5.95% + EI 2.282% (1.4 x the 1.63% employee rate, 2026)
     employer_pension_percent: 0, // Included in CPP
     employer_other_percent: 1.0, // Workers comp, health tax (varies by province)
     income_tax_brackets: [
@@ -209,9 +244,9 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.33 },
     ],
     notes: [
-      "CPP contributions ~5.95% employer + 5.95% employee (2024, on earnings $3,500-$68,500).",
-      "CPP2 on earnings $68,500-$73,200 at 4%.",
-      "EI premiums: employer 1.66x employee rate.",
+      "CPP contributions 5.95% employer + 5.95% employee (2026, on earnings $3,500-$74,600).",
+      "CPP2 on earnings $74,600-$85,000 at 4% (2026).",
+      "EI premiums: employer pays 1.4x the employee rate (2026: employee 1.63%, employer 2.282%).",
       "Provincial income tax adds 4-21% depending on province (not included).",
       "Provincial health taxes vary (e.g., Ontario EHT 0.98-1.95%).",
     ],
@@ -219,7 +254,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   AU: {
     name: "Australia",
     currency: "AUD",
-    employer_social_percent: 11.5, // Superannuation Guarantee 2024-25
+    employer_social_percent: 12.0, // Superannuation Guarantee from 1 July 2025
     employer_pension_percent: 0, // Super is the pension, included above
     employer_other_percent: 1.0, // Workers comp, payroll tax (varies by state)
     income_tax_brackets: [
@@ -230,7 +265,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.45 },
     ],
     notes: [
-      "Superannuation Guarantee 11.5% (2024-25), rising to 12% from 2025-26.",
+      "Superannuation Guarantee 12% of ordinary time earnings from 1 July 2025.",
       "Medicare levy 2% on taxable income (not included in brackets above).",
       "Payroll tax varies by state (3.75-6.85%, threshold varies).",
       "No separate social security contributions beyond super.",
@@ -239,8 +274,8 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   IE: {
     name: "Ireland",
     currency: "EUR",
-    employer_social_percent: 11.05, // Employer PRSI (Class A)
-    employer_pension_percent: 0, // Auto-enrolment coming 2025
+    employer_social_percent: 11.4, // Employer PRSI (Class A) from 1 October 2026
+    employer_pension_percent: 1.5, // MyFutureFund auto-enrolment employer minimum, 2026-2028
     employer_other_percent: 0,
     income_tax_brackets: [
       { up_to: 5_000, rate: 0 }, // Approximate after credits
@@ -248,9 +283,10 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.40 },
     ],
     notes: [
-      "Employer PRSI 11.05% (Class A, most employees). 8.8% if weekly pay < EUR 441.",
+      "Employer PRSI 11.40% (Class A, from 1 October 2026). 9.15% if weekly pay is EUR 552 or less.",
+      "MyFutureFund auto-enrolment (from 1 January 2026): employer 1.5% for eligible employees not in a workplace pension.",
       "USC (Universal Social Charge) 0.5-8% paid by employee.",
-      "Employee PRSI 4%.",
+      "Employee PRSI 4.35% (from 1 October 2026).",
       "Tax credits reduce effective tax significantly at lower incomes.",
     ],
   },
@@ -284,7 +320,7 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
   ES: {
     name: "Spain",
     currency: "EUR",
-    employer_social_percent: 29.9, // Social Security + unemployment + FOGASA + training
+    employer_social_percent: 30.65, // common 23.60 + MEI 0.75 + unemployment 5.50 + FOGASA 0.20 + training 0.60 (2026)
     employer_pension_percent: 0, // Included in social
     employer_other_percent: 0,
     income_tax_brackets: [
@@ -296,8 +332,8 @@ const COUNTRY_PROFILES: Record<string, CountryTaxProfile> = {
       { up_to: Infinity, rate: 0.47 },
     ],
     notes: [
-      "Employer social: common contingencies ~23.6%, unemployment ~5.5%, FOGASA 0.2%, professional training 0.6%.",
-      "Employee social ~6.35%.",
+      "Employer social (2026): common contingencies 23.60%, MEI 0.75%, unemployment 5.50%, FOGASA 0.20%, professional training 0.60%.",
+      "Employee social 6.50% (common 4.70%, unemployment 1.55%, training 0.10%, MEI 0.15%).",
       "Regional surcharges may apply depending on autonomous community.",
     ],
   },

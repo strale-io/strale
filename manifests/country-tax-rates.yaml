@@ -22,10 +22,10 @@ output_schema:
   example:
     notes: Municipal tax ~32% + state tax 20% above SEK 598k
     currency: SEK
-    tax_year: 2024/2025
+    tax_year: "2026"
     country_code: SE
     country_name: Sweden
-    last_updated: 2025-01
+    last_updated: "2026-11-06"
     social_security:
       employee: 7
       employer: 31.42
@@ -49,7 +49,7 @@ output_schema:
       type: number
     personal_income_tax_top_rate:
       type: number
-data_source: Static database (corporate tax rates by country, updated quarterly)
+data_source: Static reference table (tax rates by country; EU rates checked against the European Commission TEDB on 2026-11-06)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
