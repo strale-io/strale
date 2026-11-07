@@ -77,6 +77,22 @@ if (existsSync(recurringFile)) {
   }
 }
 
+// Reference data due for a check against its source (robustness R2): the same
+// rows the weekly drift issue lists, shown here so whichever account runs next
+// sees them. Judgment work, like the due-list above.
+const refdataFile = join(root, "config", "reference-data.yaml");
+if (existsSync(refdataFile)) {
+  try {
+    const { dueRows, loadRegister, stockholmToday } = await import("../reference-data-lib.mjs");
+    const due = dueRows(loadRegister(root).datasets ?? [], stockholmToday());
+    if (due.length) {
+      lines.push(`Reference data due for a source check (config/reference-data.yaml; npm run refdata:due), harm A first:`);
+      for (const d of due.slice(0, 5)) lines.push(`  [${d.harm}] ${d.id}: ${d.kind}, due ${d.due} → ${oneLine(d.recheck_against)}`);
+      if (due.length > 5) lines.push(`  …and ${due.length - 5} more`);
+    } else lines.push("Reference data: nothing due (config/reference-data.yaml)");
+  } catch (error) { lines.push(`Reference data: register could not be read (${String(error.message).split("\n")[0]})`); }
+}
+
 const stateDir = join(root, ".claude", "state", "handoff");
 for (const provider of ["codex", "claude"]) {
   const last = join(stateDir, `last-${provider}.json`);

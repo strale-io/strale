@@ -8,13 +8,15 @@
 #
 # Checked by scripts/check-reference-data.mjs (npm run refdata:check, in CI):
 #   - every row's file exists and contains its symbol, and every tool has a manifest;
-#   - every *_AS_OF / *_VERIFIED_ON date constant under apps/api/src has a row
+#   - every *_AS_OF / *_VERIFIED_ON / *_FETCHED_AT / *_CHECKED_ON date
+#     constant under apps/api/src has a row
 #     naming it (as_of_symbol), and the row's as_of equals the constant. Moving
 #     one without the other fails the PR, so the register cannot fall behind
 #     the code;
 #   - PR CI never fails because time has passed. Rows that are due are reported
 #     by the weekly drift sweep (.github/workflows/weekly-drift.yml, step
-#     reference-data), which opens or updates the weekly drift issue.
+#     reference-data), which opens or updates the weekly drift issue, and
+#     at session start (scripts/handoff/orient.mjs), whichever account runs.
 #
 # Fields
 #   harm             A wrong compliance or legal answer; B wrong money figure;
@@ -28,10 +30,13 @@
 #                    source's own version (a FATF plenary, a consolidated text).
 #                    Absent means the same as as_of.
 #   review_days      days after the last check when the next one is due.
+#   next_review_by   optional: brings the due date forward for a source on a
+#                    calendar, such as FATF's plenaries.
 #   first_review_by  for an undated row: the date its first check is due. This
 #                    spreads the inherited backlog of undated rows over time
 #                    rather than reporting all of it at once.
-#   active           false for a deactivated tool; such rows are never due.
+#   active           false when every tool is in DEACTIVATED (auto-register.ts),
+#                    which the check enforces; such rows are never due.
 #
 # Clearing a due row: check the values against recheck_against, fix the code,
 # move the dataset's *_AS_OF constant (add one if it has none) and set as_of,
@@ -52,14 +57,14 @@ datasets:
       - eu-ai-act-classify
     active: true
     holds: AI Act prohibited / Annex III areas, articles, obligations and application dates
-    source: Regulation (EU) 2024/1689 (stated)
+    source: Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744
     recheck_against: "EUR-Lex: Reg. 2024/1689 as amended by Reg. 2026/1744 (Digital Omnibus); AI Office guidelines"
     trigger: On each amending act or Commission guideline; quarterly
     as_of: 2026-11-06
     as_of_symbol: EU_AI_ACT_AS_OF
     evidence: "PR #962"
     review_days: 90
-    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #962: Annex III obligations apply from 2 December 2027 (Regulation (EU) 2026/1744), with the other application dates checked."
   - id: work-permit-requirements-eu-eea
     harm: A
     file: apps/api/src/capabilities/work-permit-requirements.ts
@@ -68,14 +73,14 @@ datasets:
       - work-permit-requirements
     active: true
     holds: Free-movement area, visa-waiver nationals, official guidance links
-    source: null
+    source: the issuing authority named next to each value in the code
     recheck_against: EU Reg. 2018/1806 Annex II (visa list); national migration agencies
     trigger: When Reg. 2018/1806 Annex II changes; annually
     as_of: 2026-11-06
     as_of_symbol: WORK_PERMIT_RULES_AS_OF
     evidence: "PR #962"
     review_days: 90
-    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #962 (Common Travel Area for IE and GB). ETIAS is not modelled."
   - id: work-permit-requirements-visit-visa-lists
     harm: A
     file: apps/api/src/capabilities/work-permit-requirements.ts
@@ -99,14 +104,14 @@ datasets:
       - financial-year-dates
     active: true
     holds: Fiscal year, tax-filing and annual-report deadlines, VAT filing frequency per country
-    source: null
+    source: the issuing authority named next to each value in the code
     recheck_against: National tax authorities (Skatteverket, HMRC, IRS...) and business registers
     trigger: Annually (before filing season), per country
     as_of: 2026-11-06
     as_of_symbol: FISCAL_YEAR_DATA_AS_OF
     evidence: "PR #962"
     review_days: 90
-    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #962. Each value's source is named in a comment next to it; a value that could not be confirmed is marked unverified there."
   - id: data-protection-authority-lookup-dpa-directory
     harm: A
     file: apps/api/src/capabilities/data-protection-authority-lookup.ts
@@ -241,15 +246,15 @@ datasets:
     tools:
       - work-permit-requirements
     active: true
-    holds: Per-country permit rules and salary thresholds (UK GBP 26,200; DE Blue Card 2024 figures)
-    source: null
+    holds: "Per-country permit rules and salary thresholds: UK Skilled Worker GBP 41,700 or the going rate, German EU Blue Card EUR 50,700 / 45,934.20 (2026), Sweden 90% of the median salary"
+    source: gov.uk; BAnz AT 18.12.2025 B3; Migrationsverket
     recheck_against: gov.uk (Skilled Worker), make-it-in-germany.com / BMI, Migrationsverket, etc.
     trigger: Annually on 1 Jan (DE Blue Card), each UK rules change (Apr/Jul)
     as_of: 2026-11-06
     as_of_symbol: WORK_PERMIT_RULES_AS_OF
     evidence: "PR #962"
     review_days: 90
-    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #962 against gov.uk, the Bundesanzeiger notice and Migrationsverket."
   - id: dilisense-sources-sanctions-major-lists
     harm: A
     file: apps/api/src/capabilities/lib/dilisense-sources.ts
@@ -295,6 +300,8 @@ datasets:
     checked_on: 2026-11-06
     evidence: "PR #954 (lists of the October 2026 plenary)"
     review_days: 120
+    next_review_by: 2027-02-28
+    note: FATF updates these lists at the end of each plenary (February, June, October). After each one, re-check and move FATF_LISTS_AS_OF and next_review_by to the next plenary's end. fatf-gafi.org refuses automated reads, so read a public relay (FinCEN) and name it in the code.
   - id: aml-risk-score-fatf-black-list
     harm: A
     file: apps/api/src/capabilities/aml-risk-score.ts
@@ -311,6 +318,8 @@ datasets:
     checked_on: 2026-11-06
     evidence: "PR #954 (lists of the October 2026 plenary)"
     review_days: 120
+    next_review_by: 2027-02-28
+    note: FATF updates these lists at the end of each plenary (February, June, October). After each one, re-check and move FATF_LISTS_AS_OF and next_review_by to the next plenary's end. fatf-gafi.org refuses automated reads, so read a public relay (FinCEN) and name it in the code.
   - id: aml-risk-score-fatf-countermeasures
     harm: A
     file: apps/api/src/capabilities/aml-risk-score.ts
@@ -327,6 +336,8 @@ datasets:
     checked_on: 2026-11-06
     evidence: "PR #954 (lists of the October 2026 plenary)"
     review_days: 120
+    next_review_by: 2027-02-28
+    note: FATF updates these lists at the end of each plenary (February, June, October). After each one, re-check and move FATF_LISTS_AS_OF and next_review_by to the next plenary's end. fatf-gafi.org refuses automated reads, so read a public relay (FinCEN) and name it in the code.
   - id: aml-risk-score-eu-high-risk
     harm: A
     file: apps/api/src/capabilities/aml-risk-score.ts
@@ -351,14 +362,14 @@ datasets:
       - vat-rate-lookup
     active: true
     holds: Standard, reduced, super-reduced, parking rates and currency for EU27+GB, NO, CH, IS
-    source: null
+    source: the issuing authority named next to each value in the code
     recheck_against: European Commission TEDB; national tax authorities
     trigger: Annually on 1 Jan plus 1 Jul; on any national budget change
     as_of: 2026-11-06
     as_of_symbol: VAT_RATES_AS_OF
     evidence: "PR #963"
     review_days: 90
-    note: 'Corrected in PR #963; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #963. Each value's source is named in a comment next to it; a value that could not be confirmed is marked unverified there."
   - id: country-tax-rates-tax-data
     harm: B
     file: apps/api/src/capabilities/country-tax-rates.ts
@@ -367,14 +378,14 @@ datasets:
       - country-tax-rates
     active: true
     holds: Corporate, VAT, top PIT, CGT, WHT, social security rates per country
-    source: null
+    source: the issuing authority named next to each value in the code
     recheck_against: OECD tax database; national tax authorities; EC TEDB
     trigger: Annually on 1 Jan
     as_of: 2026-11-06
     as_of_symbol: TAX_DATA_AS_OF
     evidence: "PR #963"
     review_days: 90
-    note: 'Corrected in PR #963; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #963. Each value's source is named in a comment next to it; a value that could not be confirmed is marked unverified there."
   - id: token-count-model-info
     harm: B
     file: apps/api/src/capabilities/token-count.ts
@@ -441,14 +452,14 @@ datasets:
       - employment-cost-estimate
     active: true
     holds: Employer social, pension rates and income-tax brackets
-    source: null
+    source: the issuing authority named next to each value in the code
     recheck_against: National tax / social insurance authorities; OECD Taxing Wages
     trigger: Annually on 1 Jan (and fiscal-year start for GB, AU, CA)
     as_of: 2026-11-06
     as_of_symbol: EMPLOYMENT_COST_RATES_AS_OF
     evidence: "PR #962"
     review_days: 90
-    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #962. Each value's source is named in a comment next to it; a value that could not be confirmed is marked unverified there."
   - id: country-trade-data-embedded-data
     harm: B
     file: apps/api/src/capabilities/country-trade-data.ts
@@ -477,9 +488,9 @@ datasets:
     trigger: Monthly; on each model launch
     as_of: 2026-08-15
     as_of_symbol: PRICING_VERIFIED_ON
-    evidence: PRICING_VERIFIED_ON in the code; llm-cost-calculate.test.ts fails after 180 days
+    evidence: PRICING_VERIFIED_ON in the code; the weekly drift sweep reports it when due
     review_days: 180
-    note: Has staleness test (180 days); good pattern
+    note: Its age was once enforced by a test that failed every PR after 180 days; the register's weekly report replaced it.
   - id: iban-registry-iban-lengths
     harm: C
     file: apps/api/src/lib/iban-registry.ts
@@ -489,7 +500,7 @@ datasets:
       - iban-to-bank
     active: true
     holds: IBAN length per country, shared by iban-validate and iban-to-bank
-    source: null
+    source: SWIFT IBAN Registry (Release 103, September 2026), read through two machine-readable copies named in the code
     recheck_against: SWIFT IBAN Registry
     trigger: On each IBAN Registry release (several per year)
     as_of: 2026-11-06
@@ -497,6 +508,21 @@ datasets:
     evidence: "PR #961"
     review_days: 365
     note: "Merged from two copies in PR #961 (they disagreed on Andorra). Bank and branch code positions in iban-validate.ts are not covered by this row."
+  - id: iban-validate-bank-code-positions
+    harm: C
+    file: apps/api/src/capabilities/iban-validate.ts
+    symbol: extractBankInfo
+    tools:
+      - iban-validate
+    active: true
+    holds: Where the bank and branch codes sit inside the BBAN for 12 countries; other countries default to the first four characters
+    source: null
+    recheck_against: SWIFT IBAN Registry (BBAN structure per country)
+    trigger: On each IBAN Registry release
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+    note: The default (first four characters) is a guess for countries not listed.
   - id: swift-validate-country-codes
     harm: C
     file: apps/api/src/capabilities/swift-validate.ts
@@ -674,7 +700,7 @@ datasets:
       - business-day-check
     active: true
     holds: Countries with a Fri-Sat (or Fri) weekend
-    source: null
+    source: national government and central-bank sources named next to each country in the code
     recheck_against: National labour law / government gazettes
     trigger: Annually
     as_of: 2026-11-06
@@ -816,14 +842,14 @@ datasets:
       - iso-country-lookup
     active: true
     holds: Country codes, currency, capital, calling code, eu_member / schengen / eurozone flags
-    source: null
+    source: the issuing authority named next to each value in the code
     recheck_against: ISO 3166 MA; ECB (euro area); EU Commission (Schengen)
     trigger: On ISO newsletter; 1 Jan for euro/Schengen accessions
     as_of: 2026-11-06
     as_of_symbol: COUNTRIES_AS_OF
     evidence: "PR #963"
     review_days: 365
-    note: 'Corrected in PR #963; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+    note: "Corrected in PR #963. Each value's source is named in a comment next to it; a value that could not be confirmed is marked unverified there."
   - id: keyword-rank-check-bare-public-suffixes
     harm: C
     file: apps/api/src/capabilities/keyword-rank-check.ts
@@ -1206,6 +1232,7 @@ datasets:
     as_of: 2026-09-24
     evidence: CLASSIFIER_SNAPSHOT_FETCHED_AT in the file
     review_days: 365
+    as_of_symbol: CLASSIFIER_SNAPSHOT_FETCHED_AT
   - id: eurostat-data-eurostat-allowed-datasets
     harm: D
     file: apps/api/src/capabilities/eurostat-data.ts

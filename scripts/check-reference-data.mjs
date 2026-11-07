@@ -8,20 +8,26 @@
 //                                                  source is due; exit 1 if any (the
 //                                                  weekly-drift step, which opens the
 //                                                  weekly drift issue).
-//   --today YYYY-MM-DD   pin the date (tests, replays)
+//   --today YYYY-MM-DD   pin the date (tests, replays); default today in Sweden
 //   --json               machine-readable output
 import { requireInputs } from "./require-inputs.mjs";
-import { checkRegister, dueRows, loadRegister, repoRootFrom, REGISTER_PATH } from "./reference-data-lib.mjs";
+import { checkRegister, dueRows, isDate, loadRegister, repoRootFrom, REGISTER_PATH, stockholmToday } from "./reference-data-lib.mjs";
 
 const args = process.argv.slice(2);
 const json = args.includes("--json");
 const dueMode = args.includes("--due");
 const ti = args.indexOf("--today");
-const today = ti >= 0 ? args[ti + 1] : new Date().toISOString().slice(0, 10);
+const today = ti >= 0 ? args[ti + 1] : stockholmToday();
+if (!isDate(today)) {
+  console.error(`--today needs a YYYY-MM-DD date, got ${JSON.stringify(today)}`);
+  process.exit(2);
+}
 
 const root = repoRootFrom(import.meta.url);
 const { findings, rows } = checkRegister(root, loadRegister(root), { today });
-requireInputs(rows.length, "reference-data: register rows");
+// A schema finding (wrong version, no list) explains an empty register better
+// than the empty-input guard does, so only guard when nothing else is wrong.
+if (findings.length === 0) requireInputs(rows.length, "reference-data: register rows");
 const due = dueRows(rows, today);
 
 if (json) {

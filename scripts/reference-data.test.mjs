@@ -4,6 +4,7 @@
 // real code.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -22,6 +23,7 @@ function fixture(files) {
 
 const CODE = 'export const LIST_AS_OF = "2026-11-06";\nexport const LIST = new Set(["AA"]);\n';
 const BASE_FILES = {
+  "apps/api/src/capabilities/auto-register.ts": "const DEACTIVATED = new Map<string, string>([\n]);\n",
   "apps/api/src/capabilities/tool.ts": CODE,
   "manifests/tool.yaml": "slug: tool\n",
 };
@@ -115,12 +117,80 @@ test("due dates: from checked_on when set, else as_of, else first_review_by; ina
 });
 
 test("date constants in tests are not scanned", () => {
-  const dir = fixture({ ...BASE_FILES, "apps/api/src/capabilities/tool.test.ts": 'const X_AS_OF = "2026-01-01";\n' });
+  const dir = fixture({ ...BASE_FILES, "apps/api/src/capabilities/tool.test.ts": 'const X_AS_OF = "2026-01-01";\n', "apps/api/src/capabilities/__fixtures__/y.ts": 'const Y_AS_OF = "2026-01-01";\n' });
   try {
     assert.deepEqual(findDateConstants(dir).map((c) => c.name), ["LIST_AS_OF"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("the due boundary: a row is due on its due date, not the day before", () => {
+  const r = row({ as_of: "2026-08-09" }); // + 90 days = 2026-11-07
+  assert.equal(dueDate(r), TODAY);
+  assert.equal(dueRows([r], TODAY).length, 1);
+  assert.equal(dueRows([r], "2026-11-06").length, 0);
+  assert.equal(dueRows([r], TODAY)[0].kind, "overdue");
+  assert.equal(dueRows([row({ as_of: null, first_review_by: TODAY })], TODAY)[0].kind, "never checked");
+});
+
+test("next_review_by brings a due date forward, never later", () => {
+  assert.equal(dueDate(row({ next_review_by: "2026-12-01" })), "2026-12-01");
+  assert.equal(dueDate(row({ next_review_by: "2027-06-01" })), "2027-02-04");
+  assert.ok(run([row({ next_review_by: "soon" })]).includes("REFDATA_SCHEMA"));
+});
+
+test("schema: evidence on dated rows, first_review_by only on undated ones, review_days, checked_on needs as_of", () => {
+  assert.deepEqual(run([row({ evidence: undefined })]), ["REFDATA_SCHEMA"]);
+  assert.deepEqual(run([row({ first_review_by: "2027-01-01" })]), ["REFDATA_SCHEMA"]);
+  assert.deepEqual(run([row({ review_days: 0 })]), ["REFDATA_SCHEMA"]);
+  assert.deepEqual(run([row({ as_of: "2026-02-30" })]).sort(), ["REFDATA_AS_OF_MISMATCH", "REFDATA_SCHEMA"]);
+  const undated = { ...row({ id: "u", as_of: null, as_of_symbol: undefined, evidence: undefined }), first_review_by: "2027-01-01" };
+  assert.ok(run([row(), { ...undated, checked_on: "2026-11-01" }]).includes("REFDATA_SCHEMA"));
+  assert.ok(run([row(), { ...undated, active: "yes" }]).includes("REFDATA_SCHEMA"));
+});
+
+test("active must agree with DEACTIVATED in auto-register.ts", () => {
+  const files = {
+    ...BASE_FILES,
+    "apps/api/src/capabilities/auto-register.ts": 'const DEACTIVATED = new Map<string, string>([\n  ["tool", "reason"],\n]);\n',
+  };
+  assert.deepEqual(run([row()], files), ["REFDATA_ACTIVE_MISMATCH"]);
+  assert.deepEqual(run([row({ active: false })], files), []);
+  assert.deepEqual(run([row({ active: false })]), ["REFDATA_ACTIVE_MISMATCH"]);
+  const { "apps/api/src/capabilities/auto-register.ts": _gone, ...without } = BASE_FILES;
+  assert.deepEqual(run([row()], without), ["REFDATA_DEACTIVATED_UNREADABLE"]);
+});
+
+test("the reverse scan catches other quote styles, let, annotations and other suffixes", () => {
+  const code = [
+    "let A_AS_OF = '2026-01-01';",
+    "const B_FETCHED_AT: IsoDate = `2026-01-02`;",
+    'export const C_CHECKED_ON = "2026-01-03T10:00:00Z";',
+    "const lowerCase_AS_OF = '2026-01-04';",
+  ].join("\n");
+  const dir = fixture({ "apps/api/src/capabilities/x.ts": code });
+  try {
+    assert.deepEqual(findDateConstants(dir).map((c) => `${c.name}=${c.value}`), ["A_AS_OF=2026-01-01", "B_FETCHED_AT=2026-01-02", "C_CHECKED_ON=2026-01-03"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a symbol must be declared, not merely mentioned", () => {
+  const files = { ...BASE_FILES, "apps/api/src/capabilities/tool.ts": CODE.replace("export const LIST =", "export const LIST_V2 =") };
+  // "LIST" still appears inside LIST_AS_OF and LIST_V2.
+  assert.deepEqual(run([row()], files), ["REFDATA_SYMBOL_MISSING"]);
+});
+
+test("CLI: structural mode exits 0 with rows due; --due exits 1; a bad --today exits 2", () => {
+  const cli = join(repoRootFrom(import.meta.url), "scripts", "check-reference-data.mjs");
+  const at = (args) => spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+  const late = "2099-01-01"; // every dated row is due by then
+  assert.equal(at(["--today", late]).status, 0);
+  assert.equal(at(["--today", late, "--due"]).status, 1);
+  assert.equal(at(["--today"]).status, 2);
+  assert.equal(at(["--today", "2026-02-30"]).status, 2);
 });
 
 test("the real register matches the real code", () => {

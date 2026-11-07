@@ -68,10 +68,13 @@ tracks:
       - "An inventory receipt lists every hard-coded reference dataset with
         source, as-of date and cadence, and each dataset older than its cadence
         is refreshed or has a recorded reason."
-      - "The FATF and EU-list re-checks are scheduled: rows in
-        config/reference-data.yaml with cadences, reported by the weekly drift
-        sweep (this replaces separate RECURRING.yaml rows, so there is one
-        schedule, not two). Vendor terms carry a re-read cadence."
+      - "The FATF and EU-list re-checks are scheduled, each with a procedure:
+        rows in config/reference-data.yaml with cadences (FATF following the
+        plenary calendar) and the clearing procedure in its header, reported by
+        the weekly drift sweep and at session start (orient.mjs). This replaces
+        separate RECURRING.yaml rows, so there is one schedule, not two. Each
+        vendor-terms row carries a re-read cadence that a check enforces and the
+        same reports surface, with a procedure."
       - "Every vendor-terms row has an accessed date inside its cadence."
     evidence: []
   - id: T3

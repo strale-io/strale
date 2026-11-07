@@ -476,6 +476,7 @@
         "apps/api/test/guard-production-write-access.test.ts",
         "apps/api/vitest.config.ts",
         "config/env-manifest.schema.json",
+        "config/reference-data.yaml",
         "config/vendors.yaml",
         "context7.json",
         "design/PROVENANCE.md",

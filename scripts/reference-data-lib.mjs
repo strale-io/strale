@@ -20,8 +20,14 @@ export const REGISTER_PATH = "config/reference-data.yaml";
 export const HARM = new Set(["A", "B", "C", "D"]);
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-// A date constant that labels a dataset: FATF_LISTS_AS_OF, PRICING_VERIFIED_ON.
-const DATE_CONST = /\bconst\s+([A-Z][A-Z0-9_]*(?:_AS_OF|_VERIFIED_ON))\s*(?::\s*string\s*)?=\s*"(\d{4}-\d{2}-\d{2})"/g;
+// A date constant that labels a dataset: FATF_LISTS_AS_OF, PRICING_VERIFIED_ON,
+// CLASSIFIER_SNAPSHOT_FETCHED_AT. Any quote style, const or let, any annotation.
+const DATE_CONST =
+  /\b(?:const|let)\s+([A-Z][A-Z0-9_]*(?:_AS_OF|_VERIFIED_ON|_FETCHED_AT|_CHECKED_ON))\s*(?::[^=]+)?=\s*(["'`])(\d{4}-\d{2}-\d{2})(?:T[^"'`]*)?\2/g;
+// A table must be declared in its file, not merely mentioned: renaming PRICING
+// must fail even though PRICING_SOURCES still contains the word.
+const declares = (text, symbol) =>
+  new RegExp(`\\b(?:const|let|var|function|class|enum|interface|type)\\s+${symbol.replace(/[$]/g, "\\$&")}\\b`).test(text);
 // Where the date constants live. Tests are excluded: they pin dates, they do not own them.
 export const SCAN_ROOTS = ["apps/api/src"];
 
@@ -29,12 +35,20 @@ export function repoRootFrom(metaUrl) {
   return path.resolve(path.dirname(fileURLToPath(metaUrl)), "..");
 }
 
+// Today's date in Sweden, as recurring.mjs uses: a row dated today by someone
+// in Stockholm just after midnight is not "in the future".
+export function stockholmToday(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const part = (type) => parts.find((p) => p.type === type).value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 export function loadRegister(root) {
   const text = fs.readFileSync(path.join(root, REGISTER_PATH), "utf8");
   return YAML.parse(text);
 }
 
-function isDate(s) {
+export function isDate(s) {
   if (typeof s !== "string" || !ISO_DATE.test(s)) return false;
   const d = new Date(`${s}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
@@ -50,11 +64,28 @@ export function addDays(iso, days) {
 // A dated row is due review_days after it was last checked: checked_on when the
 // row has one (the as_of constant then dates the source's own version, such as
 // a FATF plenary), otherwise as_of.
+// next_review_by, when set, brings the date forward for sources on a calendar
+// (FATF publishes after each plenary in February, June and October), so the
+// check follows the publication rather than the date of the last check.
 export function dueDate(row) {
   const checked = isDate(row.checked_on) ? row.checked_on : row.as_of;
-  if (isDate(checked) && Number.isInteger(row.review_days)) return addDays(checked, row.review_days);
-  if (isDate(row.first_review_by)) return row.first_review_by;
-  return null;
+  let due = null;
+  if (isDate(checked) && Number.isInteger(row.review_days)) due = addDays(checked, row.review_days);
+  else if (isDate(row.first_review_by)) due = row.first_review_by;
+  if (isDate(row.next_review_by) && (!due || row.next_review_by < due)) due = row.next_review_by;
+  return due;
+}
+
+// Tools switched off in auto-register.ts's DEACTIVATED map.
+export function deactivatedTools(root) {
+  const file = path.join(root, "apps/api/src/capabilities/auto-register.ts");
+  if (!fs.existsSync(file)) return null;
+  const text = fs.readFileSync(file, "utf8");
+  const start = text.indexOf("const DEACTIVATED = new Map");
+  if (start < 0) return null;
+  const end = text.indexOf("]);", start);
+  const block = text.slice(start, end < 0 ? undefined : end);
+  return new Set([...block.matchAll(/^\s*\[\s*"([a-z0-9-]+)"\s*,/gm)].map((m) => m[1]));
 }
 
 function walk(dir, out) {
@@ -79,7 +110,7 @@ export function findDateConstants(root) {
     for (const f of walk(abs, [])) {
       const text = fs.readFileSync(f, "utf8");
       for (const m of text.matchAll(DATE_CONST)) {
-        found.push({ file: path.relative(root, f).split(path.sep).join("/"), name: m[1], value: m[2] });
+        found.push({ file: path.relative(root, f).split(path.sep).join("/"), name: m[1], value: m[3] });
       }
     }
   }
@@ -87,7 +118,7 @@ export function findDateConstants(root) {
 }
 
 // Structural findings. `today` is used only to refuse an as_of in the future.
-export function checkRegister(root, register, { today = new Date().toISOString().slice(0, 10) } = {}) {
+export function checkRegister(root, register, { today = stockholmToday() } = {}) {
   const findings = [];
   const add = (code, at, detail) => findings.push({ code, file: REGISTER_PATH, detail: `${at}: ${detail}` });
   if (!register || register.version !== 1 || !Array.isArray(register.datasets)) {
@@ -96,6 +127,10 @@ export function checkRegister(root, register, { today = new Date().toISOString()
   }
   const rows = register.datasets;
   const ids = new Set();
+  const deactivated = deactivatedTools(root);
+  if (!deactivated) {
+    findings.push({ code: "REFDATA_DEACTIVATED_UNREADABLE", file: "apps/api/src/capabilities/auto-register.ts", detail: "no DEACTIVATED map found; the active flags cannot be checked" });
+  }
   const fileText = new Map();
   const read = (rel) => {
     if (!fileText.has(rel)) {
@@ -124,6 +159,15 @@ export function checkRegister(root, register, { today = new Date().toISOString()
       add("REFDATA_SCHEMA", at, "source must be text or null (none stated)");
     }
 
+    if (row.next_review_by !== undefined && !isDate(row.next_review_by)) add("REFDATA_SCHEMA", at, "next_review_by must be a YYYY-MM-DD date");
+    if (deactivated && Array.isArray(row.tools) && row.tools.length > 0 && typeof row.active === "boolean") {
+      const off = row.tools.filter((t) => deactivated.has(t));
+      const shouldBeActive = off.length < row.tools.length;
+      if (row.active !== shouldBeActive) {
+        add("REFDATA_ACTIVE_MISMATCH", at, `active is ${row.active}, but ${off.length ? off.join(", ") : "none of its tools"} ${off.length === 1 ? "is" : "are"} in DEACTIVATED (auto-register.ts)`);
+      }
+    }
+
     if (row.as_of === null || row.as_of === undefined) {
       if (!isDate(row.first_review_by)) add("REFDATA_SCHEMA", at, "an undated row needs first_review_by (YYYY-MM-DD): when it is first checked against its source");
       if (row.as_of_symbol) add("REFDATA_SCHEMA", at, "as_of_symbol needs as_of");
@@ -149,14 +193,16 @@ export function checkRegister(root, register, { today = new Date().toISOString()
     if (typeof row.file !== "string") return;
     const text = read(row.file);
     if (text === null) return add("REFDATA_FILE_MISSING", at, `${row.file} does not exist`);
-    if (typeof row.symbol === "string" && !text.includes(row.symbol)) {
-      add("REFDATA_SYMBOL_MISSING", at, `${row.symbol} does not appear in ${row.file}`);
+    // A dependency's data (package.json) is named, not declared.
+    const found = row.file.endsWith(".json") ? text.includes(row.symbol) : declares(text, row.symbol);
+    if (typeof row.symbol === "string" && !found) {
+      add("REFDATA_SYMBOL_MISSING", at, `${row.symbol} is not declared in ${row.file}`);
     }
     if (row.as_of_symbol) {
       const m = [...text.matchAll(DATE_CONST)].find((x) => x[1] === row.as_of_symbol);
       if (!m) add("REFDATA_AS_OF_SYMBOL_MISSING", at, `no date constant ${row.as_of_symbol} in ${row.file}`);
-      else if (m[2] !== row.as_of) {
-        add("REFDATA_AS_OF_MISMATCH", at, `${row.as_of_symbol} is ${m[2]} in the code but as_of is ${row.as_of}; update both in the same change`);
+      else if (m[3] !== row.as_of) {
+        add("REFDATA_AS_OF_MISMATCH", at, `${row.as_of_symbol} is ${m[3]} in the code but as_of is ${row.as_of}; update both in the same change`);
       }
     }
   });
