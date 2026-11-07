@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   assertParseWithinBounds,
   boundHtmlForParse,
@@ -19,7 +19,10 @@ import {
   HtmlTooComplexError,
   prepareHtmlForParse,
 } from "./html-parse-bound.js";
-import { htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
+// The markup bounds are measured on the in-process conversion: the worker
+// that runs it in production adds its own time limit, tested in
+// readability-convert.test.ts, and would make these timings depend on load.
+import { convertHtmlToMarkdownSync as htmlToCleanMarkdown } from "./readability-convert-sync.js";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 
 const KB = 1024;
@@ -38,18 +41,11 @@ function articlePage(bytes: number): string {
   return `${html}</article><footer>f</footer></body></html>`;
 }
 
-// The conversion runs in a worker thread; start it once so the timings below
-// measure conversions, not the worker's start-up.
-beforeAll(async () => {
-  await htmlToCleanMarkdown("<p>warm up</p>", "https://example.test/");
-}, 30_000);
-afterAll(stopConversionWorkers);
-
 /** Runs the conversion; returns how long it took and whether it threw. */
-async function convert(html: string): Promise<{ ms: number; error: unknown; markdown: string | null }> {
+function convert(html: string): { ms: number; error: unknown; markdown: string | null } {
   const started = performance.now();
   try {
-    const result = await htmlToCleanMarkdown(html, "https://example.test/a");
+    const result = htmlToCleanMarkdown(html, "https://example.test/a");
     return { ms: performance.now() - started, error: null, markdown: result.markdown };
   } catch (error) {
     return { ms: performance.now() - started, error, markdown: null };
@@ -71,28 +67,28 @@ const ADVERSARIAL: Array<[string, () => string]> = [
 ];
 
 describe("htmlToCleanMarkdown on adversarial markup", () => {
-  it.each(ADVERSARIAL)("%s finishes under 2 s or refuses", async (_label, make) => {
-    const { ms, error } = await convert(make());
+  it.each(ADVERSARIAL)("%s finishes under 2 s or refuses", (_label, make) => {
+    const { ms, error } = convert(make());
     if (error) expect(error).toBeInstanceOf(HtmlTooComplexError);
     expect(ms).toBeLessThan(2_000);
   });
 
-  it("16 MB of flat <p>x is refused before jsdom, without exhausting the heap", async () => {
-    const { ms, error } = await convert(fill("<p>x", 16 * 1024 * KB));
+  it("16 MB of flat <p>x is refused before jsdom, without exhausting the heap", () => {
+    const { ms, error } = convert(fill("<p>x", 16 * 1024 * KB));
     expect(error).toBeInstanceOf(HtmlTooComplexError);
     expect(ms).toBeLessThan(2_000);
   });
 
-  it("a refusal is a ResourceLimitError, so the call is not billed and not a source failure", async () => {
-    const { error } = await convert(fill("<p>x", 1024 * KB));
+  it("a refusal is a ResourceLimitError, so the call is not billed and not a source failure", () => {
+    const { error } = convert(fill("<p>x", 1024 * KB));
     expect(error).toBeInstanceOf(ResourceLimitError);
     expect((error as ResourceLimitError).isCapabilityRefusal).toBe(true);
     expect((error as Error).message).toMatch(/too complex to convert safely/);
   });
 
-  it("deep nesting keeps the text: tags past the depth limit are dropped, not their content", async () => {
+  it("deep nesting keeps the text: tags past the depth limit are dropped, not their content", () => {
     const html = `<body>${"<div>".repeat(5_000)}<p>The text inside the deep nest survives intact.</p></body>`;
-    const { ms, error, markdown } = await convert(html);
+    const { ms, error, markdown } = convert(html);
     expect(error).toBeNull();
     expect(ms).toBeLessThan(2_000);
     expect(markdown).toContain("The text inside the deep nest survives intact.");
@@ -155,9 +151,9 @@ describe("ordinary pages reach jsdom unchanged", () => {
     expect(() => assertParseWithinBounds(html)).not.toThrow();
   });
 
-  it("an ordinary article converts to the same Markdown as an unbounded parse would give", async () => {
+  it("an ordinary article converts to the same Markdown as an unbounded parse would give", () => {
     const html = articlePage(100 * KB);
-    const { error, markdown } = await convert(html);
+    const { error, markdown } = convert(html);
     expect(error).toBeNull();
     expect(prepareHtmlForParse(html)).toBe(html);
     expect(markdown).toContain("# Heading");

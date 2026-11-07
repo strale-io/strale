@@ -4,7 +4,7 @@
  * refused quickly, a refusal must not fall through to Browserless, and a
  * hostile page must never come back as an empty success.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { safeFetchMock, fetchRenderedHtml } = vi.hoisted(() => ({
   safeFetchMock: vi.fn(),
@@ -24,7 +24,15 @@ vi.mock("../lib/robots-txt.js", () => ({
 import { getDirectExecutor } from "./index.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { HtmlTooComplexError } from "./lib/html-parse-bound.js";
+import { htmlToCleanMarkdown, stopConversionWorkers } from "./lib/readability-convert.js";
 import "./url-to-markdown.js";
+
+// The conversion runs in a worker thread that starts on first use; start it
+// here so the timings below measure conversions, not the worker's start-up.
+beforeAll(async () => {
+  await htmlToCleanMarkdown("<p>warm up</p>", "https://example.test/");
+}, 30_000);
+afterAll(stopConversionWorkers);
 
 const WORDS = "Readable words that a person would want in the Markdown output. ".repeat(20);
 
