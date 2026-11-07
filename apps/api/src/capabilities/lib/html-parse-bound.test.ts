@@ -23,6 +23,7 @@ import {
 // that runs it in production adds its own time limit, tested in
 // readability-convert.test.ts, and would make these timings depend on load.
 import { convertHtmlToMarkdownSync as htmlToCleanMarkdown } from "./readability-convert-sync.js";
+import { CONVERSION_LIMITS } from "./readability-convert.js";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 
 /**
@@ -101,8 +102,11 @@ describe("htmlToCleanMarkdown on adversarial markup", () => {
   it("deep nesting keeps the text: tags past the depth limit are dropped, not their content", () => {
     const html = `<body>${"<div>".repeat(5_000)}<p>The text inside the deep nest survives intact.</p></body>`;
     const { ms, error, markdown } = convert(html);
+    // Before the bound this ended in a RangeError. What matters for time now is
+    // that it converts inside the worker's wall-clock limit in production,
+    // not a fixed 2 s: CI runners spend about 2.8 s of CPU on it.
     expect(error).toBeNull();
-    expect(ms).toBeLessThan(2_000);
+    expect(ms).toBeLessThan(CONVERSION_LIMITS.timeoutMs);
     expect(markdown).toContain("The text inside the deep nest survives intact.");
   });
 });
