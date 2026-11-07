@@ -19,42 +19,22 @@ input_schema:
 output_schema:
   type: object
   example:
-    url: https://strale.dev/robots.txt
-    rules:
-      - allow:
-          - /
-        disallow: []
-        user_agent: Googlebot
-      - allow:
-          - /
-        disallow: []
-        user_agent: Bingbot
-      - allow:
-          - /
-        disallow: []
-        user_agent: Twitterbot
-      - allow:
-          - /
-        disallow: []
-        user_agent: facebookexternalhit
-      - allow:
-          - /
-        disallow: []
-        user_agent: "*"
+    url: https://strale.io/robots.txt
     exists: true
-    sitemaps:
-      - https://strale.dev/sitemap.xml
-    raw_length: 201
-    total_rules: 5
+    total_rules: 1
     user_agents:
-      - Googlebot
-      - Bingbot
-      - Twitterbot
-      - facebookexternalhit
-      - "*"
-    total_allow_rules: 5
-    blocks_all_crawlers: false
+    - '*'
     total_disallow_rules: 0
+    total_allow_rules: 1
+    sitemaps:
+    - https://strale.io/sitemap.xml
+    blocks_all_crawlers: false
+    rules:
+    - user_agent: '*'
+      allow:
+      - /
+      disallow: []
+    raw_length: 63
   properties:
     rules:
       type: array
@@ -77,7 +57,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale.dev/robots.txt
+      url: https://strale.io/robots.txt
     expected_fields:
       - field: rules
         operator: not_null
@@ -110,12 +90,12 @@ test_fixtures:
       - field: sitemaps.0
         operator: contains
         reliability: guaranteed
-        value: 'strale.dev'
+        value: 'strale.io'
       - field: user_agents.0
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    url: https://strale.dev
+    url: https://strale.io
 output_field_reliability:
   rules: guaranteed
   exists: guaranteed

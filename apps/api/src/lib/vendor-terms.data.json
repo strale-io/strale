@@ -373,5 +373,28 @@
     "findings": ["Statistics Finland states that it uses the CC BY 4.0 open-data licence and permits use in every way provided the source is mentioned. Its published terms require the source, table or product, material version date, CC BY 4.0 reference and licence hyperlink; Strale identifies its reshaping."],
     "decision_ref": "DEC-20261023-A; portfolio plan item 2.10",
     "basis": "published_terms"
+  },
+  {
+    "vendor": "European Commission (Access2Markets)",
+    "hosts": [
+      "trade.ec.europa.eu"
+    ],
+    "url_prefixes": [
+      "https://trade.ec.europa.eu/access-to-markets/"
+    ],
+    "capabilities": [
+      "customs-duty-lookup"
+    ],
+    "resale": "permitted",
+    "basis": "published_terms",
+    "terms_url": "https://commission.europa.eu/legal-notice_en",
+    "accessed": "2026-11-07",
+    "how_read": "Read the Commission legal notice's copyright section and the Access2Markets 'Sources and copyright' page (trade.ec.europa.eu/access-to-markets/en/content/sources-and-copyright) in a rendering browser with Strale's honest user agent; checked trade.ec.europa.eu/robots.txt (disallows only /wp-login.php).",
+    "findings": [
+      "Commission legal notice: 'Unless otherwise indicated ... content owned by the EU on this website is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence. This means that reuse is allowed, provided appropriate credit is given and changes are indicated.'",
+      "Access2Markets 'Sources and copyright': EU import tariffs come from 'DG TAXUD, TARIC database' and internal taxes for EU member states from 'TARIC SA' (Commission data). Only rows marked Mendel* (tariffs, taxes and formalities of NON-EU countries) carry Mendel Verlag terms that forbid resale and redistribution.",
+      "customs-duty-lookup queries only imports into an EU member state, so it never reads Mendel rows; it returns attribution, licence and source URL in provenance. TARIC's own consultation pages (ec.europa.eu/taxation_customs/dds2/taric/) are robots-disallowed and are not used."
+    ],
+    "decision_ref": "DEC-20261023-A (allowed with checks: public, non-personal source whose terms permit, with attribution); weekly-drift robots sweep, issue #747"
   }
 ]

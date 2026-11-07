@@ -2,74 +2,105 @@ import { createAnthropicClient } from "../lib/anthropic-client.js";
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
-import type Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
-// ─── EU Customs Duty Lookup via TARIC + Browserless + Claude ────────────────
+// ─── EU import duty lookup via Access2Markets (European Commission) ─────────
+//
+// Source: the Commission's Access2Markets "My Trade Assistant" results page.
+// Its EU import tariff rows come from DG TAXUD's TARIC database, and the
+// Commission licenses its own content under CC BY 4.0 (legal notice,
+// commission.europa.eu/legal-notice_en), so a per-call read with attribution
+// is in DEC-20261023-A's allowed-with-checks lane.
+//
+// Not used, and why:
+//   - TARIC's own consultation pages (ec.europa.eu/taxation_customs/dds2/taric/)
+//     are disallowed for every agent by ec.europa.eu/robots.txt. This executor
+//     used to read them first; since the 2026-10-28 fetch hardening that call
+//     always refused (weekly-drift robots sweep, issue #747).
+//   - Access2Markets' tariff and tax rows for NON-EU destinations come from
+//     Mendel Verlag under terms that forbid resale. This executor only ever
+//     asks about imports INTO an EU member state, whose rows are TARIC's.
+//
+// Access2Markets answers HTTP 400 ("country from and country to are mandatory")
+// unless both an origin and a member-state destination are given, and answers
+// at the 6-digit HS subheading. The old fallback sent destination=EU with an
+// optional origin, so it got that error page and handed it to the LLM.
+
+/** EU member states (ISO 3166-1 alpha-2), the destinations Access2Markets accepts for an EU import. */
+export const EU_MEMBER_STATES = new Set([
+  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE",
+  "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+]);
+
+/**
+ * The customs duty is the EU's common external tariff, identical in every
+ * member state. When the caller names no member state we ask for this one and
+ * withhold the VAT rate, which is national.
+ */
+const DEFAULT_DESTINATION = "DE";
+
+const RESULTS_MARKER = "Results for product code";
+
+export function a2mResultsUrl(hsCode: string, origin: string, destination: string): string {
+  const q = new URLSearchParams({ product: hsCode, origin, destination });
+  return `https://trade.ec.europa.eu/access-to-markets/en/results?${q.toString()}`;
+}
+
+/**
+ * The results section of the page, or null when the page is not a results
+ * page (a 400 error page, or the subheading picker a 4-digit code produces).
+ */
+export function resultsSection(pageText: string): { text: string; resolvedCode: string | null } | null {
+  const start = pageText.indexOf(RESULTS_MARKER);
+  if (start === -1) return null;
+  const end = pageText.indexOf("Sources and copyright", start);
+  const text = pageText.slice(start, end === -1 ? undefined : end);
+  const resolved = text.match(/^Results for product code ([\d.]+)/);
+  return { text, resolvedCode: resolved ? resolved[1].replace(/\./g, "") : null };
+}
 
 registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   const hsCode = ((input.hs_code as string) ?? (input.task as string) ?? "").trim();
   if (!hsCode) {
     throw new Error(
-      "'hs_code' is required. Provide an HS code (e.g. '8471.30' or '847130') to look up EU customs duties.",
+      "'hs_code' is required. Provide an HS code of at least 6 digits (e.g. '8471.30' or '847130') to look up EU import duties.",
     );
   }
-
-  const originCountry = ((input.origin_country as string) ?? "").trim().toUpperCase() || "";
-  const destinationCountry = ((input.destination_country as string) ?? "EU").trim().toUpperCase();
-
-  // Normalize HS code: remove dots and spaces
   const cleanHsCode = hsCode.replace(/[\s.]/g, "");
-  if (!/^\d{4,10}$/.test(cleanHsCode)) {
+  if (!/^\d{6,10}$/.test(cleanHsCode)) {
     throw new Error(
-      `Invalid HS code format: "${hsCode}". Must be 4-10 digits (e.g. '8471.30' or '847130').`,
+      `Invalid HS code: "${hsCode}". Give 6 to 10 digits (e.g. '8471.30' or '847130'); a 4-digit heading is too broad to carry one duty rate.`,
     );
   }
 
-  // Pad to at least 6 digits for TARIC
-  const paddedCode = cleanHsCode.padEnd(10, "0");
-
-  // Build TARIC consultation URL
-  const today = new Date();
-  const simDate = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-  const taricUrl =
-    `https://ec.europa.eu/taxation_customs/dds2/taric/measures.jsp` +
-    `?Lang=en&SimDate=${simDate}&GoodsCode=${paddedCode}` +
-    `&Ctry=${originCountry}&Area=&MeasType=&StartPub=&EndPub=` +
-    `&MeasText=&search_text=goods&textSearch=&LangDescr=en` +
-    `&OrderNum=&Regulation=&measStartDat=&measEndDat=`;
-
-  let pageText: string;
-  let sourceUrl = taricUrl;
-
-  try {
-    const html = await fetchRenderedHtml(taricUrl, { source: "strale" });
-    pageText = htmlToText(html);
-
-    if (pageText.length < 200) {
-      // Fallback: try Access2Markets
-      const a2mUrl = `https://trade.ec.europa.eu/access-to-markets/en/search?product=${cleanHsCode}${originCountry ? `&origin=${originCountry}` : ""}&destination=${destinationCountry}`;
-      sourceUrl = a2mUrl;
-      const a2mHtml = await fetchRenderedHtml(a2mUrl, { source: "strale" });
-      pageText = htmlToText(a2mHtml);
-    }
-  } catch (e: any) {
-    // Try Access2Markets as fallback
-    try {
-      const a2mUrl = `https://trade.ec.europa.eu/access-to-markets/en/search?product=${cleanHsCode}${originCountry ? `&origin=${originCountry}` : ""}&destination=${destinationCountry}`;
-      sourceUrl = a2mUrl;
-      const a2mHtml = await fetchRenderedHtml(a2mUrl, { source: "strale" });
-      pageText = htmlToText(a2mHtml);
-    } catch {
-      throw new Error(
-        `Could not fetch customs duty data for HS code "${hsCode}". Both TARIC and Access2Markets failed. Original error: ${e.message}`,
-      );
-    }
+  const originCountry = ((input.origin_country as string) ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(originCountry)) {
+    throw new Error(
+      "'origin_country' is required: the ISO 3166-1 alpha-2 code of the country the goods come from (e.g. 'CN'). " +
+        "The duty and any preferential rate depend on it.",
+    );
+  }
+  if (EU_MEMBER_STATES.has(originCountry)) {
+    throw new Error(
+      `'origin_country' ${originCountry} is an EU member state. Goods moving between member states pay no customs duty; give the non-EU country of origin.`,
+    );
   }
 
-  if (pageText.length < 100) {
+  const requestedDestination = ((input.destination_country as string) ?? "").trim().toUpperCase() || "EU";
+  if (requestedDestination !== "EU" && !EU_MEMBER_STATES.has(requestedDestination)) {
     throw new Error(
-      `Could not load customs duty page for HS code "${hsCode}". The page returned insufficient content.`,
+      `'destination_country' must be an EU member state (ISO alpha-2, e.g. 'SE') or 'EU'; got "${requestedDestination}". This tool covers imports into the EU only.`,
+    );
+  }
+  const destinationDefaulted = requestedDestination === "EU";
+  const queryDestination = destinationDefaulted ? DEFAULT_DESTINATION : requestedDestination;
+
+  const sourceUrl = a2mResultsUrl(cleanHsCode, originCountry, queryDestination);
+  const html = await fetchRenderedHtml(sourceUrl, { source: "strale" });
+  const section = resultsSection(htmlToText(html));
+  if (!section || section.text.length < 200) {
+    throw new Error(
+      `Access2Markets returned no tariff results for HS code "${hsCode}" from ${originCountry}. Check that the code is a valid 6-digit subheading or longer.`,
     );
   }
 
@@ -77,39 +108,51 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = createAnthropicClient({ apiKey });
-  const output = await extractJsonWithLlm({
+  const extracted = await extractJsonWithLlm({
     client,
     model: MODELS.capability_default.id,
     maxTokens: 2000,
-    prompt: `Extract customs duty information from this EU customs/TARIC page for HS code "${hsCode}"${originCountry ? ` from origin country "${originCountry}"` : ""}.
+    prompt: `Extract the EU import duty for HS code "${cleanHsCode}" from ${originCountry} from this Access2Markets results text. Use only what the text states.
 
 Return ONLY valid JSON:
 {
-  "hs_code": "${cleanHsCode}",
-  "description": "product description from the page",
-  "origin_country": "${originCountry || "not specified"}",
-  "destination": "${destinationCountry}",
-  "duty_rate": "percentage or specific rate",
-  "duty_type": "ad_valorem or specific or mixed",
-  "preferential_rates": [{"agreement": "trade agreement name", "rate": "preferential rate"}],
-  "anti_dumping": false,
-  "additional_duties": [],
-  "vat_rate": "standard VAT rate if shown",
-  "notes": "any relevant notes, conditions, or regulations"
+  "description": "product description from the page, or null",
+  "duty_rate": "the third-country (ERGA OMNES) duty as written, e.g. '0%' or '3.2%' or '12.8 EUR/100 kg', or null",
+  "duty_type": "ad_valorem or specific or mixed, or null",
+  "preferential_rates": [{"agreement": "agreement or preference name", "rate": "rate as written"}],
+  "anti_dumping": true or false (true only if an anti-dumping or countervailing measure is listed for this origin),
+  "additional_duties": [{"measure": "measure type as written", "rate": "rate as written"}],
+  "vat_rate": "the import VAT rate if shown, or null",
+  "notes": "conditions, footnotes or legal references worth knowing, or null"
 }
 
-If the page does not contain clear duty data, still return the JSON structure with whatever information is available, using null for missing fields.
-
-Page text:
-${pageText.slice(0, 12000)}`,
-    truncationGuidance: "This HS code's duty page produced more preferential-rate entries than fit in one call.",
-    parseFailureError: () => new Error("Failed to extract customs duty data from the page."),
+Results text:
+${section.text.slice(0, 12000)}`,
+    truncationGuidance: "This HS code's results listed more measures than fit in one call.",
+    parseFailureError: () => new Error("Failed to extract customs duty data from the Access2Markets results."),
   });
+
+  const output: Record<string, unknown> = {
+    ...extracted,
+    hs_code: cleanHsCode,
+    resolved_hs_code: section.resolvedCode,
+    origin_country: originCountry,
+    destination: requestedDestination,
+  };
+  if (destinationDefaulted) {
+    // VAT is national; the rate on the page is the default member state's.
+    output.vat_rate = null;
+  }
 
   return {
     output,
     provenance: {
-      source: sourceUrl.includes("taric") ? "ec.europa.eu/taric" : "trade.ec.europa.eu/access-to-markets",
+      source: "trade.ec.europa.eu/access-to-markets (TARIC data, DG TAXUD)",
+      source_url: sourceUrl,
+      license: "CC BY 4.0",
+      license_url: "https://creativecommons.org/licenses/by/4.0/legalcode",
+      attribution: "© European Union. Source: European Commission, Access2Markets; tariff data from the TARIC database (DG TAXUD).",
+      ...(destinationDefaulted ? { queried_member_state: DEFAULT_DESTINATION } : {}),
       fetched_at: new Date().toISOString(),
     },
   };

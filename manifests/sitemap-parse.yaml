@@ -19,108 +19,41 @@ input_schema:
 output_schema:
   type: object
   example:
-    url: https://strale.dev/sitemap.xml
+    url: https://strale.io/sitemap.xml
     type: urlset
-    total_urls: 239
-    has_lastmod: true
+    total_urls: 487
+    has_lastmod: false
+    has_priority: false
+    has_changefreq: false
+    newest_lastmod: null
+    oldest_lastmod: null
     sample_urls:
-      - loc: https://strale.dev/
-        lastmod: "2026-03-12"
-        priority: "1.0"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities
-        lastmod: "2026-03-12"
-        priority: "0.9"
-        changefreq: daily
-      - loc: https://strale.dev/pricing
-        lastmod: "2026-03-12"
-        priority: "0.8"
-        changefreq: monthly
-      - loc: https://strale.dev/docs
-        lastmod: "2026-03-12"
-        priority: "0.8"
-        changefreq: weekly
-      - loc: https://strale.dev/signup
-        lastmod: "2026-03-12"
-        priority: "0.7"
-        changefreq: monthly
-      - loc: https://strale.dev/security
-        lastmod: "2026-03-12"
-        priority: "0.7"
-        changefreq: monthly
-      - loc: https://strale.dev/capabilities/belgian-company-data
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/vat-validate
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/ssl-certificate-chain
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/vat-rate-lookup
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/web-extract
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/invoice-extract
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/swedish-company-data
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/pdf-extract
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/eori-validate
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/iban-validate
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/brand-mention-search
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/norwegian-company-data
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/austrian-company-data
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-      - loc: https://strale.dev/capabilities/danish-company-data
-        lastmod: "2026-03-12"
-        priority: "0.6"
-        changefreq: weekly
-    has_priority: true
-    has_changefreq: true
-    newest_lastmod: "2026-03-12"
-    oldest_lastmod: "2026-03-12"
+    - loc: https://strale.io/
+    - loc: https://strale.io/tools
+    - loc: https://strale.io/company-data
+    - loc: https://strale.io/use-cases
+    - loc: https://strale.io/pricing
     top_path_segments:
-      - count: 234
-        segment: capabilities
-      - count: 1
-        segment: /
-      - count: 1
-        segment: pricing
-      - count: 1
-        segment: docs
-      - count: 1
-        segment: signup
-      - count: 1
-        segment: security
+    - segment: tools
+      count: 298
+    - segment: solutions
+      count: 95
+    - segment: guides
+      count: 49
+    - segment: company-data
+      count: 26
+    - segment: use-cases
+      count: 7
+    - segment: docs
+      count: 5
+    - segment: /
+      count: 1
+    - segment: pricing
+      count: 1
+    - segment: security
+      count: 1
+    - segment: about
+      count: 1
   properties:
     type:
       type: string
@@ -141,7 +74,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale.dev/sitemap.xml
+      url: https://strale.io/sitemap.xml
     expected_fields:
       - field: type
         operator: not_null
@@ -182,9 +115,9 @@ test_fixtures:
       - field: sample_urls.0.loc
         operator: contains
         reliability: guaranteed
-        value: 'strale.dev'
+        value: 'strale.io'
   health_check_input:
-    url: https://strale.dev/sitemap.xml
+    url: https://strale.io/sitemap.xml
 output_field_reliability:
   type: guaranteed
   total_urls: guaranteed

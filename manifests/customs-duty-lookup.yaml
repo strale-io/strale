@@ -13,30 +13,34 @@ input_schema:
   type: object
   required:
     - hs_code
+    - origin_country
   properties:
     hs_code:
       type: string
+      description: "HS code of 6 to 10 digits, e.g. '8471.30'. Duties are read at the 6-digit subheading."
     origin_country:
       type: string
+      description: "ISO 3166-1 alpha-2 code of the non-EU country the goods come from, e.g. 'CN'."
     destination_country:
       type: string
+      description: "EU member state the goods are imported into (ISO alpha-2, e.g. 'SE'), or 'EU' (default). The duty is the same in every member state; the VAT rate is returned only when a member state is named."
 output_schema:
   type: object
   example:
-    notes: >-
-      The provided page content does not contain information for HS code 847130. The page displays TARIC measure
-      information for Chapter 1 (Live Animals) codes only, specifically codes in the 0101-0102 range. HS code 847130
-      falls under Chapter 84 (Machinery) and is not present in the displayed content.
     hs_code: "847130"
-    vat_rate: null
-    duty_rate: null
-    duty_type: null
-    description: null
-    destination: null
-    anti_dumping: false
-    origin_country: not specified
-    additional_duties: []
+    resolved_hs_code: "847130"
+    description: Portable automatic data-processing machines, weighing not more than 10 kg
+    origin_country: CN
+    destination: SE
+    duty_rate: 0%
+    duty_type: ad_valorem
     preferential_rates: []
+    anti_dumping: false
+    additional_duties:
+      - measure: Low-value consignment customs duty
+        rate: 3.00 EUR per item
+    vat_rate: null
+    notes: The low-value consignment duty applies from 1 July 2026 to items in consignments worth up to EUR 150.
   properties:
     duty_rate:
       type: string
@@ -46,7 +50,9 @@ output_schema:
       type: boolean
     preferential_rates:
       type: array
-data_source: TARIC (EU Customs Tariff Database, European Commission)
+    resolved_hs_code:
+      type: string
+data_source: "Access2Markets (European Commission), EU tariff data from the TARIC database (DG TAXUD)"
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
@@ -58,7 +64,8 @@ test_fixtures:
   known_answer:
     input:
       hs_code: "8471.30"
-      destination_country: US
+      origin_country: CN
+      destination_country: SE
     expected_fields:
       - field: hs_code
         operator: not_null
@@ -69,7 +76,8 @@ test_fixtures:
         value: string
   health_check_input:
     hs_code: "8471.30"
-    destination_country: US
+    origin_country: CN
+    destination_country: SE
 output_field_reliability:
   duty_rate: guaranteed
   duty_type: guaranteed
@@ -77,12 +85,28 @@ output_field_reliability:
   preferential_rates: guaranteed
 limitations:
   - title: Rates depend on the HS code and country of origin
-    text: Duty rates come from TARIC and depend on the correct HS code classification and declared country of origin.
+    text: >-
+      Duty rates come from the EU's TARIC database, read through the European Commission's Access2Markets service,
+      and depend on the correct HS code classification and declared country of origin.
     category: accuracy
     severity: warning
     workaround: >-
       Verify extracted duty rates against the official TARIC database and consult a customs broker for complex
       classifications
+  - title: Read at the 6-digit subheading
+    text: >-
+      Access2Markets answers at the 6-digit HS subheading, so a measure that applies only to some 8- or 10-digit
+      codes under it may be listed without saying which. resolved_hs_code says which code the answer is for.
+    category: coverage
+    severity: info
+    workaround: For an 8- or 10-digit code with code-specific measures, check the full code in the official TARIC database.
+  - title: Imports into the EU only
+    text: >-
+      Covers goods imported into an EU member state from a non-EU country. It does not cover duties charged by
+      non-EU countries, and goods moving between member states pay no customs duty.
+    category: coverage
+    severity: info
+    workaround: For another country's import duties, use that country's own customs tariff.
   - title: Output size cap per call
     text: >-
       Structured output is limited to about 2000 output tokens per call; requests exceeding this limit
@@ -96,4 +120,11 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: public_page_read
-  checks: pending
+  upstream_vendor: European Commission (Access2Markets)
+  checks: recorded
+  checks_note: >-
+    Checked 2026-11-07. Reads one Access2Markets results page per call (trade.ec.europa.eu; robots.txt disallows
+    only /wp-login.php). The EU import tariff rows on it are TARIC data owned by the European Commission, which
+    licenses its content under CC BY 4.0 (commission.europa.eu/legal-notice_en); attribution is in provenance.
+    Only imports into EU member states are queried, so the Mendel Verlag rows (non-EU tariffs, no resale) are
+    never read. TARIC's own pages (ec.europa.eu/taxation_customs/dds2/taric/) are robots-disallowed and not used.

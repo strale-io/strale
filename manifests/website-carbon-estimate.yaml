@@ -19,19 +19,19 @@ input_schema:
 output_schema:
   type: object
   example:
-    url: https://strale.dev
-    rating: A
-    methodology: Website Carbon / Sustainable Web Design model
-    page_size_kb: 3
-    annual_co2_kg: 0.1
+    url: https://strale.io
+    page_size_bytes: 60397
+    page_size_kb: 59
+    co2_grams_per_view: 0.0152
+    cleaner_than_percent: 99
     green_hosting: unknown
-    page_size_bytes: 3239
-    recommendations:
-      - This page is already lightweight. Maintain current optimization practices.
-    transfer_encoding: gzip
-    co2_grams_per_view: 0.0008
+    annual_co2_kg: 1.82
     annual_co2_kg_custom: null
-    cleaner_than_percent: 100
+    rating: A
+    transfer_encoding: gzip
+    methodology: Website Carbon / Sustainable Web Design model
+    recommendations:
+    - This page is already lightweight. Maintain current optimization practices.
   properties:
     rating:
       type: string
@@ -52,7 +52,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://strale.dev
+      url: https://strale.io
     expected_fields:
       - field: rating
         operator: not_null
@@ -87,7 +87,7 @@ test_fixtures:
         reliability: guaranteed
         value: 2000
   health_check_input:
-    url: https://strale.dev
+    url: https://strale.io
 output_field_reliability:
   rating: guaranteed
   page_size_kb: guaranteed
