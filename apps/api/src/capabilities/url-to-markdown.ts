@@ -2,6 +2,7 @@ import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
+import { hasMoreTextThan } from "./lib/stripped-text-length.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
@@ -134,16 +135,9 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       throw siteAccessRefusal(url, { kind: "challenge" }, getBlockedSiteHint(url) ?? undefined);
     }
 
-    let stripped = html;
-    stripped = stripped.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
-    stripped = stripped.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-    stripped = stripped.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "");
-    stripped = stripped.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "");
-    stripped = stripped.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "");
-    stripped = stripped.replace(/<[^>]+>/g, " ");
-    const textLength = stripped.replace(/\s+/g, " ").trim().length;
-
-    if (textLength > 500) return html;
+    // Linear, and reads at most TEXT_CHECK_WINDOW: the regex chain this
+    // replaced was quadratic on hostile pages (R1).
+    if (hasMoreTextThan(html, 500)) return html;
 
     return null;
   } catch (err) {
@@ -243,14 +237,6 @@ function mapBrowserlessError(msg: string, url?: string): Error {
   );
 }
 
-/** Post-process markdown to strip links/images if requested. */
-function postProcess(md: string, includeLinks: boolean, includeImages: boolean): string {
-  let result = md;
-  if (!includeLinks) result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-  if (!includeImages) result = result.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
-  return result;
-}
-
 registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.link as string) ?? "").trim();
   if (!url) throw inputRefusal("'url' is required.", "url", "Send 'url' as an absolute HTTP or HTTPS URL to a web page.");
@@ -272,8 +258,9 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const plainHtml = await tryPlainFetch(fullUrl);
 
   if (plainHtml) {
-    const result = htmlToCleanMarkdown(plainHtml, fullUrl);
-    const markdown = postProcess(result.markdown, includeLinks, includeImages);
+    // Link and image stripping runs in the worker too (R1).
+    const result = await htmlToCleanMarkdown(plainHtml, fullUrl, { includeLinks, includeImages });
+    const markdown = result.markdown;
     const wordCount = markdown.split(/\s+/).filter(Boolean).length;
 
     if (wordCount < 10) {
@@ -306,8 +293,8 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
     throw mapBrowserlessError(err instanceof Error ? err.message : String(err), fullUrl);
   }
 
-  const result = htmlToCleanMarkdown(browserlessHtml, fullUrl);
-  const browserMarkdown = postProcess(result.markdown, includeLinks, includeImages);
+  const result = await htmlToCleanMarkdown(browserlessHtml, fullUrl, { includeLinks, includeImages });
+  const browserMarkdown = result.markdown;
   const wordCount = browserMarkdown.split(/\s+/).filter(Boolean).length;
 
   if (wordCount < 10 && browserMarkdown.length < 100) {

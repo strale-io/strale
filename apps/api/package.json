@@ -45,6 +45,7 @@
     "jsdom": "^29.0.1",
     "libphonenumber-js": "^1.12.38",
     "p-limit": "^7.3.0",
+    "parse5": "^8.0.0",
     "pino": "^10.3.1",
     "postgres": "^3.4.5",
     "resend": "^6.9.4",

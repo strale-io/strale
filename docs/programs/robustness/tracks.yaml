@@ -9,26 +9,42 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator; Codex builds, Claude reviews (DEC-20261101-A).
-      Check the head of codex/url-to-markdown-parse-bound. It sat at its brief
-      commit 627d8402 at the last check (orchestrator state, 2026-11-06 about 21:05
-      Swedish time). When the head moves, run an independent untrusted-input
-      review in a separate context. The brief, on that branch at
-      docs/lanes/codex/url-to-markdown-parse-bound-brief.md, asks for three
-      things. First, measure before and after. Second, add a linear pre-pass
-      before jsdom that bounds nesting depth, attributes per tag and attribute
-      length, or else a worker with a hard timeout. Third, throw rather than
-      return empty Markdown. Hold the review to the lesson from company-enrich
-      (#947): parse time is what matters, not size. Fix the findings, then open
-      the PR with auto-merge. If no result arrives within the run limit of 3
-      briefs, Claude builds it from the same brief. Then sweep the other places
-      that hand fetched markup to jsdom (lib/company-enrich/structured-metadata.ts,
-      which builds its DOM from bounded HTML since #947, and lib/nta-corporate.ts, which bounds the
-      response before building a DOM) and record each one's bound in a single
-      receipt. Unverified: the jsdom timings in the brief (16 KB nested div 1.5 s,
-      1.4 MB attribute flood 452 s) were measured during the company-enrich
-      reviews; url-to-markdown itself has not been measured, and the brief's
-      first step does that."
+    next_action: "Owner: orchestrator. Codex produced two empty runs, so Claude
+      built R1 (#964, fix/url-to-markdown-parse-bound). Its first independent
+      review FAILED: the markup limits do not bound conversion time (10k flat
+      <div> took 9.4 s in Readability, 29k took 83 s, 15 MB of text 10-40 s).
+      The fix moves the whole conversion into a pool of two worker threads with
+      an 8 s wall-clock limit, a 512 MB heap limit and a bounded queue
+      (lib/readability-convert.ts); past a limit the worker is terminated and
+      the call is refused unbilled. Review round 2 (FAIL) found two more
+      main-thread regexes on the tool's path (the body-text check in
+      web-provider.ts, 4.1 s on 256 KB; the link strip, 1 s): both fixed, with
+      a 4 MB converter input cap and refusal logs. Open follow-ups: per-caller
+      fairness in the converter pool (one caller can occupy it; needs caller
+      identity in executors), and the same regex chain in
+      browserless-extract.ts htmlToText (other tools; the round-3 review
+      measured 26.8 s for 256 KB of repeated <p, reachable from eight tools that fetch
+      a caller URL, so it is the next R1 batch). Round 3 (FAIL) found the text
+      checks still read whole 16 MiB pages (up to 2.2 s) and memory over a 1 GB
+      box; round 4 bounds the checks to 512 KiB, the converter to 2 MiB and a
+      384 MB heap, and fixes the input cut. Round 4 (FAIL) found two hostile
+      pages still reached +850 MB and a regression for client-rendered pages
+      with large inline state; round 5 converts one large page at a time
+      (+326 MB measured) and extends the text window past a straddling
+      script. Round 5 (FAIL): memory follows markup, not size (two 256 KiB
+      pages at +605 MB), and the window extension rescanned (0.5 s). Round 6
+      runs one conversion at a time (four hostile pages +318 MB), frees a
+      slot only after its worker exits, and scans forward only. Round 6:
+      PASS-WITH-NITS; its fixes (a 1 MiB cap on the text window, an exit
+      watchdog, plain worker errors, queue 4 / wait 13 s) are in the PR.
+      Remaining R1 follow-ups: per-caller fairness (one free account can keep
+      the single converter busy), browserless-extract htmlToText, and the
+      rare under-read the forward-only scan accepts. Next: merge #964,
+      merge, then after deploy call url-to-markdown on an ordinary page and
+      confirm it converts (DEC-20260504-C), and write the receipt for the exit
+      below. Then sweep the other places that hand fetched markup to jsdom
+      (lib/company-enrich/structured-metadata.ts, bounded since #947, and
+      lib/nta-corporate.ts) and record each one's bound in that receipt."
     resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     exit:
       - "A receipt shows every adversarial input in the brief (nested div 16, 32

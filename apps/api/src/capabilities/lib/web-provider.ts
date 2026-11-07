@@ -105,6 +105,7 @@ import {
   siteAccessRefusal,
 } from "../../lib/site-access.js";
 import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
+import { bodyHasMoreTextThan } from "./stripped-text-length.js";
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
@@ -574,20 +575,7 @@ async function fetchPageOnce(
           // Heuristic: if body has substantial text content, skip Browserless.
           // Style content is stripped like scripts — embedded CSS inflated
           // bodyText past the bar on EUR-Lex's 2KB challenge page.
-          //
-          // Computed LAZILY (#428 /simplify): the strip allocates several full
-          // copies of the document, and at the 16 MiB cap that is a lot of
-          // churn to spend on a page the two cheap guards are about to reject.
-          const visibleText = () => {
-            const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-            return bodyMatch
-              ? bodyMatch[1]
-                  .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-                  .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-                  .replace(/<[^>]+>/g, "")
-                  .trim()
-              : "";
-          };
+          // Checked last, after the two cheap guards (#428 /simplify).
           // A JS-challenge interstitial ("enable JavaScript and reload") is
           // not content. Accepting it is how eu-regulation-search silently
           // returned "no results" for weeks (P2 triage, 2026-08-12). It used
@@ -598,7 +586,8 @@ async function fetchPageOnce(
           }
           // The whole body was read and is not a challenge.
           sawFirstAnswer = true;
-          if (html.length > 2000 && visibleText().length > 200) {
+          // Linear, and reads at most TEXT_CHECK_WINDOW of the body (R1).
+          if (html.length > 2000 && bodyHasMoreTextThan(html, 200)) {
             const fetchTimeMs = Date.now() - start;
             if (!skipCache) setCache(renderMode, targetUrl, html);
             return { html, cached: false, fetchTimeMs, attempt: 0 };
