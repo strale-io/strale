@@ -9,6 +9,7 @@ import {
   checkedBase64,
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("contract-extract", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();
@@ -89,7 +90,7 @@ registerCapability("contract-extract", async (input: CapabilityInput) => {
     messages,
   });
 
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const output = extractJsonObject(responseText);
   if (!output) throw new Error("Failed to extract contract data.");
   output.disclaimer = "AI-extracted summary. Not legal advice. Verify all terms against the original document.";

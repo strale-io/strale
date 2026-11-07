@@ -18,7 +18,7 @@ The package gives the model two tools built with the AI SDK's `tool()`:
 npm install strale-ai-sdk ai zod
 ```
 
-Requires `ai` 7.x and Node.js 20.3 or later.
+Requires `ai` 7.x and Node.js 22 or later (the `ai` 7 engine requirement).
 
 ## Use
 

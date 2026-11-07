@@ -114,6 +114,8 @@ import {
   DQ36_NEW_SANCTIONS_DESCRIPTION,
   DQ36_OLD_SANCTIONS_DATA_SOURCE,
   DQ36_NEW_SANCTIONS_DATA_SOURCE,
+  DQ46_NEW_SANCTIONS_DATA_SOURCE,
+  DQ46_OLD_SANCTIONS_DATA_SOURCE,
   PHASE0_DK_BUNDLE_SLUGS,
   PHASE0_X402_BUNDLE_SLUGS,
   PHASE0_NARROWED_DESCRIPTIONS,
@@ -134,7 +136,7 @@ const latestDescriptions = new Map([...PUBLIC_DESCRIPTIONS_0124, ...UNLISTED_DES
 // Tools delisted after blocks 0123/0124 froze their copy. Their manifests gain
 // the "Currently unavailable. " prefix that public-descriptions.test.ts
 // requires of every DEACTIVATED slug; the frozen block data does not change.
-const DELISTED_AFTER_0124 = new Set(["price-compare"]);
+const DELISTED_AFTER_0124 = new Set(["price-compare", "eu-trademark-search"]);
 const pinnedManifestDescription = (slug: string, description: string) =>
   DELISTED_AFTER_0124.has(slug) ? `Currently unavailable. ${description}` : description;
 const dialect = new PgDialect();
@@ -1519,6 +1521,11 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0143_publishDomainReputationText",
       "runMigration0144_correctAiLabelAndDependencyAuditText",
       "runMigration0145_vaspRoutingLatency",
+      "runMigration0146_polishCompanyDataAlgorithmic",
+      "runMigration0147_reconcileSerperRenewal",
+      "runMigration0148_deactivateEuTrademarkSearch",
+      "runMigration0149_publishDilisenseSourceText",
+      "runMigration0150_publishPepCheckLimitations",
     ]);
   });
 });
@@ -2458,7 +2465,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(145);
+    expect(Math.max(...numbers)).toBe(150);
   });
 });
 
@@ -3292,7 +3299,9 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     // The description pin moved on 2026-10-26: block 0123 (catalogue copy)
     // rewrites sanctions-check's description, guarded on exactly the text 0122
     // wrote, so the manifest now matches 0123's target. data_source is
-    // untouched by 0123 and still pinned to 0122.
+    // untouched by 0123. Its pin moved on 2026-11-07: block 0149 (DQ-46)
+    // rewrites it, guarded on exactly the text 0122 wrote, so the manifest now
+    // matches 0149's target (startup-migration-0149.test.ts pins that).
     const { readFileSync } = await import("node:fs");
     const yaml = (await import("js-yaml")).default;
     const manifest = yaml.load(
@@ -3301,7 +3310,8 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     const row0123 = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.slug === "sanctions-check")!;
     expect(row0123.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
     expect(manifest.description).toBe(latestDescriptions.get("sanctions-check") ?? row0123.description);
-    expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
+    expect(manifest.data_source).toBe(DQ46_NEW_SANCTIONS_DATA_SOURCE);
+    expect(DQ46_OLD_SANCTIONS_DATA_SOURCE).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
   });
 
   it("the new copy no longer names OFSI and keeps everything else", () => {

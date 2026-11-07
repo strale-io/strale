@@ -56,6 +56,43 @@ if (existsSync(programsDir)) {
   }
 }
 
+const recurringFile = join(root, "docs", "company", "RECURRING.yaml");
+if (existsSync(recurringFile)) {
+  let YAML = null;
+  try { YAML = (await import("yaml")).default; } catch { YAML = null; }
+  if (!YAML) lines.push("Recurring work: docs/company/RECURRING.yaml present, but the yaml package is missing (npm ci)");
+  else {
+    try {
+      const { overdueJobs, stockholmToday, validateRecurring } = await import("./recurring.mjs");
+      const doc = YAML.parse(readFileSync(recurringFile, "utf8"));
+      const today = stockholmToday();
+      const problems = validateRecurring(doc, today);
+      if (problems.length) lines.push(`Recurring work: RECURRING.yaml is invalid — ${oneLine(problems.join("; "))}`);
+      const due = overdueJobs(doc, today);
+      if (due.length) {
+        lines.push(`Recurring work due (docs/company/RECURRING.yaml) — run these before other work, then set last_run:`);
+        for (const job of due) lines.push(`  ${job.id}: last run ${job.lastRun}, ${job.daysSince} day(s) ago, every ${job.cadenceDays} day(s) → ${job.procedure}`);
+      } else lines.push("Recurring work: nothing due (docs/company/RECURRING.yaml)");
+    } catch (error) { lines.push(`Recurring work: RECURRING.yaml could not be read (${String(error.message).split("\n")[0]})`); }
+  }
+}
+
+// Reference data due for a check against its source (robustness R2): the same
+// rows the weekly drift issue lists, shown here so whichever account runs next
+// sees them. Judgment work, like the due-list above.
+const refdataFile = join(root, "config", "reference-data.yaml");
+if (existsSync(refdataFile)) {
+  try {
+    const { dueRows, loadRegister, stockholmToday } = await import("../reference-data-lib.mjs");
+    const due = dueRows(loadRegister(root).datasets ?? [], stockholmToday());
+    if (due.length) {
+      lines.push(`Reference data due for a source check (config/reference-data.yaml; npm run refdata:due), harm A first:`);
+      for (const d of due.slice(0, 5)) lines.push(`  [${d.harm}] ${d.id}: ${d.kind}, due ${d.due} → ${oneLine(d.recheck_against)}`);
+      if (due.length > 5) lines.push(`  …and ${due.length - 5} more`);
+    } else lines.push("Reference data: nothing due (config/reference-data.yaml)");
+  } catch (error) { lines.push(`Reference data: register could not be read (${String(error.message).split("\n")[0]})`); }
+}
+
 const stateDir = join(root, ".claude", "state", "handoff");
 for (const provider of ["codex", "claude"]) {
   const last = join(stateDir, `last-${provider}.json`);

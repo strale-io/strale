@@ -12,6 +12,7 @@ import {
   readBodyWithLimit,
   readPageHtml,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
 const ORG_NUMBER_RE = /^(\d{6})-?(\d{4})$/;
@@ -306,7 +307,7 @@ registerCapability(
     }
 
     const text =
-      response.content[0]?.type === "text" ? response.content[0].text : "";
+      messageText(response);
 
     const parsed = extractJsonObject(text);
     if (!parsed) {

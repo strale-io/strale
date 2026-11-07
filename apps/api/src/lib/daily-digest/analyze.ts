@@ -3,6 +3,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { DigestData } from "./types.js";
 import { logError, logWarn } from "../log.js";
 import { MODELS } from "../models.js";
+import { messageText } from "../llm-response.js";
 
 export interface DigestAnalysis {
   situationAssessment: string;
@@ -131,7 +132,7 @@ export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
       messages: [{ role: "user", content: buildPrompt(data) }],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text = messageText(response);
 
     // Strip markdown fences if present
     const cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();

@@ -361,6 +361,10 @@ const DEACTIVATED = new Map<string, string>([
     "price-compare",
     "deactivated 2026-10-30: price-compare reads www.pricerunner.<tld>/search, which redirects to /results, and PriceRunner's robots.txt has Disallow: /results for User-agent: * — since PR #786 (2026-10-28) every call fails the robots.txt check, so the source cannot be read under DEC-20261023-A. Reactivate only on a price source whose terms and robots.txt permit per-call automated reads (an official/affiliate product API); also set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
   ],
+  [
+    "eu-trademark-search",
+    "deactivated 2026-11-06 (DQ-42, approved by Petter): eu-trademark-search renders euipo.europa.eu/eSearch/, and EUIPO's robots.txt has disallow: /eSearch/ for every agent — since PR #786 (2026-10-28) every call fails the robots.txt check and is not charged, so the source cannot be read under DEC-20261023-A (archive/receipts/2026-10-30-check-source-robots-access.json). Block 0148 records the reason in the database. Relist when the rebuild on EUIPO's official Trademark Search API ships (it needs the free EUIPO developer account Petter approved on 2026-11-06): remove this entry, set is_active, visible and x402_enabled back and clear deactivation_reason in the database (the sync here only ever deactivates)",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21

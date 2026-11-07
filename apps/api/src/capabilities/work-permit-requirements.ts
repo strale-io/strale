@@ -1,6 +1,51 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // ─── Work permit requirements — pure algorithmic rule engine ──────────────────
+//
+// Reference data checked against the issuing authorities on 2026-11-06. Update
+// on each change listed below and move this date.
+//   - UK Skilled Worker salary: gov.uk/skilled-worker-visa/your-job (the higher
+//     of GBP 41,700 a year or the going rate for the occupation).
+//   - UK visit: gov.uk Immigration Rules, Appendix Visitor: Visa national list
+//     (Colombia and Ukraine are visa nationals; Switzerland is not) and
+//     gov.uk/eta (most visa-free visitors need an Electronic Travel
+//     Authorisation; British and Irish passport holders do not).
+//   - Ireland and the UK: gov.uk Common Travel Area guidance (Irish citizens in
+//     the UK and British citizens in Ireland can live and work without
+//     permission).
+//   - Germany EU Blue Card: Bundesministerium des Innern, Bekanntmachung zu
+//     § 18g AufenthG of 2 December 2025 (BAnz AT 18.12.2025 B3): EUR 50,700,
+//     and EUR 45,934.20 under § 18g(1) sentence 2 and (2), for 2026. Updated
+//     every 1 January. (make-it-in-germany.com refused automated reads behind
+//     a bot challenge, so the Bundesanzeiger notice was used.)
+//   - Sweden: Migrationsverket "Work permit for employees": salary of at least
+//     90% of the median salary (SEK 34,470 a month from 16 June 2026, median
+//     SEK 38,300) and terms on par with Swedish collective agreements or
+//     practice in the occupation.
+//   - Schengen short stays: Regulation (EU) 2018/1806 Annex II, consolidated
+//     version of 30 December 2025 on EUR-Lex. SCHENGEN_WAIVER is a partial
+//     list of Annex II nationalities.
+//   - US visits: DHS Visa Waiver Program country list (42 countries, dhs.gov)
+//     and 9 FAM 201.1 (Canadian citizens need neither a visa nor an ESTA for
+//     visits). travel.state.gov refused automated reads (HTTP 403).
+//   - Canada visits: canada.ca "Find out if you need a visa" (eTA-only list,
+//     and the visa-required countries whose citizens may get an eTA instead
+//     when flying and meeting conditions; US citizens need neither).
+// Unverified as of 2026-11-06 (left as they were): the Australia visit lists
+// (immi.homeaffairs.gov.au refused automated reads), the 90/180-day stay
+// lengths, the Swedish processing time, the Swiss permit wording and the
+// qualitative per-destination notes for NO, DK, FI, NL, FR, ES, IT, IE, US,
+// CA and AU work routes.
+export const WORK_PERMIT_RULES_AS_OF = "2026-11-06";
+
+export const UK_SKILLED_WORKER_NOTE =
+  "Skilled Worker visa requires a salary of at least GBP 41,700 a year or the going rate for the occupation, whichever is higher.";
+export const DE_BLUE_CARD_NOTE =
+  "Germany: EU Blue Card available for qualified professionals (min. salary EUR 50,700 / EUR 45,934.20 for shortage occupations in 2026).";
+export const SE_SALARY_NOTE =
+  "Sweden: Work permit generally requires a job offer with a salary of at least 90% of the median salary (SEK 34,470 a month from 16 June 2026), with lower thresholds for some listed occupations and transitional extensions, and terms at least on par with Swedish collective agreements or practice in the occupation.";
+export const UK_ETA_NOTE =
+  "An Electronic Travel Authorisation (ETA) is usually required to visit the UK without a visa.";
 
 // EU/EEA member states
 const EU_EEA = new Set([
@@ -14,11 +59,43 @@ const EU_EEA = new Set([
 // Nordic Passport Union countries
 const NORDIC = new Set(["SE", "NO", "DK", "FI", "IS"]);
 
-// Schengen visa-waiver countries (90 days visa-free for short stays)
+// Schengen visa-waiver countries (90 days visa-free for short stays); a partial
+// list of Regulation (EU) 2018/1806 Annex II.
 const SCHENGEN_WAIVER = new Set([
   "US", "CA", "AU", "NZ", "JP", "KR", "SG", "IL", "BR", "MX",
   "AR", "CL", "CR", "UY", "CO", "PE", "PA", "HK", "TW", "MY",
   "AE", "BN", "GB", "UA",
+]);
+
+// UK visit: nationalities in SCHENGEN_WAIVER that are on the UK visa national
+// list, and Switzerland, which is not (Appendix Visitor: Visa national list).
+const UK_VISA_NATIONALS_IN_WAIVER = new Set(["CO", "UA"]);
+const UK_NON_VISA_EXTRA = new Set(["CH", "SA"]); // not on the UK visa-national list (Immigration Rules, Appendix Visitor: visa national list)
+
+// US Visa Waiver Program designated countries (dhs.gov, 42 countries).
+export const US_VWP: ReadonlySet<string> = new Set([
+  "AD", "AU", "AT", "BE", "BN", "CL", "HR", "CZ", "DK", "EE",
+  "FI", "FR", "DE", "GR", "HU", "IS", "IE", "IL", "IT", "JP",
+  "KR", "LV", "LI", "LT", "LU", "MT", "MC", "NL", "NZ", "NO",
+  "PL", "PT", "QA", "SM", "SG", "SK", "SI", "ES", "SE", "CH",
+  "TW", "GB",
+]);
+
+// Canada: visa-exempt nationalities that need only an eTA to fly (canada.ca).
+// Romania: electronic passport holders only.
+export const CA_ETA_ONLY: ReadonlySet<string> = new Set([
+  "AD", "AU", "AT", "BS", "BB", "BE", "GB", "BN", "BG", "CL",
+  "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HK",
+  "HU", "IS", "IE", "IL", "IT", "JP", "LV", "LI", "LT", "LU",
+  "MT", "MC", "NL", "NZ", "NO", "PG", "PL", "PT", "QA", "KR",
+  "RO", "WS", "SM", "SG", "SK", "SI", "SB", "ES", "SE", "CH",
+  "TW", "AE", "VA",
+]);
+// Canada: visa-required nationalities that may get an eTA instead when flying
+// and meeting conditions (canada.ca).
+const CA_ETA_CONDITIONAL = new Set([
+  "AG", "AR", "BR", "CR", "ID", "MY", "MX", "MA", "PA", "PH",
+  "KN", "LC", "VC", "SC", "TH", "TT", "UY",
 ]);
 
 // Country names
@@ -159,6 +236,13 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
     freeMovement = true;
     summary = `Swiss citizens have free movement rights in the EU/EEA under the bilateral agreement. Registration with local authorities required.`;
   }
+  // Ireland <-> UK: Common Travel Area (no permission needed to live or work)
+  else if ((nationality === "IE" && isDestUK) || (isNatUK && destination === "IE")) {
+    visaRequired = false;
+    permitType = "none";
+    freeMovement = true;
+    summary = `Under the Common Travel Area, ${natName} citizens can live and work in ${destName} without a visa or permission.`;
+  }
   // EU citizen → UK (post-Brexit)
   else if (isNatEU && isDestUK) {
     if (purpose === "visit") {
@@ -166,11 +250,12 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
       permitType = "none";
       maxStayDays = 180;
       summary = `EU citizens can visit the UK for up to 6 months without a visa but cannot work.`;
+      notes.push(UK_ETA_NOTE);
     } else {
       visaRequired = true;
       permitType = "skilled_worker_visa";
       summary = `Since Brexit, EU citizens need a Skilled Worker visa to work in the UK. A job offer from a licensed sponsor is required.`;
-      notes.push("Skilled Worker visa requires a minimum salary threshold (typically GBP 26,200 or the going rate).");
+      notes.push(UK_SKILLED_WORKER_NOTE);
       notes.push("Points-based immigration system applies.");
     }
   }
@@ -210,10 +295,10 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
 
       // Destination-specific notes
       if (destination === "SE") {
-        notes.push("Sweden: Work permit requires a job offer with salary meeting collective agreement standards.");
+        notes.push(SE_SALARY_NOTE);
         notes.push("Processing time: typically 1-6 months.");
       } else if (destination === "DE") {
-        notes.push("Germany: EU Blue Card available for qualified professionals (min. salary EUR 45,300 / EUR 41,041.80 for shortage occupations in 2024).");
+        notes.push(DE_BLUE_CARD_NOTE);
         notes.push("Opportunity Card (Chancenkarte) available for job seekers.");
       } else if (destination === "NL") {
         notes.push("Netherlands: Highly Skilled Migrant visa (Kennismigrant) available through recognized sponsors.");
@@ -253,11 +338,15 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
   }
   // Non-EU → UK
   else if (!isNatEU && isDestUK) {
-    if (purpose === "visit" && isSchengenWaiver) {
+    const ukVisaFree =
+      (isSchengenWaiver && !UK_VISA_NATIONALS_IN_WAIVER.has(nationality)) ||
+      UK_NON_VISA_EXTRA.has(nationality);
+    if (purpose === "visit" && ukVisaFree) {
       visaRequired = false;
       permitType = "none";
       maxStayDays = 180;
       summary = `${natName} citizens can visit the UK for up to 6 months without a visa but cannot work.`;
+      notes.push(UK_ETA_NOTE);
     } else if (purpose === "visit") {
       visaRequired = true;
       permitType = "visitor_visa";
@@ -268,12 +357,17 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
       permitType = "skilled_worker_visa";
       summary = `${natName} citizens need a Skilled Worker visa to work in the UK. Requires a job offer from a licensed sponsor.`;
       notes.push("Points-based system. Minimum salary threshold applies.");
+      notes.push(UK_SKILLED_WORKER_NOTE);
       notes.push("Global Talent visa available for leaders/potential leaders in specific fields.");
     }
   }
   // Non-EU → US
   else if (destination === "US") {
-    if (purpose === "visit" && isSchengenWaiver) {
+    if (purpose === "visit" && nationality === "CA") {
+      visaRequired = false;
+      permitType = "none";
+      summary = `Canadian citizens generally do not need a visa or an ESTA to visit the US.`;
+    } else if (purpose === "visit" && US_VWP.has(nationality)) {
       visaRequired = false;
       permitType = "esta_waiver";
       maxStayDays = 90;
@@ -296,13 +390,24 @@ registerCapability("work-permit-requirements", async (input: CapabilityInput) =>
   }
   // Non-EU → Canada
   else if (destination === "CA") {
-    if (purpose === "visit") {
-      visaRequired = !["US", "GB", "AU", "NZ", "FR", "DE"].includes(nationality);
+    if (purpose === "visit" && nationality === "US") {
+      visaRequired = false;
+      permitType = "none";
+      maxStayDays = 180;
+      summary = `US citizens do not need a visa or an eTA to visit Canada.`;
+    } else if (purpose === "visit") {
+      visaRequired = !CA_ETA_ONLY.has(nationality);
       permitType = visaRequired ? "visitor_visa" : "eta_waiver";
       maxStayDays = 180;
       summary = visaRequired
         ? `${natName} citizens need a visitor visa for Canada.`
         : `${natName} citizens can visit Canada with an eTA (Electronic Travel Authorization) for up to 6 months.`;
+      if (CA_ETA_CONDITIONAL.has(nationality)) {
+        notes.push("Citizens of this country may be eligible for an eTA instead of a visa when travelling by air and meeting certain requirements.");
+      }
+      if (nationality === "RO") {
+        notes.push("eTA applies to electronic passport holders only.");
+      }
     } else {
       visaRequired = true;
       permitType = "work_permit";

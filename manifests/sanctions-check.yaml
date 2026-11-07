@@ -48,16 +48,16 @@ output_schema:
         last_updated_at: null
     lists_queried:
       collection: dilisense/consolidated-sanctions
-      source_count: 134
+      source_count: 120
       major_lists:
         - "OFAC — Specially Designated Nationals (SDN)"
         - "European Commission — Consolidated List of Financial Sanctions"
         - "UN Security Council — Consolidated List"
-        - "HMT OFSI — Financial Sanctions"
+        - "UK Government — Sanctions List"
         - "SECO — Switzerland Sanctions"
         - "BIS — Entity List"
-        - "(plus ~128 more)"
-      freshness_note: "Dilisense aggregates 130+ sanctions, debarment, and restrictive-measure lists into a consolidated index. The publisher refreshes the consolidated index multiple times daily; per-list timestamps are not exposed via the screening API."
+        - "(plus ~114 more)"
+      freshness_note: "Dilisense consolidates 120 sanctions and restrictive-measure lists into one index, and states that it is updated every 60 minutes. Per-list timestamps are not exposed by the screening API."
       source_catalog_url: "https://dilisense.com/en/sources/sanction-sources"
       version: null
       last_updated_at: null
@@ -131,7 +131,7 @@ output_schema:
         - dilisense
     queried_at:
       type: string
-data_source: Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)
+data_source: Dilisense consolidated (120 sanctions and restrictive-measure lists, including OFAC SDN, EU FSF, UN SC, the UK Sanctions List, CH SECO and BIS; full attribution at https://dilisense.com/en/sources/sanction-sources)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch

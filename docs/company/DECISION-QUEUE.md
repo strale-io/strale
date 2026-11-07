@@ -14,6 +14,51 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-47** · `answered` · owner Petter · raised 2026-11-07 · answered 2026-11-07 (approved) — **the PEP check's published limitations still say it runs on OpenSanctions and suggest an "LLM fallback"; neither has been true since April**
+
+*Answer (2026-11-07):* Petter, in session: "approve DQ-47". Published by startup block 0150 (`0150-publish-pep-check-limitations.ts`): it removes the five named rows by exact text and adds the manifest's three, word for word.
+
+*Why it is yours:* compliance tools' published text changes only with your approval (the boot sync refuses it, `manifest-publication-policy.ts`), as DQ-36 and DQ-46 did.
+
+*What is established (read from the public route `/v1/public/ops/limitations/capabilities/pep-check` on 2026-11-07, during the independent review of PR #969):*
+1. Production shows five limitation rows for `pep-check`, written before the switch to Dilisense on 2026-04-27 (commit `16ca790`) and never replaced, because compliance rows do not sync.
+2. One says "Coverage depends on OpenSanctions dataset — may not include all national PEP lists". We no longer use OpenSanctions.
+3. One advises to "use the LLM fallback as a secondary signal". There is no LLM fallback.
+4. Two say the same thing about fuzzy name matching.
+5. The fifth, on update frequency, is corrected by DQ-46 (block 0149).
+6. `manifests/pep-check.yaml` carries the current set of three, written for Dilisense: national coverage is not verified for each call; common names can produce false matches; per-list update timestamps are not returned.
+
+*Proposed change:* replace the five production rows with the manifest's three, word for word, the way block 0143 did for `domain-reputation` (rows not in the manifest are removed, missing ones added in manifest order). All three narrow or correct what we say; none adds a claim.
+
+*Options:* approve; edit any of the three texts first; or leave the five rows as they are.
+
+*Recommendation:* approve. A session then writes the startup block and checks the public route after deploy.
+
+*Consequence:* approving removes two false statements about our sources from a compliance tool's public page. Not approving keeps them visible to anyone who checks.
+
+**DQ-46** · `answered` · owner Petter · raised 2026-11-07 · answered 2026-11-07 (approved as written) — **the public description of our sanctions check still names five blacklists we cannot show we screen; a narrower text is drafted for you to approve**
+
+*Answer (2026-11-07):* Petter, in session: "approve DQ-46". Published by startup block 0149 (`0149-publish-dilisense-source-text.ts`, PR #969), which changes each text only if production still holds the old wording: the sanctions data source, both sample responses, and the PEP freshness limitation as it reads in production ("updated multiple times per day" becomes "once a day by default"; its 48-hour lag sentence is kept). The review of #969 found the PEP tool's other published limitations still predate Dilisense; that is DQ-47.
+
+*Why it is yours:* compliance tools' published text only changes with your approval: the boot-time sync reports it and writes nothing (`apps/api/src/lib/manifest-publication-policy.ts`, `isReportOnly`), and the current wording was published under your DQ-36 approval (startup block 0122).
+
+*What is established (Dilisense's own catalogue pages, read 2026-11-07, robots.txt allows; PR #966):*
+1. The sanctions tool's public data source says it screens "World Bank, EBRD, ADB + 125 national sanctions/debarment lists". Dilisense lists the development-bank debarment lists only as paid add-ons, "switched on and off per client". Strale is on Dilisense's free tier, so they are not screened.
+2. The catalogue marks 120 sanctions lists as included (five more are paid-only). We say 134 in some places and "130+" in others.
+3. The sample response in both tools' descriptions still shows 134 lists, a retired UK list ("HMT OFSI — Financial Sanctions") and "multiple times daily"; the PEP tool's limitation says Dilisense refreshes PEP data "multiple times daily", while Dilisense says "once a day by default, and more often for highly important PEPs".
+4. PR #966 already corrects what every response carries (the `lists_queried` block), which is code, not published text. This entry is only about the published descriptions.
+
+*Proposed wording (all narrow what we say):*
+1. Sanctions data source: "Dilisense consolidated (120 sanctions and restrictive-measure lists, including OFAC SDN, EU FSF, UN SC, the UK Sanctions List, CH SECO and BIS; full attribution at https://dilisense.com/en/sources/sanction-sources)".
+2. Both sample responses: the same lists, count and update wording as the live response after PR #966.
+3. PEP limitation: "Dilisense updates its PEP data once a day by default, and more often for highly important PEPs."
+
+*Options:* approve as written; edit; or leave the published text as it is (it keeps naming lists we do not screen).
+
+*Recommendation:* approve as written. A session then publishes it the way block 0122 did (a startup block that changes the text only if it still matches the old wording) and checks it in production.
+
+*Consequence:* approving removes a claim a customer's auditor could catch. Not approving keeps public text that contradicts what each response now says.
+
 **DQ-45** · `answered` · owner Petter · raised 2026-11-05 · answered 2026-11-05 (approved as written) — **four sentences in the Terms and Privacy pages are out of date; here is the corrected wording, which goes live with the new site unless you change it**
 
 *Answer (2026-11-05):* Petter, in session: "approve DQ-45". All four changes are applied as written in `apps/web/src/pages/terms.astro` and `privacy.astro`. Both pages' last-updated dates move to 5 November 2026. The Terms date was not named in the entry; it moves because the Terms text changed. They go live with the new site.
@@ -56,7 +101,9 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *Consequence:* renewing costs about $10.40 a month including VAT, against a few euros of income from these tools today. Longer term, another search provider sells a $50 balance that never expires, which at our volume would last years instead of six months; that needs their written permission to resell first, and is a separate decision. Lapsing saves that and removes web search from the catalogue on 8 November.
 
-**DQ-43** · `your_call` · owner Petter · raised 2026-10-30 · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+**DQ-43** · `answered` · owner Petter · raised 2026-10-30 · answered 2026-11-06 (yes) · authorization, not judgement — **Japan's tax agency said yes to the invoice-number check; the last step is a form for Moonlighter AB**
+
+*Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
 
 *Settled:* the Japan qualified-invoice-issuer check is portfolio plan item 1.13, approved under DEC-20261024-B. The NTA invoice-system office replied on 2026-10-29 (OUTBOX row `nta-invoice-app-id`): the invoice Web-API permission can be added to the corporate-number application ID we already hold, through the application-ID change notification (`https://www.invoice-kohyo.nta.go.jp/web-api/pre-change`, email-change fields left empty), with our 2026-10-27 email text uploaded as a Word file as the usage document.
 
@@ -64,7 +111,11 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 
 *What I need:* your go for this form. A local session then fills it up to the final button and prepares the Word file; you submit.
 
-**DQ-42** · `your_call` · owner Petter · raised 2026-10-30 — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+**DQ-42** · `answered` · owner Petter · raised 2026-10-30 · answered 2026-11-06 (yes, free EUIPO account) — **our EU trademark search stopped working on 28 October under our own robots.txt rule; the official free EUIPO API needs an account only you can open**
+
+*Answer (2026-11-06):* Petter said yes in the orchestrator session (decision 8 in `handoff/_general/from-code/2026-11-06-petter-decisions-growth.md`). A session prepares the form up to its final button; Petter clicks it. Open until submitted.
+
+*Answer (2026-11-06, delisting):* Petter answered in the Strale master session (session_01Ms71ZkYLtEVEsZBfEXzD9i): "yes, delist eu-trademark-search if it cant be fixed". It cannot be fixed today, because the only permitted fix is the rebuild on EUIPO's official Trademark Search API and that needs the account. So `eu-trademark-search` is delisted: added to DEACTIVATED in `auto-register.ts`, its reason recorded in the database by startup block 0148, and its description marked "Currently unavailable". Relist it when the EUIPO API rebuild ships. Still open: creating the free EUIPO developer account. A session fills the form up to its final button; Petter clicks it.
 
 *What is established (2026-10-30 morning run, production read-only):*
 - Since the 2026-10-28 fetch-hardening deploy, tools that read a public page as their source check its robots.txt (DEC-20261023-A adoption work). `eu-trademark-search` renders `euipo.europa.eu/eSearch/`, and EUIPO's robots.txt has `disallow: /eSearch/` for every agent. The production parser refuses it; a registered account's paid call failed with exactly that on 2026-10-29 13:40Z and was not charged.
@@ -90,6 +141,8 @@ The Terms link text "strale.dev/capabilities" becomes "strale.io/tools" at the s
 *What I need:* the one-time key set in both places. After that, running the onboarding (mode `onboard` for the four slugs, then mode `limitations`, slugs `all`) is a delegated `capability_onboarding` action the next session can trigger and verify.
 
 **Update 2026-10-28 (morning run):** still blocked — `POST /v1/internal/onboarding/run` → 503 `not_configured`; `GET /v1/capabilities/entity-resolve` → 404. **The ask has narrowed to the four new tools.** #776 (merged 2026-10-27) applies reviewed manifest text after every deploy; it ran on the deployed tip `f2270a61` (322 of 356 rows carry its hash) and the strict drift sweep shows no limitation drift on any writable tool. Not applied, by design: the 22 compliance/risk-synthesis tools the sync treats as report-only (their rewritten wording stays with Petter under CHARTER.md), the four new tools, and the six 2026-05-16 manifests not in the table. **Note for the session that runs the button:** its `limitations` mode has no report-only guard, so run it for named non-compliance slugs only, never `all`, unless Petter has approved publishing the compliance wording.
+
+**Update 2026-11-06 (Strale master, evidence):** the ask is done. The onboarding key was set and the button has run: Actions run 41035841605 (2026-10-30, success) onboarded `eurostat-data`, `entity-resolve`, `company-status-check` and `invoice-counterparty-check`; a repeat run tonight (42279405310) answered `already_exists` for all four. No onboarding run is waiting for approval (`gh run list --status waiting` and `--status pending` return nothing). The four tools are dark-launched, so `GET /v1/capabilities/<slug>` answers 404 by design (DEC-20260812-A); the free three promote themselves after a green week, and `invoice-counterparty-check` (paid upstream, no harness green week) needs a promotion path, which is session work. Nothing here waits on Petter; this item stays `your_call` only until he closes it (DEC-20260822-A part 4).
 
 **DQ-40** · `your_call` · owner Petter · raised 2026-10-26 12:10 CET · answered 2026-10-26, open until the registers reply — **three official registers' published terms do not grant resale: the Swiss UID register and Zefix (reproduction needs written consent) and the Czech ARES (use permitted, reuse licence not declared); three live tools resell them**
 

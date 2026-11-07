@@ -628,6 +628,11 @@ jobs:
       - run: npm run vendor-terms:test
       - run: npm run vendors:check
       - run: npm run vendors:test
+      # Reference-data register (robustness R2): the register agrees with the
+      # code's *_AS_OF constants. Never fails on elapsed time; due rows are
+      # reported by weekly-drift.yml.
+      - run: npm run refdata:check
+      - run: npm run refdata:test
       # Shadow distribution-surfaces register (M3 batch 3, T6,
       # docs/operations/distribution-registry.yaml). Not authoritative
       # until the founder-gated M4 cutover, but validated (schema, unique

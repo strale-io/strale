@@ -167,6 +167,20 @@ mechanisms:
       live contract failure, a request the executor no longer makes, a moved
       status, or a recording older than 90 days.
 
+  - id: weekly-drift-reference-data
+    workflow: .github/workflows/weekly-drift.yml
+    trigger: schedule
+    step:
+      match: id
+      value: reference-data
+    runs: scripts/check-reference-data.mjs
+    secrets: {}
+    purpose: >
+      Lists the reference datasets hard-coded into the tools (FATF and EU
+      lists, VAT and tax rates, legal deadlines, code lists) whose check
+      against their source is due, from config/reference-data.yaml
+      (robustness R2). Due rows land in the weekly drift issue.
+
   - id: m3-digest-shadow-comparison
     workflow: .github/workflows/m3-digest-shadow.yml
     trigger: schedule

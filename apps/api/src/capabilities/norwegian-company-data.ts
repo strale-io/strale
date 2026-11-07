@@ -13,6 +13,7 @@ import {
   type BrregRollerResponse,
 } from "../lib/brreg-fetch.js";
 import { firstString } from "./lib/input-aliases.js";
+import { messageText } from "../lib/llm-response.js";
 
 async function extractCompanyName(naturalLanguage: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -31,9 +32,7 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   });
 
   const name =
-    response.content[0].type === "text"
-      ? response.content[0].text.trim().replace(/^["']|["']$/g, "")
-      : "";
+    messageText(response).trim().replace(/^["']|["']$/g, "");
   if (!name) throw new Error(`Could not identify a company name from: "${naturalLanguage}".`);
   return name;
 }

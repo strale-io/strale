@@ -3,6 +3,7 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import type Anthropic from "@anthropic-ai/sdk";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("structured-scrape", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? "").trim();
@@ -40,7 +41,7 @@ ${text.slice(0, 12000)}`,
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const jsonMatch = responseText.match(/[\[{][\s\S]*[\]}]/);
   if (!jsonMatch) throw new Error("Failed to extract structured data from the page.");
 

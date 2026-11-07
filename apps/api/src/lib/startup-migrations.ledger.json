@@ -1161,6 +1161,71 @@
         "capabilities.avg_latency_ms"
       ],
       "sha256": "bfc712c7b8745f0193fd2b6b58bf7f0d1a46c918c2a705c7cef695b817ba9caa"
+    },
+    {
+      "id": "M089",
+      "function": "runMigration0146_polishCompanyDataAlgorithmic",
+      "title": "Polish Company Data Algorithmic",
+      "added": "2026-11-06",
+      "columns_written": [
+        "capabilities.capability_type",
+        "capabilities.transparency_tag"
+      ],
+      "sha256": "be596c763650b0811a4f4ab9f25d2a86a5431f4af0f6b4708ba38286db056bfe"
+    },
+    {
+      "id": "M090",
+      "function": "runMigration0147_reconcileSerperRenewal",
+      "title": "Reconcile Serper Renewal",
+      "added": "2026-11-06",
+      "columns_written": [
+        "vendor_accounts.expires_at",
+        "vendor_accounts.included_units",
+        "vendor_accounts.metadata",
+        "vendor_accounts.remaining_units",
+        "vendor_accounts.used_units"
+      ],
+      "sha256": "d4a1b6a5da879d3254fba5e4f21cce60bc1cbc6f9d66553da5cae494730fd5e4"
+    },
+    {
+      "id": "M091",
+      "function": "runMigration0148_deactivateEuTrademarkSearch",
+      "title": "Deactivate Eu Trademark Search",
+      "added": "2026-11-06",
+      "columns_written": [
+        "capabilities.deactivation_reason",
+        "capabilities.updated_at"
+      ],
+      "sha256": "dad56e6de6654d767178e74720022ab9977497768864db317b2b2e06524c60b5"
+    },
+    {
+      "id": "M092",
+      "function": "runMigration0149_publishDilisenseSourceText",
+      "title": "Publish Dilisense Source Text",
+      "added": "2026-11-07",
+      "columns_written": [
+        "capabilities.data_source",
+        "capabilities.output_schema",
+        "capability_limitations.limitation_text",
+        "capability_limitations.title"
+      ],
+      "sha256": "a026f4604de7fdf793309f9882cd2614d2214be2ce02a381077e6143180e9c9b"
+    },
+    {
+      "id": "M093",
+      "function": "runMigration0150_publishPepCheckLimitations",
+      "title": "Publish Pep Check Limitations",
+      "added": "2026-11-07",
+      "columns_written": [
+        "capability_limitations.capability_slug",
+        "capability_limitations.category",
+        "capability_limitations.limitation_text",
+        "capability_limitations.severity",
+        "capability_limitations.sort_order",
+        "capability_limitations.title",
+        "capability_limitations.workaround"
+      ],
+      "sha256": "10c8d7921c994ea200b390b62153611b2cdcb4832171ba89507b6f8e1582f9e5"
     }
   ],
   "known_overlaps": [
@@ -1304,9 +1369,10 @@
         "M055",
         "M064",
         "M065",
-        "M083"
+        "M083",
+        "M091"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 12): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M011, M014, M015, M016, M017, M018, M019, M020, M029, M040, M042, M044. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M064 (0121, 2026-10-23, Phase 0 catalogue repairs) writes this column once (ledgered; never on a later boot) and only for named slugs: the four Danish bundles (delist), kyb-complete-se (relist), the kyb-essentials/kyb-complete/invoice-verify bundles for AT, GR, HR, IE and SG, the capabilities cz-unreliable-vat-payer, no-bankruptcy-check and fr-bodacc-lookup, and five description rows; each UPDATE is guarded on the row still being in its pre-repair state. None of those slugs is touched by the other writers (M040 acts only on rows recorded in vendor_*_suspensions for OpenRegister, i.e. German-registry dependants; M049 only us-court-search; M052 only the four growth bundles; M029 only url-to-markdown; M055 only its eight free APIs), so it cannot fight them. M065 (0122, 2026-10-23, DQ-36) writes this column once (ledgered) and only for slug = 'sanctions-check', guarded on the exact old OFSI wording; no other writer touches that slug. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 12): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M011, M014, M015, M016, M017, M018, M019, M020, M029, M040, M042, M044. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M064 (0121, 2026-10-23, Phase 0 catalogue repairs) writes this column once (ledgered; never on a later boot) and only for named slugs: the four Danish bundles (delist), kyb-complete-se (relist), the kyb-essentials/kyb-complete/invoice-verify bundles for AT, GR, HR, IE and SG, the capabilities cz-unreliable-vat-payer, no-bankruptcy-check and fr-bodacc-lookup, and five description rows; each UPDATE is guarded on the row still being in its pre-repair state. None of those slugs is touched by the other writers (M040 acts only on rows recorded in vendor_*_suspensions for OpenRegister, i.e. German-registry dependants; M049 only us-court-search; M052 only the four growth bundles; M029 only url-to-markdown; M055 only its eight free APIs), so it cannot fight them. M065 (0122, 2026-10-23, DQ-36) writes this column once (ledgered) and only for slug = 'sanctions-check', guarded on the exact old OFSI wording; no other writer touches that slug. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare. M091 (0148, 2026-11-06, DQ-42) writes deactivation_reason and updated_at for the single slug 'eu-trademark-search' (EUIPO robots.txt disallows /eSearch/), once (run policy once), guarded on all three flags already being false and the reason not yet set, so it cannot fight the other writers: M083 only price-compare, M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches eu-trademark-search."
     },
     {
       "column": "capabilities.visible",
@@ -1478,9 +1544,10 @@
       "blocks": [
         "M040",
         "M049",
-        "M083"
+        "M083",
+        "M091"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M083 (0140, 2026-10-30) delists the single slug 'price-compare' (PriceRunner robots.txt disallows /results), once (run policy once; guarded on the row still being listed on some surface), so it cannot fight the other writers: M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches price-compare. M091 (0148, 2026-11-06, DQ-42) writes deactivation_reason and updated_at for the single slug 'eu-trademark-search' (EUIPO robots.txt disallows /eSearch/), once (run policy once), guarded on all three flags already being false and the reason not yet set, so it cannot fight the other writers: M083 only price-compare, M049 only us-court-search, M064 only its named slugs, M040 only OpenRegister dependants, M055 only its eight free APIs; none touches eu-trademark-search."
     },
     {
       "column": "solutions.updated_at",
@@ -1592,9 +1659,10 @@
       "column": "capabilities.output_schema",
       "blocks": [
         "M050",
-        "M063"
+        "M063",
+        "M092"
       ],
-      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row."
+      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row. M092 (0149, 2026-11-07, DQ-46) writes only the example.lists_queried subtree of 'sanctions-check' and 'pep-check', neither of which is in CAPABILITY_OUTPUT_CONTRACTS (M050 writes only the properties subtree of its seven slugs) or is fear-greed-index (M063); guarded on the exact pre-DQ-46 JSON and run once, so it cannot fight either writer."
     },
     {
       "column": "solutions.deactivation_reason",
@@ -1691,17 +1759,20 @@
       "column": "capabilities.data_source",
       "blocks": [
         "M065",
-        "M086"
+        "M086",
+        "M092"
       ],
-      "note": "M065 (0122, 2026-10-23, DQ-36) rewrites data_source only for slug = 'sanctions-check', guarded on the exact old OFSI wording, once (ledgered). M086 (0143, 2026-11-06) rewrites data_source only for slug = 'domain-reputation', guarded on IS DISTINCT FROM its new text, once (run policy once; Petter's 2026-11-06 approval to publish the narrowed text). The slugs are disjoint, so they cannot fight. Neither runs again after its first applied boot; the boot manifest text sync refuses the compliance-category domain-reputation row until approved."
+      "note": "M065 (0122, 2026-10-23, DQ-36) rewrites data_source only for slug = 'sanctions-check', guarded on the exact old OFSI wording, once (ledgered). M086 (0143, 2026-11-06) rewrites data_source only for slug = 'domain-reputation', guarded on IS DISTINCT FROM its new text, once (run policy once; Petter's 2026-11-06 approval to publish the narrowed text). The slugs are disjoint, so they cannot fight. Neither runs again after its first applied boot; the boot manifest text sync refuses the compliance-category domain-reputation row until approved. M092 (0149, 2026-11-07, DQ-46) rewrites data_source only for 'sanctions-check', guarded on exactly the text M065 wrote, once (run policy once). M065 has already applied in production and never runs again, so the two run in sequence and cannot fight; M086 is a different slug."
     },
     {
       "column": "capability_limitations.limitation_text",
       "blocks": [
         "M086",
-        "M087"
+        "M087",
+        "M092",
+        "M093"
       ],
-      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes title and limitation_text of the one active pep-check freshness row whose text equals its 2026-11-07 production text, once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit). M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run."
     },
     {
       "column": "capability_limitations.updated_at",
@@ -1710,6 +1781,103 @@
         "M087"
       ],
       "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+    },
+    {
+      "column": "capabilities.transparency_tag",
+      "blocks": [
+        "M087",
+        "M089"
+      ],
+      "note": "Disjoint by slug (2026-11-06): M087 (block 0144) writes only slug = 'env-template-generate' from 'algorithmic' to 'ai_generated'; M089 (block 0146) writes only slug = 'polish-company-data' from 'ai_generated' to 'algorithmic'. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+    },
+    {
+      "column": "vendor_accounts.expires_at",
+      "blocks": [
+        "M040",
+        "M090"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M090 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.included_units",
+      "blocks": [
+        "M040",
+        "M090"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M090 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.metadata",
+      "blocks": [
+        "M040",
+        "M090"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M090 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.remaining_units",
+      "blocks": [
+        "M040",
+        "M090"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M090 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "vendor_accounts.used_units",
+      "blocks": [
+        "M040",
+        "M090"
+      ],
+      "note": "Not a fight (2026-11-06): M040 (block 0111, every boot) writes vendor_accounts only through INSERT ... ON CONFLICT (provider_name) DO NOTHING, so it seeds a missing row and never rewrites an existing one. M090 (block 0147, run once) is a single UPDATE of the serper row guarded on the May pack's expiry 2026-11-08; after it runs the guard no longer matches and M040 cannot touch the row."
+    },
+    {
+      "column": "capability_limitations.title",
+      "blocks": [
+        "M086",
+        "M092",
+        "M093"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M092 (block 0149, DQ-46) writes only the one active pep-check freshness row whose text equals its 2026-11-07 production text. Both run once and are guarded on their old values, so neither can rewrite the other's row. M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run."
+    },
+    {
+      "column": "capability_limitations.sort_order",
+      "blocks": [
+        "M086",
+        "M093"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+    },
+    {
+      "column": "capability_limitations.workaround",
+      "blocks": [
+        "M086",
+        "M093"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+    },
+    {
+      "column": "capability_limitations.capability_slug",
+      "blocks": [
+        "M086",
+        "M093"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+    },
+    {
+      "column": "capability_limitations.category",
+      "blocks": [
+        "M086",
+        "M093"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+    },
+    {
+      "column": "capability_limitations.severity",
+      "blocks": [
+        "M086",
+        "M093"
+      ],
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
     }
   ]
 }

@@ -4,6 +4,108 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 const GEO_API = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_API = "https://api.open-meteo.com/v1/forecast";
 
+interface GeoHit {
+  latitude: number;
+  longitude: number;
+  country_code?: string;
+  country?: string;
+  admin1?: string;
+  admin2?: string;
+  admin3?: string;
+  admin4?: string;
+}
+
+// Common ways callers name a country that Open-Meteo's `country` field does
+// not spell out. Keys and values are lower case; values are ISO 3166-1 alpha-2.
+const COUNTRY_ALIASES: Record<string, string> = {
+  uk: "gb",
+  "great britain": "gb",
+  britain: "gb",
+  usa: "us",
+  "united states of america": "us",
+  america: "us",
+  uae: "ae",
+  turkey: "tr",
+  "czech republic": "cz",
+  holland: "nl",
+  "south korea": "kr",
+};
+
+const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+
+/** One comma-separated part of a place string, with postal codes removed ("Michigan 48505" → "Michigan"). */
+const cleanPart = (s: string) => s.replace(/\b\d{3,}(-\d+)?\b/g, " ").replace(/\s+/g, " ").trim();
+
+/** Does any of the caller's qualifiers ("UK", "New York City", "Ontario") name this hit's country or region? */
+export function hitMatchesQualifiers(hit: GeoHit, qualifiers: string[]): boolean {
+  const cc = (hit.country_code ?? "").toLowerCase();
+  // Each region name also counts without a leading "the" or a trailing generic
+  // word, so "Pabna" names "Pabna District" and "Netherlands" "The Netherlands".
+  const names = [hit.country, hit.admin1, hit.admin2, hit.admin3, hit.admin4]
+    .filter((v): v is string => typeof v === "string" && v.length > 0)
+    .map(norm)
+    .flatMap((n) => [n, n.replace(/^the /, "").replace(/ (district|division|province|state|county|region|governorate|prefecture|municipality|city)$/, "")]);
+  return qualifiers.some((raw) => {
+    const q = norm(raw);
+    if (!q) return false;
+    if (cc && (q === cc || COUNTRY_ALIASES[q] === cc)) return true;
+    // The qualifier is the name, or starts with it as whole words: "new york
+    // city" names admin1 "new york". Never the other way round or in the middle,
+    // so "ireland" does not name "northern ireland" and "new hampshire" does not
+    // name "hampshire". Single letters never match.
+    return names.some((n) => n.length > 1 && (q === n || q.startsWith(`${n} `)));
+  });
+}
+
+async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
+  const geoUrl = `${GEO_API}?name=${encodeURIComponent(name)}&count=${count}&language=en`;
+  const gr = await fetch(geoUrl, { signal: AbortSignal.timeout(10000) });
+  if (!gr.ok) throw new Error(`Geocoding API returned HTTP ${gr.status}`);
+  const gd = (await gr.json()) as { results?: GeoHit[] };
+  return Array.isArray(gd.results)
+    ? gd.results.filter((h): h is GeoHit => !!h && typeof h === "object" && Number.isFinite(h.latitude) && Number.isFinite(h.longitude))
+    : [];
+}
+
+/**
+ * Open-Meteo's geocoder matches a bare place name only: "London" resolves,
+ * "London, UK" returns nothing. Callers overwhelmingly write "place, region,
+ * country", so a qualified string is split on commas, the leading part is
+ * looked up, and the hit whose country or regions all the remaining parts name
+ * is taken. If no hit is in the region the caller named, the call refuses
+ * rather than returning weather for a different place of that name.
+ */
+export async function resolvePlace(city: string): Promise<GeoHit> {
+  const direct = await geocodeName(city, 1);
+  if (direct.length) return direct[0];
+
+  const parts = city.split(",").map(cleanPart).filter(Boolean);
+  if (parts.length < 2) {
+    // A bare-name retry only when the caller wrote no comma ("Flint 48505").
+    // "Springfield, 62701" named a region by postcode; guessing the top
+    // Springfield would ignore it, so that refuses.
+    if (parts.length === 1 && parts[0] !== city && !city.includes(",")) {
+      const bare = await geocodeName(parts[0], 1);
+      if (bare.length) return bare[0];
+    }
+    throw new Error(`Location "${city}" not found.`);
+  }
+
+  // Only the leading part is looked up, and a hit is taken only when every
+  // later part names its country or one of its regions. Looking up a later
+  // part on its own ("Georgia" out of "Twiggs County, Georgia, USA") finds a
+  // different place of that name, so it is never done.
+  const [name, ...qualifiers] = parts;
+  const hits = await geocodeName(name, 20);
+  const match = hits.find((h) => qualifiers.every((q) => hitMatchesQualifiers(h, [q])));
+  if (match) return match;
+  throw new Error(
+    hits.length
+      ? `Location "${city}" not found: places named "${name}" exist, but none in ${qualifiers.join(", ")}. Pass latitude and longitude for an exact location.`
+      : `Location "${city}" not found.`,
+  );
+}
+
 registerCapability("weather-lookup", async (input: CapabilityInput) => {
   let lat = Number(input.latitude ?? input.lat);
   let lon = Number(input.longitude ?? input.lon ?? input.lng);
@@ -11,13 +113,9 @@ registerCapability("weather-lookup", async (input: CapabilityInput) => {
 
   // Geocode city name if no coordinates provided
   if ((isNaN(lat) || isNaN(lon)) && city) {
-    const geoUrl = `${GEO_API}?name=${encodeURIComponent(city)}&count=1&language=en`;
-    const gr = await fetch(geoUrl, { signal: AbortSignal.timeout(10000) });
-    if (!gr.ok) throw new Error(`Geocoding API returned HTTP ${gr.status}`);
-    const gd = (await gr.json()) as any;
-    if (!gd.results?.length) throw new Error(`Location "${city}" not found.`);
-    lat = gd.results[0].latitude;
-    lon = gd.results[0].longitude;
+    const place = await resolvePlace(city);
+    lat = place.latitude;
+    lon = place.longitude;
   }
 
   if (isNaN(lat) || isNaN(lon)) {

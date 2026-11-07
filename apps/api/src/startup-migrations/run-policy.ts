@@ -114,4 +114,9 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0143_publishDomainReputationText: { policy: "once", reason: "guarded UPDATEs of the domain-reputation and domain-trust rows plus a diff of one capability's limitations; a re-run must not undo a later edit to that text" },
   runMigration0144_correctAiLabelAndDependencyAuditText: { policy: "once", reason: "two UPDATEs guarded on the old value (one capability tag, one limitation text); a re-run must not undo a later edit" },
   runMigration0145_vaspRoutingLatency: { policy: "once", reason: "fills a NULL avg_latency_ms on two named rows; a later measured value must never be overwritten" },
+  runMigration0146_polishCompanyDataAlgorithmic: { policy: "once", reason: "two UPDATEs of one capability row (tag and type), each guarded on its old value; a re-run must not undo a later edit" },
+  runMigration0147_reconcileSerperRenewal: { policy: "once", reason: "one UPDATE guarded on the May pack's expiry; a re-run must not undo a later top-up reconciliation or reset the live counter" },
+  runMigration0148_deactivateEuTrademarkSearch: { policy: "once", reason: "one UPDATE of a single row, guarded on its three flags already being false; a re-run must not undo a relisting on the official EUIPO API" },
+  runMigration0149_publishDilisenseSourceText: { policy: "once", reason: "guarded UPDATEs of the sanctions-check and pep-check text (DQ-46), each on the exact pre-DQ-46 wording; a re-run must not undo a later edit" },
+  runMigration0150_publishPepCheckLimitations: { policy: "once", reason: "deletes five named pep-check limitation rows by exact text and inserts the manifest's three where missing (DQ-47); a re-run must not undo a later edit" },
 };
