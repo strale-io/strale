@@ -263,13 +263,14 @@ datasets:
       - sanctions-check
     active: true
     holds: Sanctions lists disclosed as screened in lists_queried evidence
-    source: dilisense.com/en/sources (stated)
-    recheck_against: Dilisense source catalogue (vendor)
+    source: "dilisense.com/en/sources (the publisher's catalogue pages)"
+    recheck_against: dilisense.com/en/sources/sanction-sources and /politically-exposed-persons-list (robots.txt allows)
     trigger: Quarterly, and on any vendor source-list change
-    as_of: 2026-04-27
-    evidence: snapshot date in the file header comment
+    as_of: 2026-11-07
+    as_of_symbol: DILISENSE_SOURCES_AS_OF
+    evidence: "PR checking the Dilisense catalogue pages on 2026-11-07"
     review_days: 180
-    note: Disclosure claim; snapshot 6 months old
+    note: "Narrowed on 2026-11-07: development-bank debarment lists and OFSI's retired list removed (not in the catalogue as included), count 134 to 120."
   - id: dilisense-sources-pep-major-sources
     harm: A
     file: apps/api/src/capabilities/lib/dilisense-sources.ts
@@ -278,12 +279,14 @@ datasets:
       - pep-check
     active: true
     holds: PEP sources and source_count (230) disclosed in evidence
-    source: dilisense.com/en/sources (stated)
-    recheck_against: Dilisense source catalogue (vendor)
+    source: "dilisense.com/en/sources (the publisher's catalogue pages)"
+    recheck_against: dilisense.com/en/sources/sanction-sources and /politically-exposed-persons-list (robots.txt allows)
     trigger: Quarterly
-    as_of: 2026-04-27
-    evidence: snapshot date in the file header comment
+    as_of: 2026-11-07
+    as_of_symbol: DILISENSE_SOURCES_AS_OF
+    evidence: "PR checking the Dilisense catalogue pages on 2026-11-07"
     review_days: 180
+    note: "Narrowed on 2026-11-07: Wikidata and the named national bodies removed (not stated by the publisher); categories as the catalogue lists them."
   - id: aml-risk-score-fatf-grey-list
     harm: A
     file: apps/api/src/capabilities/aml-risk-score.ts

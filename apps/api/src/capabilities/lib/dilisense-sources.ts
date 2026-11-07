@@ -1,12 +1,20 @@
 /**
  * Dilisense source attribution for the audit-grade `lists_queried` evidence
- * shape. Sourced from https://dilisense.com/en/sources/sanction-sources and
- * /en/sources/additional-sources (2026-04-27 snapshot).
+ * shape. Checked on 2026-11-07 against the publisher's own catalogue pages,
+ * https://dilisense.com/en/sources/sanction-sources and
+ * https://dilisense.com/en/sources/politically-exposed-persons-list (robots.txt
+ * allows them). The first snapshot (2026-04-27) also named World Bank, EBRD and
+ * regional development bank debarment lists; those sit on Dilisense's separate
+ * risk-intelligence page as paid add-ons "switched on and off per client", and
+ * nothing here shows them switched on for Strale, so they are not claimed.
+ * Re-check every 180 days (config/reference-data.yaml) and move this date.
  *
  * Used by sanctions-check and pep-check to populate a meaningful list of
  * underlying sources screened, even though the Dilisense screening API
  * doesn't expose per-list versioning per call.
  */
+
+export const DILISENSE_SOURCES_AS_OF = "2026-11-07";
 
 export type DilisenseListsQueried = {
   collection: string;
@@ -28,11 +36,6 @@ const SANCTIONS_MAJOR_LISTS = [
   "European Commission — Consolidated List of Travel Bans",
   "European Council — Decisions (CFSP)",
   "European Council — Regulations",
-  "World Bank — Debarred Firms and Individuals",
-  "African Development Bank — Debarred Entities",
-  "Asian Development Bank — Sanction List",
-  "Inter-American Development Bank — Sanctioned Firms and Individuals",
-  "EBRD — Sanctions",
   // United States
   "OFAC — Specially Designated Nationals (SDN)",
   "OFAC — Non-SDN Sanction List",
@@ -41,11 +44,11 @@ const SANCTIONS_MAJOR_LISTS = [
   "BIS — Military End User (MEU) List",
   "DOS — Foreign Terrorist Organizations",
   "DOS — Nonproliferation Sanctions",
-  "DDTC — AECA Debarred List",
+  "DDTC — AECA Debarred Administrative List",
+  "DDTC — AECA Debarred Statutory List",
   "DOD — Section 1260H Chinese Military Companies",
   "DHS — UFLPA Entity List",
   // United Kingdom
-  "HMT OFSI — Financial Sanctions",
   "HMT OFSI — Ukraine Restrictive Measures",
   "UK Government — Sanctions List",
   "Home Office — Proscribed Terrorist Groups",
@@ -64,34 +67,34 @@ const SANCTIONS_MAJOR_LISTS = [
   "Singapore MAS — Targeted Financial Sanctions",
 ] as const;
 
-/** ~135 named sanctions sources covered by Dilisense's consolidated endpoint */
-const DILISENSE_SANCTIONS_SOURCE_COUNT = 134;
+/**
+ * Lists marked "Included" in Dilisense's sanctions catalogue on 2026-11-07.
+ * The catalogue names 125 lists; five more (Russia's MFA Stop List and four
+ * Turkish frozen-asset lists) are marked "Paid products", and whether Strale's
+ * plan includes them is not confirmed, so they are not counted.
+ */
+const DILISENSE_SANCTIONS_SOURCE_COUNT = 120;
 
 export const DILISENSE_SANCTIONS_LISTS_QUERIED: DilisenseListsQueried = {
   collection: "dilisense/consolidated-sanctions",
   source_count: DILISENSE_SANCTIONS_SOURCE_COUNT,
   major_lists: [...SANCTIONS_MAJOR_LISTS],
   freshness_note:
-    "Dilisense aggregates 130+ sanctions, debarment, and restrictive-measure lists into a consolidated index. The publisher refreshes the consolidated index multiple times daily; per-list timestamps are not exposed via the screening API.",
+    "Dilisense consolidates 120 sanctions and restrictive-measure lists into one index, and states that it is updated every 60 minutes. Per-list timestamps are not exposed by the screening API.",
   source_catalog_url: "https://dilisense.com/en/sources/sanction-sources",
   version: null,
   last_updated_at: null,
 };
 
 const PEP_MAJOR_SOURCES = [
-  // International
-  "EU C/2023/724 — Member-State PEP function definitions",
-  "Wikidata — Politically-exposed persons",
-  // National (a sample — Dilisense pulls government and parliament sources per jurisdiction)
-  "DE Bundestag, Bundesrat, Bundespräsident, Bundesbank, state-owned enterprises (Bahn, Bundesdruckerei, BwConsulting)",
-  "FR Assemblée Nationale, Sénat, Conseil constitutionnel, Banque de France",
-  "UK Parliament, Cabinet Office, Bank of England, judiciary",
-  "Sweden Riksdag, Regering, Sveriges Riksbank",
-  "Norway Storting, Regjeringen, Norges Bank",
-  "Switzerland Bundesversammlung, Bundesrat, Schweizerische Nationalbank",
-  "Other EU27 + EEA + Switzerland — national parliaments, governments, central banks, supreme courts, and state-owned-enterprise boards",
-  "International organizations — EU institutions, ECB, BIS, IMF, World Bank officials",
-  "Relatives and Close Associates (RCAs) — derived from public records",
+  // What the publisher's PEP catalogue states (2026-11-07); it names no
+  // individual national sources, so none are listed here.
+  "EU C/2023/724 — public functions defining PEPs in each Member State",
+  "Politicians",
+  "Embassy, military, agency and international-organisation officials",
+  "Judges and prosecution officials",
+  "Central bank and state-owned enterprise board members",
+  "Relatives and close associates (RCAs)",
 ] as const;
 
 export const DILISENSE_PEP_LISTS_QUERIED: DilisenseListsQueried = {
@@ -99,7 +102,7 @@ export const DILISENSE_PEP_LISTS_QUERIED: DilisenseListsQueried = {
   source_count: 230,
   major_lists: [...PEP_MAJOR_SOURCES],
   freshness_note:
-    "Dilisense PEP coverage spans 230+ geopolitical territories and aligns with EU C/2023/724 PEP function definitions. The publisher refreshes the index multiple times daily; per-list timestamps are not exposed via the screening API.",
+    "Dilisense states PEP coverage of 230+ geopolitical territories in 12 categories, with automated daily updates, and describes EU PEPs by the C/2023/724 public-function lists. Per-list timestamps are not exposed by the screening API.",
   source_catalog_url: "https://dilisense.com/en/sources/politically-exposed-persons-list",
   version: null,
   last_updated_at: null,
