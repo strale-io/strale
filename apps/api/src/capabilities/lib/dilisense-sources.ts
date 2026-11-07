@@ -87,14 +87,15 @@ export const DILISENSE_SANCTIONS_LISTS_QUERIED: DilisenseListsQueried = {
 };
 
 const PEP_MAJOR_SOURCES = [
-  // What the publisher's PEP catalogue states (2026-11-07); it names no
-  // individual national sources, so none are listed here.
+  // What the publisher's PEP catalogue states (2026-11-07). Its only named
+  // national sources are its worked example for Germany, kept below as that.
   "EU C/2023/724 — public functions defining PEPs in each Member State",
   "Politicians",
   "Embassy, military, agency and international-organisation officials",
   "Judges and prosecution officials",
   "Central bank and state-owned enterprise board members",
   "Relatives and close associates (RCAs)",
+  "Example given by the publisher for Germany: Federal President, Bundestag, Bundesrat, Bundesbank, and state-owned enterprises (Deutsche Bahn, Bundesdruckerei, BwConsulting)",
 ] as const;
 
 export const DILISENSE_PEP_LISTS_QUERIED: DilisenseListsQueried = {
@@ -102,7 +103,7 @@ export const DILISENSE_PEP_LISTS_QUERIED: DilisenseListsQueried = {
   source_count: 230,
   major_lists: [...PEP_MAJOR_SOURCES],
   freshness_note:
-    "Dilisense states PEP coverage of 230+ geopolitical territories in 12 categories, with automated daily updates, and describes EU PEPs by the C/2023/724 public-function lists. Per-list timestamps are not exposed by the screening API.",
+    "Dilisense states PEP coverage of 230+ geopolitical territories in 12 categories, updated once a day by default and more often for highly important PEPs, and describes EU PEPs by the C/2023/724 public-function lists. Per-list timestamps are not exposed by the screening API.",
   source_catalog_url: "https://dilisense.com/en/sources/politically-exposed-persons-list",
   version: null,
   last_updated_at: null,

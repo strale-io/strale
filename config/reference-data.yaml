@@ -286,7 +286,7 @@ datasets:
     as_of_symbol: DILISENSE_SOURCES_AS_OF
     evidence: "PR checking the Dilisense catalogue pages on 2026-11-07"
     review_days: 180
-    note: "Narrowed on 2026-11-07: Wikidata and the named national bodies removed (not stated by the publisher); categories as the catalogue lists them."
+    note: "Narrowed on 2026-11-07: Wikidata and national bodies the publisher does not name removed; its worked example for Germany kept as an example; categories as the catalogue lists them."
   - id: aml-risk-score-fatf-grey-list
     harm: A
     file: apps/api/src/capabilities/aml-risk-score.ts

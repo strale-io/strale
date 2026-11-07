@@ -18,7 +18,9 @@ describe("Dilisense source disclosure (as of 2026-11-07)", () => {
 
   it("does not claim the paid per-client debarment lists or OFSI's retired list", () => {
     const named = DILISENSE_SANCTIONS_LISTS_QUERIED.major_lists.join(" | ");
-    for (const absent of ["World Bank", "EBRD", "Asian Development Bank", "African Development Bank", "Inter-American", "OFSI — Financial Sanctions"]) {
+    // Also the five lists the catalogue marks "Paid products" (Strale is on the
+    // free tier, docs/operations/orchestrator-carryover-facts.md).
+    for (const absent of ["World Bank", "EBRD", "Asian Development Bank", "African Development Bank", "Inter-American", "OFSI — Financial Sanctions", "Stop List", "Frozen Assets"]) {
       expect(named, absent).not.toContain(absent);
     }
   });
@@ -39,9 +41,10 @@ describe("Dilisense source disclosure (as of 2026-11-07)", () => {
   it("PEP disclosure names no source the publisher does not state", () => {
     const named = DILISENSE_PEP_LISTS_QUERIED.major_lists.join(" | ");
     expect(named).not.toContain("Wikidata");
-    expect(named).not.toContain("Bundestag");
+    expect(named).not.toContain("Riksdag"); // national bodies the publisher does not name
+    expect(named).toContain("Example given by the publisher for Germany");
     expect(named).toContain("Relatives and close associates");
-    expect(DILISENSE_PEP_LISTS_QUERIED.freshness_note).toMatch(/daily updates/);
+    expect(DILISENSE_PEP_LISTS_QUERIED.freshness_note).toMatch(/once a day by default/);
     expect(DILISENSE_PEP_LISTS_QUERIED.freshness_note).not.toMatch(/multiple times daily/);
   });
 });

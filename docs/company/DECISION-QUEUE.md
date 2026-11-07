@@ -14,6 +14,27 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-46** · `your_call` · owner Petter · raised 2026-11-07 — **the public description of our sanctions check still names five blacklists we cannot show we screen; a narrower text is drafted for you to approve**
+
+*Why it is yours:* compliance tools' published text only changes with your approval: the boot-time sync reports it and writes nothing (`apps/api/src/lib/manifest-publication-policy.ts`, `isReportOnly`), and the current wording was published under your DQ-36 approval (startup block 0122).
+
+*What is established (Dilisense's own catalogue pages, read 2026-11-07, robots.txt allows; PR #966):*
+1. The sanctions tool's public data source says it screens "World Bank, EBRD, ADB + 125 national sanctions/debarment lists". Dilisense lists the development-bank debarment lists only as paid add-ons, "switched on and off per client". Strale is on Dilisense's free tier, so they are not screened.
+2. The catalogue marks 120 sanctions lists as included (five more are paid-only). We say 134 in some places and "130+" in others.
+3. The sample response in both tools' descriptions still shows 134 lists, a retired UK list ("HMT OFSI — Financial Sanctions") and "multiple times daily"; the PEP tool's limitation says Dilisense refreshes PEP data "multiple times daily", while Dilisense says "once a day by default, and more often for highly important PEPs".
+4. PR #966 already corrects what every response carries (the `lists_queried` block), which is code, not published text. This entry is only about the published descriptions.
+
+*Proposed wording (all narrow what we say):*
+1. Sanctions data source: "Dilisense consolidated (120 sanctions and restrictive-measure lists, including OFAC SDN, EU FSF, UN SC, the UK Sanctions List, CH SECO and BIS; full attribution at https://dilisense.com/en/sources/sanction-sources)".
+2. Both sample responses: the same lists, count and update wording as the live response after PR #966.
+3. PEP limitation: "Dilisense updates its PEP data once a day by default, and more often for highly important PEPs."
+
+*Options:* approve as written; edit; or leave the published text as it is (it keeps naming lists we do not screen).
+
+*Recommendation:* approve as written. A session then publishes it the way block 0122 did (a startup block that changes the text only if it still matches the old wording) and checks it in production.
+
+*Consequence:* approving removes a claim a customer's auditor could catch. Not approving keeps public text that contradicts what each response now says.
+
 **DQ-45** · `answered` · owner Petter · raised 2026-11-05 · answered 2026-11-05 (approved as written) — **four sentences in the Terms and Privacy pages are out of date; here is the corrected wording, which goes live with the new site unless you change it**
 
 *Answer (2026-11-05):* Petter, in session: "approve DQ-45". All four changes are applied as written in `apps/web/src/pages/terms.astro` and `privacy.astro`. Both pages' last-updated dates move to 5 November 2026. The Terms date was not named in the entry; it moves because the Terms text changed. They go live with the new site.
