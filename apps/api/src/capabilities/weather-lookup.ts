@@ -25,6 +25,10 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "united states of america": "us",
   america: "us",
   uae: "ae",
+  turkey: "tr",
+  "czech republic": "cz",
+  holland: "nl",
+  "south korea": "kr",
 };
 
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
@@ -60,9 +64,9 @@ async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
  * Open-Meteo's geocoder matches a bare place name only: "London" resolves,
  * "London, UK" returns nothing. Callers overwhelmingly write "place, region,
  * country", so a qualified string is split on commas, the leading part is
- * looked up, and the hit whose country or region the remaining parts name is
- * taken. If none of the hits is in the region the caller named, the call
- * refuses rather than returning weather for a different place of that name.
+ * looked up, and the hit whose country or regions all the remaining parts name
+ * is taken. If no hit is in the region the caller named, the call refuses
+ * rather than returning weather for a different place of that name.
  */
 export async function resolvePlace(city: string): Promise<GeoHit> {
   const direct = await geocodeName(city, 1);
@@ -77,19 +81,17 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
     throw new Error(`Location "${city}" not found.`);
   }
 
-  // Try each part as the place name, with the parts after it as qualifiers.
-  // The last part is never looked up on its own: it is the country or region.
-  // At most three lookups, so a string of many commas cannot fan out upstream.
-  let candidatesSeen = false;
-  for (let i = 0; i < Math.min(parts.length - 1, 3); i++) {
-    const hits = await geocodeName(parts[i], 10);
-    if (hits.length) candidatesSeen = true;
-    const match = hits.find((h) => hitMatchesQualifiers(h, parts.slice(i + 1)));
-    if (match) return match;
-  }
+  // Only the leading part is looked up, and a hit is taken only when every
+  // later part names its country or one of its regions. Looking up a later
+  // part on its own ("Georgia" out of "Twiggs County, Georgia, USA") finds a
+  // different place of that name, so it is never done.
+  const [name, ...qualifiers] = parts;
+  const hits = await geocodeName(name, 10);
+  const match = hits.find((h) => qualifiers.every((q) => hitMatchesQualifiers(h, [q])));
+  if (match) return match;
   throw new Error(
-    candidatesSeen
-      ? `Location "${city}" not found: places of that name exist, but none in ${parts.slice(1).join(", ")}. Pass latitude and longitude for an exact location.`
+    hits.length
+      ? `Location "${city}" not found: places named "${name}" exist, but none in ${qualifiers.join(", ")}. Pass latitude and longitude for an exact location.`
       : `Location "${city}" not found.`,
   );
 }

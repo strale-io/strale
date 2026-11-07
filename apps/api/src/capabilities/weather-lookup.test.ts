@@ -40,6 +40,7 @@ describe("weather-lookup place resolution", () => {
         London: [LONDON_GB, LONDON_CA, LONDON_US],
         Manhattan: [MANHATTAN_NY, MANHATTAN_KS],
         Ogbomoso: [],
+        Georgia: [{ name: "Georgia", latitude: 31.52, longitude: -85.06, country_code: "US", country: "United States", admin1: "Alabama" }],
       });
       vi.stubGlobal("fetch", fetchMock);
     });
@@ -67,8 +68,18 @@ describe("weather-lookup place resolution", () => {
     });
 
     it("refuses rather than return weather for a namesake elsewhere", async () => {
-      await expect(exec({ city: "London, Japan" })).rejects.toThrow(/places of that name exist, but none in Japan/);
+      await expect(exec({ city: "London, Japan" })).rejects.toThrow(/places named "London" exist, but none in Japan/);
       expect(fetchMock.mock.calls.some((c) => new URL(String(c[0])).hostname === "api.open-meteo.com")).toBe(false);
+    });
+
+    it("never looks a later part up on its own ('Georgia' out of 'Twiggs County, Georgia, USA' is a town in Alabama)", async () => {
+      await expect(exec({ city: "Twiggs County, Georgia, USA" })).rejects.toThrow(/not found/);
+      const names = fetchMock.mock.calls.map((c) => new URL(String(c[0])).searchParams.get("name"));
+      expect(names).not.toContain("Georgia");
+    });
+
+    it("requires every qualifier to match, not just the country", async () => {
+      await expect(exec({ city: "London, Ontario, UK" })).rejects.toThrow(/none in Ontario, UK/);
     });
 
     it("still refuses a place the geocoder does not know", async () => {
@@ -77,7 +88,7 @@ describe("weather-lookup place resolution", () => {
 
     it("bounds the upstream lookups for a string of many commas", async () => {
       await expect(exec({ city: Array.from({ length: 50 }, (_, i) => `x${i}`).join(", ") })).rejects.toThrow(/not found/);
-      expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(4);
+      expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(2);
     });
   });
 
