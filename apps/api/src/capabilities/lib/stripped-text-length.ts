@@ -88,29 +88,42 @@ export const TEXT_CHECK_WINDOW = 512 * 1024;
  * client-rendered page with a large inline state script would pass as a real
  * page and never reach the renderer (fourth R1 review of #964, F2). When the
  * window ends inside one, it is moved past that element's closing tag and
- * extended by another window, at most a few times. Each step is one forward
- * regex search, so the cost stays linear.
+ * extended by another window, at most four times.
+ *
+ * Each step searches only new ground: openers in [from, end), where `from` is
+ * the previous step's closing tag, and the closing tag forward from the
+ * opener. So the whole call reads each part of the page about once (a version
+ * that rescanned from the start cost 0.5 s on a crafted 16 MiB page, fifth R1
+ * review).
  */
 function windowEnd(html: string, start: number, limit: number): number {
   let end = Math.min(limit, start + TEXT_CHECK_WINDOW);
+  let from = start;
+  const noCloseAfter = new Map<string, number>(); // tag -> a point with no closing tag after it
   for (let step = 0; step < 4 && end < limit; step++) {
-    let moved = false;
+    const segment = html.slice(from, end); // a view, not a copy, in V8
+    let past = -1; // end of the furthest element that crosses the window
     for (const tag of ["script", "style"]) {
-      // The last opening tag inside the window...
       const open = new RegExp(`<${tag}`, "gi");
-      open.lastIndex = start;
       let lastOpen = -1;
-      for (let m = open.exec(html); m && m.index < end; m = open.exec(html)) lastOpen = m.index;
+      for (let m = open.exec(segment); m; m = open.exec(segment)) lastOpen = from + m.index;
       if (lastOpen < 0) continue;
-      // ...is it still open at the window's end?
+      if ((noCloseAfter.get(tag) ?? Infinity) <= lastOpen) continue;
       const close = new RegExp(`</${tag}>`, "gi");
       close.lastIndex = lastOpen;
       const c = close.exec(html);
-      if (!c || c.index + c[0].length <= end) continue;
-      end = Math.min(limit, c.index + c[0].length + TEXT_CHECK_WINDOW);
-      moved = true;
+      // Unclosed to the end of the page: the full check counts it as text too,
+      // and no later opener can find a closing tag either.
+      if (!c || c.index >= limit) {
+        noCloseAfter.set(tag, lastOpen);
+        continue;
+      }
+      const closeEnd = c.index + c[0].length;
+      if (closeEnd > end) past = Math.max(past, closeEnd);
     }
-    if (!moved) break;
+    if (past < 0) break;
+    from = past;
+    end = Math.min(limit, past + TEXT_CHECK_WINDOW);
   }
   return end;
 }

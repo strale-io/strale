@@ -31,7 +31,11 @@ tracks:
       pages still reached +850 MB and a regression for client-rendered pages
       with large inline state; round 5 converts one large page at a time
       (+326 MB measured) and extends the text window past a straddling
-      script. Next: round-5 confirmation,
+      script. Round 5 (FAIL): memory follows markup, not size (two 256 KiB
+      pages at +605 MB), and the window extension rescanned (0.5 s). Round 6
+      runs one conversion at a time (four hostile pages +318 MB), frees a
+      slot only after its worker exits, and scans forward only. Next: a
+      focused check of round 6,
       merge, then after deploy call url-to-markdown on an ordinary page and
       confirm it converts (DEC-20260504-C), and write the receipt for the exit
       below. Then sweep the other places that hand fetched markup to jsdom

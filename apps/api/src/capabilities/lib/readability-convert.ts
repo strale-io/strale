@@ -9,7 +9,7 @@
  * markup limit (29k flat <div>, 15 MB of text in one <p>). Run on the main
  * thread, that is 10-80 s in which no other request is served.
  *
- * So the conversion runs in a small pool of worker threads
+ * So the conversion runs in a worker thread
  * (readability-worker.ts). Each conversion has a wall-clock limit and each
  * worker a heap limit; past either, the worker is terminated, replaced, and
  * the caller gets HtmlTooComplexError, a non-billable refusal. When every
@@ -27,16 +27,21 @@ import type { MarkdownOptions, ReadabilityResult } from "./readability-convert-s
 export type { MarkdownOptions, ReadabilityResult } from "./readability-convert-sync.js";
 
 export const CONVERSION_LIMITS = {
-  /** Worker threads converting at once. */
-  workers: 2,
+  /**
+   * Worker threads converting at once. One: memory per conversion depends on
+   * the page's markup, not its size (64 attributes per tag in 256 KiB reached
+   * +314 MB; two such pages at once +605 MB, fifth R1 review), so the only
+   * bound that holds for every page shape on a 1 GB box is one conversion at
+   * a time. Ordinary pages convert in well under a second.
+   */
+  workers: 1,
   /** Wall-clock limit for one conversion, from the moment a worker takes it. */
   timeoutMs: 8_000,
   /**
    * Heap limits per worker (MB). The API runs on a 1 GB Railway box
    * (web-provider.ts). At 256 a dense 1 MiB article ran out of heap; at 384
    * the time limit binds first. One hostile page converting alone measured
-   * +438 MB of process memory, and two at once +850 MB (fourth R1 review), so
-   * only one large page converts at a time (maxLargeAtOnce).
+   * +314 to +438 MB of process memory (fourth and fifth R1 reviews).
    */
   maxOldGenerationSizeMb: 384,
   maxYoungGenerationSizeMb: 48,
@@ -47,14 +52,6 @@ export const CONVERSION_LIMITS = {
    * of process memory for one 15 MB conversion.
    */
   maxInputChars: 2 * 1024 * 1024,
-  /** Inputs above this many characters count as large. */
-  largeInputChars: 256 * 1024,
-  /**
-   * Large inputs converting at once. A small page (under largeInputChars)
-   * stays well under the heap limit, so the other worker keeps serving small
-   * pages while a large one converts.
-   */
-  maxLargeAtOnce: 1,
   /** Pages waiting for a worker; beyond this a page is refused at once. */
   maxQueued: 8,
   /** Longest a page waits for a worker before it is refused. */
@@ -113,12 +110,24 @@ function tooComplex(message: string): HtmlTooComplexError {
   return e;
 }
 
+/**
+ * One worker and the job it runs. The slot is busy from the moment a job
+ * starts until the job is answered AND, if the worker was stopped or died,
+ * until that worker has exited: a replacement never runs beside a worker that
+ * is still releasing its heap (fifth R1 review, finding 4).
+ */
 class Slot {
   private worker: Worker | null = null;
   job: Job | null = null;
+  /** True while a stopped or dying worker has not exited yet. */
+  private closing = false;
   private timer: NodeJS.Timeout | null = null;
 
   constructor(private readonly onFree: () => void) {}
+
+  get busy(): boolean {
+    return this.job !== null || this.closing;
+  }
 
   private spawn(): Worker {
     const w = workerFactory({
@@ -130,24 +139,34 @@ class Slot {
     w.unref(); // an idle converter never keeps the process alive
     w.on("message", (reply: Reply) => {
       const job = this.job;
-      if (!job || reply.id !== job.id) return;
-      this.finish();
+      if (this.worker !== w || !job || reply.id !== job.id) return;
+      this.answered();
       if (reply.ok) job.resolve(reply.result);
       else job.reject(reply.tooComplex ? tooComplex(reply.message) : new Error(reply.message));
+      this.onFree();
     });
-    // A worker that dies (heap limit, crash) fails its job; the slot respawns
-    // on its next job.
-    const dead = (err: unknown) => {
+    // A worker error (heap limit, crash) fails its job at once; the slot
+    // stays busy until the worker has exited.
+    w.on("error", (err: unknown) => {
       if (this.worker !== w) return;
-      this.worker = null;
+      this.closing = true;
       const job = this.job;
       if (!job) return;
-      this.finish();
+      this.answered();
       const oom = err instanceof Error && /ERR_WORKER_OUT_OF_MEMORY|heap/i.test(`${(err as { code?: string }).code ?? ""} ${err.message}`);
       job.reject(oom ? tooComplex(new HtmlTooComplexError("it needs more memory than the converter allows").message) : err);
-    };
-    w.on("error", dead);
-    w.on("exit", (code) => dead(new Error(`converter exited with code ${code}`)));
+    });
+    w.on("exit", (code) => {
+      if (this.worker !== w) return;
+      this.worker = null;
+      this.closing = false;
+      const job = this.job;
+      if (job) {
+        this.answered();
+        job.reject(new Error(`The page converter stopped unexpectedly (code ${code}). Please retry.`));
+      }
+      this.onFree();
+    });
     return w;
   }
 
@@ -168,33 +187,33 @@ class Slot {
     this.job = job;
     const w = this.worker;
     this.timer = setTimeout(() => {
-      // Terminate first so the CPU is released, then answer the caller.
-      this.worker = null;
-      void w.terminate();
+      // Answer the caller now; the slot frees when the worker has exited.
+      this.closing = true;
       const j = this.job;
-      this.finish();
+      this.answered();
       j?.reject(
         tooComplex(
           new HtmlTooComplexError(`conversion did not finish within ${CONVERSION_LIMITS.timeoutMs / 1000} s`).message,
         ),
       );
+      void w.terminate();
     }, CONVERSION_LIMITS.timeoutMs);
     w.postMessage({ id: job.id, html: job.html, url: job.url, options: job.options });
   }
 
-  private finish(): void {
+  /** The current job has its answer; clears it and its timer. */
+  private answered(): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.job = null;
-    this.onFree();
   }
 
   async stop(): Promise<void> {
-    if (this.timer) clearTimeout(this.timer);
     const w = this.worker;
     const job = this.job;
+    this.answered();
     this.worker = null;
-    this.job = null;
+    this.closing = false;
     job?.reject(new ConversionBusyError());
     if (w) await w.terminate();
   }
@@ -204,16 +223,12 @@ let nextId = 1;
 let slots: Slot[] = [];
 const queue: Job[] = [];
 
-const isLarge = (job: Job) => job.html.length > CONVERSION_LIMITS.largeInputChars;
-
-/** Hands queued pages to free workers, in order, at most maxLargeAtOnce large ones at a time. */
+/** Hands queued pages to free workers, in order. */
 function dispatch(): void {
   for (const slot of slots) {
-    if (slot.job) continue;
-    const large = slots.filter((s) => s.job && isLarge(s.job)).length;
-    const i = queue.findIndex((job) => !isLarge(job) || large < CONVERSION_LIMITS.maxLargeAtOnce);
-    if (i < 0) return;
-    const [job] = queue.splice(i, 1);
+    if (slot.busy) continue;
+    const job = queue.shift();
+    if (!job) return;
     if (job.queueTimer) clearTimeout(job.queueTimer);
     slot.run(job);
   }

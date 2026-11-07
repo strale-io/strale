@@ -130,6 +130,22 @@ describe("the windowed text checks", () => {
     expect(bodyHasMoreTextThan(`<html><body>${state}<p>${words}</p></body></html>`, 200)).toBe(true);
   });
 
+  it("stay fast when every step of the window extension has new openers", () => {
+    // Fifth R1 review: a 16 MiB chain of "<style" blocks kept the window
+    // growing for all four steps, and each step rescanned from the start
+    // (0.35-0.55 s per call).
+    const block = (n: number) => `<style>${"<style".repeat(n)}</style>`;
+    let html = `<html><body>${block(Math.floor((12 * 1024 * 1024) / 6))}`; // one huge first block
+    for (let k = 0; k < 4; k++) html += block(Math.floor(W / 6));
+    html += "x".repeat(16 * 1024 * 1024 - html.length - 20) + "</body></html>";
+    for (const check of [() => hasMoreTextThan(html, 500), () => bodyHasMoreTextThan(html, 200)]) {
+      const started = process.cpuUsage();
+      check();
+      const d = process.cpuUsage(started);
+      expect((d.user + d.system) / 1000).toBeLessThan(200);
+    }
+  });
+
   it("agree with the full check on pages inside the window", () => {
     for (const html of [`<body><p>${words}</p></body>`, "<body><script>x</script>short</body>", "<p>no body</p>"]) {
       expect(hasMoreTextThan(html, 500)).toBe(strippedTextLength(html) > 500);
