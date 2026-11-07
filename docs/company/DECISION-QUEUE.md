@@ -14,7 +14,9 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-46** · `your_call` · owner Petter · raised 2026-11-07 — **the public description of our sanctions check still names five blacklists we cannot show we screen; a narrower text is drafted for you to approve**
+**DQ-46** · `answered` · owner Petter · raised 2026-11-07 · answered 2026-11-07 (approved as written) — **the public description of our sanctions check still names five blacklists we cannot show we screen; a narrower text is drafted for you to approve**
+
+*Answer (2026-11-07):* Petter, in session: "approve DQ-46". Published by startup block 0149 (`0149-publish-dilisense-source-text.ts`), which changes each text only if production still holds the old wording, with the manifests carrying the same text.
 
 *Why it is yours:* compliance tools' published text only changes with your approval: the boot-time sync reports it and writes nothing (`apps/api/src/lib/manifest-publication-policy.ts`, `isReportOnly`), and the current wording was published under your DQ-36 approval (startup block 0122).
 

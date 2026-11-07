@@ -256,7 +256,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "fa0f340093014fa3c4ec0cdef8994b76f2da61304aba10590be6afd6c6e14645",
+      "sha256": "a2c4ebfd5111285acb8eeae17b891ab755fa4916b38c31e469799bd5efd91e8a",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -279,6 +279,7 @@
         "apps/api/src/lib/vendor-terms.data.json",
         "apps/api/src/lib/vendor-terms.test.ts",
         "apps/api/src/startup-migrations/blocks/0085-actor-identity.ts",
+        "apps/api/src/startup-migrations/blocks/0149-publish-dilisense-source-text.ts",
         "apps/web/README.md",
         "config/env-manifest.yaml",
         "config/vendors.yaml",

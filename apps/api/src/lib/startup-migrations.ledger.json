@@ -1197,6 +1197,18 @@
         "capabilities.updated_at"
       ],
       "sha256": "dad56e6de6654d767178e74720022ab9977497768864db317b2b2e06524c60b5"
+    },
+    {
+      "id": "M092",
+      "function": "runMigration0149_publishDilisenseSourceText",
+      "title": "Publish Dilisense Source Text",
+      "added": "2026-11-07",
+      "columns_written": [
+        "capabilities.data_source",
+        "capabilities.output_schema",
+        "capability_limitations.limitation_text"
+      ],
+      "sha256": "9656fb4cf488443451c378801e78b8fa6c02af47212b329a1146f2ce95af22a6"
     }
   ],
   "known_overlaps": [
@@ -1630,9 +1642,10 @@
       "column": "capabilities.output_schema",
       "blocks": [
         "M050",
-        "M063"
+        "M063",
+        "M092"
       ],
-      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row."
+      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row. M092 (0149, 2026-11-07, DQ-46) writes only the example.lists_queried subtree of 'sanctions-check' and 'pep-check', neither of which is in CAPABILITY_OUTPUT_CONTRACTS (M050 writes only the properties subtree of its seven slugs) or is fear-greed-index (M063); guarded on the exact pre-DQ-46 JSON and run once, so it cannot fight either writer."
     },
     {
       "column": "solutions.deactivation_reason",
@@ -1729,17 +1742,19 @@
       "column": "capabilities.data_source",
       "blocks": [
         "M065",
-        "M086"
+        "M086",
+        "M092"
       ],
-      "note": "M065 (0122, 2026-10-23, DQ-36) rewrites data_source only for slug = 'sanctions-check', guarded on the exact old OFSI wording, once (ledgered). M086 (0143, 2026-11-06) rewrites data_source only for slug = 'domain-reputation', guarded on IS DISTINCT FROM its new text, once (run policy once; Petter's 2026-11-06 approval to publish the narrowed text). The slugs are disjoint, so they cannot fight. Neither runs again after its first applied boot; the boot manifest text sync refuses the compliance-category domain-reputation row until approved."
+      "note": "M065 (0122, 2026-10-23, DQ-36) rewrites data_source only for slug = 'sanctions-check', guarded on the exact old OFSI wording, once (ledgered). M086 (0143, 2026-11-06) rewrites data_source only for slug = 'domain-reputation', guarded on IS DISTINCT FROM its new text, once (run policy once; Petter's 2026-11-06 approval to publish the narrowed text). The slugs are disjoint, so they cannot fight. Neither runs again after its first applied boot; the boot manifest text sync refuses the compliance-category domain-reputation row until approved. M092 (0149, 2026-11-07, DQ-46) rewrites data_source only for 'sanctions-check', guarded on exactly the text M065 wrote, once (run policy once). M065 has already applied in production and never runs again, so the two run in sequence and cannot fight; M086 is a different slug."
     },
     {
       "column": "capability_limitations.limitation_text",
       "blocks": [
         "M086",
-        "M087"
+        "M087",
+        "M092"
       ],
-      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot."
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes only pep-check rows that still contain the old 'multiple times daily' phrase, replacing that phrase once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit)."
     },
     {
       "column": "capability_limitations.updated_at",

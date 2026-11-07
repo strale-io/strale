@@ -114,6 +114,8 @@ import {
   DQ36_NEW_SANCTIONS_DESCRIPTION,
   DQ36_OLD_SANCTIONS_DATA_SOURCE,
   DQ36_NEW_SANCTIONS_DATA_SOURCE,
+  DQ46_NEW_SANCTIONS_DATA_SOURCE,
+  DQ46_OLD_SANCTIONS_DATA_SOURCE,
   PHASE0_DK_BUNDLE_SLUGS,
   PHASE0_X402_BUNDLE_SLUGS,
   PHASE0_NARROWED_DESCRIPTIONS,
@@ -1522,6 +1524,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0146_polishCompanyDataAlgorithmic",
       "runMigration0147_reconcileSerperRenewal",
       "runMigration0148_deactivateEuTrademarkSearch",
+      "runMigration0149_publishDilisenseSourceText",
     ]);
   });
 });
@@ -2461,7 +2464,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(148);
+    expect(Math.max(...numbers)).toBe(149);
   });
 });
 
@@ -3295,7 +3298,9 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     // The description pin moved on 2026-10-26: block 0123 (catalogue copy)
     // rewrites sanctions-check's description, guarded on exactly the text 0122
     // wrote, so the manifest now matches 0123's target. data_source is
-    // untouched by 0123 and still pinned to 0122.
+    // untouched by 0123. Its pin moved on 2026-11-07: block 0149 (DQ-46)
+    // rewrites it, guarded on exactly the text 0122 wrote, so the manifest now
+    // matches 0149's target (startup-migration-0149.test.ts pins that).
     const { readFileSync } = await import("node:fs");
     const yaml = (await import("js-yaml")).default;
     const manifest = yaml.load(
@@ -3304,7 +3309,8 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     const row0123 = CATALOGUE_COPY_0123_CAPABILITIES.find((r) => r.slug === "sanctions-check")!;
     expect(row0123.old_description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
     expect(manifest.description).toBe(latestDescriptions.get("sanctions-check") ?? row0123.description);
-    expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
+    expect(manifest.data_source).toBe(DQ46_NEW_SANCTIONS_DATA_SOURCE);
+    expect(DQ46_OLD_SANCTIONS_DATA_SOURCE).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
   });
 
   it("the new copy no longer names OFSI and keeps everything else", () => {

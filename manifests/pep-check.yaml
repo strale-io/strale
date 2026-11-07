@@ -50,10 +50,12 @@ output_schema:
       collection: dilisense/consolidated-pep
       source_count: 230
       major_lists:
-        - "EU C/2023/724 — Member-State PEP function definitions"
-        - "DE Bundestag, Bundesrat, Bundespräsident, Bundesbank, state-owned enterprises"
-        - "(plus 228+ national parliament/government/central-bank/judiciary sources)"
-      freshness_note: "Dilisense PEP coverage spans 230+ geopolitical territories and aligns with EU C/2023/724 PEP function definitions. The publisher refreshes the index multiple times daily; per-list timestamps are not exposed via the screening API."
+        - "EU C/2023/724 — public functions defining PEPs in each Member State"
+        - "Politicians"
+        - "Relatives and close associates (RCAs)"
+        - "Example given by the publisher for Germany: Federal President, Bundestag, Bundesrat, Bundesbank, and state-owned enterprises (Deutsche Bahn, Bundesdruckerei, BwConsulting)"
+        - "(plus the other categories in the publisher's catalogue)"
+      freshness_note: "Dilisense states PEP coverage of 230+ geopolitical territories in 12 categories, updated once a day by default and more often for highly important PEPs, and describes EU PEPs by the C/2023/724 public-function lists. Per-list timestamps are not exposed by the screening API."
       source_catalog_url: "https://dilisense.com/en/sources/politically-exposed-persons-list"
       version: null
       last_updated_at: null
@@ -191,7 +193,7 @@ limitations:
     workaround: Provide date_of_birth and an ISO country code.
   - title: Per-list update timestamps are not available
     text: >-
-      Dilisense refreshes the consolidated PEP index multiple times daily, but the screening API does not return
+      Dilisense updates its PEP data once a day by default, and more often for highly important PEPs, but the screening API does not return
       a per-list last_updated_at value per call. Output sets lists_queried.last_updated_at = null with a
       freshness_note attesting to the publisher's refresh cadence.
     category: freshness
