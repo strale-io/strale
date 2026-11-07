@@ -160,9 +160,26 @@ describeMaybe("x402 settlement watch against disposable Postgres", () => {
       { payer: SMALL_2, prior7d: 7 * 2, last24h: 2 },
     ]);
     expect(verdict.kind).toBe("healthy");
-    expect(verdict.baselinePerDay).toBe(135); // the burst day capped at 3x the days around it
+    // The big buyer's burst day capped at 3x its own usual 100; the small payers untouched.
+    expect(verdict.baselinePerDay).toBeCloseTo((6 * 100 + 300) / 7 + 5);
+    expect(verdict.cappedPayerDays).toBe(1);
     expect(ledger).toEqual([]);
     expect(sent).toEqual([]);
+  }, 60_000);
+
+  it("one buyer's burst does not shrink the steady payers, so their broad drop stays critical (review round 3)", async () => {
+    // The steady payers fell to two thirds of their own baseline. Scaling every
+    // payer on the burst day (the round-2 design) shrank their baseline enough
+    // to read this as "explained by the top buyer" and send a warning.
+    const { verdict, ledger } = await runScenario([
+      { payer: BIG, prior7d: 7 * 100, last24h: 0, burst: { daysBack: 4, count: 900 } },
+      { payer: SMALL_1, prior7d: 7 * 30, last24h: 20 },
+      { payer: SMALL_2, prior7d: 7 * 30, last24h: 20 },
+    ]);
+    expect(verdict.kind).toBe("broad");
+    expect(verdict.cappedPayerDays).toBe(1);
+    expect(ledger).toEqual([{ key: "x402-settlement-volume-drop", severity: "critical" }]);
+    expect(sent[0]!.body).toContain("Everyone else: 40 in the last 24h vs ~188.6/day baseline.");
   }, 60_000);
 
   it("under the minimum baseline nothing is sent", async () => {

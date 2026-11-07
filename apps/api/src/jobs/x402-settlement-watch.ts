@@ -10,8 +10,8 @@
  * the platform watched that number; this job is the tripwire.
  *
  * Every TICK, compare settled-x402-transaction count over the trailing 24h
- * against the daily average of the 7 days before that, with one-off spike
- * days capped (see "Robust baseline" below). If the baseline is meaningful
+ * against the daily average of the 7 days before that, with each payer's one-off
+ * burst days capped (see "Robust baseline" below). If the baseline is meaningful
  * (≥ MIN_BASELINE_PER_DAY) and the last 24h came in under ALERT_RATIO of it,
  * page via sendAlert — at most once per ALERT_COOLDOWN_MS so a sustained dip
  * doesn't spam. The remedy is in the alert text: check
@@ -73,107 +73,144 @@ const MIN_OTHERS_PER_DAY = 3;
 
 // Robust baseline (incident 2026-11-03): the baseline is the daily mean of
 // the 7 days before the last 24h (24h buckets counted back from now). One
-// buyer ran a single large job on 2026-10-30, many times a normal day, and
+// buyer ran a single large job on 2026-10-30, many times its normal day, and
 // that one day lifted the mean so far that on 2026-11-03 an ordinary day read
 // as a drop below half of it, hours after the buyer was back.
 //
-// So an ISOLATED SPIKE is capped before averaging: a day is capped at
-// SPIKE_CAP_FACTOR times its reference level, where the reference is the
-// larger of the average of the newer baseline days and the average of the
-// older ones. A day is only touched when it stands far above BOTH sides,
-// which is what tells a one-off job apart from the shapes that must keep the
-// plain mean:
-//  - a ramp: the busy days are the newest, so there is no quieter newer side.
-//    The newest baseline day is never capped, which also means a burst is
-//    recognised only once a normal day has followed it (a burst yesterday and
-//    a ramp yesterday are the same data until then);
-//  - an outage or slow degradation: the healthy days are the oldest, so the
-//    days older than a healthy day are healthy too (and the oldest day is
-//    never capped), and none of them stands above its older side;
-//  - quiet weekends and every-other-day buyers: no day is three times the
-//    days around it.
-// Each side leaves out the day right next to the one being judged when it
-// has others, so a job that straddles a bucket boundary caps both of its
-// days. Capping rather than dropping keeps the baseline continuous: one more
-// call on a busy day can never move the baseline down.
+// So a burst is capped PER PAYER, against that payer's own usual day, and
+// only once the payer is seen on both sides of it:
+//  - A payer's usual day is the median of its non-zero days over the
+//    baseline days and CONTEXT_DAYS older days (context only: they never
+//    enter the mean). A job covering up to a third of those active days
+//    cannot move it.
+//  - A day is capped at max(SPIKE_CAP_FACTOR x usual, SPIKE_CAP_FLOOR). The
+//    floor means a small payer's days are never touched, and the cap is
+//    never below the floor, so a payer can never be capped away.
+//  - A day above the cap is capped only when the same payer had a usual
+//    baseline day both BEFORE it and AFTER it. That is what a one-off job
+//    looks like: the payer came back to its normal level. The last 24h is
+//    never that evidence, because it is what is being judged: a burst
+//    yesterday and a ramp that broke today look the same until a full day
+//    has followed it, so a burst in the newest baseline day is capped only
+//    from the next day on.
+//    A payer that went quiet after its busy days (an outage, a degradation,
+//    a payer that stopped) has no usual day after them and keeps the plain
+//    mean. A payer whose busy days are its newest or its first (a ramp, a
+//    new buyer) has no usual day on one side and keeps the plain mean.
+//  - Other payers' counts are never touched, so "everyone else" stays their
+//    own plain mean; the total baseline is the sum of the per-payer ones, so
+//    the top buyers' shares sum to at most 1.
+//  - Unattributed rows (payer null) are a mix of payers and are never capped.
 //
-// Two designs were rejected in review (2026-11-06): the median of the daily
-// totals (quiet weekends page; a degraded level becomes the baseline after
-// four days; buyers active on three or fewer days vanish), and leaving out
-// any day above three times the rest (it dropped the last healthy days of a
-// deep outage and the first days of a ramp, lowering the bar exactly when a
-// real drop happens). Medians on each side were also ruled out: with an
-// every-other-day buyer both side medians are 0 and every active day would
-// be capped away.
+// Three designs were rejected in review (2026-11-06): the median of the daily
+// totals; leaving out any total day above three times the rest; and capping a
+// total day that stands above both its sides. All three reshaped the totals,
+// so a real outage or a ramp could read as a spike and lower the bar exactly
+// when a real drop happened, and the third scaled every payer on a capped day
+// (review round 3).
 //
-// The cap is applied to the day's total and every payer's count that day is
-// scaled by the same factor, so per-payer baselines still add up to the
-// total, "everyone else" is still the total minus the excluded buyers, and
-// the top buyers' shares sum to at most 1.
+// Accepted cost: one payer's own surge that then returns to its usual level
+// for a day is treated as a job, even if it was a short-lived ramp. That is
+// the incident shape, and comparing the last 24h against the payer's usual
+// level is then the right question.
 export const BASELINE_DAYS = 7;
+export const CONTEXT_DAYS = 7;
 export const SPIKE_CAP_FACTOR = 3;
-
-/** Settled count per payer: the last 24h, and each of the BASELINE_DAYS days before it (index 0 = 24–48h ago). */
-export type PayerRow = { payer: string | null; last24h: number; priorDaily: number[] };
-
-/** Day-by-day totals across rows, always BASELINE_DAYS long (missing days are 0). */
-function dailyTotals(rows: PayerRow[]): number[] {
-  const totals = new Array<number>(BASELINE_DAYS).fill(0);
-  for (const r of rows) for (let d = 0; d < BASELINE_DAYS; d++) totals[d]! += r.priorDaily[d] ?? 0;
-  return totals;
-}
-
-const mean = (values: number[]) => values.reduce((a, n) => a + n, 0) / values.length;
+export const SPIKE_CAP_FLOOR = 10;
 
 /**
- * The daily totals with isolated spikes capped (see "Robust baseline"). Index
- * 0 is the newest baseline day, the last index the oldest; those two are
- * never capped because one side of them is unseen.
+ * Settled count per payer: the last 24h, each of the BASELINE_DAYS days
+ * before it (index 0 = 24–48h ago), and optionally CONTEXT_DAYS older days
+ * (index 0 = the day before the oldest baseline day), used only to judge
+ * what the payer's usual day is.
  */
-export function capSpikes(totals: number[]): number[] {
-  const last = totals.length - 1;
-  return totals.map((n, d) => {
-    if (d === 0 || d === last) return n;
-    const newer = totals.slice(0, d >= 2 ? d - 1 : d);
-    const older = totals.slice(d <= last - 2 ? d + 2 : d + 1);
-    return Math.min(n, SPIKE_CAP_FACTOR * Math.max(mean(newer), mean(older)));
+export type PayerRow = { payer: string | null; last24h: number; priorDaily: number[]; contextDaily?: number[] };
+
+const sum = (values: number[]) => values.reduce((a, n) => a + n, 0);
+
+function median(sorted: number[]): number {
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
+/**
+ * One payer's baseline days with that payer's own bursts capped (see
+ * "Robust baseline"). Returns the days unchanged when nothing qualifies.
+ */
+export function capPayerSpikes(row: PayerRow): number[] {
+  const days = row.priorDaily;
+  const context = row.contextDaily ?? [];
+  const active = [...days, ...context].filter((n) => n > 0).sort((a, b) => a - b);
+  if (active.length === 0) return [...days];
+  const usual = median(active);
+  const cap = Math.max(SPIKE_CAP_FACTOR * usual, SPIKE_CAP_FLOOR);
+  const isUsual = (n: number) => n > 0 && n <= cap && n * SPIKE_CAP_FACTOR >= usual;
+  return days.map((n, d) => {
+    if (n <= cap) return n;
+    const after = days.slice(0, d).some(isUsual);
+    const before = days.slice(d + 1).some(isUsual) || context.some(isUsual);
+    return after && before ? cap : n;
   });
 }
 
-const priorSum = (r: PayerRow) => r.priorDaily.reduce((a, n) => a + n, 0);
+const BUCKET_LIMIT = BASELINE_DAYS + CONTEXT_DAYS;
 
 /**
  * Fold (payer, days-ago, count) buckets into per-payer rows. Bucket 0 is the
  * last 24h (a row a little in the future from clock skew counts there too);
- * 1..BASELINE_DAYS fill priorDaily; anything older is ignored. A bucket that
- * is not a whole number is a broken query, not data to drop quietly.
+ * 1..BASELINE_DAYS fill priorDaily, the next CONTEXT_DAYS fill contextDaily;
+ * anything older is ignored. A bucket that is not a whole day or a whole,
+ * non-negative count is a broken query, not data to drop quietly.
  */
 export function rowsFromBuckets(buckets: Array<{ payer: string | null; dayAgo: number; n: number }>): PayerRow[] {
   const byPayer = new Map<string | null, PayerRow>();
   for (const b of buckets) {
-    if (!Number.isInteger(b.dayAgo) || !Number.isFinite(b.n)) {
+    if (!Number.isInteger(b.dayAgo) || !Number.isInteger(b.n) || b.n < 0) {
       throw new Error(`x402-settlement-watch: malformed bucket (day_ago ${String(b.dayAgo)}, n ${String(b.n)})`);
     }
-    if (b.dayAgo > BASELINE_DAYS) continue;
+    if (b.dayAgo > BUCKET_LIMIT) continue;
     let row = byPayer.get(b.payer);
     if (!row) {
-      row = { payer: b.payer, last24h: 0, priorDaily: new Array<number>(BASELINE_DAYS).fill(0) };
+      row = {
+        payer: b.payer,
+        last24h: 0,
+        priorDaily: new Array<number>(BASELINE_DAYS).fill(0),
+        contextDaily: new Array<number>(CONTEXT_DAYS).fill(0),
+      };
       byPayer.set(b.payer, row);
     }
     if (b.dayAgo <= 0) row.last24h += b.n;
-    else row.priorDaily[b.dayAgo - 1]! += b.n;
+    else if (b.dayAgo <= BASELINE_DAYS) row.priorDaily[b.dayAgo - 1]! += b.n;
+    else row.contextDaily![b.dayAgo - BASELINE_DAYS - 1]! += b.n;
   }
   return [...byPayer.values()];
 }
 
+/** A numeric column from the driver: a number or a numeric string, never a missing value read as 0. */
+function column(r: Record<string, unknown>, name: string): number {
+  const v = r[name];
+  if (typeof v === "number") return v;
+  if (typeof v === "string" && v.trim() !== "") return Number(v);
+  return Number.NaN;
+}
+
+/** The raw query rows as buckets; a missing day_ago or n column is refused by rowsFromBuckets. */
+export function bucketsFromQueryRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((r) => ({
+    payer: (r.payer as string | null | undefined) ?? null,
+    dayAgo: column(r, "day_ago"),
+    n: column(r, "n"),
+  }));
+}
+
 export type VolumeVerdict =
-  | { kind: "no_baseline" | "healthy"; last24h: number; baselinePerDay: number; cappedDays: number }
+  | { kind: "no_baseline" | "healthy"; last24h: number; baselinePerDay: number; cappedPayerDays: number }
   | {
       kind: "concentrated" | "broad";
       last24h: number;
       baselinePerDay: number;
-      /** Baseline days whose total was capped as an isolated spike. */
-      cappedDays: number;
+      /** (payer, baseline day) pairs capped as that payer's one-off burst. */
+      cappedPayerDays: number;
       distinctPayers24h: number;
       distinctPayers7d: number;
       /** The biggest baseline payers, largest first, with their share of baseline volume. */
@@ -188,31 +225,32 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /** Pure decision over per-payer counts. Exported for unit tests. */
 export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
-  const last24h = rows.reduce((a, r) => a + r.last24h, 0);
-  const totals = dailyTotals(rows);
-  const capped = capSpikes(totals);
-  const cappedDays = capped.filter((n, d) => n < totals[d]!).length;
-  // Each payer's day is scaled by the same factor as the day's total.
-  const scale = totals.map((n, d) => (n > 0 ? capped[d]! / n : 0));
-  const baseline = new Map(rows.map((r) => [
-    r,
-    r.priorDaily.reduce((a, n, d) => a + n * (scale[d] ?? 0), 0) / BASELINE_DAYS,
-  ]));
-  const baselinePerDay = capped.reduce((a, n) => a + n, 0) / BASELINE_DAYS;
-  if (baselinePerDay < MIN_BASELINE_PER_DAY) return { kind: "no_baseline", last24h, baselinePerDay, cappedDays };
-  if (last24h >= baselinePerDay * ALERT_RATIO) return { kind: "healthy", last24h, baselinePerDay, cappedDays };
+  const payers = rows.map((row) => {
+    const capped = row.payer === null ? row.priorDaily : capPayerSpikes(row);
+    return {
+      row,
+      baseline: sum(capped) / BASELINE_DAYS,
+      raw: sum(row.priorDaily),
+      cappedDays: capped.filter((n, d) => n < row.priorDaily[d]!).length,
+    };
+  });
+  const last24h = sum(rows.map((r) => r.last24h));
+  const baselinePerDay = sum(payers.map((p) => p.baseline));
+  const cappedPayerDays = sum(payers.map((p) => p.cappedDays));
+  if (baselinePerDay < MIN_BASELINE_PER_DAY) return { kind: "no_baseline", last24h, baselinePerDay, cappedPayerDays };
+  if (last24h >= baselinePerDay * ALERT_RATIO) return { kind: "healthy", last24h, baselinePerDay, cappedPayerDays };
 
   // Unattributed rows (pre-hash x402 rows, or no payer extracted) are never a
   // "buyer" to exclude; they count with everyone else.
-  const known = rows.filter((r) => r.payer !== null);
+  const known = payers.filter((p) => p.row.payer !== null);
   const ranked = [...known].sort((a, b) =>
-    baseline.get(b)! - baseline.get(a)! || priorSum(b) - priorSum(a) || b.last24h - a.last24h);
-  const top = ranked.slice(0, MAX_EXCLUDED_BUYERS).filter((r) => baseline.get(r)! > 0);
-  const topBuyers = top.map((r) => ({
-    payerHashPrefix: (r.payer as string).slice(0, 8),
-    baselinePerDay: round1(baseline.get(r)!),
-    last24h: r.last24h,
-    share: baseline.get(r)! / baselinePerDay,
+    b.baseline - a.baseline || b.raw - a.raw || b.row.last24h - a.row.last24h);
+  const top = ranked.slice(0, MAX_EXCLUDED_BUYERS).filter((p) => p.baseline > 0);
+  const topBuyers = top.map((p) => ({
+    payerHashPrefix: (p.row.payer as string).slice(0, 8),
+    baselinePerDay: round1(p.baseline),
+    last24h: p.row.last24h,
+    share: p.baseline / baselinePerDay,
   }));
 
   let excluded = 0;
@@ -220,8 +258,8 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
   let othersBaselinePerDay = baselinePerDay;
   for (let k = 1; k <= top.length; k++) {
     const removed = top.slice(0, k);
-    const oLast = last24h - removed.reduce((a, r) => a + r.last24h, 0);
-    const oBase = baselinePerDay - removed.reduce((a, r) => a + baseline.get(r)!, 0);
+    const oLast = last24h - sum(removed.map((p) => p.row.last24h));
+    const oBase = baselinePerDay - sum(removed.map((p) => p.baseline));
     if (oBase >= MIN_OTHERS_PER_DAY && oLast >= 1 && oLast >= oBase * OTHERS_NEAR_BASELINE_RATIO) {
       excluded = k;
       othersLast24h = oLast;
@@ -234,9 +272,10 @@ export function classifyVolume(rows: PayerRow[]): VolumeVerdict {
     kind: excluded > 0 ? "concentrated" : "broad",
     last24h,
     baselinePerDay,
-    cappedDays,
-    distinctPayers24h: known.filter((r) => r.last24h > 0).length,
-    distinctPayers7d: known.filter((r) => priorSum(r) > 0).length,
+    cappedPayerDays,
+    distinctPayers24h: known.filter((p) => p.row.last24h > 0).length,
+    // Same basis as the baseline: a payer with baseline volume.
+    distinctPayers7d: known.filter((p) => p.baseline > 0).length,
     topBuyers,
     excluded,
     othersLast24h,
@@ -262,8 +301,9 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
   const db = opts.db ?? getDb();
   // One bucket per (payer, 24h periods back from now): 0 is the last 24h
   // (created_at >= now() - 24h, as before), 1..BASELINE_DAYS the baseline
-  // days, each (now - (k+1)·24h, now - k·24h]. Epoch arithmetic, so a DST
-  // change cannot stretch a bucket, and the bucket count follows BASELINE_DAYS.
+  // days, each (now - (k+1)·24h, now - k·24h], then CONTEXT_DAYS older days
+  // that only inform each payer's usual day. Epoch arithmetic, so a DST
+  // change cannot stretch a bucket, and the bucket count follows the constants.
   const rows = await db.execute(sql`
     SELECT
       x402_payer_hash AS payer,
@@ -271,17 +311,11 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
       COUNT(*)::int AS n
     FROM transactions
     WHERE x402_settlement_id IS NOT NULL
-      AND created_at >= now() - make_interval(hours => ${(BASELINE_DAYS + 1) * 24})
+      AND created_at >= now() - make_interval(hours => ${(BUCKET_LIMIT + 1) * 24})
     GROUP BY 1, 2
   `);
   const verdict = classifyVolume(
-    rowsFromBuckets(
-      (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
-        payer: (r.payer as string | null) ?? null,
-        dayAgo: Number(r.day_ago ?? 0),
-        n: Number(r.n ?? 0),
-      })),
-    ),
+    rowsFromBuckets(bucketsFromQueryRows(rows as unknown as Array<Record<string, unknown>>)),
   );
   const { last24h, baselinePerDay } = verdict;
 
@@ -291,7 +325,7 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
       verdict: verdict.kind,
       last_24h: last24h,
       baseline_per_day: round1(baselinePerDay),
-      capped_spike_days: verdict.cappedDays,
+      capped_payer_days: verdict.cappedPayerDays,
       ...(verdict.kind === "concentrated" || verdict.kind === "broad"
         ? {
             distinct_payers_24h: verdict.distinctPayers24h,
@@ -308,8 +342,9 @@ export async function checkX402SettlementVolume(opts: { db?: Database } = {}): P
   const totals =
     `Settled x402 transactions in the last 24h: ${last24h}. ` +
     `Trailing 7-day baseline: ~${Math.round(baselinePerDay)}/day` +
-    (verdict.cappedDays > 0
-      ? ` (${verdict.cappedDays} one-off spike day${verdict.cappedDays === 1 ? "" : "s"} capped at ${SPIKE_CAP_FACTOR}x the days around ${verdict.cappedDays === 1 ? "it" : "them"}). `
+    (verdict.cappedPayerDays > 0
+      ? ` (${verdict.cappedPayerDays} one-off burst day${verdict.cappedPayerDays === 1 ? "" : "s"} capped at ` +
+        `${SPIKE_CAP_FACTOR}x that payer's usual day). `
       : ". ");
 
   if (verdict.kind === "concentrated") {

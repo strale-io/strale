@@ -4,14 +4,25 @@
  * x402-settlement-watch.integration.test.ts; these pin the edge cases.
  */
 import { describe, expect, it } from "vitest";
-import { capSpikes, classifyVolume, rowsFromBuckets, type PayerRow } from "./x402-settlement-watch.js";
+import {
+  bucketsFromQueryRows,
+  capPayerSpikes,
+  classifyVolume,
+  rowsFromBuckets,
+  SPIKE_CAP_FLOOR,
+  type PayerRow,
+} from "./x402-settlement-watch.js";
 
 /** A payer with the same count on each of the seven baseline days. */
 const perDay = (payer: string | null, base: number, last24h: number): PayerRow =>
   ({ payer, priorDaily: new Array(7).fill(base), last24h });
 
 /** A payer with an explicit day-by-day history (index 0 = 24–48h ago). */
-const daily = (payer: string | null, priorDaily: number[], last24h: number): PayerRow => ({ payer, priorDaily, last24h });
+const daily = (payer: string | null, priorDaily: number[], last24h: number, contextDaily?: number[]): PayerRow =>
+  ({ payer, priorDaily, last24h, ...(contextDaily ? { contextDaily } : {}) });
+
+/** classifyVolume leaves the plain mean in place for these rows. */
+const unchangedVerdict = (rows: PayerRow[]) => expect(classifyVolume(rows).baselinePerDay).toBeCloseTo(meanBaseline(rows));
 
 /** The pre-fix rule, kept here only to show the replayed case fired under it. */
 const meanBaseline = (rows: PayerRow[]) => rows.reduce((a, r) => a + r.priorDaily.reduce((x, n) => x + n, 0), 0) / 7;
@@ -50,42 +61,49 @@ describe("classifyVolume", () => {
   });
 });
 
-describe("capSpikes", () => {
-  it("leaves an ordinary week alone", () => {
-    for (const week of [
-      [100, 100, 100, 100, 100, 100, 100],
-      [100, 100, 100, 100, 100, 45, 45], // quiet weekend
-      [0, 100, 0, 100, 0, 100, 0], // every-other-day buyer
-      [500, 500, 500, 0, 0, 0, 0], // a buyer three days old
-      [0, 0, 0, 0, 0, 0, 0],
-    ]) expect(capSpikes(week)).toEqual(week);
+describe("capPayerSpikes", () => {
+  const unchanged = (row: PayerRow) => expect(capPayerSpikes(row)).toEqual(row.priorDaily);
+
+  it("leaves an ordinary payer alone", () => {
+    unchanged(daily("a", [100, 100, 100, 100, 100, 100, 100], 100));
+    unchanged(daily("a", [100, 100, 100, 100, 100, 45, 45], 45)); // quiet weekend
+    unchanged(daily("a", [0, 100, 0, 100, 0, 100, 0], 100)); // every-other-day buyer
+    unchanged(daily("a", [500, 500, 500, 0, 0, 0, 0], 0)); // a buyer three days old
+    unchanged(daily("a", [0, 0, 0, 0, 0, 0, 0], 0));
   });
 
-  it("leaves a ramp and the healthy days of an outage alone (review round 2)", () => {
-    for (const week of [
-      [300, 300, 30, 30, 30, 30, 30], // ramp: the newest days are the busy ones
-      [300, 300, 300, 30, 30, 30, 30],
-      [0, 0, 0, 0, 0, 100, 100], // total outage, day 6
-      [0, 0, 0, 0, 100, 100, 100],
-      [30, 30, 30, 30, 100, 100, 100], // slow degradation
-    ]) expect(capSpikes(week)).toEqual(week);
+  it("leaves a ramp, an outage and a degradation alone: no usual day on one side", () => {
+    unchanged(daily("a", [300, 300, 30, 30, 30, 30, 30], 300)); // ramp still running
+    unchanged(daily("a", [300, 300, 30, 30, 30, 30, 30], 0)); // ramp, then the rail broke
+    unchanged(daily("a", [0, 0, 0, 0, 100, 10, 10], 0)); // review round 3: a big day, then an outage
+    unchanged(daily("a", [0, 0, 0, 0, 0, 500, 500], 0)); // review round 3: a two-day buyer that stopped
+    unchanged(daily("a", [30, 30, 30, 30, 100, 100, 100], 25)); // degradation to 30%
+    unchanged(daily("a", [1, 1, 1, 1, 100, 100, 100], 1)); // degradation to 1%
   });
 
-  it("caps a one-off spike, and both days of one that straddles a bucket boundary", () => {
-    expect(capSpikes([105, 105, 105, 1005, 105, 105, 105])).toEqual([105, 105, 105, 315, 105, 105, 105]);
-    expect(capSpikes([105, 105, 900, 800, 105, 105, 105])).toEqual([105, 105, 315, 315, 105, 105, 105]);
-    expect(capSpikes([105, 900, 800, 105, 105, 105, 105])).toEqual([105, 315, 315, 105, 105, 105, 105]);
+  it("caps a burst once the payer is seen at its usual level before and after it", () => {
+    expect(capPayerSpikes(daily("a", [100, 100, 100, 1000, 100, 100, 100], 75))).toEqual([100, 100, 100, 300, 100, 100, 100]);
+    // review round 3: a job spanning three buckets
+    expect(capPayerSpikes(daily("a", [100, 100, 1000, 1000, 1000, 100, 100], 75))).toEqual([100, 100, 300, 300, 300, 100, 100]);
   });
 
-  it("never caps the newest or the oldest baseline day", () => {
-    expect(capSpikes([1005, 105, 105, 105, 105, 105, 105])[0]).toBe(1005);
-    expect(capSpikes([105, 105, 105, 105, 105, 105, 1005])[6]).toBe(1005);
+  it("caps a straddle at the oldest edge against the older context days (review round 3)", () => {
+    expect(capPayerSpikes(daily("a", [100, 100, 100, 100, 100, 1000, 1000], 100, new Array(7).fill(100))))
+      .toEqual([100, 100, 100, 100, 100, 300, 300]);
+    // Without the older context, the oldest days have no "before" and stay as they are.
+    unchanged(daily("a", [100, 100, 100, 100, 100, 1000, 1000], 100));
   });
 
-  it("is continuous: one more call on a spike day never lowers the baseline", () => {
-    const sum = (xs: number[]) => xs.reduce((a, n) => a + n, 0);
-    for (let n = 200; n <= 400; n++) {
-      expect(sum(capSpikes([100, 100, 100, n + 1, 100, 100, 100]))).toBeGreaterThanOrEqual(sum(capSpikes([100, 100, 100, n, 100, 100, 100])));
+  it("has a floor: a capped day is never below SPIKE_CAP_FLOOR, so a payer is never capped away (review round 3)", () => {
+    expect(capPayerSpikes(daily("a", [1, 1, 1, 30, 1, 1, 1], 1))).toEqual([1, 1, 1, SPIKE_CAP_FLOOR, 1, 1, 1]);
+    unchanged(daily("a", [1, 1, 1, 9, 1, 1, 1], 1));
+    for (let seed = 1; seed <= 500; seed++) {
+      const r = (k: number) => ((seed * 9301 + k * 49297) % 233280) % 7 === 0 ? (seed * k) % 1500 : (seed + k) % 4;
+      const row = daily("a", [0, 1, 2, 3, 4, 5, 6].map(r), r(7), [8, 9, 10, 11, 12, 13, 14].map(r));
+      capPayerSpikes(row).forEach((n, d) => {
+        expect(n).toBeGreaterThanOrEqual(Math.min(row.priorDaily[d]!, SPIKE_CAP_FLOOR));
+        expect(n).toBeLessThanOrEqual(row.priorDaily[d]!);
+      });
     }
   });
 });
@@ -97,18 +115,28 @@ describe("rowsFromBuckets", () => {
       { payer: "a", dayAgo: -1, n: 1 }, // clock skew: a row slightly in the future
       { payer: "a", dayAgo: 1, n: 7 },
       { payer: "a", dayAgo: 7, n: 2 },
-      { payer: "a", dayAgo: 8, n: 99 }, // outside the window
+      { payer: "a", dayAgo: 8, n: 6 }, // context: the day before the oldest baseline day
+      { payer: "a", dayAgo: 14, n: 9 },
+      { payer: "a", dayAgo: 15, n: 99 }, // outside the window
       { payer: null, dayAgo: 3, n: 5 },
     ]);
     expect(rows).toEqual([
-      { payer: "a", last24h: 5, priorDaily: [7, 0, 0, 0, 0, 0, 2] },
-      { payer: null, last24h: 0, priorDaily: [0, 0, 5, 0, 0, 0, 0] },
+      { payer: "a", last24h: 5, priorDaily: [7, 0, 0, 0, 0, 0, 2], contextDaily: [6, 0, 0, 0, 0, 0, 9] },
+      { payer: null, last24h: 0, priorDaily: [0, 0, 5, 0, 0, 0, 0], contextDaily: [0, 0, 0, 0, 0, 0, 0] },
     ]);
   });
 
   it("refuses a malformed bucket instead of losing its count", () => {
     expect(() => rowsFromBuckets([{ payer: "a", dayAgo: Number.NaN, n: 3 }])).toThrow(/malformed bucket/);
     expect(() => rowsFromBuckets([{ payer: "a", dayAgo: 1.5, n: 3 }])).toThrow(/malformed bucket/);
+    expect(() => rowsFromBuckets([{ payer: "a", dayAgo: 1, n: -1 }])).toThrow(/malformed bucket/);
+  });
+
+  it("refuses a query row with a missing day_ago or n column instead of reading it as 0 (review round 3)", () => {
+    expect(() => rowsFromBuckets(bucketsFromQueryRows([{ payer: "a", n: 3 }]))).toThrow(/malformed bucket/);
+    expect(() => rowsFromBuckets(bucketsFromQueryRows([{ payer: "a", day_ago: 1 }]))).toThrow(/malformed bucket/);
+    expect(() => rowsFromBuckets(bucketsFromQueryRows([{ payer: "a", day_ago: null, n: 3 }]))).toThrow(/malformed bucket/);
+    expect(rowsFromBuckets(bucketsFromQueryRows([{ payer: "a", day_ago: "1", n: "3" }]))[0]!.priorDaily[0]).toBe(3);
   });
 });
 
@@ -130,22 +158,61 @@ describe("classifyVolume, robust baseline (incident 2026-11-03)", () => {
   it("is healthy now: one burst day does not set the bar for the week", () => {
     const v = classifyVolume(rows);
     expect(v.kind).toBe("healthy");
-    expect(v.baselinePerDay).toBe(135); // (6 x 105 + the burst day capped at 3 x 105) / 7
-    expect(v.cappedDays).toBe(1);
+    // The big buyer's burst day capped at 3x its usual 100; the small payers untouched.
+    expect(v.baselinePerDay).toBeCloseTo((6 * 100 + 300) / 7 + 5);
+    expect(v.cappedPayerDays).toBe(1);
   });
 
   it("still pages when the big buyer really stops, burst or not", () => {
     const v = classifyVolume([daily("big", bigDaily, 0), perDay("small1", 3, 0), perDay("small2", 2, 0)]);
     expect(v.kind).toBe("broad");
-    expect(v.baselinePerDay).toBe(135);
+    expect(v.baselinePerDay).toBeCloseTo((6 * 100 + 300) / 7 + 5);
   });
 
-  it("a burst by a small payer does not make it outrank the steady buyer", () => {
-    const v = classifyVolume([perDay("steady", 100, 0), daily("burst", [0, 0, 0, 900, 0, 0, 0], 0), perDay("c", 5, 5)]);
+  it("a job spanning three buckets is capped on all three (review round 3)", () => {
+    const rows = [daily("big", [100, 100, 1000, 1000, 1000, 100, 100], 100), perDay("small1", 3, 3), perDay("small2", 2, 2)];
+    expect(rows.reduce((a, r) => a + r.last24h, 0)).toBeLessThan(meanBaseline(rows) * 0.5); // the mean paged
+    const v = classifyVolume(rows);
+    expect(v.kind).toBe("healthy");
+    expect(v.cappedPayerDays).toBe(3);
+  });
+
+  it("a burst in the newest baseline days is capped once a usual baseline day follows it, never on the last 24h alone", () => {
+    // The last 24h is what is being judged, so it is not evidence that the buyer came back.
+    unchangedVerdict([daily("big", [1000, 1000, 100, 100, 100, 100, 100], 100)]);
+    const v = classifyVolume([daily("big", [100, 1000, 1000, 100, 100, 100, 100], 100), perDay("small1", 3, 3)]);
+    expect(v.kind).toBe("healthy");
+    expect(v.cappedPayerDays).toBe(2);
+  });
+
+  it("one buyer's burst never shrinks the steady payers, so a broad drop stays critical (review round 3)", () => {
+    // The steady payers fell to two thirds of their own plain baseline: below
+    // OTHERS_NEAR_BASELINE_RATIO, so excluding the big buyer must not explain it.
+    const v = classifyVolume([
+      daily("big", [100, 100, 100, 1000, 100, 100, 100], 0),
+      perDay("c", 30, 20),
+      perDay("d", 30, 20),
+    ]);
+    expect(v.kind).toBe("broad");
+    if (v.kind !== "broad") throw new Error("unreachable");
+    const c = v.topBuyers.find((b) => b.payerHashPrefix === "c");
+    expect(c?.baselinePerDay).toBe(30);
+  });
+
+  it("a buyer seen on one day only keeps the plain mean (nothing shows it came back), and shares stay within 1", () => {
+    const rows = [perDay("steady", 100, 0), daily("burst", [0, 0, 0, 900, 0, 0, 0], 0), perDay("c", 5, 5)];
+    const v = classifyVolume(rows);
+    expect(v.baselinePerDay).toBeCloseTo(meanBaseline(rows));
     expect(v.kind).toBe("concentrated");
     if (v.kind !== "concentrated") throw new Error("unreachable");
-    expect(v.topBuyers[0]!.payerHashPrefix).toBe("steady");
     expect(v.topBuyers.reduce((a, b) => a + b.share, 0)).toBeLessThanOrEqual(1);
+  });
+
+  it("counts distinct payers on the same basis as the baseline: context-only payers are not in the 7 days (review round 3)", () => {
+    const v = classifyVolume([perDay("a", 100, 0), daily("old", [0, 0, 0, 0, 0, 0, 0], 0, new Array(7).fill(50)), perDay("c", 5, 5)]);
+    if (v.kind !== "concentrated" && v.kind !== "broad") throw new Error("expected a drop");
+    expect(v.distinctPayers7d).toBe(2);
+    expect(v.baselinePerDay).toBe(105);
   });
 });
 
@@ -191,5 +258,29 @@ describe("classifyVolume, what the plain mean already got right stays right (rev
     ]);
     if (v.kind !== "concentrated" && v.kind !== "broad") throw new Error("expected a drop");
     expect(v.topBuyers.reduce((a, b) => a + b.share, 0)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("classifyVolume, round-3 shapes keep the plain mean", () => {
+  const plain = (rows: PayerRow[]) => expect(classifyVolume(rows).baselinePerDay).toBeCloseTo(meanBaseline(rows));
+
+  it("a ramp made by a new buyer, then a drop, keeps the plain mean and pages", () => {
+    // Totals [30, 300, 300, 30, 30, 30, 30]: a steady payer plus a new buyer.
+    const rows = [perDay("old", 30, 0), daily("new", [0, 270, 270, 0, 0, 0, 0], 0)];
+    plain(rows);
+    expect(classifyVolume(rows).kind).toBe("broad");
+  });
+
+  it("a healthy level followed by an outage keeps the plain mean, one payer or many", () => {
+    plain([daily("a", [0, 0, 0, 0, 100, 10, 10], 0)]);
+    const many = ["p", "q", "r", "s", "t"].map((p) => daily(p, [0, 0, 0, 0, 20, 2, 2], 0));
+    plain(many);
+    expect(classifyVolume(many).kind).toBe("broad");
+  });
+
+  it("an outage where all payers fall together keeps the plain mean", () => {
+    const rows = ["p", "q", "r"].map((p) => daily(p, [0, 0, 40, 40, 40, 40, 40], 0));
+    plain(rows);
+    expect(classifyVolume(rows).kind).toBe("broad");
   });
 });
