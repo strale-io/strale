@@ -2,7 +2,7 @@ import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
-import { strippedTextLength } from "./lib/stripped-text-length.js";
+import { hasMoreTextThan } from "./lib/stripped-text-length.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
@@ -135,8 +135,9 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       throw siteAccessRefusal(url, { kind: "challenge" }, getBlockedSiteHint(url) ?? undefined);
     }
 
-    // Linear: the regex chain this replaced was quadratic on hostile pages.
-    if (strippedTextLength(html) > 500) return html;
+    // Linear, and reads at most TEXT_CHECK_WINDOW: the regex chain this
+    // replaced was quadratic on hostile pages (R1).
+    if (hasMoreTextThan(html, 500)) return html;
 
     return null;
   } catch (err) {

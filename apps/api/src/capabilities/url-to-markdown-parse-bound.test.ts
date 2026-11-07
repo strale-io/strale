@@ -69,6 +69,48 @@ beforeEach(() => {
   fetchRenderedHtml.mockRejectedValue(new Error("Browserless must not be reached in this suite"));
 });
 
+/** Longest event-loop gap (5 ms interval, trailing tick) while `work` runs. */
+async function maxGap(work: () => Promise<unknown>): Promise<number> {
+  let last = performance.now();
+  let gap = 0;
+  const timer = setInterval(() => {
+    const now = performance.now();
+    gap = Math.max(gap, now - last);
+    last = now;
+  }, 5);
+  try {
+    await work();
+  } finally {
+    await new Promise((r) => setTimeout(r, 25));
+    clearInterval(timer);
+  }
+  return gap;
+}
+
+describe("url-to-markdown keeps the event loop free (R1)", () => {
+  it("converts 16 MiB of ordinary text without blocking, and keeps its words", async () => {
+    // Third R1 review: the full-page text check cost 2.2 s of main-thread time
+    // here, and the converter's input cut dropped the whole page (0 words).
+    const html = `<html><body><p>${"word ".repeat(Math.floor((16 * 1024 * 1024 - 64) / 5))}</p></body></html>`;
+    let outcome: Awaited<ReturnType<typeof run>> | undefined;
+    const gap = await maxGap(async () => { outcome = await run(html); });
+    expect(outcome?.error).toBeNull();
+    expect((outcome?.result as { output: { word_count: number } }).output.word_count).toBeGreaterThan(1_000);
+    expect(gap).toBeLessThan(500);
+  }, 60_000);
+
+  it("strips links from a flood of '[' without blocking", async () => {
+    // Second R1 review: 1 s on the main thread when link stripping ran there.
+    safeFetchMock.mockImplementation(async () => page(`<html><body><p>${WORDS}</p><pre>${"[".repeat(60_000)}</pre></body></html>`));
+    let error: unknown = null;
+    const gap = await maxGap(async () => {
+      await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a", include_links: false }).catch((e) => { error = e; });
+    });
+    expect(error).toBeNull();
+    expect(gap).toBeLessThan(500);
+  }, 60_000);
+});
+
 describe("url-to-markdown on hostile pages", () => {
   it("converts a deeply nested page quickly and keeps its text", async () => {
     const { ms, result, error } = await run(`<html><body>${"<div>".repeat(20_000)}<p>${WORDS}</p></body></html>`);

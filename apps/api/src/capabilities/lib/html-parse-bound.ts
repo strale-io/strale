@@ -40,8 +40,12 @@ import { defaultTreeAdapter, parse, type DefaultTreeAdapterMap, type TreeAdapter
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 
 export const HTML_PARSE_LIMITS = {
-  /** Model depth past which opening tags are dropped. */
-  maxDepth: 256,
+  /**
+   * Model depth past which opening tags are dropped (their text is kept).
+   * Readability's cost grows about with the square of depth (0.41 s at 100,
+   * 1.5 s at 256 in the third R1 review); real pages rarely nest past 60.
+   */
+  maxDepth: 128,
   /** Attributes kept per tag. */
   maxAttributesPerTag: 64,
   /** Characters kept per attribute value (inline data: images fit). */

@@ -31,16 +31,21 @@ export const CONVERSION_LIMITS = {
   workers: 2,
   /** Wall-clock limit for one conversion, from the moment a worker takes it. */
   timeoutMs: 8_000,
-  /** Heap limits per worker (MB). One conversion of the largest input peaks well inside. */
-  maxOldGenerationSizeMb: 512,
+  /**
+   * Heap limits per worker (MB). The API runs on a 1 GB Railway box
+   * (web-provider.ts). At 256 a dense 1 MiB article ran out of heap; at 384
+   * the time limit binds first. Measured peak with two 15 MB pages converting
+   * at once: 293 MB above the process baseline.
+   */
+  maxOldGenerationSizeMb: 384,
   maxYoungGenerationSizeMb: 48,
   /**
    * Characters of HTML handed to the converter; the rest of a longer page is
-   * dropped at a tag boundary. The Markdown is cut to 50,000 characters
-   * anyway, and the second R1 review measured 650-775 MB of process memory
-   * for one 15 MB conversion, which two workers would double.
+   * dropped. The Markdown is cut to 50,000 characters anyway, a 4 MiB article
+   * already runs into the time limit, and the R1 reviews measured 650-775 MB
+   * of process memory for one 15 MB conversion.
    */
-  maxInputChars: 4 * 1024 * 1024,
+  maxInputChars: 2 * 1024 * 1024,
   /** Pages waiting for a worker; beyond this a page is refused at once. */
   maxQueued: 8,
   /** Longest a page waits for a worker before it is refused. */
@@ -86,6 +91,13 @@ function createWorker(options: { resourceLimits: { maxOldGenerationSizeMb: numbe
   return new Worker(url, options);
 }
 
+type WorkerFactory = typeof createWorker;
+let workerFactory: WorkerFactory = createWorker;
+/** Tests only: replace how workers are created (null restores the real one). */
+export function __setWorkerFactoryForTests(factory: WorkerFactory | null): void {
+  workerFactory = factory ?? createWorker;
+}
+
 function tooComplex(message: string): HtmlTooComplexError {
   const e = new HtmlTooComplexError("over a conversion limit");
   e.message = message;
@@ -100,7 +112,7 @@ class Slot {
   constructor(private readonly onFree: () => void) {}
 
   private spawn(): Worker {
-    const w = createWorker({
+    const w = workerFactory({
       resourceLimits: {
         maxOldGenerationSizeMb: CONVERSION_LIMITS.maxOldGenerationSizeMb,
         maxYoungGenerationSizeMb: CONVERSION_LIMITS.maxYoungGenerationSizeMb,
@@ -136,8 +148,10 @@ class Slot {
       try {
         this.worker = this.spawn();
       } catch (err) {
+        // The log keeps the detail (a file path, in production); the caller
+        // gets a plain message.
         logWarn("readability-worker-spawn-failed", err instanceof Error ? err.message : String(err));
-        job.reject(err);
+        job.reject(new Error("The page converter could not start. Please retry later."));
         this.onFree();
         return;
       }
@@ -231,12 +245,21 @@ export function htmlToCleanMarkdown(html: string, url: string, options?: Markdow
   }).catch(refused);
 }
 
-/** Cuts the HTML at maxInputChars, at the last "<" before it so no tag is split. */
+/**
+ * Cuts the HTML at maxInputChars. It cuts before a tag that starts within the
+ * last 64 KiB, so no tag is split; otherwise (one long run of text crosses the
+ * limit) it cuts the text there. Cutting at an earlier "<" could drop the
+ * whole page: `<p>` and 15 MB of words would keep only `<html><body>` (third
+ * R1 review, M1). parse5 handles a cut anywhere; a surrogate pair is never split.
+ */
 export function boundInput(html: string): string {
   const max = CONVERSION_LIMITS.maxInputChars;
   if (html.length <= max) return html;
   const lt = html.lastIndexOf("<", max);
-  return html.slice(0, lt > 0 ? lt : max);
+  let cut = lt > 0 && max - lt <= 64 * 1024 ? lt : max;
+  const c = html.charCodeAt(cut - 1);
+  if (c >= 0xd800 && c <= 0xdbff) cut -= 1; // high surrogate: keep the pair together
+  return html.slice(0, cut);
 }
 
 /** Stops every converter (tests, shutdown). Queued pages are refused. */

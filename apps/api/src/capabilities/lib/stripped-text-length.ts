@@ -74,6 +74,54 @@ export function strippedTextLength(html: string): number {
 }
 
 /**
+ * How much of a page the "is there real text here?" checks read. Both callers
+ * only compare the text length with a small threshold (500 and 200
+ * characters), so the first 512 KiB decides it. Reading all of a 16 MiB page
+ * cost up to 2.2 s of main-thread time even though the scans are linear
+ * (third R1 review of #964).
+ */
+export const TEXT_CHECK_WINDOW = 512 * 1024;
+
+/** strippedTextLength over the first TEXT_CHECK_WINDOW characters, compared with `n`. */
+export function hasMoreTextThan(html: string, n: number): boolean {
+  return strippedTextLength(html.length > TEXT_CHECK_WINDOW ? html.slice(0, TEXT_CHECK_WINDOW) : html) > n;
+}
+
+const isAsciiCI = (html: string, at: number, word: string): boolean => {
+  for (let k = 0; k < word.length; k++) {
+    if ((html.charCodeAt(at + k) | 0x20) !== word.charCodeAt(k)) return false;
+  }
+  return true;
+};
+
+/** Index of the last "</body>" (any case) starting at or after `from`, or -1. No copies. */
+function lastCloseBody(html: string, from: number): number {
+  for (let i = html.lastIndexOf("</"); i >= from; i = i > 0 ? html.lastIndexOf("</", i - 1) : -1) {
+    if (i + 7 <= html.length && isAsciiCI(html, i + 2, "body") && html.charCodeAt(i + 6) === 62 /* > */) return i;
+  }
+  return -1;
+}
+
+/** The span the body regex below captures, or null: [start, end). */
+function bodySpan(html: string): [number, number] | null {
+  // The match starts at the first "<body" whose "[^>]*>" can complete, which
+  // is the first one: a later "<body" has no ">" after it if this one does not.
+  // (Searched case-insensitively in place: lowercasing a copy can change its
+  // length for some Unicode characters and shift every index.)
+  const openMatch = /<body/i.exec(html);
+  if (!openMatch) return null;
+  const gt = html.indexOf(">", openMatch.index + 5);
+  if (gt < 0) return null;
+  // Greedy [\s\S]* ends at the last "</body>" after the ">".
+  const close = lastCloseBody(html, gt + 1);
+  return close < 0 ? null : [gt + 1, close];
+}
+
+function stripBody(body: string): string {
+  return replaceTags(removeSpans(removeSpans(body, "script"), "style"), "").trim();
+}
+
+/**
  * What web-provider's plain-fetch tier calls the page's visible text. It
  * returns exactly what this returns:
  *
@@ -88,22 +136,14 @@ export function strippedTextLength(html: string): number {
  * 1 MB would take about a minute (the second R1 review of #964).
  */
 export function bodyVisibleText(html: string): string {
-  // The match starts at the first "<body" whose "[^>]*>" can complete, which
-  // is the first one: a later "<body" has no ">" after it if this one does not.
-  // (Searched case-insensitively in place: lowercasing a copy can change its
-  // length for some Unicode characters and shift every index.)
-  const openMatch = /<body/i.exec(html);
-  if (!openMatch) return "";
-  const gt = html.indexOf(">", openMatch.index + 5);
-  if (gt < 0) return "";
-  // Greedy [\s\S]* ends at the last "</body>" after the ">": one forward pass.
-  const closeRe = /<\/body>/gi;
-  closeRe.lastIndex = gt + 1;
-  let close = -1;
-  for (let m = closeRe.exec(html); m; m = closeRe.exec(html)) close = m.index;
-  if (close < 0) return "";
-  let body = html.slice(gt + 1, close);
-  body = removeSpans(body, "script");
-  body = removeSpans(body, "style");
-  return replaceTags(body, "").trim();
+  const span = bodySpan(html);
+  return span ? stripBody(html.slice(span[0], span[1])) : "";
+}
+
+/** bodyVisibleText(html).length > n, reading at most TEXT_CHECK_WINDOW of the body. */
+export function bodyHasMoreTextThan(html: string, n: number): boolean {
+  const span = bodySpan(html);
+  if (!span) return false;
+  const end = Math.min(span[1], span[0] + TEXT_CHECK_WINDOW);
+  return stripBody(html.slice(span[0], end)).length > n;
 }

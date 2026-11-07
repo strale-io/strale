@@ -95,7 +95,7 @@ limitations:
     severity: info
   - title: Very large or slow pages are cut short or refused
     text: >-
-      Only the first 4 MiB of a page's HTML is converted, so the end of a very long page can be
+      Only the first 2 MiB of a page's HTML is converted, so the end of a very long page can be
       missing. A page whose markup is too complex, or that takes more than 8 seconds to convert, is
       refused with an error saying so. A refusal is not charged.
     category: coverage

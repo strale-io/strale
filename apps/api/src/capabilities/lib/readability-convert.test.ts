@@ -11,7 +11,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ResourceLimitError } from "../../lib/resource-limits.js";
 import { HtmlTooComplexError } from "./html-parse-bound.js";
 import { convertHtmlToMarkdownSync, postProcessMarkdown } from "./readability-convert-sync.js";
-import { boundInput, CONVERSION_LIMITS, ConversionBusyError, htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
+import { __setWorkerFactoryForTests, boundInput, CONVERSION_LIMITS, ConversionBusyError, htmlToCleanMarkdown, stopConversionWorkers } from "./readability-convert.js";
 
 const DEFAULTS = { ...CONVERSION_LIMITS };
 const URL_ = "https://example.test/a";
@@ -129,6 +129,34 @@ describe("htmlToCleanMarkdown in a worker", () => {
     expect(boundInput("<p>short</p>")).toBe("<p>short</p>");
     expect(boundInput("<p>aaaa</p><p>bbbbbbbbbbbbbb</p>")).toBe("<p>aaaa</p>");
   });
+
+  it("cuts a long run of text at the limit rather than at a much earlier tag", () => {
+    // Third R1 review, M1: "<p>" and 15 MB of words kept only "<html><body>".
+    CONVERSION_LIMITS.maxInputChars = 200_000;
+    const html = `<html><body><p>${"word ".repeat(100_000)}</p></body></html>`;
+    const cut = boundInput(html);
+    expect(cut.length).toBe(200_000);
+    expect(cut.startsWith("<html><body><p>word word")).toBe(true);
+  });
+
+  it("never splits a surrogate pair at the cut", () => {
+    CONVERSION_LIMITS.maxInputChars = 101;
+    const html = `<p>${"x".repeat(97)}😀😀😀</p>`; // the emoji starts at index 100
+    const cut = boundInput(html);
+    expect(cut.length).toBe(100);
+    expect(cut.endsWith("x")).toBe(true);
+  });
+
+  it("a worker that cannot start fails its job with a plain message, and the next job works", async () => {
+    await stopConversionWorkers();
+    __setWorkerFactoryForTests(() => { throw new Error("readability worker missing at /app/dist/capabilities/lib/readability-worker.js"); });
+    const error = await htmlToCleanMarkdown(ARTICLE, URL_).catch((e) => e);
+    expect((error as Error).message).toBe("The page converter could not start. Please retry later.");
+    expect((error as Error).message).not.toContain("/app/");
+    __setWorkerFactoryForTests(null);
+    const ok = await htmlToCleanMarkdown(ARTICLE, URL_);
+    expect(ok.markdown).toContain("# Heading");
+  }, 30_000);
 
   it("refuses a page that waits in the queue past maxQueueWaitMs", async () => {
     await stopConversionWorkers();

@@ -102,11 +102,11 @@ describe("htmlToCleanMarkdown on adversarial markup", () => {
   it("deep nesting keeps the text: tags past the depth limit are dropped, not their content", () => {
     const html = `<body>${"<div>".repeat(5_000)}<p>The text inside the deep nest survives intact.</p></body>`;
     const { ms, error, markdown } = convert(html);
-    // Before the bound this ended in a RangeError. What matters for time now is
-    // that it converts inside the worker's wall-clock limit in production,
-    // not a fixed 2 s: CI runners spend about 2.8 s of CPU on it.
+    // Before the bound this ended in a RangeError. At maxDepth 256 CI runners
+    // spent about 2.8 s of CPU on it; at 128 it is about a third of that.
+    // The bound sits well under the worker's limit, so a regression shows.
     expect(error).toBeNull();
-    expect(ms).toBeLessThan(CONVERSION_LIMITS.timeoutMs);
+    expect(ms).toBeLessThan(CONVERSION_LIMITS.timeoutMs / 4);
     expect(markdown).toContain("The text inside the deep nest survives intact.");
   });
 });
