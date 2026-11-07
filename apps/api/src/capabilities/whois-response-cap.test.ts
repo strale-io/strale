@@ -26,6 +26,13 @@ import type { AddressInfo } from "node:net";
 
 const state = vi.hoisted(() => ({ port: 0 }));
 
+vi.mock("../lib/safe-fetch.js", () => ({
+  safeFetch: async () => new Response(JSON.stringify({ services: [] }), {
+    headers: { "content-type": "application/json" },
+  }),
+  discardBody: async (response: Response) => response.body?.cancel(),
+}));
+
 vi.mock("node:net", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:net")>();
   // The capabilities call createConnection(43, "whois.<registry>", onConnect).

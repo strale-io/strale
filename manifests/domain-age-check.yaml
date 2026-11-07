@@ -33,7 +33,7 @@ output_schema:
       type: boolean
     risk_indicator:
       type: string
-data_source: WHOIS protocol (direct queries to TLD registrars)
+data_source: RDAP via the IANA bootstrap, with direct registry WHOIS fallback
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -70,8 +70,8 @@ output_field_reliability:
   is_new: guaranteed
   risk_indicator: guaranteed
 limitations:
-  - title: WHOIS availability
-    text: Some TLDs restrict WHOIS data — creation date may not be available for all domains
+  - title: Registration-date coverage
+    text: Registration dates come from the registry's RDAP service, or WHOIS where the TLD has no RDAP service; some ccTLD registries publish no creation date.
     category: coverage
     severity: info
   - title: Rate limiting
