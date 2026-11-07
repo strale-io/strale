@@ -14,7 +14,9 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-47** · `your_call` · owner Petter · raised 2026-11-07 — **the PEP check's published limitations still say it runs on OpenSanctions and suggest an "LLM fallback"; neither has been true since April**
+**DQ-47** · `answered` · owner Petter · raised 2026-11-07 · answered 2026-11-07 (approved) — **the PEP check's published limitations still say it runs on OpenSanctions and suggest an "LLM fallback"; neither has been true since April**
+
+*Answer (2026-11-07):* Petter, in session: "approve DQ-47". Published by startup block 0150 (`0150-publish-pep-check-limitations.ts`): it removes the five named rows by exact text and adds the manifest's three, word for word.
 
 *Why it is yours:* compliance tools' published text changes only with your approval (the boot sync refuses it, `manifest-publication-policy.ts`), as DQ-36 and DQ-46 did.
 
