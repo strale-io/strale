@@ -225,6 +225,17 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # Robustness R2: reference datasets hard-coded into the tools (FATF and EU
+      # lists, VAT and tax rates, legal deadlines) whose check against their
+      # source is due, from config/reference-data.yaml. No network, no secrets.
+      - id: reference-data
+        run: |
+          set +e
+          set -o pipefail
+          node scripts/check-reference-data.mjs --due 2>&1 | tee /tmp/reference-data.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Aggregate report. Step fails (and triggers issue creation) if
       # ANY upstream sweep reported drift.
       - id: aggregate
@@ -281,6 +292,11 @@ jobs:
             echo '```'
             cat /tmp/upstream-recordings.txt
             echo '```'
+            echo ""
+            echo "## Reference data due for a check against its source"
+            echo '```'
+            cat /tmp/reference-data.txt
+            echo '```'
           } > /tmp/report.md
           cat /tmp/report.md
 
@@ -294,7 +310,8 @@ jobs:
           TR=${{ steps.toast-readability.outputs.exit }}
           OS=${{ steps.output-schema.outputs.exit }}
           UR=${{ steps.upstream-recordings.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$FTC" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ] || [ "$UR" != "0" ]; then
+          RD=${{ steps.reference-data.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$FTC" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ] || [ "$UR" != "0" ] || [ "$RD" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi

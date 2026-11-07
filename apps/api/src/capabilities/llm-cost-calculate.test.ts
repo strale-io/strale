@@ -34,19 +34,18 @@ describe("the request that exposed the staleness", () => {
 });
 
 describe("staleness is visible before a caller finds it", () => {
-  it("the table has been verified within PRICING_MAX_AGE_DAYS", () => {
-    // The whole point. When this fails, re-check the three vendor pages and
-    // move PRICING_VERIFIED_ON — do not just bump the date. A green test with
-    // a stale table is exactly the state that produced the original failure.
-    const verified = new Date(PRICING_VERIFIED_ON);
+  it("the table carries a real verification date", () => {
+    // Its age is reported by the reference-data register
+    // (config/reference-data.yaml, row llm-cost-calculate-pricing) in the
+    // weekly drift issue and at session start. This test used to fail every
+    // PR once the table was PRICING_MAX_AGE_DAYS old, which would have blocked
+    // the whole repository on 2027-02-11 for a reason no PR could fix (the
+    // codex:check outage, DEC-20260910-A). When the row is due, re-check the
+    // three vendor pages and move PRICING_VERIFIED_ON; do not just bump it.
+    const verified = new Date(`${PRICING_VERIFIED_ON}T00:00:00Z`);
     expect(Number.isNaN(verified.getTime()), "PRICING_VERIFIED_ON must parse").toBe(false);
-    const ageDays = (Date.now() - verified.getTime()) / 86_400_000;
-    expect(
-      ageDays,
-      `price table last verified ${Math.round(ageDays)} days ago — re-check ${Object.values(
-        PRICING_SOURCES,
-      ).join(", ")} and update PRICING_VERIFIED_ON`,
-    ).toBeLessThan(PRICING_MAX_AGE_DAYS);
+    expect(verified.toISOString().slice(0, 10)).toBe(PRICING_VERIFIED_ON);
+    expect(PRICING_MAX_AGE_DAYS).toBeGreaterThan(0);
   });
 
   it("every priced model names a vendor that has a source URL", () => {

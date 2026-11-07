@@ -46,28 +46,21 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator. (1) #954 (FATF lists) merged 2026-11-06.
-      #956 merged 2026-11-06: the EU high-risk list in
-      aml-risk-score taken from the 2026-01-29 consolidation of Delegated
-      Regulation (EU) 2016/1675, and Myanmar as high, not prohibited. It passed an
-      independent review (PASS-WITH-NITS); it corrected reference data to the
-      official published lists and narrowed the Myanmar label (DEC-20260822-A).
-      After deploy, call the tool for RU and BB and confirm the EU flag follows
-      the Annex (DEC-20260504-C). Nit 1 (EDD, not SDD, for EU-listed
-      countries) is pending in #958.
-      Nit 2, exposing FATF_LISTS_AS_OF and EU_HIGH_RISK_AS_OF in the output, is
-      in scope here. (2) Add RECURRING.yaml due-list rows for a FATF re-check after
-      each plenary (February, June and October) and an EU-list re-check when the
-      Commission amends the Annex. Name the sources: FATF statements, and FinCEN
-      or another public relay when fatf-gafi.org shows its Cloudflare challenge,
-      which is never worked around (DEC-20261023-A). (3) Inventory every
-      hard-coded reference dataset under apps/api/src/capabilities and lib: lists,
-      rate tables, thresholds, embedded estimates such as country-trade-data's.
-      Give each a source, an as-of date and a review cadence, and record
-      SECRECY_JURISDICTIONS as a list with no published source. (4) Vendor terms.
-      apps/api/src/lib/vendor-terms.data.json has 18 rows with accessed dates
-      from 2026-09-06 to 2026-11-06 (Jina AI was already removed and is
-      prohibited, #732). Add a re-read cadence per row."
+    next_action: "Owner: orchestrator. Done: #954 and #956 (FATF and EU lists),
+      #958 (EDD floor), the inventory (#960, 80 datasets), fixes #961, #962 and
+      #963, and the register config/reference-data.yaml with its check
+      (npm run refdata:check in CI; due rows in the weekly drift issue). Next:
+      (1) after #956's deploy, call aml-risk-score for RU and BB and receipt the EU
+      flag (DEC-20260504-C). (2) Clear the due rows in harm order: first the two
+      Dilisense disclosure rows (snapshot 2026-04-27, due since 2026-10-24), then
+      the undated harm-A rows before their first_review_by of 2026-12-15, with
+      SECRECY_JURISDICTIONS replaced by a sourced list or relabelled. (3) Put each
+      tool's *_AS_OF date into its output, so callers see the data's age. (4) The
+      review follow-ups from #962 and #963: VAT-exempt categories,
+      corporate_tax_rate semantics, one EU member list instead of four, one EU
+      VAT regex instead of three, the Israel and Nepal weekends, the Art. 111(4)
+      note. (5) Vendor terms: give each of the 18 rows in
+      apps/api/src/lib/vendor-terms.data.json a re-read cadence."
     resume_file: handoff/_general/from-code/2026-11-06-strale-master-takeover.md
     exit:
       - "#956 is merged and a post-deploy receipt shows the EU flag on the
@@ -75,8 +68,13 @@ tracks:
       - "An inventory receipt lists every hard-coded reference dataset with
         source, as-of date and cadence, and each dataset older than its cadence
         is refreshed or has a recorded reason."
-      - "RECURRING.yaml carries the FATF plenary row, the EU-list row and a
-        vendor-terms re-read row, each with a procedure."
+      - "The FATF and EU-list re-checks are scheduled, each with a procedure:
+        rows in config/reference-data.yaml with cadences (FATF following the
+        plenary calendar) and the clearing procedure in its header, reported by
+        the weekly drift sweep and at session start (orient.mjs). This replaces
+        separate RECURRING.yaml rows, so there is one schedule, not two. Each
+        vendor-terms row carries a re-read cadence that a check enforces and the
+        same reports surface, with a procedure."
       - "Every vendor-terms row has an accessed date inside its cadence."
     evidence: []
   - id: T3
