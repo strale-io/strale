@@ -2,6 +2,7 @@ import { createAnthropicClient } from "../../lib/anthropic-client.js";
 import { MODELS } from "../../lib/models.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { CapabilityRefusalError } from "../../lib/capability-refusal.js";
+import { messageText } from "../../lib/llm-response.js";
 
 /**
  * Shared Browserless scraping + Claude extraction utility for company registries.
@@ -75,7 +76,7 @@ ${text.slice(0, 12000)}`,
     ],
   });
 
-  const content = response.content[0].type === "text" ? response.content[0].text : "";
+  const content = messageText(response);
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error(`Could not extract company data for "${searchTerm}" from ${country} registry.`);
@@ -113,9 +114,7 @@ export async function extractCompanyName(
   });
 
   const name =
-    response.content[0].type === "text"
-      ? response.content[0].text.trim().replace(/^["']|["']$/g, "")
-      : "";
+    messageText(response).trim().replace(/^["']|["']$/g, "");
 
   if (!name || name === NO_NAME_SENTINEL || looksLikeRefusal(name)) {
     throw new CapabilityRefusalError(

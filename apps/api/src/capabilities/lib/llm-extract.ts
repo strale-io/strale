@@ -40,6 +40,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { CapabilityRefusalError } from "../../lib/capability-refusal.js";
 import { extractJsonObject } from "./llm-json.js";
+import { messageText } from "../../lib/llm-response.js";
 
 export interface ExtractJsonWithLlmArgs {
   /** Caller-constructed client — keeps API-key/env handling in the executor. */
@@ -109,7 +110,7 @@ export async function extractJsonWithLlm(
   }
 
   const responseText =
-    response.content[0]?.type === "text" ? response.content[0].text : "";
+    messageText(response);
 
   const parsed = extractJsonObject(responseText);
   if (!parsed) {

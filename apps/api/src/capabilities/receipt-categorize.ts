@@ -9,6 +9,7 @@ import {
   checkedBase64,
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("receipt-categorize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string)?.trim() ?? (input.url as string)?.trim();
@@ -68,7 +69,7 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
     messages,
   });
 
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const parsedOutput = extractJsonObject(responseText);
   if (!parsedOutput) throw new Error("Failed to parse receipt.");
 

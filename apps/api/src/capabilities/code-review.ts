@@ -3,6 +3,7 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
+import { messageText } from "../lib/llm-response.js";
 
 registerCapability("code-review", async (input: CapabilityInput) => {
   const code = ((input.code as string) ?? (input.task as string) ?? "").trim();
@@ -67,7 +68,7 @@ Return JSON:
     );
   }
 
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to review code.");
 

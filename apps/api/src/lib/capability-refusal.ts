@@ -109,6 +109,10 @@ export const REFUSAL_MESSAGE_PATTERNS = [
   // (via isCapabilityRefusal) aligned with the taxonomy, the same three-consumer
   // guarantee this list already gives the registry-refusal patterns above.
   "Extraction result too large for one call",
+  // lib/llm-response.ts: the model's safety classifiers declined this input
+  // (stop_reason "refusal", newer models). Nothing is unhealthy and retrying
+  // the same input gets the same answer; the input has to change.
+  "The AI model declined this request",
 ] as const;
 
 /**

@@ -9,6 +9,7 @@ import {
   checkedBase64,
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
+import { messageText } from "../lib/llm-response.js";
 
 // URL inputs are fetched by US via safeFetch and sent to Anthropic as base64.
 // Two reasons (P1, 2026-08-12): (a) Anthropic's own URL fetcher fails on
@@ -114,7 +115,7 @@ If no text is found, return {"text": "", "confidence": "high", "language_detecte
     ],
   });
 
-  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const responseText = messageText(r).trim();
   const output = extractJsonObject(responseText);
   if (!output) throw new Error("OCR extraction failed.");
 
