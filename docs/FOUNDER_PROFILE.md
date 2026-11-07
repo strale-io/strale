@@ -21,9 +21,8 @@ had no such file, so they guessed, and asked him technical questions he cannot j
   and Claude verifies it (`MODEL_ROUTING.md` "Codex builders").
 - **Each project has a master that runs lanes in parallel**, and lanes delegate their building to
   Codex too, through the fleet's Codex dispatcher.
-- **Work runs in the cloud**, so it continues while his laptop is closed. A cloud session starts a
-  session on his PC itself when only the PC has what it needs (`docs/fleet-roster.md` "Needs the
-  founder's PC").
+- **Work runs in the cloud**, so it continues while his laptop is closed. Work only his PC can do goes
+  to the PC desk as a PC job (`docs/fleet-roster.md` "PC desk").
 - **Sessions talk to each other** (`COMMS_CORE.md`) to stay in step and answer each other's
   questions before anything reaches him.
 - **Seamless, never reckless:** secrets, sign-ins, customer and production data keep their rules
@@ -38,9 +37,15 @@ had no such file, so they guessed, and asked him technical questions he cannot j
 
 ## Asking him
 
-- Ask only what is really his (`PACE_CORE.md` §5 "ASK LAST", in wow-core): spending, accounts and payments,
-  legal acceptance, external communication, production releases not already delegated, deleting
-  data, irreversible provider changes, and real product or strategy choices.
+- Ask only what is really his (`PACE_CORE.md` §5 "ASK LAST", in wow-core): his **five hard stops** and
+  what they imply (founder 2026-11-06; list in wow-core `AGENTS.md` "Execution and close"): never send, post
+  or invite; never pay, accept terms or create accounts; never delete production data or publish without
+  his yes; Codex gets no keys, mail or customer data; merges only through `merge-gate`. So: spending,
+  accounts and payments, legal acceptance, external communication, deleting production data, publishing,
+  irreversible provider changes, and real product or strategy choices. Reversible production changes
+  (environment and Railway variables, redeploy and rollback, DNS records, domain settings) are the
+  masters' own and reach him only in the daily digest; storing a Test key or using a sign-in he already
+  made needs no ask either (`SECURITY_CORE.md` §1a).
 - **Never ask him to review or choose a technical option.** He cannot judge it better than a model.
   Decide it, with an independent review in a separate context where the tier needs one, and tell
   him what was decided.
@@ -49,6 +54,6 @@ had no such file, so they guessed, and asked him technical questions he cannot j
   terminal wherever the platform allows.
 - **Never hand him git, shell or PowerShell commands** (founder 2026-11-06: a master asked him to remove a
   worktree and delete a branch by hand). GitHub work (branches, PRs, labels) a cloud session does itself;
-  work on his PC (worktrees, local files, local tools) goes into a PC session its master starts
-  (`docs/fleet-roster.md` "A master's PC session"), batched into the next PC job when it is only cleanup. The
+  work on his PC (worktrees, local files, local tools) goes to the PC desk as a PC job
+  (`docs/fleet-roster.md` "PC desk"), batched into the next PC job when it is only cleanup. The
   only things he types are in Claude, a sign-in page or a product's own screen.

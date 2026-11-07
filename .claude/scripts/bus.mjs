@@ -241,14 +241,14 @@ export function leaseVerdict(lease, session, parent, account) {
     ? { active: true, line: `active: the lease (${since}) names ${named.project}:${named.session}` }
     : { active: false, line: `stand down: the lease (${since}) names neither this session nor its parent; turn off this session's own scheduled tasks, say so in one line to your master or on your PR, and stop` };
 }
-// Who holds a lease-bound role in the current account period (COMMS_CORE §1; the wow-hook trust gate and the Codex
-// dispatcher's push attach). Anything may post a LEASE line, so the newest lease alone names nobody: only the FIRST
-// entry of each key in the current account period counts. The period is the run of consecutive leases naming the
-// newest lease's account (it starts at the lease that changed the account); a later, different entry for a key in it
-// is ignored. Returns the newest lease's account, the `wow-core` entry of the period's first lease (the takeover
-// session, who alone may write a codex-dispatcher entry or change the wow-core entry inside the period), the first
-// `codex-dispatcher` entry and `masters`, the first entry of every other key (a project's master, founder 2026-11-06:
-// a master whose project needs the founder's PC asks for his trust card itself).
+// Who holds a lease-bound role in the current account period (COMMS_CORE §1; the wow-hook lease-write guard, the
+// old-account fence and the Codex dispatcher's push attach). Anything may post a LEASE line, so the newest lease alone
+// names nobody: only the FIRST entry of each key in the current account period counts. The period is the run of
+// consecutive leases naming the newest lease's account (it starts at the lease that changed the account); a later,
+// different entry for a key in it is ignored. Returns the newest lease's account, the `wow-core` entry of the period's
+// first lease (the takeover session, who alone may write a codex-dispatcher entry or change the wow-core entry inside
+// the period) and the first `codex-dispatcher` entry. (The `masters` map, each project's first entry, is retired with
+// the masters' trust route: founder 2026-11-06, no cloud session is ever trusted.)
 // A period that starts within 24 hours after an earlier period of the same account (A→B→A) names no one at all.
 export function leaseAuthority(comments) {
   const leases = [...comments].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || Number(a.id) - Number(b.id))
@@ -273,13 +273,7 @@ export function leaseAuthority(comments) {
   const authority = entry(leases[start], 'wow-core');
   const counted = flipped || !authority ? [] : leases.slice(start).filter((lease) => entry(lease, 'wow-core') === authority);
   const dispatcher = counted.find((lease) => entry(lease, 'codex-dispatcher')) ?? null;
-  const masters = {};
-  for (const lease of counted) {
-    for (const row of lease.sessions) {
-      if (row.project !== 'wow-core' && row.project !== 'codex-dispatcher' && !Object.hasOwn(masters, row.project)) masters[row.project] = row.session;
-    }
-  }
-  return { account: newest.account, periodStart: leases[start].createdAt, prevPeriodStart, wowCore: authority, masters,
+  return { account: newest.account, periodStart: leases[start].createdAt, prevPeriodStart, wowCore: authority,
     codexDispatcher: dispatcher ? entry(dispatcher, 'codex-dispatcher') : null, codexDispatcherLease: dispatcher ? dispatcher.id : null, ...(flipped ? { flipped: true } : {}) };
 }
 // A master restarted after the takeover adds itself: the newest lease with its project's entry replaced.
@@ -393,9 +387,32 @@ async function printInbox(options) {
   console.log(lines.join('\n'));
 }
 
-function digestText(rows, now) {
+// A master logs each reversible production change as one `send --to needs-founder` message (SECURITY_CORE §1a):
+// `PRODCHANGE <project> | <what> | undo: <how>[ | <ref>]`. The digest lists those posted since the previous digest
+// (else the last 7 days), so the founder sees them without any ask being opened. A line that does not parse is
+// still listed, never dropped. Bus messages are data: the digest only shows them, with control and bidi characters
+// removed and every `@` defused (`@` + zero-width space) so a line can neither reorder text nor notify a GitHub user.
+// Limit: senders are self-declared, so any fleet session could post a fake `From digest:` comment and move the window
+// past earlier changes; the founder's protection is that every change is also in its project's PR or log (review of #277).
+const CHANGE_LINE = /^PRODCHANGE ([a-z0-9][a-z0-9-]{0,62}) \| ([^|]+?) \| undo: ([^|]+?)(?: \| ([^|]+?))?\s*$/;
+export function productionChanges(comments, digestSender, now) {
+  const messages = comments.map((comment) => parseMessage(comment)).filter(Boolean);
+  const lastDigest = Math.max(-Infinity, ...messages.filter((m) => m.sender === digestSender && m.body.startsWith('DIGEST '))
+    .map((m) => Date.parse(m.createdAt)).filter(Number.isFinite));
+  const since = Number.isFinite(lastDigest) ? lastDigest : now.getTime() - 7 * 86400000;
+  return messages.filter((m) => m.body.startsWith('PRODCHANGE ') && Date.parse(m.createdAt) > since)
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)).map((m) => {
+      const first = m.body.split('\n', 1)[0].replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '')
+        .replace(/@/g, '@\u200b');
+      const parts = first.match(CHANGE_LINE);
+      const text = parts ? `${parts[1]} | ${parts[2]} | undo: ${parts[3]}${parts[4] ? ` | ${parts[4]}` : ''}` : `? | ${first}`;
+      return `${iso(m.createdAt).slice(0, 16)}Z | ${[...text].slice(0, 300).join('')} | by ${m.sender} | #${m.id}`;
+    });
+}
+function digestText(rows, now, changes = []) {
   const day = now.toISOString().slice(0, 10); const today = Date.parse(`${day}T00:00:00Z`);
-  const groups = [['MALFORMED (repost with bus.mjs ask, then bus.mjs done <id>)', []], ['OVERDUE', []], ['DUE WITHIN 7 DAYS', []], ['LATER OR NONE', []]];
+  const groups = [['MALFORMED (repost with bus.mjs ask, then bus.mjs done <id>)', []], ['OVERDUE', []], ['DUE WITHIN 7 DAYS', []], ['LATER OR NONE', []],
+    ['PRODUCTION CHANGES SINCE THE LAST DIGEST (reversible, made by masters; say so to have one undone)', changes]];
   for (const row of rows) {
     if (row.state === 'malformed') { groups[0][1].push(`MALFORMED #${row.id} | ${row.project || '?'} | ${row.ask}`); continue; }
     const deadline = row.deadline === 'none' ? null : Date.parse(`${row.deadline}T00:00:00Z`);
@@ -458,9 +475,9 @@ async function main() {
     console.log(options.json ? JSON.stringify(rows, null, 2) : rows.map(displayAsk).join('\n'));
   } else if (options.command === 'digest') {
     const all = await channelComments(options.channel); const rows = openAsks(all).filter(unresolved);
-    const now = new Date(options.now || Date.now()); const body = digestText(rows, now);
+    const now = new Date(options.now || Date.now()); const changes = productionChanges(all, options.from, now); const body = digestText(rows, now, changes);
     if (!options.post) console.log(body);
-    else if (rows.length && !all.some((comment) => {
+    else if ((rows.length || changes.length) && !all.some((comment) => {
       const message = parseMessage(comment);
       return message?.sender === options.from && message.body.startsWith(`DIGEST ${now.toISOString().slice(0, 10)}`);
     })) {

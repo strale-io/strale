@@ -45,17 +45,16 @@
 //                   session left on the old account stops itself; FAIL OPEN with one stderr
 //                   line when the label is unset or the bus cannot be read in 5 s). Deny JSON.
 //                   mcp__claude-code-remote__add_repo: ALLOW when the call is exactly {owner,
-//                   repo} or {repo: "owner/name"} naming the repository in WOW_BUS_REPO; files
-//                   the session can edit are never read. In wow-core's own checkout also the Codex
+//                   repo} or {repo: "owner/name"} naming the repository in WOW_BUS_REPO; also exactly
+//                   {owner: <WOW_BUS_REPO's owner>, repo: "wow-core"} with no other key (read-only,
+//                   wowCoreAttachDecision); files the session can edit are never read. In wow-core's own checkout also the Codex
 //                   dispatcher's push attach of a roster repository (codexDispatcherAttachDecision).
 //                   Anything else gets no decision: the host's normal permission flow runs.
-//                   mcp__claude-code-remote__confirm_repository_trust: ALLOW only for the lease-named
-//                   master of a project the roster lists under "Needs the founder's PC" (trustGate:
-//                   WOW_ACCOUNT_LABEL is the leased account's AND the period's first lease entry for
-//                   that project is this session, CLAUDE_CODE_REMOTE_SESSION_ID), or for the period's
-//                   first wow-core entry in wow-core's own checkout (founder 2026-11-06); DENY for everything
-//                   else and whenever that cannot be established (fail CLOSED), citing COMMS_CORE §1.
-//                   Founder 2026-11-06, "Masters use PC directly"; replaces the PC helper of 2026-11-04.
+//                   mcp__claude-code-remote__confirm_repository_trust: DENY for every session (founder
+//                   2026-11-06, "yes": no cloud session is ever trusted; PC work goes through the PC desk,
+//                   docs/fleet-roster.md "PC desk"), citing COMMS_CORE §1, before the hard stops; a deadline
+//                   or internal error on this call denies too (fail CLOSED), and permissions.deny lists it as
+//                   the static backup. Replaces the masters' trust route of #263/#266.
 //   post-tool-use, post-tool-use-failure
 //                   Bash: no-progress halt ({"decision":"block"} once) after 3 identical
 //                   consecutive failures; silent otherwise.
@@ -625,6 +624,30 @@ export function busAttachDecision(input, env = process.env) {
     permissionDecisionReason: `wow-core: attaching the bus repository ${bus} (WOW_BUS_REPO) is allowed` } };
 }
 
+// ---- wow-core read-only attach (evidence 2026-11-06) ----
+// A master opened without wow-core attached cannot take its wow-core sync: four masters were opened that way on
+// 2026-11-06 and one master's read-only add_repo of wow-core was refused by its auto-mode classifier. So this rule allows
+// that one attach as well, and nothing wider: the call is exactly the own keys owner and repo, repo exactly "wow-core"
+// and owner exactly (case-sensitive) the owner of WOW_BUS_REPO. No access key at all, so the host attaches read-only;
+// a call with access ("read" or "push"), any other key, shape or spelling gets no decision and the host's normal flow
+// runs. The owner comes from the environment, like the bus rule, never from a file the session can edit. It is not a
+// constant because this file ships to comms consumers, which may be public, so it names no owner (the comms payload
+// test forbids one); the fleet keeps wow-core under the bus repository's owner (docs/fleet-roster.md), and where that
+// does not hold the rule simply never matches. Earlier denies still win: the old-account fence and the hard stops run
+// before the add_repo branch.
+export const WOW_CORE_REPO_NAME = "wow-core";
+
+export function wowCoreAttachDecision(input, env = process.env) {
+  const bus = trustedBusRepo(env);
+  if (!bus || !input || typeof input !== "object" || Array.isArray(input)) return null;
+  const keys = Object.keys(input);
+  if (keys.length !== 2 || !keys.includes("owner") || !keys.includes("repo")) return null;
+  const owner = bus.split("/")[0];
+  if (input.owner !== owner || input.repo !== WOW_CORE_REPO_NAME) return null;
+  return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
+    permissionDecisionReason: `wow-core: attaching ${owner}/${WOW_CORE_REPO_NAME} read-only (no access key) is allowed: a master takes its wow-core sync from it (owner from WOW_BUS_REPO; COMMS_CORE §2)` } };
+}
+
 export function denyResponse(reason) {
   return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } };
 }
@@ -642,7 +665,9 @@ export function denyResponse(reason) {
 // it (code in the repository, like the bus rule above), and a scheduled task that starts a fresh
 // session each time is not a create_session call.
 
-export const SPAWN_LIMITS = Object.freeze({ perSession: 10, perContainerDay: 25, maxDepth: 2 });
+// Raised from 10 and 25 by the founder on 2026-11-06 (docs/reviews/2026-11-05-security-rollback.md row E3): a master
+// stopped at 10 lanes. Still a cap, the only guard against an injected prompt fanning out sessions on his budget.
+export const SPAWN_LIMITS = Object.freeze({ perSession: 25, perContainerDay: 60, maxDepth: 2 });
 export const ARCHIVE_TAGS = Object.freeze(["wow-task"]);
 const DEPTH_TAG = /\[wow-spawn-depth: (\d+)\]/g;
 const HEAD_BYTES = 256 * 1024;
@@ -719,8 +744,6 @@ function pruneOldDays(base, today) {
   } catch { /* best effort */ }
 }
 
-// The roster's fixed PC prompt (docs/fleet-roster.md "A master's PC session" step 3), as a master sends it.
-const PC_JOB_PROMPT = /^Run git fetch and git checkout --detach [0-9a-f]{7,40}, read docs\/lanes\/pc\/[a-z0-9-]+-brief\.md there, do that one job; report on the PR of \S+ with To orchestrator: comments; end\.$/;
 export function spawnDecision(payload, env = process.env, now = Date.now()) {
   try {
     const sid = safeId(payload?.session_id);
@@ -753,25 +776,18 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     if (childDepth > SPAWN_LIMITS.maxDepth) {
       return denyResponse(`wow-core: session depth ${depth} may not start sessions (master → lane → reviewer, no deeper; founder 2026-11-01). Use a subagent instead.`);
     }
-    // A master's PC session (create_session on its project's bridge environment with the roster's fixed PC prompt,
-    // docs/fleet-roster.md "A master's PC session") does not count toward the per-session cap (founder 2026-11-06,
-    // "yes": short PC jobs used up the Strale orchestrator's 10 starts and it handed the work to him); the PC limits
-    // them (PACE_CORE §2a, two heavy jobs) and the per-container day cap, depth and tags still apply.
-    // Only a master (depth 0) starts PC sessions (roster), and only the whole fixed prompt counts, depth tag removed.
-    const pcJob = depth === 0 && typeof input.environment_id === "string" && input.environment_id !== ""
-      && PC_JOB_PROMPT.test(String(input.prompt ?? "").replace(DEPTH_TAG, "").trim());
     const base = env.WOW_SPAWN_DIR || path.join(os.homedir(), ".wow-core", "spawn");
     const container = safeId(env.CLAUDE_CODE_CONTAINER_ID) || safeId(os.hostname()) || "local";
     const today = new Date(now).toISOString().slice(0, 10);
     pruneOldDays(base, today);
-    const sessionSlot = pcJob ? null : claimSlot(path.join(base, `session-${sid}`), SPAWN_LIMITS.perSession);
-    if (!pcJob && !sessionSlot) return denyResponse(`wow-core: this session has started ${SPAWN_LIMITS.perSession} sessions, the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
+    const sessionSlot = claimSlot(path.join(base, `session-${sid}`), SPAWN_LIMITS.perSession);
+    if (!sessionSlot) return denyResponse(`wow-core: this session has started ${SPAWN_LIMITS.perSession} sessions, the cap (founder 2026-11-01, raised 2026-11-06). Use a subagent.`);
     let daySlot;
     try { daySlot = claimSlot(path.join(base, `container-${container}-${today}`), SPAWN_LIMITS.perContainerDay); }
-    catch (error) { if (sessionSlot) rmSync(sessionSlot, { force: true }); throw error; }
+    catch (error) { rmSync(sessionSlot, { force: true }); throw error; }
     if (!daySlot) {
-      if (sessionSlot) rmSync(sessionSlot, { force: true });
-      return denyResponse(`wow-core: this container has started ${SPAWN_LIMITS.perContainerDay} sessions today (UTC ${today}), the cap (founder 2026-11-01). Use a subagent, or ask the founder.`);
+      rmSync(sessionSlot, { force: true });
+      return denyResponse(`wow-core: this container has started ${SPAWN_LIMITS.perContainerDay} sessions today (UTC ${today}), the cap (founder 2026-11-01, raised 2026-11-06). Use a subagent, or wait for the next UTC day.`);
     }
     const prompt = String(input.prompt ?? "").replace(DEPTH_TAG, "").trimEnd();
     // The archive tag (founder 2026-11-02): every session started here is a task the starter
@@ -781,10 +797,10 @@ export function spawnDecision(payload, env = process.env, now = Date.now()) {
     const updatedInput = { ...input, prompt: `${prompt}${prompt ? "\n\n" : ""}[wow-spawn-depth: ${childDepth}]`,
       tags: [...tags, "wow-task"] };
     return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow",
-      permissionDecisionReason: `wow-core: ${pcJob ? "PC job (not counted toward the per-session cap)" : `session start ${Number(path.basename(sessionSlot)) + 1}/${SPAWN_LIMITS.perSession} for this session`}, ${Number(path.basename(daySlot)) + 1}/${SPAWN_LIMITS.perContainerDay} for this container today, child depth ${childDepth}`,
+      permissionDecisionReason: `wow-core: session start ${Number(path.basename(sessionSlot)) + 1}/${SPAWN_LIMITS.perSession} for this session, ${Number(path.basename(daySlot)) + 1}/${SPAWN_LIMITS.perContainerDay} for this container today, child depth ${childDepth}`,
       updatedInput } };
   } catch (error) {
-    return denyResponse(`wow-core: the session-start cap could not check this call (${error?.message ?? error}), so it is refused (fail closed). Use a subagent, or ask the founder.`);
+    return denyResponse(`wow-core: the session-start cap could not check this call (${error?.message ?? error}), so it is refused (fail closed). Use a subagent, or retry once the cause is fixed (COMMS_CORE §3).`);
   }
 }
 
@@ -1024,56 +1040,24 @@ export function leaseAccountGuard(command, env = process.env) {
   return `wow-core: this lease write names account ${written}, but this session runs on ${label} (WOW_ACCOUNT_LABEL). Only a takeover on an account leases that account; a lease for another account would stop every session started before it. Re-run with --account ${label}, or ask the wow-core master.`;
 }
 
-// ---- Trust gate (founder 2026-11-06, "Masters use PC directly"; replaces the PC helper of 2026-11-04) ----
-// COMMS_CORE §1: the founder's Allow on a trust card limits that session to trusted devices for good, so no lane or
-// other session calls confirm_repository_trust. A master whose project needs the founder's PC starts its own PC
-// sessions (docs/fleet-roster.md "Needs the founder's PC"), so it is the one session of its project that asks, once
-// per account switch. ALLOW only when all hold: WOW_ACCOUNT_LABEL is the leased account's; the roster's "Needs the
-// founder's PC" table, as committed on refs/remotes/origin/main of a wow-core checkout (this hook's own, or, for a
-// consumer's copy in <checkout>/.claude/scripts, the wow-core checkout beside that checkout, which every master
-// session has as its second repository), lists a repository whose lease key (the name after the slash) has this
-// session as its FIRST entry in the account's lease period (`bus.mjs lease --authority` `masters`; ids compare after
-// the first underscore: the platform shows one session as session_<x> and cse_<x>); OR this session is the period's
-// first wow-core entry (`wowCore`) and this copy is wow-core's own checkout (founder 2026-11-06: only a trusted session
-// can message the trusted masters). The hook does not care which
-// checkout's copy runs: every copy reads the same roster and lease. Everything else, including any failure to
-// establish that, DENIES. The founder still answers the card, and he is the boundary: anything on the account can post
-// a LEASE line, so a session that posts the period's first entry for a project by a route the Bash guard below
-// (leaseAuthorityGuard) does not see passes this gate AND locks the real master out of the PC until the next account
-// switch; the card then shows that session's title, not the master's (COMMS_CORE §1).
-export const CONFIRM_TRUST_TOOL = "mcp__claude-code-remote__confirm_repository_trust";
-export const isConfirmTrust = (name) => typeof name === "string" && /^mcp__(?:.+_)?claude-code-remote__confirm_repository_trust$/.test(name);
+// ---- Trust gate (founder 2026-11-06, "yes": no cloud session is ever trusted) ----
+// COMMS_CORE §1: the founder's Allow on a trust card limits that session to trusted devices for good, and live on
+// 2026-11-06 nothing in the cloud could then send_message into it (elevated_session_untrusted_device, even from another
+// trusted session) and scheduled tasks could not fire into it: two project masters and the wow-core master, trusted
+// under the masters' route of #263/#266, went deaf to the fleet. PC work goes through the PC desk, a
+// local session on the founder's PC that needs no card (docs/fleet-roster.md "PC desk"). So this tool is refused for
+// every session, without reading the lease or the roster; the deadline and the internal-error paths in run() deny it
+// too (fail closed). The founder still answers any card that gets through, and he declines them all.
+export const isConfirmTrust = (name) => typeof name === "string" && /^mcp__(?:.+_)?claude-code-remote(?:-[0-9a-f]+)?__confirm_repository_trust$/.test(name);
+export const TRUST_REFUSAL = "wow-core: confirm_repository_trust is refused for every session (founder 2026-11-06): a trusted session opens only on trusted devices, no other session can message it and scheduled tasks cannot fire into it (COMMS_CORE §1). Work that needs the founder's PC goes to the PC desk as a PC job (docs/fleet-roster.md \"PC desk\"): push docs/lanes/pc/<slug>-brief.md with a draft PR and add the label pc-job. Carry on without the card.";
 const SESSION_SUFFIX = /^[A-Za-z0-9]+$/;
 const suffixOf = (id) => {
   if (typeof id !== "string") return null;
   const suffix = id.slice(id.indexOf("_") + 1);
   return id.includes("_") && SESSION_SUFFIX.test(suffix) ? suffix : null;
 };
-export const PC_SECTION = "Needs the founder's PC";
 
-// The repositories of the roster's "Needs the founder's PC" table (rows that start with one `owner/name`), lower-case.
-export function rosterPcRepos(text) {
-  const section = String(text ?? "").split(/^## /m).slice(1).find((part) => part.startsWith(PC_SECTION)) ?? "";
-  return new Set([...section.matchAll(/^\|\s*`([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)`\s*\|/gm)].map((m) => m[1].toLowerCase()));
-}
-
-// The wow-core checkout whose committed roster the trust gate reads: this hook's own in wow-core's layout; for a
-// consumer's copy, `<parent>/wow-core` beside the hook's checkout, when it is a wow-core checkout. null otherwise.
-export function rosterCheckout(self = SELF) {
-  const own = ownCheckoutRoot(self);
-  if (own) return own;
-  const root = hookCheckoutRoot(self);
-  if (!root) return null;
-  const sibling = path.join(path.dirname(root), "wow-core");
-  return existsSync(path.join(sibling, ".git")) && isWowCore(sibling) ? sibling : null;
-}
-const committedPcRoster = () => {
-  const root = rosterCheckout();
-  if (!root) throw new Error("no wow-core checkout beside this one (a master session has wow-core as its second repository)");
-  return committedFileAt(root, ROSTER_SOURCE);
-};
-
-// The lease authority as `bus.mjs lease --authority` prints it: {account, wowCore, masters, codexDispatcher, ...} or
+// The lease authority as `bus.mjs lease --authority` prints it: {account, wowCore, codexDispatcher, ...} or
 // null. Anything may post a LEASE line, so only the FIRST entry of each key in the current account period counts
 // (bus.mjs leaseAuthority). The bus repository must come from the environment (WOW_BUS_REPO, set by the fleet
 // environment); the project's .claude/bus.json and the user bus config are files the session can edit, so these
@@ -1092,7 +1076,7 @@ async function readAuthority(cwd, env, run) {
 }
 
 // This session's label, id and the authority, checked against each other: { ok: true, mine, label, authority } or
-// { ok: false, why }. Shared by the trust gate and the Codex dispatcher's attach.
+// { ok: false, why }. Used by the Codex dispatcher's attach.
 async function leasedAuthority({ cwd, env, run }) {
   const label = typeof env.WOW_ACCOUNT_LABEL === "string" ? env.WOW_ACCOUNT_LABEL : "";
   if (!label || !ACCOUNT_NAME.test(label)) return { ok: false, why: "WOW_ACCOUNT_LABEL is unset or invalid" };
@@ -1105,50 +1089,16 @@ async function leasedAuthority({ cwd, env, run }) {
   return { ok: true, mine, label, authority };
 }
 
-// { allow, reason }. `run` and `roster` are injectable for tests.
-// The period's wow-core session (the lease authority) may also ask, from wow-core's own checkout only (founder
-// 2026-11-06): once the masters are trusted, the platform accepts messages into them only from trusted sessions, so an
-// untrusted wow-core master could no longer steer them and the founder became the messenger.
-export async function trustGate({ cwd, env = process.env, run = runChild, roster = committedPcRoster, self = SELF }) {
-  const refuse = (why) => ({ allow: false, reason: `wow-core: confirm_repository_trust is refused: ${why}. Only the lease-named master of a project the roster lists under "${PC_SECTION}", or the period's wow-core master in wow-core's own checkout, asks for the founder's trust card, once per account switch; a lane or any other session never does, because the card limits that session to trusted devices for good (COMMS_CORE §1). Carry on without it, or ask your master.` });
-  try {
-    const first = await leasedAuthority({ cwd, env, run });
-    if (first.ok && !first.authority.flipped && first.authority.wowCore && suffixOf(first.authority.wowCore) === first.mine && ownCheckoutRoot(self)) {
-      return { allow: true, reason: `wow-core: this session is the wow-core master of the account's lease period (wow-core:${first.authority.wowCore}, account ${first.label}), asking so it can still reach the trusted masters; the founder answers the card, from the desktop app or a browser on a trusted device` };
-    }
-    let pcRepos;
-    try { pcRepos = rosterPcRepos(roster()); } catch (error) { return refuse(`the roster could not be read from ${ROSTER_SOURCE} (${String(error?.message ?? error).split("\n")[0]})`); }
-    if (!pcRepos.size) return refuse(`the roster on ${ORIGIN_MAIN} lists no repository under "${PC_SECTION}"`);
-    const who = first;
-    if (!who.ok) return refuse(who.why);
-    if (who.authority.flipped) return refuse("the account's lease period began within 24 hours of an earlier period of the same account (an A to B to A switch), so it names no master");
-    const masters = who.authority.masters && typeof who.authority.masters === "object" ? who.authority.masters : {};
-    for (const repo of pcRepos) {
-      const key = repo.split("/")[1];
-      const named = Object.hasOwn(masters, key) ? masters[key] : null;
-      if (suffixOf(named) === who.mine) {
-        return { allow: true, reason: `wow-core: this session is the lease-named master of ${repo} (${key}:${named}, account ${who.label}), which the roster lists under "${PC_SECTION}"; the founder answers the card, from the desktop app or a browser on a trusted device` };
-      }
-    }
-    return refuse(`this session is not the first lease entry, in the account's lease period, of a project listed there (${[...pcRepos].join(", ")})`);
-  } catch (error) { return refuse(String(error?.message ?? error).split("\n")[0]); }
-}
-
-// Rewriting the `wow-core` entry is how a session would make itself the lease authority, writing a `codex-dispatcher`
-// entry is how it would name itself the dispatcher (review 2026-11-04), and writing the period's first entry for a
-// project under the roster's "Needs the founder's PC" is how it would name itself that project's master for the trust
-// gate, locking the real master out of the PC for the whole period (review 2026-11-06, M1). The authority is the
+// Rewriting the `wow-core` entry is how a session would make itself the lease authority, and writing a
+// `codex-dispatcher` entry is how it would name itself the dispatcher (review 2026-11-04). The authority is the
 // `wow-core` session of the account period's FIRST lease (`bus.mjs lease --authority`): it alone writes a
-// codex-dispatcher entry, changes a wow-core entry inside the period, or writes a PC project's entry while
-// `lease --authority` `masters` has none for it yet (the takeover's step-6 re-take). Once the project has its first
-// entry, a later write changes nothing for the trust gate and stays allowed (a restarted master's `lease --add`). A
-// `--take` (or raw LEASE) for a DIFFERENT account than the newest lease starts a new period, that is a takeover, and
-// stays allowed. Fail closed when the lease cannot be read, and treat an unclaimed project as a PC project when the
-// committed roster cannot be read. This text
-// match stops honest mistakes and the obvious self-grant only (it misses split strings, variables and a body file); a
-// session that edits its own hooks or posts through another route is stopped by the first-entry rules in bus.mjs, for
-// the dispatcher by the `Codex dispatcher:` line the master merges into TASKS.md (codexDispatcherAttachDecision), and
-// for the trust card by the founder.
+// codex-dispatcher entry or changes a wow-core entry inside the period. A `--take` (or raw LEASE) for a DIFFERENT
+// account than the newest lease starts a new period, that is a takeover, and stays allowed. Fail closed when the lease
+// cannot be read. A project's entry (a master's `lease --add`) is not guarded: since no session may ask for a trust
+// card (founder 2026-11-06), a project's first entry grants nothing. This text match stops honest mistakes and the
+// obvious self-grant only (it misses split strings, variables and a body file); a session that edits its own hooks or
+// posts through another route is stopped by the first-entry rules in bus.mjs and, for the dispatcher, by the
+// `Codex dispatcher:` line the master merges into TASKS.md (codexDispatcherAttachDecision).
 const LEASE_WRITE = (command) => (/\bbus\.mjs\b[^;&|\n]*\blease\b[^;&|\n]*--(?:add|take)\b/.test(command))
   || (/\bLEASE\s+account=/.test(command))
   || (/fleet-lease/.test(command) && /\b(?:send|api|POST|comments)\b/.test(command));
@@ -1158,57 +1108,28 @@ export function writesCodexDispatcherLease(command) {
 export function writesWowCoreLease(command) {
   return typeof command === "string" && /wow-core\s*:\s*(?:session|cse)_/i.test(command) && LEASE_WRITE(command);
 }
-// The project keys (every `<key>:<session id>` but wow-core and codex-dispatcher) a lease write names, lower-case.
-export function leaseProjectKeys(command) {
-  if (typeof command !== "string" || !LEASE_WRITE(command)) return [];
-  const keys = [...command.matchAll(/(?<![A-Za-z0-9-])([A-Za-z0-9][A-Za-z0-9-]{0,62})\s*:\s*(?:session|cse)_/g)].map((m) => m[1].toLowerCase());
-  return [...new Set(keys)].filter((key) => key !== "wow-core" && key !== "codex-dispatcher");
-}
 // The account a lease write names (`--account <label>` or `LEASE account=<label>`), or null when it names none.
 const writtenAccount = (command) => command.match(/--account[ =]+["']?([a-z0-9][a-z0-9-]*)/)?.[1] ?? command.match(/\bLEASE\s+account=([a-z0-9][a-z0-9-]*)/)?.[1] ?? null;
-export async function leaseAuthorityGuard({ command, cwd, env = process.env, run = runChild, roster = committedPcRoster }) {
+export async function leaseAuthorityGuard({ command, cwd, env = process.env, run = runChild }) {
   const dispatcherWrite = writesCodexDispatcherLease(command);
   const wowCoreWrite = writesWowCoreLease(command);
-  const projectKeys = leaseProjectKeys(command);
-  if (!dispatcherWrite && !wowCoreWrite && !projectKeys.length) return null;
-  let authority;
-  let authorityError = null;
-  try { authority = await readAuthority(cwd, env, run); } catch (error) { authorityError = String(error?.message ?? error).split("\n")[0]; }
-  const refuse = (why) => `wow-core: a codex-dispatcher entry, a change to the wow-core entry, or the first entry of a project under the roster's "${PC_SECTION}", inside an account's lease period, may be written only by the takeover (the wow-core session of the period's first lease): ${why}. The Codex dispatcher is the one session allowed to attach fleet repositories with push (MODEL_ROUTING "Codex dispatch"), a PC project's first entry is the one master allowed to ask for the founder's trust card, and the wow-core entry names who may write both (COMMS_CORE §1), so none of them is for lanes or masters. Ask the wow-core master.`;
-  // Only an unclaimed key matters: a key that already has its first entry in the period cannot change who the trust gate
-  // honours, and a flipped (A to B to A) period names no master at all (the gate refuses everyone there), so neither is
-  // guarded (review 2026-11-06: a restarted master's --add must not be refused all period). The roster is read only for
-  // the unclaimed keys; when it cannot be read, each unclaimed key is treated as a PC project (fail closed), so a write
-  // the period already covers still goes through.
-  let pcWrite = [];
-  if (projectKeys.length && !authority?.flipped) {
-    const masters = authority?.masters && typeof authority.masters === "object" ? authority.masters : {};
-    const unclaimed = projectKeys.filter((key) => !Object.hasOwn(masters, key));
-    if (unclaimed.length) {
-      try { const pcKeys = new Set([...rosterPcRepos(roster())].map((repo) => repo.split("/")[1])); pcWrite = unclaimed.filter((key) => pcKeys.has(key)); }
-      catch (error) {
-        pcWrite = unclaimed;
-        note(`the roster could not be read from ${ROSTER_SOURCE} (${String(error?.message ?? error).split("\n")[0]}); treating ${unclaimed.join(", ")} as projects under "${PC_SECTION}"`);
-      }
-    }
-  }
-  if (!dispatcherWrite && !wowCoreWrite && !pcWrite.length) return null;
+  if (!dispatcherWrite && !wowCoreWrite) return null;
+  const refuse = (why) => `wow-core: a codex-dispatcher entry, or a change to the wow-core entry inside an account's lease period, may be written only by the takeover (the wow-core session of the period's first lease): ${why}. The Codex dispatcher is the one session allowed to attach fleet repositories with push (MODEL_ROUTING "Codex dispatch"), and the wow-core entry names who may write it (COMMS_CORE §1), so neither is for lanes or masters. Ask the wow-core master.`;
   const mine = suffixOf(env.CLAUDE_CODE_REMOTE_SESSION_ID);
   if (!mine) return refuse("this session's id (CLAUDE_CODE_REMOTE_SESSION_ID) is missing");
-  if (authorityError) return refuse(authorityError);
+  let authority;
+  try { authority = await readAuthority(cwd, env, run); } catch (error) { return refuse(String(error?.message ?? error).split("\n")[0]); }
   const isAuthority = Boolean(authority && authority.wowCore) && suffixOf(authority.wowCore) === mine;
   if (dispatcherWrite) {
     if (!authority || !authority.wowCore) return refuse("the newest lease period names no wow-core session");
     if (!isAuthority) return refuse("this session is not the wow-core session of the account's lease period");
   }
-  // A wow-core or PC project write: allowed for the period's authority, for the very first lease, and for a takeover
-  // that starts a new account period (its account differs from the newest lease's).
-  if (!authority || isAuthority) return null;
+  // A wow-core write: allowed for the period's authority, for the very first lease, and for a takeover that starts a
+  // new account period (its account differs from the newest lease's).
+  if (!wowCoreWrite || !authority || isAuthority) return null;
   const account = writtenAccount(command);
   if (account && account !== authority.account) return null;
-  if (wowCoreWrite) return refuse(`this session is not the wow-core session of the account's lease period (${authority.account}), and the write does not start a new account period`);
-  if (pcWrite.length) return refuse(`this session is not the wow-core session of the account's lease period (${authority.account}), and the period has no entry yet for ${pcWrite.join(", ")} (a project under "${PC_SECTION}"): the takeover's re-take writes it`);
-  return null;
+  return refuse(`this session is not the wow-core session of the account's lease period (${authority.account}), and the write does not start a new account period`);
 }
 
 // ---- Codex dispatcher push attach (founder 2026-11-05; MODEL_ROUTING "Codex dispatch" "Results") ----
@@ -1579,22 +1500,20 @@ async function preToolUse(root, payload, cwd, workDir = cwd, stops = {}) {
   // The settings route every tool here ("*") for the old-account fence; everything else below is per tool.
   const fence = await fenceCheck({ toolName: payload?.tool_name, transcriptPath: payload?.transcript_path, cwd: workDir });
   if (fence.fenced) return `${JSON.stringify(denyResponse(fence.reason))}\n`;
+  // Before the hard stops: the deny lists carry this tool too (the static backup), but its own reason says what to do.
+  if (isConfirmTrust(payload?.tool_name)) return `${JSON.stringify(denyResponse(TRUST_REFUSAL))}\n`;
   if (typeof payload?.tool_name === "string" && payload.tool_name.startsWith("mcp__")) {
     const entry = hardStopEntry(payload.tool_name, hardStopDeny(stops));
     if (entry) return `${JSON.stringify(denyResponse(hardStopReason(payload.tool_name, entry)))}\n`;
   }
   if (!ROUTED_TOOL(payload?.tool_name, payload?.tool_input)) return "";
   if (payload?.tool_name === ADD_REPO_TOOL) {
-    const decision = busAttachDecision(payload.tool_input) ?? await codexDispatcherAttachDecision({ input: payload.tool_input, cwd: workDir });
+    const decision = busAttachDecision(payload.tool_input) ?? wowCoreAttachDecision(payload.tool_input)
+      ?? await codexDispatcherAttachDecision({ input: payload.tool_input, cwd: workDir });
     return decision ? `${JSON.stringify(decision)}\n` : "";
   }
   if (isCreateSession(payload?.tool_name)) {
     return `${JSON.stringify(spawnDecision(payload, process.env, Date.now()))}\n`;
-  }
-  if (isConfirmTrust(payload?.tool_name)) {
-    const gate = await trustGate({ cwd: workDir });
-    const hookSpecificOutput = { hookEventName: "PreToolUse", permissionDecision: gate.allow ? "allow" : "deny", permissionDecisionReason: gate.reason };
-    return `${JSON.stringify({ hookSpecificOutput })}\n`;
   }
   const command = payload?.tool_input?.command;
   const leaseAccount = leaseAccountGuard(command);
@@ -1675,8 +1594,8 @@ export async function run(forcedTool) {
   }
   // Known limit (review 2026-11-04): the tool name is in the stdin payload, so a hook that hangs before stdin
   // arrives, or crashes at startup before this line, cannot know it is the trust call and fails open like every
-  // other tool. That outcome is the host's normal permission flow, not an allow: there is no allow rule for the
-  // tool, wow-core's settings carry no deny only so the hook's allow can work, and the founder's own card remains.
+  // other tool. That outcome is the host's normal permission flow, not an allow: the settings' permissions.deny
+  // refuses the tool there too, and the founder, who answers any card, declines every one (COMMS_CORE §1).
   let trustCall = false;
   const watchdog = setTimeout(() => {
     note(`${mode} exceeded its ${DEADLINE_MS[mode] / 1000} s deadline; ${trustCall ? "denying the trust call (fail-closed)" : "allowing (fail-open)"}`);
