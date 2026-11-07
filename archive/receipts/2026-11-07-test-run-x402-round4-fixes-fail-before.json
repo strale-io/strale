@@ -1,0 +1,628 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "node_modules/.bin/vitest",
+    "commit": "a63043aa8214f5b57197ec7e7f79d594b598c3b7"
+  },
+  "at": "2026-11-07T22:25:06.559Z",
+  "inputs": {
+    "files": [
+      "apps/api/src/jobs/x402-settlement-watch.integration.test.ts",
+      "apps/api/src/jobs/x402-settlement-watch.test.ts",
+      "apps/api/src/jobs/x402-alert-delivery.e2e.test.ts"
+    ],
+    "code": "apps/api/src/jobs/x402-settlement-watch.ts restored from 2c9530b2 (round-4-reviewed code); tests from a63043aa",
+    "database": "throwaway local Postgres 16, schema via drizzle-kit push plus startup migrations (93 blocks)"
+  },
+  "summary": {
+    "passed": 42,
+    "failed": 3,
+    "total": 45,
+    "failed_is": "raw-mean noise gate (no_baseline instead of broad), ramp lull read as payer back, missing payer column not refused"
+  },
+  "topic": "x402-round4-fixes-fail-before",
+  "raw": {
+    "numTotalTestSuites": 12,
+    "numPassedTestSuites": 10,
+    "numFailedTestSuites": 2,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 45,
+    "numPassedTests": 42,
+    "numFailedTests": 3,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1794090297021,
+    "success": false,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery dormant bus: a broad drop emails a CRITICAL and makes no network call",
+            "status": "passed",
+            "title": "dormant bus: a broad drop emails a CRITICAL and makes no network call",
+            "duration": 500.70928200000003,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery bus set: the same CRITICAL also lands on channel strale-planning in bus format",
+            "status": "passed",
+            "title": "bus set: the same CRITICAL also lands on channel strale-planning in bus format",
+            "duration": 21.987393999999995,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery bus set: one buyer pausing is a WARNING on both channels, not a critical",
+            "status": "passed",
+            "title": "bus set: one buyer pausing is a WARNING on both channels, not a critical",
+            "duration": 13.388774000000012,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 volume watch, end to end to delivery"
+            ],
+            "fullName": "x402 volume watch, end to end to delivery healthy volume sends nothing on either channel",
+            "status": "passed",
+            "title": "healthy volume sends nothing on either channel",
+            "duration": 5.574889999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794090297245,
+        "endTime": 1794090297786.575,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-x402-settlement-watch/apps/api/src/jobs/x402-alert-delivery.e2e.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one buyer pausing is a warning that names the buyer share, not a critical page",
+            "status": "passed",
+            "title": "one buyer pausing is a warning that names the buyer share, not a critical page",
+            "duration": 55.00871299999994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres a broad drop across buyers stays critical and carries the payer breakdown",
+            "status": "passed",
+            "title": "a broad drop across buyers stays critical and carries the payer breakdown",
+            "duration": 25.36244600000009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres nobody else settling at all stays critical even when the top buyer explains the volume",
+            "status": "passed",
+            "title": "nobody else settling at all stays critical even when the top buyer explains the volume",
+            "duration": 19.023843000000056,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)",
+            "status": "passed",
+            "title": "one burst day in the baseline does not make an ordinary day page (incident 2026-11-03)",
+            "duration": 31.250583000000006,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres one buyer's burst does not shrink the steady payers, so their broad drop stays critical (review round 3)",
+            "status": "passed",
+            "title": "one buyer's burst does not shrink the steady payers, so their broad drop stays critical (review round 3)",
+            "duration": 38.14280699999995,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "x402 settlement watch against disposable Postgres"
+            ],
+            "fullName": "x402 settlement watch against disposable Postgres under the minimum baseline nothing is sent",
+            "status": "passed",
+            "title": "under the minimum baseline nothing is sent",
+            "duration": 4.538269999999898,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794090297742,
+        "endTime": 1794090297915.5383,
+        "status": "passed",
+        "message": "",
+        "name": "/home/user/strale-wt-x402-settlement-watch/apps/api/src/jobs/x402-settlement-watch.integration.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume is healthy at or above half the baseline, and silent under the minimum",
+            "status": "passed",
+            "title": "is healthy at or above half the baseline, and silent under the minimum",
+            "duration": 1.6611589999999978,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume excludes the top two buyers when one alone does not explain the drop",
+            "status": "passed",
+            "title": "excludes the top two buyers when one alone does not explain the drop",
+            "duration": 0.3962980000000016,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume never excludes more than two buyers",
+            "status": "passed",
+            "title": "never excludes more than two buyers",
+            "duration": 0.2331970000000183,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume stays critical when the other payers' own baseline is too small to prove the rail works",
+            "status": "passed",
+            "title": "stays critical when the other payers' own baseline is too small to prove the rail works",
+            "duration": 0.19848899999999503,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume"
+            ],
+            "fullName": "classifyVolume counts unattributed rows with the others and never as a buyer to exclude",
+            "status": "passed",
+            "title": "counts unattributed rows with the others and never as a buyer to exclude",
+            "duration": 0.7907069999999976,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capPayerSpikes"
+            ],
+            "fullName": "capPayerSpikes leaves an ordinary payer alone",
+            "status": "passed",
+            "title": "leaves an ordinary payer alone",
+            "duration": 0.574865999999929,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capPayerSpikes"
+            ],
+            "fullName": "capPayerSpikes leaves a ramp, an outage and a degradation alone: no usual day on one side",
+            "status": "passed",
+            "title": "leaves a ramp, an outage and a degradation alone: no usual day on one side",
+            "duration": 0.46913100000006125,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capPayerSpikes"
+            ],
+            "fullName": "capPayerSpikes caps a burst once the payer is seen at its usual level before and after it",
+            "status": "passed",
+            "title": "caps a burst once the payer is seen at its usual level before and after it",
+            "duration": 0.17405299999995805,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capPayerSpikes"
+            ],
+            "fullName": "capPayerSpikes caps a straddle at the oldest edge against the older context days (review round 3)",
+            "status": "passed",
+            "title": "caps a straddle at the oldest edge against the older context days (review round 3)",
+            "duration": 0.4624939999999924,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "capPayerSpikes"
+            ],
+            "fullName": "capPayerSpikes has a floor: a capped day is never below SPIKE_CAP_FLOOR, so a payer is never capped away (review round 3)",
+            "status": "passed",
+            "title": "has a floor: a capped day is never below SPIKE_CAP_FLOOR, so a payer is never capped away (review round 3)",
+            "duration": 81.56399099999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "rowsFromBuckets"
+            ],
+            "fullName": "rowsFromBuckets folds (payer, days ago) buckets into rows, with bucket 0 as the last 24h",
+            "status": "passed",
+            "title": "folds (payer, days ago) buckets into rows, with bucket 0 as the last 24h",
+            "duration": 0.4062069999999949,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "rowsFromBuckets"
+            ],
+            "fullName": "rowsFromBuckets refuses a malformed bucket instead of losing its count",
+            "status": "passed",
+            "title": "refuses a malformed bucket instead of losing its count",
+            "duration": 0.8945360000000164,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "rowsFromBuckets"
+            ],
+            "fullName": "rowsFromBuckets refuses a query row with a missing day_ago or n column instead of reading it as 0 (review round 3)",
+            "status": "passed",
+            "title": "refuses a query row with a missing day_ago or n column instead of reading it as 0 (review round 3)",
+            "duration": 0.32897700000000896,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) fired under the old mean baseline",
+            "status": "passed",
+            "title": "fired under the old mean baseline",
+            "duration": 0.1384410000000571,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) is healthy now: one burst day does not set the bar for the week",
+            "status": "passed",
+            "title": "is healthy now: one burst day does not set the bar for the week",
+            "duration": 0.2548029999999244,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) still pages when the big buyer really stops, burst or not",
+            "status": "passed",
+            "title": "still pages when the big buyer really stops, burst or not",
+            "duration": 0.14611500000000888,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) a job spanning three buckets is capped on all three (review round 3)",
+            "status": "passed",
+            "title": "a job spanning three buckets is capped on all three (review round 3)",
+            "duration": 0.11824899999999161,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) a burst in the newest baseline days is capped once a usual baseline day follows it, never on the last 24h alone",
+            "status": "passed",
+            "title": "a burst in the newest baseline days is capped once a usual baseline day follows it, never on the last 24h alone",
+            "duration": 0.12113899999997102,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) one buyer's burst never shrinks the steady payers, so a broad drop stays critical (review round 3)",
+            "status": "passed",
+            "title": "one buyer's burst never shrinks the steady payers, so a broad drop stays critical (review round 3)",
+            "duration": 0.09726000000000568,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) a buyer seen on one day only keeps the plain mean (nothing shows it came back), and shares stay within 1",
+            "status": "passed",
+            "title": "a buyer seen on one day only keeps the plain mean (nothing shows it came back), and shares stay within 1",
+            "duration": 0.11669700000004468,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, robust baseline (incident 2026-11-03)"
+            ],
+            "fullName": "classifyVolume, robust baseline (incident 2026-11-03) counts distinct payers on the same basis as the baseline: context-only payers are not in the 7 days (review round 3)",
+            "status": "passed",
+            "title": "counts distinct payers on the same basis as the baseline: context-only payers are not in the 7 days (review round 3)",
+            "duration": 0.08387600000003204,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a quiet weekend day does not page",
+            "status": "passed",
+            "title": "a quiet weekend day does not page",
+            "duration": 0.08287799999993695,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a deep outage keeps paging until its last healthy day ages out, as the mean did (review round 2)",
+            "status": "passed",
+            "title": "a deep outage keeps paging until its last healthy day ages out, as the mean did (review round 2)",
+            "duration": 0.1636110000000599,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a rail breaking right after a ramp pages, as the mean did (review round 2)",
+            "status": "passed",
+            "title": "a rail breaking right after a ramp pages, as the mean did (review round 2)",
+            "duration": 0.07337300000006053,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a slow degradation keeps paging as long as the mean did",
+            "status": "passed",
+            "title": "a slow degradation keeps paging as long as the mean did",
+            "duration": 0.06910499999992226,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) a buyer active on three of the seven days still counts, so its stop pages",
+            "status": "passed",
+            "title": "a buyer active on three of the seven days still counts, so its stop pages",
+            "duration": 0.046451000000047316,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2)"
+            ],
+            "fullName": "classifyVolume, what the plain mean already got right stays right (review rounds 1 and 2) shares of two excluded buyers never add up to more than the whole",
+            "status": "passed",
+            "title": "shares of two excluded buyers never add up to more than the whole",
+            "duration": 0.07614000000000942,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, round-3 shapes keep the plain mean"
+            ],
+            "fullName": "classifyVolume, round-3 shapes keep the plain mean a ramp made by a new buyer, then a drop, keeps the plain mean and pages",
+            "status": "passed",
+            "title": "a ramp made by a new buyer, then a drop, keeps the plain mean and pages",
+            "duration": 0.12275599999998121,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, round-3 shapes keep the plain mean"
+            ],
+            "fullName": "classifyVolume, round-3 shapes keep the plain mean a healthy level followed by an outage keeps the plain mean, one payer or many",
+            "status": "passed",
+            "title": "a healthy level followed by an outage keeps the plain mean, one payer or many",
+            "duration": 0.125267000000008,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyVolume, round-3 shapes keep the plain mean"
+            ],
+            "fullName": "classifyVolume, round-3 shapes keep the plain mean an outage where all payers fall together keeps the plain mean",
+            "status": "passed",
+            "title": "an outage where all payers fall together keeps the plain mean",
+            "duration": 0.0811029999999846,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "review round 4"
+            ],
+            "fullName": "review round 4 the noise gate uses the raw mean: a real stream that stops pages even when its capped baseline is small",
+            "status": "failed",
+            "title": "the noise gate uses the raw mean: a real stream that stops pages even when its capped baseline is small",
+            "duration": 6.378431999999975,
+            "failureMessages": [
+              "AssertionError: expected 'no_baseline' to be 'broad' // Object.is equality\n    at /home/user/strale-wt-x402-settlement-watch/apps/api/src/jobs/x402-settlement-watch.test.ts:293:40\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "review round 4"
+            ],
+            "fullName": "review round 4 a quiet day inside a ramp is not the payer coming back, so a ramp that breaks pages",
+            "status": "failed",
+            "title": "a quiet day inside a ramp is not the payer coming back, so a ramp that breaks pages",
+            "duration": 3.006167000000005,
+            "failureMessages": [
+              "AssertionError: expected [ 100, 100, 10, 30, 30, 30, 30 ] to deeply equal [ 100, 100, 10, 100, 100, 100, 100 ]\n    at /home/user/strale-wt-x402-settlement-watch/apps/api/src/jobs/x402-settlement-watch.test.ts:299:33\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2955:64"
+            ],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "review round 4"
+            ],
+            "fullName": "review round 4 a day far below the usual level is not the payer coming back",
+            "status": "passed",
+            "title": "a day far below the usual level is not the payer coming back",
+            "duration": 0.17136900000002697,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "review round 4"
+            ],
+            "fullName": "review round 4 empty days after a burst are neutral, so an every-other-day buyer's job is still capped",
+            "status": "passed",
+            "title": "empty days after a burst are neutral, so an every-other-day buyer's job is still capped",
+            "duration": 0.07382499999994252,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "review round 4"
+            ],
+            "fullName": "review round 4 refuses a query row with no payer column instead of treating every row as unattributed",
+            "status": "failed",
+            "title": "refuses a query row with no payer column instead of treating every row as unattributed",
+            "duration": 0.9626860000000761,
+            "failureMessages": [
+              "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/expect/dist/index.js:1552:16)\n    at Proxy.<anonymous> (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/expect/dist/index.js:1156:15)\n    at Proxy.methodWrapper (file:///home/user/strale-wt-x402-settlement-watch/node_modules/chai/index.js:1700:25)\n    at /home/user/strale-wt-x402-settlement-watch/apps/api/src/jobs/x402-settlement-watch.test.ts:320:64\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/user/strale-wt-x402-settlement-watch/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20"
+            ],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1794090297747,
+        "endTime": 1794090297848.9626,
+        "status": "failed",
+        "message": "",
+        "name": "/home/user/strale-wt-x402-settlement-watch/apps/api/src/jobs/x402-settlement-watch.test.ts"
+      }
+    ]
+  }
+}
