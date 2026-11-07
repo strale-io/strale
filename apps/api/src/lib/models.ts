@@ -139,6 +139,10 @@ export const MODEL_CANDIDATES: Partial<Record<ModelRole, ModelCandidate>> = {
       pinned_at: "2026-11-07",
       decision: "unrecorded",
       purpose: "Default model for AI-generation/extraction/classification capabilities: Haiku 5.5, a tenth of Haiku 4.5's per-token price.",
+      // Settings are looked up by model id, and search_rank already uses
+      // this id: promoting this candidate must give search_rank the same
+      // settings (model-settings.test.ts fails otherwise). Search sets its
+      // own `thinking`, so the only effect there is a larger max_tokens cap.
       // Haiku 4.5 ran these calls without thinking; Haiku 5.5 thinks by
       // default, which would eat the 10- and 100-token budgets of the name
       // resolvers. It rejects every sampling parameter, and its tokenizer

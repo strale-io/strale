@@ -5,6 +5,7 @@ const { messageCreate } = vi.hoisted(() => ({ messageCreate: vi.fn() }));
 vi.mock("@anthropic-ai/sdk", () => ({ default: class { messages = { create: messageCreate }; } }));
 
 import { applyModelSettings, createAnthropicClient } from "./anthropic-client.js";
+import { buildSearchRequest } from "./search/smart.js";
 import { MODELS, MODEL_CANDIDATES, MODEL_PRICES } from "./models.js";
 
 type Params = Anthropic.Messages.MessageCreateParamsNonStreaming;
@@ -66,5 +67,21 @@ describe("the capability_default candidate", () => {
   it("is priced as Haiku 5.5, including the long-prompt rate", () => {
     expect(candidate.price).toEqual(MODEL_PRICES.search_rank);
     expect(candidate.price.long_prompt?.threshold).toBe(100_000);
+  });
+});
+
+describe("settings are per model id, so roles sharing an id must agree", () => {
+  it("every role that uses a model id carries the same settings", () => {
+    const byId = new Map<string, string>();
+    for (const [role, entry] of Object.entries(MODELS)) {
+      const settings = JSON.stringify((entry as { settings?: unknown }).settings ?? null);
+      const seen = byId.get(entry.id);
+      if (seen !== undefined) expect(settings, `${role} disagrees with another role on ${entry.id}`).toBe(seen);
+      byId.set(entry.id, settings);
+    }
+  });
+
+  it("search sets its own thinking, so a shared default for its model id cannot turn thinking off", () => {
+    expect(buildSearchRequest("prompt", "query", 5).thinking).toEqual({ type: "adaptive" });
   });
 });
