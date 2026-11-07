@@ -1,0 +1,1222 @@
+# Reference-data register (robustness R2).
+#
+# One row per reference dataset hard-coded into the tools: legal lists, tax and
+# VAT rates, deadlines, code lists. Each row says where the data comes from,
+# when it was last checked against that source, and when it is next due. Built
+# from docs/research/2026-11-06-reference-data-inventory.md (80 datasets), with
+# the fixes of PRs #954, #956, #961, #962 and #963 applied.
+#
+# Checked by scripts/check-reference-data.mjs (npm run refdata:check, in CI):
+#   - every row's file exists and contains its symbol, and every tool has a manifest;
+#   - every *_AS_OF / *_VERIFIED_ON date constant under apps/api/src has a row
+#     naming it (as_of_symbol), and the row's as_of equals the constant. Moving
+#     one without the other fails the PR, so the register cannot fall behind
+#     the code;
+#   - PR CI never fails because time has passed. Rows that are due are reported
+#     by the weekly drift sweep (.github/workflows/weekly-drift.yml, step
+#     reference-data), which opens or updates the weekly drift issue.
+#
+# Fields
+#   harm             A wrong compliance or legal answer; B wrong money figure;
+#                    C wrong validation or lookup result; D cosmetic or low stakes.
+#   as_of            the date the values are valid as of, or null if they were
+#                    never checked against the source. Usually the check date;
+#                    for a versioned source, the version date (then checked_on
+#                    is set). Equals the code's as_of_symbol constant when the
+#                    row names one. A dated row cites its evidence.
+#   checked_on       the date of the last check, when as_of instead dates the
+#                    source's own version (a FATF plenary, a consolidated text).
+#                    Absent means the same as as_of.
+#   review_days      days after the last check when the next one is due.
+#   first_review_by  for an undated row: the date its first check is due. This
+#                    spreads the inherited backlog of undated rows over time
+#                    rather than reporting all of it at once.
+#   active           false for a deactivated tool; such rows are never due.
+#
+# Clearing a due row: check the values against recheck_against, fix the code,
+# move the dataset's *_AS_OF constant (add one if it has none) and set as_of,
+# evidence and review_days here in the same PR. Values that cannot be confirmed
+# keep their old value, marked "unverified as of <date>" in the code. They are
+# never guessed. A source behind a bot challenge is read from a secondary copy
+# that the code names, never by getting around the challenge (DEC-20261023-A).
+#
+# A new hard-coded dataset gets a row in the PR that adds it. The check catches
+# a dated one; an undated one is caught only in review (REVIEW.md).
+version: 1
+datasets:
+  - id: eu-ai-act-classify-unacceptable-rules
+    harm: A
+    file: apps/api/src/capabilities/eu-ai-act-classify.ts
+    symbol: UNACCEPTABLE_RULES
+    tools:
+      - eu-ai-act-classify
+    active: true
+    holds: AI Act prohibited / Annex III areas, articles, obligations and application dates
+    source: Regulation (EU) 2024/1689 (stated)
+    recheck_against: "EUR-Lex: Reg. 2024/1689 as amended by Reg. 2026/1744 (Digital Omnibus); AI Office guidelines"
+    trigger: On each amending act or Commission guideline; quarterly
+    as_of: 2026-11-06
+    as_of_symbol: EU_AI_ACT_AS_OF
+    evidence: "PR #962"
+    review_days: 90
+    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: work-permit-requirements-eu-eea
+    harm: A
+    file: apps/api/src/capabilities/work-permit-requirements.ts
+    symbol: EU_EEA
+    tools:
+      - work-permit-requirements
+    active: true
+    holds: Free-movement area, visa-waiver nationals, official guidance links
+    source: null
+    recheck_against: EU Reg. 2018/1806 Annex II (visa list); national migration agencies
+    trigger: When Reg. 2018/1806 Annex II changes; annually
+    as_of: 2026-11-06
+    as_of_symbol: WORK_PERMIT_RULES_AS_OF
+    evidence: "PR #962"
+    review_days: 90
+    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: work-permit-requirements-visit-visa-lists
+    harm: A
+    file: apps/api/src/capabilities/work-permit-requirements.ts
+    symbol: US_VWP
+    tools:
+      - work-permit-requirements
+    active: true
+    holds: "Who may visit the US, Canada and the UK without a visa: the US Visa Waiver Program list, Canada's eTA lists, the UK visa-national exceptions"
+    source: DHS Visa Waiver Program; canada.ca eTA eligibility; gov.uk Immigration Rules Appendix Visitor
+    recheck_against: "dhs.gov / travel.state.gov VWP list; canada.ca eTA lists; gov.uk Appendix Visitor: visa national list"
+    trigger: When a country joins or leaves the VWP, the eTA lists or the UK visa-national list; quarterly
+    as_of: 2026-11-06
+    as_of_symbol: WORK_PERMIT_RULES_AS_OF
+    evidence: "PR #962"
+    review_days: 90
+  - id: financial-year-dates-fiscal-year-data
+    harm: A
+    file: apps/api/src/capabilities/financial-year-dates.ts
+    symbol: FISCAL_YEAR_DATA
+    tools:
+      - financial-year-dates
+    active: true
+    holds: Fiscal year, tax-filing and annual-report deadlines, VAT filing frequency per country
+    source: null
+    recheck_against: National tax authorities (Skatteverket, HMRC, IRS...) and business registers
+    trigger: Annually (before filing season), per country
+    as_of: 2026-11-06
+    as_of_symbol: FISCAL_YEAR_DATA_AS_OF
+    evidence: "PR #962"
+    review_days: 90
+    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: data-protection-authority-lookup-dpa-directory
+    harm: A
+    file: apps/api/src/capabilities/data-protection-authority-lookup.ts
+    symbol: DPA_DIRECTORY
+    tools:
+      - data-protection-authority-lookup
+    active: true
+    holds: "National data protection authorities: names, websites, contacts"
+    source: null
+    recheck_against: EDPB members list (edpb.europa.eu)
+    trigger: Annually; on EDPB membership change
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: invoice-validate-eu-required-fields
+    harm: A
+    file: apps/api/src/capabilities/invoice-validate.ts
+    symbol: EU_REQUIRED_FIELDS
+    tools:
+      - invoice-validate
+    active: true
+    holds: Mandatory invoice particulars used for the compliance verdict
+    source: null
+    recheck_against: VAT Directive 2006/112/EC Art. 226 (EUR-Lex); ViDA e-invoicing changes
+    trigger: On VAT Directive amendment (ViDA 2030 timeline); annually
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: dangerous-goods-classify-dangerous-goods
+    harm: A
+    file: apps/api/src/capabilities/dangerous-goods-classify.ts
+    symbol: DANGEROUS_GOODS
+    tools:
+      - dangerous-goods-classify
+    active: true
+    holds: UN numbers, shipping names, classes, packing groups
+    source: null
+    recheck_against: UN Model Regulations (UNECE), ADR, IATA DGR
+    trigger: Biennially (UN Model Regs revision; ADR odd years 1 Jan)
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: incoterms-explain-incoterms
+    harm: A
+    file: apps/api/src/capabilities/incoterms-explain.ts
+    symbol: INCOTERMS
+    tools:
+      - incoterms-explain
+    active: true
+    holds: ICC Incoterms 2020 rule texts and risk/cost transfer
+    source: null
+    recheck_against: ICC (iccwbo.org)
+    trigger: On the next ICC Incoterms revision (watch ~2030)
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: license-compatibility-check-licenses
+    harm: A
+    file: apps/api/src/capabilities/license-compatibility-check.ts
+    symbol: LICENSES
+    tools:
+      - license-compatibility-check
+    active: true
+    holds: "SPDX licences: OSI approval, copyleft, SaaS and patent flags"
+    source: null
+    recheck_against: SPDX License List; OSI approved licences
+    trigger: Quarterly (SPDX releases)
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: package-security-audit-copyleft-licenses
+    harm: A
+    file: apps/api/src/capabilities/package-security-audit.ts
+    symbol: COPYLEFT_LICENSES
+    tools:
+      - package-security-audit
+    active: true
+    holds: SPDX ids treated as copyleft
+    source: null
+    recheck_against: SPDX License List
+    trigger: Quarterly
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: uk-cop-check-cop-code-to-status
+    harm: A
+    file: apps/api/src/capabilities/uk-cop-check.ts
+    symbol: COP_CODE_TO_STATUS
+    tools:
+      - uk-cop-check
+    active: true
+    holds: Confirmation of Payee response codes mapped to match verdicts
+    source: null
+    recheck_against: Pay.UK CoP standards / vendor API docs
+    trigger: On Pay.UK rulebook release; semi-annually
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: risk-narrative-generate-non-active-registry-statuses
+    harm: A
+    file: apps/api/src/capabilities/risk-narrative-generate.ts
+    symbol: NON_ACTIVE_REGISTRY_STATUSES
+    tools:
+      - risk-narrative-generate
+    active: true
+    holds: Registry status codes treated as non-active, and their phrases
+    source: executor file:line refs (internal)
+    recheck_against: Each national business register's status codelist
+    trigger: When an upstream register changes its codelist; quarterly
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+  - id: aml-risk-score-secrecy-jurisdictions
+    harm: A
+    file: apps/api/src/capabilities/aml-risk-score.ts
+    symbol: SECRECY_JURISDICTIONS
+    tools:
+      - aml-risk-score
+    active: true
+    holds: Tax-haven / secrecy jurisdictions used in risk score
+    source: null
+    recheck_against: EU Council list of non-cooperative jurisdictions (Annex I), or Tax Justice Network FSI
+    trigger: After each EU Council revision (Feb, Oct)
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-15
+    note: No source, no date (comment admits it)
+  - id: work-permit-requirements-salary-thresholds
+    harm: A
+    file: apps/api/src/capabilities/work-permit-requirements.ts
+    symbol: UK_SKILLED_WORKER_NOTE
+    tools:
+      - work-permit-requirements
+    active: true
+    holds: Per-country permit rules and salary thresholds (UK GBP 26,200; DE Blue Card 2024 figures)
+    source: null
+    recheck_against: gov.uk (Skilled Worker), make-it-in-germany.com / BMI, Migrationsverket, etc.
+    trigger: Annually on 1 Jan (DE Blue Card), each UK rules change (Apr/Jul)
+    as_of: 2026-11-06
+    as_of_symbol: WORK_PERMIT_RULES_AS_OF
+    evidence: "PR #962"
+    review_days: 90
+    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: dilisense-sources-sanctions-major-lists
+    harm: A
+    file: apps/api/src/capabilities/lib/dilisense-sources.ts
+    symbol: SANCTIONS_MAJOR_LISTS
+    tools:
+      - sanctions-check
+    active: true
+    holds: Sanctions lists disclosed as screened in lists_queried evidence
+    source: dilisense.com/en/sources (stated)
+    recheck_against: Dilisense source catalogue (vendor)
+    trigger: Quarterly, and on any vendor source-list change
+    as_of: 2026-04-27
+    evidence: snapshot date in the file header comment
+    review_days: 180
+    note: Disclosure claim; snapshot 6 months old
+  - id: dilisense-sources-pep-major-sources
+    harm: A
+    file: apps/api/src/capabilities/lib/dilisense-sources.ts
+    symbol: PEP_MAJOR_SOURCES
+    tools:
+      - pep-check
+    active: true
+    holds: PEP sources and source_count (230) disclosed in evidence
+    source: dilisense.com/en/sources (stated)
+    recheck_against: Dilisense source catalogue (vendor)
+    trigger: Quarterly
+    as_of: 2026-04-27
+    evidence: snapshot date in the file header comment
+    review_days: 180
+  - id: aml-risk-score-fatf-grey-list
+    harm: A
+    file: apps/api/src/capabilities/aml-risk-score.ts
+    symbol: FATF_GREY_LIST
+    tools:
+      - aml-risk-score
+    active: true
+    holds: FATF jurisdictions under increased monitoring
+    source: FATF via FinCEN release + ComplyAdvantage note (stated)
+    recheck_against: FATF (fatf-gafi.org) plenary outcomes
+    trigger: After each FATF plenary (Feb, Jun, Oct)
+    as_of: 2026-10-30
+    as_of_symbol: FATF_LISTS_AS_OF
+    checked_on: 2026-11-06
+    evidence: "PR #954 (lists of the October 2026 plenary)"
+    review_days: 120
+  - id: aml-risk-score-fatf-black-list
+    harm: A
+    file: apps/api/src/capabilities/aml-risk-score.ts
+    symbol: FATF_BLACK_LIST
+    tools:
+      - aml-risk-score
+    active: true
+    holds: FATF call-for-action jurisdictions
+    source: FATF (stated)
+    recheck_against: FATF call-for-action statement
+    trigger: After each FATF plenary (Feb, Jun, Oct)
+    as_of: 2026-10-30
+    as_of_symbol: FATF_LISTS_AS_OF
+    checked_on: 2026-11-06
+    evidence: "PR #954 (lists of the October 2026 plenary)"
+    review_days: 120
+  - id: aml-risk-score-fatf-countermeasures
+    harm: A
+    file: apps/api/src/capabilities/aml-risk-score.ts
+    symbol: FATF_COUNTERMEASURES
+    tools:
+      - aml-risk-score
+    active: true
+    holds: Call-for-action jurisdictions subject to countermeasures
+    source: FATF statement 30 Oct 2026 (stated)
+    recheck_against: FATF call-for-action statement
+    trigger: After each FATF plenary (Feb, Jun, Oct)
+    as_of: 2026-10-30
+    as_of_symbol: FATF_LISTS_AS_OF
+    checked_on: 2026-11-06
+    evidence: "PR #954 (lists of the October 2026 plenary)"
+    review_days: 120
+  - id: aml-risk-score-eu-high-risk
+    harm: A
+    file: apps/api/src/capabilities/aml-risk-score.ts
+    symbol: EU_HIGH_RISK
+    tools:
+      - aml-risk-score
+    active: true
+    holds: EU high-risk third countries (Annex to Del. Reg. 2016/1675)
+    source: EUR-Lex consolidated CELEX 02016R1675-20260129 (stated)
+    recheck_against: European Commission / EUR-Lex (Del. Reg. 2016/1675 amendments)
+    trigger: On each new Commission delegated regulation; check monthly, and after each FATF plenary
+    as_of: 2026-01-29
+    as_of_symbol: EU_HIGH_RISK_AS_OF
+    checked_on: 2026-11-06
+    evidence: "PR #956 (consolidated text of 29 January 2026, read on EUR-Lex)"
+    review_days: 180
+  - id: vat-rate-lookup-vat-rates
+    harm: B
+    file: apps/api/src/capabilities/vat-rate-lookup.ts
+    symbol: VAT_RATES
+    tools:
+      - vat-rate-lookup
+    active: true
+    holds: Standard, reduced, super-reduced, parking rates and currency for EU27+GB, NO, CH, IS
+    source: null
+    recheck_against: European Commission TEDB; national tax authorities
+    trigger: Annually on 1 Jan plus 1 Jul; on any national budget change
+    as_of: 2026-11-06
+    as_of_symbol: VAT_RATES_AS_OF
+    evidence: "PR #963"
+    review_days: 90
+    note: 'Corrected in PR #963; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: country-tax-rates-tax-data
+    harm: B
+    file: apps/api/src/capabilities/country-tax-rates.ts
+    symbol: TAX_DATA
+    tools:
+      - country-tax-rates
+    active: true
+    holds: Corporate, VAT, top PIT, CGT, WHT, social security rates per country
+    source: null
+    recheck_against: OECD tax database; national tax authorities; EC TEDB
+    trigger: Annually on 1 Jan
+    as_of: 2026-11-06
+    as_of_symbol: TAX_DATA_AS_OF
+    evidence: "PR #963"
+    review_days: 90
+    note: 'Corrected in PR #963; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: token-count-model-info
+    harm: B
+    file: apps/api/src/capabilities/token-count.ts
+    symbol: MODEL_INFO
+    tools:
+      - token-count
+    active: true
+    holds: Context sizes and per-1K prices for 14 models
+    source: null
+    recheck_against: OpenAI, Anthropic, Google pricing pages
+    trigger: Monthly
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-31
+    note: Prices for gpt-4o era models; no date, no test (unlike llm-cost-calculate)
+  - id: marketplace-fee-calculate-amazon-referral-rates
+    harm: B
+    file: apps/api/src/capabilities/marketplace-fee-calculate.ts
+    symbol: AMAZON_REFERRAL_RATES
+    tools:
+      - marketplace-fee-calculate
+    active: true
+    holds: Marketplace referral, transaction and processing fees
+    source: null
+    recheck_against: Amazon Seller Central, eBay, Etsy, Shopify fee pages
+    trigger: Quarterly; Amazon annual fee change (Jan/Feb)
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-31
+  - id: shipping-cost-estimate-base-rates
+    harm: B
+    file: apps/api/src/capabilities/shipping-cost-estimate.ts
+    symbol: BASE_RATES
+    tools:
+      - shipping-cost-estimate
+    active: true
+    holds: Carrier zone base prices (PostNord, DHL, UPS) and zone membership
+    source: '"published rate guides" (unnamed)'
+    recheck_against: PostNord, DHL, UPS published price lists
+    trigger: Annually (carriers revise 1 Jan)
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-31
+    note: Invented-looking round prices; no named rate card
+  - id: credit-score-band-scoring-systems
+    harm: B
+    file: apps/api/src/capabilities/credit-score-band.ts
+    symbol: SCORING_SYSTEMS
+    tools:
+      - credit-score-band
+    active: true
+    holds: FICO, VantageScore, Experian UK, Equifax UK ranges and bands
+    source: null
+    recheck_against: FICO, VantageScore, Experian UK, Equifax UK
+    trigger: Annually
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-31
+  - id: employment-cost-estimate-country-profiles
+    harm: B
+    file: apps/api/src/capabilities/employment-cost-estimate.ts
+    symbol: COUNTRY_PROFILES
+    tools:
+      - employment-cost-estimate
+    active: true
+    holds: Employer social, pension rates and income-tax brackets
+    source: null
+    recheck_against: National tax / social insurance authorities; OECD Taxing Wages
+    trigger: Annually on 1 Jan (and fiscal-year start for GB, AU, CA)
+    as_of: 2026-11-06
+    as_of_symbol: EMPLOYMENT_COST_RATES_AS_OF
+    evidence: "PR #962"
+    review_days: 90
+    note: 'Corrected in PR #962; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: country-trade-data-embedded-data
+    harm: B
+    file: apps/api/src/capabilities/country-trade-data.ts
+    symbol: EMBEDDED_DATA
+    tools:
+      - country-trade-data
+    active: true
+    holds: Exports, imports, partners, top products per country (year 2023)
+    source: null
+    recheck_against: UN Comtrade / WTO / World Bank WITS
+    trigger: Annually when the next year's data is final
+    as_of: null
+    review_days: 90
+    first_review_by: 2026-12-31
+    note: Year disclosed (2023); 2024 data now final
+  - id: llm-cost-calculate-pricing
+    harm: B
+    file: apps/api/src/capabilities/llm-cost-calculate.ts
+    symbol: PRICING
+    tools:
+      - llm-cost-calculate
+    active: true
+    holds: USD per 1K tokens per model, context windows
+    source: vendor pricing pages (PRICING_SOURCES)
+    recheck_against: OpenAI, Anthropic, Google pricing pages
+    trigger: Monthly; on each model launch
+    as_of: 2026-08-15
+    as_of_symbol: PRICING_VERIFIED_ON
+    evidence: PRICING_VERIFIED_ON in the code; llm-cost-calculate.test.ts fails after 180 days
+    review_days: 180
+    note: Has staleness test (180 days); good pattern
+  - id: iban-registry-iban-lengths
+    harm: C
+    file: apps/api/src/lib/iban-registry.ts
+    symbol: IBAN_LENGTHS
+    tools:
+      - iban-validate
+      - iban-to-bank
+    active: true
+    holds: IBAN length per country, shared by iban-validate and iban-to-bank
+    source: null
+    recheck_against: SWIFT IBAN Registry
+    trigger: On each IBAN Registry release (several per year)
+    as_of: 2026-11-06
+    as_of_symbol: IBAN_REGISTRY_AS_OF
+    evidence: "PR #961"
+    review_days: 365
+    note: "Merged from two copies in PR #961 (they disagreed on Andorra). Bank and branch code positions in iban-validate.ts are not covered by this row."
+  - id: swift-validate-country-codes
+    harm: C
+    file: apps/api/src/capabilities/swift-validate.ts
+    symbol: COUNTRY_CODES
+    tools:
+      - swift-validate
+    active: true
+    holds: ISO 3166 alpha-2 codes accepted in a BIC
+    source: null
+    recheck_against: ISO 3166 Maintenance Agency
+    trigger: On ISO 3166 newsletter
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: vat-format-validate-vat-formats
+    harm: C
+    file: apps/api/src/capabilities/vat-format-validate.ts
+    symbol: VAT_FORMATS
+    tools:
+      - vat-format-validate
+    active: true
+    holds: EU VAT number regex and examples
+    source: null
+    recheck_against: EC VIES technical docs
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: company-id-detect-patterns
+    harm: C
+    file: apps/api/src/capabilities/company-id-detect.ts
+    symbol: PATTERNS
+    tools:
+      - company-id-detect
+    active: true
+    holds: Registry and tax ID formats per country
+    source: null
+    recheck_against: National business registers
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: whois-lookup-tld-servers
+    harm: C
+    file: apps/api/src/capabilities/whois-lookup.ts
+    symbol: TLD_SERVERS
+    tools:
+      - whois-lookup
+    active: true
+    holds: WHOIS server per TLD
+    source: null
+    recheck_against: IANA root zone database
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: bank-bic-lookup-known-bics
+    harm: C
+    file: apps/api/src/capabilities/bank-bic-lookup.ts
+    symbol: KNOWN_BICS
+    tools:
+      - bank-bic-lookup
+    active: true
+    holds: BIC bank-code prefixes to bank names; alpha-2 names
+    source: null
+    recheck_against: SWIFT BIC directory; ISO 3166 MA
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: invoice-validate-vat-patterns
+    harm: C
+    file: apps/api/src/capabilities/invoice-validate.ts
+    symbol: VAT_PATTERNS
+    tools:
+      - invoice-validate
+    active: true
+    holds: EU VAT number regex (third copy)
+    source: null
+    recheck_against: EC VIES technical docs
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: domain-reputation-suspicious-tlds
+    harm: C
+    file: apps/api/src/capabilities/domain-reputation.ts
+    symbol: suspiciousTlds
+    tools:
+      - domain-reputation
+    active: true
+    holds: TLDs treated as suspicious
+    source: null
+    recheck_against: Spamhaus TLD reputation; Interisle phishing reports
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: secret-scan-patterns
+    harm: C
+    file: apps/api/src/capabilities/secret-scan.ts
+    symbol: PATTERNS
+    tools:
+      - secret-scan
+    active: true
+    holds: Vendor credential formats (AWS, GitHub, Stripe, ...)
+    source: null
+    recheck_against: Vendor token-format docs; gitleaks rules
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: header-security-check-security-headers
+    harm: C
+    file: apps/api/src/capabilities/header-security-check.ts
+    symbol: SECURITY_HEADERS
+    tools:
+      - header-security-check
+    active: true
+    holds: Recommended headers, severities, values
+    source: null
+    recheck_against: OWASP Secure Headers Project
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: container-track-carrier-prefixes
+    harm: C
+    file: apps/api/src/capabilities/container-track.ts
+    symbol: CARRIER_PREFIXES
+    tools:
+      - container-track
+    active: true
+    holds: Container owner prefix to carrier
+    source: null
+    recheck_against: BIC (bic-code.org) owner codes
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: shipping-track-carriers
+    harm: C
+    file: apps/api/src/capabilities/shipping-track.ts
+    symbol: carriers
+    tools:
+      - shipping-track
+    active: true
+    holds: Tracking-number formats and tracking URLs per carrier
+    source: null
+    recheck_against: Carrier developer docs
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: iban-to-bank-bank-codes
+    harm: C
+    file: apps/api/src/capabilities/iban-to-bank.ts
+    symbol: BANK_CODES
+    tools:
+      - iban-to-bank
+    active: true
+    holds: Country names and a bank-code-to-bank map for a few countries
+    source: null
+    recheck_against: SWIFT IBAN Registry; Bundesbank BLZ file, national bank-code files
+    trigger: IBAN Registry releases; BLZ file quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+    note: "IBAN lengths moved to lib/iban-registry.ts in PR #961."
+  - id: business-day-check-fri-sat-weekend
+    harm: C
+    file: apps/api/src/capabilities/business-day-check.ts
+    symbol: FRI_SAT_WEEKEND
+    tools:
+      - business-day-check
+    active: true
+    holds: Countries with a Fri-Sat (or Fri) weekend
+    source: null
+    recheck_against: National labour law / government gazettes
+    trigger: Annually
+    as_of: 2026-11-06
+    as_of_symbol: WEEKEND_TABLE_AS_OF
+    evidence: "PR #961"
+    review_days: 365
+    note: "UAE corrected to Saturday-Sunday in PR #961; several rows still marked unverified in the code."
+  - id: timezone-lookup-country-timezones
+    harm: C
+    file: apps/api/src/capabilities/timezone-lookup.ts
+    symbol: COUNTRY_TIMEZONES
+    tools:
+      - timezone-lookup
+    active: true
+    holds: Country and city to IANA zone
+    source: null
+    recheck_against: IANA tz database
+    trigger: On each tzdata release
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: email-reputation-score-disposable-domains
+    harm: C
+    file: apps/api/src/capabilities/email-reputation-score.ts
+    symbol: DISPOSABLE_DOMAINS
+    tools:
+      - email-reputation-score
+    active: true
+    holds: Disposable domains and provider reputation scores
+    source: null
+    recheck_against: disposable-email-domains community list
+    trigger: Monthly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: domain-age-check-tld-servers
+    harm: C
+    file: apps/api/src/capabilities/domain-age-check.ts
+    symbol: TLD_SERVERS
+    tools:
+      - domain-age-check
+    active: true
+    holds: WHOIS server per TLD (second copy)
+    source: null
+    recheck_against: IANA root zone database
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: ip-risk-score-datacenter-asns
+    harm: C
+    file: apps/api/src/capabilities/ip-risk-score.ts
+    symbol: DATACENTER_ASNS
+    tools:
+      - ip-risk-score
+    active: false
+    holds: ASNs treated as datacenter / VPN
+    source: null
+    recheck_against: RIR / PeeringDB
+    trigger: On reactivation
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: vat-derivation-can-derive-vat
+    harm: C
+    file: apps/api/src/capabilities/lib/vat-derivation.ts
+    symbol: canDeriveVat
+    tools: []
+    active: true
+    holds: Countries where the registry ID derives the VAT number
+    source: null
+    recheck_against: National tax authorities
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+    note: Shared by the KYB solutions and company-data tools.
+  - id: workflow-security-audit-trusted-publishers
+    harm: C
+    file: apps/api/src/capabilities/workflow-security-audit.ts
+    symbol: TRUSTED_PUBLISHERS
+    tools:
+      - workflow-security-audit
+    active: true
+    holds: GitHub Action owners treated as trusted
+    source: null
+    recheck_against: GitHub verified creators
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: nl-woz-value-city-to-gm
+    harm: C
+    file: apps/api/src/capabilities/nl-woz-value.ts
+    symbol: CITY_TO_GM
+    tools:
+      - nl-woz-value
+    active: true
+    holds: Dutch city to CBS municipality code
+    source: null
+    recheck_against: CBS Gemeentelijke indeling
+    trigger: Annually on 1 Jan (municipal mergers)
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: nl-housing-stats-city-to-gm
+    harm: C
+    file: apps/api/src/capabilities/nl-housing-stats.ts
+    symbol: CITY_TO_GM
+    tools:
+      - nl-housing-stats
+    active: true
+    holds: Dutch city to CBS municipality code (copy)
+    source: null
+    recheck_against: CBS Gemeentelijke indeling
+    trigger: Annually on 1 Jan
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: vies-eu27-prefixes
+    harm: C
+    file: apps/api/src/capabilities/lib/vat-providers/vies.ts
+    symbol: EU27_PREFIXES
+    tools:
+      - vat-validate
+    active: true
+    holds: VAT prefixes routed to VIES (EU27 + XI)
+    source: null
+    recheck_against: EC VIES
+    trigger: On EU membership change
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: iso-3166-countries
+    harm: C
+    file: apps/api/src/capabilities/lib/iso-3166.ts
+    symbol: COUNTRIES
+    tools:
+      - iso-country-lookup
+    active: true
+    holds: Country codes, currency, capital, calling code, eu_member / schengen / eurozone flags
+    source: null
+    recheck_against: ISO 3166 MA; ECB (euro area); EU Commission (Schengen)
+    trigger: On ISO newsletter; 1 Jan for euro/Schengen accessions
+    as_of: 2026-11-06
+    as_of_symbol: COUNTRIES_AS_OF
+    evidence: "PR #963"
+    review_days: 365
+    note: 'Corrected in PR #963; values not confirmed against the source are marked "unverified as of 2026-11-06" in the code.'
+  - id: keyword-rank-check-bare-public-suffixes
+    harm: C
+    file: apps/api/src/capabilities/keyword-rank-check.ts
+    symbol: BARE_PUBLIC_SUFFIXES
+    tools:
+      - keyword-rank-check
+    active: true
+    holds: Public suffixes
+    source: null
+    recheck_against: Public Suffix List (publicsuffix.org)
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: entity-identifier-vat-shapes
+    harm: C
+    file: apps/api/src/capabilities/lib/entity-identifier.ts
+    symbol: VAT_SHAPES
+    tools:
+      - entity-resolve
+    active: true
+    holds: EU VAT number regex per member state
+    source: null
+    recheck_against: EC VIES technical docs / TEDB
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: email-validate-role-prefixes
+    harm: C
+    file: apps/api/src/capabilities/email-validate.ts
+    symbol: ROLE_PREFIXES
+    tools:
+      - email-validate
+    active: true
+    holds: Role-account prefixes, known and free mailbox providers
+    source: null
+    recheck_against: disposable/free-provider community lists
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: package-libphonenumber-js
+    harm: C
+    file: apps/api/package.json
+    symbol: libphonenumber-js
+    tools:
+      - phone-validate
+      - phone-normalize
+      - phone-type-detect
+    active: true
+    holds: Numbering-plan ranges via package ^1.12.38
+    source: libphonenumber-js (stated in provenance)
+    recheck_against: ITU-T E.164 national plans via Google libphonenumber
+    trigger: Monthly dependency bump
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-03-31
+  - id: eurostat-data-eurostat-allowed-countries
+    harm: C
+    file: apps/api/src/capabilities/eurostat-data.ts
+    symbol: EUROSTAT_ALLOWED_COUNTRIES
+    tools:
+      - eurostat-data
+    active: true
+    holds: Eurostat GEO codes, aggregates and labels
+    source: Eurostat GEO codelist (stated)
+    recheck_against: Eurostat GEO codelist
+    trigger: Annually on 1 Jan (euro-area/EU aggregates)
+    as_of: 2026-10-26
+    evidence: check dates in the code comments
+    review_days: 365
+  - id: eurostat-regions-eurostat-allowed-regions
+    harm: C
+    file: apps/api/src/capabilities/lib/eurostat-regions.ts
+    symbol: EUROSTAT_ALLOWED_REGIONS
+    tools:
+      - eurostat-data
+    active: true
+    holds: NUTS region codes allowed
+    source: generated from dataset audit fixture (stated)
+    recheck_against: Eurostat NUTS classification
+    trigger: On NUTS revision (next NUTS 2027)
+    as_of: 2026-10-26
+    evidence: dataset audit fixture __fixtures__/eurostat/dataset-audit-2026-10-26.json
+    review_days: 365
+  - id: uk-company-data-status-map
+    harm: D
+    file: apps/api/src/capabilities/uk-company-data.ts
+    symbol: statusMap
+    tools:
+      - uk-company-data
+    active: true
+    holds: Companies House status vocabulary
+    source: null
+    recheck_against: Companies House API enumerations (GitHub)
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: swift-message-parse-tag-names
+    harm: D
+    file: apps/api/src/capabilities/swift-message-parse.ts
+    symbol: TAG_NAMES
+    tools:
+      - swift-message-parse
+    active: true
+    holds: SWIFT MT field tags and message types
+    source: null
+    recheck_against: Swift Standards MT release (MT retired for cross-border payments Nov 2025)
+    trigger: Annually (Swift Standards Release, Nov)
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: port-lookup-ports
+    harm: D
+    file: apps/api/src/capabilities/port-lookup.ts
+    symbol: PORTS
+    tools:
+      - port-lookup
+    active: true
+    holds: Ports with UN/LOCODE and coordinates
+    source: null
+    recheck_against: UNECE UN/LOCODE
+    trigger: Semi-annually (UN/LOCODE releases)
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: gdpr-website-check-cookie-consent-patterns
+    harm: D
+    file: apps/api/src/capabilities/gdpr-website-check.ts
+    symbol: cookieConsentPatterns
+    tools:
+      - gdpr-website-check
+    active: true
+    holds: Consent-manager signatures
+    source: null
+    recheck_against: CMP vendor docs
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: skill-extract-technical-skills
+    harm: D
+    file: apps/api/src/capabilities/skill-extract.ts
+    symbol: TECHNICAL_SKILLS
+    tools:
+      - skill-extract
+    active: true
+    holds: Skill, tool and certification vocabularies
+    source: null
+    recheck_against: ESCO / vendor certification catalogues
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: password-strength-common-passwords
+    harm: D
+    file: apps/api/src/capabilities/password-strength.ts
+    symbol: COMMON_PASSWORDS
+    tools:
+      - password-strength
+    active: true
+    holds: Common passwords
+    source: null
+    recheck_against: NCSC / HIBP Pwned Passwords top lists
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: flight-status-airlines
+    harm: D
+    file: apps/api/src/capabilities/flight-status.ts
+    symbol: airlines
+    tools:
+      - flight-status
+    active: false
+    holds: IATA airline codes to names
+    source: null
+    recheck_against: IATA airline codes
+    trigger: On reactivation
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: crypto-price-symbol-map
+    harm: D
+    file: apps/api/src/capabilities/crypto-price.ts
+    symbol: symbolMap
+    tools:
+      - crypto-price
+    active: false
+    holds: Ticker to CoinGecko id
+    source: null
+    recheck_against: CoinGecko
+    trigger: On reactivation
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: lei-lookup-legal-form-expansions
+    harm: D
+    file: apps/api/src/capabilities/lei-lookup.ts
+    symbol: LEGAL_FORM_EXPANSIONS
+    tools:
+      - lei-lookup
+    active: true
+    holds: Legal-form abbreviations
+    source: null
+    recheck_against: GLEIF ELF code list (ISO 20275)
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: uk-filing-events-filing-categories
+    harm: D
+    file: apps/api/src/capabilities/uk-filing-events.ts
+    symbol: FILING_CATEGORIES
+    tools:
+      - uk-filing-events
+    active: true
+    holds: Companies House filing categories
+    source: null
+    recheck_against: Companies House API enumerations
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: sec-filing-events-item-descriptions
+    harm: D
+    file: apps/api/src/capabilities/sec-filing-events.ts
+    symbol: ITEM_DESCRIPTIONS
+    tools:
+      - sec-filing-events
+    active: true
+    holds: SEC Form 8-K item numbers and titles
+    source: null
+    recheck_against: SEC Form 8-K instructions
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: c2pa-inspect-ai-assertion-labels
+    harm: D
+    file: apps/api/src/capabilities/c2pa-inspect.ts
+    symbol: AI_ASSERTION_LABELS
+    tools:
+      - c2pa-inspect
+    active: true
+    holds: C2PA / vendor assertion labels meaning AI generation
+    source: null
+    recheck_against: C2PA specification
+    trigger: On C2PA spec release
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: estonian-company-data-legal-forms
+    harm: D
+    file: apps/api/src/capabilities/estonian-company-data.ts
+    symbol: legalForms
+    tools:
+      - estonian-company-data
+    active: true
+    holds: e-Business Register legal form and status codes
+    source: null
+    recheck_against: RIK e-Business Register codelists
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: country-economic-indicators-indicator-map
+    harm: D
+    file: apps/api/src/capabilities/country-economic-indicators.ts
+    symbol: INDICATOR_MAP
+    tools:
+      - country-economic-indicators
+    active: true
+    holds: World Bank indicator codes
+    source: null
+    recheck_against: World Bank WDI
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: company-fundamentals-metrics
+    harm: D
+    file: apps/api/src/capabilities/company-fundamentals.ts
+    symbol: METRICS
+    tools:
+      - company-fundamentals
+    active: true
+    holds: US-GAAP XBRL tags per metric
+    source: null
+    recheck_against: FASB US GAAP taxonomy
+    trigger: Annually (taxonomy release)
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: breach-exposure-check-credential-classes
+    harm: D
+    file: apps/api/src/capabilities/breach-exposure-check.ts
+    symbol: CREDENTIAL_CLASSES
+    tools:
+      - breach-exposure-check
+    active: true
+    holds: HIBP data classes counted as credentials
+    source: null
+    recheck_against: HIBP data classes API
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: tech-dns-second-level-labels
+    harm: D
+    file: apps/api/src/capabilities/lib/tech-dns.ts
+    symbol: SECOND_LEVEL_LABELS
+    tools:
+      - tech-stack-detect
+      - company-tech-stack
+    active: true
+    holds: Second-level labels for registrable-domain logic
+    source: null
+    recheck_against: Public Suffix List
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: vasp-data-registry-second-level
+    harm: D
+    file: apps/api/src/capabilities/lib/vasp-data.ts
+    symbol: REGISTRY_SECOND_LEVEL
+    tools:
+      - vasp-verify
+    active: true
+    holds: Second-level labels for domain matching
+    source: null
+    recheck_against: Public Suffix List
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: tech-signatures-tech-signatures
+    harm: D
+    file: apps/api/src/capabilities/lib/tech-signatures.ts
+    symbol: TECH_SIGNATURES
+    tools:
+      - tech-stack-detect
+      - company-tech-stack
+    active: true
+    holds: Technology fingerprints
+    source: null
+    recheck_against: Wappalyzer-style fingerprint sets
+    trigger: Quarterly
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: website-carbon-estimate-energy-per-gb-kwh
+    harm: D
+    file: apps/api/src/capabilities/website-carbon-estimate.ts
+    symbol: ENERGY_PER_GB_KWH
+    tools:
+      - website-carbon-estimate
+    active: true
+    holds: Energy and grid-intensity factors for CO2 estimate
+    source: null
+    recheck_against: Sustainable Web Design model (SWDM v4); Ember global grid intensity; HTTP Archive
+    trigger: Annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30
+  - id: lithuanian-classifiers-forma-snapshot
+    harm: D
+    file: apps/api/src/capabilities/lib/lithuanian-classifiers.ts
+    symbol: FORMA_SNAPSHOT
+    tools:
+      - lithuanian-company-data
+    active: false
+    holds: Legal-form and status classifiers (fallback snapshot)
+    source: data.gov.lt Spinta API (stated)
+    recheck_against: VĮ Registrų centras via data.gov.lt
+    trigger: On reactivation; semi-annually
+    as_of: 2026-09-24
+    evidence: CLASSIFIER_SNAPSHOT_FETCHED_AT in the file
+    review_days: 365
+  - id: eurostat-data-eurostat-allowed-datasets
+    harm: D
+    file: apps/api/src/capabilities/eurostat-data.ts
+    symbol: EUROSTAT_ALLOWED_DATASETS
+    tools:
+      - eurostat-data
+    active: true
+    holds: Eurostat dataset codes allowed
+    source: Eurostat (implied)
+    recheck_against: Eurostat dataset catalogue
+    trigger: Semi-annually
+    as_of: null
+    review_days: 365
+    first_review_by: 2027-06-30

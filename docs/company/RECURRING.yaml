@@ -68,7 +68,7 @@ jobs:
     where: not built yet — model on apps/api/src/lib/external-outage-digest.ts (orchestrator handoff 2026-11-06, item 1)
 
   - id: weekly-drift
-    title: Weekly drift sweep (platform facts, manifests, output schemas)
+    title: Weekly drift sweep (platform facts, manifests, output schemas, reference data due for a source check)
     runs_as: github-action
     where: .github/workflows/weekly-drift.yml
 

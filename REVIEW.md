@@ -117,6 +117,13 @@ given.
 - [ ] **One source for facts** ("Drift-prevention surfaces"). Counts, vendor
       names, retention and free-tier lists come from `platform-facts.ts` or the
       DB, never a new hard-coded copy.
+- [ ] **Reference data is registered and dated** (robustness R2,
+      `config/reference-data.yaml`). A new or changed hard-coded dataset
+      (legal list, rate, threshold, deadline, code list) has a row there, names
+      its source, and carries a `*_AS_OF` constant moved together with the
+      row's `as_of`. A value the author could not confirm stays as it was and
+      is marked unverified in the code, never guessed. `npm run refdata:check`
+      catches dated datasets only; an undated new table is caught here.
 - [ ] **Shared checkout and destructive git** ("Shared-Checkout Rule",
       "Worktree node_modules Hazard"). Agents that edit files run in their own
       worktree (`isolation: "worktree"`). Scripts and instructions never use
