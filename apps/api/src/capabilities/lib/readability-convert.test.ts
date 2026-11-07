@@ -193,6 +193,47 @@ describe("htmlToCleanMarkdown in a worker", () => {
     await stopConversionWorkers();
   }, 30_000);
 
+  it("frees the slot if a stopped worker never reports its exit", async () => {
+    // Sixth R1 review, finding 3: with one worker, a lost "exit" would refuse
+    // every page until a restart.
+    await stopConversionWorkers();
+    const { EventEmitter } = await import("node:events");
+    let spawned = 0;
+    class SilentWorker extends EventEmitter {
+      unref() {}
+      postMessage(msg: { id: number }) {
+        if (spawned > 1) setImmediate(() => this.emit("message", { id: msg.id, ok: true, result: { markdown: "ok", title: "", usedReadability: false } }));
+      }
+      terminate() { return new Promise<number>(() => {}); } // never exits
+    }
+    __setWorkerFactoryForTests((() => { spawned++; return new SilentWorker(); }) as never);
+    CONVERSION_LIMITS.timeoutMs = 100;
+    CONVERSION_LIMITS.exitWatchdogMs = 300;
+    await expect(htmlToCleanMarkdown("<p>a</p>", URL_)).rejects.toBeInstanceOf(HtmlTooComplexError);
+    const next = await htmlToCleanMarkdown("<p>b</p>", URL_);
+    expect(next.markdown).toBe("ok");
+    expect(spawned).toBe(2);
+    __setWorkerFactoryForTests(null);
+  }, 30_000);
+
+  it("gives the caller a plain message when the worker fails, and keeps the detail in the log", async () => {
+    // Sixth R1 review, finding 5.
+    await stopConversionWorkers();
+    const { EventEmitter } = await import("node:events");
+    class FailingWorker extends EventEmitter {
+      unref() {}
+      postMessage() {
+        setImmediate(() => { this.emit("error", new Error("Cannot find module '/app/dist/secret/path.js'")); this.emit("exit", 1); });
+      }
+      terminate() { return Promise.resolve(1); }
+    }
+    __setWorkerFactoryForTests((() => new FailingWorker()) as never);
+    const error = await htmlToCleanMarkdown("<p>a</p>", URL_).catch((e) => e);
+    expect((error as Error).message).toBe("The page converter failed. Please retry.");
+    __setWorkerFactoryForTests(null);
+    await stopConversionWorkers();
+  }, 30_000);
+
   it("refuses a page that waits in the queue past maxQueueWaitMs", async () => {
     await stopConversionWorkers();
     CONVERSION_LIMITS.workers = 1;

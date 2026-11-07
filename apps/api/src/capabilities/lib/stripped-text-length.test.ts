@@ -146,6 +146,19 @@ describe("the windowed text checks", () => {
     }
   });
 
+  it("never extend past a fixed span, even when a closing tag hides inside a script", () => {
+    // Sixth R1 review, finding 1: "</style>" inside a script ended the style
+    // for windowEnd but not for the strip, carrying the window to the end of
+    // a 16 MiB page (1.6-2.6 s).
+    const html = `<html><body><style>${"<a>x ".repeat(Math.floor((16 * 1024 * 1024) / 5))}<script>s</style>t</script></body></html>`;
+    for (const check of [() => hasMoreTextThan(html, 500), () => bodyHasMoreTextThan(html, 200)]) {
+      const started = process.cpuUsage();
+      check();
+      const d = process.cpuUsage(started);
+      expect((d.user + d.system) / 1000).toBeLessThan(400);
+    }
+  });
+
   it("agree with the full check on pages inside the window", () => {
     for (const html of [`<body><p>${words}</p></body>`, "<body><script>x</script>short</body>", "<p>no body</p>"]) {
       expect(hasMoreTextThan(html, 500)).toBe(strippedTextLength(html) > 500);

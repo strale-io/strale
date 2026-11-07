@@ -88,7 +88,10 @@ export const TEXT_CHECK_WINDOW = 512 * 1024;
  * client-rendered page with a large inline state script would pass as a real
  * page and never reach the renderer (fourth R1 review of #964, F2). When the
  * window ends inside one, it is moved past that element's closing tag and
- * extended by another window, at most four times.
+ * extended by another window, at most four times, and never past
+ * start + MAX_WINDOW_EXTENSION in all: a style closing tag hidden inside a
+ * script could otherwise carry the window to the end of a 16 MiB page
+ * (1.6-2.6 s of main-thread time, sixth R1 review).
  *
  * Each step searches only new ground: openers in [from, end), where `from` is
  * the previous step's closing tag, and the closing tag forward from the
@@ -96,7 +99,10 @@ export const TEXT_CHECK_WINDOW = 512 * 1024;
  * that rescanned from the start cost 0.5 s on a crafted 16 MiB page, fifth R1
  * review).
  */
+const MAX_WINDOW_EXTENSION = 2 * TEXT_CHECK_WINDOW;
+
 function windowEnd(html: string, start: number, limit: number): number {
+  limit = Math.min(limit, start + MAX_WINDOW_EXTENSION);
   let end = Math.min(limit, start + TEXT_CHECK_WINDOW);
   let from = start;
   const noCloseAfter = new Map<string, number>(); // tag -> a point with no closing tag after it

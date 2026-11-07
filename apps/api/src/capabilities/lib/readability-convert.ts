@@ -32,7 +32,7 @@ export const CONVERSION_LIMITS = {
    * the page's markup, not its size (64 attributes per tag in 256 KiB reached
    * +314 MB; two such pages at once +605 MB, fifth R1 review), so the only
    * bound that holds for every page shape on a 1 GB box is one conversion at
-   * a time. Ordinary pages convert in well under a second.
+   * a time. Ordinary pages take 0.5-1 s; a 1.3 MB article about 3 s.
    */
   workers: 1,
   /** Wall-clock limit for one conversion, from the moment a worker takes it. */
@@ -52,10 +52,18 @@ export const CONVERSION_LIMITS = {
    * of process memory for one 15 MB conversion.
    */
   maxInputChars: 2 * 1024 * 1024,
-  /** Pages waiting for a worker; beyond this a page is refused at once. */
-  maxQueued: 8,
-  /** Longest a page waits for a worker before it is refused. */
-  maxQueueWaitMs: 10_000,
+  /**
+   * Pages waiting for the worker; beyond this a page is refused at once. With
+   * one worker, a longer queue only makes callers wait to be refused.
+   */
+  maxQueued: 4,
+  /**
+   * Longest a page waits for the worker before it is refused: one timed-out
+   * page, a respawn and one ordinary page (sixth R1 review).
+   */
+  maxQueueWaitMs: 13_000,
+  /** How long a stopped worker may take to exit before its slot is freed anyway. */
+  exitWatchdogMs: 5_000,
 };
 
 /** Refused because every converter is busy; non-billable, worth retrying. */
@@ -150,11 +158,18 @@ class Slot {
     w.on("error", (err: unknown) => {
       if (this.worker !== w) return;
       this.closing = true;
+      this.watchExit(w);
       const job = this.job;
       if (!job) return;
       this.answered();
       const oom = err instanceof Error && /ERR_WORKER_OUT_OF_MEMORY|heap/i.test(`${(err as { code?: string }).code ?? ""} ${err.message}`);
-      job.reject(oom ? tooComplex(new HtmlTooComplexError("it needs more memory than the converter allows").message) : err);
+      if (oom) {
+        job.reject(tooComplex(new HtmlTooComplexError("it needs more memory than the converter allows").message));
+      } else {
+        // The log keeps the detail; the caller gets a plain message.
+        logWarn("readability-worker-error", err instanceof Error ? err.message : String(err));
+        job.reject(new Error("The page converter failed. Please retry."));
+      }
     });
     w.on("exit", (code) => {
       if (this.worker !== w) return;
@@ -197,8 +212,25 @@ class Slot {
         ),
       );
       void w.terminate();
+      this.watchExit(w);
     }, CONVERSION_LIMITS.timeoutMs);
     w.postMessage({ id: job.id, html: job.html, url: job.url, options: job.options });
+  }
+
+  /**
+   * Frees the slot if a stopping worker has not exited after exitWatchdogMs.
+   * Node always emits "exit", but with one worker a lost event would refuse
+   * every page until a restart, so this is the backstop (sixth R1 review).
+   */
+  private watchExit(w: Worker): void {
+    const timer = setTimeout(() => {
+      if (this.worker !== w || !this.closing) return;
+      logWarn("readability-worker-exit-timeout", `worker did not exit within ${CONVERSION_LIMITS.exitWatchdogMs} ms; freeing its slot`);
+      this.worker = null;
+      this.closing = false;
+      this.onFree();
+    }, CONVERSION_LIMITS.exitWatchdogMs);
+    timer.unref();
   }
 
   /** The current job has its answer; clears it and its timer. */
@@ -215,7 +247,13 @@ class Slot {
     this.worker = null;
     this.closing = false;
     job?.reject(new ConversionBusyError());
-    if (w) await w.terminate();
+    // Bounded: a worker that never exits must not hang shutdown.
+    if (w) {
+      await Promise.race([
+        w.terminate(),
+        new Promise((resolve) => setTimeout(resolve, CONVERSION_LIMITS.exitWatchdogMs).unref()),
+      ]);
+    }
   }
 }
 
