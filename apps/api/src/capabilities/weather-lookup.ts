@@ -39,16 +39,21 @@ const cleanPart = (s: string) => s.replace(/\b\d{3,}(-\d+)?\b/g, " ").replace(/\
 /** Does any of the caller's qualifiers ("UK", "New York City", "Ontario") name this hit's country or region? */
 export function hitMatchesQualifiers(hit: GeoHit, qualifiers: string[]): boolean {
   const cc = (hit.country_code ?? "").toLowerCase();
+  // Each region name also counts without a leading "the" or a trailing generic
+  // word, so "Pabna" names "Pabna District" and "Netherlands" "The Netherlands".
   const names = [hit.country, hit.admin1, hit.admin2, hit.admin3, hit.admin4]
     .filter((v): v is string => typeof v === "string" && v.length > 0)
-    .map(norm);
+    .map(norm)
+    .flatMap((n) => [n, n.replace(/^the /, "").replace(/ (district|division|province|state|county|region|governorate|prefecture|municipality|city)$/, "")]);
   return qualifiers.some((raw) => {
     const q = norm(raw);
     if (!q) return false;
     if (cc && (q === cc || COUNTRY_ALIASES[q] === cc)) return true;
-    // Whole-word containment either way: "new york city" names admin1 "new york";
-    // "north holland" names "north holland". Single letters never match.
-    return names.some((n) => n.length > 1 && (` ${q} `.includes(` ${n} `) || ` ${n} `.includes(` ${q} `)));
+    // The qualifier is the name, or starts with it as whole words: "new york
+    // city" names admin1 "new york". Never the other way round or in the middle,
+    // so "ireland" does not name "northern ireland" and "new hampshire" does not
+    // name "hampshire". Single letters never match.
+    return names.some((n) => n.length > 1 && (q === n || q.startsWith(`${n} `)));
   });
 }
 
@@ -57,7 +62,9 @@ async function geocodeName(name: string, count: number): Promise<GeoHit[]> {
   const gr = await fetch(geoUrl, { signal: AbortSignal.timeout(10000) });
   if (!gr.ok) throw new Error(`Geocoding API returned HTTP ${gr.status}`);
   const gd = (await gr.json()) as { results?: GeoHit[] };
-  return Array.isArray(gd.results) ? gd.results : [];
+  return Array.isArray(gd.results)
+    ? gd.results.filter((h): h is GeoHit => !!h && typeof h === "object" && Number.isFinite(h.latitude) && Number.isFinite(h.longitude))
+    : [];
 }
 
 /**
@@ -74,7 +81,10 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
 
   const parts = city.split(",").map(cleanPart).filter(Boolean);
   if (parts.length < 2) {
-    if (parts.length === 1 && parts[0] !== city) {
+    // A bare-name retry only when the caller wrote no comma ("Flint 48505").
+    // "Springfield, 62701" named a region by postcode; guessing the top
+    // Springfield would ignore it, so that refuses.
+    if (parts.length === 1 && parts[0] !== city && !city.includes(",")) {
       const bare = await geocodeName(parts[0], 1);
       if (bare.length) return bare[0];
     }
@@ -86,7 +96,7 @@ export async function resolvePlace(city: string): Promise<GeoHit> {
   // part on its own ("Georgia" out of "Twiggs County, Georgia, USA") finds a
   // different place of that name, so it is never done.
   const [name, ...qualifiers] = parts;
-  const hits = await geocodeName(name, 10);
+  const hits = await geocodeName(name, 20);
   const match = hits.find((h) => qualifiers.every((q) => hitMatchesQualifiers(h, [q])));
   if (match) return match;
   throw new Error(

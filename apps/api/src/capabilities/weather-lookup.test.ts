@@ -82,6 +82,11 @@ describe("weather-lookup place resolution", () => {
       await expect(exec({ city: "London, Ontario, UK" })).rejects.toThrow(/none in Ontario, UK/);
     });
 
+    it("refuses a region given only as a postcode instead of taking the top namesake", async () => {
+      await expect(exec({ city: "London, 43140" })).rejects.toThrow(/not found/);
+      expect(fetchMock.mock.calls.some((c) => new URL(String(c[0])).hostname === "api.open-meteo.com")).toBe(false);
+    });
+
     it("still refuses a place the geocoder does not know", async () => {
       await expect(exec({ city: "Ogbomosho, Nigeria" })).rejects.toThrow(/Location "Ogbomosho, Nigeria" not found\.$/);
     });
@@ -109,5 +114,11 @@ describe("weather-lookup place resolution", () => {
     expect(hitMatchesQualifiers(LONDON_CA, ["UK"])).toBe(false);
     expect(hitMatchesQualifiers(MANHATTAN_KS, ["New York City"])).toBe(false);
     expect(hitMatchesQualifiers({ ...LONDON_GB, admin1: "E" }, ["E"])).toBe(false);
+    // Review of PR 968: a qualifier must not name a longer region that merely contains it, or the reverse.
+    const NEWRY = { latitude: 54.17, longitude: -6.34, country_code: "GB", country: "United Kingdom", admin1: "Northern Ireland" };
+    expect(hitMatchesQualifiers(NEWRY, ["Ireland"])).toBe(false);
+    expect(hitMatchesQualifiers(NEWRY, ["Northern Ireland"])).toBe(true);
+    expect(hitMatchesQualifiers({ ...LONDON_GB, admin1: "England", admin2: "Hampshire" }, ["New Hampshire"])).toBe(false);
+    expect(hitMatchesQualifiers({ latitude: 0, longitude: 0, country_code: "MX", country: "Mexico" }, ["New Mexico"])).toBe(false);
   });
 });
