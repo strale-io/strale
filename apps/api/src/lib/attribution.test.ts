@@ -84,9 +84,15 @@ describe("saltedIpHash", () => {
   });
 
   it("never emits the raw IP", () => {
-    const h = saltedIpHash("203.0.113.77")!;
-    expect(h).not.toContain("203");
-    expect(h).toHaveLength(16);
+    // The salt rotates daily, so pin the date: with the real clock, an
+    // unrelated day's hash can contain any short digit run by chance
+    // (CI on 2026-11-07 produced "153ba3e81c203aab"). Assert on the whole
+    // IP and on the output shape, which no hash can satisfy by accident.
+    const ip = "203.0.113.77";
+    const h = saltedIpHash(ip, new Date("2026-01-15T12:00:00Z"))!;
+    expect(h).toMatch(/^[0-9a-f]{16}$/);
+    expect(h).not.toContain(ip);
+    expect(h).not.toContain(".");
   });
 });
 

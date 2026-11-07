@@ -2,6 +2,36 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 
 // ─── Financial year dates lookup — pure algorithmic ─────────────────────────
 // Returns fiscal year dates and filing deadlines for 40+ countries.
+//
+// Rows checked against the issuing authority on 2026-11-06 (sources by row):
+//   SE  Skatteverket "Deklarera för ett aktiebolag" (Inkomstdeklaration 2 due
+//       by fiscal-year end: Jan-Apr -> 1 Dec, May-Jun -> 15 Jan, Jul-Aug ->
+//       1 Apr, Sep-Dec -> 1 Aug of the following year); Skatteverket VAT
+//       periods (month above SEK 40M, quarter up to 40M, year up to 1M);
+//       Bolagsverket (annual report within 7 months).
+//   NO  Skatteetaten (company tax return 31 May); Bronnoysundregistrene
+//       (annual accounts to the Register of Company Accounts by 31 July).
+//   DK  Skattestyrelsen (company tax return usually 6 months after the
+//       income year); Erhvervsstyrelsen (annual report within 6 months for
+//       accounting classes B and C, 4 months for class D).
+//   DE  VAT periods: service.berlin.de (prior-year VAT above EUR 9,000 ->
+//       monthly; quarter is the default; exemption possible at EUR 2,000 or
+//       less), consistent with § 18 UStG as amended for 2025
+//       (gesetze-im-internet.de was unavailable, HTTP 503). Disclosure:
+//       12 months after year end (§ 325(1a) HGB, read from secondary legal
+//       sources; the official text was unavailable). Income-tax return dates
+//       (§ 149 AO) confirmed from secondary sources only.
+//   GB  gov.uk "Company Tax Returns" (return due 12 months after the
+//       accounting period; Corporation Tax payable 9 months and 1 day after).
+//   US  IRS Publication 509 and Form 7004 instructions (6-month automatic
+//       extension: Oct 15 for calendar-year C corporations, Sep 15 for
+//       partnerships and S corporations).
+//   HR  The HRK threshold (HRK 800,000) was converted at the euro changeover;
+//       gov.hr gives EUR 106,178.25. A proposal to raise it to EUR 110,000 was
+//       not confirmed as enacted (unverified as of 2026-11-06).
+// All other rows, and the fields of the rows above not named here, are
+// unverified as of 2026-11-06 and were left as they were.
+export const FISCAL_YEAR_DATA_AS_OF = "2026-11-06";
 
 interface FiscalYearInfo {
   country_code: string;
@@ -22,7 +52,7 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     financial_year_start: "01-01",
     financial_year_end: "12-31",
     fiscal_year_matches_calendar: true,
-    tax_filing_deadline: "May 1 (calendar year companies); 6 months after FY end for broken fiscal years",
+    tax_filing_deadline: "August 1 of the following year for fiscal years ending September-December (calendar year companies); December 1 for years ending January-April; January 15 for May-June; April 1 for July-August",
     vat_filing_frequency: "Monthly (turnover >40M SEK), quarterly (1-40M SEK), or annually (<1M SEK)",
     annual_report_deadline: "7 months after financial year end",
     notes: "Companies may choose a broken fiscal year (e.g., May-Apr, Sep-Aug). Calendar year is most common. Bolagsverket filing required.",
@@ -35,7 +65,7 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     fiscal_year_matches_calendar: true,
     tax_filing_deadline: "End of May (companies); April 30 (individuals)",
     vat_filing_frequency: "Bi-monthly (6 terms/year); annually for small businesses",
-    annual_report_deadline: "June 30 (6 months after FY end)",
+    annual_report_deadline: "July 31 (filed with the Register of Company Accounts)",
     notes: "Norwegian law generally requires calendar year. Annual accounts must be approved by AGM within 6 months of FY end.",
   },
   DK: {
@@ -44,9 +74,9 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     financial_year_start: "01-01",
     financial_year_end: "12-31",
     fiscal_year_matches_calendar: true,
-    tax_filing_deadline: "July 1 (6 months after income year end)",
+    tax_filing_deadline: "June 30 for calendar year companies (usually 6 months after income year end)",
     vat_filing_frequency: "Quarterly (default); monthly (turnover >50M DKK); semi-annually (<5M DKK)",
-    annual_report_deadline: "5 months after FY end (ApS/A/S); 6 months (Class B)",
+    annual_report_deadline: "6 months after FY end (accounting classes B and C); 4 months (class D) — filed with Erhvervsstyrelsen",
     notes: "Companies may choose non-calendar fiscal year. Tax year always follows fiscal year.",
   },
   FI: {
@@ -67,8 +97,8 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     financial_year_end: "12-31",
     fiscal_year_matches_calendar: true,
     tax_filing_deadline: "July 31 (without tax advisor); February 28/29 of second following year (with tax advisor)",
-    vat_filing_frequency: "Monthly (VAT >7,500 EUR/year); quarterly (1,000-7,500 EUR); annually (<1,000 EUR)",
-    annual_report_deadline: "12 months after FY end (small); 6 months (medium/large) — filed in Bundesanzeiger",
+    vat_filing_frequency: "Monthly (prior-year VAT >9,000 EUR); quarterly (default); exemption from advance returns possible (prior-year VAT ≤2,000 EUR)",
+    annual_report_deadline: "12 months after FY end (§ 325 HGB disclosure)",
     notes: "AG/GmbH may choose non-calendar fiscal year. Trade tax (Gewerbesteuer) due alongside corporate income tax.",
   },
   GB: {
@@ -77,7 +107,7 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     financial_year_start: "04-06",
     financial_year_end: "04-05",
     fiscal_year_matches_calendar: false,
-    tax_filing_deadline: "9 months + 1 day after accounting period end (corporation tax); January 31 following tax year (individuals)",
+    tax_filing_deadline: "12 months after accounting period end (Company Tax Return; corporation tax payable 9 months + 1 day after period end); January 31 following tax year (individuals)",
     vat_filing_frequency: "Quarterly (aligned with VAT periods); monthly (optional)",
     annual_report_deadline: "9 months after FY end (private companies); 6 months (public companies) — filed at Companies House",
     notes: "Tax year: Apr 6 - Apr 5. Companies choose their own accounting reference date. Corporation tax payment due 9 months + 1 day after period end.",
@@ -88,7 +118,7 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     financial_year_start: "01-01",
     financial_year_end: "12-31",
     fiscal_year_matches_calendar: true,
-    tax_filing_deadline: "April 15 (individuals/C-corps calendar year); March 15 (S-corps/partnerships); extension to October 15",
+    tax_filing_deadline: "April 15 (individuals/C-corps calendar year); March 15 (S-corps/partnerships); 6-month extension (October 15 for C-corps, September 15 for S-corps/partnerships)",
     vat_filing_frequency: "N/A (no federal VAT; state sales tax varies by state)",
     annual_report_deadline: "Varies by state; typically annually with Secretary of State",
     notes: "Companies may elect any fiscal year end. Federal government fiscal year: Oct 1 - Sep 30. States have their own filing requirements.",
@@ -309,7 +339,7 @@ const FISCAL_YEAR_DATA: Record<string, FiscalYearInfo> = {
     financial_year_end: "12-31",
     fiscal_year_matches_calendar: true,
     tax_filing_deadline: "April 30 (4 months after FY end)",
-    vat_filing_frequency: "Monthly (turnover >800K HRK); quarterly (default)",
+    vat_filing_frequency: "Monthly (prior-year turnover above EUR 106,178.25, converted from HRK 800,000); quarterly (below it)",
     annual_report_deadline: "June 30 (filed with FINA)",
     notes: "Calendar year required. Joined eurozone January 2023. CIT: 10% (turnover <1M EUR), 18% otherwise.",
   },
