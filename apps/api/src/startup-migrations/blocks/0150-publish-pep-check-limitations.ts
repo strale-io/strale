@@ -18,9 +18,10 @@ import type { MigrationExecutor, BlockResult } from "../types.js";
  * matched by their exact production text (the freshness row in either its
  * original or its block-0149 wording, since 0149 runs first), so a row added
  * later by anyone else is never touched. It then inserts the manifest's three
- * rows, in manifest order, where they are not already present. Skipped when
- * the pep-check capability row does not exist (a fresh database is seeded from
- * the manifest). Run policy "once"; every statement is also idempotent on its
+ * rows, in manifest order, where they are not already present, in the same
+ * statement so the two commit together. Both parts are skipped when the
+ * pep-check capability row does not exist (a fresh database is seeded from
+ * the manifest). Run policy "once"; the statement is also idempotent on its
  * own. Rows touched: at most eight, of one capability; no bulk operation
  * (DEC-20260504-B). Only strings and integers are bound (DEC-20260504-A).
  */
@@ -76,29 +77,30 @@ export async function runMigration0150_publishPepCheckLimitations(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
-  const rowCount = (res: unknown) => (res as { count?: number }).count ?? 0;
 
   const oldTexts = sql.join(
     DQ47_OLD_PEP_LIMITATION_TEXTS.map((t) => sql`${t}`),
     sql`, `,
   );
-  const deleted = rowCount(
-    await tx.execute(sql`
-      DELETE FROM capability_limitations
-       WHERE capability_slug = ${PEP_CHECK_SLUG}
-         AND active = true
-         AND limitation_text IN (${oldTexts})
-    `),
-  );
-
   const wanted = sql.join(
     DQ47_PEP_LIMITATIONS.map(
       (l, i) => sql`(${i}::int, ${l.title}, ${l.limitationText}, ${l.category}, ${l.severity}, ${l.workaround}::text)`,
     ),
     sql`, `,
   );
-  const inserted = rowCount(
-    await tx.execute(sql`
+  // One statement, so the delete and the insert commit together: a failed
+  // insert can never leave pep-check with no published limitations. The
+  // NOT EXISTS reads the table as it was before this statement, which is
+  // right here, since no row to keep is among the rows deleted.
+  const rows = (await tx.execute(sql`
+    WITH deleted AS (
+      DELETE FROM capability_limitations
+       WHERE capability_slug = ${PEP_CHECK_SLUG}
+         AND active = true
+         AND limitation_text IN (${oldTexts})
+         AND EXISTS (SELECT 1 FROM capabilities c WHERE c.slug = ${PEP_CHECK_SLUG})
+      RETURNING 1
+    ), inserted AS (
       INSERT INTO capability_limitations
         (capability_slug, title, limitation_text, category, severity, workaround, sort_order)
       SELECT ${PEP_CHECK_SLUG}, w.title, w.limitation_text, w.category, w.severity, w.workaround, w.sort_order
@@ -110,8 +112,12 @@ export async function runMigration0150_publishPepCheckLimitations(
               AND cl.active = true
               AND cl.limitation_text = w.limitation_text
          )
-    `),
-  );
+      RETURNING 1
+    )
+    SELECT (SELECT count(*) FROM deleted)::int AS deleted, (SELECT count(*) FROM inserted)::int AS inserted
+  `)) as unknown as Array<{ deleted: number; inserted: number }>;
+  const deleted = Number(rows[0]?.deleted ?? 0);
+  const inserted = Number(rows[0]?.inserted ?? 0);
 
   const total = deleted + inserted;
   return {

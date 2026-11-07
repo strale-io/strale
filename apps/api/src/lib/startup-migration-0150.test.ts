@@ -19,12 +19,12 @@ import { BLOCK_RUN_POLICY } from "../startup-migrations/run-policy.js";
 import type { MigrationExecutor } from "../startup-migrations/types.js";
 
 const dialect = new PgDialect();
-function recordingTx(count: number) {
+function recordingTx(rows: unknown) {
   const queries: { sql: string; params: unknown[] }[] = [];
   const tx = {
     execute: async (q: SQL) => {
       queries.push(dialect.sqlToQuery(q));
-      return { count };
+      return rows;
     },
   } as unknown as MigrationExecutor;
   return { tx, queries };
@@ -55,25 +55,26 @@ describe("block 0150: pep-check's limitations are replaced with the manifest's (
     for (const keep of DQ47_PEP_LIMITATIONS) expect(DQ47_OLD_PEP_LIMITATION_TEXTS).not.toContain(keep.limitationText);
   });
 
-  it("scopes both statements to pep-check and binds only strings and integers", async () => {
-    const { tx, queries } = recordingTx(1);
+  it("deletes and inserts in one statement, scoped to pep-check, binding only strings and integers", async () => {
+    const { tx, queries } = recordingTx([{ deleted: 5, inserted: 3 }]);
     const result = await runMigration0150_publishPepCheckLimitations(tx);
-    expect(queries).toHaveLength(2);
-    const [del, ins] = queries;
-    expect(del.sql.replace(/\s+/g, " ")).toMatch(/^ ?DELETE FROM capability_limitations WHERE capability_slug = \$1 AND active = true AND limitation_text IN \(/);
-    expect(del.params).toEqual(["pep-check", ...DQ47_OLD_PEP_LIMITATION_TEXTS]);
-    expect(ins.sql).toMatch(/NOT EXISTS/);
-    expect(ins.sql).toMatch(/EXISTS \(SELECT 1 FROM capabilities c WHERE c.slug = /);
-    for (const q of queries) {
-      expect(q.sql).not.toMatch(/updated_at/);
-      for (const p of q.params) expect(p === null || typeof p === "string" || typeof p === "number").toBe(true);
-    }
+    expect(queries).toHaveLength(1);
+    const text = queries[0].sql.replace(/\s+/g, " ");
+    expect(text).toMatch(/WITH deleted AS \( DELETE FROM capability_limitations WHERE capability_slug = \$1 AND active = true AND limitation_text IN \(/);
+    expect(text).toMatch(/inserted AS \( INSERT INTO capability_limitations/);
+    // The duplicate guard compares the same column, so an existing row is never added twice.
+    expect(text).toMatch(/AND cl\.active = true AND cl\.limitation_text = w\.limitation_text \)/);
+    expect(text).toMatch(/EXISTS \(SELECT 1 FROM capabilities c WHERE c\.slug = /);
+    expect(text).not.toMatch(/updated_at/);
+    expect(queries[0].params.slice(0, 1 + DQ47_OLD_PEP_LIMITATION_TEXTS.length)).toEqual(["pep-check", ...DQ47_OLD_PEP_LIMITATION_TEXTS]);
+    for (const p of queries[0].params) expect(p === null || typeof p === "string" || typeof p === "number").toBe(true);
     expect(result.block).toBe("0150_publishPepCheckLimitations");
-    expect(result.rows_affected).toBe(2);
+    expect(result.rows_affected).toBe(8);
+    expect(result.outcome).toMatch(/-5\/\+3/);
   });
 
   it("reports no change when there is nothing left to do", async () => {
-    const { tx } = recordingTx(0);
+    const { tx } = recordingTx([{ deleted: 0, inserted: 0 }]);
     const result = await runMigration0150_publishPepCheckLimitations(tx);
     expect(result.rows_affected).toBe(0);
     expect(result.outcome).toMatch(/^no change/);
