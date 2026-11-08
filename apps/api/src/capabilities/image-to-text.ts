@@ -10,6 +10,7 @@ import {
   readBodyWithLimit,
 } from "../lib/resource-limits.js";
 import { messageText } from "../lib/llm-response.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
 
 // URL inputs are fetched by US via safeFetch and sent to Anthropic as base64.
 // Two reasons (P1, 2026-08-12): (a) Anthropic's own URL fetcher fails on
@@ -22,6 +23,32 @@ import { messageText } from "../lib/llm-response.js";
 // 4 MiB image cap now comes from the shared MAX_DECODED_IMAGE_BYTES (the value
 // this capability originally declared; Claude's base64 limit is ~5MB, margin).
 const ALLOWED_MEDIA = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+type ImageMediaType = "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+
+/** Identify an Anthropic-supported image from its signature, never its label. */
+export function sniffImageMediaType(bytes: Uint8Array): ImageMediaType | null {
+  const startsWith = (...signature: number[]) =>
+    signature.every((byte, index) => bytes[index] === byte);
+
+  if (startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+  if (startsWith(0xff, 0xd8, 0xff)) return "image/jpeg";
+  if (
+    startsWith(0x47, 0x49, 0x46, 0x38, 0x37, 0x61) ||
+    startsWith(0x47, 0x49, 0x46, 0x38, 0x39, 0x61)
+  ) return "image/gif";
+  if (
+    startsWith(0x52, 0x49, 0x46, 0x46) &&
+    bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+  ) return "image/webp";
+  return null;
+}
+
+function hasValidBase64Syntax(data: string): boolean {
+  if (!data || data.length % 4 === 1 || !/^[A-Za-z0-9+/]*={0,2}$/.test(data)) return false;
+  const paddingAt = data.indexOf("=");
+  if (paddingAt < 0) return true;
+  return data.length % 4 === 0 && paddingAt >= data.length - 2;
+}
 
 registerCapability("image-to-text", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string) ?? (input.url as string) ?? undefined;
@@ -38,18 +65,23 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
   let imageContent: Anthropic.ImageBlockParam;
 
   if (base64Input) {
-    // Detect media type from the data-URI header or default to png
-    let mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" = "image/png";
-    const match = base64Input.match(/^data:(image\/\w+);base64,/);
-    if (match) {
-      mediaType = match[1] as typeof mediaType;
-    }
-
     // #412: this path used to be entirely unchecked — the 4 MiB cap applied
     // only to the URL branch, and only after the bytes were buffered.
     // Normalised, measured, and refused-if-oversized in one step; the returned
     // string is the one that was measured.
     const data = checkedBase64(base64Input, MAX_DECODED_IMAGE_BYTES);
+    // Validate the complete encoding, but decode only enough leading bytes to
+    // inspect the signature. The full payload is decoded later by Anthropic.
+    const mediaType = hasValidBase64Syntax(data)
+      ? sniffImageMediaType(Buffer.from(data.slice(0, 24), "base64").subarray(0, 16))
+      : null;
+    if (!mediaType) {
+      throw inputRefusal(
+        "'base64' must be a PNG, JPEG, GIF or WebP image.",
+        "base64",
+        "Send the image as PNG, JPEG, GIF or WebP, base64-encoded, with or without a data: header.",
+      );
+    }
 
     imageContent = {
       type: "image",
@@ -77,11 +109,19 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
       MAX_DECODED_IMAGE_BYTES,
       input.image_url ? "image_url" : "url",
     );
+    const mediaType = sniffImageMediaType(buf.subarray(0, 16));
+    if (!mediaType) {
+      throw inputRefusal(
+        "'image_url' must be a PNG, JPEG, GIF or WebP image.",
+        "image_url",
+        "Send 'image_url' as the URL of a PNG, JPEG, GIF or WebP image.",
+      );
+    }
     imageContent = {
       type: "image",
       source: {
         type: "base64",
-        media_type: rawType as "image/png" | "image/jpeg" | "image/gif" | "image/webp",
+        media_type: mediaType,
         data: buf.toString("base64"),
       },
     };

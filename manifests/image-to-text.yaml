@@ -68,6 +68,10 @@ output_field_reliability:
   confidence: guaranteed
   language_detected: guaranteed
 limitations:
+  - title: Supported image formats
+    text: Accepts PNG, JPEG, GIF and WebP; the type is read from the image itself.
+    category: coverage
+    severity: info
   - title: Handwriting and complex layouts reduce OCR accuracy
     text: >-
       AI-powered OCR — handwritten text, low-resolution images, and complex layouts (multi-column, overlapping) have
