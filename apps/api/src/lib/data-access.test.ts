@@ -125,6 +125,25 @@ describe("stampDataAccess", () => {
     ).not.toHaveProperty("data_access_checks");
   });
 
+  it("removes executor-recorded checks when the manifest records none", () => {
+    expect(stampDataAccess({
+      source: "frankfurter.dev",
+      fetched_at: "t",
+      acquisition_method: "vendor_api",
+      data_access_lane: "allowed_with_checks",
+      upstream_vendor: "Frankfurter",
+      data_access_checks: "recorded",
+    }, { lane: "preferred", acquisition_method: "direct_api" })).not.toHaveProperty("data_access_checks");
+  });
+
+  it("removes checks when the executor narrows an allowed-with-checks manifest to preferred", () => {
+    expect(stampDataAccess({
+      source: "ecb.europa.eu", fetched_at: "t", acquisition_method: "direct_api", data_access_lane: "preferred",
+    }, {
+      lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "Frankfurter", checks: "recorded",
+    })).not.toHaveProperty("data_access_checks");
+  });
+
   it("leaves provenance unchanged without a declaration", () => {
     const p = { source: "x", fetched_at: "t" };
     expect(stampDataAccess(p, undefined)).toBe(p);

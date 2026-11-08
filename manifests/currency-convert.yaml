@@ -43,11 +43,17 @@ output_schema:
       type: string
     rate:
       type: number
+    rate_source:
+      type: string
+    rate_date:
+      type: string
+    stale:
+      type: boolean
     amount:
       type: number
     converted_amount:
       type: number
-data_source: European Central Bank daily reference rates
+data_source: European Central Bank daily reference rates; Frankfurter blended central-bank rates for currencies the ECB does not publish
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: reference-data
@@ -119,9 +125,17 @@ output_field_reliability:
   date: guaranteed
   from: guaranteed
   rate: guaranteed
+  rate_source: guaranteed
+  rate_date: guaranteed
+  stale: rare
   amount: guaranteed
   converted_amount: guaranteed
 limitations:
+  - title: Reference rates are daily
+    text: ECB reference rates are published once per working day around 16:00 CET; other currencies use Frankfurter's daily blend of central-bank rates, which can lag a day.
+    category: freshness
+    severity: info
+    workaround: Use the published rate date to decide whether reconciliation is needed
   - title: Bank rates include spreads and fees
     text: Uses mid-market exchange rates — actual conversion rates from banks and payment processors include spread and fees
     category: accuracy
@@ -130,5 +144,8 @@ limitations:
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
-  lane: preferred
-  acquisition_method: direct_api
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: Frankfurter
+  checks: recorded
+  checks_note: "Frankfurter vendor terms at frankfurter.dev/license/ read 2026-11-08; blended endpoint only."

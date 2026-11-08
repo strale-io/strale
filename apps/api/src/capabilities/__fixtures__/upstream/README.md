@@ -5,9 +5,13 @@ manifest's `known_answer` input. `upstream-replay-contract.test.ts` replays it
 into the real executor (fetch answers only from the file, DNS is stubbed, the
 clock is frozen at `recorded_at`) and judges the output with the production
 runner's known_answer rules. A second test empties every recorded body and
-requires a contract check to fail, under one of two perturbations: bodies
-emptied to `{}`/`[]`, or bodies hollowed (structure kept; strings emptied,
-booleans flipped, numbers kept in sign but wrong in magnitude).
+requires a contract check to fail, under one of three perturbations: bodies
+emptied to `{}`/`[]`; bodies hollowed (structure kept; strings emptied,
+booleans flipped, numbers kept in sign but wrong in magnitude; XML attribute
+values, single- or double-quoted, and text emptied); or bodies skewed
+(structure and every non-numeric value kept, every plain number wrong in
+magnitude), which lets a strict parser that rightly refuses a hollowed body
+still show that its contract reads the numbers.
 An executor that merely throws on a perturbed body does not count; the judge
 has to read the output and reject it.
 

@@ -148,7 +148,7 @@ export function redactEmails(exchanges: RecordedExchange[]): number {
   return count;
 }
 
-export type Perturbation = "empty" | "hollow";
+export type Perturbation = "empty" | "hollow" | "skew";
 
 /**
  * Every JSON leaf changed while every key and array element stays: strings
@@ -166,11 +166,28 @@ function hollowJson(value: unknown): unknown {
 }
 
 /**
+ * Every numeric JSON leaf wrong in magnitude (as hollowJson), every other leaf
+ * kept. For a strict parser that rightly refuses a body with its codes and
+ * dates emptied, this still shows its contract reads the numbers.
+ */
+function skewJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(skewJson);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, skewJson(v)]));
+  if (typeof value === "number") return value * 1000 + 7;
+  return value;
+}
+
+const PLAIN_NUMBER = /^-?\d+(?:\.\d+)?$/;
+const skewNumber = (text: string) => (PLAIN_NUMBER.test(text) ? String(Number(text) * 1000 + 7) : text);
+
+/**
  * The perturbed body. `empty` keeps only the outer shape (`{}`, `[]` or
  * nothing). `hollow` keeps the structure and replaces the values: JSON leaves
- * as hollowJson, XML attribute values and text emptied. An executor that
- * merely throws on `empty` still has to show, under `hollow`, that its
- * contract reads the values.
+ * as hollowJson, XML attribute values and text emptied. `skew` keeps the
+ * structure and every non-numeric value, and makes every plain number (a JSON
+ * number, an XML attribute value or text node that is only a number) wrong in
+ * magnitude. An executor that merely throws on `empty` and `hollow` still has
+ * to show, under `skew`, that its contract reads the values.
  */
 function perturbed(recorded: RecordedResponse, mode: Perturbation): string {
   if (recorded.body_encoding !== "utf8") return "";
@@ -178,12 +195,19 @@ function perturbed(recorded: RecordedResponse, mode: Perturbation): string {
   if (text.startsWith("{") || text.startsWith("[")) {
     if (mode === "empty") return text.startsWith("{") ? "{}" : "[]";
     try {
-      return JSON.stringify(hollowJson(JSON.parse(text)));
+      return JSON.stringify((mode === "skew" ? skewJson : hollowJson)(JSON.parse(text)));
     } catch {
       return "";
     }
   }
-  if (mode === "hollow" && text.startsWith("<")) return text.replace(/="[^"]*"/g, '=""').replace(/>[^<]+</g, "><");
+  // Attribute values may be single- or double-quoted (the ECB's daily file
+  // uses single quotes); both are perturbed.
+  if (mode === "hollow" && text.startsWith("<")) return text.replace(/=(?:"[^"]*"|'[^']*')/g, (m: string) => `=${m[1]}${m[1]}`).replace(/>[^<]+</g, "><");
+  if (mode === "skew" && text.startsWith("<")) {
+    return text
+      .replace(/=(?:"([^"]*)"|'([^']*)')/g, (m: string, dq?: string, sq?: string) => `=${m[1]}${skewNumber(dq ?? sq ?? "")}${m[1]}`)
+      .replace(/>([^<]+)</g, (whole, v: string) => (PLAIN_NUMBER.test(v.trim()) ? `>${skewNumber(v.trim())}<` : whole));
+  }
   return "";
 }
 
