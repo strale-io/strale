@@ -47,6 +47,17 @@ const POLISH_COMPLIANCE_REFUSAL_MESSAGE =
   "Provide a 10-digit KRS number (e.g. '0000028860' for ORLEN S.A.). " +
   "Look up KRS numbers at https://wyszukiwarka-krs.ms.gov.pl/.";
 
+describe("caller-safe registry connection failures", () => {
+  it.each([
+    "WHOIS registry whois.nic.io failed: connection reset",
+    "WHOIS registry whois.nic.io failed: connection refused",
+    "RDAP registry rdap.nic.io failed: no registration event; WHOIS registry whois.nic.io failed: connection reset",
+  ])("classifies %s as upstream transient", (message) => {
+    expect(classifyFailure(message, false, false, "known_answer", {}, false, "stable_api").verdict)
+      .toBe("upstream_transient");
+  });
+});
+
 describe("classifyFailure — budget exhaustion (Phase-4 tail fix)", () => {
   it("classifies the real BudgetExhaustedError message as test_infrastructure, not unknown", () => {
     const result = classifyFailure(

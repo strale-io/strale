@@ -34,6 +34,7 @@ const DEFAULT_RETRYABLE: RegExp[] = [
   /fetch failed/i,
   /network error/i,
   /socket hang up/i,
+  /connection (reset|refused)/i,
   /HTTP 429/i,
   /HTTP 502/i,
   /HTTP 503/i,

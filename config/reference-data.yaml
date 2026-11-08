@@ -746,7 +746,7 @@ datasets:
     tools:
       - domain-age-check
     active: true
-    holds: WHOIS server per TLD (second copy)
+    holds: WHOIS fallback server per TLD; RDAP bases come from the live IANA bootstrap
     source: null
     recheck_against: IANA root zone database
     trigger: Quarterly
