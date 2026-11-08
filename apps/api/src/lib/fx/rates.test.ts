@@ -136,6 +136,16 @@ describe("Frankfurter blended series", () => {
     await expect(getFrankfurterSeries("USD", "VES", "2025-03-01", "2025-03-02")).resolves.toEqual([point]);
   });
 
+  it("rejects more than one leading publication before the start date as upstream", async () => {
+    const points = [
+      { date: "2020-01-01", base: "GBP", quote: "NGN", rate: 500 },
+      { date: "2025-02-28", base: "GBP", quote: "NGN", rate: 1900 },
+      { date: "2025-03-02", base: "GBP", quote: "NGN", rate: 1910 },
+    ];
+    safeFetchMock.mockResolvedValue(response(JSON.stringify(points)));
+    await expectUpstream(getFrankfurterSeries("GBP", "NGN", "2025-03-01", "2025-03-04"));
+  });
+
   it.each([
     [
       { ...valid, date: "2026-11-01" },
