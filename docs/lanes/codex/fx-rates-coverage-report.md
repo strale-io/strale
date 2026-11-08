@@ -36,3 +36,33 @@ ECB answers retain `preferred` / `direct_api`; this is also each manifest's defa
 - `forex-history.ts` and its existing Frankfurter v1 integration were left unchanged, as required.
 - No vendor, paid API, retry loop, or provider-specific Frankfurter endpoint was added.
 - Capability validation/smoke scripts could not run because this checkout has no `DATABASE_URL`; all requested offline Vitest, typecheck, reference-data, and vendor-terms checks were run separately.
+
+## Round 2
+
+### Fixes
+
+- Restored `stampDataAccess`'s lower-never-raise rule: an executor cannot retain `recorded` when its manifest records no checks, and any path narrowed away from `allowed_with_checks` carries no checks claim. Both FX manifests now declare Frankfurter as `vendor_api`, `allowed_with_checks`, with recorded checks and the requested dated licence note. ECB answers explicitly narrow to `direct_api` / `preferred` with no checks; Frankfurter answers identify the vendor and let manifest stamping derive `recorded`.
+- Added a bounded, five-second, 24-hour cached Frankfurter currency-list lookup with shared in-flight work. The unsupported-pair tests pin NGN→XYZ to `to`, XYZ→NGN to `from`, and the unavailable-list fallback to a refusal naming both codes and the `from` field.
+- Converted oversized, malformed, null, non-positive, and mismatched upstream responses into plain errors containing the classifiers' existing `service unavailable` phrase. Every non-success response body is discarded. The source-failure tests assert both `classifyFailure` and `classifyTransactionFailure` classify these errors as upstream.
+- Restored the pre-existing identity shortcuts in both executors. The tests pin USD→USD and NGN→NGN to rate 1, `source: identity`, no fetch; `currency-convert` retains the caller's amount without rounding.
+- Source routing now consults the last cached ECB currency set when available and otherwise the registered static ECB set. A non-ECB pair therefore goes straight to Frankfurter without fetching ECB. ECB failures back off for five minutes, stale eligibility is measured from the file's rate date, and a copy older than four days is rejected.
+
+### Tests added or changed
+
+- `fx-rates-coverage.test.ts`: manifest-derived data-access checks, ECB-without-checks, Frankfurter-with-recorded-checks, field-specific unknown-currency refusals, unavailable-list fallback, non-ECB routing independent of ECB, and no-fetch identity answers.
+- `rates.test.ts`: five-minute ECB failure backoff; four-day rate-date expiry; oversized ECB, Frankfurter mismatch/non-positive/null/invalid-JSON dual-classifier coverage; and existing cache/in-flight contracts.
+- `data-access.test.ts`: executor-set `recorded` is removed when the manifest has no checks, and checks are removed when an executor narrows an `allowed_with_checks` manifest to `preferred`.
+- `fx-unsupported-currency.test.ts`: mocks the new bounded currency-list endpoint while preserving the caller-input and source-5xx contracts.
+
+### Exact test files run
+
+- `apps/api/src/capabilities/fx-rates-coverage.test.ts`
+- `apps/api/src/capabilities/fx-unsupported-currency.test.ts`
+- `apps/api/src/lib/data-access-manifests.test.ts`
+- `apps/api/src/lib/data-access.test.ts`
+- `apps/api/src/lib/failure-classifier.test.ts`
+- `apps/api/src/lib/fx/rates.test.ts`
+- `apps/api/src/lib/transaction-failure-taxonomy.test.ts`
+- `apps/api/src/lib/vendor-terms.test.ts`
+
+All round-2 work requested by the brief was completed; nothing is intentionally omitted.

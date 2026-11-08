@@ -8,6 +8,10 @@ registerCapability("exchange-rate", async (input: CapabilityInput) => {
   if (!/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to)) {
     throw inputRefusal("'from' and 'to' must be valid 3-letter ISO 4217 currency codes.", "from", "Send 'from' and 'to' as valid 3-letter ISO 4217 currency codes.");
   }
+  if (from === to) return {
+    output: { from, to, rate: 1, inverse_rate: 1, date: new Date().toISOString().slice(0, 10) },
+    provenance: { source: "identity", fetched_at: new Date().toISOString(), acquisition_method: "computed", data_access_lane: "not_applicable" },
+  };
 
   const result = await resolveFxRate(from, to);
   const rate = result.rate;

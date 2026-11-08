@@ -7,7 +7,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
-vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock }));
+vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => undefined) }));
 import { getExecutor } from "./index.js";
 import "./exchange-rate.js";
 import "./currency-convert.js";
@@ -19,7 +19,9 @@ import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.
 afterEach(() => vi.unstubAllGlobals());
 
 const answer = (status: number) =>
-  (safeFetchMock.mockImplementation(async (url: string) => String(url).includes("ecb.europa.eu/stats")
+  (safeFetchMock.mockImplementation(async (url: string) => String(url).includes("/v2/currencies")
+    ? new Response(JSON.stringify([{ iso_code: "EUR" }]))
+    : String(url).includes("ecb.europa.eu/stats")
     ? new Response(`<Envelope><Cube><Cube time="2026-11-06"><Cube currency="USD" rate="1.2"/></Cube></Cube></Envelope>`)
     : new Response("<html>x</html>", { status })),
   vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>x</html>", { status }))));

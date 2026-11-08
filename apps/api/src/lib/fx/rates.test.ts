@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
-vi.mock("../safe-fetch.js", () => ({ safeFetch: safeFetchMock }));
+vi.mock("../safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => undefined) }));
 
 import { __resetFxRateCachesForTests, getEcbReferenceRates, getFrankfurterRate } from "./rates.js";
+import { classifyFailure } from "../failure-classifier.js";
+import { classifyTransactionFailure } from "../transaction-failure-taxonomy.js";
 
 const XML = `<?xml version="1.0"?><Envelope><Cube><Cube time="2026-11-06"><Cube currency="USD" rate="1.2"/><Cube currency="SEK" rate="12"/></Cube></Cube></Envelope>`;
 const response = (body: string, status = 200) => new Response(body, { status });
+const expectUpstream = async (promise: Promise<unknown>) => {
+  const error = await promise.catch((value) => value as Error) as Error;
+  expect(classifyTransactionFailure(error.message)).toBe("upstream");
+  expect(classifyFailure(error.message, false, false, "known_answer", {}).verdict).toMatch(/^upstream_/);
+};
 
 beforeEach(() => {
   __resetFxRateCachesForTests();
@@ -34,6 +41,13 @@ describe("ECB daily rates", () => {
     await expect(getEcbReferenceRates()).resolves.toMatchObject({ date: "2026-11-06", stale: true });
   });
 
+  it("backs off for five minutes after a failed refresh", async () => {
+    safeFetchMock.mockRejectedValue(new Error("timeout"));
+    await expect(getEcbReferenceRates()).rejects.toThrow("timeout");
+    await expect(getEcbReferenceRates()).rejects.toThrow("timeout");
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("fails when no good copy exists", async () => {
     safeFetchMock.mockRejectedValue(new Error("timeout"));
     await expect(getEcbReferenceRates()).rejects.toThrow("timeout");
@@ -48,7 +62,7 @@ describe("ECB daily rates", () => {
 
   it("caps an oversized XML response", async () => {
     safeFetchMock.mockResolvedValue(response("x".repeat(4 * 1024 * 1024 + 1)));
-    await expect(getEcbReferenceRates()).rejects.toThrow("4.0MB or less");
+    await expectUpstream(getEcbReferenceRates());
   });
 });
 
@@ -65,6 +79,11 @@ describe("Frankfurter blended rate", () => {
     { date: "2026-11-06", base: "NGN", quote: "KWD", rate: 0 },
   ])("rejects invalid or mismatched answer %#", async (answer) => {
     safeFetchMock.mockResolvedValue(response(JSON.stringify(answer)));
-    await expect(getFrankfurterRate("NGN", "KWD")).rejects.toThrow("invalid or mismatched");
+    await expectUpstream(getFrankfurterRate("NGN", "KWD"));
+  });
+
+  it.each(["null", "not-json"])("classifies %s bodies as upstream failures", async (body) => {
+    safeFetchMock.mockResolvedValue(response(body));
+    await expectUpstream(getFrankfurterRate("NGN", "KWD"));
   });
 });

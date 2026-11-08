@@ -1,5 +1,5 @@
 import { inputRefusal } from "../capability-refusal.js";
-import { FxCurrencyUnavailableError, getEcbReferenceRates, getFrankfurterRate } from "./rates.js";
+import { FxCurrencyUnavailableError, getEcbReferenceRates, getFrankfurterCurrencies, getFrankfurterRate, isEcbReferenceCurrency } from "./rates.js";
 
 export interface ResolvedFxRate {
   rate: number;
@@ -14,8 +14,8 @@ function unavailable(currency: string, field: "from" | "to"): never {
 }
 
 export async function resolveFxRate(from: string, to: string): Promise<ResolvedFxRate> {
-  const ecb = await getEcbReferenceRates();
-  if (ecb.rates.has(from) && ecb.rates.has(to)) {
+  if (isEcbReferenceCurrency(from) && isEcbReferenceCurrency(to)) {
+    const ecb = await getEcbReferenceRates();
     return {
       rate: ecb.rates.get(to)! / ecb.rates.get(from)!, date: ecb.date,
       ...(ecb.stale ? { stale: true as const } : {}), rateSource: "ECB euro reference rate",
@@ -26,11 +26,17 @@ export async function resolveFxRate(from: string, to: string): Promise<ResolvedF
     const result = await getFrankfurterRate(from, to);
     return {
       rate: result.rate, date: result.date, rateSource: "Frankfurter blended central-bank rate",
-      provenance: { source: "frankfurter.dev", attribution: "Source: Frankfurter (blended central-bank rates, frankfurter.dev)", acquisition_method: "vendor_api", data_access_lane: "allowed_with_checks", upstream_vendor: "Frankfurter", data_access_checks: "recorded" },
+      provenance: { source: "frankfurter.dev", attribution: "Source: Frankfurter (blended central-bank rates, frankfurter.dev)", acquisition_method: "vendor_api", data_access_lane: "allowed_with_checks", upstream_vendor: "Frankfurter" },
     };
   } catch (error) {
     if (error instanceof FxCurrencyUnavailableError) {
-      if (!ecb.rates.has(from)) unavailable(from, "from");
+      let currencies: Set<string>;
+      try {
+        currencies = await getFrankfurterCurrencies();
+      } catch {
+        throw inputRefusal(`'from' and 'to' must be currencies with published reference rates; ${from} and ${to} could not be confirmed.`, "from", "Send 'from' and 'to' as currencies with published reference rates.");
+      }
+      if (!currencies.has(from)) unavailable(from, "from");
       unavailable(to, "to");
     }
     throw error;

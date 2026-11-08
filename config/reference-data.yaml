@@ -49,6 +49,21 @@
 # a dated one; an undated one is caught only in review (REVIEW.md).
 version: 1
 datasets:
+  - id: ecb-euro-reference-currency-codes
+    harm: B
+    file: apps/api/src/lib/fx/rates.ts
+    symbol: ECB_REFERENCE_CURRENCIES
+    tools:
+      - exchange-rate
+      - currency-convert
+    active: true
+    holds: Currency codes published in the ECB euro foreign exchange reference rates
+    source: ECB euro reference rates page
+    recheck_against: "ECB euro reference rates page"
+    trigger: When the ECB adds or removes a published reference currency; quarterly
+    as_of: 2026-11-08
+    evidence: "ECB euro reference rates page reviewed 2026-11-08"
+    review_days: 90
   - id: eu-ai-act-classify-unacceptable-rules
     harm: A
     file: apps/api/src/capabilities/eu-ai-act-classify.ts

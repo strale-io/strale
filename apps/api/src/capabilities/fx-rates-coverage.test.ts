@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
-vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock }));
+vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => undefined) }));
 
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.js";
@@ -14,14 +14,15 @@ import "./currency-convert.js";
 const XML = `<Envelope><Cube><Cube time="2026-11-06"><Cube currency="USD" rate="1.2"/><Cube currency="SEK" rate="12"/></Cube></Cube></Envelope>`;
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 const run = (slug: "exchange-rate" | "currency-convert", input: Record<string, unknown>) => getExecutor(slug)!(input);
+const manifestAccess = { lane: "allowed_with_checks" as const, acquisition_method: "vendor_api" as const, upstream_vendor: "Frankfurter", checks: "recorded" as const };
 
 beforeEach(() => {
   __resetFxRateCachesForTests();
   safeFetchMock.mockReset();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-06T16:30:00Z"));
-  registerDataAccess("exchange-rate", { lane: "preferred", acquisition_method: "direct_api" });
-  registerDataAccess("currency-convert", { lane: "preferred", acquisition_method: "direct_api" });
+  registerDataAccess("exchange-rate", manifestAccess);
+  registerDataAccess("currency-convert", manifestAccess);
 });
 afterEach(() => {
   __resetDataAccessForTests();
@@ -37,13 +38,14 @@ it.each([
   const answer = await run("exchange-rate", input);
   expect(answer.output).toMatchObject({ rate, inverse_rate: inverse, date: "2026-11-06", rate_date: "2026-11-06", rate_source: "ECB euro reference rate" });
   expect(answer.provenance).toMatchObject({ source: "ecb.europa.eu", data_access_lane: "preferred" });
+  expect(answer.provenance).not.toHaveProperty("data_access_checks");
 });
 
 it.each([
   ["EUR", "NGN", 1600],
   ["NGN", "KWD", 0.00022],
 ] as const)("uses only Frankfurter's pair answer for %s to %s", async (from, to, rate) => {
-  safeFetchMock.mockResolvedValueOnce(new Response(XML)).mockResolvedValueOnce(json({ date: "2026-11-06", base: from, quote: to, rate }));
+  safeFetchMock.mockResolvedValueOnce(json({ date: "2026-11-06", base: from, quote: to, rate }));
   const answer = await run("exchange-rate", { from, to });
   expect(answer.output).toMatchObject({ rate, rate_source: "Frankfurter blended central-bank rate", rate_date: "2026-11-06" });
   expect(answer.provenance).toMatchObject({ source: "frankfurter.dev", data_access_lane: "allowed_with_checks", acquisition_method: "vendor_api", data_access_checks: "recorded" });
@@ -51,7 +53,7 @@ it.each([
 });
 
 it("turns a Frankfurter 404 into the existing caller-input refusal contract", async () => {
-  safeFetchMock.mockResolvedValueOnce(new Response(XML)).mockResolvedValueOnce(json({}, 404));
+  safeFetchMock.mockResolvedValueOnce(json({}, 404)).mockResolvedValueOnce(json([{ iso_code: "EUR" }]));
   const error = await run("exchange-rate", { from: "EUR", to: "XYZ" }).catch((value) => value as Error);
   expect(isCapabilityRefusal(error)).toBe(true);
   expect(classifyTransactionFailure(error.message)).toBe("caller_input");
@@ -59,13 +61,46 @@ it("turns a Frankfurter 404 into the existing caller-input refusal contract", as
   expect(error.message).toContain("has no published reference rate");
 });
 
+it.each([
+  ["NGN", "XYZ", "to"],
+  ["XYZ", "NGN", "from"],
+] as const)("names the unknown field for %s to %s", async (from, to, field) => {
+  safeFetchMock.mockResolvedValueOnce(json({}, 404)).mockResolvedValueOnce(json([{ iso_code: "NGN" }]));
+  const error = await run("exchange-rate", { from, to }).catch((value) => value as Error);
+  expect(isCapabilityRefusal(error)).toBe(true);
+  expect(error.message).toContain(`'${field}'`);
+  expect(error.message).toContain(field === "from" ? from : to);
+});
+
+it("names both codes when the Frankfurter currency list is unavailable", async () => {
+  safeFetchMock.mockResolvedValueOnce(json({}, 404)).mockResolvedValueOnce(json({}, 503));
+  const error = await run("exchange-rate", { from: "NGN", to: "XYZ" }).catch((value) => value as Error);
+  expect(isCapabilityRefusal(error)).toBe(true);
+  expect(error.message).toContain("NGN");
+  expect(error.message).toContain("XYZ");
+  expect(error.message).toContain("'from' and 'to'");
+});
+
 it.each([503, "timeout"])("keeps Frankfurter %s as an upstream failure", async (failure) => {
-  safeFetchMock.mockResolvedValueOnce(new Response(XML));
   if (typeof failure === "number") safeFetchMock.mockResolvedValueOnce(json({}, failure));
   else safeFetchMock.mockRejectedValueOnce(new Error(failure));
   const error = await run("exchange-rate", { from: "EUR", to: "NGN" }).catch((value) => value as Error);
   expect(isCapabilityRefusal(error)).toBe(false);
   expect(classifyTransactionFailure(error.message)).toMatch(/upstream|timeout/);
+});
+
+it("routes a non-ECB pair without depending on ECB availability", async () => {
+  safeFetchMock.mockResolvedValue(json({ date: "2026-11-06", base: "NGN", quote: "KWD", rate: 0.00022 }));
+  await expect(run("exchange-rate", { from: "NGN", to: "KWD" })).resolves.toMatchObject({ output: { rate: 0.00022 } });
+  expect(safeFetchMock.mock.calls.every(([url]) => !String(url).includes("ecb.europa.eu"))).toBe(true);
+});
+
+it.each(["USD", "NGN"])("returns identity for %s without fetching", async (code) => {
+  const answer = await run("exchange-rate", { from: code, to: code });
+  expect(answer).toMatchObject({ output: { rate: 1 }, provenance: { source: "identity", acquisition_method: "computed", data_access_lane: "not_applicable" } });
+  expect(answer.provenance).not.toHaveProperty("upstream_vendor");
+  expect(answer.provenance).not.toHaveProperty("data_access_checks");
+  expect(safeFetchMock).not.toHaveBeenCalled();
 });
 
 it("currency-convert multiplies by the same pair rate", async () => {
