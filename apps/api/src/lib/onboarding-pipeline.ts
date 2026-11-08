@@ -30,6 +30,10 @@ import {
 } from "./capability-persistence.js";
 // Cluster 2 Phase 3 C2: Manifest → DB-row normalizer.
 import { normalizeManifestToRow } from "./capability-manifest.js";
+import {
+  AuthorityViolationError,
+  FIELD_CATEGORIES,
+} from "./capability-field-authority.js";
 
 import { eq, and } from "drizzle-orm";
 import { capabilities, testSuites } from "../db/schema.js";
@@ -77,7 +81,13 @@ export interface OnboardingResult {
   slug: string;
   status: "success" | "failed" | "skipped";
   timeMs: number;
-  errors: Array<{ code: string; message: string }>;
+  errors: Array<{
+    code: string;
+    message: string;
+    error_class?: string;
+    violation_fields?: string[];
+    violations?: Array<{ field: string; reason: string }>;
+  }>;
   rows: { created: RowChange[]; updated: RowChange[]; deleted: RowChange[] };
   generatedTestTypes: string[];
   verification: {
@@ -1827,7 +1837,7 @@ export async function runOnboarding(
         }
       } catch (error) {
         // Error messages from drivers/vendors can embed credentials or SQL values.
-        // Log the safe SQLSTATE, stage and slug rather than their raw message/stack.
+        // Log only allowlisted diagnostics rather than their raw message/stack.
         const cause =
           error && typeof error === "object" && "cause" in error
             ? error.cause
@@ -1836,13 +1846,44 @@ export async function runOnboarding(
           cause && typeof cause === "object" && "code" in cause
             ? String(cause.code)
             : "";
+        const errorClass =
+          error &&
+          typeof error === "object" &&
+          "constructor" in error &&
+          error.constructor &&
+          typeof error.constructor === "function" &&
+          /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(error.constructor.name)
+            ? error.constructor.name
+            : undefined;
+        const authorityViolations =
+          error instanceof AuthorityViolationError
+            ? error.violations
+                .filter(({ field }) =>
+                  Object.prototype.hasOwnProperty.call(FIELD_CATEGORIES, field)
+                )
+                .map(({ field, reason }) => ({ field, reason }))
+            : [];
+        const violationFields = authorityViolations.map(({ field }) => field);
+        const authorityDetail =
+          error instanceof AuthorityViolationError
+            ? {
+                violation_fields: violationFields,
+                violations: authorityViolations,
+              }
+            : {};
         log.error(
           {
             label: "onboarding-pipeline-failed",
             slug: result.slug,
             stage,
             code:
-              error instanceof OnboardingError ? error.code : "pipeline_error",
+              error instanceof OnboardingError
+                ? error.code
+                : error instanceof AuthorityViolationError
+                ? "authority_violation"
+                : "pipeline_error",
+            ...(errorClass ? { error_class: errorClass } : {}),
+            ...authorityDetail,
             ...(/^[A-Z0-9]{5}$/.test(code) ? { sqlstate: code } : {}),
           },
           "onboarding-pipeline-failed"
@@ -1853,12 +1894,20 @@ export async function runOnboarding(
             ? "timeout"
             : error instanceof OnboardingError
             ? error.code
+            : error instanceof AuthorityViolationError
+            ? "authority_violation"
             : "pipeline_error",
           message: options.signal?.aborted
             ? "Time budget exceeded. Check status before retrying; some rows may already be committed."
             : error instanceof OnboardingError
             ? error.message
+            : error instanceof AuthorityViolationError
+            ? `Manifest and database disagree on: ${violationFields.join(
+                ", "
+              )}. Update the manifest to match the database, or re-seed the database to match the manifest.`
             : "Onboarding failed. Check the reviewed manifest and API logs before retrying.",
+          ...(errorClass ? { error_class: errorClass } : {}),
+          ...authorityDetail,
         });
       }
       const entries = result.verification.entries;
