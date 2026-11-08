@@ -16,6 +16,11 @@ export const ECB_REFERENCE_CURRENCIES = new Set([
 
 export interface EcbReferenceRates { date: string; rates: Map<string, number>; stale?: true }
 export interface FrankfurterRate { date: string; base: string; quote: string; rate: number }
+export type FrankfurterSeries = FrankfurterRate[];
+
+// Five years of daily v2 points are currently well below this; 512 KiB leaves
+// substantial room for JSON formatting and future response-field growth.
+export const FRANKFURTER_SERIES_MAX_BYTES = 512 * 1024;
 
 export class FxCurrencyUnavailableError extends Error {
   constructor(readonly status: 404 | 422) {
@@ -151,6 +156,43 @@ export async function getFrankfurterRate(base: string, quote: string): Promise<F
     frankfurterInFlight.set(key, inFlight);
   }
   return inFlight;
+}
+
+export async function getFrankfurterSeries(base: string, quote: string, start: string, end: string): Promise<FrankfurterSeries> {
+  const params = new URLSearchParams({ base, quotes: quote, from: start, to: end });
+  const response = await safeFetch(`https://api.frankfurter.dev/v2/rates?${params}`, {
+    headers: { Accept: "application/json" }, timeoutMs: 10_000, acquisitionMethod: "vendor_api",
+  });
+  if (response.status === 404 || response.status === 422) {
+    await discardBody(response, "Frankfurter series: unsupported pair");
+    throw new FxCurrencyUnavailableError(response.status);
+  }
+  if (!response.ok) {
+    await discardBody(response, "Frankfurter series: non-2xx");
+    throw new Error(`Frankfurter rate service unavailable: HTTP ${response.status}.`);
+  }
+  try {
+    const data = await readJsonWithLimit<unknown>(response, FRANKFURTER_SERIES_MAX_BYTES, "rate_source", "a historical-rate response of");
+    if (!Array.isArray(data)) throw new Error("invalid response (expected an array)");
+    // v2 opens a series at the last publication before `from` when none falls
+    // on it; at most one such leading point is accepted, or change_percent
+    // could be measured from an arbitrarily old rate.
+    let sawPointOnOrAfterStart = false;
+    let pointsBeforeStart = 0;
+    for (const item of data) {
+      const point = item as Partial<FrankfurterRate> | null;
+      if (!point || point.base !== base || point.quote !== quote || typeof point.date !== "string" ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(point.date) || point.date > end ||
+          (point.date < start && (sawPointOnOrAfterStart || ++pointsBeforeStart > 1)) ||
+          typeof point.rate !== "number" || !isPositiveRate(point.rate)) {
+        throw new Error("invalid or mismatched response");
+      }
+      if (point.date >= start) sawPointOnOrAfterStart = true;
+    }
+    return data as FrankfurterSeries;
+  } catch (error) {
+    throw new Error(`Frankfurter rate service unavailable: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export function __resetFxRateCachesForTests(): void {

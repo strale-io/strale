@@ -5,7 +5,7 @@
  * API returned HTTP 404 for NGN" and the like. As plain errors they count against
  * the tool's health, and three in a row would open its breaker for every buyer.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
 vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => undefined) }));
 import { getExecutor } from "./index.js";
@@ -16,15 +16,18 @@ import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { isUserInputError } from "../lib/circuit-breaker.js";
 import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.js";
 
-afterEach(() => vi.unstubAllGlobals());
-
 const answer = (status: number) =>
   (safeFetchMock.mockImplementation(async (url: string) => String(url).includes("/v2/currencies")
     ? new Response(JSON.stringify([{ iso_code: "EUR" }]))
     : String(url).includes("ecb.europa.eu/stats")
     ? new Response(`<Envelope><Cube><Cube time="2026-11-06"><Cube currency="USD" rate="1.2"/></Cube></Cube></Envelope>`)
-    : new Response("<html>x</html>", { status })),
-  vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>x</html>", { status }))));
+    : new Response("<html>x</html>", { status })));
+
+// The executors reach the network only through safeFetch (mocked above). A
+// bare global fetch, as forex-history used before Frankfurter v2, must not
+// quietly reach a real API and pass.
+beforeEach(() => vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("global fetch must not be called"); })));
+afterEach(() => vi.unstubAllGlobals());
 
 const CALLS = [
   ["exchange-rate", { from: "EUR", to: "NGN" }],
@@ -44,6 +47,7 @@ describe.each(CALLS)("%s", (slug, input) => {
     expect(isUserInputError(err.message)).toBe(true);
     expect(classifyTransactionFailure(err.message)).toBe("caller_input");
     expect(err.message).toContain("NGN");
+    expect(safeFetchMock).toHaveBeenCalled();
   });
 
   it("keeps a source 5xx as a real failure", async () => {
@@ -62,12 +66,17 @@ describe("forex-history dates", () => {
     [{ start_date: "abc", end_date: "2024-01-01" }, "start_date"],
     [{ start_date: "2024-01-01", end_date: "2024-13-45" }, "end_date"],
   ])("refuses %j without calling the source or blaming the currency", async (dates, field) => {
-    const source = vi.fn();
-    vi.stubGlobal("fetch", source);
+    safeFetchMock.mockImplementation(() => { throw new Error("safeFetch must not be called"); });
     const err = (await getExecutor("forex-history")!({ from: "EUR", to: "USD", ...dates }).catch((e: unknown) => e)) as Error;
     expect(isCapabilityRefusal(err)).toBe(true);
     expect(isUserInputError(err.message)).toBe(true);
     expect(err.message).toContain(field);
-    expect(source).not.toHaveBeenCalled();
+    expect(safeFetchMock).not.toHaveBeenCalled();
   });
+});
+
+it("forex-history accepts a valid leap day", async () => {
+  safeFetchMock.mockResolvedValue(new Response(JSON.stringify([{ date: "2024-02-29", base: "EUR", quote: "USD", rate: 1.08 }])));
+  const answer = await getExecutor("forex-history")!({ from: "EUR", to: "USD", start_date: "2024-02-29", end_date: "2024-02-29" });
+  expect(answer.output.data_points).toBe(1);
 });

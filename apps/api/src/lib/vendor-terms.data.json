@@ -402,7 +402,7 @@
     "vendor": "Frankfurter",
     "hosts": ["api.frankfurter.dev"],
     "url_prefixes": ["https://api.frankfurter.dev/v2/rate/"],
-    "capabilities": ["exchange-rate", "currency-convert"],
+    "capabilities": ["exchange-rate", "currency-convert", "forex-history"],
     "resale": "permitted",
     "terms_url": "https://frankfurter.dev/license/",
     "accessed": "2026-11-08",
@@ -411,7 +411,8 @@
       "Blended rates are Frankfurter's own calculation and free to use.",
       "Direct queries to individual provider endpoints remain subject to each provider's terms.",
       "Blended endpoint only; provider endpoints are out of scope.",
-      "The currency list (https://api.frankfurter.dev/v2/currencies, called from the same module as /v2/rate/) is read only to name which requested code is unsupported; it is not returned to callers."
+      "The currency list (https://api.frankfurter.dev/v2/currencies, called from the same module as /v2/rate/) is read only to name which requested code is unsupported; it is not returned to callers.",
+      "The time series endpoint (/v2/rates with from/to) is the same blended calculation; called from lib/fx/rates.ts."
     ],
     "decision_ref": "DEC-20261023-A",
     "basis": "published_terms"

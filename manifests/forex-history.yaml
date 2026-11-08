@@ -541,7 +541,9 @@ output_schema:
       type: number
     change_percent:
       type: number
-data_source: Frankfurter.app API (ECB historical exchange rates)
+    rate_source:
+      type: string
+data_source: Frankfurter blended central-bank rates (frankfurter.dev v2)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -611,18 +613,25 @@ output_field_reliability:
   rates: guaranteed
   average: guaranteed
   change_percent: guaranteed
+  rate_source: guaranteed
 limitations:
-  - title: Daily reference rates only; no intraday data
-    text: Historical rates from Frankfurter API (ECB reference rates) — published daily around 16:00 CET, no intraday data
+  - title: Start date can snap to an earlier publication
+    text: When no rate is published on start_date, the series begins with the most recent earlier published rate.
+    category: coverage
+    severity: info
+  - title: Daily blended rates only; no intraday data
+    text: Daily blended central-bank rates; dates can include weekends where a contributing central bank publishes; no intraday data.
     category: freshness
     severity: info
-    workaround: >-
-      For intraday rates, use a commercial forex data provider; ECB reference rates are suitable for accounting and
-      reporting
+  - title: Five-year range limit
+    text: A request may span no more than 1,827 days (five years).
+    category: coverage
+    severity: info
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
-  upstream_vendor: frankfurter
-  checks: pending
+  upstream_vendor: Frankfurter
+  checks: recorded
+  checks_note: "Frankfurter vendor terms at frankfurter.dev/license/ read 2026-11-08; blended endpoint only."
