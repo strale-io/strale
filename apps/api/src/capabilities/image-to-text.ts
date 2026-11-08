@@ -79,7 +79,7 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
       throw inputRefusal(
         "'base64' must be a PNG, JPEG, GIF or WebP image.",
         "base64",
-        "Send the image as PNG, JPEG, GIF or WebP, base64-encoded, with or without a data: header.",
+        "Send 'base64' as a PNG, JPEG, GIF or WebP image, base64-encoded, with or without a data: header.",
       );
     }
 

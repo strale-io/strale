@@ -116,11 +116,7 @@ for (const file of readdirSync(new URL("../capabilities/", import.meta.url)).fil
       const bindings = { k: "domain" };
       const field = run(call.arguments[1], src, bindings);
       const fix = run(call.arguments[2], src, bindings);
-      if (file === "image-to-text.ts" && field === "base64") {
-        expect(fix).toContain("base64-encoded");
-      } else {
-        expect(fix).toContain(`'${field}'`);
-      }
+      expect(fix).toContain(`'${field}'`);
       expect(fix).toMatch(/^Send /);
       expect(fix).not.toMatch(/Send Name|non-empty value matching|uk companies house|with a (?:json|csv|iban|vat|url|siren)/);
       expect(fix).toMatch(/\.$/);
