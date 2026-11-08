@@ -202,6 +202,24 @@ describe("domain-age-check RDAP precedence and WHOIS fallback", () => {
     expect(state.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("names a remembered bootstrap failure for a TLD without WHOIS inside the 60-second window", async () => {
+    state.fetch.mockRejectedValueOnce(new Error("request timed out"));
+    await execute({ domain: "one.com" });
+    await expect(execute({ domain: "example.xyz" })).rejects.toThrow(
+      "RDAP bootstrap data.iana.org failed: timeout",
+    );
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not refetch a failed bootstrap just before 60 seconds", async () => {
+    vi.useFakeTimers();
+    state.fetch.mockRejectedValueOnce(new Error("request timed out"));
+    await execute({ domain: "one.com" });
+    await vi.advanceTimersByTimeAsync(59_900);
+    await execute({ domain: "two.com" });
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("retries a failed bootstrap after 60 seconds", async () => {
     vi.useFakeTimers();
     state.fetch.mockRejectedValueOnce(new Error("request timed out"));

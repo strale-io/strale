@@ -61,7 +61,7 @@ describe("caller-safe registry connection failures", () => {
   it.each([
     "WHOIS registry whois.nic.io failed: connection reset",
     "WHOIS registry whois.nic.io failed: connection refused",
-    "RDAP registry rdap.nic.io failed: HTTP 503; WHOIS registry whois.nic.io failed: connection reset",
+    "RDAP registry rdap.nic.io failed: no registration event; WHOIS registry whois.nic.io failed: connection reset",
   ])("retries %s", async (message) => {
     const fn = vi.fn().mockRejectedValueOnce(new Error(message)).mockResolvedValue("ok");
     await expect(withRetry(fn, { baseDelayMs: 0 })).resolves.toBe("ok");

@@ -35,7 +35,10 @@ export interface RdapDomainResult {
 
 let bootstrapCache: { expiresAt: number; bases: Map<string, string> } | null = null;
 let bootstrapPromise: Promise<Map<string, string>> | null = null;
-let bootstrapFailureUntil = 0;
+// A failed bootstrap is remembered, error and all, so calls inside the window
+// fail the RDAP path at once (the caller then falls back to WHOIS, or names the
+// failure when the TLD has no WHOIS server) instead of waiting on IANA.
+let bootstrapFailure: { until: number; error: unknown } | null = null;
 
 function parseDate(value: string | undefined): Date | null {
   if (!value) return null;
@@ -56,7 +59,7 @@ function bootstrapBases(document: BootstrapDocument): Map<string, string> {
 export async function getRdapBase(tld: string): Promise<string | null> {
   const now = Date.now();
   if (bootstrapCache && bootstrapCache.expiresAt > now) return bootstrapCache.bases.get(tld) ?? null;
-  if (bootstrapFailureUntil > now) return null;
+  if (bootstrapFailure && bootstrapFailure.until > now) throw bootstrapFailure.error;
 
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
@@ -71,18 +74,19 @@ export async function getRdapBase(tld: string): Promise<string | null> {
       const document = await readJsonWithLimit<BootstrapDocument>(response, MAX_WHOIS_RESPONSE_BYTES, "rdap_bootstrap", "the IANA RDAP bootstrap file is");
       const bases = bootstrapBases(document);
       bootstrapCache = { expiresAt: Date.now() + BOOTSTRAP_TTL_MS, bases };
+      bootstrapFailure = null;
       return bases;
-    })();
+    })()
+      .catch((error: unknown) => {
+        bootstrapFailure = { until: Date.now() + BOOTSTRAP_FAILURE_TTL_MS, error };
+        throw error;
+      })
+      .finally(() => {
+        bootstrapPromise = null;
+      });
   }
 
-  try {
-    return (await bootstrapPromise).get(tld) ?? null;
-  } catch (error) {
-    bootstrapFailureUntil = Date.now() + BOOTSTRAP_FAILURE_TTL_MS;
-    throw error;
-  } finally {
-    bootstrapPromise = null;
-  }
+  return (await bootstrapPromise).get(tld) ?? null;
 }
 
 function registrarName(entities: RdapEntity[] | undefined): string | null {
@@ -124,5 +128,5 @@ export async function lookupRdapDomain(base: string, domain: string): Promise<Rd
 export function resetRdapBootstrapCacheForTests(): void {
   bootstrapCache = null;
   bootstrapPromise = null;
-  bootstrapFailureUntil = 0;
+  bootstrapFailure = null;
 }

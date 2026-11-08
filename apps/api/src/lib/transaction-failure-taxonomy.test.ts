@@ -28,7 +28,7 @@ describe("caller-safe registry connection failures", () => {
   it.each([
     "WHOIS registry whois.nic.io failed: connection reset",
     "WHOIS registry whois.nic.io failed: connection refused",
-    "RDAP registry rdap.nic.io failed: HTTP 503; WHOIS registry whois.nic.io failed: connection reset",
+    "RDAP registry rdap.nic.io failed: no registration event; WHOIS registry whois.nic.io failed: connection reset",
   ])("classifies %s as upstream", (message) => {
     expect(classOf(message)).toBe("upstream");
   });
