@@ -541,6 +541,8 @@ output_schema:
       type: number
     change_percent:
       type: number
+    rate_source:
+      type: string
 data_source: Frankfurter blended central-bank rates (frankfurter.dev v2)
 data_source_type: api
 transparency_tag: algorithmic
