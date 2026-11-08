@@ -148,9 +148,11 @@ export function __resetDataAccessForTests(): void {
  * only when the manifest records the checks AND the call took the path the
  * record covers: an executor that names another method or vendor took a path
  * the record does not cover, so the call is stamped "pending". An executor's
- * own value can lower the claim but not raise it above the manifest's, and
- * on a lane without checks it is removed. A capability with no data_access
- * block is not stamped at all (getExecutor returns the plain executor).
+ * own value can lower the claim but not raise it above the manifest's path.
+ * A mixed-source executor may explicitly select a different
+ * `allowed_with_checks` path and carry that path's recorded checks; those
+ * values are kept together rather than overwritten by the manifest's default
+ * path. A capability with no data_access block is not stamped at all.
  */
 export function stampDataAccess<P extends Record<string, unknown>>(provenance: P, access: DataAccess | undefined): P {
   if (!access || provenance === null || typeof provenance !== "object") return provenance;
@@ -166,8 +168,8 @@ export function stampDataAccess<P extends Record<string, unknown>>(provenance: P
     const otherVendor = out.upstream_vendor !== undefined && out.upstream_vendor !== access.upstream_vendor;
     const covered = access.checks === "recorded" && !otherMethod && !otherVendor;
     out.data_access_checks = covered && out.data_access_checks !== "pending" ? "recorded" : "pending";
-  } else {
-    // A lane without checks carries no checks claim, whatever the executor said.
+  } else if (out.data_access_lane !== "allowed_with_checks") {
+    // A path outside allowed_with_checks carries no checks claim.
     delete out.data_access_checks;
   }
   return out as P;

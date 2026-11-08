@@ -38,9 +38,15 @@ output_schema:
       type: string
     rate:
       type: number
+    rate_source:
+      type: string
+    rate_date:
+      type: string
+    stale:
+      type: boolean
     inverse_rate:
       type: number
-data_source: European Central Bank daily reference rates
+data_source: European Central Bank daily reference rates; Frankfurter blended central-bank rates for currencies the ECB does not publish
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: reference-data
@@ -73,10 +79,13 @@ output_field_reliability:
   date: guaranteed
   from: guaranteed
   rate: guaranteed
+  rate_source: guaranteed
+  rate_date: guaranteed
+  stale: rare
   inverse_rate: guaranteed
 limitations:
   - title: Rates can be stale on weekends and holidays
-    text: Rates updated every hour during market hours, may be stale during weekends and holidays
+    text: ECB reference rates are published once per working day around 16:00 CET; other currencies use Frankfurter's daily blend of central-bank rates, which can lag a day.
     category: freshness
     severity: info
     workaround: For weekend transactions, use the Friday close rate and flag the amount for reconciliation on Monday

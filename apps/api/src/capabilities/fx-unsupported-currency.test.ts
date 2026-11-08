@@ -6,6 +6,8 @@
  * the tool's health, and three in a row would open its breaker for every buyer.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
+const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
+vi.mock("../lib/safe-fetch.js", () => ({ safeFetch: safeFetchMock }));
 import { getExecutor } from "./index.js";
 import "./exchange-rate.js";
 import "./currency-convert.js";
@@ -17,7 +19,10 @@ import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.
 afterEach(() => vi.unstubAllGlobals());
 
 const answer = (status: number) =>
-  vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>x</html>", { status })));
+  (safeFetchMock.mockImplementation(async (url: string) => String(url).includes("ecb.europa.eu/stats")
+    ? new Response(`<Envelope><Cube><Cube time="2026-11-06"><Cube currency="USD" rate="1.2"/></Cube></Cube></Envelope>`)
+    : new Response("<html>x</html>", { status })),
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>x</html>", { status }))));
 
 const CALLS = [
   ["exchange-rate", { from: "EUR", to: "NGN" }],
@@ -27,6 +32,8 @@ const CALLS = [
 
 describe.each(CALLS)("%s", (slug, input) => {
   const run = () => getExecutor(slug)!({ ...input });
+
+  afterEach(() => safeFetchMock.mockReset());
 
   it("refuses a currency the source answers 404 for, in every health consumer", async () => {
     answer(404);

@@ -125,6 +125,20 @@ describe("stampDataAccess", () => {
     ).not.toHaveProperty("data_access_checks");
   });
 
+  it("keeps checks on an executor-selected alternate allowed-with-checks path", () => {
+    expect(stampDataAccess({
+      source: "frankfurter.dev",
+      fetched_at: "t",
+      acquisition_method: "vendor_api",
+      data_access_lane: "allowed_with_checks",
+      upstream_vendor: "Frankfurter",
+      data_access_checks: "recorded",
+    }, { lane: "preferred", acquisition_method: "direct_api" })).toMatchObject({
+      data_access_lane: "allowed_with_checks",
+      data_access_checks: "recorded",
+    });
+  });
+
   it("leaves provenance unchanged without a declaration", () => {
     const p = { source: "x", fetched_at: "t" };
     expect(stampDataAccess(p, undefined)).toBe(p);

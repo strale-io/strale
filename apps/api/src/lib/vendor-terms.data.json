@@ -397,5 +397,22 @@
       "Strale's reading: the asterisk binds both clauses to the Mendel-sourced rows, so the TARIC-sourced EU import tariff rows are Commission content under CC BY 4.0. The text does not settle this, so resale stays unverified until Access2Markets confirms. customs-duty-lookup reads only the Tariffs rows of EU imports, never the Taxes tab (it is not in the rendered page) or non-EU sections, and returns attribution, licence and source URL in provenance."
     ],
     "decision_ref": "DQ-48 (open); DEC-20261023-A, allowed with checks, checks pending; confirmation drafted as docs/company/OUTBOX.yaml a2m-terms-confirmation; weekly-drift robots sweep, issue #747"
+  },
+  {
+    "vendor": "Frankfurter",
+    "hosts": ["api.frankfurter.dev"],
+    "url_prefixes": ["https://api.frankfurter.dev/v2/rate/"],
+    "capabilities": ["exchange-rate", "currency-convert"],
+    "resale": "permitted",
+    "terms_url": "https://frankfurter.dev/license/",
+    "accessed": "2026-11-08",
+    "how_read": "The requester checked the published Frankfurter licence and robots.txt on 2026-11-08; the executor uses only the keyless v2 blended-rate endpoint and never an individual provider endpoint.",
+    "findings": [
+      "Blended rates are Frankfurter's own calculation and free to use.",
+      "Direct queries to individual provider endpoints remain subject to each provider's terms.",
+      "Blended endpoint only; provider endpoints are out of scope."
+    ],
+    "decision_ref": "DEC-20261023-A",
+    "basis": "published_terms"
   }
 ]
