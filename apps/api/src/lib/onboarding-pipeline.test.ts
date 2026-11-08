@@ -128,7 +128,8 @@ describe("shared onboarding pipeline", () => {
         field: "processes_personal_data",
         manifestValue: "SECRET-SENTINEL-manifest",
         dbValue: "SECRET-SENTINEL-db",
-        reason: FIELD_CATEGORIES.processes_personal_data.reason,
+        // A violation's own reason is never echoed; the table's is.
+        reason: "SECRET-SENTINEL-reason",
       },
     ]);
     vi.mocked(persistCapability).mockRejectedValueOnce(error);
@@ -166,6 +167,16 @@ describe("shared onboarding pipeline", () => {
         violation_fields: [
           "maintenance_class",
           "processes_personal_data",
+        ],
+        violations: [
+          {
+            field: "maintenance_class",
+            reason: FIELD_CATEGORIES.maintenance_class.reason,
+          },
+          {
+            field: "processes_personal_data",
+            reason: FIELD_CATEGORIES.processes_personal_data.reason,
+          },
         ],
         message: expect.stringContaining(
           "maintenance_class, processes_personal_data"
@@ -208,10 +219,12 @@ describe("shared onboarding pipeline", () => {
     expect(logged.mock.calls[0]?.[0]).toHaveProperty("error_class", "Error");
     expect(validResult.errors[0]).toHaveProperty("error_class", "Error");
 
+    // A real constructor function whose name fails the identifier check, so
+    // the name regex (not the function-type check) is what drops it.
+    const BadName = function () {};
+    Object.defineProperty(BadName, "name", { value: "x y<script>" });
     const error = new Error("safe message");
-    Object.defineProperty(error, "constructor", {
-      value: { name: "x y<script>" },
-    });
+    Object.defineProperty(error, "constructor", { value: BadName });
     vi.mocked(persistCapability).mockRejectedValueOnce(error);
 
     const result = await runOnboarding(database(), {
@@ -221,6 +234,32 @@ describe("shared onboarding pipeline", () => {
 
     expect(logged.mock.calls[1]?.[0]).not.toHaveProperty("error_class");
     expect(result.errors[0]).not.toHaveProperty("error_class");
+  });
+
+  it("still logs and returns the generic failure when the error object throws on inspection", async () => {
+    const logged = vi.spyOn(log, "error").mockImplementation(() => log);
+    const error = new Error("password=hunter2");
+    Object.defineProperty(error, "constructor", {
+      get() {
+        throw new Error("hostile getter");
+      },
+    });
+    vi.mocked(persistCapability).mockRejectedValueOnce(error);
+
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()),
+      mode: "onboard",
+    });
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "pipeline_error" }),
+      "onboarding-pipeline-failed"
+    );
+    expect(logged.mock.calls[0]?.[0]).not.toHaveProperty("error_class");
+    expect(result.errors).toEqual([
+      expect.objectContaining({ code: "pipeline_error" }),
+    ]);
+    expect(JSON.stringify(result)).not.toContain("hunter2");
   });
 
   it("creates all five suites with the injected handle and retains dark launch", async () => {

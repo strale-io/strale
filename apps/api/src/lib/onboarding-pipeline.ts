@@ -158,6 +158,66 @@ export async function validateOnboardingManifest(
   return violations.map((v) => `[${v.gate}] ${v.detail}`);
 }
 
+/**
+ * Allowlisted diagnostics for a failed onboarding run. Driver and vendor
+ * messages can carry credentials or SQL values, so nothing here reads a
+ * message, a manifest value or a database value: only an identifier-shaped
+ * constructor name and, for an authority violation, field names that are
+ * keys of FIELD_CATEGORIES with the reason taken from that table. A hostile
+ * error object (throwing getter, Proxy, malformed violations) yields no
+ * detail instead of throwing out of the caller's catch block.
+ */
+function safeFailureDetail(error: unknown): {
+  errorClass: string | undefined;
+  violationFields: string[];
+  authorityDetail:
+    | {
+        violation_fields: string[];
+        violations: Array<{ field: string; reason: string }>;
+      }
+    | Record<string, never>;
+} {
+  let errorClass: string | undefined;
+  try {
+    const ctor =
+      error && typeof error === "object"
+        ? (error as { constructor?: unknown }).constructor
+        : undefined;
+    const name = typeof ctor === "function" ? ctor.name : undefined;
+    if (typeof name === "string" && /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(name)) {
+      errorClass = name;
+    }
+  } catch {
+    errorClass = undefined;
+  }
+  if (!(error instanceof AuthorityViolationError)) {
+    return { errorClass, violationFields: [], authorityDetail: {} };
+  }
+  const violations: Array<{ field: string; reason: string }> = [];
+  try {
+    for (const violation of Array.from(error.violations)) {
+      const field = violation?.field;
+      if (
+        typeof field === "string" &&
+        Object.prototype.hasOwnProperty.call(FIELD_CATEGORIES, field)
+      ) {
+        violations.push({
+          field,
+          reason: FIELD_CATEGORIES[field as keyof typeof FIELD_CATEGORIES].reason,
+        });
+      }
+    }
+  } catch {
+    violations.length = 0;
+  }
+  const violationFields = violations.map(({ field }) => field);
+  return {
+    errorClass,
+    violationFields,
+    authorityDetail: { violation_fields: violationFields, violations },
+  };
+}
+
 export async function runOnboarding(
   handle: Database,
   options: OnboardingOptions
@@ -1846,31 +1906,8 @@ export async function runOnboarding(
           cause && typeof cause === "object" && "code" in cause
             ? String(cause.code)
             : "";
-        const errorClass =
-          error &&
-          typeof error === "object" &&
-          "constructor" in error &&
-          error.constructor &&
-          typeof error.constructor === "function" &&
-          /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(error.constructor.name)
-            ? error.constructor.name
-            : undefined;
-        const authorityViolations =
-          error instanceof AuthorityViolationError
-            ? error.violations
-                .filter(({ field }) =>
-                  Object.prototype.hasOwnProperty.call(FIELD_CATEGORIES, field)
-                )
-                .map(({ field, reason }) => ({ field, reason }))
-            : [];
-        const violationFields = authorityViolations.map(({ field }) => field);
-        const authorityDetail =
-          error instanceof AuthorityViolationError
-            ? {
-                violation_fields: violationFields,
-                violations: authorityViolations,
-              }
-            : {};
+        const { errorClass, authorityDetail, violationFields } =
+          safeFailureDetail(error);
         log.error(
           {
             label: "onboarding-pipeline-failed",
@@ -1902,9 +1939,11 @@ export async function runOnboarding(
             : error instanceof OnboardingError
             ? error.message
             : error instanceof AuthorityViolationError
-            ? `Manifest and database disagree on: ${violationFields.join(
-                ", "
-              )}. Update the manifest to match the database, or re-seed the database to match the manifest.`
+            ? `Manifest and database disagree on: ${
+                violationFields.length > 0
+                  ? violationFields.join(", ")
+                  : "manifest-canonical fields"
+              }. Update the manifest to match the database, or re-seed the database to match the manifest.`
             : "Onboarding failed. Check the reviewed manifest and API logs before retrying.",
           ...(errorClass ? { error_class: errorClass } : {}),
           ...authorityDetail,

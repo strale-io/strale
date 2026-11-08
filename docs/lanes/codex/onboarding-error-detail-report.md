@@ -97,3 +97,17 @@ prevents a future unvalidated class field.
   failed. `stripped-text-length.test.ts` passed in this isolated rerun.
 - `git diff --check` — **passed**.
 
+
+## Claude review round (2026-11-08)
+
+The independent read-only review gave **GO**, with one medium finding; three hardening changes were added on top of the Codex commit.
+
+- **Medium, fixed:** the non-identifier class-name test replaced `constructor` with a plain object, so the `typeof === "function"` check rejected it before the name regex ran; the test passed with the regex deleted. It now uses a real constructor function named `x y<script>` and fails when the regex is removed.
+- **Hardening:**
+  - **Reason source:** a violation's `reason` is now read from `FIELD_CATEGORIES[field].reason`, never from the violation object, so a forged or future error cannot put data in it. The authority test now gives one violation the reason `SECRET-SENTINEL-reason` and asserts it is absent.
+  - **Hostile error objects:** the diagnostics moved into `safeFailureDetail()`, which cannot throw. A throwing `constructor` getter, a Proxy, or non-array `violations` now yields no detail, instead of escaping the catch and losing the `onboarding-pipeline-failed` log line. A new test covers the throwing getter.
+  - **Empty field list:** if every violation field is filtered out, the message reads "disagree on: manifest-canonical fields" instead of "disagree on: .".
+- **Where the fields go:** `result.errors` reaches `GET /run/:id`, the workflow's `onboarding-results/` artifact in a public repo, and the step summary. The new content is column names and fixed reason strings, which are already public in `capability-field-authority.ts`.
+- **Fail-before:**
+  - the authority test and the hostile-getter test fail against a47362c6;
+  - the class-name test fails with the regex replaced by `true`.
