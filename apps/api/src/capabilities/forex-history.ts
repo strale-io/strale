@@ -1,4 +1,5 @@
-import { inputRefusal } from "../lib/capability-refusal.js";
+import { inputRefusal, isCapabilityRefusal } from "../lib/capability-refusal.js";
+import { FxCurrencyUnavailableError, getFrankfurterCurrencies, getFrankfurterSeries } from "../lib/fx/rates.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 registerCapability("forex-history", async (input: CapabilityInput) => {
@@ -13,7 +14,8 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
   const startDate = ((input.start_date as string) ?? defaultStart).trim();
   const endDate = ((input.end_date as string) ?? defaultEnd).trim();
 
-  if (!from || !to) throw new Error("'from' and 'to' currency codes are required.");
+  if (!/^[A-Z]{3}$/.test(from)) throw inputRefusal("'from' must be a three-letter currency code.", "from", "Send 'from' as a three-letter currency code.");
+  if (!/^[A-Z]{3}$/.test(to)) throw inputRefusal("'to' must be a three-letter currency code.", "to", "Send 'to' as a three-letter currency code.");
 
   // Checked here because Frankfurter answers 404 for a bad range as well, which
   // would read as an unavailable currency below.
@@ -27,39 +29,42 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
   if (startDate > endDate) {
     throw inputRefusal("'start_date' must be on or before 'end_date'.", "start_date", "Send 'start_date' on or before 'end_date'.");
   }
-
-  const url = `https://api.frankfurter.app/${startDate}..${endDate}?from=${from}&to=${to}`;
-  const resp = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-  if (!resp.ok) {
-    // Frankfurter answers 404 for a currency it does not carry. Anything else is
-    // the source's fault, and its body (an HTML error page at a 522) is not for
-    // the caller.
-    if (resp.status === 404) {
-      throw inputRefusal(
-        `'from' and 'to' must be currencies Frankfurter publishes; ${from}→${to} is not available.`,
-        "to",
-        "Send 'to' as a currency from the European Central Bank reference-rate list.",
-      );
-    }
-    throw new Error(`Frankfurter API returned HTTP ${resp.status}.`);
+  const days = (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000;
+  if (days > 1827) {
+    throw inputRefusal("'start_date' must be within 1,827 days of 'end_date'.", "start_date", "Send 'start_date' so the date range is no more than five years (1,827 days).");
   }
 
-  const data = await resp.json() as {
-    base: string;
-    start_date: string;
-    end_date: string;
-    rates: Record<string, Record<string, number>>;
-  };
-
-  const rates: { date: string; rate: number }[] = [];
-  for (const [date, rateObj] of Object.entries(data.rates ?? {})) {
-    const rate = rateObj[to];
-    if (rate !== undefined) rates.push({ date, rate });
+  let source = "frankfurter.dev";
+  let rateSource = "Frankfurter blended central-bank rate";
+  let provenance: { source: string; [key: string]: string } = { source, attribution: "Source: Frankfurter (blended central-bank rates, frankfurter.dev)", acquisition_method: "vendor_api", data_access_lane: "allowed_with_checks", upstream_vendor: "Frankfurter" };
+  let rates: { date: string; rate: number }[] = [];
+  if (from === to) {
+    source = "identity";
+    rateSource = "identity";
+    provenance = { source, acquisition_method: "computed", data_access_lane: "not_applicable" };
+    rates = [];
+    for (let time = Date.parse(`${startDate}T00:00:00Z`), end = Date.parse(`${endDate}T00:00:00Z`); time <= end; time += 86400000) {
+      rates.push({ date: new Date(time).toISOString().slice(0, 10), rate: 1 });
+    }
+  } else {
+    try {
+      rates = (await getFrankfurterSeries(from, to, startDate, endDate)).map(({ date, rate }) => ({ date, rate }));
+    } catch (error) {
+      if (!(error instanceof FxCurrencyUnavailableError)) throw error;
+      try {
+        const currencies = await getFrankfurterCurrencies();
+        if (!currencies.has(from)) throw inputRefusal(`'from' must be a currency with a published reference rate; ${from} has no published reference rate.`, "from", "Send 'from' as a currency with a published reference rate.");
+        throw inputRefusal(`'to' must be a currency with a published reference rate; ${to} has no published reference rate.`, "to", "Send 'to' as a currency with a published reference rate.");
+      } catch (listError) {
+        if (isCapabilityRefusal(listError)) throw listError;
+        throw inputRefusal(`'from' and 'to' must be currencies with published reference rates; ${from} and ${to} could not be confirmed.`, "from", "Send 'from' and 'to' as currencies with published reference rates.");
+      }
+    }
   }
   rates.sort((a, b) => a.date.localeCompare(b.date));
 
   if (rates.length === 0) {
-    throw new Error(`No exchange rate data found for ${from}→${to} in the given date range.`);
+    throw inputRefusal("'start_date' has no published rates in this range.", "start_date", "Send 'start_date' as part of a range containing published rates.");
   }
 
   const values = rates.map(r => r.rate);
@@ -80,7 +85,8 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
       max: Math.round(max * 10000) / 10000,
       change_percent: Math.round(changePct * 100) / 100,
       data_points: rates.length,
+      rate_source: rateSource,
     },
-    provenance: { source: "frankfurter.app", fetched_at: new Date().toISOString() },
+    provenance: { ...provenance, fetched_at: new Date().toISOString() },
   };
 });

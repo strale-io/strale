@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
 vi.mock("../safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => undefined) }));
 
-import { __resetFxRateCachesForTests, getEcbReferenceRates, getFrankfurterCurrencies, getFrankfurterRate } from "./rates.js";
+import { __resetFxRateCachesForTests, getEcbReferenceRates, getFrankfurterCurrencies, getFrankfurterRate, getFrankfurterSeries } from "./rates.js";
 import { classifyFailure } from "../failure-classifier.js";
 import { classifyTransactionFailure } from "../transaction-failure-taxonomy.js";
 
@@ -100,5 +100,36 @@ describe("Frankfurter currency list", () => {
   it("refuses an object answer instead of caching its keys as codes", async () => {
     safeFetchMock.mockResolvedValue(response(JSON.stringify({ error: "maintenance" })));
     await expect(getFrankfurterCurrencies()).rejects.toThrow("Frankfurter currency list unavailable");
+  });
+});
+
+describe("Frankfurter blended series", () => {
+  const valid = { date: "2026-11-01", base: "NGN", quote: "KWD", rate: 0.00022 };
+
+  it("uses the uncached v2 range endpoint with the series limits", async () => {
+    safeFetchMock.mockImplementation(async () => response(JSON.stringify([valid])));
+    await getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02");
+    await getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02");
+    expect(safeFetchMock).toHaveBeenCalledTimes(2);
+    expect(safeFetchMock.mock.calls[0]).toEqual(expect.arrayContaining([
+      "https://api.frankfurter.dev/v2/rates?base=NGN&quotes=KWD&from=2026-11-01&to=2026-11-02",
+      expect.objectContaining({ timeoutMs: 10_000, acquisitionMethod: "vendor_api" }),
+    ]));
+  });
+
+  it.each([
+    { ...valid, quote: "USD" },
+    { ...valid, rate: 0 },
+    { ...valid, date: "November 1" },
+    { ...valid, date: "2026-10-31" },
+  ])("rejects malformed point %# as upstream in both classifiers", async (bad) => {
+    safeFetchMock.mockResolvedValue(response(JSON.stringify([bad])));
+    await expectUpstream(getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02"));
+  });
+
+  it("rejects a non-array and a 503 as upstream in both classifiers", async () => {
+    safeFetchMock.mockResolvedValueOnce(response("{}")).mockResolvedValueOnce(response("secret", 503));
+    await expectUpstream(getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02"));
+    await expectUpstream(getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02"));
   });
 });
