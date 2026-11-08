@@ -51,28 +51,14 @@ const BLOCK_TAG_PREFIXES = [
   "br",
 ];
 
-/** Return the first `>` outside an attribute quote, visiting each code unit once. */
-function findTagEnd(
-  html: string,
-  start: number,
-  lastSingle: number,
-  lastDouble: number,
-): number {
-  let quote = "";
-  for (let i = start; i < html.length; i += 1) {
-    const char = html[i];
-    if (quote) {
-      if (char === quote) quote = "";
-      else if (char === "<") return html.indexOf(">", start);
-    } else if (char === '"' || char === "'") {
-      const lastSameQuote = char === "'" ? lastSingle : lastDouble;
-      if (i >= lastSameQuote) return html.indexOf(">", start);
-      quote = char;
-    } else if (char === ">") {
-      return i;
-    }
-  }
-  return -1;
+/**
+ * End of a tag: the first `>` after `start`, as the old regex `<[^>]+>` had it.
+ * Quote-aware scanning was tried in review rounds 1-2 and either emptied pages
+ * with a stray apostrophe or rescanned the remainder per tag; one indexOf from
+ * a position that only moves forward keeps the whole scan linear.
+ */
+function findTagEnd(html: string, start: number): number {
+  return html.indexOf(">", start);
 }
 
 function tagName(tag: string): string {
@@ -149,8 +135,11 @@ function isJavaScriptWhitespace(char: string): boolean {
 /** Strip HTML to bounded plain text for LLM extraction in O(n) time. */
 export function htmlToText(html: string): string {
   const input = html.slice(0, HTML_TO_TEXT_INPUT_LIMIT);
-  const lastSingle = input.lastIndexOf("'");
-  const lastDouble = input.lastIndexOf('"');
+  // Computed once so no tag or comment search ever scans past the last place
+  // it could succeed: a `<` after the last `>` is literal text (as the old
+  // regexes left it), and a `<!--` after the last `-->` ends at its first `>`.
+  const lastTagEnd = input.lastIndexOf(">");
+  const lastCommentEnd = input.lastIndexOf("-->");
   const output: string[] = [];
   let outputLength = 0;
   let position = 0;
@@ -230,19 +219,20 @@ export function htmlToText(html: string): string {
     position < input.length &&
     outputLength < HTML_TO_TEXT_OUTPUT_LIMIT + HTML_TO_TEXT_OUTPUT_MARGIN
   ) {
-    if (input[position] === "<") {
+    if (input[position] === "<" && position < lastTagEnd && input[position + 1] !== ">") {
       if (input.startsWith("<!--", position)) {
-        const commentEnd = input.indexOf("-->", position + 4);
         const end =
-          commentEnd === -1 ? input.indexOf(">", position + 4) : commentEnd + 2;
-        if (end === -1) break;
+          position + 4 <= lastCommentEnd
+            ? input.indexOf("-->", position + 4) + 2
+            : findTagEnd(input, position + 4);
+        // position < lastTagEnd and "<!--" holds no ">", so a ">" exists at or
+        // after position + 4 and end is never -1 here.
         emit(" ");
         position = end + 1;
         continue;
       }
 
-      const end = findTagEnd(input, position + 1, lastSingle, lastDouble);
-      if (end === -1) break;
+      const end = findTagEnd(input, position + 1);
 
       const tag = input.slice(position, end + 1);
       const name = tagName(tag);
@@ -255,12 +245,7 @@ export function htmlToText(html: string): string {
         const closePrefix = `</${name}`;
         const closeStart = findCloseTagStart(input, name, end + 1);
         if (closeStart === -1) break;
-        const closeEnd = findTagEnd(
-          input,
-          closeStart + closePrefix.length,
-          lastSingle,
-          lastDouble,
-        );
+        const closeEnd = findTagEnd(input, closeStart + closePrefix.length);
         if (closeEnd === -1) break;
         position = closeEnd + 1;
         continue;

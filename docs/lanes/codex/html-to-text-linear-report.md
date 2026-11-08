@@ -248,3 +248,38 @@ MiB**, or 3.90x growth, within both the 8x ratio and 2,000 ms absolute bound.
   are unrelated pre-existing wall-clock or timing-ratio thresholds. The run
   had 10,076 passing and 457 skipped tests across 519 files; the scanner suite
   passed.
+
+## Round 3 (Claude, after round-2 review FAIL)
+
+Codex's three runs for this family were used: the first produced no diff, f17dc0f2 was round 1, and 9f6a3aa7 was round 2. The round-2 independent review found two quadratic paths that a caller can control, and Fix 1 was incomplete. Claude made the last change.
+
+- **Tag ends use the old rule.** `findTagEnd` is now `html.indexOf(">", start)`, the first-`>` rule of the old regex `<[^>]+>`. The quote-aware scan is gone, and with it both failures it caused:
+  - a stray apostrophe emptied the rest of the page: `<p title=don't>It's here</p>` and `<img alt=Petter's>Petter's bio…` lost their text;
+  - the fallback restarted from the tag start and rescanned the remainder for every tag: `"<'>'"…+"'"` took 36 s at 1 MiB, and `<a 'x>y'z ` took 40.6 s at 2 MiB.
+
+  The cost is one round-1 improvement: a `>` inside a quoted attribute leaks the rest of that attribute into the output, as it always did before this change.
+- **Comments.** `lastIndexOf("-->")` is computed once. A `<!--` after the last `-->` ends at its first `>` (the old behaviour) without searching for `-->` again. Before, `"<!-- x>"` repeated took over 60 s at 1 MiB.
+- **A `<` with nothing to close it.** `lastIndexOf(">")` is computed once. A `<` after the last `>` is literal text, as the old regexes left it, so `"Price < 100 for all"` keeps its text. `<>` is literal too (`a <> b`), as before.
+- **Kept from rounds 1 and 2:**
+  - linear time;
+  - the 2 MiB input cap and the early stop;
+  - script and style skipping only on real opening tags;
+  - exact old whitespace;
+  - the old prefix rule for block tags;
+  - single entity decoding.
+- **Intended differences from the old output** (the complete list):
+  - unclosed `<script>` and `<style>` content is dropped;
+  - entities are decoded once (`&amp;lt;` stays `&lt;`);
+  - `< p>` gives a newline;
+  - comment text after a `>` inside a comment that is closed by `-->` is dropped;
+  - `</script >` with a space closes a script.
+- **Tests added:**
+  - 1 MiB timing cases for repeated `<!-- x>`, balanced quote pairs ending in an unmatched quote, and `<a 'x>y'z `;
+  - equivalence cases for `<p title=don't>It's here</p>`, `<img alt=Petter's>…`, `Price < 100 for all`, `a <> b` and an unclosed comment tail.
+
+  All five of these fail against 9f6a3aa7. The three timing cases took 160 s, 34.7 s and 18.3 s there.
+- **Commands:**
+  - the browserless-extract test file: 41 passed, 20 runs of 20;
+  - full `apps/api` vitest: 473 files passed, 0 failed;
+  - `npm run typecheck`: passed;
+  - every single-line step of the CI check job passed locally, after `context:generate` refreshed `docs/project/legacy-authority-inventory.json`, which the Codex commits had left stale.

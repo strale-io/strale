@@ -69,10 +69,13 @@ describe("htmlToText", () => {
     expect(htmlToText(html)).toBe(oldHtmlToText(html));
   });
 
-  it("does not expose the tail of a quoted attribute as text", () => {
+  it("ends a tag at its first >, as the old function did, so quotes cannot hide text", () => {
+    // Quote-aware tag ends were tried in review rounds 1 and 2: a stray
+    // apostrophe emptied the page, and the fallback rescanned per tag. The old
+    // regex's first-`>` rule is kept; a `>` inside a quoted attribute leaks its
+    // tail, as it always did.
     const html = '<div title="one > two">Visible</div>';
-    expect(htmlToText(html)).toBe("Visible");
-    expect(oldHtmlToText(html)).toBe('two">Visible');
+    expect(htmlToText(html)).toBe(oldHtmlToText(html));
   });
 
   it("drops an unclosed script because its contents are not page text", () => {
@@ -86,6 +89,11 @@ describe("htmlToText", () => {
       "<!-- Don't remove --><p>Price</p>",
       "<p title=don't>text</p>",
       "<p title=don't>Price</p><p>Bob's shop</p>",
+      "<p title=don't>It's here</p>",
+      "<img alt=Petter's>Petter's bio is short.</p><p>Next</p>",
+      "Price < 100 for all",
+      "a <> b",
+      "Tail <!-- never closed",
     ]) {
       expect(htmlToText(html)).toBe(oldHtmlToText(html));
     }
@@ -156,6 +164,19 @@ describe("htmlToText", () => {
     [
       "repeated unclosed comments",
       "<!-- don't".repeat(1024 * 103).slice(0, 1024 * 1024),
+    ],
+    // Review round 2 found both of these quadratic (over 60 s and 36 s).
+    [
+      "repeated comments with no close but a tag end",
+      "<!-- x>".repeat(Math.ceil((1024 * 1024) / 7)).slice(0, 1024 * 1024),
+    ],
+    [
+      "balanced quote pairs ending in an unmatched quote",
+      "xxx" + "<'>'".repeat(256 * 1024 - 1) + "'",
+    ],
+    [
+      "quoted tag ends that close later",
+      "<a 'x>y'z ".repeat(Math.ceil((1024 * 1024) / 10)).slice(0, 1024 * 1024),
     ],
   ])(
     "scans 1 MiB of hostile %s input within a generous bound",
