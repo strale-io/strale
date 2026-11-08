@@ -9,42 +9,18 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator. Codex produced two empty runs, so Claude
-      built R1 (#964, fix/url-to-markdown-parse-bound). Its first independent
-      review FAILED: the markup limits do not bound conversion time (10k flat
-      <div> took 9.4 s in Readability, 29k took 83 s, 15 MB of text 10-40 s).
-      The fix moves the whole conversion into a pool of two worker threads with
-      an 8 s wall-clock limit, a 512 MB heap limit and a bounded queue
-      (lib/readability-convert.ts); past a limit the worker is terminated and
-      the call is refused unbilled. Review round 2 (FAIL) found two more
-      main-thread regexes on the tool's path (the body-text check in
-      web-provider.ts, 4.1 s on 256 KB; the link strip, 1 s): both fixed, with
-      a 4 MB converter input cap and refusal logs. Open follow-ups: per-caller
-      fairness in the converter pool (one caller can occupy it; needs caller
-      identity in executors), and the same regex chain in
-      browserless-extract.ts htmlToText (other tools; the round-3 review
-      measured 26.8 s for 256 KB of repeated <p, reachable from eight tools that fetch
-      a caller URL, so it is the next R1 batch). Round 3 (FAIL) found the text
-      checks still read whole 16 MiB pages (up to 2.2 s) and memory over a 1 GB
-      box; round 4 bounds the checks to 512 KiB, the converter to 2 MiB and a
-      384 MB heap, and fixes the input cut. Round 4 (FAIL) found two hostile
-      pages still reached +850 MB and a regression for client-rendered pages
-      with large inline state; round 5 converts one large page at a time
-      (+326 MB measured) and extends the text window past a straddling
-      script. Round 5 (FAIL): memory follows markup, not size (two 256 KiB
-      pages at +605 MB), and the window extension rescanned (0.5 s). Round 6
-      runs one conversion at a time (four hostile pages +318 MB), frees a
-      slot only after its worker exits, and scans forward only. Round 6:
-      PASS-WITH-NITS; its fixes (a 1 MiB cap on the text window, an exit
-      watchdog, plain worker errors, queue 4 / wait 13 s) are in the PR.
-      Remaining R1 follow-ups: per-caller fairness (one free account can keep
-      the single converter busy), browserless-extract htmlToText, and the
-      rare under-read the forward-only scan accepts. Next: merge #964,
-      merge, then after deploy call url-to-markdown on an ordinary page and
-      confirm it converts (DEC-20260504-C), and write the receipt for the exit
-      below. Then sweep the other places that hand fetched markup to jsdom
-      (lib/company-enrich/structured-metadata.ts, bounded since #947, and
-      lib/nta-corporate.ts) and record each one's bound in that receipt."
+    next_action: "Owner: orchestrator. Done: #964 (url-to-markdown: one conversion at a time
+      in a worker with an 8 s limit, a 384 MB heap, a 2 MiB converter cap and
+      512 KiB text checks) merged and live since 2026-11-07. Next, in order: (1)
+      after any deploy, call url-to-markdown on an ordinary page and write the
+      receipt for the exit (DEC-20260504-C). (2) browserless-extract.ts
+      htmlToText: the same regex chain, measured at 26.8 s for 256 KB of
+      repeated <p, reachable from eight tools that fetch a caller URL; this is
+      the next R1 batch (Codex brief). (3) Sweep the other places that hand
+      fetched markup to jsdom (lib/company-enrich/structured-metadata.ts,
+      bounded since #947, and lib/nta-corporate.ts) and record each one's bound
+      in that receipt. (4) Per-caller fairness in the single converter (one free
+      account can keep it busy; needs caller identity in executors)."
     resume_file: handoff/_general/from-code/2026-11-06-orchestrator-state.md
     exit:
       - "A receipt shows every adversarial input in the brief (nested div 16, 32
@@ -138,35 +114,30 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator. Promotion and delisting a tool that earns
-      nothing are the session's (CHARTER); delisting a revenue earner and a new
-      vendor or account are Petter's (DEC-20260812-A). Decide each tool from its
-      executor and a receipt. (1) eu-trademark-search: delisted by #959 (block
-      0148) until it is rebuilt on the EUIPO API (DQ-42). (2) customs-duty-lookup
-      and (3) container-track: fixed on fix/robots-customs-container, not
-      delisted. customs-duty-lookup reads only the Access2Markets results page
-      (TARIC data), needs origin_country and throws on A2M's 400 and picker
-      pages instead of charging for them; its terms are unverified (DQ-48,
-      OUTBOX a2m-terms-confirmation). container-track no
-      longer fetches maersk.com or the dead SeaRates redirect; live status is
-      MSC, CMA CGM and Hapag-Lloyd only, stated in limitations. Receipts:
-      archive/receipts/2026-11-07-check-source-robots-access-customs-container.json
-      and archive/receipts/2026-11-07-test-run-robots-permitted-sources-fail-before-after.json.
-      Open: whether MSC, CMA CGM and Hapag-Lloyd's own terms permit automated
-      tracking reads (container-track data_access checks stay pending).
-      (4) exchange-rate failed 94 of 302 x402 calls in six days (31%), all
-      uncharged: 31 timeouts, about 50 refusals for currencies ECB does not
-      carry, and 2 ECB 500s. Fix the timeout. Either narrow the input schema to
-      the currencies it serves, or find a terms-checked source for the rest; a
-      paid source is Petter's. (5) Find the causes for forex-history and
-      currency-convert (Frankfurter 522), domain-age-check (16 of 213, cause
-      unverified) and image-to-text (upstream 400 on base64, caller or encoding
-      unverified). (6) invoice-counterparty-check (DQ-41) is dark-launched on a
-      paid upstream, so it can never earn a harness green week. Design a
-      promotion path from real-call or piggyback evidence. If that changes
-      DEC-20260812-A's first-green-week rule, record it as a decision. Answer
-      quality is promise-audit T6's; this track acts on listing state."
-    resume_file: handoff/_general/from-code/2026-11-07-robots-customs-container.md
+    next_action: "Owner: orchestrator. Promotion and delisting a tool that earns nothing are
+      the session's (CHARTER); delisting a revenue earner and a new vendor or
+      account are Petter's (DEC-20260812-A). Done on 2026-11-07/08: eu-
+      trademark-search delisted (#959, DQ-42); customs-duty-lookup and
+      container-track read only robots-permitted pages (#974); domain-age-check
+      RDAP first with named failures (#975); exchange-rate and currency-convert
+      on a cached ECB daily file plus Frankfurter blended rates for non-ECB
+      currencies (#976); forex-history on Frankfurter v2 (#977); image-to-text
+      reads the image type from its bytes and refuses non-images before
+      Anthropic (#978). Each needs its post-deploy who-called check in the
+      morning run (handoff files of 2026-11-08). Open: (1) container-track: MSC,
+      CMA CGM and Hapag-Lloyd terms could not be read on 2026-11-08 (every legal
+      page 403 to automated reads); official APIs exist (MSC developer portal
+      Track and Trace, CMA CGM and Hapag-Lloyd API portals). The morning run
+      reads its 30-day paid calls: near zero means delist until it runs on the
+      official APIs; if it earns, registering for those APIs is Petter's call,
+      and until then data_access checks stay pending. (2) customs-duty-lookup:
+      Access2Markets terms unverified (DQ-48, OUTBOX a2m-terms-confirmation).
+      (3) invoice-counterparty-check (DQ-41) is dark-launched on a paid
+      upstream, so it can never earn a harness green week; design a promotion
+      path from real-call or piggyback evidence and, if it changes
+      DEC-20260812-A's first-green-week rule, put it to Petter as a decision.
+      Answer quality is promise-audit T6's; this track acts on listing state."
+    resume_file: handoff/_general/from-code/2026-11-08-image-to-text-media-type.md
     exit:
       - "Each named tool has a receipt with its decision (fixed, narrowed,
         delisted or promoted) and the evidence behind it."
