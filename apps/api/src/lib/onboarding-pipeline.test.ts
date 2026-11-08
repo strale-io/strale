@@ -13,6 +13,11 @@ import {
 } from "./capability-persistence.js";
 import { guardedExecute } from "../capabilities/guarded-executor.js";
 import { validateCapability } from "./onboarding-gates.js";
+import { log } from "./log.js";
+import {
+  AuthorityViolationError,
+  FIELD_CATEGORIES,
+} from "./capability-field-authority.js";
 vi.mock("./capability-persistence.js", () => ({
   persistCapability: vi.fn(),
   diffAndUpdateLimitations: vi.fn(),
@@ -111,6 +116,152 @@ beforeEach(() => {
   });
 });
 describe("shared onboarding pipeline", () => {
+  it("reports authority violations with safe field detail and no values", async () => {
+    const error = new AuthorityViolationError([
+      {
+        field: "maintenance_class",
+        manifestValue: "SECRET-SENTINEL-manifest",
+        dbValue: "SECRET-SENTINEL-db",
+        reason: FIELD_CATEGORIES.maintenance_class.reason,
+      },
+      {
+        field: "processes_personal_data",
+        manifestValue: "SECRET-SENTINEL-manifest",
+        dbValue: "SECRET-SENTINEL-db",
+        // A violation's own reason is never echoed; the table's is.
+        reason: "SECRET-SENTINEL-reason",
+      },
+    ]);
+    vi.mocked(persistCapability).mockRejectedValueOnce(error);
+    const logged = vi.spyOn(log, "error").mockImplementation(() => log);
+
+    const result = await runOnboarding(
+      database([[{ slug: "sample-tool" }], [{ slug: "sample-tool" }], []]),
+      { manifestYaml: yaml.dump(manifest()), mode: "backfill", force: true }
+    );
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error_class: "AuthorityViolationError",
+        violation_fields: [
+          "maintenance_class",
+          "processes_personal_data",
+        ],
+        violations: [
+          {
+            field: "maintenance_class",
+            reason: FIELD_CATEGORIES.maintenance_class.reason,
+          },
+          {
+            field: "processes_personal_data",
+            reason: FIELD_CATEGORIES.processes_personal_data.reason,
+          },
+        ],
+      }),
+      "onboarding-pipeline-failed"
+    );
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "authority_violation",
+        error_class: "AuthorityViolationError",
+        violation_fields: [
+          "maintenance_class",
+          "processes_personal_data",
+        ],
+        violations: [
+          {
+            field: "maintenance_class",
+            reason: FIELD_CATEGORIES.maintenance_class.reason,
+          },
+          {
+            field: "processes_personal_data",
+            reason: FIELD_CATEGORIES.processes_personal_data.reason,
+          },
+        ],
+        message: expect.stringContaining(
+          "maintenance_class, processes_personal_data"
+        ),
+      }),
+    ]);
+    expect(JSON.stringify(logged.mock.calls)).not.toContain("SECRET-SENTINEL");
+    expect(JSON.stringify(result)).not.toContain("SECRET-SENTINEL");
+  });
+
+  it("reports a driver error class and SQLSTATE without its message", async () => {
+    const error = new Error("connection failed password=hunter2", {
+      cause: { code: "23505" },
+    });
+    vi.mocked(persistCapability).mockRejectedValueOnce(error);
+    const logged = vi.spyOn(log, "error").mockImplementation(() => log);
+
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()),
+      mode: "onboard",
+    });
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.objectContaining({ error_class: "Error", sqlstate: "23505" }),
+      "onboarding-pipeline-failed"
+    );
+    expect(JSON.stringify(logged.mock.calls)).not.toContain("hunter2");
+    expect(JSON.stringify(result)).not.toContain("hunter2");
+  });
+
+  it("omits an error class that is not identifier-shaped", async () => {
+    const logged = vi.spyOn(log, "error").mockImplementation(() => log);
+    vi.mocked(persistCapability).mockRejectedValueOnce(new Error("safe message"));
+
+    const validResult = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()),
+      mode: "onboard",
+    });
+
+    expect(logged.mock.calls[0]?.[0]).toHaveProperty("error_class", "Error");
+    expect(validResult.errors[0]).toHaveProperty("error_class", "Error");
+
+    // A real constructor function whose name fails the identifier check, so
+    // the name regex (not the function-type check) is what drops it.
+    const BadName = function () {};
+    Object.defineProperty(BadName, "name", { value: "x y<script>" });
+    const error = new Error("safe message");
+    Object.defineProperty(error, "constructor", { value: BadName });
+    vi.mocked(persistCapability).mockRejectedValueOnce(error);
+
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()),
+      mode: "onboard",
+    });
+
+    expect(logged.mock.calls[1]?.[0]).not.toHaveProperty("error_class");
+    expect(result.errors[0]).not.toHaveProperty("error_class");
+  });
+
+  it("still logs and returns the generic failure when the error object throws on inspection", async () => {
+    const logged = vi.spyOn(log, "error").mockImplementation(() => log);
+    const error = new Error("password=hunter2");
+    Object.defineProperty(error, "constructor", {
+      get() {
+        throw new Error("hostile getter");
+      },
+    });
+    vi.mocked(persistCapability).mockRejectedValueOnce(error);
+
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()),
+      mode: "onboard",
+    });
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "pipeline_error" }),
+      "onboarding-pipeline-failed"
+    );
+    expect(logged.mock.calls[0]?.[0]).not.toHaveProperty("error_class");
+    expect(result.errors).toEqual([
+      expect.objectContaining({ code: "pipeline_error" }),
+    ]);
+    expect(JSON.stringify(result)).not.toContain("hunter2");
+  });
+
   it("creates all five suites with the injected handle and retains dark launch", async () => {
     const db = database();
     vi.mocked(persistCapability).mockImplementationOnce(async (_input, opts) => {

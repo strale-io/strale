@@ -30,6 +30,10 @@ import {
 } from "./capability-persistence.js";
 // Cluster 2 Phase 3 C2: Manifest → DB-row normalizer.
 import { normalizeManifestToRow } from "./capability-manifest.js";
+import {
+  AuthorityViolationError,
+  FIELD_CATEGORIES,
+} from "./capability-field-authority.js";
 
 import { eq, and } from "drizzle-orm";
 import { capabilities, testSuites } from "../db/schema.js";
@@ -77,7 +81,13 @@ export interface OnboardingResult {
   slug: string;
   status: "success" | "failed" | "skipped";
   timeMs: number;
-  errors: Array<{ code: string; message: string }>;
+  errors: Array<{
+    code: string;
+    message: string;
+    error_class?: string;
+    violation_fields?: string[];
+    violations?: Array<{ field: string; reason: string }>;
+  }>;
   rows: { created: RowChange[]; updated: RowChange[]; deleted: RowChange[] };
   generatedTestTypes: string[];
   verification: {
@@ -146,6 +156,66 @@ export async function validateOnboardingManifest(
   }
 
   return violations.map((v) => `[${v.gate}] ${v.detail}`);
+}
+
+/**
+ * Allowlisted diagnostics for a failed onboarding run. Driver and vendor
+ * messages can carry credentials or SQL values, so nothing here reads a
+ * message, a manifest value or a database value: only an identifier-shaped
+ * constructor name and, for an authority violation, field names that are
+ * keys of FIELD_CATEGORIES with the reason taken from that table. A hostile
+ * error object (throwing getter, Proxy, malformed violations) yields no
+ * detail instead of throwing out of the caller's catch block.
+ */
+function safeFailureDetail(error: unknown): {
+  errorClass: string | undefined;
+  violationFields: string[];
+  authorityDetail:
+    | {
+        violation_fields: string[];
+        violations: Array<{ field: string; reason: string }>;
+      }
+    | Record<string, never>;
+} {
+  let errorClass: string | undefined;
+  try {
+    const ctor =
+      error && typeof error === "object"
+        ? (error as { constructor?: unknown }).constructor
+        : undefined;
+    const name = typeof ctor === "function" ? ctor.name : undefined;
+    if (typeof name === "string" && /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(name)) {
+      errorClass = name;
+    }
+  } catch {
+    errorClass = undefined;
+  }
+  if (!(error instanceof AuthorityViolationError)) {
+    return { errorClass, violationFields: [], authorityDetail: {} };
+  }
+  const violations: Array<{ field: string; reason: string }> = [];
+  try {
+    for (const violation of Array.from(error.violations)) {
+      const field = violation?.field;
+      if (
+        typeof field === "string" &&
+        Object.prototype.hasOwnProperty.call(FIELD_CATEGORIES, field)
+      ) {
+        violations.push({
+          field,
+          reason: FIELD_CATEGORIES[field as keyof typeof FIELD_CATEGORIES].reason,
+        });
+      }
+    }
+  } catch {
+    violations.length = 0;
+  }
+  const violationFields = violations.map(({ field }) => field);
+  return {
+    errorClass,
+    violationFields,
+    authorityDetail: { violation_fields: violationFields, violations },
+  };
 }
 
 export async function runOnboarding(
@@ -1827,7 +1897,7 @@ export async function runOnboarding(
         }
       } catch (error) {
         // Error messages from drivers/vendors can embed credentials or SQL values.
-        // Log the safe SQLSTATE, stage and slug rather than their raw message/stack.
+        // Log only allowlisted diagnostics rather than their raw message/stack.
         const cause =
           error && typeof error === "object" && "cause" in error
             ? error.cause
@@ -1836,13 +1906,21 @@ export async function runOnboarding(
           cause && typeof cause === "object" && "code" in cause
             ? String(cause.code)
             : "";
+        const { errorClass, authorityDetail, violationFields } =
+          safeFailureDetail(error);
         log.error(
           {
             label: "onboarding-pipeline-failed",
             slug: result.slug,
             stage,
             code:
-              error instanceof OnboardingError ? error.code : "pipeline_error",
+              error instanceof OnboardingError
+                ? error.code
+                : error instanceof AuthorityViolationError
+                ? "authority_violation"
+                : "pipeline_error",
+            ...(errorClass ? { error_class: errorClass } : {}),
+            ...authorityDetail,
             ...(/^[A-Z0-9]{5}$/.test(code) ? { sqlstate: code } : {}),
           },
           "onboarding-pipeline-failed"
@@ -1853,12 +1931,22 @@ export async function runOnboarding(
             ? "timeout"
             : error instanceof OnboardingError
             ? error.code
+            : error instanceof AuthorityViolationError
+            ? "authority_violation"
             : "pipeline_error",
           message: options.signal?.aborted
             ? "Time budget exceeded. Check status before retrying; some rows may already be committed."
             : error instanceof OnboardingError
             ? error.message
+            : error instanceof AuthorityViolationError
+            ? `Manifest and database disagree on: ${
+                violationFields.length > 0
+                  ? violationFields.join(", ")
+                  : "manifest-canonical fields"
+              }. Update the manifest to match the database, or re-seed the database to match the manifest.`
             : "Onboarding failed. Check the reviewed manifest and API logs before retrying.",
+          ...(errorClass ? { error_class: errorClass } : {}),
+          ...authorityDetail,
         });
       }
       const entries = result.verification.entries;
