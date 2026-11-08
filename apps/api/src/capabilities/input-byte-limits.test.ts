@@ -70,12 +70,13 @@ import {
   classifyTransactionFailure,
   countsAgainstCapability,
 } from "../lib/transaction-failure-taxonomy.js";
-import { streamingResponse } from "./lib/streaming-response-testutil.js";
+import { streamingResponse, streamingResponseOf } from "./lib/streaming-response-testutil.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const CHUNK = 64 * 1024;
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 // streamingResponse hoisted to lib/streaming-response-testutil.ts (#426) —
 // three test files needed it and two copies had already diverged.
@@ -207,7 +208,13 @@ describe.each(CAPS)("$slug URL path", (cap) => {
   });
 
   it("POSITIVE CONTROL: accepts a small body and forwards exactly those bytes", async () => {
-    const { response } = streamingResponse(1024, {
+    const body = cap.slug === "image-to-text"
+      ? Buffer.concat([PNG_SIGNATURE, Buffer.alloc(1016)])
+      : null;
+    const { response } = body ? streamingResponseOf(body, {
+      declare: 1024,
+      contentType: cap.contentType,
+    }) : streamingResponse(1024, {
       declare: 1024,
       contentType: cap.contentType,
     });
@@ -221,7 +228,9 @@ describe.each(CAPS)("$slug URL path", (cap) => {
   });
 
   it("still fetches through safeFetch (SSRF wrapper), not raw fetch", async () => {
-    const { response } = streamingResponse(16, { contentType: cap.contentType });
+    const { response } = cap.slug === "image-to-text"
+      ? streamingResponseOf(Buffer.concat([PNG_SIGNATURE, Buffer.alloc(8)]), { contentType: cap.contentType })
+      : streamingResponse(16, { contentType: cap.contentType });
     safeFetchMock.mockResolvedValue(response);
     mockLlmSuccess(cap.llmJson);
     await run(cap.slug)(cap.urlInput("https://example.com/f"));
@@ -318,19 +327,25 @@ describe.each(CAPS)("$slug base64 path", (cap) => {
   });
 
   it("MEASURE-EQUALS-USE: what is sent downstream is the exact normalised string", async () => {
-    const raw = "data:application/pdf;base64,aGVs bG8g\nd29ybGQh"; // prefix + whitespace
+    const encoded = cap.slug === "image-to-text"
+      ? PNG_SIGNATURE.toString("base64")
+      : "aGVsbG8gd29ybGQh";
+    const raw = `data:application/pdf;base64,${encoded.slice(0, 4)} ${encoded.slice(4, 8)}\n${encoded.slice(8)}`;
     mockLlmSuccess(cap.llmJson);
     await run(cap.slug)({ base64: raw });
     expect(messagesCreate).toHaveBeenCalledTimes(1);
     // The size guard measured normalizeBase64(raw); anything else being
     // forwarded would reopen the measure-one-string-decode-another gap.
     expect(sentSource().data).toBe(normalizeBase64(raw));
-    expect(sentSource().data).toBe("aGVsbG8gd29ybGQh");
+    expect(sentSource().data).toBe(encoded);
   });
 
   it("accepts an unpadded payload (existing tolerance preserved)", async () => {
     mockLlmSuccess(cap.llmJson);
-    await run(cap.slug)({ base64: "aGVsbG8" }); // 7 chars, no '='
+    const unpadded = cap.slug === "image-to-text"
+      ? PNG_SIGNATURE.toString("base64").replace(/=+$/, "")
+      : "aGVsbG8";
+    await run(cap.slug)({ base64: unpadded });
     expect(messagesCreate).toHaveBeenCalledTimes(1);
   });
 
@@ -339,7 +354,13 @@ describe.each(CAPS)("$slug base64 path", (cap) => {
     // payload flows to the upstream API and fails there. The size guard must
     // not change that classification for small payloads.
     mockLlmSuccess(cap.llmJson);
-    await expect(run(cap.slug)({ base64: "!!!!not-base64!!!!" })).resolves.toBeDefined();
+    if (cap.slug === "image-to-text") {
+      await expect(run(cap.slug)({ base64: "!!!!not-base64!!!!" })).rejects.toThrow(
+        "'base64' must be a PNG, JPEG, GIF or WebP image.",
+      );
+    } else {
+      await expect(run(cap.slug)({ base64: "!!!!not-base64!!!!" })).resolves.toBeDefined();
+    }
   });
 });
 
