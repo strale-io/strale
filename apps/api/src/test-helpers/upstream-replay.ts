@@ -202,10 +202,10 @@ function perturbed(recorded: RecordedResponse, mode: Perturbation): string {
   }
   // Attribute values may be single- or double-quoted (the ECB's daily file
   // uses single quotes); both are perturbed.
-  if (mode === "hollow" && text.startsWith("<")) return text.replace(/=(["'])[^"']*\1/g, "=$1$1").replace(/>[^<]+</g, "><");
+  if (mode === "hollow" && text.startsWith("<")) return text.replace(/=(?:"[^"]*"|'[^']*')/g, (m: string) => `=${m[1]}${m[1]}`).replace(/>[^<]+</g, "><");
   if (mode === "skew" && text.startsWith("<")) {
     return text
-      .replace(/=(["'])([^"']*)\1/g, (_, q: string, v: string) => `=${q}${skewNumber(v)}${q}`)
+      .replace(/=(?:"([^"]*)"|'([^']*)')/g, (m: string, dq?: string, sq?: string) => `=${m[1]}${skewNumber(dq ?? sq ?? "")}${m[1]}`)
       .replace(/>([^<]+)</g, (whole, v: string) => (PLAIN_NUMBER.test(v.trim()) ? `>${skewNumber(v.trim())}<` : whole));
   }
   return "";
