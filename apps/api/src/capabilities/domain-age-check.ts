@@ -1,7 +1,7 @@
 import { inputRefusal } from "../lib/capability-refusal.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { createConnection } from "node:net";
-import { MAX_WHOIS_RESPONSE_BYTES, createCappedTextSink } from "../lib/resource-limits.js";
+import { MAX_WHOIS_RESPONSE_BYTES, ResourceLimitError, createCappedTextSink } from "../lib/resource-limits.js";
 import { getRdapBase, lookupRdapDomain, type RdapDomainResult } from "../lib/rdap/domain.js";
 
 // F-0-006 Bucket D: opens a WHOIS TCP connection to a HARDCODED server
@@ -18,8 +18,12 @@ const TLD_SERVERS: Record<string, string> = {
 };
 
 function transportFailure(error: unknown): string {
-  const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
+  const directCode = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+  const cause = error instanceof Error ? error.cause : undefined;
+  const causeCode = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined;
+  const code = String(directCode ?? causeCode ?? "");
   const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof ResourceLimitError) return "response too large";
   if (code === "ETIMEDOUT" || /timeout|timed out|aborted/i.test(message)) return "timeout";
   if (code === "ECONNREFUSED" || /connection refused/i.test(message)) return "connection refused";
   if (code === "ECONNRESET" || /connection reset/i.test(message)) return "connection reset";
@@ -150,6 +154,7 @@ registerCapability("domain-age-check", async (input: CapabilityInput) => {
   }
 
   if (!server) {
+    if (rdapFailure) throw new Error(rdapFailure);
     return {
       output: {
         domain, age_days: null, age_years: null, created_date: null,

@@ -117,6 +117,7 @@ const UPSTREAM_TRANSIENT_PATTERNS = [
   /timeout/i,
   /fetch failed/i,
   /socket hang up/i,
+  /connection (reset|refused)/i,
   /network error/i,
   /aborted/i,
   /UNABLE_TO_GET_ISSUER_CERT/i,

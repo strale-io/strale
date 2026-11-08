@@ -50,6 +50,7 @@ const bootstrap = (services: Array<[string[], string[]]>) =>
 const rdap = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/rdap+json" } });
 const COM_SERVICE: Array<[string[], string[]]> = [[["com"], ["https://rdap.registry.example/"]]];
+const XYZ_SERVICE: Array<[string[], string[]]> = [[["xyz"], ["https://rdap.registry.example/"]]];
 const responseWithCancellation = (status: number) => {
   const cancel = vi.fn();
   const body = new ReadableStream({ cancel });
@@ -115,25 +116,48 @@ describe("domain-age-check RDAP precedence and WHOIS fallback", () => {
   it("goes straight to WHOIS when the bootstrap has no TLD entry", async () => {
     state.fetch.mockResolvedValueOnce(bootstrap([]));
     const result = await execute({ domain: "example.com" });
-    expect(result.provenance.source).toBe("whois");
+    expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.verisign-grs.com" });
     expect(state.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("still succeeds through WHOIS when the bootstrap fetch fails", async () => {
     state.fetch.mockRejectedValueOnce(new Error("request timed out"));
     const result = await execute({ domain: "example.com" });
-    expect(result.provenance.source).toBe("whois");
+    expect(result.provenance).toMatchObject({ source: "whois", upstream: "whois.verisign-grs.com" });
   });
 
-  it("preserves the unsupported-TLD result when the bootstrap fetch fails", async () => {
-    state.fetch.mockRejectedValueOnce(new Error("request timed out"));
+  it("preserves the unsupported-TLD result when neither lookup path exists", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap([]));
     const result = await execute({ domain: "example.xyz" });
     expect(result.output).toMatchObject({
       age_days: null,
       risk_indicator: "unknown",
       error: "WHOIS server not available for .xyz TLD",
     });
+    expect(result.provenance).toEqual(expect.objectContaining({ source: "whois" }));
+    expect(result.provenance).not.toHaveProperty("upstream");
+    expect(state.fetch).toHaveBeenCalledOnce();
+    expect(String(state.fetch.mock.calls[0]?.[0])).toContain("data.iana.org/rdap/dns.json");
     expect(state.whoisConnections).toBe(0);
+  });
+
+  it("throws the RDAP failure when the TLD has no WHOIS fallback", async () => {
+    state.fetch.mockResolvedValueOnce(bootstrap(XYZ_SERVICE)).mockResolvedValueOnce(rdap({}, 503));
+    await expect(execute({ domain: "example.xyz" })).rejects.toThrow(
+      "RDAP registry rdap.registry.example failed: HTTP 503",
+    );
+  });
+
+  it.each([
+    ["ECONNRESET", "connection reset"],
+    ["ECONNREFUSED", "connection refused"],
+    ["ETIMEDOUT", "timeout"],
+  ])("reads a nested fetch cause code %s", async (code, failure) => {
+    const wrapped = Object.assign(new TypeError("fetch failed"), { cause: { code } });
+    state.fetch.mockResolvedValueOnce(bootstrap(XYZ_SERVICE)).mockRejectedValueOnce(wrapped);
+    await expect(execute({ domain: "example.xyz" })).rejects.toThrow(
+      `RDAP registry rdap.registry.example failed: ${failure}`,
+    );
   });
 
   it("names both public registry paths and the reset without sanitizer masking", async () => {
@@ -157,12 +181,46 @@ describe("domain-age-check RDAP precedence and WHOIS fallback", () => {
     expect(state.fetch.mock.calls.filter(([url]) => String(url).includes("dns.json"))).toHaveLength(1);
   });
 
+  it("shares one in-flight IANA bootstrap fetch between concurrent calls", async () => {
+    let release!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => { release = resolve; });
+    state.fetch.mockReturnValueOnce(pending)
+      .mockResolvedValueOnce(rdap({}, 404))
+      .mockResolvedValueOnce(rdap({}, 404));
+    const first = execute({ domain: "one.com" });
+    const second = execute({ domain: "two.com" });
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+    release(bootstrap(COM_SERVICE));
+    await Promise.all([first, second]);
+    expect(state.fetch.mock.calls.filter(([url]) => String(url).includes("dns.json"))).toHaveLength(1);
+  });
+
+  it("does not refetch a failed bootstrap within 60 seconds", async () => {
+    state.fetch.mockRejectedValueOnce(new Error("request timed out"));
+    await execute({ domain: "one.com" });
+    await execute({ domain: "two.com" });
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a failed bootstrap after 60 seconds", async () => {
+    vi.useFakeTimers();
+    state.fetch.mockRejectedValueOnce(new Error("request timed out"));
+    await execute({ domain: "one.com" });
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    state.fetch.mockResolvedValueOnce(bootstrap(COM_SERVICE)).mockResolvedValueOnce(rdap({}, 404));
+    await execute({ domain: "two.com" });
+    expect(state.fetch.mock.calls.filter(([url]) => String(url).includes("dns.json"))).toHaveLength(2);
+  });
+
   it("refuses an oversized RDAP body cleanly", async () => {
     const oversized = JSON.stringify({ filler: "x".repeat(300 * 1024) });
     state.fetch.mockResolvedValueOnce(bootstrap(COM_SERVICE)).mockResolvedValueOnce(new Response(oversized));
     state.whoisMode = "reset";
     const error = await execute({ domain: "example.com" }).catch((caught) => caught as Error);
     expect(error.message).toContain("RDAP registry rdap.registry.example failed");
+    expect(error.message).toContain("response too large");
     expect(error.message).toContain("WHOIS registry whois.verisign-grs.com failed: connection reset");
   });
 });

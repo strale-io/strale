@@ -3,6 +3,7 @@ import { MAX_WHOIS_RESPONSE_BYTES, readJsonWithLimit } from "../resource-limits.
 
 const BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json";
 const BOOTSTRAP_TTL_MS = 24 * 60 * 60 * 1000;
+const BOOTSTRAP_FAILURE_TTL_MS = 60 * 1000;
 
 interface BootstrapDocument {
   services?: Array<[string[], string[]]>;
@@ -33,6 +34,8 @@ export interface RdapDomainResult {
 }
 
 let bootstrapCache: { expiresAt: number; bases: Map<string, string> } | null = null;
+let bootstrapPromise: Promise<Map<string, string>> | null = null;
+let bootstrapFailureUntil = 0;
 
 function parseDate(value: string | undefined): Date | null {
   if (!value) return null;
@@ -53,19 +56,33 @@ function bootstrapBases(document: BootstrapDocument): Map<string, string> {
 export async function getRdapBase(tld: string): Promise<string | null> {
   const now = Date.now();
   if (bootstrapCache && bootstrapCache.expiresAt > now) return bootstrapCache.bases.get(tld) ?? null;
+  if (bootstrapFailureUntil > now) return null;
 
-  const response = await safeFetch(BOOTSTRAP_URL, {
-    headers: { Accept: "application/json" },
-    timeoutMs: 5_000,
-  });
-  if (!response.ok) {
-    await discardBody(response, "IANA RDAP bootstrap error");
-    throw new Error(`IANA RDAP bootstrap returned HTTP ${response.status}`);
+  if (!bootstrapPromise) {
+    bootstrapPromise = (async () => {
+      const response = await safeFetch(BOOTSTRAP_URL, {
+        headers: { Accept: "application/json" },
+        timeoutMs: 5_000,
+      });
+      if (!response.ok) {
+        await discardBody(response, "IANA RDAP bootstrap error");
+        throw new Error(`IANA RDAP bootstrap returned HTTP ${response.status}`);
+      }
+      const document = await readJsonWithLimit<BootstrapDocument>(response, MAX_WHOIS_RESPONSE_BYTES, "rdap_bootstrap", "the IANA RDAP bootstrap file is");
+      const bases = bootstrapBases(document);
+      bootstrapCache = { expiresAt: Date.now() + BOOTSTRAP_TTL_MS, bases };
+      return bases;
+    })();
   }
-  const document = await readJsonWithLimit<BootstrapDocument>(response, MAX_WHOIS_RESPONSE_BYTES, "rdap_bootstrap", "the IANA RDAP bootstrap file is");
-  const bases = bootstrapBases(document);
-  bootstrapCache = { expiresAt: now + BOOTSTRAP_TTL_MS, bases };
-  return bases.get(tld) ?? null;
+
+  try {
+    return (await bootstrapPromise).get(tld) ?? null;
+  } catch (error) {
+    bootstrapFailureUntil = Date.now() + BOOTSTRAP_FAILURE_TTL_MS;
+    throw error;
+  } finally {
+    bootstrapPromise = null;
+  }
 }
 
 function registrarName(entities: RdapEntity[] | undefined): string | null {
@@ -106,4 +123,6 @@ export async function lookupRdapDomain(base: string, domain: string): Promise<Rd
 /** Test-only reset: module state must not make offline cases order-dependent. */
 export function resetRdapBootstrapCacheForTests(): void {
   bootstrapCache = null;
+  bootstrapPromise = null;
+  bootstrapFailureUntil = 0;
 }

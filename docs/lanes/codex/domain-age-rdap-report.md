@@ -38,3 +38,17 @@
 - `whois-lookup.ts` was not changed, as required.
 - No vendor, paid API, retry loop, or hard-coded RDAP base was added.
 - The database-backed onboarding validation/readiness and live smoke test were not run: this keyless brief requires all tests to stay offline and the environment has no `DATABASE_URL`. The manifest/static checks, focused offline tests, typecheck, and reference-data check were run instead.
+
+## Round 2
+
+### Fixes and tests
+
+1. Added the caller-safe `connection reset` and `connection refused` wording beside the existing transient patterns in the retry policy, test-failure classifier, and transaction-failure taxonomy. The parameterized `caller-safe registry connection failures` suites pin all three requested standalone and combined messages as retryable, `upstream_transient`, and `upstream` respectively.
+2. Preserved an RDAP registry failure when no WHOIS fallback exists. `throws the RDAP failure when the TLD has no WHOIS fallback` pins that an `.xyz` RDAP 503 names `rdap.registry.example` and `HTTP 503`, while `preserves the unsupported-TLD result when neither lookup path exists` pins the legacy success-with-error result when neither path exists.
+3. Made transport failure naming inspect both a direct socket code and `Error.cause.code`, and identify `ResourceLimitError` as `response too large`. `reads a nested fetch cause code` covers `ECONNRESET`, `ECONNREFUSED`, and `ETIMEDOUT`; `refuses an oversized RDAP body cleanly` covers the resource-limit wording.
+4. Added one shared in-flight bootstrap promise and a 60-second failure memory. `shares one in-flight IANA bootstrap fetch between concurrent calls` pins fetch coalescing, `does not refetch a failed bootstrap within 60 seconds` pins the no-wait/no-refetch failure window, and `retries a failed bootstrap after 60 seconds` pins expiry with fake timers.
+5. Strengthened `goes straight to WHOIS when the bootstrap has no TLD entry` and `still succeeds through WHOIS when the bootstrap fetch fails` to require the new executor's exact WHOIS source and public upstream provenance. The unsupported-TLD test requires the new executor's IANA bootstrap request as well as exact source provenance and the absence of a fabricated upstream.
+
+### Anything not done
+
+- No accepted round-one behavior was changed beyond the five requested fixes. In particular, `sanitizeFailureReason` and `whois-lookup.ts` remain unchanged.
