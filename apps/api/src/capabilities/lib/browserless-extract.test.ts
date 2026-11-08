@@ -11,7 +11,7 @@ function oldHtmlToText(html: string): string {
   text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
   text = text.replace(
     /<\/?(p|div|tr|td|th|li|h[1-6]|dt|dd|section|br)[^>]*>/gi,
-    "\n",
+    "\n"
   );
   text = text.replace(/<[^>]+>/g, " ");
   text = text
@@ -127,7 +127,7 @@ describe("htmlToText", () => {
       const html = `İ<${name}>hidden</${name}>after`;
       expect(htmlToText(html)).toBe("İafter");
       expect(htmlToText(html)).toBe(oldHtmlToText(html));
-    },
+    }
   );
 
   it("preserves the five existing entity substitutions and no others", () => {
@@ -175,6 +175,12 @@ describe("htmlToText", () => {
       "xxx" + "<'>'".repeat(256 * 1024 - 1) + "'",
     ],
     [
+      "closed script pairs",
+      "<script>x</script>"
+        .repeat(Math.ceil((1024 * 1024) / 18))
+        .slice(0, 1024 * 1024),
+    ],
+    [
       "quoted tag ends that close later",
       "<a 'x>y'z ".repeat(Math.ceil((1024 * 1024) / 10)).slice(0, 1024 * 1024),
     ],
@@ -183,7 +189,7 @@ describe("htmlToText", () => {
     (_name, input) => {
       expect(input).toHaveLength(1024 * 1024);
       expect(elapsedMs(input)).toBeLessThan(500);
-    },
+    }
   );
 
   it("grows linearly when hostile input doubles", () => {

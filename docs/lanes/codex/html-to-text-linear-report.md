@@ -272,12 +272,19 @@ Codex's three runs for this family were used: the first produced no diff, f17dc0
   - entities are decoded once (`&amp;lt;` stays `&lt;`);
   - `< p>` gives a newline;
   - comment text after a `>` inside a comment that is closed by `-->` is dropped;
-  - `</script >` with a space closes a script.
+  - `</script >` with a space closes a script;
+  - a bare `<` before a later `>` is always a tag, because the old chain's ordering (scripts and block tags before the generic `<[^>]+>` pass) is gone. `"<<p>div"` gives `div` where the old one gave `<` and a newline before `div`. Next to a script it can leak script text: `5 < 10<script>var t=1;</script> more` keeps `var t=1;`, where the old one lost the rest of the paragraph instead. On `<td>< 5 MSEK</td>…` the new output keeps rows the old one lost;
+  - an abrupt empty comment `<!-->` or `<!--->` hides text up to the next `-->`;
+  - an unclosed comment followed by a script leaks the script body; `<\nstyle>` starts a style skip, like `< p>`.
+
+  The last three were found by the independent review's differential fuzz. All three need markup a browser's serializer does not emit (a raw `<` in text, `<!-->`), and the callers sampled read rendered HTML through `fetchRenderedHtml`, so only raw fetches can meet them. They are accepted rather than fixed; any fix must keep the scan linear.
 - **Tests added:**
   - 1 MiB timing cases for repeated `<!-- x>`, balanced quote pairs ending in an unmatched quote, and `<a 'x>y'z `;
   - equivalence cases for `<p title=don't>It's here</p>`, `<img alt=Petter's>…`, `Price < 100 for all`, `a <> b` and an unclosed comment tail.
 
   All five of these fail against 9f6a3aa7. The three timing cases took 160 s, 34.7 s and 18.3 s there.
+  - after the review, a 1 MiB timing case of many closed `<script>x</script>` pairs, for the close-tag search's restart path.
+- **Independent review** (separate read-only Claude context, on 0bdde5e1): GO. 38 hostile shapes at 1 and 2 MiB, worst 56 ms at 1 MiB and linear when doubled; 500,000 random well-formed cases with 0 mismatches against the old function; output never above 15,000 characters.
 - **Commands:**
   - the browserless-extract test file: 41 passed, 20 runs of 20;
   - full `apps/api` vitest: 473 files passed, 0 failed;
