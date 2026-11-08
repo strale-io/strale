@@ -147,3 +147,104 @@ git repository`). The branch was not pushed anywhere else.
 The failing timing files do not import or exercise `htmlToText`, and their
 individual behavior reproduces independently of this change on this Node 20
 environment. No failing file was modified.
+
+## Round 2
+
+### Review fixes
+
+- `findTagEnd` now uses single and double quote last positions computed once over
+  the capped input. An unmatched quote falls back to the first `>` after the
+  tag start, so apostrophes in comments and unquoted attribute values no longer
+  discard the page. A new `<` reached while such a quote is still open also
+  triggers that fallback, so a later apostrophe in visible copy cannot be
+  mistaken for the close. Comments independently use one `indexOf("-->")`, then the
+  old function's first-`>` fallback when unclosed.
+- Only opening `script` and `style` tags with an exact, case-insensitive name
+  and a whitespace, `>`, or `/` boundary start a raw-text skip. Closing tags,
+  custom elements such as `script-loader`, and script-looking text inside a
+  comment no longer discard subsequent visible text.
+- Block-tag detection now follows the old regex's prefix rule. This restores
+  newlines for `pre`, `thead`, `tbody`, `link`, `path`, `picture`, and `param`.
+  The whitespace state machine also retains a space before a collapsed double
+  newline and ignores all leading JavaScript whitespace for early-stop
+  accounting, including carriage returns and Unicode spaces.
+- The growth assertion now compares the minimum of seven runs at 512 KiB and
+  2 MiB, permits the requested 8x ratio, and independently requires the 2 MiB
+  run to finish within 2,000 ms.
+- Formatting-only changes after `htmlToText` were reverted. The implementation
+  diff is limited to the scanner's constants and helpers and `htmlToText`.
+
+Tests cover both stray-apostrophe examples; comments containing script markup;
+stray close tags; `script-loader`; the old block-prefix shapes; exact old
+whitespace behavior; leading carriage returns; `< p>`; and 1 MiB hostile runs
+of repeated `<a '` and repeated `<!-- don't`. The scanner test file passed 20
+out of 20 separate runs.
+
+### Remaining intended differences from the old output
+
+These are the complete intended output differences after round 2:
+
+1. **Quoted `>` in attributes:** the scanner treats it as attribute content,
+   rather than exposing the rest of the attribute as page text.
+2. **Unclosed `script` and `style`:** the scanner drops the remaining raw-text
+   content because it is not visible page text; the old regex exposed it.
+3. **Single entity decoding:** encoded text is decoded once during the scan,
+   rather than allowing one replacement to feed a later replacement and decode
+   an entity twice.
+4. **`< p>`:** the scanner tolerates whitespace after `<` and recognizes `p`,
+   so it emits a newline; the old block regex did not recognize it and the
+   generic tag regex emitted a space.
+
+The 2 MiB input cap, 15,000-character output limit and early stop also remain
+intentional work bounds: content beyond those bounds cannot affect the result.
+
+### Round 2 measurements
+
+Measurements used Node 20.20.2 and report the minimum of seven runs for each
+1 MiB hostile input.
+
+| Input | New (ms) |
+| --- | ---: |
+| repeated `<p` | 10.065 |
+| repeated `<` | 10.043 |
+| unclosed script | 1.623 |
+| unclosed style | 1.599 |
+| repeated `\n \n ` | 39.944 |
+| alternating tag/text | 10.730 |
+| repeated `<a '` | 9.641 |
+| repeated `<!-- don't` | 2.516 |
+
+The growth fixture measured **5.046 ms at 512 KiB** and **19.683 ms at 2
+MiB**, or 3.90x growth, within both the 8x ratio and 2,000 ms absolute bound.
+
+### Round 2 commands and results
+
+- `npm install --ignore-scripts` — **passed** (1,051 packages installed; npm
+  reported existing Node-engine warnings and audit findings).
+- `cd apps/api && npx vitest run src/capabilities/lib/browserless-extract.test.ts`
+  in a 20-iteration shell loop — **passed 20 of 20**, 38 tests per run.
+- `./node_modules/.bin/tsx /tmp/html-round2-bench.mts` — **passed**, producing
+  the hostile-input and growth measurements above.
+- `cd apps/api && npx vitest run src/capabilities/lib` — **failed**, 2 of 723
+  tests: pre-existing wall-clock thresholds in
+  `src/capabilities/lib/stripped-text-length.test.ts` and
+  `src/capabilities/lib/web-provider-text-check.test.ts`. The scanner's 38
+  tests passed.
+- `cd apps/api && files=$(rg -l "htmlToText|browserless-extract" src --glob '*.test.ts' | sort); npx vitest run $files`
+  — **failed**, 1 of 323 tests: the pre-existing 500 ms event-loop threshold in
+  `src/capabilities/url-to-markdown-parse-bound.test.ts`. The other 322 tests,
+  including the scanner and caller tests, passed.
+- `npm --workspace=packages/mcp-server run build` — **passed**.
+- `npm --workspace=packages/sdk-typescript run build` — **passed**.
+- `npm --workspace=apps/api run typecheck` — **passed**.
+- Final `cd apps/api && npx vitest run src/capabilities/lib/browserless-extract.test.ts && npm run typecheck`
+  after independent review — **passed**, 38 tests plus TypeScript checking. The
+  review-found cross-tag apostrophe regression is included.
+- `cd apps/api && npx vitest run` — **failed**, 5 of 10,538 tests across four
+  files: `src/capabilities/domain-contact-extract.test.ts`,
+  `src/capabilities/url-to-markdown-parse-bound.test.ts`,
+  `src/capabilities/lib/stripped-text-length.test.ts`, and
+  `src/lib/company-enrich/structured-metadata.test.ts` (two assertions). All
+  are unrelated pre-existing wall-clock or timing-ratio thresholds. The run
+  had 10,076 passing and 457 skipped tests across 519 files; the scanner suite
+  passed.

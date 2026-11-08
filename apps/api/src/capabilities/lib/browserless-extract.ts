@@ -32,7 +32,7 @@ export const HTML_TO_TEXT_INPUT_LIMIT = 2 * 1024 * 1024;
 export const HTML_TO_TEXT_OUTPUT_LIMIT = 15_000;
 const HTML_TO_TEXT_OUTPUT_MARGIN = 32;
 
-const BLOCK_TAGS = new Set([
+const BLOCK_TAG_PREFIXES = [
   "p",
   "div",
   "tr",
@@ -49,16 +49,24 @@ const BLOCK_TAGS = new Set([
   "dd",
   "section",
   "br",
-]);
+];
 
 /** Return the first `>` outside an attribute quote, visiting each code unit once. */
-function findTagEnd(html: string, start: number): number {
+function findTagEnd(
+  html: string,
+  start: number,
+  lastSingle: number,
+  lastDouble: number,
+): number {
   let quote = "";
   for (let i = start; i < html.length; i += 1) {
     const char = html[i];
     if (quote) {
       if (char === quote) quote = "";
+      else if (char === "<") return html.indexOf(">", start);
     } else if (char === '"' || char === "'") {
+      const lastSameQuote = char === "'" ? lastSingle : lastDouble;
+      if (i >= lastSameQuote) return html.indexOf(">", start);
       quote = char;
     } else if (char === ">") {
       return i;
@@ -95,7 +103,7 @@ function tagName(tag: string): string {
 function findCloseTagStart(
   html: string,
   name: "script" | "style",
-  start: number
+  start: number,
 ): number {
   const closePattern = name === "script" ? /<\/script/gi : /<\/style/gi;
   closePattern.lastIndex = start;
@@ -141,6 +149,8 @@ function isJavaScriptWhitespace(char: string): boolean {
 /** Strip HTML to bounded plain text for LLM extraction in O(n) time. */
 export function htmlToText(html: string): string {
   const input = html.slice(0, HTML_TO_TEXT_INPUT_LIMIT);
+  const lastSingle = input.lastIndexOf("'");
+  const lastDouble = input.lastIndexOf('"');
   const output: string[] = [];
   let outputLength = 0;
   let position = 0;
@@ -148,10 +158,11 @@ export function htmlToText(html: string): string {
   let pendingAfterNewline: string[] = [];
   let pendingAfterNewlineLength = 0;
   let pendingNewlines = 0;
+  let started = false;
 
   const flushWhitespace = () => {
     if (pendingNewlines > 0) {
-      if (pendingNewlines === 1 && pendingSpaceBeforeNewline) {
+      if (pendingSpaceBeforeNewline) {
         output.push(" ");
         outputLength += 1;
       }
@@ -172,6 +183,17 @@ export function htmlToText(html: string): string {
   };
 
   const emit = (value: string) => {
+    if (
+      !started &&
+      (value === "\n" ||
+        value === " " ||
+        value === "\t" ||
+        value === "\u00a0" ||
+        isJavaScriptWhitespace(value))
+    ) {
+      return;
+    }
+    started = true;
     if (value === "\n") {
       pendingNewlines += 1;
       pendingAfterNewline = [];
@@ -209,21 +231,46 @@ export function htmlToText(html: string): string {
     outputLength < HTML_TO_TEXT_OUTPUT_LIMIT + HTML_TO_TEXT_OUTPUT_MARGIN
   ) {
     if (input[position] === "<") {
-      const end = findTagEnd(input, position + 1);
+      if (input.startsWith("<!--", position)) {
+        const commentEnd = input.indexOf("-->", position + 4);
+        const end =
+          commentEnd === -1 ? input.indexOf(">", position + 4) : commentEnd + 2;
+        if (end === -1) break;
+        emit(" ");
+        position = end + 1;
+        continue;
+      }
+
+      const end = findTagEnd(input, position + 1, lastSingle, lastDouble);
       if (end === -1) break;
 
-      const name = tagName(input.slice(position, end + 1));
-      if (name === "script" || name === "style") {
+      const tag = input.slice(position, end + 1);
+      const name = tagName(tag);
+      const closing = tag[1] === "/";
+      const rawTextName = /^<\s*(script|style)(?=[\s/>])/i
+        .exec(tag)?.[1]
+        ?.toLowerCase() as "script" | "style" | undefined;
+      if (!closing && rawTextName) {
+        const name = rawTextName;
         const closePrefix = `</${name}`;
         const closeStart = findCloseTagStart(input, name, end + 1);
         if (closeStart === -1) break;
-        const closeEnd = findTagEnd(input, closeStart + closePrefix.length);
+        const closeEnd = findTagEnd(
+          input,
+          closeStart + closePrefix.length,
+          lastSingle,
+          lastDouble,
+        );
         if (closeEnd === -1) break;
         position = closeEnd + 1;
         continue;
       }
 
-      emit(BLOCK_TAGS.has(name) ? "\n" : " ");
+      emit(
+        BLOCK_TAG_PREFIXES.some((prefix) => name.startsWith(prefix))
+          ? "\n"
+          : " ",
+      );
       position = end + 1;
       continue;
     }
@@ -254,7 +301,7 @@ export function htmlToText(html: string): string {
 export async function extractCompanyFromText(
   text: string,
   country: string,
-  searchTerm: string
+  searchTerm: string,
 ): Promise<Record<string, unknown>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
@@ -289,24 +336,20 @@ ${text.slice(0, 12000)}`,
   const content = messageText(response);
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error(
-      `Could not extract company data for "${searchTerm}" from ${country} registry.`
-    );
+    throw new Error(`Could not extract company data for "${searchTerm}" from ${country} registry.`);
   }
 
   try {
     return JSON.parse(jsonMatch[0]);
   } catch {
-    throw new Error(
-      `Failed to parse extracted company data for "${searchTerm}".`
-    );
+    throw new Error(`Failed to parse extracted company data for "${searchTerm}".`);
   }
 }
 
 /** Extract company name from natural language using Claude Haiku. */
 export async function extractCompanyName(
   naturalLanguage: string,
-  country: string
+  country: string,
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
@@ -327,14 +370,13 @@ export async function extractCompanyName(
     ],
   });
 
-  const name = messageText(response)
-    .trim()
-    .replace(/^["']|["']$/g, "");
+  const name =
+    messageText(response).trim().replace(/^["']|["']$/g, "");
 
   if (!name || name === NO_NAME_SENTINEL || looksLikeRefusal(name)) {
     throw new CapabilityRefusalError(
       `Could not identify a specific ${country} company name in the request. ` +
-        `Provide the company's registration number, or a more specific company name.`
+        `Provide the company's registration number, or a more specific company name.`,
     );
   }
   return name;
@@ -362,6 +404,6 @@ const NO_NAME_SENTINEL = "NONE";
 function looksLikeRefusal(text: string): boolean {
   if (text.length > 120) return true;
   return /^(i cannot|i can't|i am unable|i'm unable|sorry|unfortunately|there is no|no specific|the request)/i.test(
-    text
+    text,
   );
 }

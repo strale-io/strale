@@ -11,7 +11,7 @@ function oldHtmlToText(html: string): string {
   text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
   text = text.replace(
     /<\/?(p|div|tr|td|th|li|h[1-6]|dt|dd|section|br)[^>]*>/gi,
-    "\n"
+    "\n",
   );
   text = text.replace(/<[^>]+>/g, " ");
   text = text
@@ -31,11 +31,8 @@ function elapsedMs(input: string): number {
   return performance.now() - start;
 }
 
-function medianElapsedMs(input: string): number {
-  const samples = Array.from({ length: 5 }, () => elapsedMs(input)).sort(
-    (a, b) => a - b
-  );
-  return samples[2];
+function minimumElapsedMs(input: string): number {
+  return Math.min(...Array.from({ length: 7 }, () => elapsedMs(input)));
 }
 
 describe("htmlToText", () => {
@@ -63,6 +60,11 @@ describe("htmlToText", () => {
       "inline tags",
       "<p>A <strong>bold</strong> and <em>useful</em> sentence.</p>",
     ],
+    ["space before a double newline", "Hello \n\nWorld"],
+    ["pre prefix", "Before<pre>code</pre>After"],
+    ["thead prefix", "<table><thead><tr><th>A</th></tr></thead></table>"],
+    ["tbody prefix", "<table><tbody><tr><td>A</td></tr></tbody></table>"],
+    ["leading carriage returns", "\r\r\rVisible"],
   ])("matches the old output for an ordinary %s", (_name, html) => {
     expect(htmlToText(html)).toBe(oldHtmlToText(html));
   });
@@ -79,13 +81,45 @@ describe("htmlToText", () => {
     expect(oldHtmlToText(html)).toBe("Before const secret = '<p';");
   });
 
+  it("falls back to the first tag end for an unmatched apostrophe", () => {
+    for (const html of [
+      "<!-- Don't remove --><p>Price</p>",
+      "<p title=don't>text</p>",
+      "<p title=don't>Price</p><p>Bob's shop</p>",
+    ]) {
+      expect(htmlToText(html)).toBe(oldHtmlToText(html));
+    }
+  });
+
+  it("keeps scripts inside comments and skips only real opening script tags", () => {
+    const html =
+      "Intro<!-- <script src=x></script> --><p>Return window</p><p>Refunds</p><script>x</script><p>Contact us</p>";
+    expect(htmlToText(html)).toBe("Intro \nReturn window\nRefunds\nContact us");
+  });
+
+  it.each([
+    ["stray script close", "Before</script>After", "Before After"],
+    [
+      "script-like custom element",
+      "Before<script-loader>After",
+      "Before After",
+    ],
+  ])("does not start a skip for a %s", (_name, html, expected) => {
+    expect(htmlToText(html)).toBe(expected);
+  });
+
+  it("retains the scanner's intentional handling of whitespace after <", () => {
+    expect(oldHtmlToText("Before< p>After")).toBe("Before After");
+    expect(htmlToText("Before< p>After")).toBe("Before\nAfter");
+  });
+
   it.each(["script", "style"])(
     "preserves source indices around a %s tag after length-changing Unicode case folds",
     (name) => {
       const html = `İ<${name}>hidden</${name}>after`;
       expect(htmlToText(html)).toBe("İafter");
       expect(htmlToText(html)).toBe(oldHtmlToText(html));
-    }
+    },
   );
 
   it("preserves the five existing entity substitutions and no others", () => {
@@ -115,20 +149,29 @@ describe("htmlToText", () => {
         .repeat(Math.ceil((1024 * 1024) / 15))
         .slice(0, 1024 * 1024),
     ],
+    [
+      "repeated unmatched quotes",
+      "<a '".repeat(256 * 1024).slice(0, 1024 * 1024),
+    ],
+    [
+      "repeated unclosed comments",
+      "<!-- don't".repeat(1024 * 103).slice(0, 1024 * 1024),
+    ],
   ])(
     "scans 1 MiB of hostile %s input within a generous bound",
     (_name, input) => {
       expect(input).toHaveLength(1024 * 1024);
       expect(elapsedMs(input)).toBeLessThan(500);
-    }
+    },
   );
 
   it("grows linearly when hostile input doubles", () => {
     const oneMiB = "<".repeat(1024 * 1024);
     const twoMiB = oneMiB + oneMiB;
-    const oneMiBTime = medianElapsedMs(oneMiB);
-    const twoMiBTime = medianElapsedMs(twoMiB);
-    expect(twoMiBTime).toBeLessThan(oneMiBTime * 3);
+    const oneMiBTime = minimumElapsedMs(oneMiB.slice(0, 512 * 1024));
+    const twoMiBTime = minimumElapsedMs(twoMiB);
+    expect(twoMiBTime).toBeLessThanOrEqual(oneMiBTime * 8);
+    expect(twoMiBTime).toBeLessThan(2_000);
   });
 
   it("caps a huge benign page and stops after the bounded prefix", () => {
