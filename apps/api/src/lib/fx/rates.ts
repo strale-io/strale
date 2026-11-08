@@ -174,13 +174,16 @@ export async function getFrankfurterSeries(base: string, quote: string, start: s
   try {
     const data = await readJsonWithLimit<unknown>(response, FRANKFURTER_SERIES_MAX_BYTES, "rate_source", "a historical-rate response of");
     if (!Array.isArray(data)) throw new Error("invalid response (expected an array)");
+    let sawPointOnOrAfterStart = false;
     for (const item of data) {
       const point = item as Partial<FrankfurterRate> | null;
       if (!point || point.base !== base || point.quote !== quote || typeof point.date !== "string" ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(point.date) || point.date < start || point.date > end ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(point.date) || point.date > end ||
+          (point.date < start && sawPointOnOrAfterStart) ||
           typeof point.rate !== "number" || !isPositiveRate(point.rate)) {
         throw new Error("invalid or mismatched response");
       }
+      if (point.date >= start) sawPointOnOrAfterStart = true;
     }
     return data as FrankfurterSeries;
   } catch (error) {

@@ -19,7 +19,11 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
 
   // Checked here because Frankfurter answers 404 for a bad range as well, which
   // would read as an unavailable currency below.
-  const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
+  const isIsoDate = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  };
   if (!isIsoDate(startDate)) {
     throw inputRefusal("'start_date' must be a date in YYYY-MM-DD format.", "start_date", "Send 'start_date' as YYYY-MM-DD.");
   }

@@ -117,11 +117,40 @@ describe("Frankfurter blended series", () => {
     ]));
   });
 
+  it("accepts a leading publication before the requested start date", async () => {
+    const points = [
+      { date: "2025-02-28", base: "GBP", quote: "NGN", rate: 1900 },
+      { date: "2025-03-02", base: "GBP", quote: "NGN", rate: 1910 },
+      { date: "2025-03-03", base: "GBP", quote: "NGN", rate: 1920 },
+      { date: "2025-03-04", base: "GBP", quote: "NGN", rate: 1930 },
+    ];
+    safeFetchMock.mockResolvedValue(response(JSON.stringify(points)));
+
+    await expect(getFrankfurterSeries("GBP", "NGN", "2025-03-01", "2025-03-04")).resolves.toEqual(points);
+  });
+
+  it("accepts a single earlier publication for a weekend-only range", async () => {
+    const point = { date: "2025-02-28", base: "USD", quote: "VES", rate: 64.2 };
+    safeFetchMock.mockResolvedValue(response(JSON.stringify([point])));
+
+    await expect(getFrankfurterSeries("USD", "VES", "2025-03-01", "2025-03-02")).resolves.toEqual([point]);
+  });
+
+  it.each([
+    [
+      { ...valid, date: "2026-11-01" },
+      { ...valid, date: "2026-10-31" },
+    ],
+    [{ ...valid, date: "2026-11-03" }],
+  ])("rejects a misplaced earlier point or a point after the end as upstream", async (...points) => {
+    safeFetchMock.mockResolvedValue(response(JSON.stringify(points)));
+    await expectUpstream(getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02"));
+  });
+
   it.each([
     { ...valid, quote: "USD" },
     { ...valid, rate: 0 },
     { ...valid, date: "November 1" },
-    { ...valid, date: "2026-10-31" },
   ])("rejects malformed point %# as upstream in both classifiers", async (bad) => {
     safeFetchMock.mockResolvedValue(response(JSON.stringify([bad])));
     await expectUpstream(getFrankfurterSeries("NGN", "KWD", "2026-11-01", "2026-11-02"));

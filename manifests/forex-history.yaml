@@ -613,6 +613,10 @@ output_field_reliability:
   change_percent: guaranteed
   rate_source: guaranteed
 limitations:
+  - title: Start date can snap to an earlier publication
+    text: When no rate is published on start_date, the series begins with the most recent earlier published rate.
+    category: coverage
+    severity: info
   - title: Daily blended rates only; no intraday data
     text: Daily blended central-bank rates; dates can include weekends where a contributing central bank publishes; no intraday data.
     category: freshness
