@@ -27,17 +27,259 @@ export {
 } from "./web-provider.js";
 export type { WebProviderOptions, WebProviderResult } from "./web-provider.js";
 
-/** Strip HTML to plain text for LLM extraction. */
+/** Most markup worth inspecting before the LLM context is already full. */
+export const HTML_TO_TEXT_INPUT_LIMIT = 2 * 1024 * 1024;
+export const HTML_TO_TEXT_OUTPUT_LIMIT = 15_000;
+const HTML_TO_TEXT_OUTPUT_MARGIN = 32;
+
+const BLOCK_TAG_PREFIXES = [
+  "p",
+  "div",
+  "tr",
+  "td",
+  "th",
+  "li",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "dt",
+  "dd",
+  "section",
+  "br",
+];
+
+/**
+ * End of a tag: the first `>` after `start`, as the old regex `<[^>]+>` had it.
+ * Quote-aware scanning was tried in review rounds 1-2 and either emptied pages
+ * with a stray apostrophe or rescanned the remainder per tag; one indexOf from
+ * a position that only moves forward keeps the whole scan linear.
+ */
+function findTagEnd(html: string, start: number): number {
+  return html.indexOf(">", start);
+}
+
+function tagName(tag: string): string {
+  let start = 1;
+  if (tag[start] === "/") start += 1;
+  while (
+    tag[start] === " " ||
+    tag[start] === "\t" ||
+    tag[start] === "\n" ||
+    tag[start] === "\r"
+  ) {
+    start += 1;
+  }
+
+  let end = start;
+  while (end < tag.length) {
+    const code = tag.charCodeAt(end);
+    const isNameCharacter =
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122);
+    if (!isNameCharacter) break;
+    end += 1;
+  }
+  return tag.slice(start, end).toLowerCase();
+}
+
+function findCloseTagStart(
+  html: string,
+  name: "script" | "style",
+  start: number,
+): number {
+  const closePattern = name === "script" ? /<\/script/gi : /<\/style/gi;
+  closePattern.lastIndex = start;
+  for (
+    let match = closePattern.exec(html);
+    match;
+    match = closePattern.exec(html)
+  ) {
+    const boundary = html[match.index + match[0].length];
+    if (
+      boundary === ">" ||
+      boundary === " " ||
+      boundary === "\t" ||
+      boundary === "\n" ||
+      boundary === "\r"
+    ) {
+      return match.index;
+    }
+  }
+  return -1;
+}
+
+function isJavaScriptWhitespace(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (
+    code === 0x0009 ||
+    code === 0x000b ||
+    code === 0x000c ||
+    code === 0x000d ||
+    code === 0x0020 ||
+    code === 0x00a0 ||
+    code === 0x1680 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x205f ||
+    code === 0x3000 ||
+    code === 0xfeff
+  );
+}
+
+/** Strip HTML to bounded plain text for LLM extraction in O(n) time. */
 export function htmlToText(html: string): string {
-  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
-  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-  text = text.replace(/<\/?(p|div|tr|td|th|li|h[1-6]|dt|dd|section|br)[^>]*>/gi, "\n");
-  text = text.replace(/<[^>]+>/g, " ");
-  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ");
-  // Collapse whitespace
-  text = text.replace(/[ \t]+/g, " ");
-  text = text.replace(/\n\s*\n/g, "\n");
-  return text.trim().slice(0, 15000); // Limit for LLM context
+  const input = html.slice(0, HTML_TO_TEXT_INPUT_LIMIT);
+  // Computed once so no tag or comment search ever scans past the last place
+  // it could succeed: a `<` after the last `>` is literal text (as the old
+  // regexes left it), and a `<!--` after the last `-->` ends at its first `>`.
+  const lastTagEnd = input.lastIndexOf(">");
+  const lastCommentEnd = input.lastIndexOf("-->");
+  const output: string[] = [];
+  let outputLength = 0;
+  let position = 0;
+  let pendingSpaceBeforeNewline = false;
+  let pendingAfterNewline: string[] = [];
+  let pendingAfterNewlineLength = 0;
+  let pendingNewlines = 0;
+  let started = false;
+
+  const flushWhitespace = () => {
+    if (pendingNewlines > 0) {
+      if (pendingSpaceBeforeNewline) {
+        output.push(" ");
+        outputLength += 1;
+      }
+      output.push("\n");
+      outputLength += 1;
+      if (pendingAfterNewlineLength > 0) {
+        output.push(...pendingAfterNewline);
+        outputLength += pendingAfterNewlineLength;
+      }
+    } else if (pendingSpaceBeforeNewline) {
+      output.push(" ");
+      outputLength += 1;
+    }
+    pendingSpaceBeforeNewline = false;
+    pendingAfterNewline = [];
+    pendingAfterNewlineLength = 0;
+    pendingNewlines = 0;
+  };
+
+  const emit = (value: string) => {
+    if (
+      !started &&
+      (value === "\n" ||
+        value === " " ||
+        value === "\t" ||
+        value === "\u00a0" ||
+        isJavaScriptWhitespace(value))
+    ) {
+      return;
+    }
+    started = true;
+    if (value === "\n") {
+      pendingNewlines += 1;
+      pendingAfterNewline = [];
+      pendingAfterNewlineLength = 0;
+      return;
+    }
+    if (value === " " || value === "\t" || value === "\u00a0") {
+      if (pendingNewlines > 0) {
+        if (pendingAfterNewline.at(-1) !== " ") {
+          pendingAfterNewline.push(" ");
+          pendingAfterNewlineLength += 1;
+        }
+      } else {
+        pendingSpaceBeforeNewline = true;
+      }
+      return;
+    }
+    if (pendingNewlines > 0 && isJavaScriptWhitespace(value)) {
+      if (
+        pendingAfterNewlineLength <
+        HTML_TO_TEXT_OUTPUT_LIMIT + HTML_TO_TEXT_OUTPUT_MARGIN
+      ) {
+        pendingAfterNewline.push(value);
+        pendingAfterNewlineLength += value.length;
+      }
+      return;
+    }
+    flushWhitespace();
+    output.push(value);
+    outputLength += value.length;
+  };
+
+  while (
+    position < input.length &&
+    outputLength < HTML_TO_TEXT_OUTPUT_LIMIT + HTML_TO_TEXT_OUTPUT_MARGIN
+  ) {
+    if (input[position] === "<" && position < lastTagEnd && input[position + 1] !== ">") {
+      if (input.startsWith("<!--", position)) {
+        const end =
+          position + 4 <= lastCommentEnd
+            ? input.indexOf("-->", position + 4) + 2
+            : findTagEnd(input, position + 4);
+        // position < lastTagEnd and "<!--" holds no ">", so a ">" exists at or
+        // after position + 4 and end is never -1 here.
+        emit(" ");
+        position = end + 1;
+        continue;
+      }
+
+      const end = findTagEnd(input, position + 1);
+
+      const tag = input.slice(position, end + 1);
+      const name = tagName(tag);
+      const closing = tag[1] === "/";
+      const rawTextName = /^<\s*(script|style)(?=[\s/>])/i
+        .exec(tag)?.[1]
+        ?.toLowerCase() as "script" | "style" | undefined;
+      if (!closing && rawTextName) {
+        const name = rawTextName;
+        const closePrefix = `</${name}`;
+        const closeStart = findCloseTagStart(input, name, end + 1);
+        if (closeStart === -1) break;
+        const closeEnd = findTagEnd(input, closeStart + closePrefix.length);
+        if (closeEnd === -1) break;
+        position = closeEnd + 1;
+        continue;
+      }
+
+      emit(
+        BLOCK_TAG_PREFIXES.some((prefix) => name.startsWith(prefix))
+          ? "\n"
+          : " ",
+      );
+      position = end + 1;
+      continue;
+    }
+
+    if (input.startsWith("&amp;", position)) {
+      emit("&");
+      position += 5;
+    } else if (input.startsWith("&lt;", position)) {
+      emit("<");
+      position += 4;
+    } else if (input.startsWith("&gt;", position)) {
+      emit(">");
+      position += 4;
+    } else if (input.startsWith("&nbsp;", position)) {
+      emit(" ");
+      position += 6;
+    } else {
+      emit(input[position]);
+      position += 1;
+    }
+  }
+
+  flushWhitespace();
+  return output.join("").trim().slice(0, HTML_TO_TEXT_OUTPUT_LIMIT);
 }
 
 /** Use Claude Haiku to extract structured company data from registry page text. */
