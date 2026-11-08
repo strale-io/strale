@@ -1,6 +1,6 @@
 {
   "slug": "exchange-rate",
-  "recorded_at": "2026-10-28T22:20:12.074Z",
+  "recorded_at": "2026-11-08T09:20:58.609Z",
   "input": {
     "to": "EUR",
     "from": "USD"
@@ -10,26 +10,24 @@
     {
       "request": {
         "method": "GET",
-        "url": "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?lastNObservations=1&format=jsondata"
+        "url": "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
       },
       "response": {
         "status": 200,
         "headers": {
-          "cache-control": "max-age=30",
-          "content-disposition": "attachment;filename=data.json",
-          "content-type": "application/vnd.sdmx.data+json;version=1.0.0-wd",
-          "date": "Wed, 28 Oct 2026 22:20:12 GMT",
-          "expires": "Wed, 28 Oct 2026 15:12:31 GMT",
-          "last-modified": "Wed, 28 Oct 2026 14:57:03 GMT",
+          "cache-control": "max-age=300",
+          "content-disposition": "attachment;",
+          "content-type": "text/xml",
+          "date": "Sun, 08 Nov 2026 09:20:59 GMT",
+          "expires": "Fri, 06 Nov 2026 15:08:22 GMT",
+          "last-modified": "Fri, 06 Nov 2026 14:56:34 GMT",
           "server": "myracloud",
-          "strict-transport-security": "max-age=31536000 ; includeSubDomains",
-          "vary": "accept",
+          "strict-transport-security": "max-age=63072000; includeSubDomains",
           "x-cdn": "1",
-          "x-content-type-options": "nosniff",
-          "x-frame-options": "DENY",
-          "x-xss-protection": "0"
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "1; mode=block"
         },
-        "body": "{\"header\":{\"id\":\"f5eb3d8f-372a-4487-bbac-33f173dc9e44\",\"test\":false,\"prepared\":\"2026-10-28T16:12:01.750+01:00\",\"sender\":{\"id\":\"ECB\"}},\"dataSets\":[{\"action\":\"Replace\",\"validFrom\":\"2026-10-28T16:12:01.750+01:00\",\"series\":{\"0:0:0:0:0\":{\"attributes\":[0,null,0,null,null,null,null,null,null,0,null,null,0,null,0,null,0,0,0,0],\"observations\":{\"0\":[1.1133,0,0,null,null]}}}}],\"structure\":{\"links\":[{\"title\":\"Exchange Rates\",\"rel\":\"dataflow\",\"href\":\"https://data-api.ecb.europa.eu:443/service/dataflow/ECB/EXR/1.0\"}],\"name\":\"Exchange Rates\",\"dimensions\":{\"series\":[{\"id\":\"FREQ\",\"name\":\"Frequency\",\"values\":[{\"id\":\"D\",\"name\":\"Daily\"}]},{\"id\":\"CURRENCY\",\"name\":\"Currency\",\"values\":[{\"id\":\"USD\",\"name\":\"US dollar\"}]},{\"id\":\"CURRENCY_DENOM\",\"name\":\"Currency denominator\",\"values\":[{\"id\":\"EUR\",\"name\":\"Euro\"}]},{\"id\":\"EXR_TYPE\",\"name\":\"Exchange rate type\",\"values\":[{\"id\":\"SP00\",\"name\":\"Spot\"}]},{\"id\":\"EXR_SUFFIX\",\"name\":\"Series variation - EXR context\",\"values\":[{\"id\":\"A\",\"name\":\"Average\"}]}],\"observation\":[{\"id\":\"TIME_PERIOD\",\"name\":\"Time period or range\",\"role\":\"time\",\"values\":[{\"id\":\"2026-10-28\",\"name\":\"2026-10-28\",\"start\":\"2026-10-28T00:00:00.000+01:00\",\"end\":\"2026-10-28T23:59:59.999+01:00\"}]}]},\"attributes\":{\"series\":[{\"id\":\"TIME_FORMAT\",\"name\":\"Time format code\",\"values\":[{\"name\":\"P1D\"}]},{\"id\":\"BREAKS\",\"name\":\"Breaks\",\"values\":[]},{\"id\":\"COLLECTION\",\"name\":\"Collection indicator\",\"values\":[{\"id\":\"A\",\"name\":\"Average of observations through period\"}]},{\"id\":\"COMPILING_ORG\",\"name\":\"Compiling organisation\",\"values\":[]},{\"id\":\"DISS_ORG\",\"name\":\"Data dissemination organisation\",\"values\":[]},{\"id\":\"DOM_SER_IDS\",\"name\":\"Domestic series ids\",\"values\":[]},{\"id\":\"PUBL_ECB\",\"name\":\"Source publication (ECB only)\",\"values\":[]},{\"id\":\"PUBL_MU\",\"name\":\"Source publication (Euro area only)\",\"values\":[]},{\"id\":\"PUBL_PUBLIC\",\"name\":\"Source publication (public)\",\"values\":[]},{\"id\":\"UNIT_INDEX_BASE\",\"name\":\"Unit index base\",\"values\":[{\"name\":\"99Q1=100\"}]},{\"id\":\"COMPILATION\",\"name\":\"Compilation\",\"values\":[]},{\"id\":\"COVERAGE\",\"name\":\"Coverage\",\"values\":[]},{\"id\":\"DECIMALS\",\"name\":\"Decimals\",\"values\":[{\"id\":\"4\",\"name\":\"Four\"}]},{\"id\":\"NAT_TITLE\",\"name\":\"National language title\",\"values\":[]},{\"id\":\"SOURCE_AGENCY\",\"name\":\"Source agency\",\"values\":[{\"id\":\"4F0\",\"name\":\"European Central Bank (ECB)\"}]},{\"id\":\"SOURCE_PUB\",\"name\":\"Publication source\",\"values\":[]},{\"id\":\"TITLE\",\"name\":\"Title\",\"values\":[{\"name\":\"US dollar/Euro ECB reference exchange rate\"}]},{\"id\":\"TITLE_COMPL\",\"name\":\"Title complement\",\"values\":[{\"name\":\"ECB reference exchange rate, US dollar/Euro, 2.15 pm (C.E.T.)\"}]},{\"id\":\"UNIT\",\"name\":\"Unit\",\"values\":[{\"id\":\"USD\",\"name\":\"US dollar\"}]},{\"id\":\"UNIT_MULT\",\"name\":\"Unit multiplier\",\"values\":[{\"id\":\"0\",\"name\":\"Units\"}]}],\"observation\":[{\"id\":\"OBS_STATUS\",\"name\":\"Observation status\",\"values\":[{\"id\":\"A\",\"name\":\"Normal value\"}]},{\"id\":\"OBS_CONF\",\"name\":\"Observation confidentiality\",\"values\":[{\"id\":\"F\",\"name\":\"Free\"}]},{\"id\":\"OBS_PRE_BREAK\",\"name\":\"Pre-break observation value\",\"values\":[]},{\"id\":\"OBS_COM\",\"name\":\"Observation comment\",\"values\":[]}]}}}",
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gesmes:Envelope xmlns:gesmes=\"http://www.gesmes.org/xml/2002-08-01\" xmlns=\"http://www.ecb.int/vocabulary/2002-08-01/eurofxref\">\n\t<gesmes:subject>Reference rates</gesmes:subject>\n\t<gesmes:Sender>\n\t\t<gesmes:name>European Central Bank</gesmes:name>\n\t</gesmes:Sender>\n\t<Cube>\n\t\t<Cube time='2026-11-06'>\n\t\t\t<Cube currency='USD' rate='1.1165'/>\n\t\t\t<Cube currency='JPY' rate='176.77'/>\n\t\t\t<Cube currency='CZK' rate='24.350'/>\n\t\t\t<Cube currency='DKK' rate='7.4752'/>\n\t\t\t<Cube currency='GBP' rate='0.83415'/>\n\t\t\t<Cube currency='HUF' rate='363.90'/>\n\t\t\t<Cube currency='PLN' rate='4.3925'/>\n\t\t\t<Cube currency='RON' rate='5.3403'/>\n\t\t\t<Cube currency='SEK' rate='11.0260'/>\n\t\t\t<Cube currency='CHF' rate='0.9143'/>\n\t\t\t<Cube currency='ISK' rate='136.80'/>\n\t\t\t<Cube currency='NOK' rate='10.5260'/>\n\t\t\t<Cube currency='TRY' rate='55.9957'/>\n\t\t\t<Cube currency='AUD' rate='1.6250'/>\n\t\t\t<Cube currency='BRL' rate='6.1449'/>\n\t\t\t<Cube currency='CAD' rate='1.5705'/>\n\t\t\t<Cube currency='CNY' rate='7.4485'/>\n\t\t\t<Cube currency='HKD' rate='8.7505'/>\n\t\t\t<Cube currency='IDR' rate='20208.93'/>\n\t\t\t<Cube currency='ILS' rate='3.5717'/>\n\t\t\t<Cube currency='INR' rate='104.8645'/>\n\t\t\t<Cube currency='KRW' rate='1517.02'/>\n\t\t\t<Cube currency='MXN' rate='20.8828'/>\n\t\t\t<Cube currency='MYR' rate='4.5319'/>\n\t\t\t<Cube currency='NZD' rate='2.0141'/>\n\t\t\t<Cube currency='PHP' rate='70.358'/>\n\t\t\t<Cube currency='SGD' rate='1.4309'/>\n\t\t\t<Cube currency='THB' rate='37.459'/>\n\t\t\t<Cube currency='ZAR' rate='18.4649'/>\n\t\t</Cube>\n\t</Cube>\n</gesmes:Envelope>",
         "body_encoding": "utf8"
       }
     }

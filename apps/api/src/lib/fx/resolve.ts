@@ -16,7 +16,10 @@ function unavailable(currency: string, field: "from" | "to"): never {
 export async function resolveFxRate(from: string, to: string): Promise<ResolvedFxRate> {
   if (isEcbReferenceCurrency(from) && isEcbReferenceCurrency(to)) {
     const ecb = await getEcbReferenceRates();
-    return {
+    // The static list routes here before the file is read; a code the file no
+    // longer carries (the ECB has suspended codes before) goes to Frankfurter
+    // rather than producing NaN as a success.
+    if (ecb.rates.has(from) && ecb.rates.has(to)) return {
       rate: ecb.rates.get(to)! / ecb.rates.get(from)!, date: ecb.date,
       ...(ecb.stale ? { stale: true as const } : {}), rateSource: "ECB euro reference rate",
       provenance: { source: "ecb.europa.eu", attribution: "Source: European Central Bank (euro foreign exchange reference rates, available free of charge at ecb.europa.eu)", acquisition_method: "direct_api", data_access_lane: "preferred" },

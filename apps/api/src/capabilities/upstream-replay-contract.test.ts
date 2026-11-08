@@ -13,7 +13,7 @@
  *
  * A saved executor output would prove nothing here (§7.1); a replayed
  * upstream answer does, and the perturbation test below proves it per slug:
- * with the recorded bodies emptied, the contract must fail.
+ * with the recorded bodies emptied, hollowed or skewed, the contract must fail.
  *
  * What this cannot see is the upstream changing. That is the weekly
  * `record-upstream.ts --check` run in weekly-drift.yml; see the README in
@@ -147,11 +147,11 @@ describe("upstream replay contract: network executors", () => {
   }, 30_000);
 
   // A throw only shows the executor rejects the perturbed body. The proof
-  // needs output that the judge reads and rejects, under one of the two
+  // needs output that the judge reads and rejects, under one of the three
   // perturbations.
   it.each(recordings.map((r) => [r.slug, r] as const))("%s fails its known answer when the upstream content is gone", async (slug, recording) => {
     const judged: string[] = [];
-    for (const mode of ["empty", "hollow"] as const) {
+    for (const mode of ["empty", "hollow", "skew"] as const) {
       const { failures } = await replay(recording, mode);
       judged.push(...failures.filter((f) => !f.startsWith(THREW)));
       vi.resetModules();

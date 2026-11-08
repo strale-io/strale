@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
 vi.mock("../safe-fetch.js", () => ({ safeFetch: safeFetchMock, discardBody: vi.fn(async () => undefined) }));
 
-import { __resetFxRateCachesForTests, getEcbReferenceRates, getFrankfurterRate } from "./rates.js";
+import { __resetFxRateCachesForTests, getEcbReferenceRates, getFrankfurterCurrencies, getFrankfurterRate } from "./rates.js";
 import { classifyFailure } from "../failure-classifier.js";
 import { classifyTransactionFailure } from "../transaction-failure-taxonomy.js";
 
@@ -54,9 +54,12 @@ describe("ECB daily rates", () => {
   });
 
   it("does not serve a last good copy beyond four days", async () => {
+    // Fetched two days after its rate date: past four days of the rate date
+    // but inside four days of the fetch, so only a rate-date window refuses it.
+    vi.setSystemTime(new Date("2026-11-08T16:30:00Z"));
     safeFetchMock.mockResolvedValueOnce(response(XML)).mockRejectedValueOnce(new Error("refresh failed"));
     await getEcbReferenceRates();
-    vi.setSystemTime(new Date("2026-11-10T16:30:01Z"));
+    vi.setSystemTime(new Date("2026-11-11T12:00:00Z"));
     await expect(getEcbReferenceRates()).rejects.toThrow("refresh failed");
   });
 
@@ -85,5 +88,17 @@ describe("Frankfurter blended rate", () => {
   it.each(["null", "not-json"])("classifies %s bodies as upstream failures", async (body) => {
     safeFetchMock.mockResolvedValue(response(body));
     await expectUpstream(getFrankfurterRate("NGN", "KWD"));
+  });
+});
+
+describe("Frankfurter currency list", () => {
+  it("reads ISO codes from the array answer", async () => {
+    safeFetchMock.mockResolvedValue(response(JSON.stringify([{ iso_code: "NGN" }, { iso_code: "AAVE" }, { iso_code: "KWD" }])));
+    expect([...(await getFrankfurterCurrencies())].sort()).toEqual(["KWD", "NGN"]);
+  });
+
+  it("refuses an object answer instead of caching its keys as codes", async () => {
+    safeFetchMock.mockResolvedValue(response(JSON.stringify({ error: "maintenance" })));
+    await expect(getFrankfurterCurrencies()).rejects.toThrow("Frankfurter currency list unavailable");
   });
 });

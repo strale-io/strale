@@ -125,10 +125,11 @@ export async function getFrankfurterCurrencies(): Promise<Set<string>> {
     }
     try {
       const data = await readJsonWithLimit<unknown>(response, MAX_FETCHED_API_RESPONSE_BYTES, "rate_source", "a currency-list response of");
-      const rawCodes: unknown[] = Array.isArray(data)
-        ? data.map((entry) => typeof entry === "string" ? entry : (entry as { iso_code?: string })?.iso_code)
-        : Object.keys(data ?? {});
-      const codes = new Set(rawCodes.filter((code): code is string => typeof code === "string"));
+      // /v2/currencies answers an array of { iso_code, ... }. Anything else
+      // (an error object, say) must not become a cached list of "codes".
+      if (!Array.isArray(data)) throw new Error("invalid response");
+      const rawCodes: unknown[] = data.map((entry) => (entry as { iso_code?: unknown } | null)?.iso_code);
+      const codes = new Set(rawCodes.filter((code): code is string => typeof code === "string" && /^[A-Z]{3}$/.test(code)));
       if (!codes.size) throw new Error("invalid response");
       currenciesCache = { value: codes, fetchedAt: Date.now() };
       return codes;

@@ -111,3 +111,21 @@ it("currency-convert multiplies by the same pair rate", async () => {
   expect(conversion.output.converted_amount).toBe(123.4);
   expect(safeFetchMock).toHaveBeenCalledTimes(1);
 });
+
+it("currency-convert identity returns the amount unrounded without fetching", async () => {
+  const answer = await run("currency-convert", { amount: 12.345678, from: "SEK", to: "SEK" });
+  expect(answer.output).toMatchObject({ amount: 12.345678, converted_amount: 12.345678, rate: 1 });
+  expect(answer.provenance).toMatchObject({ source: "identity" });
+  expect(safeFetchMock).not.toHaveBeenCalled();
+});
+
+it("routes a listed ECB code the file no longer carries to Frankfurter instead of returning NaN", async () => {
+  // XML carries USD and SEK only; GBP is on the static list but missing here.
+  safeFetchMock
+    .mockResolvedValueOnce(new Response(XML))
+    .mockResolvedValueOnce(json({ date: "2026-11-06", base: "USD", quote: "GBP", rate: 0.78 }));
+  const answer = await run("exchange-rate", { from: "USD", to: "GBP" });
+  expect(Number.isFinite(answer.output.rate)).toBe(true);
+  expect(answer.output.rate).toBe(0.78);
+  expect(answer.provenance).toMatchObject({ source: "frankfurter.dev" });
+});
