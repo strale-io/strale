@@ -16,7 +16,7 @@ export function campaignFromUrl(href: string): Campaign {
   } catch { return {}; }
 }
 export function publicCampaignPath(path: string): boolean {
-  return /^(?:\/$|\/(?:tools|company-data|use-cases|solutions|docs)(?:\/|$)|\/(?:signup|pricing)\/?$)/.test(path);
+  return /^(?:\/$|\/(?:tools|company-data|use-cases|solutions|docs|guides)(?:\/|$)|\/(?:signup|pricing|about|security|privacy|terms)\/?$)/.test(path);
 }
 /** Remove incoming query/hash; rebuild only approved campaign fields on public pages. */
 export function analyticsUrl(href: string, base: string, campaign: Campaign = {}): string {
