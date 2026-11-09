@@ -1,0 +1,30 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4fba43aef6d925fa26ac7d57506719c24214ffa8"
+  },
+  "at": "2026-11-09T13:46:55.663Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "browser_tests": 3,
+    "api_typecheck": "passed",
+    "astro_check": "passed; two existing unused import hints",
+    "reviews": "technical GO and product GO, round1",
+    "cases": "real anonymous response envelope plus failed, pending, missing nested status, HTTP error, invalid JSON and null",
+    "commit": "4fba43ae"
+  },
+  "topic": "free-tool-tracking",
+  "raw": {
+    "ok": true,
+    "browser_tests": 3,
+    "api_typecheck": "passed",
+    "astro_check": "passed; two existing unused import hints",
+    "reviews": "technical GO and product GO, round1",
+    "cases": "real anonymous response envelope plus failed, pending, missing nested status, HTTP error, invalid JSON and null",
+    "commit": "4fba43ae"
+  }
+}

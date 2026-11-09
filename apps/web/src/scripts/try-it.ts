@@ -32,7 +32,7 @@ if (form) {
         body: JSON.stringify({ capability_slug: form.dataset.slug, inputs }),
       });
       const raw = await res.text();
-      let body: { message?: string; status?: string } | null = null;
+      let body: { message?: string; result?: { status?: string } } | null = null;
       try {
         body = JSON.parse(raw);
       } catch {
@@ -41,7 +41,7 @@ if (form) {
       out.textContent = body ? JSON.stringify(body, null, 2) : raw.slice(0, 2000);
       out.hidden = false;
       status.textContent = res.ok ? "Done. Nothing was charged." : `The API answered ${res.status}: ${body?.message ?? "see the response below"}. Nothing was charged.`;
-      track(res.ok && body?.status === "completed" ? "tool_run_completed" : "tool_run_failed", form.dataset.slug);
+      track(res.ok && body?.result?.status === "completed" ? "tool_run_completed" : "tool_run_failed", form.dataset.slug);
     } catch {
       status.textContent = "This page could not reach the API from your browser. Copy the API call below and run it instead.";
       track("tool_run_failed", form.dataset.slug);
