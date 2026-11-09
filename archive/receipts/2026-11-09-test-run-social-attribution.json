@@ -1,0 +1,44 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "28834ba153d45a8db368e541ad70fcf639598c64"
+  },
+  "at": "2026-11-09T13:04:56.935Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tracking-fix-nov09/verification-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "web_unit_tests": 85,
+    "built_output_tests": 9,
+    "browser_tests": 10,
+    "python_tests": 6,
+    "api_typecheck": "passed",
+    "astro_check": "passed",
+    "preview_pages": 434
+  },
+  "topic": "social-attribution",
+  "raw": {
+    "ok": true,
+    "web_unit_tests": 85,
+    "built_output_tests": 9,
+    "browser_tests": 10,
+    "python_tests": 6,
+    "api_typecheck": "passed",
+    "astro_check": "passed",
+    "preview_pages": 434,
+    "inputs": {
+      "commit": "28834ba153d45a8db368e541ad70fcf639598c64",
+      "commands": [
+        "npm test (apps/web)",
+        "npm run test:built (apps/web)",
+        "npm run test:browser (apps/web)",
+        "python -m unittest discover -s scripts/social",
+        "npx tsc --noEmit --project tsconfig.json (apps/api)",
+        "npm run check (apps/web)"
+      ],
+      "note": "Windows CRLF-only checkout normalization of guide data, public/_headers and routes/do.ts; no committed changes to those files. Portable built-output path separator correction committed."
+    }
+  }
+}
