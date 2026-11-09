@@ -55,4 +55,17 @@ class TrackingTests(unittest.TestCase):
         result=client.request('/drafts/123','PATCH',{'platforms':{'x':{'posts':[{'text':'Updated https://strale.io/docs'}]}}})
         self.assertEqual(result['platforms']['x']['posts'][0]['media_ids'],['example-media'])
         self.assertEqual(result['platforms']['x']['settings'],{'reply_control':'followers'})
+    def test_linkedin_response_fields_are_mapped_to_write_schema(self):
+        current={'id':123,'status':'scheduled','scheduled_date':'2099-01-02T16:00:00Z','platforms':{'linkedin':{'enabled':True,'posts':[{'text':'Try https://strale.io/docs','media_ids':[],'linkedin_reshare_urn':None}]}}}
+        def api(endpoint,method='GET',body=None):
+            if method=='PATCH':
+                p=body['platforms']['linkedin']['posts'][0]
+                self.assertNotIn('linkedin_reshare_urn',p)
+                self.assertIn('linkedin_reshare_target',p)
+                current['platforms']=copy.deepcopy(body['platforms'])
+                stored=current['platforms']['linkedin']['posts'][0]
+                stored['linkedin_reshare_urn']=stored.pop('linkedin_reshare_target')
+            return copy.deepcopy(current)
+        client=Client('test-only',api);client.identity_checked=True
+        self.assertEqual(client.request('/drafts/123','PATCH',{})['status'],'scheduled')
 if __name__=='__main__':unittest.main()

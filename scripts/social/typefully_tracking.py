@@ -138,7 +138,11 @@ class Client:
                     for media_id in post.get('media_ids') or []:
                         require(self.transport('/media/'+media_id)['status']=='ready', 'Media is not ready to publish')
         # Omit response-only x_article:null, preserve all enabled platform settings/media.
-        body['platforms'] = {k:v for k,v in expected.items() if isinstance(v,dict)}
+        body['platforms'] = copy.deepcopy({k:v for k,v in expected.items() if isinstance(v,dict)})
+        # LinkedIn's read model uses *_urn; its write schema accepts *_target.
+        for post in body['platforms'].get('linkedin', {}).get('posts', []):
+            if 'linkedin_reshare_urn' in post:
+                post['linkedin_reshare_target'] = post.pop('linkedin_reshare_urn')
         expected_time = body.get('publish_at') or (before.get('scheduled_date') if before and before['status']=='scheduled' else None)
         if 'publish_at' in body and body['publish_at'] is None:
             raise ValueError('Unscheduling requires a separate explicit operation')
