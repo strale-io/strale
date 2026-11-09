@@ -12,7 +12,8 @@ test('campaign → tool result → signup source; sensitive values never enter a
  try{const page=await browser.newPage();let registration;
  await page.route('https://strale.io/**',r=>r.fulfill({contentType:'text/html',body:html()}));
  await page.route('https://cloud.umami.is/script.js',r=>r.fulfill({contentType:'text/javascript',body:mockTracker}));
- await page.route('https://api.strale.io/v1/do',r=>r.fulfill({json:{status:'completed',output:{example:'test'}}}));
+ // Match executeFreeTier's public envelope: the execution status is inside result.
+ await page.route('https://api.strale.io/v1/do',r=>r.fulfill({json:{result:{status:'completed',output:{example:'test'}},free_tier:true}}));
  await page.route('https://api.strale.io/v1/auth/register',r=>{registration=r.request().postDataJSON();return r.fulfill({json:{api_key:'test-only-not-a-real-key'}})});
  await page.goto('https://strale.io/tools/iban-validate?utm_source=x&utm_medium=organic_social&utm_campaign=tools_2026_11&utm_content=x-123-p1&token=private-test-token#private-test-fragment');
  await page.waitForFunction(()=>window.umami);
@@ -33,11 +34,34 @@ test('preview sends no analytics and blocked analytics does not break tool or si
  const page=await browser.newPage();let requests=0;
  await page.route('https://strale.io/**',r=>r.fulfill({contentType:'text/html',body:html(preview)}));
  await page.route('https://cloud.umami.is/**',r=>{requests++;return r.abort()});
- await page.route('https://api.strale.io/v1/do',r=>r.fulfill({json:{status:'completed'}}));
+ await page.route('https://api.strale.io/v1/do',r=>r.fulfill({json:{result:{status:'completed'},free_tier:true}}));
  await page.route('https://api.strale.io/v1/auth/register',r=>r.fulfill({json:{api_key:'test-only-not-a-real-key'}}));
  await page.goto('https://strale.io/?utm_source=linkedin');
  await page.locator('[data-try] button').click();await page.locator('[data-try-status]').filter({hasText:'Done.'}).waitFor();
  await page.locator('[data-signup-form] button').click();await page.locator('[data-signup-done]').waitFor({state:'visible'});
  assert.equal(requests,preview?0:1);await page.close();
+ }}finally{await browser.close()}
+});
+test('failed, pending, malformed and HTTP-error tool responses are not completed conversions',async()=>{
+ const browser=await chromium.launch(process.env.PLAYWRIGHT_CHANNEL?{channel:process.env.PLAYWRIGHT_CHANNEL}:{});
+ try{for(const response of [
+  {json:{result:{status:'failed'}},status:200},
+  {json:{result:{status:'pending'}},status:202},
+  {json:{status:'completed'},status:200},
+  {json:{result:{status:'completed'}},status:500},
+  {body:'not JSON',status:200},
+  {json:null,status:200},
+ ]){
+ const page=await browser.newPage();
+ await page.route('https://strale.io/**',r=>r.fulfill({contentType:'text/html',body:html()}));
+ await page.route('https://cloud.umami.is/script.js',r=>r.fulfill({contentType:'text/javascript',body:mockTracker}));
+ await page.route('https://api.strale.io/v1/do',r=>r.fulfill(response));
+ await page.goto('https://strale.io/tools/iban-validate?utm_source=x');await page.waitForFunction(()=>window.umami);
+ await page.locator('[data-try] button').click();await page.waitForFunction(()=>window.captured.some(e=>e.name==='tool_run_failed'));
+ const events=await page.evaluate(()=>window.captured);
+ assert.equal(events.filter(e=>e.name==='tool_run_started').length,1);
+ assert.equal(events.filter(e=>e.name==='tool_run_failed').length,1);
+ assert.equal(events.filter(e=>e.name==='tool_run_completed').length,0);
+ await page.close();
  }}finally{await browser.close()}
 });
