@@ -140,6 +140,12 @@ export async function runWorkflow(
             ];
         for (const error of errors)
           summary(`- ${String(error.message).replace(/[\r\n]/g, " ")}`);
+      } else {
+        // Non-fatal notices (e.g. discovered fields a backfill did not apply)
+        // still need the operator's eyes on a successful run.
+        for (const error of run.errors ?? [])
+          if (error?.code === "discovered_fields_not_applied")
+            summary(`- ${String(error.message).replace(/[\r\n]/g, " ")}`);
       }
       if (
         run.busy ||

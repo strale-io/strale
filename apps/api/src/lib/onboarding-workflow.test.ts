@@ -203,6 +203,32 @@ describe("onboarding workflow client", () => {
     expect(await runWorkflow(env(), request)).toBe(1);
     expect(request).toHaveBeenCalledTimes(1);
   });
+  it("shows a discovered-fields notice on a successful run and still exits 0", async () => {
+    const ok = complete("first-tool");
+    const notice =
+      "Discovery found output fields the manifest does not list: format.";
+    const response = {
+      ...ok,
+      body: {
+        ...ok.body,
+        errors: [
+          { code: "discovered_fields_not_applied", message: notice },
+          { code: "other", message: "not shown on success" },
+        ],
+      },
+    };
+    expect(
+      await runWorkflow(
+        { ...env(), INPUT_SLUGS: "first-tool" },
+        vi.fn().mockResolvedValue(response),
+        async () => {}
+      )
+    ).toBe(0);
+    const summary = readFileSync("summary.md", "utf8");
+    expect(summary).toContain("first-tool: Completed");
+    expect(summary).toContain(notice);
+    expect(summary).not.toContain("not shown on success");
+  });
   it("fails on a completed failed pipeline result", async () => {
     expect(
       await runWorkflow(

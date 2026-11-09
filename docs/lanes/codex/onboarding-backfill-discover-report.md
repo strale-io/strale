@@ -51,3 +51,22 @@ The required independent technical + product review found one medium issue (the 
 - No authority taxonomy, authority-check ordering, workflow defaults, or workflow files were changed.
 - No production database, executor, upstream, or capability readiness check was used; the work and its targeted tests are offline and mocked as required by the brief.
 - The full API suite is not green in this environment because of the unrelated performance-threshold failures listed above. The targeted suites and typecheck are green.
+
+## Claude review round (2026-11-09)
+
+The independent read-only review of 7794f2df gave **GO**, with three low-severity findings. Two were fixed here:
+
+- **Notice on success:** the workflow summary now prints the `discovered_fields_not_applied` notice on a successful run. Before, it appeared only in the JSON artifact, because the summary printed errors only on failure.
+  - Test: `onboarding-workflow.test.ts` "shows a discovered-fields notice on a successful run and still exits 0". It fails without the change.
+- **Missing reliability map:** a backfill manifest with no `output_field_reliability` no longer crashes test-suite building with a TypeError, which surfaced as a generic `pipeline_error`.
+  - Fix: `Object.entries(manifest.output_field_reliability ?? {})`.
+  - No repository manifest lacks the field, so this has no test.
+
+Left as is:
+- **Verification failure:** when verification fails, the notice is not emitted. The run fails anyway, and the review YAML still carries the discovered fields.
+- **Test gaps the review named:** an already-listed field left out of the notice; no notice when discovery fails; the known_answer UPDATE keeping the discovered expected_fields.
+
+Commands, run at the merge of 7794f2df with main:
+- **Targeted pipeline, route, authority and gates tests:** 114 passed.
+- **Full `apps/api` vitest:** 10,092 passed, 0 failed.
+- **Fail-before:** both new backfill tests fail against origin/main's pipeline.

@@ -1642,7 +1642,7 @@ export async function runOnboarding(
         const isArrayForm = Array.isArray(manifest.test_fixtures?.known_answer);
 
         // Field reliability
-        const fields = Object.entries(manifest.output_field_reliability);
+        const fields = Object.entries(manifest.output_field_reliability ?? {});
         report(`  Field reliability:   ${fields.length} fields`);
 
         // Limitations
