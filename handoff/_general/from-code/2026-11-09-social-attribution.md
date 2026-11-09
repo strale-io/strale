@@ -8,4 +8,8 @@ Scheduling: scripts/social/typefully_tracking.py is the reusable write boundary.
 
 Verification and deployment evidence will be recorded in the linked PR and local campaign output receipts. Independent technical and product reviews are required before merge. No backend schema, auth, payment or activation-identity change is included.
 
-Next action: finish independent reviews and production browser verification, then update the 21 confirmed Typefully entries through the guarded client and save the final queue comparison. Install the same reviewed client in the local campaign helper for subsequent sessions.
+PR #985 merged as ba4a1d4c. All 21 Typefully posts (11 X, 10 LinkedIn) have tagged links, confirmed status and their original publishing times; all 18 media assets are ready. The reviewed client is installed in the existing local helper and the campaign workspace AGENTS.md requires it for future scheduling.
+
+Production verification confirmed accepted Umami campaign and signup events, but exposed a demo-status envelope mismatch: POST /v1/do returns result.status. Focused followup branch fix/free-tool-tracking, code 4fba43ae, corrects that field. Browser success and failure cases pass, as do API typecheck and Astro check. Evidence: [test receipt](../../../archive/receipts/2026-11-09-test-run-free-tool-tracking.json). Technical and product reviews both GO, round 1; no unresolved findings. Simplification pass found no extra abstraction needed.
+
+Next action: merge the reviewed followup after CI, redeploy the website, verify accepted live tool-completion and signup events, then record final evidence in the PR and local outputs/tracking-fix-nov09 receipts. Signup verification intercepts the register response and creates no real account. Remove only this session's worktree/branches after merge; shared main and other agents' work remain untouched.
