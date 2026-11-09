@@ -952,7 +952,11 @@ export async function runOnboarding(
       async function discoverFixtures(
         manifest: Manifest,
         manifestPath: string
-      ): Promise<{ manifest: Manifest; discoveryFailed: boolean }> {
+      ): Promise<{
+        manifest: Manifest;
+        discoveryFailed: boolean;
+        unlistedOutputFields: string[];
+      }> {
         // Array-form known_answer (Gate 5 multi-path fixtures, DEC-20260411-B) is
         // human-curated per entry point — the discovery flow below only knows how
         // to write the single-fixture shape, so it must never overwrite an array
@@ -981,7 +985,7 @@ export async function runOnboarding(
               "  ✗ Cannot discover: no health_check_input or known_answer.input"
             );
           }
-          return { manifest, discoveryFailed: true };
+          return { manifest, discoveryFailed: true, unlistedOutputFields: [] };
         }
 
         report(
@@ -993,21 +997,18 @@ export async function runOnboarding(
 
         if (error) {
           report(`  ✗ Cannot discover — execution failed: ${error}`);
-          return { manifest, discoveryFailed: true };
+          return { manifest, discoveryFailed: true, unlistedOutputFields: [] };
         }
 
         report(`  Output: ${Object.keys(output).length} fields`);
-        for (const [k, v] of Object.entries(output)) {
-          const display =
-            typeof v === "string" && v.length > 50
-              ? v.slice(0, 50) + "..."
-              : JSON.stringify(v);
-          report(`    ${k}: ${display}`);
-        }
+        for (const k of Object.keys(output)) report(`    ${k}`);
 
         // Generate field reliability — safe to merge regardless of known_answer
         // shape (additive-only: only fills fields not already annotated).
         const fieldReliability = generateFieldReliability(output);
+        const unlistedOutputFields = Object.keys(output).filter(
+          (field) => !manifest.output_field_reliability?.[field]
+        );
         report(
           `  Generated ${
             Object.keys(fieldReliability).length
@@ -1033,7 +1034,7 @@ export async function runOnboarding(
           report(
             `  ✓ Manifest updated (output_field_reliability only): ${manifestPath}`
           );
-          return { manifest, discoveryFailed: false };
+          return { manifest, discoveryFailed: false, unlistedOutputFields };
         }
 
         // Generate expected_fields (single-fixture shape only)
@@ -1069,7 +1070,27 @@ export async function runOnboarding(
           "  Review generated expected_fields and adjust reliability levels as needed."
         );
 
-        return { manifest, discoveryFailed: false };
+        return { manifest, discoveryFailed: false, unlistedOutputFields };
+      }
+
+      const isNoticeField = (field: string): boolean =>
+        /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(field);
+
+      function restoreReviewedManifestFields(
+        reviewed: Manifest,
+        discovered: Manifest
+      ): Manifest {
+        const restored = discovered as unknown as Record<string, unknown>;
+        const original = reviewed as unknown as Record<string, unknown>;
+        for (const [field, authority] of Object.entries(FIELD_CATEGORIES)) {
+          if (authority.category !== "manifest") continue;
+          if (Object.prototype.hasOwnProperty.call(original, field)) {
+            restored[field] = structuredClone(original[field]);
+          } else {
+            delete restored[field];
+          }
+        }
+        return discovered;
       }
 
       /**
@@ -1516,12 +1537,19 @@ export async function runOnboarding(
           );
         }
 
+        // Discovery may enrich the review YAML and fixture suites, but a
+        // backfill must never turn those unreviewed observations into changes
+        // to manifest-canonical capability columns.
+        const reviewedManifest = structuredClone(manifest);
+        let unlistedOutputFields: string[] = [];
+
         // Discover fixtures from live execution (Enhancement 3)
         if (flags.discover) {
           options.signal?.throwIfAborted();
           stage = "discovery";
           const disc = await discoverFixtures(manifest, manifestPath);
           manifest = disc.manifest;
+          unlistedOutputFields = disc.unlistedOutputFields.filter(isNoticeField);
           abortIfDiscoveryFailedUnderStrict(disc.discoveryFailed, flags.strict);
         }
 
@@ -1543,6 +1571,14 @@ export async function runOnboarding(
             );
           }
         }
+
+        if (unlistedOutputFields.length > 0) {
+          result.errors.push({
+            code: "discovered_fields_not_applied",
+            message: `Discovery found output fields the manifest does not list: ${unlistedOutputFields.join(", ")}. They are in the review YAML; add them to the manifest and sync the database to apply them.`,
+          });
+        }
+        manifest = restoreReviewedManifestFields(reviewedManifest, manifest);
 
         // Check which test types already exist.
         //
