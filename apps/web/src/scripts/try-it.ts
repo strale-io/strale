@@ -1,6 +1,7 @@
 // "Try it" for free tools: sends the visitor's inputs to POST /v1/do with no key
 // and shows the answer. The API accepts browser calls from strale.dev only, so on
 // any other origin this reports that plainly instead of failing silently.
+import { track } from "./analytics";
 const form = document.querySelector<HTMLFormElement>("[data-try]");
 if (form) {
   const status = form.querySelector<HTMLElement>("[data-try-status]")!;
@@ -23,6 +24,7 @@ if (form) {
     button.setAttribute("aria-busy", "true");
     status.textContent = "Running…";
     out.hidden = true;
+    track("tool_run_started", form.dataset.slug);
     try {
       const res = await fetch(`${form.dataset.api}/v1/do`, {
         method: "POST",
@@ -30,7 +32,7 @@ if (form) {
         body: JSON.stringify({ capability_slug: form.dataset.slug, inputs }),
       });
       const raw = await res.text();
-      let body: { message?: string } | null = null;
+      let body: { message?: string; status?: string } | null = null;
       try {
         body = JSON.parse(raw);
       } catch {
@@ -39,8 +41,10 @@ if (form) {
       out.textContent = body ? JSON.stringify(body, null, 2) : raw.slice(0, 2000);
       out.hidden = false;
       status.textContent = res.ok ? "Done. Nothing was charged." : `The API answered ${res.status}: ${body?.message ?? "see the response below"}. Nothing was charged.`;
+      track(res.ok && body?.status === "completed" ? "tool_run_completed" : "tool_run_failed", form.dataset.slug);
     } catch {
       status.textContent = "This page could not reach the API from your browser. Copy the API call below and run it instead.";
+      track("tool_run_failed", form.dataset.slug);
     } finally {
       button.removeAttribute("aria-disabled");
       button.removeAttribute("aria-busy");

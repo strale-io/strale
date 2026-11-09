@@ -17,7 +17,7 @@ function htmlFiles(dir: string): string[] {
     return e.isDirectory() ? (e.name === "_astro" ? [] : htmlFiles(p)) : e.name.endsWith(".html") ? [p] : [];
   });
 }
-const pages = htmlFiles(dist).map((file) => ({ file, path: canonicalPath("/" + relative(dist, file)), html: readFileSync(file, "utf8") }));
+const pages = htmlFiles(dist).map((file) => ({ file, path: canonicalPath("/" + relative(dist, file).replaceAll("\\", "/")), html: readFileSync(file, "utf8") }));
 
 test("the build is a preview build, and has pages of every family", () => {
   assert.match(pages.find((p) => p.path === "/")!.html, /Preview build/);

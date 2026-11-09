@@ -1,6 +1,8 @@
 // /signup: POST /v1/auth/register and show the new key once. The key lives only in this page's
 // DOM: nothing is written to storage, a cookie or the address (as on strale-frontend's Signup.tsx).
 import { openingBalance, registerBody, registerErrorMessage, type RegisterResponse } from "../lib/wallet.ts";
+import { campaignFromUrl } from "../lib/campaign";
+import { track } from "./analytics";
 
 const root = document.querySelector<HTMLElement>("[data-signup]");
 if (root) {
@@ -45,7 +47,7 @@ if (root) {
       const res = await fetch(`${api}/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerBody(email.value, name.value)),
+        body: JSON.stringify({ ...registerBody(email.value, name.value), ...signupSource() }),
       });
       if (!res.ok) {
         await res.json().catch(() => null);
@@ -55,6 +57,7 @@ if (root) {
       }
       const data = (await res.json()) as RegisterResponse;
       apiKey = data.api_key ?? "";
+      if (apiKey) track("signup_completed");
       keyEl.textContent = apiKey;
       const balance = openingBalance(data);
       const grantWithheld = data.trial_credits?.granted === false;
@@ -96,3 +99,8 @@ if (root) {
 }
 
 export {};
+
+function signupSource(): { src?: string } {
+  const source = campaignFromUrl(location.href).utm_source;
+  return source ? { src: source } : {};
+}

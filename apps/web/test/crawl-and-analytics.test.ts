@@ -8,6 +8,7 @@ import { loadPreview } from "../src/lib/load-preview.ts";
 import { liveHead, UMAMI_WEBSITE_ID } from "../src/lib/analytics.ts";
 import { EXCLUDED_PATHS, STATIC_PATHS, canonicalPath, pagePaths, renderRobots, renderSitemap, sitemapPaths } from "../src/lib/sitemap.ts";
 import type { SiteData } from "../src/lib/types.ts";
+import { publicCampaignPath } from "../src/lib/campaign.ts";
 
 const web = resolve(import.meta.dirname, "..");
 const repo = resolve(web, "../..");
@@ -31,6 +32,11 @@ test("the live sitemap lists every generated family and no excluded or preview p
   for (const p of EXCLUDED_PATHS) assert.ok(!paths.includes(p), p);
   assert.equal(new Set(paths).size, paths.length, "no duplicates");
   assert.ok(paths.every((p) => !/preview|noindex/.test(p)));
+});
+
+test("attribution covers every public sitemap path but no private or wallet page", () => {
+  for (const p of pagePaths(data("live"))) assert.ok(publicCampaignPath(p), `campaign lost on ${p}`);
+  for (const p of EXCLUDED_PATHS) assert.equal(publicCampaignPath(p), false, p);
 });
 
 test("the not-found page is a built page that is excluded from the sitemap", () => {

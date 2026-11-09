@@ -29,7 +29,8 @@
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
-        "scripts/protocol-coverage-lib.mjs"
+        "scripts/protocol-coverage-lib.mjs",
+        "scripts/social/README.md"
       ]
     },
     {
