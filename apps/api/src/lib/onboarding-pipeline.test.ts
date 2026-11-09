@@ -317,6 +317,100 @@ describe("shared onboarding pipeline", () => {
     expect(updated.output_field_reliability.answer).toBe("guaranteed");
     expect(guardedExecute).toHaveBeenCalledTimes(2);
   });
+  it("keeps discovered backfill fields out of persistence and reports them for review", async () => {
+    const m = manifest();
+    vi.mocked(guardedExecute).mockResolvedValue({
+      output: { answer: "expected", format: "png" },
+    } as any);
+    const existing = {
+      slug: m.slug,
+      outputFieldReliability: { answer: "guaranteed" },
+    };
+
+    const result = await runOnboarding(
+      database([[existing], [existing], [], []]),
+      {
+        manifestYaml: yaml.dump(m),
+        mode: "backfill",
+        force: true,
+        discover: true,
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.errors).toContainEqual({
+      code: "discovered_fields_not_applied",
+      message:
+        "Discovery found output fields the manifest does not list: format. They are in the review YAML; add them to the manifest and sync the database to apply them.",
+    });
+    expect(
+      (yaml.load(result.updatedManifestYaml!) as any).output_field_reliability
+    ).toMatchObject({ answer: "guaranteed", format: "guaranteed" });
+    expect(
+      vi.mocked(persistCapability).mock.calls[0][0].capability
+        .outputFieldReliability
+    ).toEqual({ answer: "guaranteed" });
+  });
+  it("persists discovered reliability fields when onboarding a new capability", async () => {
+    vi.mocked(guardedExecute).mockResolvedValue({
+      output: { answer: "expected", format: "png" },
+    } as any);
+
+    const result = await runOnboarding(database(), {
+      manifestYaml: yaml.dump(manifest()),
+      mode: "onboard",
+      discover: true,
+    });
+
+    expect(result.status).toBe("success");
+    expect(vi.mocked(persistCapability).mock.calls[0][0].capability)
+      .toMatchObject({
+        outputFieldReliability: {
+          answer: "guaranteed",
+          format: "guaranteed",
+        },
+      });
+    expect(result.errors).toEqual([]);
+  });
+  it("never reports or logs discovered values and filters unsafe field names", async () => {
+    const messages: string[] = [];
+    vi.mocked(guardedExecute).mockResolvedValue({
+      output: {
+        answer: "expected",
+        secret_field: "SECRET-SENTINEL-discovered-value",
+        null_field: null,
+        "unsafe-field": "SECRET-SENTINEL-discovered-value",
+      },
+    } as any);
+    const existing = {
+      slug: "sample-tool",
+      outputFieldReliability: { answer: "guaranteed" },
+    };
+
+    const result = await runOnboarding(
+      database([[existing], [existing], [], []]),
+      {
+        manifestYaml: yaml.dump(manifest()),
+        mode: "backfill",
+        force: true,
+        discover: true,
+        onMessage: (...values) => messages.push(values.join(" ")),
+      }
+    );
+
+    const notice = result.errors.find(
+      (error) => error.code === "discovered_fields_not_applied"
+    );
+    expect(notice?.message).toContain("secret_field");
+    expect(notice?.message).toContain("null_field");
+    expect(notice?.message).not.toContain("unsafe-field");
+    expect(JSON.stringify(notice)).not.toContain(
+      "SECRET-SENTINEL-discovered-value"
+    );
+    expect(messages.join("\n")).not.toContain(
+      "SECRET-SENTINEL-discovered-value"
+    );
+  });
   it("discovers timestamps and vendor release stamps as not_null, never equals", async () => {
     const m = manifest();
     m.test_fixtures.known_answer.expected_fields = [];
