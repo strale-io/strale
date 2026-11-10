@@ -1,0 +1,57 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "bcffb38498342603d57d88fe7f15435ad150b7b8"
+  },
+  "at": "2026-11-10T13:04:34.573Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/company-data-a11y-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 2,
+    "source_commit": "bcffb38498342603d57d88fe7f15435ad150b7b8",
+    "web_unit_passed": 89,
+    "web_built_passed": 13,
+    "web_browser_passed": 14,
+    "api_typecheck": "passed after mcp build",
+    "astro_check": "0 errors, 0 warnings, one pre-existing unused-import hint",
+    "live_build_pages": 491,
+    "before_company_data_failures": 4,
+    "after_company_data_failures": 0,
+    "full_live_review_checks": 40,
+    "full_live_review_failures": 0,
+    "before_report": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\company-data-a11y-nov10\\before\\report.json",
+    "after_report": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\company-data-a11y-nov10\\after\\report.json",
+    "source_sha256": "c575b0e78a3b40c6cb4d9ead719895293162761571fcb5136e0c0892360cf3c6"
+  },
+  "topic": "company-data-landmarks",
+  "raw": {
+    "ok": true,
+    "source_commit": "bcffb38498342603d57d88fe7f15435ad150b7b8",
+    "web_unit_passed": 89,
+    "web_built_passed": 13,
+    "web_browser_passed": 14,
+    "api_typecheck": "passed after mcp build",
+    "astro_check": "0 errors, 0 warnings, one pre-existing unused-import hint",
+    "live_build_pages": 491,
+    "before_company_data_failures": 4,
+    "after_company_data_failures": 0,
+    "full_live_review_checks": 40,
+    "full_live_review_failures": 0,
+    "failures": [],
+    "warnings": [
+      "Windows checkout LF normalization for existing tests produced no unrelated source changes.",
+      "simplify skill unavailable; manual simplification retained one-line fix."
+    ],
+    "review": {
+      "technical": "GO at bcffb38498342603d57d88fe7f15435ad150b7b8; no high/medium findings",
+      "product": "GO at bcffb38498342603d57d88fe7f15435ad150b7b8; no high/medium findings"
+    },
+    "before_report": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\company-data-a11y-nov10\\before\\report.json",
+    "after_report": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\company-data-a11y-nov10\\after\\report.json",
+    "source_sha256": "c575b0e78a3b40c6cb4d9ead719895293162761571fcb5136e0c0892360cf3c6"
+  }
+}
