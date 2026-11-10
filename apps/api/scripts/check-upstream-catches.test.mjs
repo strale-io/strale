@@ -34,6 +34,8 @@ for (const [name, code] of [
   ['optional logger', 'p.catch(e => { logger?.warn?.({err:e}, "failed"); return []; });'],
   ['optional log helper', 'p.catch(e => logError?.("failed", e));'],
   ['optional rejection', 'p.catch(e => Promise.reject?.(e));'],
+  ['suppressed structured debug log', 'p.catch(e => { log.debug({err:e}, "failed"); return []; });'],
+  ['suppressed logger debug log', 'p.catch(e => { logger.debug({err:e}, "failed"); return []; });'],
   ['log after return', 'p.catch(e => { return []; logError("oops", e); });'],
   ['nested helper log', 'p.catch(e => { const helper = () => logError("oops", e); return []; });'],
   ['marker inside nested example', 'p.catch(() => ({example: { unavailable: true }}));'],
@@ -139,6 +141,13 @@ test('the existing bare-catch guard misses the planted empty-array fallback that
   const old=fileURLToPath(new URL('./check-no-bare-catch.mjs',import.meta.url));
   const result=spawnSync(process.execPath,[old,join(f.root,SOURCE)],{encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);assert.equal(check(f.root,f.base).ok,false);
+});
+test('plain CI output makes each documented exception visible', (t) => {
+  const f=fixture(t,'p.catch(() => { // degraded-ok: optional leg checked by required result\n return []; });');
+  f.write(BASELINE,JSON.stringify(empty));
+  const script=fileURLToPath(new URL('./check-upstream-catches.mjs',import.meta.url));
+  const result=spawnSync(process.execPath,[script,'--root',f.root,'--base',f.base],{encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/degraded-ok apps\/api\/src\/capabilities\/example.ts:1: optional leg checked by required result/);
 });
 
 test('CI keeps the existing guard and runs the new guard and planted-failure tests', () => {

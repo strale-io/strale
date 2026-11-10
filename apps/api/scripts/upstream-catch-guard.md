@@ -6,13 +6,18 @@ lint:upstream-catches`; use `-- --json` for the full candidate list. Both the
 guard and its planted-failure tests run on every CI check job. The original
 `lint:no-bare-catch` remains enabled.
 
+The scan covers `apps/api/src/capabilities`, not shared helpers under
+`apps/api/src/lib`. Shared-helper behaviour still needs its own tests/review.
+
 It checks ordinary `catch` clauses and inline or named Promise `.catch`
 callbacks. A handler must visibly throw/reject, log, return a literal
 `unavailable: true` or `skipped: true` marker, or carry a reviewed local
 `// degraded-ok: <reason>` comment. Put that comment first inside the handler
 body, or immediately before its callback/catch clause. It applies to that
 handler only. An exception must explain why the fallback is valid and where
-the required result is checked. Exceptions are listed in the JSON report.
+the required result is checked. Exceptions are listed in both the normal CI
+output and JSON report. Structured `log.debug`/`logger.debug` calls are not
+accepted as evidence: production's normal info threshold suppresses them.
 
 The guard tracks simple branches and early returns. Nested functions, later
 logging, comments, strings, conditional-only throws/logs and overwritten

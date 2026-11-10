@@ -55,6 +55,7 @@ function logged(node) {
   if (node.questionDotToken || callee.questionDotToken) return false;
   if (ts.isIdentifier(callee)) return ['logError', 'logWarn', 'logInfo'].includes(callee.text);
   const prop = member(callee);
+  if (prop?.name === 'debug' && ts.isIdentifier(prop.receiver) && prop.receiver.text !== 'console') return false;
   return prop && ts.isIdentifier(prop.receiver) && ['log', 'logger', 'console'].includes(prop.receiver.text) &&
     ['error', 'warn', 'info', 'debug', 'log', 'fatal'].includes(prop.name);
 }
@@ -257,6 +258,7 @@ function main() {
   if (json) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Upstream catch guard: ${report.files} files, ${report.handlers} handlers, ${report.pending} existing findings, ${report.waived.length} documented exceptions.`);
+    for (const waiver of report.waived) console.log(`degraded-ok ${waiver.file}:${waiver.line}: ${waiver.reason}`);
     for (const failure of report.failures) console.error(failure);
     if (!report.ok) console.error('Throw, log, return an explicit degraded marker, or add a reviewed handler-local // degraded-ok: reason. Remove fixed baseline entries; never enlarge the baseline.');
   }
