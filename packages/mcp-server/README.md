@@ -158,13 +158,15 @@ Before your agent pays for any external API call, use `paid-api-preflight` to ve
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
 | `strale_getting_started` | No | Onboarding guide. Returns free capabilities available without an API key, usage steps, and signup link. |
-| `strale_search` | No | Search available capabilities and bundled workflows by keyword or category. Returns matches with price, input fields, and geography. |
+| `strale_search` | No | Search capabilities and bundles by keyword or category. Returns input fields where available, geography, bundle prices in `price_cents`, and an explicit `is_free_tier` flag for capabilities. Capability prices are `null` in discovery; `null` does not mean free. |
 | `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, and data provenance. *Free-tier capabilities work without an API key. |
 | `strale_methodology` | No | Explains testing modes, source context and transaction retrieval. |
 | `strale_trust_profile` | No | Reads current public test results for a tool or bundle: badge, tested flag, recent pass rate and last-tested time where available. Use the catalogue for inputs, limitations and sources. |
 | `strale_balance` | Yes | Returns your wallet balance in EUR cents and EUR. |
 | `strale_web3_assurance` | Yes | Checks on-chain counterparty signals; requires an API key. |
-| `strale_transaction` | No* | Returns a past execution record by transaction ID: inputs, outputs, latency, price, provenance, and failure categorization. *Free-tier transactions accessible by ID only. |
+| `strale_transaction` | No* | Returns a past execution record by transaction ID. *Anonymous free-tier lookups return redacted metadata only. Authenticated callers can read their own retained inputs, outputs, provenance and error details; paid transaction lookup requires authentication. |
+
+Search uses the same pricing fields for ordinary search, category filters and local fallback results. `price_formatted` is the display version of `price_cents`; the older `price` field remains as a compatibility alias. Capability discovery omits individual prices, so use `is_free_tier` to identify tools that run without payment. Anonymous free-tier calls remain subject to the monthly per-IP allowance. Bundle prices are integer EUR cents, or `null` when unavailable.
 
 ## Trust Data
 

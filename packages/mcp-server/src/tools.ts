@@ -604,6 +604,21 @@ export async function fetchSolutionTrust(
   return map;
 }
 
+/** Keep discovery pricing identical in typeahead and local fallback results. */
+function searchPricing(type: "capability" | "solution", priceCents: number | null, isFreeTier?: boolean) {
+  // Match the discovery API's component-price policy (DEC-20260304-A):
+  // capability prices are omitted, not inferred from their catalogue price.
+  // Free eligibility is a separate fact, including on the category path.
+  const price_cents = type === "solution" ? priceCents : null;
+  const price_formatted = price_cents == null ? null : `€${(price_cents / 100).toFixed(2)}`;
+  return {
+    price_cents,
+    price_formatted,
+    price: price_formatted, // Compatibility alias for existing MCP consumers.
+    ...(type === "capability" ? { is_free_tier: isFreeTier === true } : {}),
+  };
+}
+
 // ─── Register all tools on an McpServer ─────────────────────────────────────
 
 export function registerStraleTools(
@@ -817,7 +832,7 @@ export function registerStraleTools(
       title: "Search tools and bundles",
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
-        "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, and price in EUR cents. The registry spans company data, compliance, finance, web intelligence, and developer tools. No API key required to search.",
+        "Searches the Strale capability registry by keyword, category, or natural language query. Returns matching capabilities and bundles with slugs, descriptions and input fields where available. Bundle prices are integer EUR cents in price_cents, with price_formatted for display and price as a compatibility alias. Capability prices are null in discovery; null does not mean free. For capabilities, is_free_tier identifies tools that run without payment; anonymous calls have a monthly per-IP allowance. No API key required to search.",
       inputSchema: z.object({
         query: z
           .string()
@@ -872,6 +887,7 @@ export function registerStraleTools(
               ? data.results.filter((r) => !isConnectorExcluded(r.slug, r.category))
               : data.results;
             const results = visible.map((r) => {
+              const cap = r.type === "capability" ? capabilities.find((c) => c.slug === r.slug) : undefined;
               const base: Record<string, unknown> = {
                 type: r.type,
                 slug: r.slug,
@@ -879,7 +895,7 @@ export function registerStraleTools(
                 description: r.description,
                 category: r.category,
                 geography: r.geography ?? "global",
-                price: r.price_cents != null ? `€${(r.price_cents / 100).toFixed(2)}` : null,
+                ...searchPricing(r.type, r.price_cents, r.is_free_tier ?? cap?.is_free_tier),
               };
               if (r.type === "solution") {
                 if (r.step_count) base.step_count = r.step_count;
@@ -887,7 +903,6 @@ export function registerStraleTools(
               }
               if (r.type === "capability") {
                 // Enrich with input_fields from local capability data
-                const cap = capabilities.find((c) => c.slug === r.slug);
                 if (cap?.input_schema?.properties && Object.keys(cap.input_schema.properties).length > 0) {
                   const required = new Set(cap.input_schema.required ?? []);
                   const reqFields = Object.entries(cap.input_schema.properties)
@@ -903,7 +918,6 @@ export function registerStraleTools(
                 } else {
                   base.input_fields = "Accepts: task (string) — describe what you need in natural language";
                 }
-                if (r.is_free_tier) base.is_free_tier = true;
               }
               return base;
             });
@@ -971,7 +985,7 @@ export function registerStraleTools(
           name: s.name,
           description: s.description,
           category: s.category,
-          price: `€${(s.price_cents / 100).toFixed(2)}`,
+          ...searchPricing("solution", s.price_cents),
           geography: s.geography,
           step_count: s.step_count,
           capabilities: s.capabilities,
@@ -1006,7 +1020,7 @@ export function registerStraleTools(
             description: c.description,
             category: c.category,
             geography: c.geography ?? "global",
-            price: `€${(c.price_cents / 100).toFixed(2)}`,
+            ...searchPricing("capability", c.price_cents, c.is_free_tier),
             input_fields: inputFields,
           };
         });
@@ -1229,7 +1243,7 @@ Public methodology: https://strale.io/security`;
       title: "Read a transaction record",
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       description:
-        "Retrieve a past execution record by transaction ID. Returns inputs, outputs, latency, price, data provenance, success/failure status, and failure categorization. Use this to inspect what a previous strale_execute call returned, debug failures, or provide an audit trail. Free-tier transactions are accessible by ID without an API key.",
+        "Retrieves a past execution record by transaction ID, including status, latency and price. Authenticated callers can read their own retained inputs, outputs, provenance and error details. Without authentication, free-tier lookups return only redacted metadata: inputs, outputs, errors, provenance and the audit body are omitted. Paid transaction lookup requires authentication. Use this to inspect a previous strale_execute call or debug a failure.",
       inputSchema: z.object({
         transaction_id: z
           .string()
@@ -1240,7 +1254,7 @@ Public methodology: https://strale.io/security`;
     },
     async ({ transaction_id }) => {
       // Build headers — include API key if available, but don't require it
-      // Free-tier transactions are publicly accessible by ID (UUID is unguessable)
+      // Anonymous free-tier lookups return redacted metadata only.
       const headers: Record<string, string> = { Accept: "application/json" };
       if (opts.apiKey) headers.Authorization = `Bearer ${opts.apiKey}`;
 

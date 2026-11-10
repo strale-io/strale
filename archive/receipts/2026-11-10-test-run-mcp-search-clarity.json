@@ -1,0 +1,52 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d78d064cbb1f72441520b59ef88eb20f35e0f4c4"
+  },
+  "at": "2026-11-10T07:24:00.385Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 2,
+    "regressions_failed_before": 6,
+    "mcp_tests_passed": 11,
+    "api_tests_passed": 37,
+    "api_typecheck": true,
+    "mcp_typecheck": true,
+    "mcp_build": true,
+    "claims_check": true,
+    "framework_package_check": true,
+    "scope": "Observed commands on working tree based on d78d064c; no live paid calls. Test input fixtures only."
+  },
+  "topic": "mcp-search-clarity",
+  "raw": {
+    "ok": true,
+    "regressions_failed_before": 6,
+    "mcp_tests_passed": 11,
+    "api_tests_passed": 37,
+    "api_typecheck": true,
+    "mcp_typecheck": true,
+    "mcp_build": true,
+    "claims_check": true,
+    "framework_package_check": true,
+    "failures": [],
+    "warnings": [
+      "Untouched sibling frontend llms.txt triggers existing claims warning",
+      "mcp-connector fixture logs caught CATALOG initialization error at prewarm; tests pass"
+    ],
+    "commands": [
+      "npm run build --workspace=packages/mcp-server",
+      "npm test --workspace=packages/mcp-server",
+      "npm run typecheck --workspace=apps/api",
+      "npm run typecheck --workspace=packages/mcp-server",
+      "npx vitest run src/routes/mcp-connector.test.ts src/routes/mcp.test.ts src/lib/mcp-trust-contract.test.ts",
+      "npm run claims:check",
+      "node apps/api/scripts/check-framework-packages.mjs"
+    ],
+    "scope": "Observed commands on working tree based on d78d064c; no live paid calls. Test input fixtures only."
+  }
+}
