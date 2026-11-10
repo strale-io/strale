@@ -131,7 +131,7 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
         <p class="t-compact muted">Each runs several tools in one call at one price and returns every step’s result.{summaryKinds.length > 0 && ` The ${summaryKinds.map((k) => BUNDLE_LABEL[k].toLowerCase()).join(" and ")} add${summaryKinds.length === 1 ? "s" : ""} an AI-written summary for a person to review.`} A bundle is charged in full when its steps return results, and refunded when every step fails or Strale withholds a step.</p>
       </div>
       {withBundles.length ? (
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Bundled checks by country">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Bundled checks table">
           <table class="table">
             <thead><tr><th scope="col">Country</th>{kinds.map((k) => <th scope="col" class="num">{BUNDLE_LABEL[k]}</th>)}</tr></thead>
             <tbody>{withBundles.map((r) => (
