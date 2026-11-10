@@ -175,21 +175,16 @@ output_field_reliability:
   country_filter: common
   birth_date_filter: common
 limitations:
-  - title: Per-list update timestamps are not available
-    text: >-
-      Dilisense refreshes the consolidated index multiple times daily, but the screening API does not return
-      a per-list last_updated_at value per call. Output sets lists_queried.last_updated_at = null with a
-      freshness_note attesting to the publisher's refresh cadence and a source_catalog_url for verification.
+  - title: "Per-list update timestamps are not available"
+    text: "Dilisense states that its consolidated sanctions index is refreshed every 60 minutes. The screening API does not expose per-list update timestamps, so this is not a guarantee that a new designation is already included. Read lists_queried for the provider's source information."
     category: freshness
     severity: info
-    workaround: For same-day compliance against fresh designations, cross-reference primary sources (OFAC RSS, EU OJ).
-  - title: Common names can produce false matches
-    text: >-
-      Common names (e.g. "Mohammad", "John Smith") may produce false-positive matches. Use birth_date for
-      person disambiguation.
+    workaround: "For time-sensitive decisions, check the relevant primary sanctions lists and their publication dates."
+  - title: "Potential name matches need review"
+    text: "Name matching can return false positives. No match confidence score is returned. For individuals, birth_date is passed to the provider for disambiguation. The country input is echoed in country_filter but does not restrict the provider search."
     category: accuracy
     severity: warning
-    workaround: Provide birth_date for individuals and an ISO country code for companies.
+    workaround: "Compare names and available identifying details with the primary source. Do not treat a potential match as a confirmed identity or an empty result as clearance."
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:

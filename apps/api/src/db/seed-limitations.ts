@@ -176,13 +176,13 @@ export const LIMITATIONS: LimitationDef[] = [
 
   // ── sanctions-check ──
   { capabilitySlug: "sanctions-check", category: "freshness", severity: "info",
-    title: "Sanctions lists updated multiple times per day — newly sanctioned entities may lag up to 24 hours",
-    limitationText: "Sanctions lists updated multiple times per day from OFAC, EU, UN, the UK Sanctions List and 120+ other sources via Dilisense — newly sanctioned entities may take up to 24 hours to appear",
-    workaround: "For same-day compliance, subscribe to OFAC's RSS feed and cross-reference against today's additions" },
+    title: "Per-list update timestamps are not available",
+    limitationText: "Dilisense states that its consolidated sanctions index is refreshed every 60 minutes. The screening API does not expose per-list update timestamps, so this is not a guarantee that a new designation is already included. Read lists_queried for the provider's source information.",
+    workaround: "For time-sensitive decisions, check the relevant primary sanctions lists and their publication dates." },
   { capabilitySlug: "sanctions-check", category: "accuracy", severity: "warning",
-    title: "Name matching uses fuzzy logic and may produce false positives for common names",
-    limitationText: "Name matching uses fuzzy logic — common names may produce false positives. Always verify flagged results",
-    workaround: "Filter results by match confidence score and verify flagged entities against the primary sanctions list PDF" },
+    title: "Potential name matches need review",
+    limitationText: "Name matching can return false positives. No match confidence score is returned. For individuals, birth_date is passed to the provider for disambiguation. The country input is echoed in country_filter but does not restrict the provider search.",
+    workaround: "Compare names and available identifying details with the primary source. Do not treat a potential match as a confirmed identity or an empty result as clearance." },
 
   // ── pep-check ──
   { capabilitySlug: "pep-check", category: "coverage", severity: "warning",

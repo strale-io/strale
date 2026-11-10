@@ -48,6 +48,8 @@ print(result)
 
 Anti-money-laundering programmes usually combine three searches: sanctions lists, politically exposed persons and negative news. Each Strale tool runs one of them.
 
-The agent decides the order, and reports every result, including empty ones. Matches need a person's judgement, because common names produce false matches. Pass the country and, for a person, the birth date to narrow them.
+The agent decides the order, and reports every result, including empty ones. Matches need a person’s judgement because common names can produce false matches. Check each tool’s inputs: `sanctions-check` accepts `birth_date` for person disambiguation, while its `country` input is echoed without filtering the search. Do not assume that the same filters work across all three tools.
+
+After reviewing the evidence, you can pass the screening flags to [AML Risk Score](/tools/aml-risk-score). That tool scores the flags you supply; it does not run these searches itself. Do not turn a failed or unfinished check into a `false` flag.
 
 A bundled check runs a fixed set of steps in one call, at one price, with one record. They are listed under [Bundled checks](/tools#bundled).

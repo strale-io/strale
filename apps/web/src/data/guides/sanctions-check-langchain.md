@@ -35,11 +35,11 @@ for call in result.tool_calls:
 
 ## How it works
 
-The tool searches the consolidated sanctions and debarment lists that Dilisense maintains, including the US OFAC SDN list, the EU financial sanctions list, the UN Security Council list and the UK sanctions list. The tool page names the sources. It matches names approximately and returns `is_sanctioned`, `match_count` and a `matches` list.
+The tool searches Dilisense’s consolidated sanctions index, including the US OFAC SDN list, the EU financial sanctions list, the UN Security Council list and the UK Sanctions List. The tool page names the sources. It matches names approximately and returns `is_sanctioned`, `match_count` and a `matches` list.
 
-Each match has the listed name, the lists it appears on, the countries involved and the listing details. There is no numeric confidence score. Common names can match the wrong person or company, so pass `country`, and `birth_date` for a person, to narrow the search.
+Each match includes the listed name and source identifiers, with countries and listing details where available. There is no numeric confidence score. Common names can match the wrong person or company. For an individual, provide `birth_date` when known to help the provider distinguish people. The `country` input is echoed in the response but does not filter the sanctions search; compare the available identifying details yourself.
 
-Every answer includes `lists_queried`, which names the lists searched, so you can show what was checked.
+Every answer includes `lists_queried`, which describes the provider’s coverage and refresh statement. It does not verify each list’s freshness for that call.
 
 A match means a name appears on a list that was searched. It is not a decision about the person or company: a person should review it.
 

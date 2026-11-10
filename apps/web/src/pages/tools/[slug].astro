@@ -111,12 +111,13 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
           <section aria-labelledby="results-title" class="stack">
             <h2 id="results-title" class="t-section">How to read the result</h2>
             {page.results.map((result) => <div class="stack-tight"><h3 class="t-subhead">{result.label}</h3><p>{result.explanation}</p></div>)}
+            {page.nextTools && <ul class="plain-list stack-tight">{page.nextTools.map((next) => <li><a class="link" href={`/tools/${next.slug}`}>{next.label}</a></li>)}</ul>}
           </section>
         </>}
 
         <section aria-labelledby="inputs-title" class="stack">
           <h2 id="inputs-title" class="t-section">Inputs</h2>
-          <InputsTable schema={tool.input_schema} />
+          <InputsTable schema={tool.input_schema} descriptions={page?.inputDescriptions} />
         </section>
 
         <section aria-labelledby="outputs-title" class="stack">
@@ -128,7 +129,7 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
         <section aria-labelledby="call-title" class="stack">
           <h2 id="call-title" class="t-section">How to call it</h2>
           <p class="t-compact muted">The same tool through each route. MCP clients reach it through Strale’s server at <code>{API_BASE}/mcp</code>; the call below is what the agent sends.</p>
-          {page && <p class="t-compact">{tool.free ? "Use the browser test above for a first lookup, or copy a request below to call it from your app." : "Get an API key, check your account balance, then copy a request below and replace the example EORI number with the one you need to check."}</p>}
+          {page && <p class="t-compact">{tool.free ? "Use the browser test above for a first call, or copy a request below to call it from your app." : "Get an API key, check your account balance, then copy a request below and replace the example inputs with the values you want to use."}</p>}
           <CodeBlock id="calls" title="How to call it" panels={snippets} />
           {page && <div class="stack-tight">
             <h3 class="t-subhead">Next steps</h3>

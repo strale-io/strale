@@ -1226,6 +1226,18 @@
         "capability_limitations.workaround"
       ],
       "sha256": "10c8d7921c994ea200b390b62153611b2cdcb4832171ba89507b6f8e1582f9e5"
+    },
+    {
+      "id": "M094",
+      "function": "runMigration0151_correctSanctionsLimitations",
+      "title": "Correct Sanctions Limitations",
+      "added": "2026-11-10",
+      "columns_written": [
+        "capability_limitations.limitation_text",
+        "capability_limitations.title",
+        "capability_limitations.workaround"
+      ],
+      "sha256": "089999063cbd75c4273ce536555b36ed6a177ecb269ec33e7e67647cd431a02f"
     }
   ],
   "known_overlaps": [
@@ -1770,9 +1782,10 @@
         "M086",
         "M087",
         "M092",
-        "M093"
+        "M093",
+        "M094"
       ],
-      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes title and limitation_text of the one active pep-check freshness row whose text equals its 2026-11-07 production text, once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit). M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run."
+      "note": "Disjoint by slug (2026-11-06): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M087 (block 0144) writes only the one active 'dependency-audit' row whose text equals the old production text. Both are run policy \"once\" and guarded on their old values, so neither can rewrite the other's row or fight it on boot. M092 (0149, 2026-11-07, DQ-46) writes title and limitation_text of the one active pep-check freshness row whose text equals its 2026-11-07 production text, once (run policy once); disjoint by slug from M086 (domain-reputation) and M087 (dependency-audit). M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps."
     },
     {
       "column": "capability_limitations.updated_at",
@@ -1835,9 +1848,10 @@
       "blocks": [
         "M086",
         "M092",
-        "M093"
+        "M093",
+        "M094"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M092 (block 0149, DQ-46) writes only the one active pep-check freshness row whose text equals its 2026-11-07 production text. Both run once and are guarded on their old values, so neither can rewrite the other's row. M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M092 (block 0149, DQ-46) writes only the one active pep-check freshness row whose text equals its 2026-11-07 production text. Both run once and are guarded on their old values, so neither can rewrite the other's row. M093 (0150, 2026-11-07, DQ-47) writes only capability_slug = 'pep-check' rows: it deletes five named rows by exact text and inserts the manifest's three where missing, once (run policy once); disjoint by slug from M086 (domain-reputation), and it never updates a row M092 (0149) wrote except by deleting it as one of the five named texts, after M092 has run. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps."
     },
     {
       "column": "capability_limitations.sort_order",
@@ -1851,9 +1865,10 @@
       "column": "capability_limitations.workaround",
       "blocks": [
         "M086",
-        "M093"
+        "M093",
+        "M094"
       ],
-      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows."
+      "note": "Disjoint by slug (2026-11-07): M086 (block 0143) writes only rows with capability_slug = 'domain-reputation'; M093 (block 0150, DQ-47) inserts only pep-check rows, once, where their text is missing. Neither can write the other's rows. M094 (0151, 2026-11-10) only corrects active sanctions-check rows guarded by exact old text, once; all earlier limitation blocks target other slugs. No row overlaps."
     },
     {
       "column": "capability_limitations.capability_slug",

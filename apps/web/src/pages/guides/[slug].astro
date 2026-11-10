@@ -71,7 +71,7 @@ const toc = [
         if (b.kind === "ul") return <ul class="doc-list t-body">{b.items.map((x) => <li set:html={renderInline(x)} />)}</ul>;
         if (b.kind === "ol") return <ol class="doc-list t-body">{b.items.map((x) => <li set:html={renderInline(x)} />)}</ol>;
         if (b.kind === "table") return (
-          <div class="table-wrap" tabindex="0" role="region" aria-label={s.heading}>
+          <div class="table-wrap" tabindex="0" role="region" aria-label={`${s.heading} table ${i + 1}`}>
             <table class="table">
               <thead><tr>{b.head.map((h) => <th scope="col" set:html={renderInline(h)} />)}</tr></thead>
               <tbody>{b.rows.map((r) => <tr>{r.map((c, j) => (j === 0 ? <th scope="row" set:html={renderInline(c)} /> : <td set:html={renderInline(c)} />))}</tr>)}</tbody>
@@ -85,7 +85,7 @@ const toc = [
 
   <section id="tools" aria-labelledby="tools-title">
     <h2 id="tools-title" class="t-section">Tools in this guide</h2>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Tools in this guide">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tools and prices table">
       <table class="table">
         <thead><tr><th scope="col">Tool</th><th scope="col">Price per call</th></tr></thead>
         <tbody>

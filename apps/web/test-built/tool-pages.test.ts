@@ -12,6 +12,36 @@ function example(html: string, id: string) {
   return JSON.parse(decode(code));
 }
 
+test("AML, Markdown and sanctions examples agree with their call inputs and lead to usable next steps", () => {
+  for (const slug of ["aml-risk-score", "url-to-markdown", "sanctions-check"]) {
+    const html = read(slug);
+    const input = example(html, "ex-in"), output = example(html, "ex-out");
+    const expected = slug === "aml-risk-score" ? input.entity_name : slug === "sanctions-check" ? input.name : input.url;
+    assert.equal(output[slug === "aml-risk-score" ? "entity_name" : slug === "sanctions-check" ? "query" : "url"], expected);
+    assert.match(decode(html), new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(html, new RegExp(`href="/signup\\?tool=${slug}"`));
+    assert.match(html, /id="uses-title"/);
+    assert.match(html, /id="results-title"/);
+    assert.doesNotMatch(html, /example EORI number/);
+    for (const [, href] of html.matchAll(/href="(\/(?:tools|guides)\/[^"?#]+)"/g)) assert.ok(existsSync(resolve(dist, `${href.slice(1)}.html`)), href);
+    assert.match(html, new RegExp(`<link rel="canonical" href="https://strale.io/tools/${slug}"`));
+  }
+  const markdown = read("url-to-markdown"), aml = read("aml-risk-score"), sanctions = read("sanctions-check");
+  assert.match(markdown, /<form id="try-tool"/);
+  assert.match(markdown, /opening excerpt/);
+  assert.doesNotMatch(markdown, /Example Domain/);
+  assert.equal(example(aml, "ex-in").entity_type, "company");
+  assert.equal(example(aml, "ex-in").adverse_media_match, true);
+  assert.equal(example(aml, "ex-out").risk_score, 20);
+  assert.match(aml, /does not look up a person or company/);
+  assert.match(sanctions, /not a live screening result/);
+  assert.doesNotMatch(sanctions, /Vladimir|Spotify/);
+  assert.match(sanctions, /ISO country code echoed in the response; does not filter the sanctions search/);
+  assert.doesNotMatch(sanctions, /ISO country code filter/);
+  assert.match(markdown, /Keep link destinations in the Markdown/);
+  assert.doesNotMatch(aml + sanctions, /<form id="try-tool"/);
+});
+
 test("DNS and EORI render paired usable examples, crawlable guides and selected-tool signup", () => {
   for (const [slug, field, value, guide] of [
     ["dns-lookup", "domain", "strale.io", "dns-lookup-agent-python"],
