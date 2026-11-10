@@ -16,12 +16,14 @@ interface Props {
   description?: string;
   /** Header item to mark as the current page. */
   current?: "tools" | "company-data" | "use-cases" | "pricing" | "docs";
+  /** Tool to return to after signup; supplied only by a catalogue tool page. */
+  signupTool?: string;
   /** Keep the page out of search indexes (pages that only make sense with a private link). */
   noindex?: boolean;
   /** Structured data (schema.org) for the page, written as ld+json. */
   jsonLd?: Record<string, unknown>[];
 }
-const { title, description = SHORT_DESCRIPTION, current, noindex = false, jsonLd = [] } = Astro.props;
+const { title, description = SHORT_DESCRIPTION, current, signupTool, noindex = false, jsonLd = [] } = Astro.props;
 const data = await getSiteData();
 const ogImage = new URL("/og-image.png", Astro.site).href;
 const head = liveHead(data.mode, Astro.site!, noindex);
@@ -66,7 +68,7 @@ const fullTitle = Astro.url.pathname === "/" ? title : `${title} · Strale`;
       </div>
     </aside>
   )}
-  <Header current={current} />
+  <Header current={current} signupTool={signupTool} />
   <main id="main">
     <slot />
   </main>

@@ -9,11 +9,12 @@
 //   keyless allowance   FREE_TIER_MONTHLY_LIMIT (code-facts)
 import Base from "../layouts/Base.astro";
 import CodeBlock from "../components/CodeBlock.astro";
-import { getSiteData, API_BASE } from "../lib/site-data";
+import { getSiteData, tools, API_BASE } from "../lib/site-data";
 import { FREE_TIER_MONTHLY_LIMIT, TRIAL_CREDITS_CENTS } from "../lib/code-facts";
 import { formatEur } from "../lib/format";
 
 const data = await getSiteData();
+const signupTools = tools(data).map(({ slug, name }) => ({ slug, name }));
 const free = data.facts.capability_counts.free_tier_slugs;
 const trial = formatEur(TRIAL_CREDITS_CENTS);
 const SUPPORT = "hello@strale.io";
@@ -38,10 +39,11 @@ const response = JSON.stringify({ user_id: "…", email: "you@example.com", api_
 
   <section class="section-tight" aria-label="Create your account">
     <div class="container narrow stack-loose">
-      <div class="card panel" data-signup data-api={API_BASE} data-support={SUPPORT}>
+      <div class="card panel" data-signup data-api={API_BASE} data-support={SUPPORT} data-signup-tools={JSON.stringify(signupTools)}>
         <div data-signup-form-view class="stack">
           <h2 class="t-subhead">Create your account</h2>
           <p class="t-compact muted">Get your API key instantly. New accounts can start with {trial} in trial credit.</p>
+          <p class="t-compact" data-signup-tool-context hidden>After signup, continue with <strong data-signup-tool-name></strong>.</p>
           <noscript><p class="t-compact">This form needs JavaScript. You can also register from the command line, below.</p></noscript>
           {/* No name= attributes on purpose: the script reads the fields by id, so if it fails to
               load, a native submit carries no fields and the email never lands in a URL. */}
@@ -77,7 +79,12 @@ const response = JSON.stringify({ user_id: "…", email: "you@example.com", api_
           </div>
           <div class="stack-tight">
             <p class="label">Next steps</p>
-            <ol class="steps plain-list" role="list">
+            <div class="stack" data-signup-continuation hidden>
+              <p class="t-compact">Save your key above, then open your tool’s call instructions. Use your key in the API request or your MCP client. Opening the instructions does not run or charge for a call.</p>
+              <a class="btn btn-primary" data-signup-continue href="/tools">Continue with your tool</a>
+              <a class="link" href="/docs#first-call">New to the API? Start with a free example</a>
+            </div>
+            <ol class="steps plain-list" role="list" data-signup-general-steps>
               <li><span class="num">01</span><a class="link" href="/docs#first-call">Make your first API call</a></li>
               <li><span class="num">02</span><a class="link" href="/docs/sdks">Install the TypeScript or Python SDK</a></li>
               <li><span class="num">03</span><a class="link" href="/tools#bundled">Browse the bundled checks</a></li>

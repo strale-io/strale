@@ -1,0 +1,48 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/web/package.json (unit, build, built, browser, Astro), API tsc, design:check",
+    "commit": "9ee0061ec8f467a5251d398ef1e0c70de6fa618b"
+  },
+  "at": "2026-11-10T10:21:42.454Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/funnel-fix-nov10/test-summary.json"
+  },
+  "summary": {
+    "ok": true,
+    "unit_passed": 89,
+    "built_passed": 11,
+    "browser_passed": 14,
+    "astro_errors": 0,
+    "astro_warnings": 0,
+    "astro_existing_hints": 2,
+    "api_types_passed": true,
+    "design_check_passed": true,
+    "preview_pages": 434,
+    "technical_high": 0,
+    "technical_medium": 0,
+    "product_high": 0,
+    "product_medium": 0,
+    "manual_fixture_signup_return_passed": true,
+    "notes": "Tests ran against working diff based on 9ee0061e. Windows autocrlf-only checkout artifacts normalized for tests and restored; no unrelated content changes. No live registration or paid call. Reviewed Tier 1 by independent sol/high contexts."
+  },
+  "topic": "tool-signup-continuation",
+  "raw": {
+    "ok": true,
+    "unit_passed": 89,
+    "built_passed": 11,
+    "browser_passed": 14,
+    "astro_errors": 0,
+    "astro_warnings": 0,
+    "astro_existing_hints": 2,
+    "api_types_passed": true,
+    "design_check_passed": true,
+    "preview_pages": 434,
+    "technical_high": 0,
+    "technical_medium": 0,
+    "product_high": 0,
+    "product_medium": 0,
+    "manual_fixture_signup_return_passed": true,
+    "notes": "Tests ran against working diff based on 9ee0061e. Windows autocrlf-only checkout artifacts normalized for tests and restored; no unrelated content changes. No live registration or paid call. Reviewed Tier 1 by independent sol/high contexts."
+  }
+}
