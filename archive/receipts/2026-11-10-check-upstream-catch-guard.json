@@ -1,0 +1,35 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f25d9d3eb9a63c9d5564aa612b2c362fb993a0d7"
+  },
+  "at": "2026-11-10T23:37:24.462Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/upstream-lint-nov11/receipt-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 2,
+    "scope": "Static upstream catch guard and additive CI gates; no billing-path implementation"
+  },
+  "topic": "upstream-catch-guard",
+  "raw": {
+    "ok": true,
+    "scope": "Static upstream catch guard and additive CI gates; no billing-path implementation",
+    "failures": [],
+    "warnings": [
+      "200 conservative existing candidates remain; not confirmed billing defect count",
+      "Logging and lint acceptance do not prove unbillable failures; executor repairs/replays/reconciliation remain open"
+    ],
+    "checks": {
+      "production": "No credentials, executor imports, network calls, production data or billing changes",
+      "tests": "55 passed",
+      "inventory": "406 source files,265handlers,200 existing candidates,0inlineexceptions",
+      "legacy_gap": "Existing bare-catch guard accepts planted array fallback; new guard rejects it",
+      "ratchet": "Exact source-context fingerprints and multiplicities; must shrink after fixes; cannot grow versus trusted merge base, including first adoption",
+      "review_fail_before": "3 optional logging/rejection cases failed before correction and pass after"
+    }
+  }
+}
