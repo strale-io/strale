@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 
 const bundle = await build({ stdin: { contents: `import './src/scripts/signup'; import {initAnalytics} from './src/scripts/analytics'; initAnalytics();`, resolveDir: process.cwd() }, bundle: true, write: false, format: 'iife' });
 const html = `<!doctype html><html><body>
-<div data-signup data-api="https://api.strale.io" data-support="support@example.invalid" data-signup-tools='[{"slug":"pdf-extract","name":"PDF Data Extraction"},{"slug":"iban-validate","name":"IBAN Validation"}]'>
+<div data-signup data-api="https://api.strale.io" data-support="support@example.invalid" data-signup-tools='[{"slug":"pdf-extract","name":"PDF Data Extraction"},{"slug":"iban-validate","name":"IBAN Validation"},{"slug":"dns-lookup","name":"DNS Lookup"},{"slug":"eori-validate","name":"EORI Validation"}]'>
 <div data-signup-form-view><p data-signup-tool-context hidden>After signup, continue with <strong data-signup-tool-name></strong>.</p><form data-signup-form><input id="signup-email" value="test@example.invalid"><input id="signup-name" value=""><button type="submit"><span data-spinner></span><span data-label>Get API key</span></button><div data-signup-error hidden><span></span></div></form></div>
 <div data-signup-done hidden tabindex="-1"><span data-signup-key></span><span data-signup-balance></span><div data-signup-withheld hidden><p></p></div><button data-signup-copy><span></span><svg><use></use></svg></button><span data-signup-copy-status></span><div data-signup-continuation hidden><a data-signup-continue href="/tools">Continue</a></div><ol data-signup-general-steps><li>Make your first API call</li></ol></div>
 </div><script>${bundle.outputFiles[0].text}</script></body></html>`;
@@ -14,7 +14,7 @@ const launch = () => chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? { channel:
 test('paid and free tools continue to the same tool with tracking, without moving or storing the key', async () => {
   const browser = await launch();
   try {
-    for (const [slug, name, source] of [['pdf-extract','PDF Data Extraction','linkedin'], ['iban-validate','IBAN Validation','x']]) {
+    for (const [slug, name, source] of [['pdf-extract','PDF Data Extraction','linkedin'], ['iban-validate','IBAN Validation','x'], ['dns-lookup','DNS Lookup','x'], ['eori-validate','EORI Validation','linkedin']]) {
       const page = await browser.newPage(); let registration; const outbound = [];
       page.on('request', r => outbound.push(r.url()));
       await page.route('https://strale.io/**', r => r.fulfill({ contentType: 'text/html', body: new URL(r.request().url()).pathname === '/signup' ? html : '<h1>Tool call instructions</h1>' }));

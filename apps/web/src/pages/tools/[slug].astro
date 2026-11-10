@@ -10,10 +10,12 @@ import InputsTable from "../../components/tool/InputsTable.astro";
 import OutputsTable from "../../components/tool/OutputsTable.astro";
 import Limitations from "../../components/tool/Limitations.astro";
 import { getSiteData, tools as allTools, solutionsFor, API_BASE, type Tool } from "../../lib/site-data.ts";
-import { formatEur, formatUsd, formatDate, json, plural } from "../../lib/format.ts";
+import { formatEur, formatUsd, formatDate, json } from "../../lib/format.ts";
 import { FREE_TIER_MONTHLY_LIMIT } from "../../lib/code-facts.ts";
 import { toolSnippets } from "../../lib/snippets.ts";
 import { TRANSPARENCY } from "../../lib/describe.ts";
+import { toolPages } from "../../content/tool-pages.ts";
+import { toolSignupHref } from "../../lib/signup-continuation.ts";
 import { JOB_GROUPS } from "../../content/jobs.ts";
 
 export async function getStaticPaths() {
@@ -27,8 +29,9 @@ const tools = allTools(data);
 const tool = tools.find((t) => t.slug === slug) as Tool;
 const extras = data.manifests.get(slug);
 const job = JOB_GROUPS.find((g) => g.id === tool.job)!;
-const inputs = extras?.example_input ?? {};
-const output = tool.output_schema?.example ?? null;
+const page = toolPages[slug];
+const inputs = page?.example.input ?? extras?.example_input ?? {};
+const output = page?.example.output ?? tool.output_schema?.example ?? null;
 const reliability = extras?.output_field_reliability ?? {};
 const limitations = data.limitations.get(slug) ?? [];
 const trust = data.trust.get(slug);
@@ -44,13 +47,18 @@ const outText = output ? flat(JSON.stringify(output)) : "";
 const inputValues = Object.values(inputs).filter((v) => typeof v === "string" || typeof v === "number");
 const paired = !!output && inputValues.length > 0 && inputValues.every((v) => outText.includes(flat(v)));
 ---
-<Base title={tool.name} current="tools" signupTool={tool.slug} description={tool.description.slice(0, 160)}>
+<Base title={page?.title ?? tool.name} current="tools" signupTool={tool.slug} description={page?.description ?? tool.description.slice(0, 160)}>
   <article>
     <header class="tool-head">
       <div class="container stack">
         <nav aria-label="Breadcrumb" class="small"><a class="link" href="/tools">Tools</a> <span aria-hidden="true">/</span> <a class="link" href={`/tools?job=${job.id}`}>{job.label}</a></nav>
         <h1 class="t-campaign">{tool.name}</h1>
-        <p class="t-lead">{tool.description}</p>
+        <p class="t-lead">{page?.intro ?? tool.description}</p>
+        {page && <div class="row">
+          <a class="btn btn-primary" href={tool.free ? "#try-tool" : toolSignupHref(slug)}>{tool.free ? "Try it without a key" : "Get an API key"}</a>
+          <a class="btn btn-secondary" href="#call-title">{tool.free ? "See the API call" : "Already have a key? Copy the call"}</a>
+        </div>}
+        {page && !tool.free && <p class="small muted">{formatEur(tool.price_cents)} per successful call with an API key. After signup, continue with {tool.name}. Review your balance before making a paid call.</p>}
         <div class="row">
           {tool.free && <span class="tag tag-teal">Free to try</span>}
           {tool.x402 && <span class="tag tag-kit">Pay by wallet (x402)</span>}
@@ -65,10 +73,11 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
       <div class="tool-main">
         <section aria-labelledby="example-title" class="stack">
           <h2 id="example-title" class="t-section">Example</h2>
+          {page && <p class="t-compact muted">{page.example.note}</p>}
           {paired ? (
             <div class="grid-2 example-grid">
               <CodeBlock id="ex-in" title="Input" wrap panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
-              <CodeBlock id="ex-out" title="Answer" wrap panels={[{ label: "Answer", lang: "json", code: json(output) }]} />
+              <CodeBlock id="ex-out" title={page?.example.selected ? "Selected output fields" : "Answer"} wrap panels={[{ label: "Answer", lang: "json", code: json(output) }]} />
             </div>
           ) : output ? (
             <CodeBlock id="ex-out" title="Example answer" wrap panels={[{ label: "Answer", lang: "json", code: json(output) }]} />
@@ -79,7 +88,7 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
             </>
           )}
           {tool.free && (
-            <form class="try card" data-try data-api={API_BASE} data-slug={slug}>
+            <form id="try-tool" class="try card" data-try data-api={API_BASE} data-slug={slug}>
               <h3 class="t-subhead">Try it</h3>
               <p class="t-compact muted">Runs the real tool from your browser, with no key. Free calls are limited to {FREE_TIER_MONTHLY_LIMIT} a month across all free tools.</p>
               <div class="field">
@@ -94,6 +103,17 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
           )}
         </section>
 
+        {page && <>
+          <section aria-labelledby="uses-title" class="stack">
+            <h2 id="uses-title" class="t-section">What you can do with it</h2>
+            <ul class="stack-tight">{page.uses.map((use) => <li>{use}</li>)}</ul>
+          </section>
+          <section aria-labelledby="results-title" class="stack">
+            <h2 id="results-title" class="t-section">How to read the result</h2>
+            {page.results.map((result) => <div class="stack-tight"><h3 class="t-subhead">{result.label}</h3><p>{result.explanation}</p></div>)}
+          </section>
+        </>}
+
         <section aria-labelledby="inputs-title" class="stack">
           <h2 id="inputs-title" class="t-section">Inputs</h2>
           <InputsTable schema={tool.input_schema} />
@@ -102,13 +122,19 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
         <section aria-labelledby="outputs-title" class="stack">
           <h2 id="outputs-title" class="t-section">Output fields</h2>
           <p class="t-compact muted">How reliably each field appears in a successful answer.</p>
-          <OutputsTable schema={tool.output_schema} reliability={reliability} />
+          <OutputsTable schema={tool.output_schema} reliability={reliability} overrides={page?.outputOverrides} />
         </section>
 
         <section aria-labelledby="call-title" class="stack">
           <h2 id="call-title" class="t-section">How to call it</h2>
           <p class="t-compact muted">The same tool through each route. MCP clients reach it through Strale’s server at <code>{API_BASE}/mcp</code>; the call below is what the agent sends.</p>
+          {page && <p class="t-compact">{tool.free ? "Use the browser test above for a first lookup, or copy a request below to call it from your app." : "Get an API key, check your account balance, then copy a request below and replace the example EORI number with the one you need to check."}</p>}
           <CodeBlock id="calls" title="How to call it" panels={snippets} />
+          {page && <div class="stack-tight">
+            <h3 class="t-subhead">Next steps</h3>
+            <p class="t-compact"><a class="link" href={page.guide.href}>{page.guide.label}</a> for a complete code example.</p>
+            <p class="t-compact"><a class="link" href={toolSignupHref(slug)}>Get an API key for {tool.name}</a>. After signup, you’ll return to these call instructions. Signing up does not run the tool.</p>
+          </div>}
         </section>
 
         <section aria-labelledby="limits-title" class="stack">
