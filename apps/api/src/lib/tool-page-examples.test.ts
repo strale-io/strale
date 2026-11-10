@@ -1,7 +1,17 @@
 import { expect, it, vi } from "vitest";
-import { toolPages } from "../../../web/src/content/tool-pages.js";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
+import ts from "typescript";
 import { getExecutor } from "../capabilities/index.js";
 import "../capabilities/aml-risk-score.js";
+
+// The API CI job does not install Astro. Load this dependency-free content
+// module without resolving the website's Astro-based tsconfig.
+const source = readFileSync(new URL("../../../web/src/content/tool-pages.ts", import.meta.url), "utf8");
+const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
+const content = { exports: {} as { toolPages: Record<string, { example: { input: Record<string, unknown>; output: Record<string, unknown> } }> } };
+runInNewContext(compiled.outputText, content);
+const { toolPages } = content.exports;
 
 vi.mock("./metered-vendor-fetch.js", () => ({ meteredVendorFetch: vi.fn(async () => new Response(JSON.stringify({ found_records: [] }), { status: 200 })) }));
 import "../capabilities/sanctions-check.js";
