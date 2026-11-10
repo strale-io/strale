@@ -1,6 +1,6 @@
 # Strale Goals — the document every agent reads first
 
-**Reviewed:** 2026-08-23 · next review at each Sunday synthesis · quarterly deep review.
+**Reviewed:** 2026-11-10 (catch-up for weeks 2026-10-26 and 2026-11-02) · next review at each Sunday synthesis · quarterly deep review.
 
 ## Mission
 
@@ -134,6 +134,20 @@ matter more than the total at this size. One wallet buying more is not
 conversion.
 
 ## What we currently know (update as evidence lands)
+
+- **Reviewed 2026-11-10 — completed weeks 2026-10-26 and 2026-11-02.**
+  The full commercial synthesis and fresh read-only aggregates are retained
+  outside this public repository under the founder's financial-data boundary.
+  It covers both completed weeks, concentration, repeat use, the retained-payer
+  revenue bridge, first-purchase tools, quiet payers, free use and margin gaps.
+  The existing milestone definitions and experiment constraints remain in force.
+  Next: finish the missing weekly free-caller and listings checks, then apply
+  the roadmap's reliability review before further listing expansion. The daily
+  summary's first delivery is verified; its observation-period acceptance stays
+  open. ChatGPT business verification is deferred by the founder and the draft
+  is not a published listing. See the [review checkpoint](../../handoff/_general/from-code/2026-11-10-weekly-revenue-review.md)
+  for private evidence locations and the next review window. Earlier dated
+  entries below remain historical observations, including partial-week reads.
 
 - **Measured 2026-10-31 — the week in progress looks like a record, but about
   €64 of its €139.57 (day 6) is one-off.** The largest x402 payer ran 1,055
