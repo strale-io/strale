@@ -15,7 +15,8 @@ describe("private digest provider boundary", () => {
     vi.stubEnv("HEALTH_DIGEST_EMAIL", "changed@example.test"); vi.stubEnv("HEALTH_DIGEST_FROM", "changed-sender@example.test");
     vi.stubEnv("HEALTH_MONITOR_INBOUND", "another-public-workflow@example.test");
     await sendPrivateDigestEmail(message, "summary-test");
-    expect(provider.send).toHaveBeenCalledWith(message, { idempotencyKey: "summary-test" });
+    const { reply_to, ...content } = message;
+    expect(provider.send).toHaveBeenCalledWith({ ...content, replyTo: reply_to }, { idempotencyKey: "summary-test" });
     expect(message.to).toBe("owner@example.test"); expect(message.reply_to).toBe("owner@example.test");
     expect(message.from).not.toBe("changed-sender@example.test");
     expect(JSON.stringify(provider.send.mock.calls)).not.toContain("public-workflow");

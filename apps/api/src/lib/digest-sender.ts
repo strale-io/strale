@@ -77,7 +77,9 @@ export function preparePrivateDigestEmail(html: string, subject: string): Privat
 }
 
 export async function sendPrivateDigestEmail(message: PrivateDigestEnvelope, idempotencyKey: string): Promise<void> {
-  const { error } = await getResend().emails.send(message, { idempotencyKey });
+  // The saved envelope uses the provider wire field; the SDK expects camelCase.
+  const { reply_to, ...content } = message;
+  const { error } = await getResend().emails.send({ ...content, replyTo: reply_to }, { idempotencyKey });
   // Keep provider payloads, private recipient and financial subject out of logs.
   if (error) throw new Error("Private digest delivery failed; retry with the saved envelope");
   log.info({ label: "private-digest-accepted" }, "private-digest-accepted");
