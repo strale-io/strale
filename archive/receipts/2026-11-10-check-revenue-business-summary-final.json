@@ -1,0 +1,46 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "9626dfd1ad7573fd944e357e5b3bda87463405c6"
+  },
+  "at": "2026-11-10T19:32:33.109Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/revenue-roadmap-nov10/final-verification-source.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "reviewed_source": "9626dfd1ad7573fd944e357e5b3bda87463405c6",
+    "final_verdict": "GO",
+    "final_rounds": 2,
+    "final_reviewer": "fresh independent gpt-6.1-sol/high",
+    "routing": "Wanted Opus/high, fell to Codex sol/high after authenticated Max subscription invocation returned 429 usage_limit_reached. No usage credits enabled.",
+    "remaining_high": 0,
+    "remaining_medium": 0,
+    "independent_tests_passed": 23,
+    "api_typecheck_after_fix": "passed",
+    "sdk_serialization_regression": "real SDK, offline transport, private wire reply_to and idempotency verified",
+    "mutation_test": "green -> red on removed SDK field mapping -> green after restoration; clean working tree",
+    "mutation_command": "node apps/api/scripts/mutation-test.mjs --file apps/api/src/lib/digest-sender.ts --find 'send({ ...content, replyTo: reply_to }, { idempotencyKey })' --replace 'send(message, { idempotencyKey })' --test 'npm exec --workspace=apps/api -- vitest run src/lib/digest-sender.serialization.test.ts'",
+    "production_acceptance": "pending deployment; five-of-seven-days observation remains open"
+  },
+  "topic": "revenue-business-summary-final",
+  "raw": {
+    "ok": true,
+    "reviewed_source": "9626dfd1ad7573fd944e357e5b3bda87463405c6",
+    "final_verdict": "GO",
+    "final_rounds": 2,
+    "final_reviewer": "fresh independent gpt-6.1-sol/high",
+    "routing": "Wanted Opus/high, fell to Codex sol/high after authenticated Max subscription invocation returned 429 usage_limit_reached. No usage credits enabled.",
+    "remaining_high": 0,
+    "remaining_medium": 0,
+    "independent_tests_passed": 23,
+    "api_typecheck_after_fix": "passed",
+    "sdk_serialization_regression": "real SDK, offline transport, private wire reply_to and idempotency verified",
+    "mutation_test": "green -> red on removed SDK field mapping -> green after restoration; clean working tree",
+    "mutation_command": "node apps/api/scripts/mutation-test.mjs --file apps/api/src/lib/digest-sender.ts --find 'send({ ...content, replyTo: reply_to }, { idempotencyKey })' --replace 'send(message, { idempotencyKey })' --test 'npm exec --workspace=apps/api -- vitest run src/lib/digest-sender.serialization.test.ts'",
+    "failures": [],
+    "production_acceptance": "pending deployment; five-of-seven-days observation remains open"
+  }
+}
