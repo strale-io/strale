@@ -17,6 +17,8 @@ Independent technical and product reviews in separate gpt-6.1-sol/high contexts:
 
 Local browser walkthrough used a clearly fake key and a local registration fixture, then followed Continue with PDF Data Extraction to its call instructions. No real account or paid call. API/OAuth paid-call verification remains paused at the user's request.
 
+Layout follow-up: manual visual inspection found adjacent inline actions. Paragraph wrappers now separate them using existing spacing. Preview build, built-output and browser checks passed again; product round 2 GO. Follow-up evidence: `archive/receipts/2026-11-10-test-run-tool-signup-layout.json`.
+
 ## Scheduled links
 
 Guarded Typefully client used for Strale social set 298868, X @strale_io and LinkedIn /company/strale-io. Updated 17 destinations; two were already appropriate. All 19 entries reread as scheduled at original publish_at values; all 17 attached media ready. Approved copy except URL destination, UTM labels, threads and platform settings preserved.
