@@ -57,6 +57,24 @@ jobs:
     evidence: docs/company/BUDGET.md
     procedure: docs/company/BUDGET.md
 
+  - id: weekly-free-callers
+    title: Weekly free callers, signup cohort and paid conversions
+    runs_as: due-list
+    cadence_days: 7
+    last_run: 2026-11-10
+    evidence: handoff/_general/from-code/2026-11-10-revenue-checks.md
+    procedure: docs/operations/weekly-revenue-checks.md
+    note: D10 remains an experiment; retain the 2026-12-12 review. Private aggregate evidence stays outside this public repository.
+
+  - id: weekly-listings
+    title: Weekly distribution listings and published-package checks
+    runs_as: due-list
+    cadence_days: 7
+    last_run: 2026-11-10
+    evidence: handoff/_general/from-code/2026-11-10-revenue-checks.md
+    procedure: docs/operations/weekly-revenue-checks.md
+    note: Record live evidence separately from prepared submissions, unavailable counters and deferred verification. A completed check does not mean all listings are corrected.
+
   - id: data-source-digest-email
     title: Daily data-source (external outage) summary email
     runs_as: api-job

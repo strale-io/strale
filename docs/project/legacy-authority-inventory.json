@@ -258,7 +258,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "eb41fb4b139b7c97c7426400ae413d29ff3c6c772ebe2f8f6091bde209ce6a14",
+      "sha256": "c26f46a6cb0b38b8c4967349d7f869aeaff2aa01926b8f40b73f2cc8373c189b",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -299,6 +299,7 @@
         "docs/operations/distribution-registry.yaml",
         "docs/operations/orchestrator-carryover-facts.md",
         "docs/operations/vendor-permissions/2026-10-27-serper.md",
+        "docs/operations/weekly-revenue-checks.md",
         "docs/programs/brand-website/PROGRAM.md",
         "docs/programs/brand-website/SWITCHOVER-REFERENCES.md",
         "docs/programs/brand-website/homepage-brief.json",
@@ -510,6 +511,7 @@
         "docs/operations/distribution-registry.yaml",
         "docs/operations/orchestrator-carryover-facts.md",
         "docs/operations/run-onboarding.md",
+        "docs/operations/weekly-revenue-checks.md",
         "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md",
         "docs/programs/brand-website/PROGRAM.md",
         "docs/programs/brand-website/PROOF-QUALIFICATION.md",
