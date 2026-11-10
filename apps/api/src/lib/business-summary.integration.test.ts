@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { sql } from "drizzle-orm";
 import { useTestDatabase } from "../test-support/integration-db.js";
-const url = useTestDatabase();
-const suite = url ? describe : describe.skip;
+const DATABASE_URL_TEST = useTestDatabase();
+const suite = DATABASE_URL_TEST ? describe : describe.skip;
 const send = vi.fn(async (..._args: unknown[]) => {});
 vi.mock("./digest-sender.js", async (original) => ({ ...await original<typeof import("./digest-sender.js")>(), isEmailConfigured: () => true, sendPrivateDigestEmail: (...args: unknown[]) => send(...args) }));
-import { getDb, closeDbPool, withDatabase } from "../db/index.js";
-import { collectBusinessSummary, sendBusinessSummary } from "./business-summary.js";
-import { runMigration0152_businessSummaryDeliveries } from "../startup-migrations/blocks/0152-business-summary-deliveries.js";
+const { getDb, closeDbPool, withDatabase } = await import("../db/index.js");
+const { collectBusinessSummary, sendBusinessSummary } = await import("./business-summary.js");
+const { runMigration0152_businessSummaryDeliveries } = await import("../startup-migrations/blocks/0152-business-summary-deliveries.js");
 class Rollback extends Error {}
 
 suite("business summary on disposable Postgres", () => {
