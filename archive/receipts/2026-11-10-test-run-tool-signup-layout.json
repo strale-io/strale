@@ -1,0 +1,34 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/web/package.json (build:preview-data, test:built, test:browser)",
+    "commit": "5ad57614e4e4334e5f3c4b560f1b13f7e26e1a96"
+  },
+  "at": "2026-11-10T10:32:37.157Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/funnel-fix-nov10/layout-summary.json"
+  },
+  "summary": {
+    "ok": true,
+    "built_passed": 11,
+    "browser_passed": 14,
+    "preview_build_passed": true,
+    "manual_screenshot_passed": true,
+    "product_round": 2,
+    "high_findings": 0,
+    "medium_findings": 0,
+    "delta": "Two continuation anchors wrapped in paragraphs for existing vertical spacing. No logic changes versus 5ad57614."
+  },
+  "topic": "tool-signup-layout",
+  "raw": {
+    "ok": true,
+    "built_passed": 11,
+    "browser_passed": 14,
+    "preview_build_passed": true,
+    "manual_screenshot_passed": true,
+    "product_round": 2,
+    "high_findings": 0,
+    "medium_findings": 0,
+    "delta": "Two continuation anchors wrapped in paragraphs for existing vertical spacing. No logic changes versus 5ad57614."
+  }
+}

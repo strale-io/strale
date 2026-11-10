@@ -3,6 +3,7 @@
 import { openingBalance, registerBody, registerErrorMessage, type RegisterResponse } from "../lib/wallet.ts";
 import { campaignFromUrl } from "../lib/campaign";
 import { track } from "./analytics";
+import { signupContinuation, type SignupTool } from "../lib/signup-continuation";
 
 const root = document.querySelector<HTMLElement>("[data-signup]");
 if (root) {
@@ -24,6 +25,28 @@ if (root) {
   const copyStatus = root.querySelector<HTMLElement>("[data-signup-copy-status]")!;
   let submitting = false;
   let apiKey = "";
+
+  // Optional navigation context must never prevent account creation. The list comes from
+  // the built catalogue, not the query string; assign textContent rather than HTML.
+  try {
+    const tools = JSON.parse(root.dataset.signupTools ?? "[]") as SignupTool[];
+    const continuation = signupContinuation(location.href, tools);
+    if (continuation) {
+      const context = root.querySelector<HTMLElement>("[data-signup-tool-context]");
+      const name = root.querySelector<HTMLElement>("[data-signup-tool-name]");
+      const next = root.querySelector<HTMLElement>("[data-signup-continuation]");
+      const link = root.querySelector<HTMLAnchorElement>("[data-signup-continue]");
+      const general = root.querySelector<HTMLElement>("[data-signup-general-steps]");
+      if (context && name && next && link && general) {
+        name.textContent = continuation.name;
+        link.textContent = `Continue with ${continuation.name}`;
+        link.href = continuation.href;
+        context.hidden = false;
+        next.hidden = false; // Inside the success view, which stays hidden until signup succeeds.
+        general.hidden = true;
+      }
+    }
+  } catch { /* Missing or malformed context falls back to the ordinary quickstart. */ }
 
   // The browser's own required / type=email check runs before submit, as on the old page.
   const showError = (msg: string) => {

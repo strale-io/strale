@@ -1,9 +1,11 @@
 ---
 import Wordmark from "./Wordmark.astro";
+import { toolSignupHref } from "../lib/signup-continuation";
 // Header: Tools · Company data · Use cases · Pricing · Docs, then one button (SITE-STRUCTURE.md).
 // No login link: there is no login product (claims.yaml sign-in-no-login-product).
-interface Props { current?: string }
-const { current } = Astro.props;
+interface Props { current?: string; signupTool?: string }
+const { current, signupTool } = Astro.props;
+const signupHref = toolSignupHref(signupTool);
 const items = [
   { id: "tools", href: "/tools", label: "Tools" },
   { id: "company-data", href: "/company-data", label: "Company data" },
@@ -23,7 +25,7 @@ const items = [
       </ul>
     </nav>
     <div class="nav-actions">
-      <a class="btn btn-primary" href="/signup">Get an API key</a>
+      <a class="btn btn-primary" href={signupHref}>Get an API key</a>
     </div>
     <button class="nav-link menu-button" type="button" aria-expanded="false" aria-controls="mobile-menu" data-disclosure><span data-label>Menu</span> <svg class="icon" aria-hidden="true"><use href="#i-menu" /></svg></button>
   </div>
@@ -34,7 +36,7 @@ const items = [
       </ul>
     </nav>
     <div class="mobile-actions">
-      <a class="btn btn-primary" href="/signup">Get an API key</a>
+      <a class="btn btn-primary" href={signupHref}>Get an API key</a>
     </div>
   </div>
 </header>

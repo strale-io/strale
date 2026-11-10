@@ -44,7 +44,7 @@ const outText = output ? flat(JSON.stringify(output)) : "";
 const inputValues = Object.values(inputs).filter((v) => typeof v === "string" || typeof v === "number");
 const paired = !!output && inputValues.length > 0 && inputValues.every((v) => outText.includes(flat(v)));
 ---
-<Base title={tool.name} current="tools" description={tool.description.slice(0, 160)}>
+<Base title={tool.name} current="tools" signupTool={tool.slug} description={tool.description.slice(0, 160)}>
   <article>
     <header class="tool-head">
       <div class="container stack">
