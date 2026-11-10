@@ -33,7 +33,7 @@ const page = toolPages[slug];
 const inputs = page?.example.input ?? extras?.example_input ?? {};
 const output = page?.example.output ?? tool.output_schema?.example ?? null;
 const reliability = extras?.output_field_reliability ?? {};
-const limitations = data.limitations.get(slug) ?? [];
+const limitations = (data.limitations.get(slug) ?? []).map((item) => ({ ...item, ...page?.limitationOverrides?.[item.title ?? ""] }));
 const trust = data.trust.get(slug);
 const bundles = solutionsFor(data, slug);
 const related = tools.filter((t) => t.job === tool.job && t.slug !== slug && (t.category === tool.category || t.country !== null && tool.country !== null)).slice(0, 6);

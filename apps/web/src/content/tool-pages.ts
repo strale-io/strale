@@ -9,11 +9,79 @@ interface ToolPage {
   /** Display corrections verified against the executor; do not change the API contract. */
   outputOverrides?: Record<string, { type?: string; appears?: string }>;
   inputDescriptions?: Record<string, string>;
+  /** Correct specific stale catalogue prose while retaining every other limitation. */
+  limitationOverrides?: Record<string, { title?: string; text?: string; workaround?: string }>;
   guide: { href: string; label: string };
   nextTools?: { slug: string; label: string }[];
 }
 
 export const toolPages: Partial<Record<string, ToolPage>> = {
+  "doi-resolve": {
+    title: "DOI Lookup API — publication metadata as JSON",
+    description: "Resolve a DOI to publication or dataset metadata with Strale’s API. Read Crossref and DataCite results, handle missing fields and copy a complete request.",
+    intro: "Turn a DOI into publication metadata your app or research agent can use: title, authors, publisher, publication date and available citation counts. Strale’s DOI lookup API queries Crossref, with a DataCite fallback when Crossref has no record. It returns JSON, not the full paper.",
+    example: {
+      input: { doi: "10.1038/nature12373" },
+      output: { doi: "10.1038/nature12373", title: "Nanometre-scale thermometry in a living cell", container_title: "Nature", published: "2013-07-31", registration_agency: "Crossref", abstract: null },
+      selected: true,
+      note: "Selected fields from the catalogue example, not a fresh metadata lookup. abstract: null means no abstract was returned; it does not mean the publication has no abstract. Author lists and citation counts are omitted here to keep the example short.",
+    },
+    uses: [
+      "Enrich a bibliography with structured publication details from a DOI.",
+      "Check the title and source of a reference supplied by a research agent before using it.",
+      "Retrieve available dataset or software metadata from DataCite through the same call.",
+    ],
+    results: [
+      { label: "registration_agency and coverage", explanation: "Crossref is queried first. A not-found response triggers a DataCite lookup; a timeout or service error does not. A DOI outside these two sources may resolve at doi.org but still be unavailable here. Missing metadata is not proof that a publication does not exist." },
+      { label: "title, authors and published", explanation: "Fields reflect the source’s deposited metadata. authors may be an empty array; other details may be null. published can be a year, year-month or full date. The DataCite path returns a year when available, not an invented month or day." },
+      { label: "abstract, licence and full text", explanation: "An available Crossref abstract is returned with XML tags stripped. The DataCite path does not return abstracts or licence URLs. Missing fields stay null. A metadata result or licence URL does not supply the full paper or establish permission to reuse it." },
+      { label: "Citation counts", explanation: "reference_count counts references listed by the work; referenced_by_count counts citations to it reported by the source. Read registration_agency before comparing counts. Missing counts are null, not zero; an actual zero stays zero. This tool does not return citing works or a citation graph." },
+    ],
+    inputDescriptions: { doi: "A bare DOI such as 10.1038/nature12373, a doi: prefixed value or a doi.org URL. Supply the identifier, not an article title." },
+    outputOverrides: {
+      title: { type: "string or null", appears: "Source title when available; otherwise null" },
+      authors: { type: "array of strings", appears: "Array; may be empty when names are unavailable" },
+      referenced_by_count: { type: "number or null", appears: "Source citation count when available; null is not zero" },
+      issn: { type: "array of strings", appears: "Array; empty on the DataCite path or when unavailable" },
+      type: { type: "string or null" }, container_title: { type: "string or null" }, publisher: { type: "string or null" },
+      published: { type: "string or null", appears: "Year, year-month or date when available; otherwise null" },
+      reference_count: { type: "number or null" }, volume: { type: "string or null" }, issue: { type: "string or null" }, pages: { type: "string or null" },
+      abstract: { type: "string or null" }, language: { type: "string or null" }, license_url: { type: "string or null" },
+    },
+    limitationOverrides: {
+      "Two registration agencies of the eleven that exist": { title: "Crossref and DataCite coverage", text: "This lookup supports records returned by Crossref or DataCite. DOIs registered elsewhere can resolve at doi.org but return not-found here." },
+      "DataCite records are thinner than Crossref records": { text: "The DataCite path returns available title, publisher, year, creators and type. Journal fields, abstract, language, reference_count and license_url are null on this path; issn is an empty array." },
+      "Citation count is Crossref's, not a consensus figure": { title: "Citation counts depend on the source", text: "referenced_by_count uses Crossref’s count or DataCite’s citationCount when supplied. It can be null, and counts from different indexes need not agree. This lookup does not return citing works.", workaround: "Keep registration_agency alongside the count. Use the source’s own record to check its coverage before comparing figures." },
+    },
+    guide: { href: "/guides/doi-lookup-api", label: "Look up DOI metadata and handle missing fields" },
+    nextTools: [{ slug: "academic-paper-search", label: "Search for a publication when you do not have its DOI" }],
+  },
+  "header-security-check": {
+    title: "HTTP Security Headers API — check presence and missing headers",
+    description: "Check a public URL’s HTTP security headers with Strale’s API. Read present and missing headers, understand the grade and plan configuration checks.",
+    intro: "Check a public URL’s HTTP response headers and get present headers, missing headers, suggestions and a grade as JSON. Use Strale’s security headers API in a release check or website review. The grade measures header presence, not the security of the whole site.",
+    example: {
+      input: { url: "https://web.dev/" },
+      output: { url: "https://web.dev/", score: 75, grade: "C", missing: [{ header: "content-security-policy", severity: "high" }], response_status: 200 },
+      selected: true,
+      note: "Illustrative response, not a live security assessment of web.dev. This example assumes the five other scored headers are present and CSP is missing. Selected fields are shown; suggestions and present header values are omitted.",
+    },
+    uses: [
+      "Spot missing response headers after a deployment, using the same public URL for each comparison.",
+      "Add a header-presence check to an agent’s website review and pass the findings to the person maintaining the site.",
+      "Record the returned status and headers before changing configuration, then check again after a reviewed change.",
+    ],
+    results: [
+      { label: "score and grade", explanation: "The score starts at 100. Missing HSTS or CSP subtracts 25 points each; missing X-Frame-Options, X-Content-Type-Options, Referrer-Policy or Permissions-Policy subtracts 10 each. Grades are A at 90–100, B at 80–89, C at 60–79, D at 40–59 and F below 40. Deprecated X-XSS-Protection does not affect the score." },
+      { label: "present and missing", explanation: "The check counts non-empty header values as present. It does not validate CSP directives, HSTS duration or whether a browser will enforce a policy. A restrictive CSP frame-ancestors policy can replace X-Frame-Options in supported browsers, but the score still counts a missing X-Frame-Options header. An A grade is not a security certification." },
+      { label: "response_status and redirects", explanation: "Headers come from the response fetched by the tool, after permitted redirects. Check response_status first: an error page can still produce a grade. The returned url echoes the requested URL, not necessarily the final redirect destination. Header values in present are limited to 200 characters." },
+      { label: "Suggestions and next steps", explanation: "Recommendations are generic starting points, not changes the tool applies. Review CSP against your scripts and resources, and confirm HTTPS coverage before extending HSTS to subdomains. The tool does not inspect TLS configuration, application vulnerabilities or browser behaviour. Missing CORS headers do not affect its grade." },
+    ],
+    inputDescriptions: { url: "Public HTTP or HTTPS page URL to check. Use the same URL when comparing results; private network destinations are blocked." },
+    outputOverrides: { score: { appears: "Header-presence score from 0 to 100; not an overall security score" }, grade: { appears: "A, B, C, D or F, derived from score" }, present: { appears: "Array of observed headers; values truncated to 200 characters" }, missing: { appears: "Array of absent scored headers and generic suggestions" } },
+    guide: { href: "/guides/http-security-headers-api", label: "Check HTTP headers and interpret the grade" },
+    nextTools: [{ slug: "ssl-check", label: "Check the TLS certificate separately" }, { slug: "dns-lookup", label: "Look up the domain’s DNS records" }, { slug: "page-speed-test", label: "Measure page performance separately" }],
+  },
   "latvian-company-data": {
     title: "Latvian Company Lookup API — register records and officers",
     description: "Look up Latvian companies by registration number or name. Get register data as JSON, understand officer availability and copy a complete API request.",
