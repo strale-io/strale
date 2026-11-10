@@ -1,0 +1,82 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "8be44c18ca7a0eec840910b7bbac692a6d770207"
+  },
+  "at": "2026-11-10T12:19:29.837Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 4,
+    "source_commit": "8be44c18ca7a0eec840910b7bbac692a6d770207",
+    "web_unit_passed": 89,
+    "web_built_passed": 13,
+    "web_browser_passed": 14,
+    "visual_accessibility_checks_passed": 8,
+    "api_typecheck": "passed after mcp build",
+    "astro_check": "0 errors, 0 warnings, 1 pre-existing unused-import hint",
+    "preview_build": "passed",
+    "live_build_before_final_table_correction": "passed (490 pages)",
+    "final_live_build": "pending; recorded in delivery.json before merge"
+  },
+  "topic": "dns-eori-tool-pages",
+  "raw": {
+    "ok": true,
+    "source_commit": "8be44c18ca7a0eec840910b7bbac692a6d770207",
+    "web_unit_passed": 89,
+    "web_built_passed": 13,
+    "web_browser_passed": 14,
+    "visual_accessibility_checks_passed": 8,
+    "api_typecheck": "passed after mcp build",
+    "astro_check": "0 errors, 0 warnings, 1 pre-existing unused-import hint",
+    "preview_build": "passed",
+    "live_build_before_final_table_correction": "passed (490 pages)",
+    "final_live_build": "pending; recorded in delivery.json before merge",
+    "failures": [],
+    "warnings": [
+      "Initial Windows CRLF checkout broke existing LF-only parser/tests; restored tracked bytes to LF without source diff and reran successfully.",
+      "Initial browser-suite run before build completed lacked topup.html; rerun after build passed.",
+      "Local browser DNS request blocked by production CORS; real browser request from strale.io passed.",
+      "simplify skill not installed; manual simplification pass completed."
+    ],
+    "review": {
+      "technical": "GO at 8be44c18ca7a0eec840910b7bbac692a6d770207; two rounds; no high/medium findings",
+      "product": "GO at 8be44c18ca7a0eec840910b7bbac692a6d770207; two rounds; EORI table nullability finding resolved"
+    },
+    "browser_manual": {
+      "dns_production": "Done. Nothing was charged.",
+      "eori_preview_signup": "/signup?tool=eori-validate; After signup, continue with EORI Validation."
+    },
+    "example_evidence": {
+      "eori": {
+        "input": {
+          "eori": "SE5560125790"
+        },
+        "source": "Existing executor calling EU service directly; not authenticated paid API billing",
+        "fetched_at": "2026-11-10T12:02:36.159Z",
+        "valid": true,
+        "trader_name": "Aktiebolaget Volvo"
+      },
+      "dns": {
+        "input": {
+          "domain": "strale.io"
+        },
+        "source": "Production free /v1/do call",
+        "fetched_at": "2026-11-10T12:03:02.466Z",
+        "status": "completed",
+        "price_cents": 0
+      }
+    },
+    "files": {
+      "apps/web/src/components/tool/OutputsTable.astro": "0d9d916fa70fd12a368dd1c57e457a7a28641cf1d5062dbef24be85038ee4fad",
+      "apps/web/src/content/tool-pages.ts": "b743bed94eaa6575168ce9e7864582e4df31f48480ab9f6ac60922d96667db3c",
+      "apps/web/src/pages/tools/[slug].astro": "c7baee9ab58d70793695600eb22798cc993e155e8d336836fc2c363cca8e88ad",
+      "apps/web/test-browser/signup-continuation.browser.test.mjs": "309356149510270e7cd3e2b1a10e3d9373ccb241261fde1b59cccc98c4974f10",
+      "apps/web/test-built/tool-pages.test.ts": "2c787411311bb7cf323341d2402301f87959aa03388216561a594cc74f300092"
+    }
+  }
+}
