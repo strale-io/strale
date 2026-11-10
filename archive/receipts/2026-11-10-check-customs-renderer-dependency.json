@@ -1,0 +1,31 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "6e05531feb74a2f640f3e0d72a111f0023da9597"
+  },
+  "at": "2026-11-10T22:48:08.239Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/customs-release-nov10/dependency-receipt-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 1,
+    "scope": "Correct CI-detected customs renderer dependency omission"
+  },
+  "topic": "customs-renderer-dependency",
+  "raw": {
+    "checks": {
+      "fail_before": "CI run42915881751: browserless dependency under-inclusion failed;9773 API tests passed",
+      "pass_after": "44 tests passed across customs, drift, credential-health and upstream-health suites",
+      "change": "Move customs from fallback to required Browserless dependency; preserve both drift checks and update audited-set assertion"
+    },
+    "ok": true,
+    "warnings": [
+      "Full PR and merge queue CI pending; live paid execution remains unverified"
+    ],
+    "scope": "Correct CI-detected customs renderer dependency omission",
+    "failures": []
+  }
+}

@@ -146,6 +146,7 @@ export const PROVIDERS: DependencyProvider[] = [
     capabilities: [
       "annual-report-extract",   // direct Browserless call for PDF retrieval
       "company-enrich",          // direct Browserless call
+      "customs-duty-lookup",      // tariff rows require rendering; skipFallback: true
       "html-to-pdf",             // requires real Chromium PDF rendering
       "landing-page-roast",      // direct Browserless screenshot
       "screenshot-url",          // requires real Chromium screenshots
@@ -154,7 +155,7 @@ export const PROVIDERS: DependencyProvider[] = [
     fallbackCapabilities: [
       "accessibility-audit", "australian-company-data", "business-license-check-se",
       "company-tech-stack", "competitor-compare", "container-track", "cookie-scan",
-      "customs-duty-lookup", "employer-review-summary", "eu-court-case-search",
+      "employer-review-summary", "eu-court-case-search",
       "eu-trademark-search", "gdpr-fine-lookup",
       "patent-search", "price-compare", "pricing-page-extract",
       "privacy-policy-analyze", "product-reviews-extract", "product-search",
