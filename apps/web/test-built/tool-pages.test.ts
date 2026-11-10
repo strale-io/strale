@@ -22,6 +22,7 @@ test("AML, Markdown and sanctions examples agree with their call inputs and lead
     assert.match(html, new RegExp(`href="/signup\\?tool=${slug}"`));
     assert.match(html, /id="uses-title"/);
     assert.match(html, /id="results-title"/);
+    assert.doesNotMatch(html, /example EORI number/);
     for (const [, href] of html.matchAll(/href="(\/(?:tools|guides)\/[^"?#]+)"/g)) assert.ok(existsSync(resolve(dist, `${href.slice(1)}.html`)), href);
     assert.match(html, new RegExp(`<link rel="canonical" href="https://strale.io/tools/${slug}"`));
   }
