@@ -1,0 +1,61 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "b2bbf90edfb2bb0684aea87d15eb214b448a1bed"
+  },
+  "at": "2026-11-10T18:10:38.055Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-sixth-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 6,
+    "source_commit": "b2bbf90edfb2bb0684aea87d15eb214b448a1bed",
+    "web_unit_passed": 91,
+    "built_passed": 18,
+    "browser_passed": 15,
+    "api_tests_passed": 22,
+    "accessibility_checks": 20,
+    "accessibility_failures": 0,
+    "preview_build_pages": 443,
+    "api_typecheck": "passed after MCP dependency build",
+    "astro_check": "0errors 0warnings1existinghint",
+    "design_check": "passed",
+    "claims_check": "passed with preexisting sibling warning",
+    "evidence_directory": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\tool-pages-sixth-nov10"
+  },
+  "topic": "doi-security-pages",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "warnings": [
+      "No authenticated paid calls; examples verified against real executors with mocked upstreams.",
+      "Website-only DOI limitation corrections; raw catalogue/API limitations unchanged.",
+      "Opus/high subscription invocation returned429usage_limit_reached; independent Codex reviews used under founder fallback policy.",
+      "Existing unrelated sibling frontend llms universal-x402 warning and Astro unused-import hint.",
+      "Guide index mobile screenshot clipped at14000px; target tool/guide captures complete. Axe contrast incomplete on guide index, not a proven contrast failure.",
+      "Live-data build and deployment checks pending at receipt creation."
+    ],
+    "source_commit": "b2bbf90edfb2bb0684aea87d15eb214b448a1bed",
+    "web_unit_passed": 91,
+    "built_passed": 18,
+    "browser_passed": 15,
+    "api_tests_passed": 22,
+    "accessibility_checks": 20,
+    "accessibility_failures": 0,
+    "preview_build_pages": 443,
+    "api_typecheck": "passed after MCP dependency build",
+    "astro_check": "0errors 0warnings1existinghint",
+    "design_check": "passed",
+    "claims_check": "passed with preexisting sibling warning",
+    "reviews": {
+      "technical": "GO round1",
+      "product": "GO round1",
+      "high": 0,
+      "medium": 0
+    },
+    "evidence_directory": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\tool-pages-sixth-nov10"
+  }
+}
