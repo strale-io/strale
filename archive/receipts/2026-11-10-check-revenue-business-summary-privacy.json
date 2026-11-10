@@ -1,0 +1,32 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4dbeafccea464172cf9164ffa3809cefcb68edee"
+  },
+  "at": "2026-11-10T19:50:25.568Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/revenue-roadmap-nov10/privacy-classification-source.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "tests_passed": 15,
+    "command": "node --test scripts/provision-verify-role.test.mjs",
+    "ci_failure": "Table completeness and frozen-access tests failed because business_summary_deliveries was unclassified.",
+    "fix": "Classify business_summary_deliveries as EXCLUDED and require it by name in the sensitive-table test. ALLOWED and all view SQL remain unchanged; no new grant or default privilege.",
+    "post_review_change": "Author-verified privacy classification after final round 2, disclosed in PR.",
+    "broader_local_gates": "85 pass, 4 fail in existing Windows-incompatible bash/npm child-process tests. The corresponding Linux CI tests passed before the unrelated classification failure. Linux CI remains the release gate."
+  },
+  "topic": "revenue-business-summary-privacy",
+  "raw": {
+    "ok": true,
+    "tests_passed": 15,
+    "command": "node --test scripts/provision-verify-role.test.mjs",
+    "ci_failure": "Table completeness and frozen-access tests failed because business_summary_deliveries was unclassified.",
+    "fix": "Classify business_summary_deliveries as EXCLUDED and require it by name in the sensitive-table test. ALLOWED and all view SQL remain unchanged; no new grant or default privilege.",
+    "post_review_change": "Author-verified privacy classification after final round 2, disclosed in PR.",
+    "broader_local_gates": "85 pass, 4 fail in existing Windows-incompatible bash/npm child-process tests. The corresponding Linux CI tests passed before the unrelated classification failure. Linux CI remains the release gate.",
+    "failures": []
+  }
+}
