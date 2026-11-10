@@ -277,7 +277,7 @@ test("the guide set preserves carried guides and includes the new company and fi
   assert.equal(Object.keys(PRUNED).length, 7);
   const carried = [...old].filter((s) => !Object.keys(PRUNED).includes(`/learn/${s}`));
   // New pages are not legacy URLs and must not be added to OLD_LEARN/OLD_GUIDES.
-  const added = ["belgian-company-lookup-api", "sec-edgar-filings-api", "singapore-company-lookup-api", "page-speed-test-api", "http-to-curl-api"];
+  const added = ["belgian-company-lookup-api", "sec-edgar-filings-api", "singapore-company-lookup-api", "page-speed-test-api", "http-to-curl-api", "latvian-company-lookup-api", "defi-protocol-fees-api"];
   assert.deepEqual([...carried, ...added].sort(), guides.map((g) => g.slug).sort());
 });
 

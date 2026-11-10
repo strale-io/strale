@@ -12,6 +12,36 @@ function example(html: string, id: string) {
   return JSON.parse(decode(code));
 }
 
+test("Latvian company and protocol fees pages explain their examples and retain selected-tool signup", () => {
+  for (const [slug, guide] of [["latvian-company-data", "latvian-company-lookup-api"], ["protocol-fees-lookup", "defi-protocol-fees-api"]]) {
+    const html = read(slug), input = example(html, "ex-in"), output = example(html, "ex-out");
+    const code = html.match(/id="calls-panel-0"[^>]*>\s*<pre[^>]*><code[^>]*>([\s\S]*?)<\/code>/)?.[1];
+    assert.ok(code);
+    const payload = JSON.parse(decode(code).match(/-d '([\s\S]*?)'/)![1]);
+    assert.deepEqual(payload.inputs, input);
+    assert.equal(payload.capability_slug, slug);
+    assert.ok(html.includes(`href="/signup?tool=${slug}"`));
+    assert.ok(html.includes(`href="/guides/${guide}"`));
+    assert.ok(existsSync(resolve(dist, `guides/${guide}.html`)));
+    assert.ok(html.includes(`href="https://strale.io/tools/${slug}"`));
+    assert.doesNotMatch(html, /<form id="try-tool"/);
+    const text = decode(html);
+    if(slug === "latvian-company-data") {
+      assert.equal(output.reg_number, input.reg_number);
+      assert.match(text, /not a live company check/);
+      assert.match(text, /null means the officers lookup failed/);
+      assert.match(text, /not confirmation of VAT registration/);
+    } else {
+      assert.equal(input.protocol, "uniswap");
+      assert.equal(output.protocol, "Uniswap");
+      assert.equal(output.revenue_24h_usd, null);
+      assert.match(text, /not current Uniswap totals/);
+      assert.match(text, /without chain or product breakdowns/);
+      assert.doesNotMatch(text, /with available breakdowns/);
+    }
+  }
+});
+
 test("Singapore, page speed and HTTP conversion use consistent examples and complete call instructions", () => {
   for (const [slug, guide] of [
     ["singapore-company-data", "singapore-company-lookup-api"],
