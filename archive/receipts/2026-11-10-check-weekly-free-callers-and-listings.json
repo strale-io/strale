@@ -1,0 +1,43 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "2152c5366f49cde64daae90e24188a7336924636"
+  },
+  "at": "2026-11-10T21:41:03.236Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/revenue-checks-nov10/public-receipt-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 2,
+    "scope": "Weekly checks and due-list documentation only; customs repair is not released",
+    "checked_at": "2026-11-10T21:37:57Z",
+    "next_due_stockholm": "2026-11-17"
+  },
+  "topic": "weekly-free-callers-and-listings",
+  "raw": {
+    "ok": true,
+    "scope": "Weekly checks and due-list documentation only; customs repair is not released",
+    "checked_at": "2026-11-10T21:37:57Z",
+    "failures": [],
+    "warnings": [
+      "Customs capability readiness and fixture validation fail; operator write authorization unavailable. No capability release.",
+      "Listing corrections and authenticated ownership/application states remain outstanding; usage counters unavailable on some providers."
+    ],
+    "checks": {
+      "weekly_free_callers": "complete; anonymous aggregates in private campaign workspace",
+      "weekly_listings": "complete; timestamped public observations in private campaign workspace",
+      "recurring_tests": "11 passed",
+      "program_register": "passed",
+      "docs_index": "passed",
+      "customs_regressions": "22 passed; eight new cases failed before patch; retained local work only",
+      "api_typecheck": "passed after building MCP workspace dependency",
+      "customs_production_readiness": "false; missing resolved_hs_code reliability",
+      "customs_validation": "18 of 19; stored known-answer fixture lacks origin_country",
+      "customs_live_smoke": "not run; authorization unavailable for required onboarding repair"
+    },
+    "next_due_stockholm": "2026-11-17"
+  }
+}

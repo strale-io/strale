@@ -26,33 +26,7 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Registry half done: strale-mcp 0.2.11 is the latest version in the
-      official MCP registry (published 2026-11-06). npm releases of 2026-11-06
-      (handoff/_general/from-code/2026-11-06-npm-releases.md; receipts
-      archive/receipts/2026-11-06-check-strale-mcp-0-2-11-production-smoke.json
-      and archive/receipts/2026-11-06-check-npm-four-packages-production-smoke.json):
-      strale-mcp 0.2.11, straleio 0.1.4, straleio-langchain 0.1.1,
-      n8n-nodes-strale 1.0.0; strale-capabilities 0.1.2 matches production
-      (archive/receipts/2026-11-06-check-strale-capabilities-0-1-2-production-smoke.json).
-      npm trusted publishers are set for those four and strale-semantic-kernel
-      is deprecated. The listings audit of 2026-11-06 is
-      docs/research/2026-11-06-distribution-listings-audit.md. Still wrong
-      outside the repository: Smithery strale-io/strale and the duplicate
-      strale/agent-tools (stale descriptions, SQS wording in an 8-tool
-      snapshot, no homepage), the Glama server page, mcp.so and Context7
-      (all carry the retired Trust and quality text), and the 402 Index
-      listing (168 endpoints, none domain-verified, provider spelled two
-      ways). The audit has the steps for Petter, and a 402 Index domain-claim
-      API route a session can run after one yes. In the repository, the next
-      strale-mcp release carries the new websiteUrl in server.json, and
-      straleio-langchain needs 0.1.2 for its README (the 0.1.1 package has
-      none). The PyPI pages of straleio, langchain-strale, crewai-strale and
-      composio-strale still show strale.dev and the old counts until their
-      releases (repo has 0.1.5, 0.2.0, 0.1.5, 0.1.5), which wait on the PyPI
-      trusted publishers (Petter, signed in on pypi.org). Remaining first
-      publishes: strale-cli and strale-ai-sdk. strale.dev answers 302, not the
-      301 DEC-20261105-A describes (Petter owns the redirect rule). Post-publish
-      production smoke tests are owed on each package the moment it ships."
+    next_action: "Weekly check completed 2026-11-10; see handoff/_general/from-code/2026-11-10-revenue-checks.md. Official MCP registry and npm now show strale-mcp 0.2.12 with strale.io; npm straleio-langchain 0.1.2 includes its README. straleio 0.1.4, n8n-nodes-strale 1.0.0 and strale-capabilities 0.1.2 are live. Smithery both records, mcp.so and Context7 still carry stale claims; Glama connector is clean but the server has stale generated integration wording. 402 Index has 166 Strale-hosted services, none domain-verified; ownership claim remains unperformed. Four active PyPI packages remain 0.1.4 with old-domain/count claims. strale-cli and strale-ai-sdk remain unpublished. Docker PR 2202 is open; other submission outcomes without receipts remain unverified. Follow docs/operations/weekly-revenue-checks.md weekly, then correct remaining external listings under applicable publishing authority. Existing 301 redirect and Search Console migration receipts are in the private roadmap audit; do not repeat completed migration work."
     resume_file: docs/research/2026-10-27-distribution-strategy.md
     exit:
       - No source text or integration carries a retired claim or calls a removed
@@ -272,12 +246,7 @@ tracks:
       - T1
       - T2
     owner: session
-    next_action: Live since 2026-10-28 (300 calls a month per IP, verified in
-      production 2026-10-29). Each week run commercial-brief with the read-only
-      role and record free callers, signups and paid conversions against the
-      August base of two callers in 90 days. On 2026-12-12 (rollout plus 45 days,
-      Swedish date) revert allowance and copy together if callers have not risen.
-      Merge the strale-frontend copy PR. See the handoff.
+    next_action: "Live since 2026-10-28 (300 calls a month per IP, verified in production 2026-10-29). Weekly review completed 2026-11-10 using complete weeks, rollout and 90-day windows with explicit IP-proxy and QA caveats; private results in the campaign workspace. Experiment remains open. Repeat via docs/operations/weekly-revenue-checks.md and RECURRING.yaml weekly-free-callers. Preserve 2026-12-12 review and the existing requirement to revert allowance and copy together if callers have not risen. Check existing frontend merge receipts before repeating copy work."
     resume_file: handoff/_general/from-code/2026-10-29-d10-rollout.md
     exit:
       - Monthly allowance and texts match the adopted pricing scope.
