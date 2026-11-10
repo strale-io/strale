@@ -180,15 +180,26 @@ function calls(code: string): { slug: string; keys: string[]; ceiling: number | 
         if (rest[i] === "}" && --depth === 0) { end = i; break; }
       }
       const body = rest.slice(open + 1, end);
-      keys = [...body.matchAll(/(?:^|[,{\s])["']?([a-z_]+)["']?\s*:/g)].map((k) => k[1]);
-      // keys of nested objects are not inputs
-      keys = depth === 0 && !body.includes("{") ? keys : keys.slice(0, 1);
+      try {
+        // JSON requests can contain URLs and nested headers; inspect only input keys.
+        keys = Object.keys(JSON.parse(`{${body}}`));
+      } catch {
+        // Python/TypeScript examples can contain expressions instead of JSON values.
+        keys = [...body.matchAll(/(?:^|[,{])\s*["']?([a-z_]+)["']?\s*:/g)].map((k) => k[1]);
+        keys = depth === 0 && !body.includes("{") ? keys : keys.slice(0, 1);
+      }
     }
     const cap = rest.match(/max_price_cents["']?\s*[:=]\s*(\d+)/);
     out.push({ slug: m[1], keys, ceiling: cap ? Number(cap[1]) : null, text: rest });
   }
   return out;
 }
+
+test("call inspection distinguishes URL values and nested headers from input names", () => {
+  const parsed = calls('"capability_slug":"http-to-curl", "inputs":{"url":"https://api.strale.io/v1/capabilities","headers":{"Accept":"application/json"},"unexpected_field":true}, "max_price_cents":2');
+  assert.deepEqual(parsed[0].keys, ["url", "headers", "unexpected_field"]);
+  assert.equal(parsed[0].ceiling, 2);
+});
 
 test("example calls send inputs the tool's schema has, and every SDK call carries a price ceiling that covers the price", () => {
   const d = previewData();
@@ -266,7 +277,7 @@ test("the guide set preserves carried guides and includes the new company and fi
   assert.equal(Object.keys(PRUNED).length, 7);
   const carried = [...old].filter((s) => !Object.keys(PRUNED).includes(`/learn/${s}`));
   // New pages are not legacy URLs and must not be added to OLD_LEARN/OLD_GUIDES.
-  const added = ["belgian-company-lookup-api", "sec-edgar-filings-api"];
+  const added = ["belgian-company-lookup-api", "sec-edgar-filings-api", "singapore-company-lookup-api", "page-speed-test-api", "http-to-curl-api"];
   assert.deepEqual([...carried, ...added].sort(), guides.map((g) => g.slug).sort());
 });
 

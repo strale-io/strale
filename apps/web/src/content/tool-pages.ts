@@ -14,6 +14,85 @@ interface ToolPage {
 }
 
 export const toolPages: Partial<Record<string, ToolPage>> = {
+  "singapore-company-data": {
+    title: "Singapore Company Lookup API — search ACRA data by UEN",
+    description: "Look up Singapore company data by UEN or name. Get ACRA open-data records as JSON, understand monthly updates and copy a working API request.",
+    intro: "Look up a Singapore entity by UEN or name and get its name, status, entity type and available address details as JSON. Strale’s Singapore company lookup API reads ACRA open data from data.gov.sg. Use the returned UEN to match a supplier or customer to the right register record.",
+    example: {
+      input: { uen: "197200078R" },
+      output: { entity_name: "SINGAPORE AIRLINES LIMITED", uen: "197200078R", entity_type: "Local Company", status: "Registered", registered_address: "AIRLINE ROAD, Singapore 819829", jurisdiction: "SG" },
+      selected: true,
+      note: "Selected fields from the catalogue example, not a live lookup. The address contains a street and postal code, not a building or unit number. The source is a monthly snapshot, so recent changes may not appear yet.",
+    },
+    uses: [
+      "Match a UEN from a supplier form or invoice to the entity name in ACRA open data.",
+      "Retrieve an entity’s status and available address details for an onboarding record.",
+      "Search by name when you do not know the UEN, then check the returned identity before using it. The tool selects one match rather than returning a list of candidates.",
+    ],
+    results: [
+      { label: "uen and entity_name", explanation: "Prefer an exact UEN lookup when you have the identifier. Name searches select one record from the provider’s results, preferring names containing the search text and then Registered status. A returned match still needs an identity check." },
+      { label: "status and is_active", explanation: "is_active is true when the source status is Registered. It describes that monthly record, not a current trading, solvency or compliance assessment. A failed request or missing match does not establish that an entity is deregistered." },
+      { label: "Address and dates", explanation: "registered_address combines the available street and postal code. It is not a full mailing address. uen_issue_date is the source’s UEN issue date. Source fields can be missing; this lookup does not include directors, beneficial owners, financial statements or GST registration." },
+    ],
+    inputDescriptions: { uen: "Singapore Unique Entity Number, such as 197200078R. Provide uen or company_name; uen takes priority.", company_name: "Entity name to search. One preferred match is returned; check its UEN before using it." },
+    outputOverrides: {
+      company_name: { appears: "Not returned by this tool; use entity_name" }, vat_number: { appears: "Not returned; this lookup does not check GST registration" },
+      entity_name: { type: "string or null", appears: "May be null when the source value is missing" }, entity_type: { type: "string or null", appears: "May be null when the source value is missing" },
+      status: { type: "string or null", appears: "May be null when the source value is missing" }, issuance_agency: { type: "string or null", appears: "May be null when the source value is missing" },
+      uen_issue_date: { type: "string or null", appears: "UEN issue date; may be null" }, registered_street: { type: "string or null" }, registered_postal_code: { type: "string or null" }, registered_address: { type: "string or null" },
+    },
+    guide: { href: "/guides/singapore-company-lookup-api", label: "Look up Singapore entities by UEN" },
+    nextTools: [{ slug: "sanctions-check", label: "Screen the matched entity name for potential sanctions matches" }],
+  },
+  "page-speed-test": {
+    title: "Page Speed Test API — Lighthouse performance as JSON",
+    description: "Run a mobile or desktop page speed test through Strale’s API. Get Lighthouse performance metrics, understand the units and find suggested improvements.",
+    intro: "Send a public page URL to Strale’s page speed test API and get a Lighthouse performance score, lab metrics and suggested improvements as JSON. Choose mobile or desktop to check a page before and after a change, or add a performance check to your app or agent.",
+    example: {
+      input: { url: "https://web.dev/", strategy: "mobile" },
+      output: { url: "https://web.dev/", strategy: "mobile", performance_score: 82, grade: "B", metrics: { lcp_ms: 2400, fcp_ms: 1400, cls_score: 0.04, tbt_ms: 180, ttfb_ms: 200, speed_index: 2100 } },
+      selected: true,
+      note: "Illustrative metrics for a mobile test, not a measured score for web.dev. Selected fields are shown. Run the call for a current result; scores vary between runs.",
+    },
+    uses: [
+      "Compare a public page before and after a release, keeping the same URL and mobile or desktop strategy.",
+      "Read performance metrics in a website review workflow without processing the full PageSpeed Insights report.",
+      "Use the returned opportunities and diagnostics to choose what to investigate next. Your application decides when to run another test.",
+    ],
+    results: [
+      { label: "performance_score and grade", explanation: "The score runs from 0 to 100. Strale maps it to A at 90 or above, B at 70–89, C at 50–69, D at 30–49 and F below 30. Compare repeated tests using the same strategy; one score does not describe every visitor’s experience." },
+      { label: "Timing and layout metrics", explanation: "lcp_ms, fcp_ms, tbt_ms and ttfb_ms are milliseconds; speed_index is also in milliseconds. For example, lcp_ms: 2400 means 2.4 seconds. cls_score has no time unit. Individual metrics may be null when Lighthouse does not supply them." },
+      { label: "Lab results, not a real-user assessment", explanation: "This tool returns Lighthouse lab data. It does not return CrUX field data, INP or a Core Web Vitals pass/fail assessment. TBT measures blocking time in the lab; it is not a real-user INP measurement." },
+      { label: "Suggested improvements", explanation: "opportunities contains estimated savings and diagnostics contains supporting findings. Treat savings as estimates, not promises, and do not add them together: fixes can overlap. A page that Lighthouse cannot load returns an error rather than a score." },
+    ],
+    inputDescriptions: { url: "Public page URL that Lighthouse can load without signing in.", strategy: "mobile or desktop; defaults to mobile. Keep this the same when comparing runs." },
+    outputOverrides: { metrics: { appears: "Object is present; individual measurements may be null" } },
+    guide: { href: "/guides/page-speed-test-api", label: "Run and interpret a page speed test" },
+    nextTools: [{ slug: "header-security-check", label: "Check the page’s HTTP security headers separately" }],
+  },
+  "http-to-curl": {
+    title: "HTTP to cURL Converter API — generate a request command",
+    description: "Convert HTTP request details into a cURL command with Strale. See a complete GET example and understand the difference between generating and sending a request.",
+    intro: "Give Strale a request URL, method and headers to generate a cURL command. The HTTP-to-cURL tool returns code as text; it does not send the request to the target URL. Use it to turn structured request details into a command you can inspect and run yourself.",
+    example: {
+      input: { url: "https://api.strale.io/v1/capabilities", method: "GET", headers: { Accept: "application/json" } },
+      output: { method: "GET", url: "https://api.strale.io/v1/capabilities", curl_command: "curl \\\n  'https://api.strale.io/v1/capabilities' \\\n  -H 'Accept: application/json'" },
+      selected: true,
+      note: "A GET request for Strale’s public tool catalogue, with no request body or credentials. Selected output fields are shown. Generating this command does not fetch the catalogue.",
+    },
+    uses: [
+      "Turn a structured GET request into a cURL command for documentation or debugging.",
+      "Give an agent a command it can present for review before anyone sends the request.",
+      "Keep the request URL, method and headers together when handing an example to another developer.",
+    ],
+    results: [
+      { label: "curl_command", explanation: "This is executable text, not an HTTP response. Review the destination and request details before running it. Running the command is a separate action from calling this converter." },
+      { label: "method and url", explanation: "The example uses GET with an Accept header and no body. The outer POST to Strale’s /v1/do endpoint invokes the converter; it does not change the method of the generated request." },
+      { label: "Credentials and generated code", explanation: "Use placeholders when sharing request examples. If you supply credentials, they can appear in the generated code. Review snippets before running them, especially after changing the method, body or authentication." },
+    ],
+    inputDescriptions: { url: "Target URL to include in the generated command; the converter does not fetch it.", method: "HTTP method for the generated request; defaults to GET.", headers: "Request header names and values. This example requests a JSON response with Accept.", body: "Optional request body. Omit it for this GET example.", auth: "Optional authentication details; supplied credentials can appear in generated code." },
+    guide: { href: "/guides/http-to-curl-api", label: "Convert a GET request to cURL" },
+  },
   "belgian-company-data": {
     title: "Belgian Company Lookup API — KBO/BCE company records",
     description: "Look up Belgian company records by enterprise number or name. Get JSON for your app or agent, see the KBO/BCE source and copy an API example.",

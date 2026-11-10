@@ -18,6 +18,70 @@ import "../capabilities/sanctions-check.js";
 import "../capabilities/belgian-company-data.js";
 import { resetTickerCacheForTests } from "../capabilities/sec-edgar-filings.js";
 import "../capabilities/vat-validate.js";
+import "../capabilities/singapore-company-data.js";
+import "../capabilities/http-to-curl.js";
+vi.mock("./robots-txt.js", () => ({ assertRobotsAllowed: vi.fn(async () => {}) }));
+import "../capabilities/page-speed-test.js";
+
+it("the Singapore example maps the source record and does not promise missing details", async () => {
+  const records = [{ uen: "197200078R", entity_name: "SINGAPORE AIRLINES LIMITED", entity_type_desc: "Local Company", uen_status_desc: "Registered", reg_street_name: "AIRLINE ROAD", reg_postal_code: "819829" }];
+  const fetcher = vi.fn(async (_url: unknown) => new Response(JSON.stringify({ success: true, result: { records } })));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["singapore-company-data"]!.example;
+    const result = await getExecutor("singapore-company-data")!(example.input);
+    const request = new URL(String(fetcher.mock.calls[0]?.[0]));
+    expect(JSON.parse(request.searchParams.get("filters")!)).toEqual({ uen: "197200078R" });
+    expect(result.output).toMatchObject(example.output);
+    expect(result.output).not.toHaveProperty("company_name");
+    expect(result.output).not.toHaveProperty("vat_number");
+    expect(result.output.uen_issue_date).toBeNull();
+    records[0]!.reg_street_name = ""; records[0]!.reg_postal_code = "";
+    const missing = await getExecutor("singapore-company-data")!(example.input);
+    expect(missing.output.registered_address).toBeNull();
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("the page-speed illustration matches lab-score mapping and units from the executor", async () => {
+  const audits: Record<string, { numericValue?: number }> = {
+    "largest-contentful-paint": { numericValue: 2400 }, "first-contentful-paint": { numericValue: 1400 },
+    "cumulative-layout-shift": { numericValue: 0.04 }, "total-blocking-time": { numericValue: 180 },
+    "server-response-time": { numericValue: 200 }, "speed-index": { numericValue: 2100 },
+  };
+  const fetcher = vi.fn(async (_url: unknown) => new Response(JSON.stringify({ lighthouseResult: { categories: { performance: { score: 0.82 } }, audits } })));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["page-speed-test"]!.example;
+    const result = await getExecutor("page-speed-test")!(example.input);
+    const request = new URL(String(fetcher.mock.calls[0]?.[0]));
+    expect(request.hostname).toBe("www.googleapis.com");
+    expect(request.searchParams.get("url")).toBe(example.input.url);
+    expect(request.searchParams.get("strategy")).toBe("mobile");
+    expect(result.output).toMatchObject(example.output);
+    expect(result.output).not.toHaveProperty("loadingExperience");
+    delete audits["largest-contentful-paint"];
+    const missing = await getExecutor("page-speed-test")!(example.input);
+    expect((missing.output.metrics as Record<string, unknown>).lcp_ms).toBeNull();
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("the HTTP example generates equivalent bodyless GET requests without contacting the target", async () => {
+  const network = vi.fn(); vi.stubGlobal("fetch", network);
+  try {
+    const example = toolPages["http-to-curl"]!.example;
+    const result = await getExecutor("http-to-curl")!(structuredClone(example.input));
+    expect(network).not.toHaveBeenCalled();
+    expect(result.output).toMatchObject(example.output);
+    expect(String(result.output.curl_command)).not.toMatch(/ -d |--data|-X POST/);
+    const fetchStub = vi.fn(async () => ({}));
+    const axiosGet = vi.fn(async () => ({}));
+    await runInNewContext(`(async () => { ${result.output.equivalent_fetch} })()`, { fetch: fetchStub });
+    await runInNewContext(`(async () => { ${result.output.equivalent_axios} })()`, { axios: { get: axiosGet } });
+    for (const generated of [fetchStub, axiosGet]) {
+      expect(generated).toHaveBeenCalledWith(example.input.url, { headers: { Accept: "application/json" } });
+    }
+  } finally { vi.unstubAllGlobals(); }
+});
 
 it("the Belgian example preserves the enterprise number and derives the displayed VAT number", async () => {
   vi.stubEnv("CBEAPI_KEY", "unit-test-placeholder");

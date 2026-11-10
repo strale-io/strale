@@ -15,7 +15,7 @@ test('input descriptions remain readable and keyboard-scrollable on mobile', asy
         await route.fulfill({ body, contentType: path.endsWith('.css') ? 'text/css' : path.endsWith('.js') ? 'text/javascript' : path.endsWith('.ttf') ? 'font/ttf' : 'text/html' });
       } catch { await route.fulfill({ status: 404, body: '' }); }
     });
-    for (const slug of ['belgian-company-data', 'sec-edgar-filings', 'vat-validate', 'dns-lookup', 'eori-validate', 'aml-risk-score']) {
+    for (const slug of ['belgian-company-data', 'sec-edgar-filings', 'vat-validate', 'dns-lookup', 'eori-validate', 'aml-risk-score', 'singapore-company-data', 'page-speed-test', 'http-to-curl']) {
       await page.goto(`https://fixture.invalid/tools/${slug}`);
       await page.evaluate(() => document.fonts.ready);
       const wrapper = page.getByRole('region', { name: 'Input fields table', exact: true });
