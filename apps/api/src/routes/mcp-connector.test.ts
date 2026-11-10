@@ -183,6 +183,39 @@ describe("an unexpanded placeholder bearer reads as no token", () => {
 });
 
 describe("connector-mode tool results", () => {
+  it.each(["/mcp", "/mcp/connector"])("%s keeps pricing and free eligibility consistent through the transport", async (path) => {
+    const search = async (args: Record<string, unknown>) => {
+      const result = await rpcResult(await post(path, call("strale_search", args)));
+      return JSON.parse(result.content[0].text).results;
+    };
+    // The discovery API intentionally omits capability prices. An omitted
+    // free flag must be recovered from the catalogue, not treated as paid.
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ total: 1, results: [
+      { type: "capability", slug: "iban-validate", name: "IBAN", description: "d", category: "validation", price_cents: null, geography: null },
+    ] }));
+    const expectedFree = { price_cents: null, price_formatted: null, price: null, is_free_tier: true };
+    expect((await search({ query: "iban" }))[0]).toMatchObject(expectedFree);
+    expect((await search({ query: "iban", category: "validation" }))[0]).toMatchObject(expectedFree);
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("fixture typeahead outage"));
+    expect((await search({ query: "iban" }))[0]).toMatchObject(expectedFree);
+
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ total: 1, results: [
+      { ...SOLUTIONS[0], type: "solution" },
+    ] }));
+    const expectedBundle = { price_cents: 150, price_formatted: "€1.50", price: "€1.50" };
+    expect((await search({ query: "kyb" }))[0]).toMatchObject(expectedBundle);
+    expect((await search({ query: "kyb", category: "compliance" })).find((r: { slug: string }) => r.slug === "kyb-essentials-se")).toMatchObject(expectedBundle);
+  });
+
+  it.each(["/mcp", "/mcp/connector"])("%s exposes the redaction and pricing limits in tool discovery", async (path) => {
+    const { tools } = await rpcResult(await post(path, { jsonrpc: "2.0", id: 1, method: "tools/list" }));
+    const description = (name: string) => tools.find((t: { name: string }) => t.name === name).description;
+    expect(description("strale_transaction")).toMatch(/Without authentication.*redacted metadata/);
+    expect(description("strale_transaction")).toMatch(/Authenticated callers.*their own/);
+    expect(description("strale_search")).toMatch(/null does not mean free/);
+    expect(description("strale_search")).toContain("monthly per-IP allowance");
+  });
+
   it("getting started lists no crypto tool and offers sign-in, not x402", async () => {
     const text = (await rpcResult(await post("/mcp/connector", call("strale_getting_started")))).content[0].text;
     expect(text).toContain("iban-validate");

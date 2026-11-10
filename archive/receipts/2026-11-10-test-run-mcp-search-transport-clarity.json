@@ -1,0 +1,26 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "ee54ee954cc735b4312ad2845e07e217697c4c36"
+  },
+  "at": "2026-11-10T07:31:39.303Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "numTotalTests": 41,
+    "numPassedTests": 41,
+    "numFailedTests": 0,
+    "numTotalTestSuites": 12,
+    "success": true
+  },
+  "topic": "mcp-search-transport-clarity",
+  "raw": {
+    "numTotalTests": 41,
+    "numPassedTests": 41,
+    "numFailedTests": 0,
+    "numTotalTestSuites": 12,
+    "success": true
+  }
+}
