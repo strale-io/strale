@@ -3,15 +3,85 @@ interface ToolPage {
   title: string;
   description: string;
   intro: string;
-  example: { input: Record<string, string>; output: Record<string, unknown>; note: string; selected?: boolean };
+  example: { input: Record<string, unknown>; output: Record<string, unknown>; note: string; selected?: boolean };
   uses: string[];
   results: { label: string; explanation: string }[];
   /** Display corrections verified against the executor; do not change the API contract. */
   outputOverrides?: Record<string, { type?: string; appears?: string }>;
   guide: { href: string; label: string };
+  nextTools?: { slug: string; label: string }[];
 }
 
 export const toolPages: Partial<Record<string, ToolPage>> = {
+  "aml-risk-score": {
+    title: "AML Risk Scoring API — score supplied screening results",
+    description: "Turn sanctions, PEP and adverse-media screening results into an AML risk score as JSON. See the inputs, risk factors and API example for your app or agent.",
+    intro: "Strale’s AML risk scoring API combines the screening results you supply with jurisdiction risk to return a score from 0 to 100, a risk level and the factors behind it. Run the screening checks first: this tool does not look up a person or company or search sanctions lists.",
+    example: {
+      input: { entity_name: "Example Supplier Ltd", entity_type: "company", country_code: "SE", sanctions_match: false, pep_match: false, adverse_media_match: true },
+      output: { entity_name: "Example Supplier Ltd", entity_type: "company", country_code: "SE", risk_score: 20, risk_level: "medium", risk_factors: [{ factor: "adverse_media", points: 20, description: "Negative media coverage found (fraud, litigation, regulatory action)" }], jurisdiction_risk: "standard", inputs_received: { sanctions_match: false, pep_match: false, adverse_media_match: true } },
+      selected: true,
+      note: "Illustrative company and supplied screening flags. Selected output fields show how one adverse-media flag contributes to the score; this is not a screening result for a real company.",
+    },
+    uses: [
+      "Add a scoring step after sanctions, PEP and adverse-media checks in a supplier-onboarding workflow.",
+      "Send the score and its contributing factors to a reviewer, alongside the underlying screening evidence.",
+      "Compare how different supplied flags affect a score. A missing flag defaults to false; it does not mean a screening check was completed.",
+    ],
+    results: [
+      { label: "risk_score and risk_factors", explanation: "The score is computed from fixed rules, not a probability of money laundering. The factors list shows which inputs and jurisdiction rules contributed points." },
+      { label: "risk_level and jurisdiction_risk", explanation: "Read both fields together with the recommendation. Jurisdiction rules can call for additional review even when the numeric score is low." },
+      { label: "A low score", explanation: "A low score only describes the inputs supplied. It does not establish that an entity is safe, that screening is complete or that your legal obligations have been met. Review the source evidence before acting." },
+    ],
+    guide: { href: "/guides/aml-screening-agent-workflow", label: "Build a screening workflow for an AI agent" },
+    nextTools: [{ slug: "sanctions-check", label: "Check for sanctions matches" }, { slug: "pep-check", label: "Check politically exposed person status" }, { slug: "adverse-media-check", label: "Find adverse-media signals" }],
+  },
+  "url-to-markdown": {
+    title: "URL to Markdown API — convert web pages for AI agents",
+    description: "Convert a public web page to Markdown with Strale’s API. Try it without a key, inspect the extracted text and use it in your app or AI agent.",
+    intro: "Give Strale a public web page URL and get its readable content back as Markdown, with a title and word count. Use the text in an AI agent, summarisation step or document-processing workflow. Try the API here without a key.",
+    example: {
+      input: { url: "https://strale.io/guides/url-to-markdown-mcp", include_links: true, include_images: false },
+      output: { url: "https://strale.io/guides/url-to-markdown-mcp", title: "How do I fetch and convert web pages to Markdown through MCP?", markdown: "-   MCP\n-   JSON\n\n## Steps\n\n1.  Add the Strale MCP server to your client's configuration. No key is needed for free tools.\n2.  Restart the client.\n3.  Ask the assistant to convert a URL to Markdown.\n4.  Use the Markdown it returns." },
+      selected: true,
+      note: "Recorded from a free call on 10 November 2026. The Markdown shown is the opening excerpt, not the full response. Run the tool below to inspect the current page’s complete result.",
+    },
+    uses: [
+      "Read a public guide or article as Markdown before passing it to an agent for summarisation.",
+      "Prepare public web content for a document-processing workflow, keeping links when you need to trace statements back to their source.",
+      "Set include_links to false to remove link destinations, or include_images to false to omit images. Both options default to true.",
+    ],
+    results: [
+      { label: "markdown, title and word_count", explanation: "Read the markdown field as the extracted content. The word count describes the returned text, not the whole source page; check the result before using it downstream." },
+      { label: "Missing or incomplete content", explanation: "Dynamic pages and very long pages can produce incomplete results. Compare the returned text with the source page. Extraction does not verify that the page’s claims are true." },
+      { label: "An access or input error", explanation: "Use a publicly accessible HTML page. Login pages, paywalls, blocked sites and unsupported platforms cannot be read. For a PDF, use PDF Extraction instead." },
+    ],
+    guide: { href: "/guides/url-to-markdown-mcp", label: "Read web pages through MCP" },
+    nextTools: [{ slug: "web-extract", label: "Extract named fields from a web page" }, { slug: "pdf-extract", label: "Extract information from a PDF" }],
+  },
+  "sanctions-check": {
+    title: "Sanctions Screening API — check person and company names",
+    description: "Screen a person or company name with Strale’s sanctions API. Get potential matches and source lists as JSON, with guidance on reviewing the results.",
+    intro: "Screen a person or company name against Dilisense’s consolidated sanctions index. Strale returns potential matches, source lists and available identifying details as JSON so your app or AI agent can pass them on for review.",
+    example: {
+      input: { name: "Example Supplier Ltd", entity_type: "company" },
+      output: { query: "Example Supplier Ltd", schema: "Company", is_sanctioned: false, match_count: 0, total_results: 0, matches: [] },
+      selected: true,
+      note: "Illustrative no-match response for a fictional company, showing selected fields. This is not a live screening result. Every call example below uses the same name; replace it with the entity you want to check.",
+    },
+    uses: [
+      "Screen a supplier or customer name during onboarding and send potential matches for review.",
+      "For individuals, provide birth_date when known to help distinguish people with the same name.",
+      "Review the underlying matches before passing a sanctions flag into AML Risk Score.",
+    ],
+    results: [
+      { label: "is_sanctioned: true", explanation: "The provider returned at least one potential sanctions match. The field name does not establish that the person or company you searched for is the listed entity. Compare identifying details and the primary source before deciding." },
+      { label: "No matches", explanation: "No potential matches were returned for this query. This is not a guarantee that the entity is absent from every list or that a new designation has reached the provider." },
+      { label: "Source details and freshness", explanation: "Read lists_queried for the provider’s coverage and refresh statement. Per-list update timestamps are not available. match_count can exceed the matches array, which contains at most ten records; no match confidence score is returned." },
+    ],
+    guide: { href: "/guides/sanctions-check-langchain", label: "Add sanctions screening to a LangChain agent" },
+    nextTools: [{ slug: "aml-risk-score", label: "Score reviewed screening results" }, { slug: "pep-check", label: "Check politically exposed person status" }],
+  },
   "dns-lookup": {
     title: "DNS Lookup API — DNS records, SPF and DMARC",
     description: "Look up A, AAAA, MX, TXT, CNAME and NS records as JSON with Strale’s DNS lookup API. Check SPF and DMARC presence. Try it in your browser without a key.",
