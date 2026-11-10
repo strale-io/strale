@@ -16,3 +16,9 @@ const fields = [...new Set([...Object.keys(schema?.properties ?? {}), ...Object.
     })}</tbody>
   </table>
 </div>
+
+<style>
+  /* Keep reliability notes readable inside the existing keyboard-scrollable wrapper. */
+  td:last-child { min-width: var(--type-detail-measure); }
+  td:first-of-type { white-space: nowrap; }
+</style>

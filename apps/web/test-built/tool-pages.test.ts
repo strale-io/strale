@@ -12,6 +12,45 @@ function example(html: string, id: string) {
   return JSON.parse(decode(code));
 }
 
+test("Singapore, page speed and HTTP conversion use consistent examples and complete call instructions", () => {
+  for (const [slug, guide] of [
+    ["singapore-company-data", "singapore-company-lookup-api"],
+    ["page-speed-test", "page-speed-test-api"],
+    ["http-to-curl", "http-to-curl-api"],
+  ]) {
+    const html = read(slug), input = example(html, "ex-in"), output = example(html, "ex-out");
+    const panel = html.match(/id="calls-panel-0"[^>]*>\s*<pre[^>]*><code[^>]*>([\s\S]*?)<\/code>/)?.[1];
+    assert.ok(panel);
+    const payload = decode(panel).match(/-d '([\s\S]*?)'/)?.[1];
+    assert.ok(payload);
+    assert.deepEqual(JSON.parse(payload).inputs, input, `${slug}: displayed example and REST request agree`);
+    assert.equal(JSON.parse(payload).capability_slug, slug);
+    assert.match(html, new RegExp(`href="/signup\\?tool=${slug}"`));
+    assert.match(html, new RegExp(`href="/guides/${guide}"`));
+    assert.ok(existsSync(resolve(dist, `guides/${guide}.html`)));
+    assert.match(html, new RegExp(`<link rel="canonical" href="https://strale.io/tools/${slug}"`));
+    assert.doesNotMatch(html, /<form id="try-tool"/);
+    const text = decode(html);
+    if (slug === "singapore-company-data") {
+      assert.equal(output.uen, input.uen);
+      assert.match(text, /monthly snapshot/);
+      assert.match(text, /Not returned by this tool; use entity_name/);
+      assert.match(text, /not a full mailing address/);
+    } else if (slug === "page-speed-test") {
+      assert.equal(output.url, input.url); assert.equal(output.strategy, input.strategy);
+      assert.match(text, /not a measured score for web.dev/);
+      assert.match(text, /does not return CrUX field data, INP/);
+      assert.match(text, /speed_index is also in milliseconds/);
+    } else {
+      assert.equal(input.method, "GET"); assert.equal("body" in input, false);
+      assert.equal(output.url, input.url); assert.equal(output.method, input.method);
+      assert.match(output.curl_command, /Accept: application\/json/);
+      assert.doesNotMatch(text, /This is a test input for automated capability testing/);
+      assert.match(text, /does not send the request/);
+    }
+  }
+});
+
 test("Belgian, SEC and VAT pages pair examples with the same API call and useful next steps", () => {
   for (const [slug, guide] of [
     ["belgian-company-data", "belgian-company-lookup-api"],
@@ -105,8 +144,8 @@ test("DNS trial is discoverable without signup and EORI never presents a free ru
   assert.ok(Object.keys(example(dns, "ex-out")).length <= 6, "keep the first example short");
   assert.doesNotMatch(eori, /data-try\s/);
   assert.equal(example(eori, "ex-out").valid, true);
-  assert.match(eori, /<code>valid<\/code><\/th><td>boolean or null<\/td>/);
-  assert.match(eori, /<code>trader_name<\/code><\/th><td>string or null<\/td><td>May be null; omitted when the input format is invalid<\/td>/);
+  assert.match(eori, /<code[^>]*>valid<\/code><\/th><td[^>]*>boolean or null<\/td>/);
+  assert.match(eori, /<code[^>]*>trader_name<\/code><\/th><td[^>]*>string or null<\/td><td[^>]*>May be null; omitted when the input format is invalid<\/td>/);
   assert.match(eori, /valid: null/);
   assert.match(eori, /format_valid/);
   assert.doesNotMatch(read("pdf-extract"), /id="uses-title"/);

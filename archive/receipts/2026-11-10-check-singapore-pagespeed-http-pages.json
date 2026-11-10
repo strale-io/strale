@@ -1,0 +1,58 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4f68cc684fd715e884559043b0fa0254e1090bb9"
+  },
+  "at": "2026-11-10T16:11:11.803Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-fourth-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 4,
+    "accessibility_checks": 28,
+    "api_examples_passed": 9,
+    "source_commit": "4f68cc684fd715e884559043b0fa0254e1090bb9",
+    "mobile_tables": "input/output across nine tools",
+    "evidence_directory": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-fourth-nov10",
+    "api_typecheck": "passed",
+    "preview_build_pages": 439,
+    "web_unit_passed": 91,
+    "design_check": "passed",
+    "browser_passed": 15,
+    "built_passed": 16,
+    "accessibility_failures": 0,
+    "astro_check": "0 errors and warnings; existing hint"
+  },
+  "topic": "singapore-pagespeed-http-pages",
+  "raw": {
+    "accessibility_checks": 28,
+    "api_examples_passed": 9,
+    "failures": [],
+    "source_commit": "4f68cc684fd715e884559043b0fa0254e1090bb9",
+    "mobile_tables": "input/output across nine tools",
+    "evidence_directory": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-fourth-nov10",
+    "ok": true,
+    "api_typecheck": "passed",
+    "preview_build_pages": 439,
+    "web_unit_passed": 91,
+    "design_check": "passed",
+    "browser_passed": 15,
+    "warnings": [
+      "Authenticated paid calls not run; Singapore and PageSpeed use mocked upstreams, HTTP executor and generated GET snippets tested locally.",
+      "Opus/high subscription returned usage_limit_reached; independent gpt-6.1-sol/high fallback under founder policy.",
+      "Existing unrelated sibling frontend llms all-x402 claim warning.",
+      "Live-data build and public deployment verification pending."
+    ],
+    "reviews": {
+      "product": "GO at 4f68cc684fd715e884559043b0fa0254e1090bb9, rounds2",
+      "technical": "GO at 4f68cc684fd715e884559043b0fa0254e1090bb9, rounds2",
+      "findings": "Broken name-search example replaced and parsing limitation documented; mobile output notes fixed."
+    },
+    "built_passed": 16,
+    "accessibility_failures": 0,
+    "astro_check": "0 errors and warnings; existing hint"
+  }
+}
