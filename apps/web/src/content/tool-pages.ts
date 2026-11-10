@@ -27,14 +27,14 @@ export const toolPages: Partial<Record<string, ToolPage>> = {
     uses: [
       "Match a UEN from a supplier form or invoice to the entity name in ACRA open data.",
       "Retrieve an entity’s status and available address details for an onboarding record.",
-      "Search by name when you do not know the UEN, then check the returned identity before using it. The tool selects one match rather than returning a list of candidates.",
+      "Try a short name search such as DBS BANK when you do not know the UEN. Check the returned identity: the tool selects one match, and identifier-like text can be routed to UEN lookup instead.",
     ],
     results: [
-      { label: "uen and entity_name", explanation: "Prefer an exact UEN lookup when you have the identifier. Name searches select one record from the provider’s results, preferring names containing the search text and then Registered status. A returned match still needs an identity check." },
+      { label: "uen and entity_name", explanation: "Prefer an exact UEN lookup when you have the identifier. The tool checks both input fields for UEN-like text first: a name that becomes 9–10 letters or digits after removing spaces, dots and hyphens, or contains a run of 9 or more letters or digits, can be treated as an identifier. Other name searches select one record, preferring names containing the search text and then Registered status. Check the returned identity." },
       { label: "status and is_active", explanation: "is_active is true when the source status is Registered. It describes that monthly record, not a current trading, solvency or compliance assessment. A failed request or missing match does not establish that an entity is deregistered." },
       { label: "Address and dates", explanation: "registered_address combines the available street and postal code. It is not a full mailing address. uen_issue_date is the source’s UEN issue date. Source fields can be missing; this lookup does not include directors, beneficial owners, financial statements or GST registration." },
     ],
-    inputDescriptions: { uen: "Singapore Unique Entity Number, such as 197200078R. Provide uen or company_name; uen takes priority.", company_name: "Entity name to search. One preferred match is returned; check its UEN before using it." },
+    inputDescriptions: { uen: "Singapore Unique Entity Number, such as 197200078R. Provide uen or company_name; uen takes priority.", company_name: "Name text, such as DBS BANK. UEN-like text can trigger identifier lookup instead; see the name-search limitations above. Check the selected record’s UEN." },
     outputOverrides: {
       company_name: { appears: "Not returned by this tool; use entity_name" }, vat_number: { appears: "Not returned; this lookup does not check GST registration" },
       entity_name: { type: "string or null", appears: "May be null when the source value is missing" }, entity_type: { type: "string or null", appears: "May be null when the source value is missing" },

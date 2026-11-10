@@ -144,8 +144,8 @@ test("DNS trial is discoverable without signup and EORI never presents a free ru
   assert.ok(Object.keys(example(dns, "ex-out")).length <= 6, "keep the first example short");
   assert.doesNotMatch(eori, /data-try\s/);
   assert.equal(example(eori, "ex-out").valid, true);
-  assert.match(eori, /<code>valid<\/code><\/th><td>boolean or null<\/td>/);
-  assert.match(eori, /<code>trader_name<\/code><\/th><td>string or null<\/td><td>May be null; omitted when the input format is invalid<\/td>/);
+  assert.match(eori, /<code[^>]*>valid<\/code><\/th><td[^>]*>boolean or null<\/td>/);
+  assert.match(eori, /<code[^>]*>trader_name<\/code><\/th><td[^>]*>string or null<\/td><td[^>]*>May be null; omitted when the input format is invalid<\/td>/);
   assert.match(eori, /valid: null/);
   assert.match(eori, /format_valid/);
   assert.doesNotMatch(read("pdf-extract"), /id="uses-title"/);

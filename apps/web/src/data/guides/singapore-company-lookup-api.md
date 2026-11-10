@@ -29,7 +29,9 @@ Compare `output.uen` and `output.entity_name` with the supplier or customer deta
 
 ## Search by name when needed
 
-Replace the inputs with `{"company_name":"SINGAPORE AIRLINES LIMITED"}`. Supply one lookup input at a time; `uen` takes priority if both are provided. Name search selects one record from the provider’s results, preferring names containing the search text and then Registered status. It does not return a candidate list or establish that the selected entity is the one you intended.
+Replace the inputs with `{"company_name":"DBS BANK"}`. Supply one lookup input at a time; `uen` takes priority if both are provided. Name search selects one record from the provider’s results, preferring names containing the search text and then Registered status. It does not return a candidate list or establish that the selected entity is the one you intended.
+
+The current tool checks both fields for UEN-like text before searching names. A name that becomes 9–10 letters or digits after removing spaces, dots and hyphens, or contains a run of 9 or more letters or digits, can be routed to identifier lookup instead. For example, `SINGAPORE AIRLINES LIMITED` is interpreted as the identifier `SINGAPORE`. Use the known UEN for that entity, as in the first call above; do not interpret that failed name lookup as evidence that the company is absent.
 
 ## Read the source fields
 

@@ -65,6 +65,27 @@ it("the page-speed illustration matches lab-score mapping and units from the exe
   } finally { vi.unstubAllGlobals(); }
 });
 
+it("the documented Singapore name example uses name search and explains identifier-like names", async () => {
+  const guide = readFileSync(new URL("../../../web/src/data/guides/singapore-company-lookup-api.md", import.meta.url), "utf8");
+  const nameInput = JSON.parse(guide.match(/`(\{"company_name":[^`]+\})`/)![1]!);
+  const fetcher = vi.fn(async (_url: unknown) => new Response(JSON.stringify({ success: true, result: { records: [
+    { uen: "000000001A", entity_name: "UNRELATED BANK", uen_status_desc: "Registered" },
+    { uen: "000000002B", entity_name: "DBS BANK OLD", uen_status_desc: "Deregistered" },
+    { uen: "196800306E", entity_name: "DBS BANK LTD.", uen_status_desc: "Registered" },
+  ] } })));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const result = await getExecutor("singapore-company-data")!(nameInput);
+    const request = new URL(String(fetcher.mock.calls[0]?.[0]));
+    expect(request.searchParams.get("q")).toBe("DBS BANK");
+    expect(request.searchParams.has("filters")).toBe(false);
+    expect(result.output.uen).toBe("196800306E");
+    fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { records: [] } })));
+    await expect(getExecutor("singapore-company-data")!({ company_name: "SINGAPORE AIRLINES LIMITED" })).rejects.toThrow("UEN SINGAPORE");
+    expect(guide).toContain("interpreted as the identifier `SINGAPORE`");
+  } finally { vi.unstubAllGlobals(); }
+});
+
 it("the HTTP example generates equivalent bodyless GET requests without contacting the target", async () => {
   const network = vi.fn(); vi.stubGlobal("fetch", network);
   try {
