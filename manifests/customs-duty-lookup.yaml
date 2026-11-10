@@ -42,6 +42,14 @@ output_schema:
     vat_rate: null
     notes: The low-value consignment duty applies from 1 July 2026 to items in consignments worth up to EUR 150.
   properties:
+    hs_code:
+      type: string
+    description:
+      type: [string, "null"]
+    origin_country:
+      type: string
+    destination:
+      type: string
     duty_rate:
       type: string
     duty_type:
@@ -52,11 +60,18 @@ output_schema:
       type: array
     resolved_hs_code:
       type: string
+    additional_duties:
+      type: array
+    notes:
+      type: [string, "null"]
+    vat_rate:
+      type: "null"
 data_source: "Access2Markets (European Commission), EU tariff data from the TARIC database (DG TAXUD)"
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
 maintenance_class: scraping-stable-target
+avg_latency_ms: 8000
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: eu
@@ -69,20 +84,38 @@ test_fixtures:
     expected_fields:
       - field: hs_code
         operator: not_null
-        reliability: common
+        reliability: guaranteed
       - field: hs_code
         operator: type
-        reliability: common
+        reliability: guaranteed
+        value: string
+      - field: resolved_hs_code
+        operator: not_null
+        reliability: guaranteed
+      - field: duty_rate
+        operator: not_null
+        reliability: guaranteed
+      - field: duty_rate
+        operator: type
+        reliability: guaranteed
         value: string
   health_check_input:
     hs_code: "8471.30"
     origin_country: CN
     destination_country: SE
 output_field_reliability:
+  hs_code: guaranteed
+  resolved_hs_code: guaranteed
+  origin_country: guaranteed
+  destination: guaranteed
+  description: common
   duty_rate: guaranteed
   duty_type: guaranteed
   anti_dumping: guaranteed
   preferential_rates: guaranteed
+  additional_duties: common
+  notes: common
+  vat_rate: rare
 limitations:
   - title: Rates depend on the HS code and country of origin
     text: >-

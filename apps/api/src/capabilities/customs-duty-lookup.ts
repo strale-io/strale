@@ -77,7 +77,10 @@ export function a2mResultsUrl(hsCode: string, origin: string, destination: strin
 export function resultsSection(pageText: string): { text: string; resolvedCode: string | null } | null {
   const start = pageText.indexOf(RESULTS_MARKER);
   if (start === -1) return null;
-  const end = pageText.indexOf("Sources and copyright", start);
+  const ends = ["Sources and copyright", "Quick links"]
+    .map((marker) => pageText.indexOf(marker, start))
+    .filter((index) => index !== -1);
+  const end = ends.length ? Math.min(...ends) : -1;
   const text = pageText.slice(start, end === -1 ? undefined : end);
   const resolved = text.match(/^Results for product code ([\d.]+)/);
   return { text, resolvedCode: resolved ? resolved[1].replace(/\./g, "") : null };
@@ -120,10 +123,13 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   const queryDestination = destinationDefaulted ? DEFAULT_DESTINATION : requestedDestination;
 
   const sourceUrl = a2mResultsUrl(cleanHsCode, originCountry, queryDestination);
-  const html = await fetchRenderedHtml(sourceUrl, { source: "strale" });
+  // The plain 200 response is a navigation shell: tariff rows and product
+  // choices load through JavaScript. Its menu text passes the shared plain
+  // fetch heuristic, so require a render (with the normal access checks).
+  const html = await fetchRenderedHtml(sourceUrl, { source: "strale", skipFallback: true });
   const pageText = htmlToText(html);
   const section = resultsSection(pageText);
-  if (!section || section.text.length < 200) {
+  if (!section) {
     const offered = pickerCodes(pageText, cleanHsCode);
     if (offered && offered.length > 0) {
       throw new Error(
@@ -131,9 +137,23 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
           `Call again with one of these codes: ${offered.slice(0, 25).join(", ")}.`,
       );
     }
+    if (offered !== null) {
+      throw new Error(
+        `HS code "${hsCode}" is split further in the EU tariff, but the more specific codes did not load. ` +
+          "Select the full product code in Access2Markets and call again with that code.",
+      );
+    }
     throw new Error(
       `Access2Markets returned no tariff results for HS code "${hsCode}" from ${originCountry}. Check the code against the EU tariff (6, 8 or 10 digits).`,
     );
+  }
+  // A heading plus a long footer is not tariff data. In particular, do not
+  // ask the model to invent a rate from the shell if rendering is incomplete.
+  if (section.text.length < 200 || !/\bThird country duty\b/i.test(section.text)) {
+    throw new Error("Access2Markets did not load tariff data for this product. Try again later or check the product on Access2Markets.");
+  }
+  if (!section.resolvedCode || !/^\d{6,10}$/.test(section.resolvedCode)) {
+    throw new Error("Access2Markets could not confirm the product code for these tariff results. Check the full product code on Access2Markets and try again.");
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -162,6 +182,10 @@ ${section.text.slice(0, 12000)}`,
     truncationGuidance: "This HS code's results listed more measures than fit in one call.",
     parseFailureError: () => new Error("Failed to extract customs duty data from the Access2Markets results."),
   });
+
+  if (typeof extracted.duty_rate !== "string" || !extracted.duty_rate.trim()) {
+    throw new Error("Access2Markets extraction did not provide a duty rate. Check the product on Access2Markets; no duty result is available from this call.");
+  }
 
   const output: Record<string, unknown> = {
     ...extracted,

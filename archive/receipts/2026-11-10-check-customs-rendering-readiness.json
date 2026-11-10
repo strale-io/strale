@@ -1,0 +1,43 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a5a267c766f0310e9c4ab3d6f8b3b365c16e1ecb"
+  },
+  "at": "2026-11-10T22:30:24.195Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/customs-release-nov10/public-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 4,
+    "scope": "Customs renderer repair, reviewed scoped metadata sync and production readiness; not a live paid execution pass"
+  },
+  "topic": "customs-rendering-readiness",
+  "raw": {
+    "ok": true,
+    "scope": "Customs renderer repair, reviewed scoped metadata sync and production readiness; not a live paid execution pass",
+    "failures": [],
+    "warnings": [
+      "Paid-prepaid internal-test refusal is the documented smoke exception; live paid customer execution is unverified.",
+      "Legacy suggest route returned 404/skipped; public capability detail separately returned 200.",
+      "Windows smoke runner printed a UV shutdown assertion after its results; no complete smoke pass claimed.",
+      "DQ-48 source-terms interpretation remains pending and unchanged."
+    ],
+    "checks": {
+      "focused_regressions": "25 passed; 11 additions demonstrated fail-before across two saved runs",
+      "typecheck": "passed after MCP workspace build",
+      "manifest_identity_tier_cost_claims_env": "passed; existing allowlisted findings and external frontend warning retained",
+      "production_validation": "19/19 passed",
+      "production_readiness": "ready true, zero issues; read-only DB and authenticated API agree",
+      "scoped_metadata_sync": "only output_schema and output_field_reliability, one capability row",
+      "backfill": "known-answer and dependency-health inputs corrected; stale baselines cleared; exact policy refusal required before persistence",
+      "protected_fields": "pricing, activity, visibility, x402 eligibility and lifecycle unchanged",
+      "limitations": "all five rows unchanged",
+      "shared_environment": "unchanged; operator credential supplied only to child process",
+      "independent_review": "Sol/high technical and product, two rounds, no remaining HIGH/MEDIUM findings",
+      "final_review": "wanted Opus/high; actual subscription weekly-limit failure; fell to fresh Sol/high, GO under explicit smoke limitations"
+    }
+  }
+}

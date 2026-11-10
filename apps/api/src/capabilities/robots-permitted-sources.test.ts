@@ -91,6 +91,42 @@ describe("customs-duty-lookup", () => {
     expect(r.provenance.queried_member_state).toBe("DE");
   });
 
+  it("REGRESSION: renders the JavaScript tariff data instead of accepting the navigation-only HTTP shell", async () => {
+    // Access2Markets' plain 200 page has substantial navigation text, but
+    // the tariff rows and picker choices arrive only after JavaScript runs.
+    fetchRenderedHtml.mockImplementation(async (_url, options) => options?.skipFallback
+      ? A2M_RESULTS
+      : `<h2>Results for product code 8471.30 from China to Sweden</h2><h2>Quick links</h2><p>${"How can I find the import duty? ".repeat(20)}</p>`);
+    const r = await exec()({ hs_code: "847130", origin_country: "CN", destination_country: "SE" });
+    expect(fetchRenderedHtml).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ source: "strale", skipFallback: true }));
+    expect(r.output.duty_rate).toBe("0%");
+    expect(extractJsonWithLlm.mock.calls[0][0].prompt).toContain("Third country duty");
+  });
+
+  it("REGRESSION: an incomplete results shell never reaches extraction, even with a long footer", async () => {
+    fetchRenderedHtml.mockResolvedValue(`<h2>Results for product code 8471.30 from China to Sweden</h2><h2>Quick links</h2><p>${"How can I find the import duty? ".repeat(20)}</p>`);
+    await expect(exec()({ hs_code: "847130", origin_country: "CN" })).rejects.toThrow(/did not load tariff data/);
+    expect(extractJsonWithLlm).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "", "   ", 0, undefined])("REGRESSION: extraction without a usable duty rate (%j) is refused", async (duty_rate) => {
+    fetchRenderedHtml.mockResolvedValue(A2M_RESULTS);
+    extractJsonWithLlm.mockResolvedValue({ duty_rate, duty_type: "ad_valorem" });
+    await expect(exec()({ hs_code: "847130", origin_country: "CN" })).rejects.toThrow(/did not provide a duty rate/);
+  });
+
+  it("an unloaded product picker explains that a more specific code is needed", async () => {
+    fetchRenderedHtml.mockResolvedValue(`<h2>Product search</h2><p>For your search criteria, a match was identified with an HS code. Please continue browsing.</p><h2>Quick links</h2>`);
+    await expect(exec()({ hs_code: "610910", origin_country: "CN" })).rejects.toThrow(/split further.*did not load.*Access2Markets/);
+    expect(extractJsonWithLlm).not.toHaveBeenCalled();
+  });
+
+  it.each(["unavailable", "8", "...."])("refuses a tariff section whose resolved code is %s before the LLM", async (code) => {
+    fetchRenderedHtml.mockResolvedValue(A2M_RESULTS.replace("Results for product code 8471.30", `Results for product code ${code}`));
+    await expect(exec()({ hs_code: "847130", origin_country: "CN", destination_country: "SE" })).rejects.toThrow(/could not confirm the product code/);
+    expect(extractJsonWithLlm).not.toHaveBeenCalled();
+  });
+
   it("REGRESSION: an Access2Markets error page throws instead of reaching the LLM", async () => {
     fetchRenderedHtml.mockResolvedValue(A2M_400);
     await expect(exec()({ hs_code: "847130", origin_country: "CN", destination_country: "SE" })).rejects.toThrow(
