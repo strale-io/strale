@@ -117,7 +117,7 @@ const paired = !!output && inputValues.length > 0 && inputValues.every((v) => ou
 
         <section aria-labelledby="inputs-title" class="stack">
           <h2 id="inputs-title" class="t-section">Inputs</h2>
-          <InputsTable schema={tool.input_schema} />
+          <InputsTable schema={tool.input_schema} descriptions={page?.inputDescriptions} />
         </section>
 
         <section aria-labelledby="outputs-title" class="stack">

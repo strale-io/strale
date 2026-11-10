@@ -36,6 +36,9 @@ test("AML, Markdown and sanctions examples agree with their call inputs and lead
   assert.match(aml, /does not look up a person or company/);
   assert.match(sanctions, /not a live screening result/);
   assert.doesNotMatch(sanctions, /Vladimir|Spotify/);
+  assert.match(sanctions, /ISO country code echoed in the response; does not filter the sanctions search/);
+  assert.doesNotMatch(sanctions, /ISO country code filter/);
+  assert.match(markdown, /Keep link destinations in the Markdown/);
   assert.doesNotMatch(aml + sanctions, /<form id="try-tool"/);
 });
 

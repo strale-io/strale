@@ -8,6 +8,7 @@ interface ToolPage {
   results: { label: string; explanation: string }[];
   /** Display corrections verified against the executor; do not change the API contract. */
   outputOverrides?: Record<string, { type?: string; appears?: string }>;
+  inputDescriptions?: Record<string, string>;
   guide: { href: string; label: string };
   nextTools?: { slug: string; label: string }[];
 }
@@ -57,6 +58,7 @@ export const toolPages: Partial<Record<string, ToolPage>> = {
       { label: "An access or input error", explanation: "Use a publicly accessible HTML page. Login pages, paywalls, blocked sites and unsupported platforms cannot be read. For a PDF, use PDF Extraction instead." },
     ],
     guide: { href: "/guides/url-to-markdown-mcp", label: "Read web pages through MCP" },
+    inputDescriptions: { include_links: "Keep link destinations in the Markdown (default: true).", include_images: "Keep image references in the Markdown (default: true)." },
     nextTools: [{ slug: "web-extract", label: "Extract named fields from a web page" }, { slug: "pdf-extract", label: "Extract information from a PDF" }],
   },
   "sanctions-check": {
@@ -80,6 +82,7 @@ export const toolPages: Partial<Record<string, ToolPage>> = {
       { label: "Source details and freshness", explanation: "Read lists_queried for the provider’s coverage and refresh statement. Per-list update timestamps are not available. match_count can exceed the matches array, which contains at most ten records; no match confidence score is returned." },
     ],
     guide: { href: "/guides/sanctions-check-langchain", label: "Add sanctions screening to a LangChain agent" },
+    inputDescriptions: { country: "ISO country code echoed in the response; does not filter the sanctions search." },
     nextTools: [{ slug: "aml-risk-score", label: "Score reviewed screening results" }, { slug: "pep-check", label: "Check politically exposed person status" }],
   },
   "dns-lookup": {
