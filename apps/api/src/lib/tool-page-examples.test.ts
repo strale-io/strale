@@ -15,6 +15,60 @@ const { toolPages } = content.exports;
 
 vi.mock("./metered-vendor-fetch.js", () => ({ meteredVendorFetch: vi.fn(async () => new Response(JSON.stringify({ found_records: [] }), { status: 200 })) }));
 import "../capabilities/sanctions-check.js";
+import "../capabilities/belgian-company-data.js";
+import { resetTickerCacheForTests } from "../capabilities/sec-edgar-filings.js";
+import "../capabilities/vat-validate.js";
+
+it("the Belgian example preserves the enterprise number and derives the displayed VAT number", async () => {
+  vi.stubEnv("CBEAPI_KEY", "unit-test-placeholder");
+  const fetcher = vi.fn(async (_url: unknown) => new Response(JSON.stringify({ data: {
+    cbe_number: "0417497106", denomination: "ANHEUSER-BUSCH INBEV",
+  } }), { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["belgian-company-data"]!.example;
+    const result = await getExecutor("belgian-company-data")!(example.input);
+    expect(fetcher.mock.calls[0]?.[0]).toBe("https://cbeapi.be/api/v1/company/0417497106");
+    expect(result.output).toMatchObject(example.output);
+  } finally { vi.unstubAllGlobals(); vi.unstubAllEnvs(); }
+});
+
+it("the SEC example filters for the requested form and builds the documented filing link", async () => {
+  resetTickerCacheForTests();
+  const fetcher = vi.fn(async (url: unknown) => new Response(JSON.stringify(
+    String(url).endsWith("company_tickers.json") ? { "0": { cik_str: 320193, ticker: "AAPL", title: "Apple Inc." } } : {
+      name: "Apple Inc.", tickers: ["AAPL"], filings: { recent: {
+        accessionNumber: ["0000320193-26-000001", "0000320193-25-000079"],
+        form: ["10-Q", "10-K"], filingDate: ["2026-02-01", "2025-10-31"],
+        reportDate: ["2025-12-31", "2025-09-27"], primaryDocument: ["quarter.htm", "aapl-20250927.htm"],
+      } },
+    }), { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["sec-edgar-filings"]!.example;
+    const result = await getExecutor("sec-edgar-filings")!(example.input);
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      "https://www.sec.gov/files/company_tickers.json", "https://data.sec.gov/submissions/CIK0000320193.json",
+    ]);
+    expect(result.output).toMatchObject(example.output);
+  } finally { vi.unstubAllGlobals(); resetTickerCacheForTests(); }
+});
+
+it("the VAT example agrees with the VIES adapter and missing details are empty strings", async () => {
+  const fetcher = vi.fn(async (_url: unknown, options?: RequestInit) => {
+    const swedish = String(options?.body).includes("<urn:countryCode>SE</urn:countryCode>");
+    return new Response(`<checkVatResponse><valid>true</valid><name>${swedish ? "Spotify AB" : "---"}</name><address>${swedish ? "REGERINGSGATAN 19\n111 53 STOCKHOLM" : "---"}</address><requestDate>2026-11-10</requestDate></checkVatResponse>`, { status: 200 });
+  });
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["vat-validate"]!.example;
+    const result = await getExecutor("vat-validate")!(example.input);
+    expect(result.output).toMatchObject(example.output);
+    expect(String(fetcher.mock.calls[0]?.[1]?.body)).toContain("<urn:vatNumber>556703748501</urn:vatNumber>");
+    const missing = await getExecutor("vat-validate")!({ vat_number: "DE811128135" });
+    expect(missing.output).toMatchObject({ valid: true, vat_number: "DE811128135", company_name: "", company_address: "" });
+  } finally { vi.unstubAllGlobals(); }
+});
 
 it("the AML landing-page example is computed by the real scoring rules", async () => {
   const example = toolPages["aml-risk-score"]!.example;

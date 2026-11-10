@@ -14,6 +14,81 @@ interface ToolPage {
 }
 
 export const toolPages: Partial<Record<string, ToolPage>> = {
+  "belgian-company-data": {
+    title: "Belgian Company Lookup API — KBO/BCE company records",
+    description: "Look up Belgian company records by enterprise number or name. Get JSON for your app or agent, see the KBO/BCE source and copy an API example.",
+    intro: "Look up a Belgian company by enterprise number or name and get its identity, status and available address details as JSON. Strale’s Belgian company lookup API uses KBO/BCE public-register data supplied by CBEAPI.be. Use it to check company details in supplier onboarding or invoice workflows.",
+    example: {
+      input: { enterprise_number: "0417497106" },
+      output: { company_name: "ANHEUSER-BUSCH INBEV", registration_number: "0417.497.106", vat_number: "BE0417497106", jurisdiction: "BE" },
+      selected: true,
+      note: "Selected fields from the catalogue example; this is not a live lookup. The VAT number is derived from the enterprise number and does not confirm VAT registration. Run the call for the current company record.",
+    },
+    uses: [
+      "Retrieve a supplier’s registered company name and available address before creating its record in your system.",
+      "Compare an enterprise number from an invoice with the company record returned by the register provider.",
+      "Look up a company name when you do not have its enterprise number. The tool returns the first search result, so check the identity before using it.",
+    ],
+    results: [
+      { label: "registration_number and company_name", explanation: "Prefer an enterprise-number lookup when you know the identifier. A name search returns the first provider match, not a list of candidates. Compare the returned number and name with your source document." },
+      { label: "vat_number", explanation: "This field is constructed from the Belgian enterprise number. Use VAT Validation for a separate registration check; the presence of a BE-prefixed number is not evidence that it is registered for VAT." },
+      { label: "Company details and missing fields", explanation: "Address, legal form and registration date may be missing. This tool does not return directors or beneficial owners. A company record is one input to a review, not a complete due-diligence result." },
+    ],
+    inputDescriptions: { enterprise_number: "KBO/BCE enterprise number, with or without dots; a BE prefix is accepted.", company_name: "Company name to search. Returns the first provider match; verify its enterprise number." },
+    outputOverrides: { address: { type: "string or null" }, business_type: { type: "string or null", appears: "May be null when the provider does not supply a legal form" }, registration_date: { type: "string or null" }, vat_number: { appears: "Derived from the enterprise number; not a VAT-registration check" } },
+    guide: { href: "/guides/belgian-company-lookup-api", label: "Look up a Belgian company with the API" },
+    nextTools: [{ slug: "vat-validate", label: "Check VAT registration separately" }, { slug: "sanctions-check", label: "Screen the company name for potential sanctions matches" }],
+  },
+  "sec-edgar-filings": {
+    title: "SEC EDGAR Filings API — find filings by ticker or CIK",
+    description: "Find recent SEC filings by ticker or CIK. Filter for 10-K, 10-Q or 8-K forms and get filing dates and document links as JSON through Strale’s API.",
+    intro: "Find a company’s recent SEC filings by ticker or CIK and return their dates, form types and document links as JSON. Strale’s SEC EDGAR filings API lets your app or agent filter for forms such as 10-K, 10-Q and 8-K without handling the SEC’s ticker mapping and submissions format itself.",
+    example: {
+      input: { ticker: "AAPL", form_type: "10-K", limit: 1 },
+      output: { cik: 320193, ticker: "AAPL", returned: 1, filings: [{ form: "10-K", filing_date: "2025-10-31", report_date: "2025-09-27", url: "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm" }] },
+      selected: true,
+      note: "Illustrative response using Apple’s 2025 10-K, with selected fields shown. This is not a live latest-filing result; running the call may return a newer filing.",
+    },
+    uses: [
+      "Find a company’s recent annual reports with form_type set to 10-K, or quarterly reports with 10-Q.",
+      "Retrieve recent 8-K filing links for a review workflow. Your application decides when to call and which filings it has already processed.",
+      "Pass a CIK instead of a ticker when the filer is absent from the ticker index. The lookup returns filing metadata and links, not the document contents.",
+    ],
+    results: [
+      { label: "filing_date and report_date", explanation: "The filing date is when the document was filed with the SEC. The report date is the period or event date reported by the source; it can be absent. They describe different dates." },
+      { label: "filings and returned", explanation: "The limit is a maximum, not a promise of that many results. The tool filters the recent filings supplied by EDGAR; an empty list does not prove the company has never filed that form. Older filings may be outside the recent window." },
+      { label: "Document links", explanation: "Open the returned url to read a filing. The response does not contain extracted financial figures, full filing text or XBRL facts. Use the SEC source document for the underlying information." },
+    ],
+    inputDescriptions: { ticker: "Exchange ticker, such as AAPL. Provide ticker or cik; cik takes priority if both are supplied.", cik: "SEC Central Index Key, up to 10 digits. Use this when the filer is not in the ticker index.", form_type: "Exact form filter, such as 10-K, 10-Q or 8-K. Omit to include all recent form types." },
+    outputOverrides: { name: { type: "string or null" }, ticker: { type: "string or null" }, tickers: { type: "array" }, exchanges: { type: "array" }, entity_type: { type: "string or null" }, sic_code: { type: "string or null" }, sic_description: { type: "string or null" }, state_of_incorporation: { type: "string or null" }, fiscal_year_end: { type: "string or null" }, filer_category: { type: "string or null" }, business_address: { type: "object or null" }, form_filter: { type: "string or null" }, recent_filings_available: { type: "number" } },
+    guide: { href: "/guides/sec-edgar-filings-api", label: "Find SEC filings by ticker or CIK" },
+  },
+  "vat-validate": {
+    title: "VAT Validation API — check EU VAT numbers with VIES",
+    description: "Check EU VAT registration through VIES with Strale’s API. See a consistent request and response, available company details, caching and error handling.",
+    intro: "Check an EU VAT number against VIES and get its registration result and available company details as JSON. Strale’s VAT validation API can use a cached result, so read the cache fields when freshness matters. A format check alone does not confirm VAT registration.",
+    example: {
+      input: { vat_number: "SE556703748501" },
+      output: { valid: true, vat_number: "SE556703748501", country_code: "SE", company_name: "Spotify AB", company_address: "REGERINGSGATAN 19\n111 53 STOCKHOLM" },
+      selected: true,
+      note: "Illustrative response for the same Swedish VAT number used in every call below. Selected fields are shown; this is not a live registration check. Company details depend on what the provider supplies.",
+    },
+    uses: [
+      "Check a supplier’s VAT registration before passing an invoice or onboarding record to the next step.",
+      "Compare the returned company name and address with your records when those details are available.",
+      "Use VAT Format Validation for an offline format check, then this tool when you need a registry response.",
+    ],
+    results: [
+      { label: "valid", explanation: "Read this as the provider’s registration result for the number. An unavailable service or failed request is not an invalid registration. Handle errors separately and retry when the service becomes available." },
+      { label: "company_name and company_address", explanation: "These fields can be empty strings even when valid is true. The VIES adapter returns an empty string when a detail is missing or supplied as a placeholder; the Swiss public lookup also returns empty company details." },
+      { label: "Cached results", explanation: "A cached answer includes cache_hit, cached_at and cache_age_hours. Results can be reused for 48 hours. If a provider fails and an older cached answer is available, stale: true identifies that fallback. Decide whether its age is acceptable before relying on it." },
+      { label: "Country coverage", explanation: "EU and XI numbers use VIES; Norway and Switzerland/Liechtenstein use other registry services. GB checks depend on configured HMRC access and can return a credentials-pending error. The guide explains the routes and their limits." },
+    ],
+    inputDescriptions: { vat_number: "VAT number including its country prefix, such as SE556703748501. Country support and available details vary; see the limitations." },
+    outputOverrides: { company_name: { appears: "Present as a string; may be empty even for a valid number" }, company_address: { appears: "Present as a string; may be empty even for a valid number" } },
+    guide: { href: "/guides/vat-number-validation-api", label: "Check VAT numbers and handle cached or missing details" },
+    nextTools: [{ slug: "vat-format-validate", label: "Check VAT-number format without a registry lookup" }, { slug: "eori-validate", label: "Check an EORI number for customs workflows" }],
+  },
   "aml-risk-score": {
     title: "AML Risk Scoring API — score supplied screening results",
     description: "Turn sanctions, PEP and adverse-media screening results into an AML risk score as JSON. See the inputs, risk factors and API example for your app or agent.",

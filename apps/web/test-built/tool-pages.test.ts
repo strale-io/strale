@@ -12,6 +12,45 @@ function example(html: string, id: string) {
   return JSON.parse(decode(code));
 }
 
+test("Belgian, SEC and VAT pages pair examples with the same API call and useful next steps", () => {
+  for (const [slug, guide] of [
+    ["belgian-company-data", "belgian-company-lookup-api"],
+    ["sec-edgar-filings", "sec-edgar-filings-api"],
+    ["vat-validate", "vat-number-validation-api"],
+  ]) {
+    const html = read(slug), input = example(html, "ex-in"), output = example(html, "ex-out");
+    const decoded = decode(html);
+    const calls = html.match(/id="calls-panel-0"[^>]*>\s*<pre[^>]*><code[^>]*>([\s\S]*?)<\/code>/)?.[1];
+    assert.ok(calls, `${slug}: missing REST request`);
+    for (const value of Object.values(input)) assert.ok(decode(calls).includes(JSON.stringify(value)), `${slug}: call lacks ${value}`);
+    assert.match(html, new RegExp(`href="/signup\\?tool=${slug}"`));
+    assert.match(html, new RegExp(`href="/guides/${guide}"`));
+    assert.ok(existsSync(resolve(dist, `guides/${guide}.html`)));
+    assert.match(html, new RegExp(`<link rel="canonical" href="https://strale.io/tools/${slug}"`));
+    assert.match(html, /id="uses-title"/);
+    assert.doesNotMatch(html, /<form id="try-tool"/);
+    if (slug === "belgian-company-data") {
+      assert.equal(String(output.registration_number).replaceAll(".", ""), input.enterprise_number);
+      assert.equal(output.vat_number, `BE${input.enterprise_number}`);
+      assert.match(decoded, /first provider match/);
+      assert.match(decoded, /does not confirm VAT registration/);
+    } else if (slug === "sec-edgar-filings") {
+      assert.equal(output.ticker, input.ticker);
+      assert.equal(output.returned, output.filings.length);
+      assert.ok(output.returned <= input.limit);
+      assert.equal(output.filings[0].form, input.form_type);
+      assert.match(decoded, /not a live latest-filing result/);
+      assert.match(decoded, /does not contain extracted financial figures/);
+    } else {
+      assert.equal(output.vat_number, input.vat_number);
+      assert.doesNotMatch(decode(calls), /DE811128135/);
+      assert.match(decoded, /may be empty even for a valid number/);
+      assert.match(decoded, /stale: true/);
+      assert.match(decoded, /credentials-pending/);
+    }
+  }
+});
+
 test("AML, Markdown and sanctions examples agree with their call inputs and lead to usable next steps", () => {
   for (const slug of ["aml-risk-score", "url-to-markdown", "sanctions-check"]) {
     const html = read(slug);
