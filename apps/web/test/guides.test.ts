@@ -260,12 +260,23 @@ test("the index lists every guide exactly once, under a group that exists", () =
   assert.equal(new Set(listed).size, listed.length);
 });
 
-test("the carried guides are the old set minus the seven pruned", () => {
+test("the guide set preserves carried guides and includes the new company and filings guides", () => {
   const old = new Set<string>([...OLD_LEARN, ...OLD_GUIDES]);
   assert.equal(old.size, 55);
   assert.equal(Object.keys(PRUNED).length, 7);
   const carried = [...old].filter((s) => !Object.keys(PRUNED).includes(`/learn/${s}`));
-  assert.deepEqual(carried.sort(), guides.map((g) => g.slug).sort());
+  // New pages are not legacy URLs and must not be added to OLD_LEARN/OLD_GUIDES.
+  const added = ["belgian-company-lookup-api", "sec-edgar-filings-api"];
+  assert.deepEqual([...carried, ...added].sort(), guides.map((g) => g.slug).sort());
+});
+
+test("the VAT guide describes the adapter's empty strings and conditional UK availability", () => {
+  const guide = guides.find((g) => g.slug === "vat-number-validation-api")!;
+  const text = textOf(guide);
+  assert.match(text, /"company_name": "", "company_address": ""/);
+  assert.doesNotMatch(text, /"company_name": null|company_name null/);
+  assert.match(text, /GB checks use HMRC only when its access is configured/);
+  assert.match(text, /cache_age_hours/);
 });
 
 test("folded country guides are built guides, linked from their country page", () => {
