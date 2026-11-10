@@ -1,0 +1,57 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "1bbdb4ff78e8d518f67a564cfa9bc289f8145bc9"
+  },
+  "at": "2026-11-10T15:15:40.965Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-third-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 4,
+    "built_passed": 15,
+    "evidence_directory": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-third-nov10",
+    "astro_check": "0 errors/0 warnings; existing unused import hint",
+    "api_typecheck": "passed",
+    "deployment_verification": "pending public page/guide and mobile checks after CI/merge",
+    "design_check": "passed",
+    "accessibility_failures": 0,
+    "web_unit_passed": 90,
+    "live_build_pages": 493,
+    "api_targeted_passed": 21,
+    "browser_passed": 15,
+    "source_commit": "1bbdb4ff78e8d518f67a564cfa9bc289f8145bc9",
+    "accessibility_checks": 28
+  },
+  "topic": "belgian-sec-vat-pages",
+  "raw": {
+    "reviews": {
+      "technical": "GO at 1bbdb4ff78e8d518f67a564cfa9bc289f8145bc9, rounds2",
+      "product": "GO at 1bbdb4ff78e8d518f67a564cfa9bc289f8145bc9, rounds2; mobile finding fixed"
+    },
+    "built_passed": 15,
+    "evidence_directory": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-third-nov10",
+    "astro_check": "0 errors/0 warnings; existing unused import hint",
+    "failures": [],
+    "api_typecheck": "passed",
+    "deployment_verification": "pending public page/guide and mobile checks after CI/merge",
+    "design_check": "passed",
+    "warnings": [
+      "No authenticated paid live call; executor behavior unchanged.",
+      "Wanted Opus/high; actual subscription invocation returned usage_limit_reached; fell to independent gpt-6.1-sol/high under founder policy.",
+      "Windows CRLF normalization regenerated identical tokens and normalized fixtures without source changes.",
+      "Existing sibling frontend llms claim warning is unrelated."
+    ],
+    "accessibility_failures": 0,
+    "web_unit_passed": 90,
+    "live_build_pages": 493,
+    "api_targeted_passed": 21,
+    "browser_passed": 15,
+    "source_commit": "1bbdb4ff78e8d518f67a564cfa9bc289f8145bc9",
+    "ok": true,
+    "accessibility_checks": 28
+  }
+}
