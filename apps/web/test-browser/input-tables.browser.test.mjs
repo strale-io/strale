@@ -15,7 +15,7 @@ test('input and output descriptions remain readable and keyboard-scrollable on m
         await route.fulfill({ body, contentType: path.endsWith('.css') ? 'text/css' : path.endsWith('.js') ? 'text/javascript' : path.endsWith('.ttf') ? 'font/ttf' : 'text/html' });
       } catch { await route.fulfill({ status: 404, body: '' }); }
     });
-    for (const slug of ['belgian-company-data', 'sec-edgar-filings', 'vat-validate', 'dns-lookup', 'eori-validate', 'aml-risk-score', 'singapore-company-data', 'page-speed-test', 'http-to-curl']) {
+    for (const slug of ['belgian-company-data', 'sec-edgar-filings', 'vat-validate', 'dns-lookup', 'eori-validate', 'aml-risk-score', 'singapore-company-data', 'page-speed-test', 'http-to-curl', 'latvian-company-data', 'protocol-fees-lookup']) {
       await page.goto(`https://fixture.invalid/tools/${slug}`);
       await page.evaluate(() => document.fonts.ready);
       for (const name of ['Input fields table', 'Output fields table']) {

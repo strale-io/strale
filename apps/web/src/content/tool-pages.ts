@@ -14,6 +14,58 @@ interface ToolPage {
 }
 
 export const toolPages: Partial<Record<string, ToolPage>> = {
+  "latvian-company-data": {
+    title: "Latvian Company Lookup API — register records and officers",
+    description: "Look up Latvian companies by registration number or name. Get register data as JSON, understand officer availability and copy a complete API request.",
+    intro: "Look up a Latvian company by its registration number or name and get identity, status, address and available current officers as JSON. Strale’s Latvian company lookup API reads open data published by the Latvian Enterprise Register. Use the registration number to match a supplier to the right record.",
+    example: {
+      input: { reg_number: "40003245752" },
+      output: { company_name: "Air Baltic Corporation AS", reg_number: "40003245752", company_type_code: "AS", status: "Reģistrēts", registration_date: "1995-02-08", jurisdiction: "LV" },
+      selected: true,
+      note: "Selected fields from the catalogue example, not a live company check. Officer and address fields are omitted here to keep the example short. The register publishes daily snapshots; recent filings may not appear yet.",
+    },
+    uses: [
+      "Match an 11-digit registration number from a supplier form or invoice to a Latvian company record.",
+      "Retrieve the registered address and registration date for an onboarding record.",
+      "Read available current representation details, checking whether the officers lookup succeeded before interpreting an empty result.",
+    ],
+    results: [
+      { label: "reg_number and company_name", explanation: "Prefer the exact registration number. Name search returns one record from up to ten source matches, preferring records without a termination date. It does not return a candidate list or prove that the chosen record is your intended company." },
+      { label: "status and registration_date", explanation: "Reģistrēts means registered, Likvidēts means liquidated and Slēgts means closed. The tool derives these labels from the source’s termination and closure fields. This is register status, not a solvency assessment. Missing source details may be null." },
+      { label: "legal_representatives", explanation: "An array contains available current representation-entitled persons; an empty array means none were returned. null means the officers lookup failed. Read tier_2_available_reason to distinguish those cases. Up to 50 entries are returned; total_legal_representatives can be larger. Birth dates are not returned." },
+      { label: "vat_number and ownership", explanation: "vat_number is derived from the registration number; it is not confirmation of VAT registration. Use VAT Validation for a separate VIES check. Beneficial owners and financial statements are not included in this lookup." },
+    ],
+    inputDescriptions: { reg_number: "Latvian registration number: 11 digits, for example 40003245752. Prefer this to a name search.", company_name: "Name text to search in the register. Returns one preferred source match; verify its registration number.", task: "Alternative lookup text. Supply one input at a time: reg_number takes precedence, then company_name, then task." },
+    outputOverrides: { company_name: { type: "string or null", appears: "May be null when the source name is missing" }, address: { type: "string or null" }, company_type: { type: "string or null" }, company_type_code: { type: "string or null" }, register_type: { type: "string or null" }, postal_index: { type: "string or null" }, registration_date: { type: "string or null" }, termination_date: { type: "string or null" }, sepa_creditor_id: { type: "string or null" }, atvk_code: { type: "string or null" }, vat_number: { appears: "Derived identifier; not a VAT-registration check" }, legal_representatives: { appears: "Array when lookup succeeds, including []; null when it fails" }, total_legal_representatives: { appears: "Source total when available; null when the officers lookup fails" } },
+    guide: { href: "/guides/latvian-company-lookup-api", label: "Look up Latvian companies and read officer results" },
+    nextTools: [{ slug: "vat-validate", label: "Validate VAT registration separately" }, { slug: "sanctions-check", label: "Screen the matched entity name for potential sanctions matches" }],
+  },
+  "protocol-fees-lookup": {
+    title: "DeFi Protocol Fees and Revenue API — reported totals in JSON",
+    description: "Look up DeFi protocol fees and revenue with Strale’s API. See USD totals from DefiLlama, understand missing values and copy a complete request.",
+    intro: "Send a DeFi protocol slug to Strale and get its reported fees and revenue from DefiLlama as JSON. The tool returns available totals for 24 hours, 7 days, 30 days and all time, ready for an app, agent or research workflow.",
+    example: {
+      input: { protocol: "uniswap" },
+      output: { protocol: "Uniswap", slug: "parent#uniswap", fees_24h_usd: 1100432, fees_7d_usd: 7424515, fees_30d_usd: 39302873, revenue_24h_usd: null },
+      selected: true,
+      note: "Selected figures from the catalogue example, not current Uniswap totals. Run the call for a fresh response. null means revenue was unavailable in that response; it does not mean zero revenue.",
+    },
+    uses: [
+      "Add reported protocol fees and revenue to a research summary without processing the full upstream response.",
+      "Compare the same metric and reporting period across protocols, checking each protocol’s methodology first.",
+      "Store responses in your application to track changes over time. The tool itself does not schedule monitoring or return a historical time series.",
+    ],
+    results: [
+      { label: "Fees and revenue", explanation: "Fees describe what users pay to use the protocol. Revenue is the portion retained by the protocol under DefiLlama’s methodology. They are different measures; neither is a quote for the gas cost of your next transaction." },
+      { label: "Periods and currency", explanation: "Fields ending in _usd are amounts in US dollars, not cents or native tokens. fees_48h_to_24h_usd is the preceding 24-hour period. The 7-day and 30-day totals overlap: do not add them together. These are aggregate totals, without chain or product breakdowns." },
+      { label: "Missing values", explanation: "A metric can be null when the provider does not supply it. The revenue request is optional: it can fail while the fee request succeeds, leaving revenue fields null. Preserve null rather than turning it into zero. A zero value is retained when the provider supplies zero." },
+      { label: "protocol and slug", explanation: "Use a supported DefiLlama URL slug such as uniswap as input. The output slug may be a different provider identifier, such as parent#uniswap; do not automatically reuse it as the next lookup input. An unknown protocol returns an error." },
+    ],
+    inputDescriptions: { protocol: "Supported DefiLlama protocol slug, such as uniswap or aave-v3. Use the source’s slug rather than guessing a display name." },
+    outputOverrides: { protocol: { appears: "Present; falls back to the normalised input slug" }, fees_7d_usd: { type: "number or null" }, fees_24h_usd: { type: "number or null" }, fees_30d_usd: { type: "number or null" }, revenue_7d_usd: { type: "number or null" }, revenue_24h_usd: { type: "number or null" }, revenue_30d_usd: { type: "number or null" }, fees_all_time_usd: { type: "number or null" } },
+    guide: { href: "/guides/defi-protocol-fees-api", label: "Read protocol fees and revenue through the API" },
+    nextTools: [{ slug: "protocol-tvl-lookup", label: "Look up total value locked as a separate measure" }],
+  },
   "singapore-company-data": {
     title: "Singapore Company Lookup API — search ACRA data by UEN",
     description: "Look up Singapore company data by UEN or name. Get ACRA open-data records as JSON, understand monthly updates and copy a working API request.",

@@ -1,0 +1,58 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "cce5fc320012f3bc84ff7249f01612cbe0c53245"
+  },
+  "at": "2026-11-10T17:23:21.458Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-fifth-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 5,
+    "source_commit": "cce5fc320012f3bc84ff7249f01612cbe0c53245",
+    "web_unit_passed": 91,
+    "built_passed": 17,
+    "browser_passed": 15,
+    "api_tests_passed": 14,
+    "accessibility_checks": 20,
+    "accessibility_failures": 0,
+    "preview_build_pages": 441,
+    "api_typecheck": "passed",
+    "astro_check": "0errors 0warnings existing1hint",
+    "design_check": "passed",
+    "evidence_directory": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-fifth-nov10"
+  },
+  "topic": "latvian-fees-recall-pages",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "warnings": [
+      "No authenticated paid calls. Page examples tested against real executors with mocked upstreams. Recall probes used the free public CPSC API without Strale billing.",
+      "Recall recorded timeout remains unresolved in production history; exact stored input was not inspected.",
+      "Opus/high actual subscription attempt failed usage_limit_reached; independent Codex fallback used without metered spend.",
+      "Existing unrelated sibling frontend llms universal-x402 warning.",
+      "Live-data build and public deployment verification pending."
+    ],
+    "source_commit": "cce5fc320012f3bc84ff7249f01612cbe0c53245",
+    "web_unit_passed": 91,
+    "built_passed": 17,
+    "browser_passed": 15,
+    "api_tests_passed": 14,
+    "accessibility_checks": 20,
+    "accessibility_failures": 0,
+    "preview_build_pages": 441,
+    "api_typecheck": "passed",
+    "astro_check": "0errors 0warnings existing1hint",
+    "design_check": "passed",
+    "reviews": {
+      "technical": "GO rounds1",
+      "product": "GO rounds1",
+      "medium": 0,
+      "high": 0
+    },
+    "evidence_directory": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-fifth-nov10"
+  }
+}

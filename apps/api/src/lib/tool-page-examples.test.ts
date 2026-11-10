@@ -22,6 +22,68 @@ import "../capabilities/singapore-company-data.js";
 import "../capabilities/http-to-curl.js";
 vi.mock("./robots-txt.js", () => ({ assertRobotsAllowed: vi.fn(async () => {}) }));
 import "../capabilities/page-speed-test.js";
+import "../capabilities/latvian-company-data.js";
+import "../capabilities/protocol-fees-lookup.js";
+
+it("the Latvian example uses an exact register lookup and distinguishes missing officers from failed retrieval", async () => {
+  const record = { regcode: "40003245752", name: "Air Baltic Corporation AS", type: "AS", type_text: "Akciju sabiedrība", registered: "1995-02-08T00:00:00", terminated: null, closed: null };
+  const fetcher = vi.fn(async (url: unknown) => {
+    const request = new URL(String(url));
+    return new Response(JSON.stringify({ success: true, result: { records: request.searchParams.get("resource_id") === "25e80bf3-f107-4ab4-89ef-251b5b9374e9" ? [record] : [], total: 0 } }));
+  });
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["latvian-company-data"]!.example;
+    const result = await getExecutor("latvian-company-data")!(example.input);
+    expect(JSON.parse(new URL(String(fetcher.mock.calls[0]![0])).searchParams.get("filters")!)).toEqual({ regcode: "40003245752" });
+    expect(result.output).toMatchObject(example.output);
+    expect(result.output).toMatchObject({ vat_number: "LV40003245752", legal_representatives: [], total_legal_representatives: 0, tier_2_available: false });
+    expect(result.output.tier_2_available_reason).toContain("no current");
+    fetcher.mockImplementation(async (url: unknown) => String(url).includes("e665114a") ? new Response("unavailable", { status: 503 }) : new Response(JSON.stringify({ success: true, result: { records: [record] } })));
+    const partial = await getExecutor("latvian-company-data")!(example.input);
+    expect(partial.output).toMatchObject(example.output);
+    expect(partial.output).toMatchObject({ legal_representatives: null, total_legal_representatives: null, tier_2_available: false });
+    expect(partial.output.tier_2_available_reason).toContain("query failed");
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("the Latvian guide name search picks a source record without a termination date", async () => {
+  const guide = readFileSync(new URL("../../../web/src/data/guides/latvian-company-lookup-api.md", import.meta.url), "utf8");
+  const input = JSON.parse(guide.match(/`(\{"company_name":[^`]+\})`/)![1]!);
+  const fetcher = vi.fn(async (url: unknown) => new Response(JSON.stringify({ success: true, result: {
+    records: String(url).includes("e665114a") ? [] : [{ regcode: "00000000001", name: "Synthetic closed company", terminated: "2020-01-01" }, { regcode: "00000000002", name: "Synthetic active company", terminated: null }], total: 0,
+  } })));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const result = await getExecutor("latvian-company-data")!(input);
+    const request = new URL(String(fetcher.mock.calls[0]![0]));
+    expect(request.searchParams.get("q")).toBe("Air Baltic");
+    expect(request.searchParams.get("limit")).toBe("10");
+    expect(request.searchParams.has("filters")).toBe(false);
+    expect(result.output.reg_number).toBe("00000000002");
+  } finally { vi.unstubAllGlobals(); }
+});
+
+it("the protocol fees example preserves USD totals and optional revenue without inventing breakdowns", async () => {
+  const data = { name: "Uniswap", defillamaId: "parent#uniswap", total24h: 1100432, total7d: 7424515, total30d: 39302873, totalDataChartBreakdown: ["not exposed"] };
+  let revenue: number | null = null;
+  const fetcher = vi.fn(async (url: unknown) => String(url).includes("/revenue/") ? revenue === null ? new Response("not available", { status: 404 }) : new Response(JSON.stringify({ total24h: revenue })) : new Response(JSON.stringify(data)));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    const example = toolPages["protocol-fees-lookup"]!.example;
+    const result = await getExecutor("protocol-fees-lookup")!(example.input);
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual(["https://api.llama.fi/summary/fees/uniswap?dataType=dailyFees", "https://api.llama.fi/summary/revenue/uniswap?dataType=dailyRevenue"]);
+    expect(result.output).toMatchObject(example.output);
+    expect(result.output).not.toHaveProperty("totalDataChartBreakdown");
+    expect(result.output.fees_all_time_usd).toBeNull();
+    revenue = 0;
+    const zero = await getExecutor("protocol-fees-lookup")!(example.input);
+    expect(zero.output.revenue_24h_usd).toBe(0);
+    expect(zero.output.revenue_7d_usd).toBeNull();
+    fetcher.mockResolvedValueOnce(new Response("not found", { status: 404 }));
+    await expect(getExecutor("protocol-fees-lookup")!({ protocol: "unknown-protocol" })).rejects.toThrow("not found");
+  } finally { vi.unstubAllGlobals(); }
+});
 
 it("the Singapore example maps the source record and does not promise missing details", async () => {
   const records = [{ uen: "197200078R", entity_name: "SINGAPORE AIRLINES LIMITED", entity_type_desc: "Local Company", uen_status_desc: "Registered", reg_street_name: "AIRLINE ROAD", reg_postal_code: "819829" }];
