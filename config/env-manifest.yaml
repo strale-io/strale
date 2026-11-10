@@ -645,7 +645,7 @@
     - railway
   cost_note: GitHub REST API is free; a token only raises the rate limit (60/hr anonymous -> 5000/hr authenticated).
 - name: HEALTH_DIGEST_EMAIL
-  purpose: Override recipient for the health-monitor digest email (defaults to admin@strale.io).
+  purpose: Recipient for health-monitor digests (defaults to admin@strale.io); must be explicitly set for private business summaries.
   provider: internal
   holder: petter
   cost_class: none

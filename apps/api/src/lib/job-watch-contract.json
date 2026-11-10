@@ -19,6 +19,7 @@
   "weekly-sweep": 604800,
   "retention": 86400,
   "external-outage-digest": 86400,
+  "business-summary": 86400,
   "job-coordinator": 60,
   "test-scheduler": 60,
   "reservation-reconciler": 60,

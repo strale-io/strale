@@ -58,3 +58,27 @@ export async function sendDigestEmail(html: string, subject: string, toOverride?
 export function isEmailConfigured(): boolean {
   return !!process.env.RESEND_API_KEY;
 }
+
+/** Fully persisted for private reports so retries cannot inherit a changed
+ * recipient, sender or health-action Reply-To. Replies go to the private
+ * recipient's mailbox, never the publicly logged health-action webhook. */
+export interface PrivateDigestEnvelope {
+  from: string;
+  to: string;
+  reply_to: string;
+  subject: string;
+  html: string;
+}
+
+export function preparePrivateDigestEmail(html: string, subject: string): PrivateDigestEnvelope {
+  const to = process.env.HEALTH_DIGEST_EMAIL;
+  if (!to) throw new Error("Private digest recipient is not configured");
+  return { to, from: process.env.HEALTH_DIGEST_FROM ?? "Strale Health Monitor <noreply@strale.io>", reply_to: to, subject, html };
+}
+
+export async function sendPrivateDigestEmail(message: PrivateDigestEnvelope, idempotencyKey: string): Promise<void> {
+  const { error } = await getResend().emails.send(message, { idempotencyKey });
+  // Keep provider payloads, private recipient and financial subject out of logs.
+  if (error) throw new Error("Private digest delivery failed; retry with the saved envelope");
+  log.info({ label: "private-digest-accepted" }, "private-digest-accepted");
+}

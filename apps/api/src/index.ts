@@ -226,6 +226,9 @@ async function main() {
   const { startJobCoordinator } = await import("./lib/job-coordinator.js");
   startJobCoordinator();
 
+  const { startBusinessSummary } = await import("./lib/business-summary.js");
+  startBusinessSummary();
+
   const { startTestScheduler } = await import("./jobs/test-scheduler.js");
 
   startTestScheduler();

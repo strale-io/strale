@@ -65,7 +65,8 @@ jobs:
   - id: business-summary-email
     title: Daily business-summary email (revenue, payers, x402 volume, top tools)
     runs_as: api-job
-    where: not built yet — model on apps/api/src/lib/external-outage-digest.ts (orchestrator handoff 2026-11-06, item 1)
+    where: apps/api/src/lib/business-summary.ts
+    note: Hourly durable check; one private summary per Stockholm date from 08:00. Acceptance still requires production delivery, parity with commercial-brief and five successful days in seven.
 
   - id: weekly-drift
     title: Weekly drift sweep (platform facts, manifests, output schemas, reference data due for a source check)
