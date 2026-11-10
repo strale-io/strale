@@ -1246,6 +1246,14 @@ export const vendorSolutionSuspensions = pgTable(
 );
 
 // ─── digest_snapshots ───────────────────────────────────────────────────────
+// Private delivery snapshots; never exposed through public health events.
+export const businessSummaryDeliveries = pgTable("business_summary_deliveries", {
+  reportDay: date("report_day").primaryKey(),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+});
+
 // Daily digest data snapshots for delta computation
 export const digestSnapshots = pgTable("digest_snapshots", {
   id: uuid("id").defaultRandom().primaryKey(),

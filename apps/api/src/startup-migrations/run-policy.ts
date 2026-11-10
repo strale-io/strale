@@ -120,4 +120,5 @@ export const BLOCK_RUN_POLICY: Readonly<Record<string, { policy: BlockRunPolicy;
   runMigration0149_publishDilisenseSourceText: { policy: "once", reason: "guarded UPDATEs of the sanctions-check and pep-check text (DQ-46), each on the exact pre-DQ-46 wording; a re-run must not undo a later edit" },
   runMigration0150_publishPepCheckLimitations: { policy: "once", reason: "deletes five named pep-check limitation rows by exact text and inserts the manifest's three where missing (DQ-47); a re-run must not undo a later edit" },
   runMigration0151_correctSanctionsLimitations: { policy: "once", reason: "corrects only the two sanctions-check rows matching the old limitation text; preserves later edits" },
+  runMigration0152_businessSummaryDeliveries: { policy: "once", reason: "one CREATE TABLE IF NOT EXISTS; schema validation checks the table on later boots" },
 };

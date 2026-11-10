@@ -1238,6 +1238,14 @@
         "capability_limitations.workaround"
       ],
       "sha256": "089999063cbd75c4273ce536555b36ed6a177ecb269ec33e7e67647cd431a02f"
+    },
+    {
+      "id": "M095",
+      "function": "runMigration0152_businessSummaryDeliveries",
+      "title": "Business Summary Deliveries",
+      "added": "2026-11-10",
+      "columns_written": [],
+      "sha256": "181b53766728b8532a765efe092e0bfe1bc9c671f49e13fdecbf95c62356aa85"
     }
   ],
   "known_overlaps": [

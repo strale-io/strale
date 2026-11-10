@@ -1,0 +1,64 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0a00de462907f1846d5ca28066950d59dbd4d471"
+  },
+  "at": "2026-11-10T19:28:23.382Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/revenue-roadmap-nov10/verification-source.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "focused_tests_passed": 267,
+    "focused_files_passed": 6,
+    "postgres_integration_tests_passed": 2,
+    "handoff_tests_passed": 55,
+    "health_job_tests_passed": 18,
+    "api_typecheck": "passed",
+    "api_build": "passed",
+    "mcp_dependency_build": "passed",
+    "migration_blocks_checked": 95,
+    "environment_contract": "passed",
+    "completed_week_revenue_parity": true,
+    "completed_week_payer_parity": true,
+    "technical_review": "GO, two rounds, no remaining HIGH or MEDIUM",
+    "product_review": "GO, two rounds, no HIGH; final MEDIUM resolved by explicit prior-week comparison without a streak claim",
+    "production_acceptance": "pending deployment; five-of-seven-day criterion remains open"
+  },
+  "topic": "revenue-business-summary",
+  "raw": {
+    "ok": true,
+    "focused_tests_passed": 267,
+    "focused_files_passed": 6,
+    "postgres_integration_tests_passed": 2,
+    "handoff_tests_passed": 55,
+    "health_job_tests_passed": 18,
+    "api_typecheck": "passed",
+    "api_build": "passed",
+    "mcp_dependency_build": "passed",
+    "migration_blocks_checked": 95,
+    "environment_contract": "passed",
+    "completed_week_revenue_parity": true,
+    "completed_week_payer_parity": true,
+    "technical_review": "GO, two rounds, no remaining HIGH or MEDIUM",
+    "product_review": "GO, two rounds, no HIGH; final MEDIUM resolved by explicit prior-week comparison without a streak claim",
+    "production_acceptance": "pending deployment; five-of-seven-day criterion remains open",
+    "failures": [],
+    "commands": [
+      "npx vitest run src/lib/business-summary.test.ts src/lib/business-summary.integration.test.ts src/lib/digest-sender.idempotency.test.ts src/lib/startup-migrations.test.ts src/lib/job-coordinator-interval-change.test.ts src/lib/job-coordinator.watchdog.test.ts",
+      "npx tsc --noEmit --project apps/api/tsconfig.json",
+      "npm run build --workspace=apps/api",
+      "npm run mcp:build",
+      "npm run handoff:test",
+      "npm run migrations:check",
+      "npm run env:check"
+    ],
+    "notes": [
+      "Postgres regression injects a heartbeat failure after mocked provider acceptance and verifies rollback plus identical-envelope retry.",
+      "Production parity check used operator read-only access and exported only anonymous aggregates outside the public repository.",
+      "New migration uses the canonical append-only startup block mechanism, not the obsolete drizzle-only skill wording."
+    ]
+  }
+}

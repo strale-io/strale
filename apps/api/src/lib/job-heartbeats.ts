@@ -9,6 +9,7 @@ export const AUXILIARY_INTERVALS: Readonly<Record<string, number>> = {
   "meta-hourly": HOUR, "meta-daily": 24 * HOUR,
   diagnostics: 24 * HOUR, "weekly-sweep": 168 * HOUR,
   retention: 24 * HOUR, "external-outage-digest": 24 * HOUR,
+  "business-summary": 24 * HOUR,
 };
 export const JOB_INTERVALS: Readonly<Record<string, number>> = JOB_WATCH_CONTRACT;
 // Only these timers lack a durable success row; startup grace must never

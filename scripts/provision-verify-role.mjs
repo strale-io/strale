@@ -188,6 +188,7 @@ const EXCLUDED = [
   ["ee_directors", "named natural persons, addresses and isikukood_hash. Estonian director PII."],
   ["cy_directors", "named natural persons. Cypriot director PII."],
   ["health_monitor_events", "a free-text details blob that has historically quoted row content."],
+  ["business_summary_deliveries", "private financial email payloads and the recipient's email address; delivery freshness is available through job_schedule_meta."],
   ["vendor_accounts", "payment_method, last_error and an unbounded metadata jsonb."],
 ];
 

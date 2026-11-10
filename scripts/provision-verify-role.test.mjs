@@ -80,6 +80,7 @@ test('the sensitive tables are excluded by name', () => {
     'transactions', 'users', 'api_keys', 'oauth_tokens', 'test_results', 'wallet_transactions',
     'x402_orphan_settlements', 'rate_limit_counters', 'job_callbacks', 'wallet_reservations',
     'ee_directors', 'cy_directors', 'suggest_log', 'failed_requests', 'job_files',
+    'business_summary_deliveries',
   ];
   for (const t of mustExclude) {
     assert.ok(excluded.some((e) => e.table === t), `${t} must be excluded from strale_verify`);
