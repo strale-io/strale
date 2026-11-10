@@ -8,4 +8,6 @@ Validation: six new regressions failed against the original implementation, then
 
 Evidence: `archive/receipts/2026-11-10-test-run-mcp-search-clarity.json`.
 
-Next action: complete independent technical and product reviews, open the PR, follow its required checks, and verify the hosted connector after delivery. No package release or directory submission is part of this change. No paid production call is needed to verify it.
+Independent reviews: technical and product Codex reviewers in separate contexts both returned GO at `9cdf0955f96b518730d6e9e8d1ab2f69af8e68f2`, round 1, with zero high or medium findings. Wanted Opus/high for final tier-2 verification; its subscription invocation failed at the weekly limit, so the final gate uses the two independent Codex reviews under the founder's 2026-09-07 provider-availability policy. No metered API fallback was used.
+
+PR: https://github.com/strale-io/strale/pull/987. Next action at checkpoint: follow required CI and merge-queue checks, then verify ordinary/category search parity and the transaction description on the hosted connector. Final delivery status belongs in the PR and the append-only session Journal. No package release or directory submission is part of this change. No paid production call is needed to verify it.
