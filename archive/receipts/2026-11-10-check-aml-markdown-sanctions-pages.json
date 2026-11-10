@@ -1,0 +1,68 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "cd2b1674c2129e7d49099c207665cc9b6921449e"
+  },
+  "at": "2026-11-10T14:05:20.363Z",
+  "inputs": {
+    "source": "C:/Users/pette/OneDrive/Dokument/ChatGPT/Strale/outputs/tool-pages-second-nov10/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "warnings_count": 5,
+    "source_commit": "cd2b1674c2129e7d49099c207665cc9b6921449e",
+    "web_unit_passed": 89,
+    "built_passed": 14,
+    "browser_passed": 14,
+    "api_targeted_passed": 28,
+    "guide_tests_passed": 21,
+    "api_typecheck": "passed",
+    "astro_check": "0 errors and warnings; pre-existing unused-import hint",
+    "live_build_pages": 491,
+    "final_page_and_guide_accessibility_checks": 20,
+    "final_input_accessibility_checks": 12,
+    "accessibility_failures": 0,
+    "migration_guard_mutation": "green-red-green",
+    "structural_validation": "19/19",
+    "sanctions_readiness": true,
+    "paid_live_smoke": "unavailable: existing internal_test paid_prepaid policy refusal, identical baseline; connector unauthenticated",
+    "evidence_directory": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\tool-pages-second-nov10",
+    "deployment_verification": "pending: public limitations endpoint, three page metadata/examples, guide copy and browser first free call"
+  },
+  "topic": "aml-markdown-sanctions-pages",
+  "raw": {
+    "ok": true,
+    "source_commit": "cd2b1674c2129e7d49099c207665cc9b6921449e",
+    "web_unit_passed": 89,
+    "built_passed": 14,
+    "browser_passed": 14,
+    "api_targeted_passed": 28,
+    "guide_tests_passed": 21,
+    "api_typecheck": "passed",
+    "astro_check": "0 errors and warnings; pre-existing unused-import hint",
+    "live_build_pages": 491,
+    "final_page_and_guide_accessibility_checks": 20,
+    "final_input_accessibility_checks": 12,
+    "accessibility_failures": 0,
+    "migration_guard_mutation": "green-red-green",
+    "structural_validation": "19/19",
+    "sanctions_readiness": true,
+    "paid_live_smoke": "unavailable: existing internal_test paid_prepaid policy refusal, identical baseline; connector unauthenticated",
+    "failures": [],
+    "warnings": [
+      "No paid live screening call; no executor behavior changed.",
+      "Initial Windows CRLF test failure resolved by checkout-only LF normalization.",
+      "simplify skill not installed; manual pass retained bounded editorial content and guarded copy publication.",
+      "Opus/high subscription attempt returned usage_limit_reached; final verification used independent gpt-6.1-sol/high under founder policy.",
+      "Existing sibling strale-frontend llms.txt claims warning is outside this deployed site."
+    ],
+    "reviews": {
+      "technical": "GO at cd2b1674c2129e7d49099c207665cc9b6921449e; rounds2 with final binding after non-high author fixes",
+      "product": "GO at bdcc7756b9b942ce123a7ef7fdd3136b08867014; rounds2; then table accessibility and input-description fixes confirmed by technical final verifier"
+    },
+    "evidence_directory": "C:\\Users\\pette\\OneDrive\\Dokument\\ChatGPT\\Strale\\outputs\\tool-pages-second-nov10",
+    "deployment_verification": "pending: public limitations endpoint, three page metadata/examples, guide copy and browser first free call"
+  }
+}
