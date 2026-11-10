@@ -149,11 +149,14 @@ describe("dependency-manifest.ts browserless.capabilities — drift detector", (
   // estonian-company-data left the set 2026-10-24: its Browserless "EU proxy"
   // fallback retried the registry's 403 through another route, which
   // DEC-20261023-A forbids, so it now calls the registry API directly only.
+  // customs-duty-lookup joined 2026-11-10: plain HTML is a navigation shell;
+  // tariff rows require rendering with skipFallback: true.
   it("matches the audited 2026-08-18 hard-require set exactly", () => {
     expect([...CURATED_BROWSERLESS_SLUGS].sort()).toEqual(
       [
         "annual-report-extract",
         "company-enrich",
+        "customs-duty-lookup",
         "html-to-pdf",
         "landing-page-roast",
         "screenshot-url",
