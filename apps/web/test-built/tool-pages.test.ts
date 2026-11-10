@@ -12,6 +12,41 @@ function example(html: string, id: string) {
   return JSON.parse(decode(code));
 }
 
+test("DOI and header pages pair the documented calls, preserve limits and give usable next steps", () => {
+  for (const [slug, guide] of [["doi-resolve", "doi-lookup-api"], ["header-security-check", "http-security-headers-api"]]) {
+    const html = read(slug), input = example(html, "ex-in"), output = example(html, "ex-out");
+    const panel = html.match(/id="calls-panel-0"[^>]*>\s*<pre[^>]*><code[^>]*>([\s\S]*?)<\/code>/)?.[1];
+    assert.ok(panel);
+    const payload = JSON.parse(decode(panel).match(/-d '([\s\S]*?)'/)![1]);
+    assert.deepEqual(payload.inputs, input);
+    assert.equal(payload.capability_slug, slug);
+    assert.ok(html.includes(`href="/signup?tool=${slug}"`));
+    assert.ok(html.includes(`href="/guides/${guide}"`));
+    assert.ok(existsSync(resolve(dist, `guides/${guide}.html`)));
+    assert.ok(html.includes(`href="https://strale.io/tools/${slug}"`));
+    assert.doesNotMatch(html, /<form id="try-tool"/);
+    const text = decode(html);
+    if (slug === "doi-resolve") {
+      assert.equal(output.doi, input.doi);
+      assert.equal(output.abstract, null);
+      assert.match(text, /not a fresh metadata lookup/);
+      assert.match(text, /Metadata is only as complete as the publisher/);
+      assert.match(text, /Crossref and DataCite coverage/);
+      assert.match(text, /Citation counts depend on the source/);
+      assert.doesNotMatch(text, /\[withdrawn\]|Call citation-graph|ISSN\) are null|Two registration agencies of the eleven/);
+      assert.match(html, /<code[^>]*>issn<\/code><\/th><td[^>]*>array of strings<\/td>/);
+      assert.match(html, /<code[^>]*>published<\/code><\/th><td[^>]*>string or null<\/td>/);
+    } else {
+      assert.equal(output.url, input.url);
+      assert.equal(output.score, 75); assert.equal(output.grade, "C");
+      assert.match(text, /not a live security assessment/);
+      assert.match(text, /does not validate CSP directives/);
+      assert.match(text, /Only HTTP security headers are checked/);
+      assert.doesNotMatch(text, /https:\/\/google\.com/);
+    }
+  }
+});
+
 test("Latvian company and protocol fees pages explain their examples and retain selected-tool signup", () => {
   for (const [slug, guide] of [["latvian-company-data", "latvian-company-lookup-api"], ["protocol-fees-lookup", "defi-protocol-fees-api"]]) {
     const html = read(slug), input = example(html, "ex-in"), output = example(html, "ex-out");
