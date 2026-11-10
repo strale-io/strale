@@ -15,3 +15,8 @@ const required = new Set(schema?.required ?? []);
     </table>
   </div>
 ) : <p class="muted">No inputs.</p>}
+
+<style>
+  /* Preserve a readable description column; the existing wrapper scrolls on small screens. */
+  td:last-child { min-width: var(--type-detail-measure); }
+</style>
