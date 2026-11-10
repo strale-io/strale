@@ -2,8 +2,8 @@
 // Output fields with how reliably each appears (manifest output_field_reliability).
 import type { JsonSchema } from "../../lib/types.ts";
 import { RELIABILITY, schemaType } from "../../lib/describe.ts";
-interface Props { schema: JsonSchema | null | undefined; reliability: Record<string, string>; label?: string }
-const { schema, reliability, label = "Output fields table" } = Astro.props;
+interface Props { schema: JsonSchema | null | undefined; reliability: Record<string, string>; label?: string; overrides?: Record<string, { type?: string; appears?: string }> }
+const { schema, reliability, label = "Output fields table", overrides = {} } = Astro.props;
 const fields = [...new Set([...Object.keys(schema?.properties ?? {}), ...Object.keys(reliability)])];
 ---
 <div class="table-wrap" tabindex="0" role="region" aria-label={label}>
@@ -11,7 +11,8 @@ const fields = [...new Set([...Object.keys(schema?.properties ?? {}), ...Object.
     <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Appears</th></tr></thead>
     <tbody>{fields.map((f) => {
       const r = RELIABILITY[reliability[f]];
-      return <tr><th scope="row"><code>{f}</code></th><td>{schemaType(schema?.properties?.[f])}</td><td>{r ? <>{r.label}{" "}<span class="muted">({r.note})</span></> : <span class="muted">Not stated</span>}</td></tr>;
+      const correction = overrides[f];
+      return <tr><th scope="row"><code>{f}</code></th><td>{correction?.type ?? schemaType(schema?.properties?.[f])}</td><td>{correction?.appears ?? (r ? <>{r.label}{" "}<span class="muted">({r.note})</span></> : <span class="muted">Not stated</span>)}</td></tr>;
     })}</tbody>
   </table>
 </div>
