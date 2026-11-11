@@ -24,10 +24,10 @@ or a missed failure. It owns only what no other program owns.
 ## Resume here
 
 Read [tracks.yaml](tracks.yaml), then the active track's `next_action` and
-`resume_file`. R1 (T1, untrusted-input bounds) is active. The brief at commit `627d8402` was
-queued to the Codex dispatcher on 2026-11-06 at 23:46 Swedish time (recorded in `handoff/_general/from-code/2026-11-06-strale-master-takeover.md`) as task
-`task_e_6aee58cc7388832998dd61ec621b3a41`, and its result lands on
-`codex/url-to-markdown-parse-bound`.
+`resume_file`. R1 (T1, untrusted-input bounds) is done: #964, #980, #1003 and
+#1006 are live (/health `f1282238` on 2026-11-11), and its exits are met by the
+two R1 receipts dated 2026-11-11. R3 (T3, alert and signal correctness) is active;
+its `next_action` lists four signals, most urgent first.
 
 The schema's `gate` field is the M2 milestone gate and is `none` on every row.
 Each track's gate, the concrete evidence that it is done, is its `exit` list,

@@ -1,0 +1,180 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scratchpad harness (case.mts + drive.sh), described in raw.method",
+    "commit": "f1282238b34d581293d2d5ea32619028ee2a61f4"
+  },
+  "at": "2026-11-11T04:04:59.136Z",
+  "inputs": {
+    "adversarial_inputs": [
+      "nested div 16/32/64 KB",
+      "nested formatting 16/32 KB",
+      "1 MiB attribute flood",
+      "16 MiB flat tags"
+    ],
+    "after_commit": "f1282238",
+    "before_commit": "f494ad76^"
+  },
+  "summary": {
+    "inputs": 7,
+    "after_worst_conversion_ms": 424,
+    "after_unbilled_refusals": 1,
+    "after_worst_event_loop_gap_ms": 16,
+    "before_failures": 7,
+    "before_worst_block_ms": 60018,
+    "existing_tests_passed": 70
+  },
+  "topic": "robustness-r1-adversarial-inputs-fail-before",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "warnings": [],
+    "method": "Each input wrapped in <html><body>…</body></html> and run in its own tsx process from apps/api. After: htmlToCleanMarkdown from apps/api/src/capabilities/lib/readability-convert.ts at main f1282238 (production /health f1282238), worker warmed with one small page first; ms is the conversion alone, max_event_loop_gap_ms is the main thread's largest gap (10 ms timer). Before: the unfixed file, readability-convert.ts at f494ad76^ (the commit before #964), synchronous on the main thread, so its ms is time the event loop was blocked; 60 s limit per process. Linux cloud container, Node 22, single run each, 2026-11-11.",
+    "inputs_built_as": {
+      "nested-div": "'<div>' repeated to the size, then 'x'",
+      "nested-formatting": "'<b><i><u>' repeated to the size, then 'x'",
+      "attribute-flood-1MB": "one <div> with a0=\"x\" a1=\"x\" … to 1 MiB",
+      "flat-tags-16MB": "'<p>x' repeated to 16 MiB"
+    },
+    "after": [
+      {
+        "mode": "after",
+        "case": "nested-div-16KB",
+        "input_bytes": 16407,
+        "outcome": "converted",
+        "ms": 412,
+        "max_event_loop_gap_ms": 11,
+        "markdown_chars": 1
+      },
+      {
+        "mode": "after",
+        "case": "nested-div-32KB",
+        "input_bytes": 32792,
+        "outcome": "converted",
+        "ms": 405,
+        "max_event_loop_gap_ms": 16,
+        "markdown_chars": 1
+      },
+      {
+        "mode": "after",
+        "case": "nested-div-64KB",
+        "input_bytes": 65562,
+        "outcome": "converted",
+        "ms": 424,
+        "max_event_loop_gap_ms": 13,
+        "markdown_chars": 1
+      },
+      {
+        "mode": "after",
+        "case": "nested-formatting-16KB",
+        "input_bytes": 16407,
+        "outcome": "converted",
+        "ms": 124,
+        "max_event_loop_gap_ms": 15,
+        "markdown_chars": 259
+      },
+      {
+        "mode": "after",
+        "case": "nested-formatting-32KB",
+        "input_bytes": 32787,
+        "outcome": "converted",
+        "ms": 150,
+        "max_event_loop_gap_ms": 13,
+        "markdown_chars": 259
+      },
+      {
+        "mode": "after",
+        "case": "attribute-flood-1MB",
+        "input_bytes": 1048613,
+        "outcome": "converted",
+        "ms": 42,
+        "max_event_loop_gap_ms": 10,
+        "markdown_chars": 1
+      },
+      {
+        "mode": "after",
+        "case": "flat-tags-16MB",
+        "input_bytes": 16777242,
+        "outcome": "refused",
+        "error": "HtmlTooComplexError",
+        "unbilled_refusal": true,
+        "ms": 30,
+        "max_event_loop_gap_ms": 10
+      }
+    ],
+    "before_fail_before": [
+      {
+        "mode": "before",
+        "case": "nested-div-16KB",
+        "input_bytes": 16407,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 3705,
+        "max_event_loop_gap_ms": 0
+      },
+      {
+        "mode": "before",
+        "case": "nested-div-32KB",
+        "input_bytes": 32792,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 7167,
+        "max_event_loop_gap_ms": 9
+      },
+      {
+        "mode": "before",
+        "case": "nested-div-64KB",
+        "input_bytes": 65562,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 25037,
+        "max_event_loop_gap_ms": 0
+      },
+      {
+        "mode": "before",
+        "case": "nested-formatting-16KB",
+        "input_bytes": 16407,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 4250,
+        "max_event_loop_gap_ms": 0
+      },
+      {
+        "mode": "before",
+        "case": "nested-formatting-32KB",
+        "input_bytes": 32787,
+        "outcome": "threw",
+        "error": "RangeError",
+        "message": "Maximum call stack size exceeded",
+        "ms": 17486,
+        "max_event_loop_gap_ms": 11
+      },
+      {
+        "mode": "before",
+        "case": "attribute-flood-1MB",
+        "outcome": "process_died",
+        "exit_code": 137,
+        "wall_ms": 60018,
+        "killed_at_limit_s": 60,
+        "stderr": ""
+      },
+      {
+        "mode": "before",
+        "case": "flat-tags-16MB",
+        "outcome": "process_died",
+        "exit_code": 134,
+        "wall_ms": 17831,
+        "killed_at_limit_s": null,
+        "stderr": "heap out of memory"
+      }
+    ],
+    "existing_tests": {
+      "command": "cd apps/api && npx vitest run src/capabilities/url-to-markdown src/capabilities/lib/readability-convert src/capabilities/lib/html-parse-bound",
+      "result": "3 files, 70 tests passed"
+    }
+  }
+}
