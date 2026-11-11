@@ -192,6 +192,23 @@ describe("Japanese company data through the official NTA v4 API", () => {
     });
   });
 
+  it.each([
+    ["1 MiB of attributes on one element", (() => {
+      let tag = "<corporations";
+      for (let i = 0; tag.length < 1024 * 1024 - 64; i++) tag += ` a${i}=""`;
+      return `${tag}><count>1</count></corporations>`;
+    })()],
+    ["6,000 comments", `<corporations><count>0</count>${"<!---->".repeat(6000)}</corporations>`],
+  ])("refuses %s with the generic response error in under 200 ms", async (_label, body) => {
+    fetchMock.mockResolvedValue(new Response(body));
+    const started = performance.now();
+    await expect(execute({ corporate_number: "5111101000006" })).rejects.toMatchObject({
+      error_code: "execution_failed",
+      message: "NTA returned an unexpected response. Retry later.",
+    });
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
   it("preserves mapped output for a real-shaped 50-record response", async () => {
     const fields = [
       ["corporateNumber", "5111101000006"], ["process", "01"], ["correct", "1"],

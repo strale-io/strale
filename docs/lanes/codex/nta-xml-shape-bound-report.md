@@ -51,3 +51,29 @@ The committed tests enforce looser, CI-safe ceilings: the 64 KiB transport case 
   - `src/capabilities/url-to-markdown-parse-bound.test.ts` — 1 timing failure (`converts 16 MiB of ordinary text`, 690 ms event-loop gap vs a 500 ms ceiling).
   - `src/capabilities/lib/web-provider-text-check.test.ts` — 1 timing failure (`16 MiB of ordinary text`, 530 ms event-loop gap vs a 500 ms ceiling).
   - Overall: 4 failed / 477 passed / 47 skipped files; 5 failed / 10,155 passed / 459 skipped tests. Duration 451.98 s.
+
+## Claude review round (2026-11-11)
+
+The independent read-only review of 43c91fad gave **NO-GO**. The scanner bounded depth and element count, but not attributes or non-element nodes. Every input below passed `assertXmlShape` and the pre-checks:
+
+| Input (1 MiB) | jsdom time |
+|---|---|
+| attributes on one element | 63.8 s |
+| `xmlns` declarations | 25.8 s |
+| namespaced attributes | 24.6 s |
+| `<!---->` repeated | 523 ms |
+| `<?p?>` repeated | 697 ms |
+
+Fixed by Claude:
+
+- **Attributes:**
+  - `assertXmlShape` takes an optional `maxAttributes` and counts each `=` outside quotes in an opening tag.
+  - `parseResponse` uses `MAX_XML_ATTRIBUTES = 64`. Real NTA type-12 responses carry no attributes, as every fixture in `apps/api/src/capabilities/__fixtures__/nta-corporate/` confirms.
+- **Nodes:**
+  - The scanner takes an optional `maxNodes`. Comments, processing instructions and CDATA sections now count as nodes, alongside elements.
+  - `parseResponse` uses `MAX_XML_NODES = 5000`.
+- **Tests:**
+  - **Helper:** attribute counting, with `=` in a quoted value or in text not counted, and a 1 MiB attribute flood refused in under 200 ms. Comments, processing instructions and CDATA each count toward the node limit.
+  - **End to end:** 1 MiB of attributes on one element and 6,000 comments are each refused with the generic response error in under 200 ms.
+  - **Fail-before:** all six tests fail against 43c91fad. The end-to-end attribute case takes 49 s there.
+- **Commands:** `npx vitest run src/lib/nta-corporate src/capabilities/japanese-company-data` gives 101 passed.
