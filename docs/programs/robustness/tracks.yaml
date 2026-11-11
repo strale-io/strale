@@ -18,7 +18,8 @@ tracks:
       under 200 ms) live since 2026-11-11; #1006 (per-caller fairness in the
       single converter) live since 2026-11-11 (/health f1282238). Exit 1: two
       receipts run the brief's inputs against f1282238 and against the unfixed
-      file at f494ad76^, with scripts/robustness/r1-adversarial-drive.sh. After:
+      file at f494ad76^ (the first from a scratchpad copy of the harness, the
+      second from scripts/robustness/r1-adversarial-drive.sh). After:
       nested div 16 to 64 KB and nested b/i/u convert in at most 424 ms, nested
       b/i/u/a (the brief's formatting input) and the 16 MiB flat page are refused
       unbilled in 30 ms or less, and the 1 MiB attribute flood converts in 42 ms.
