@@ -16,7 +16,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { safeFetchMock, fetchRenderedHtml, meteredFetchMock, resolve4, llmCreate, extractJsonWithLlm } = vi.hoisted(() => ({
+const { safeFetchMock, fetchRenderedHtml, meteredFetchMock, resolve4, llmCreate, extractJsonWithLlm, logWarnMock } = vi.hoisted(() => ({
+  logWarnMock: vi.fn(),
   safeFetchMock: vi.fn(),
   fetchRenderedHtml: vi.fn(),
   meteredFetchMock: vi.fn(),
@@ -45,6 +46,10 @@ vi.mock("../lib/anthropic-client.js", () => ({
   createAnthropicClient: () => ({ messages: { create: llmCreate } }),
 }));
 vi.mock("./lib/llm-extract.js", () => ({ extractJsonWithLlm }));
+vi.mock("../lib/log.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  logWarn: logWarnMock,
+}));
 vi.mock("node:dns/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:dns/promises")>();
   return { ...original, resolve4, default: { ...original, resolve4 } };
@@ -121,6 +126,7 @@ beforeEach(() => {
   resolve4.mockReset();
   llmCreate.mockReset();
   extractJsonWithLlm.mockReset();
+  logWarnMock.mockReset();
   __resetRobotsCacheForTests();
   process.env.ANTHROPIC_API_KEY = "test-key";
   delete process.env.SERPER_API_KEY;
@@ -337,8 +343,9 @@ describe("backlink-check negative: a domain Common Crawl holds nothing for keeps
   it.each([
     ["HTTP 404", () => status(404)],
     ["an empty 200", () => status(200, "")],
-  ])("Common Crawl %s answers an empty list, billed", async (_l, cc) => {
-    backlinks(cc);
+  ])("Common Crawl %s and Serper finding nothing answer an empty list, billed", async (_l, cc) => {
+    process.env.SERPER_API_KEY = "test";
+    backlinks(cc, () => json({ organic: [] }));
     const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
     expect(out).toEqual({
       domain: "mysite.example",
@@ -715,5 +722,124 @@ describe("review fix: cookie-scan reads an unstated consent banner as unknown", 
     const out = await billed("cookie-scan", exec("cookie-scan")({ url: "https://shop.test" }));
     expect(out.consent_banner_detected).toBe(true);
     expect(out.potential_issues).toEqual([]);
+  });
+});
+
+// ─── Delta-review tail on PR #1015 ──────────────────────────────────────────
+//
+// Tagged "tail:". Each failure case fails against the executors at d090ea9c
+// (#1015 merged) and passes after.
+
+describe("tail: startup-domain-check keeps the caller's name out of error messages", () => {
+  it.each(["ETIMEOUT", "ESERVFAIL"])("'studio403' with every lookup failing (%s) is retryable for the breaker", async (code) => {
+    domains(() => Promise.reject(dnsError(code)));
+    const err = await expectUnbilledUpstreamFailure(exec("startup-domain-check")({ company_name: "studio403" }));
+    expect(err.message).not.toContain("studio403");
+    expect(err.message).toContain(code);
+    expect(categorizeFailureReason(err.message)).toBe("transient");
+  });
+});
+
+describe("tail: seo-audit robots.txt errors are logged, and our own defects are not hidden", () => {
+  it.each([
+    ["a TypeError", () => new TypeError("Cannot read properties of undefined (reading 'ok')")],
+    ["a ReferenceError", () => new ReferenceError("robotsRes is not defined")],
+    ["a SyntaxError", () => new SyntaxError("Unexpected token < in JSON at position 0")],
+  ])("%s that is not a fetch transport error is rethrown", async (_l, makeErr) => {
+    const bug = makeErr();
+    seo(async () => { throw bug; });
+    await expect(exec("seo-audit")({ url: "https://site.test" })).rejects.toBe(bug);
+  });
+
+  it.each([
+    ["fetch failed", () => networkError()],
+    ["terminated", () => new TypeError("terminated")],
+  ])("a fetch transport TypeError (%s) is still unavailable, not a defect", async (_l, makeErr) => {
+    seo(async () => { throw makeErr(); });
+    const out = await billed("seo-audit", exec("seo-audit")({ url: "https://site.test" }));
+    expect(out.unavailable_sources).toEqual(["robots.txt"]);
+  });
+
+  it("logs the error's name and class, never its message or the URL", async () => {
+    seo(async () => {
+      throw new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://site.test/robots.txt?token=secret.");
+    });
+    await billed("seo-audit", exec("seo-audit")({ url: "https://site.test/?q=private" }));
+    const call = logWarnMock.mock.calls.find(([label]) => String(label).includes("robots"));
+    expect(call).toBeDefined();
+    expect(call![2]).toMatchObject({ error_name: "Error", error_class: "Error" });
+    const logged = JSON.stringify(call);
+    expect(logged).not.toContain("secret");
+    expect(logged).not.toContain("private");
+    expect(logged).not.toContain("Too many redirects");
+  });
+});
+
+describe("tail: cookie-scan reads a redirect loop on the caller's site as the target's failure", () => {
+  it("safe-fetch's 'Too many redirects' stays unbilled and breaker-exempt", async () => {
+    site(async () => {
+      throw new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://shop.test.");
+    });
+    const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
+    expect(err.message).toContain("URL did not answer");
+    expect(isUserInputError(err.message)).toBe(true);
+  });
+});
+
+describe("tail: backlink-check never counts the domain's own hosts or bills a Serper it could not ask", () => {
+  it("drops Common Crawl captures on the domain's own subdomains", async () => {
+    process.env.SERPER_API_KEY = "test";
+    const cc = [
+      { url: "https://www.mysite.example/a", timestamp: "20240301000000" },
+      { url: "https://blog.mysite.example/b", timestamp: "20240301000000" },
+      { url: "https://deep.shop.mysite.example/c", timestamp: "20240301000000" },
+      { url: "https://notmysite.example/d", timestamp: "20240301000000" },
+    ]
+      .map((r) => JSON.stringify(r))
+      .join("\n");
+    backlinks(() => status(200, cc), () => json({ organic: [] }));
+    const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
+    expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["notmysite.example"]);
+    expect(out.referring_domains_count).toBe(1);
+  });
+
+  it.each([
+    ["HTTP 404", () => status(404)],
+    ["an empty 200", () => status(200, "")],
+  ])("Common Crawl %s with no Serper key throws, unbilled, naming Serper", async (_l, cc) => {
+    backlinks(cc);
+    const err = await expectUnbilledUpstreamFailure(exec("backlink-check")({ domain: "mysite.example" }));
+    expect(err.message).toContain("Serper Google search API");
+    expect(meteredFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a few Common Crawl backlinks with no Serper key are kept, with Serper named", async () => {
+    backlinks(() => status(200, CC_RECORD));
+    const out = await billed("backlink-check", exec("backlink-check")({ domain: "mysite.example" }));
+    expect(out.backlinks.map((b: Out) => b.source_domain)).toEqual(["blog.example"]);
+    expect(out.unavailable_sources).toEqual(["Serper Google search API"]);
+  });
+});
+
+describe("tail: github-repo-analyze names a 403 only as what its body says", () => {
+  it.each([
+    ["the repository record", (u: string) => u.endsWith("/repos/o/r")],
+    ["the contributor list", (u: string) => u.includes("/contributors")],
+    ["the README host", (u: string) => u.endsWith("/README.md")],
+  ])("a 403 on %s with no rate-limit or abuse wording reads 'declined the request', retryable", async (_l, match) => {
+    github((u) => (match(u) ? () => status(403, '{"message":"Resource not accessible by integration"}') : undefined));
+    const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(err.retryable).toBe(true);
+    expect(err.message).toContain("declined the request");
+    expect(err.message).not.toMatch(/rate limit|abuse/i);
+    expect(err.message).not.toMatch(/\b40[13]\b/);
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  });
+
+  it("a 403 whose body names abuse detection says so", async () => {
+    github((u) => (u.endsWith("/repos/o/r") ? () => status(403, '{"message":"You have triggered an abuse detection mechanism."}') : undefined));
+    const err = await expectUnbilledUpstreamFailure(exec("github-repo-analyze")({ url: "https://github.com/o/r" }));
+    expect(err.message).toMatch(/abuse detection/);
+    expect(categorizeFailureReason(err.message)).toBe("transient");
   });
 });

@@ -184,7 +184,29 @@ describe("the breaker reads a helper error the way its retryable flag says", () 
   it("quotedLegCodes quotes only the retryable legs when any leg is retryable", () => {
     const legs = [httpUnavailable("A", 503), httpUnavailable("B", 403)];
     expect(quotedLegCodes(legs)).toBe("HTTP 503");
-    expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 403, HTTP 404");
+    expect(quotedLegCodes([httpUnavailable("A", 410), httpUnavailable("B", 404)])).toBe("HTTP 410, HTTP 404");
+  });
+});
+
+describe("tail: quotedLegCodes never quotes a 401 or 403", () => {
+  // A retryable GitHub rate-limit leg carries code "HTTP 403"; quoted, it
+  // would make the combined message read auth_expired (PR #1015 delta review).
+  const rateLimited403 = () =>
+    new UpstreamUnavailableError("GitHub REST API", "rate limited; retry shortly.", { code: "HTTP 403", retryable: true });
+
+  it("a combined message from a retryable 403 leg and a 503 leg classifies transient", () => {
+    const legs = [rateLimited403(), httpUnavailable("Other API", 503)];
+    const combined = new UpstreamUnavailableError("GitHub REST API and Other API", `neither source answered (${quotedLegCodes(legs)}).`, {
+      retryable: true,
+    });
+    expect(combined.message).not.toMatch(/\b40[13]\b/);
+    expect(categorizeFailureReason(combined.message)).toBe("transient");
+  });
+
+  it("drops 401 and 403 even when they are the only codes", () => {
+    expect(quotedLegCodes([rateLimited403()])).not.toMatch(/\b40[13]\b/);
+    expect(quotedLegCodes([httpUnavailable("A", 401), httpUnavailable("B", 403)])).not.toMatch(/\b40[13]\b/);
+    expect(quotedLegCodes([httpUnavailable("A", 403), httpUnavailable("B", 404)])).toBe("HTTP 404");
   });
 });
 
