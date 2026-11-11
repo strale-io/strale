@@ -203,8 +203,8 @@ export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
  * Measured 2026-08-29: YouTube oembed 0.8 KiB, Corporations Canada 0.07 KiB
  * (not-found shape), api.github.com repo 5.8 KiB, and a Common Crawl index
  * reply at `limit=50` 20.0 KiB (a leg backlink-check no longer has). 4 MiB
- * is over 200x the largest of those — it exists to make an unbounded read bounded, not to police a size
- * anyone is near.
+ * is over 200x the largest of those — it exists to make an unbounded read
+ * bounded, not to police a size anyone is near.
  */
 export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 

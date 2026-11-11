@@ -119,7 +119,7 @@ limitations:
     severity: info
   - title: A failed search is never read as no backlinks
     text: >-
-      If the Google search through Serper fails, times out or is not configured, the call fails unbilled rather than returning an empty list. An empty list means the search answered and found no page other than the domain's own (its subdomains are never counted as backlinks).
+      If the Google search through Serper fails, times out or is not configured, the call fails unbilled rather than returning an empty list. An empty list means the search answered and found no page other than the domain's own (its subdomains are never counted as backlinks), or none it could open; unresolved_link_count tells the two apart.
     category: availability
     severity: info
   - title: Unopened Google redirect links are counted, not listed
