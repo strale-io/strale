@@ -72,6 +72,9 @@ function isUncoveredCountry(err: unknown): boolean {
 const NAGER_YEAR_WINDOW = 50;
 function isYearOutOfRange(err: unknown, year: number): boolean {
   if (!/^Nager\.Date API error: HTTP 400$/.test(err instanceof Error ? err.message : "")) return false;
+  // UTC year. Within about an hour of New Year, Nager.Date's own clock may sit
+  // in the next year; a 400 at that edge is filed as a provider failure, which
+  // is still unbilled.
   const current = new Date().getUTCFullYear();
   return year < current - NAGER_YEAR_WINDOW || year > current + NAGER_YEAR_WINDOW;
 }

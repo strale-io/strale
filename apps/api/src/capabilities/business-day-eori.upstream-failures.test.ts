@@ -95,7 +95,10 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     expect((err as { code?: unknown }).code).toBe("unparseable");
   });
 
-  it.each([["1975-06-02", 1975], ["2080-06-03", 2080]])(
+  // Derived from the clock so the cases stay outside Nager.Date's window of
+  // about 50 years either side of the current year, whenever the suite runs.
+  const NOW_YEAR = new Date().getUTCFullYear();
+  it.each([[`${NOW_YEAR - 51}-06-02`, NOW_YEAR - 51], [`${NOW_YEAR + 51}-06-03`, NOW_YEAR + 51]])(
     "refuses %s, a year Nager.Date does not cover (HTTP 400): unbilled, not counted against the capability",
     async (date, year) => {
       fetchMock.mockImplementation(async () => status(400));
