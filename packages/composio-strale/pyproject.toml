@@ -42,5 +42,5 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://strale.io?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1"
-Repository = "https://github.com/strale-io/strale/tree/main/packages/composio-strale"
+Repository = "https://github.com/strale-io/strale"
 Documentation = "https://strale.io/docs?src=pypi-readme&utm_source=pypi-readme&utm_medium=listing&utm_campaign=distribution-d0-d1"

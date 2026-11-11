@@ -56,6 +56,11 @@ PACKAGES = {
         "module": "crewai_strale",
         "client_prefix": "crewai-strale",
     },
+    "packages/composio-strale": {
+        "name": "composio-strale",
+        "module": "composio_strale",
+        "client_prefix": "composio-strale",
+    },
 }
 
 TAG_RE = re.compile(r"^pypi/(?P<name>[A-Za-z0-9._-]+)/v(?P<version>.+)$")
@@ -180,6 +185,22 @@ def cmd_smoke(args: argparse.Namespace) -> None:
                 result = client.capabilities()
             finally:
                 client.close()
+        elif pkg["module"] == "composio_strale":
+            tools = {}
+
+            class Registry:
+                def custom_tool(self, **_kwargs: object):
+                    def register(fn):
+                        tools[fn.__name__] = fn
+                        return fn
+                    return register
+
+            class Composio:
+                tools = Registry()
+
+            module.StraleToolkit(api_key="sk_smoke_fixture", base_url=base_url).register(Composio())
+            request = importlib.import_module(f"{pkg['module']}.toolkit").StraleSearchInput(query="smoke")
+            result = tools["strale_search"](request)["capabilities"]
         else:
             client = importlib.import_module(f"{pkg['module']}.client").StraleClient(api_key="sk_smoke_fixture", base_url=base_url)
             result = client.list_capabilities()
@@ -188,13 +209,14 @@ def cmd_smoke(args: argparse.Namespace) -> None:
 
     if result != []:
         fail(f"list call returned {result!r}, expected []")
-    if len(_CatalogHandler.seen) != 1 or _CatalogHandler.seen[0]["path"] != "/v1/capabilities":
-        fail(f"expected one GET /v1/capabilities, saw {[s['path'] for s in _CatalogHandler.seen]}")
+    expected_path = "/v1/suggest/typeahead?q=smoke&limit=10" if pkg["module"] == "composio_strale" else "/v1/capabilities"
+    if len(_CatalogHandler.seen) != 1 or _CatalogHandler.seen[0]["path"] != expected_path:
+        fail(f"expected one GET {expected_path}, saw {[s['path'] for s in _CatalogHandler.seen]}")
     header = _CatalogHandler.seen[0]["headers"].get("X-Strale-Client")
     want = f"{pkg['client_prefix']}/{args.version}"
     if header != want:
         fail(f"X-Strale-Client was {header!r}, expected {want!r}")
-    print(f"smoke ok: GET /v1/capabilities sent X-Strale-Client: {header}")
+    print(f"smoke ok: GET {expected_path} sent X-Strale-Client: {header}")
 
 
 def main() -> None:
