@@ -90,14 +90,15 @@ tracks:
       (1) Serper. Block 0147 (#952, merged) replaced the stale May expiry that made
       the vendor tower report CRITICAL for a paid-up vendor. Run npm run
       vendor:status after deploy and record Serper healthy with expiry 2027-05-05
-      as a receipt. (2) The x402 settlement-drop alert (#950, draft, do not merge).
-      Three review rounds found the same class of bug: the baseline drops during
-      a real outage. Redesign it as a per-payer burst cap, against that payer's
-      own typical day, with a floor, leaving other payers untouched, as its PR
-      body says. Give it tests for the shapes reviewed in rounds 1 to 3: ramp,
-      deep outage, slow degradation, quiet weekend, every-other-day buyer,
-      two-day buyer, a job across three buckets, steady payers, and a missing
-      bucket column. (3) production-watch: done by #1002 (merged 2026-11-11).
+      as a receipt. (2) The x402 settlement-drop alert: the per-payer
+      burst cap merged as #950 on 2026-11-07 (squash d5f2411d), after five
+      review rounds, with fail-before and after receipts
+      (archive/receipts/2026-11-07-test-run-x402-per-payer-cap-*.json and
+      2026-11-07-test-run-x402-round4-fixes-*.json). This line called it a
+      draft until 2026-11-11 (state drift, F7). Remaining for the exit: a
+      receipt from its first production week with no false page, due from
+      2026-11-14 (Railway logs for the settlement watch, and any alert sent).
+      (3) production-watch: done by #1002 (merged 2026-11-11).
       scripts/production-watch/known-failures.json acknowledges #856
       (ingest-ee-directors) until 2026-12-11; an acknowledged failure is still
       reported on its issue but no longer turns the run red, and any other
