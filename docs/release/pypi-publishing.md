@@ -1,6 +1,6 @@
 # Publishing the PyPI packages
 
-Strale publishes three Python packages out of this monorepo through
+Strale publishes four Python packages out of this monorepo through
 [`.github/workflows/release-pypi.yml`](../../.github/workflows/release-pypi.yml):
 
 | PyPI project | directory | X-Strale-Client | notes |
@@ -8,6 +8,7 @@ Strale publishes three Python packages out of this monorepo through
 | `langchain-strale` | `packages/langchain-strale` | `langchain-strale/<version>` | LangChain tools; the first package through this workflow |
 | `straleio` | `packages/sdk-python` | `straleio-python/<version>` | Python SDK |
 | `crewai-strale` | `packages/crewai-strale` | `crewai-strale/<version>` | CrewAI tools; most of its tests need a key and skip here |
+| `composio-strale` | `packages/composio-strale` | `composio-strale/<version>` | Composio custom tools; tag releases use `pypi/composio-strale/v<version>` |
 
 The workflow uses **PyPI trusted publishing (OIDC)**. There is no `PYPI_TOKEN`
 secret and no long-lived credential anywhere in the pipeline: the publish job
@@ -43,10 +44,10 @@ tag push publishes without anyone approving it.
 ### 2. Add the trusted publisher on pypi.org (once per project)
 
 This needs a logged-in session on pypi.org as an owner of the project; it
-cannot be done from CI. All three projects already exist on PyPI (0.1.x was
+cannot be done from CI. All four projects already exist on PyPI (0.1.x was
 published before this workflow), so this is the "existing project" form.
 
-For **each** of `langchain-strale`, `straleio` and `crewai-strale` (start with
+For **each** of `langchain-strale`, `straleio`, `crewai-strale` and `composio-strale` (start with
 `langchain-strale`; the others can wait until their first release here):
 
 1. Sign in at <https://pypi.org> with two-factor authentication.
