@@ -111,6 +111,14 @@ describe("business-day-check: Nager.Date failures throw (row 17)", () => {
     },
   );
 
+  it("throws, unbilled, on a 400 for a year inside Nager.Date's window: the caller's date does not explain it", async () => {
+    fetchMock.mockImplementation(async () => status(400));
+    const exec = await load("business-day-check", "./business-day-check.js");
+    const year = new Date().getUTCFullYear();
+    const err = await expectUnbilledUpstreamFailure(exec({ date: `${year}-06-03`, country_code: "SE" }));
+    expect(err.message).not.toContain("outside that range");
+  });
+
   it("answers a holiday correctly when Nager.Date answers", async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify(SE_HOLIDAYS), { status: 200 }));
     const exec = await load("business-day-check", "./business-day-check.js");

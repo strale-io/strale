@@ -73,7 +73,6 @@ const RENDERING_FAILURES: Array<[string, () => Error, boolean, string | null]> =
   ["Browserless's own 5xx", () => new Error("The target site (www.msc.com) returned a server error (HTTP 503). This is usually transient — try again in a few minutes."), true, "HTTP 503"],
   ["Browserless's rate limit", () => new Error("The web scraping service is temporarily rate-limited. Please try again in a few minutes."), true, "HTTP 429"],
   ["an empty render", () => new Error("Browserless returned empty or too-short HTML response."), true, "empty"],
-  ["an exhausted Browserless account", () => Object.assign(new Error("Vendor 'browserless' is exhausted; the request was refused before spending or charging."), { name: "VendorUnavailableError", providerName: "browserless", vendorStatus: "exhausted" }), false, "vendor exhausted"],
 ];
 
 describe("container-track: a failed tracking leg throws (row 34)", () => {
@@ -103,6 +102,14 @@ describe("container-track: a failed tracking leg throws (row 34)", () => {
     expect(err).toBe(config);
     expect((err as Error).name).not.toBe("UpstreamUnavailableError");
     expect(outcomeFromError(err)).toMatchObject({ billable: false });
+  });
+
+  it("passes Strale's own Browserless account state through unchanged: unbilled, not counted against the capability", async () => {
+    const vendor = Object.assign(new Error("Vendor 'browserless' is exhausted; the request was refused before spending or charging."), { name: "VendorUnavailableError", providerName: "browserless", vendorStatus: "exhausted" });
+    fetchRenderedHtml.mockRejectedValue(vendor);
+    const err = await exec()(MSC).catch((e: unknown) => e);
+    expect(err).toBe(vendor);
+    expect(outcomeFromError(err)).toMatchObject({ billable: false, counts_against_capability: false });
   });
 
   it("passes a refusal through unchanged (unbilled, not counted against the capability)", async () => {

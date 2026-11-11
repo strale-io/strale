@@ -62,13 +62,18 @@ function isUncoveredCountry(err: unknown): boolean {
 }
 
 /**
- * Nager.Date answers HTTP 400 for a year outside the range it holds (it held
- * 1976 to 2079 when checked live on 2026-11-11; 1975 and 2080 both drew 400).
- * That is a fact about the caller's date, not an outage: a refusal, unbilled
- * and not counted against the capability.
+ * Nager.Date holds 50 years either side of the current year and answers HTTP
+ * 400 outside that window (checked live on 2026-11-11: 1976 and 2076 answered,
+ * 1975 and 2077 drew 400). For a year outside the window that 400 is a fact
+ * about the caller's date, not an outage: a refusal, unbilled and not counted
+ * against the capability. A 400 for a year inside the window is not explained
+ * by the caller's input, so it stays a provider failure.
  */
-function isYearOutOfRange(err: unknown): boolean {
-  return /^Nager\.Date API error: HTTP 400$/.test(err instanceof Error ? err.message : "");
+const NAGER_YEAR_WINDOW = 50;
+function isYearOutOfRange(err: unknown, year: number): boolean {
+  if (!/^Nager\.Date API error: HTTP 400$/.test(err instanceof Error ? err.message : "")) return false;
+  const current = new Date().getUTCFullYear();
+  return year < current - NAGER_YEAR_WINDOW || year > current + NAGER_YEAR_WINDOW;
 }
 
 /**
@@ -140,11 +145,11 @@ registerCapability("business-day-check", async (input: CapabilityInput) => {
     // holiday calendar to apply, so only weekends are checked, as before. Any
     // other failure used to land here too and answer `is_business_day: true`
     // on a public holiday, billed (2026-11-06 swallowed-failures audit, row 17).
-    if (isYearOutOfRange(err)) {
+    if (isYearOutOfRange(err, year)) {
       throw inputRefusal(
-        `'date' must be in a year the Nager.Date holiday calendar covers (1976 to 2079); ${year} is outside that range.`,
+        `'date' must be in a year the Nager.Date holiday calendar covers (about 50 years either side of the current year); ${year} is outside that range.`,
         "date",
-        "Send 'date' as a YYYY-MM-DD date in a year from 1976 to 2079.",
+        "Send 'date' as a YYYY-MM-DD date within about 50 years of the current year.",
       );
     }
     if (!isUncoveredCountry(err)) throw holidayFailure(err);

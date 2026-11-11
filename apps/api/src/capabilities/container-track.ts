@@ -21,15 +21,15 @@ const RENDERING_SERVICE = "rendering service (Browserless)";
  *   - a carrier that refuses Strale throws its `SourceBlockedError` unchanged
  *     (DEC-20261023-A), and a refusal or an already-classified error passes
  *     through;
- *   - Strale's own missing Browserless configuration is returned unchanged, so
- *     a defect of ours is never filed as anyone's outage;
+ *   - Strale's own missing Browserless configuration, and the control tower's
+ *     exhausted/auth_error/disabled state for Strale's Browserless account, are
+ *     returned unchanged, so a state of ours is never filed as anyone's outage;
  *   - the carrier's own answers: a plain-request 4xx ("URL returned HTTP n"),
  *     a page gone (404/410, plain or rendered: not retryable), a host that
  *     does not resolve or refuses the connection, a page that took too long
  *     to load (Browserless 408), and Chrome's permanent navigation failures;
  *   - everything Browserless says about itself (its rate limit, its 5xx, its
- *     token being refused, an empty render, the control tower's
- *     exhausted/auth_error/disabled account state) and a transport failure on
+ *     token being refused, an empty render) and a transport failure on
  *     the request to Browserless (every plain-request transport failure falls
  *     through to Browserless, so a bare "fetch failed" or timeout here is
  *     Browserless's) name the rendering service, never the carrier;
@@ -66,10 +66,12 @@ function trackingPageFailure(scrapeUrl: string, err: unknown): Error {
   }
 
   // ── The rendering service ──
-  if (error.name === "VendorUnavailableError") {
-    const state = (err as { vendorStatus?: unknown }).vendorStatus;
-    return fail(RENDERING_SERVICE, `the account is ${String(state)}; this says nothing about the container.`, `vendor ${String(state)}`, false);
-  }
+  // Strale's own Browserless account being exhausted, disabled or failing auth
+  // is our state, not a carrier or provider outage: pass it through unchanged,
+  // as every other Browserless caller does (unbilled, not counted against the
+  // capability), so a day on an exhausted account cannot push container-track
+  // under the quality floor.
+  if (error.name === "VendorUnavailableError") return error;
   if (error.name === "TimeoutError" || error.name === "AbortError") {
     return fail(RENDERING_SERVICE, "timeout; retry shortly.", "timeout");
   }
