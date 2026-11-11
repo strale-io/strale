@@ -1,0 +1,1169 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/scripts/check-upstream-catches.mjs",
+    "commit": "433cdd55a4db604a21dcd5f52ee658d42639716b"
+  },
+  "at": "2026-11-11T09:51:49.897Z",
+  "inputs": {
+    "source": "/tmp/claude-0/-home-user-strale/26857655-34e7-5340-8467-a58b1d11de08/scratchpad/guard.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "findings_count": 186,
+    "base": "34b38d691c0ff5ee0f87eb419a3b2d4960398011",
+    "files": 406,
+    "handlers": 262,
+    "pending": 186
+  },
+  "topic": "upstream-catch-guard-wave2a",
+  "raw": {
+    "ok": true,
+    "base": "34b38d691c0ff5ee0f87eb419a3b2d4960398011",
+    "files": 406,
+    "handlers": 262,
+    "pending": 186,
+    "waived": [
+      {
+        "file": "apps/api/src/capabilities/business-day-check.ts",
+        "line": 127,
+        "reason": "only Nager.Date's own no-calendar answers (404 and 204) fall through to a weekends-only result, its long-standing output for those countries; every other failure throws."
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-age-check.ts",
+        "line": 161,
+        "reason": "the failure is kept in rdapFailure; WHOIS answers in its place, or the call throws carrying it."
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-age-check.ts",
+        "line": 176,
+        "reason": "the failure is kept in rdapFailure; WHOIS answers in its place, or the call throws carrying it."
+      },
+      {
+        "file": "apps/api/src/capabilities/package-security-audit.ts",
+        "line": 72,
+        "reason": "the Scorecard is an optional signal that only ever adds a penalty; its failure is named in unavailable_sources, so a null scorecard is not read as \"none published\"."
+      }
+    ],
+    "failures": [],
+    "findings": [
+      {
+        "file": "apps/api/src/capabilities/api-health-check.ts",
+        "line": 78,
+        "kind": "catch",
+        "fingerprint": "1201dc3ac324bb2c07fa07cf347cc955933ace29d41cc42cd22327a8ef0fd60b"
+      },
+      {
+        "file": "apps/api/src/capabilities/api-health-check.ts",
+        "line": 81,
+        "kind": "catch",
+        "fingerprint": "b225ff2121760930979fb0d832995274f11bd7537a8a53b89d9066350b9fb183"
+      },
+      {
+        "file": "apps/api/src/capabilities/api-health-check.ts",
+        "line": 85,
+        "kind": "catch",
+        "fingerprint": "fa5e07e4bf8430e719ba06a87d47bc8cff8c8948c1cad4fcf5d9d069e9e967d2"
+      },
+      {
+        "file": "apps/api/src/capabilities/backlink-check.ts",
+        "line": 87,
+        "kind": "catch",
+        "fingerprint": "4e1726ac392609abafecf7ce18a7f64878f4820bd5088144a4ab35dcbcba1067"
+      },
+      {
+        "file": "apps/api/src/capabilities/backlink-check.ts",
+        "line": 92,
+        "kind": "catch",
+        "fingerprint": "19d2e86a1bfa53a6693a4cad058f9da94e9268bf39750d949842dfbc354169dd"
+      },
+      {
+        "file": "apps/api/src/capabilities/backlink-check.ts",
+        "line": 160,
+        "kind": "catch",
+        "fingerprint": "7f1077258acd8c75e2db595c7719048a405d27b334bf72a1eec73d3314f1ce23"
+      },
+      {
+        "file": "apps/api/src/capabilities/backlink-check.ts",
+        "line": 207,
+        "kind": "catch",
+        "fingerprint": "67924d1b4de93d57dd5f79cd0ee83cb17e665c696d96f70a59c11477ad579d87"
+      },
+      {
+        "file": "apps/api/src/capabilities/barcode-lookup.ts",
+        "line": 53,
+        "kind": "catch",
+        "fingerprint": "5908473ec9d1fc1e94b8ddc89f7f50723bb10246976a18b1cd837391076a9405"
+      },
+      {
+        "file": "apps/api/src/capabilities/barcode-lookup.ts",
+        "line": 90,
+        "kind": "catch",
+        "fingerprint": "dc821eb398bc7dc269718108d0264cf88d514802e58d441e3b7dd13f61460e0c"
+      },
+      {
+        "file": "apps/api/src/capabilities/bitcoin-address-validate.ts",
+        "line": 33,
+        "kind": "catch",
+        "fingerprint": "1f619dbe752f9a435151cf5e044b95f9f9e4891b0c3aaee0a7239d1108a698d1"
+      },
+      {
+        "file": "apps/api/src/capabilities/bitcoin-address-validate.ts",
+        "line": 78,
+        "kind": "catch",
+        "fingerprint": "e077faa609bc7ae6279deaf325ae2ad69af4452d66b207895c3fd83731d4426e"
+      },
+      {
+        "file": "apps/api/src/capabilities/bitcoin-address-validate.ts",
+        "line": 89,
+        "kind": "catch",
+        "fingerprint": "6f9df0218be43ebfa02a9b072b50b3d5b40c75c2d5a29cc00b86c571c51c5e35"
+      },
+      {
+        "file": "apps/api/src/capabilities/brand-mention-search.ts",
+        "line": 52,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/breach-exposure-check.ts",
+        "line": 52,
+        "kind": "catch",
+        "fingerprint": "a4bb25c662607ca86ec5d9d474191d55e25e207ea43828b02c2117b97c875da6"
+      },
+      {
+        "file": "apps/api/src/capabilities/canadian-company-data.ts",
+        "line": 311,
+        "kind": "catch",
+        "fingerprint": "14f13d46a5de0b55ba1b2ccc6576264b600c4ce75d4f4cb77d16de4faf197f21"
+      },
+      {
+        "file": "apps/api/src/capabilities/cert-transparency-search.ts",
+        "line": 45,
+        "kind": "catch",
+        "fingerprint": "a4bb25c662607ca86ec5d9d474191d55e25e207ea43828b02c2117b97c875da6"
+      },
+      {
+        "file": "apps/api/src/capabilities/cert-transparency-search.ts",
+        "line": 128,
+        "kind": "catch",
+        "fingerprint": "2afb2faeccf11d7f3a920736025283b61f2d85a65e5c5cbf3d83ea2efe8acd74"
+      },
+      {
+        "file": "apps/api/src/capabilities/citation-graph.ts",
+        "line": 129,
+        "kind": "promise-catch",
+        "fingerprint": "a170483f750fff7e58414dfe6602bb462ce7664d4d1664445e2243ded90830d0"
+      },
+      {
+        "file": "apps/api/src/capabilities/citation-graph.ts",
+        "line": 132,
+        "kind": "promise-catch",
+        "fingerprint": "d5763fd979c2145d070e40884a228cfec7a41e47ed038bc0d00a38fa71053b1c"
+      },
+      {
+        "file": "apps/api/src/capabilities/code-review.ts",
+        "line": 78,
+        "kind": "catch",
+        "fingerprint": "204942bb31162bb5f4e128234a4e238fe3caf4eee9f9ab3db96a5b3dcac51e48"
+      },
+      {
+        "file": "apps/api/src/capabilities/company-enrich.ts",
+        "line": 325,
+        "kind": "promise-catch",
+        "fingerprint": "ca43265ad0acfe3c4fe38621bc37e4ccd0c965c6bbabf3b3dac61932ca5ffda4"
+      },
+      {
+        "file": "apps/api/src/capabilities/company-fundamentals.ts",
+        "line": 192,
+        "kind": "catch",
+        "fingerprint": "4b8673637cae3489e7626300f711bce54e66dd92cbe79f11616fcd1b8801b779"
+      },
+      {
+        "file": "apps/api/src/capabilities/company-fundamentals.ts",
+        "line": 202,
+        "kind": "promise-catch",
+        "fingerprint": "b38219bd2753d5f88948b9c9c309ce37fd442ac5e0796cb509d1f8761053c018"
+      },
+      {
+        "file": "apps/api/src/capabilities/company-tech-stack.ts",
+        "line": 60,
+        "kind": "catch",
+        "fingerprint": "92d285f50753488e732067fa65cb7407d6759b79ee9da2875be2e5c46f10cf69"
+      },
+      {
+        "file": "apps/api/src/capabilities/contract-verify-check.ts",
+        "line": 28,
+        "kind": "catch",
+        "fingerprint": "0694993dde398d6f788822c7d54f01e647a34d34ac057febedcee44d13ab5508"
+      },
+      {
+        "file": "apps/api/src/capabilities/cookie-scan.ts",
+        "line": 178,
+        "kind": "catch",
+        "fingerprint": "17a6819bf1c3a5cba1b91c9fa04230e4433cc4aacb254b20b5a3d6b44a857250"
+      },
+      {
+        "file": "apps/api/src/capabilities/cookie-scan.ts",
+        "line": 241,
+        "kind": "catch",
+        "fingerprint": "e632ec8deeb2b5c8dc310199f2ace1076fb416b66c5ab67a8b8fdf44a662fa53"
+      },
+      {
+        "file": "apps/api/src/capabilities/cookie-scan.ts",
+        "line": 265,
+        "kind": "catch",
+        "fingerprint": "eefc6e18e48a0acef65ae37f4dba9eb3b9c7527041744a6fd937c8e538340775"
+      },
+      {
+        "file": "apps/api/src/capabilities/country-trade-data.ts",
+        "line": 943,
+        "kind": "catch",
+        "fingerprint": "e3abd5601af4386e074b4f4d5eb5220b7eaffbe0c2c3fd769d3b9d889861709b"
+      },
+      {
+        "file": "apps/api/src/capabilities/country-trade-data.ts",
+        "line": 974,
+        "kind": "catch",
+        "fingerprint": "3be2dd4dea44d519e1fadbea5a027568dc988b0492f7625f1ec805774e68d328"
+      },
+      {
+        "file": "apps/api/src/capabilities/croatian-company-data.ts",
+        "line": 133,
+        "kind": "promise-catch",
+        "fingerprint": "0754652176d685a019b6ab2d9fe421d169478d1379463b04d1db894e69bffc9f"
+      },
+      {
+        "file": "apps/api/src/capabilities/cve-lookup.ts",
+        "line": 36,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/cypriot-company-data.ts",
+        "line": 176,
+        "kind": "catch",
+        "fingerprint": "0c2b24e288eb31fa8bd3da729ea5a392efd5740900edbccb8f83c0cb6e384757"
+      },
+      {
+        "file": "apps/api/src/capabilities/cz-company-data.ts",
+        "line": 167,
+        "kind": "catch",
+        "fingerprint": "1489c6a6de8e6a1801397ce0bea60dc2ff30f5dde62b33180e31d8d13c43a17f"
+      },
+      {
+        "file": "apps/api/src/capabilities/docker-hub-info.ts",
+        "line": 43,
+        "kind": "catch",
+        "fingerprint": "ccbf9f23dcb872ae7b33a8f355a72d9c6722dd13fa6b545b2ca43435f9e72aee"
+      },
+      {
+        "file": "apps/api/src/capabilities/document-ocr.ts",
+        "line": 72,
+        "kind": "catch",
+        "fingerprint": "6e4b4e8d73bf7a2188148646d45b7df527eea9b53ddf40c967912645c3d60117"
+      },
+      {
+        "file": "apps/api/src/capabilities/dogecoin-address-validate.ts",
+        "line": 30,
+        "kind": "catch",
+        "fingerprint": "9a00c3edc8d0d8d7daf9420e5464659838e4fb19a2a41438e5ccd7741e85adfb"
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-contact-extract.ts",
+        "line": 215,
+        "kind": "catch",
+        "fingerprint": "17f65b6c90125f4abd0c50c5413154afe67c22ed4bb358725f0dbed3e328b328"
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-contact-extract.ts",
+        "line": 289,
+        "kind": "catch",
+        "fingerprint": "af0a40ec331caa0eabd95109ea20cc40937da61572c91ce4dba914798abaf920"
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-contact-extract.ts",
+        "line": 323,
+        "kind": "catch",
+        "fingerprint": "2fc725261e724cd67ca75b6a319211604d106e5e4ca5b10668971d3e291d8bc9"
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-contact-extract.ts",
+        "line": 393,
+        "kind": "catch",
+        "fingerprint": "2721114eb030374768bff837bb11a33938b8fe896032dcdbe916233aeca4f88e"
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-contact-extract.ts",
+        "line": 411,
+        "kind": "catch",
+        "fingerprint": "f32ea8d78974278f24ed4f8eaefd7b16a95d092f1fcc922935da61d762fa25f5"
+      },
+      {
+        "file": "apps/api/src/capabilities/domain-reputation.ts",
+        "line": 79,
+        "kind": "catch",
+        "fingerprint": "682f35261c31e3f188f65c0fcca45f0fc3194d3b2c8a2c59c997c2099eca8f94"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-finder.ts",
+        "line": 212,
+        "kind": "catch",
+        "fingerprint": "dc7c346c5b41a697adc3eb77a46ae3da480819c262852c7665e453a79e652e82"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-finder.ts",
+        "line": 288,
+        "kind": "catch",
+        "fingerprint": "9dd6d19f54bbfcc26dbda5476c52434355055f9b28d286119aa1296685760408"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-finder.ts",
+        "line": 305,
+        "kind": "catch",
+        "fingerprint": "2721114eb030374768bff837bb11a33938b8fe896032dcdbe916233aeca4f88e"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-finder.ts",
+        "line": 319,
+        "kind": "catch",
+        "fingerprint": "3d4b25845f2acfa8ede7a6fb81f7392eb10344c7d6f40d721014a76771163bce"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-pattern-discover.ts",
+        "line": 45,
+        "kind": "catch",
+        "fingerprint": "5e9b97348060da170113792d1776e0a2412fd1544028db28dd4d34a2502d1778"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-pattern-discover.ts",
+        "line": 149,
+        "kind": "catch",
+        "fingerprint": "56d0b1b8033d0f05917c09fa79c797e8e4ac6ff20eb8a5339e5015782196ab64"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-reputation-score.ts",
+        "line": 92,
+        "kind": "catch",
+        "fingerprint": "9de9b93d4f40830d290f9290e0c029e38ad6c1b0cfeafc3ac2eb7fc432079ef7"
+      },
+      {
+        "file": "apps/api/src/capabilities/email-validate-bulk.ts",
+        "line": 88,
+        "kind": "catch",
+        "fingerprint": "824378878fcc1c7b69bb87ee167004442b86520f89ecc24293f62ebf0c2ba8d1"
+      },
+      {
+        "file": "apps/api/src/capabilities/employer-review-summary.ts",
+        "line": 36,
+        "kind": "catch",
+        "fingerprint": "f9a1246e7f2cb71ca8c8a08031141c59c6b1f39c7c7a00c31127d658301d52ed"
+      },
+      {
+        "file": "apps/api/src/capabilities/ens-resolve.ts",
+        "line": 115,
+        "kind": "catch",
+        "fingerprint": "85d3731910fe351b1c0af55499887e65939f3a4ab9f61b4ebaaec33e67f86360"
+      },
+      {
+        "file": "apps/api/src/capabilities/ens-resolve.ts",
+        "line": 129,
+        "kind": "catch",
+        "fingerprint": "92957333f0bd22625f7b79d798d70616cc74def7348416ade933f45a9720c4c3"
+      },
+      {
+        "file": "apps/api/src/capabilities/ens-reverse-lookup.ts",
+        "line": 54,
+        "kind": "catch",
+        "fingerprint": "8e3425284136fa6b4fe80f27faffcc984815d46dc3962129e7195d4cdc3aa8af"
+      },
+      {
+        "file": "apps/api/src/capabilities/ens-reverse-lookup.ts",
+        "line": 67,
+        "kind": "catch",
+        "fingerprint": "f839cfb6136c362e73b3a8df2259202f544272e5d6e75d693fbc82cd1c821c27"
+      },
+      {
+        "file": "apps/api/src/capabilities/estonian-company-data.ts",
+        "line": 318,
+        "kind": "catch",
+        "fingerprint": "d748023648afadbdf127084c8bce2ffa1d4cbef588259b986e91dd00f5fa6c48"
+      },
+      {
+        "file": "apps/api/src/capabilities/eth-address-validate.ts",
+        "line": 30,
+        "kind": "catch",
+        "fingerprint": "c491677e044d5d5096847645620d211128f08753d2abe349fccdca8cbcd85837"
+      },
+      {
+        "file": "apps/api/src/capabilities/eurostat-data.ts",
+        "line": 636,
+        "kind": "catch",
+        "fingerprint": "33c87946c40ded0884085f1e2cf677e67af60b8495364ed1c474903fa2a0609b"
+      },
+      {
+        "file": "apps/api/src/capabilities/eurostat-data.ts",
+        "line": 667,
+        "kind": "catch",
+        "fingerprint": "10352a49f671d2b4eea906da74e4a17a33cdbce5e6bece4158e047768c9d4e54"
+      },
+      {
+        "file": "apps/api/src/capabilities/fda-safety-search.ts",
+        "line": 107,
+        "kind": "promise-catch",
+        "fingerprint": "d13f5c542b878ce12dc4f8d5e1510fabe5a2d9f688b2d17b9e45cb3bbc508b63"
+      },
+      {
+        "file": "apps/api/src/capabilities/forex-history.ts",
+        "line": 56,
+        "kind": "catch",
+        "fingerprint": "000b74b24b1aa949b76cb09b75dbafac55f9af9220744c0cbd9e5877ab6e0637"
+      },
+      {
+        "file": "apps/api/src/capabilities/fr-bodacc-lookup.ts",
+        "line": 45,
+        "kind": "catch",
+        "fingerprint": "31132e83bbbf872003152fc9e138fd122c661aa1d76cb60a0fe5a1b48d6b84a5"
+      },
+      {
+        "file": "apps/api/src/capabilities/french-insolvency-check.ts",
+        "line": 51,
+        "kind": "catch",
+        "fingerprint": "96af2def40370aaaf30669092b7e0bcc0a7705c91d8befd3c08eab9837dab907"
+      },
+      {
+        "file": "apps/api/src/capabilities/german-company-data.ts",
+        "line": 155,
+        "kind": "promise-catch",
+        "fingerprint": "0754652176d685a019b6ab2d9fe421d169478d1379463b04d1db894e69bffc9f"
+      },
+      {
+        "file": "apps/api/src/capabilities/german-company-data.ts",
+        "line": 290,
+        "kind": "promise-catch",
+        "fingerprint": "0754652176d685a019b6ab2d9fe421d169478d1379463b04d1db894e69bffc9f"
+      },
+      {
+        "file": "apps/api/src/capabilities/github-repo-analyze.ts",
+        "line": 131,
+        "kind": "catch",
+        "fingerprint": "876fdb8040d0c9db0ac09c56e66c618627479e4e2ef9294976dcdb2b785f144b"
+      },
+      {
+        "file": "apps/api/src/capabilities/github-repo-analyze.ts",
+        "line": 144,
+        "kind": "catch",
+        "fingerprint": "b752cd1e405052d3dc9a662ec8a4295c5f3f3a75e957ade1b6a4f06d457708e7"
+      },
+      {
+        "file": "apps/api/src/capabilities/github-user-profile.ts",
+        "line": 42,
+        "kind": "catch",
+        "fingerprint": "25bb6890f750d84fc8bc3fc65fd82ff7c62257cabc3c8f6eb3ad0ffda5375744"
+      },
+      {
+        "file": "apps/api/src/capabilities/google-news-search.ts",
+        "line": 85,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/google-search.ts",
+        "line": 57,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/job-posting-analyze.ts",
+        "line": 35,
+        "kind": "catch",
+        "fingerprint": "4dd677281fb4a4ad432d93bbdc59e6d9212ea703a7d4fd3d2195d81373087466"
+      },
+      {
+        "file": "apps/api/src/capabilities/json-schema-validate.ts",
+        "line": 87,
+        "kind": "catch",
+        "fingerprint": "f74ebe491d60e001860361863b7e5551ca6050fa25dd25f26884dc0653681f4c"
+      },
+      {
+        "file": "apps/api/src/capabilities/keyword-rank-check.ts",
+        "line": 111,
+        "kind": "promise-catch",
+        "fingerprint": "71e3e20b2bc270d1a0fb936a7c05fe3aead892f125b7c2a0cb17f592e260864e"
+      },
+      {
+        "file": "apps/api/src/capabilities/keyword-rank-check.ts",
+        "line": 245,
+        "kind": "catch",
+        "fingerprint": "f5e58a3fd7febf62b0c41da74dd62d55b204add03ca9286825a2f920742fc474"
+      },
+      {
+        "file": "apps/api/src/capabilities/keyword-suggest.ts",
+        "line": 30,
+        "kind": "catch",
+        "fingerprint": "b6bf4a660e18e79fb4c6e9442ac9ed5d198ae7d886f156ec9badf49b54bfaed2"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/llm-json.ts",
+        "line": 115,
+        "kind": "catch",
+        "fingerprint": "08389cfcb5079fffa85d6c1517a225eb9a61c963ce3c070b8b3bf3704f2babf6"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/llm-json.ts",
+        "line": 121,
+        "kind": "catch",
+        "fingerprint": "e9fb1cc12c77b6982b2096312360f156b567e5efc12bc97106cd1b4d03fb5a5b"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/name-resolver.ts",
+        "line": 103,
+        "kind": "catch",
+        "fingerprint": "d2dcc97630476f78bc49c572ace50cc6a8cb6cea444169aa70900ed30fdab075"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/ocr/engine.ts",
+        "line": 142,
+        "kind": "catch",
+        "fingerprint": "7014ba59e5c4d3685cdb23118616d84e6a8a4af24713409e0fd9ca3183660047"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/ocr/engine.ts",
+        "line": 272,
+        "kind": "promise-catch",
+        "fingerprint": "590301cde0f2d4dc4652df8c5fd2891bc0496f33325bc17fef3cd80ac57b8866"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/ocr/engine.ts",
+        "line": 400,
+        "kind": "catch",
+        "fingerprint": "edd83c65a4b624468aa61d46cd0dfa909d1fda6e4b513a8703b0fc170549a2f0"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/ocr/engine.ts",
+        "line": 446,
+        "kind": "catch",
+        "fingerprint": "a4d86501c1b7d6109da9e17740434573f3e4ea3bddc3f96d3e7c8817f731e90f"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/openapi-resolver.ts",
+        "line": 93,
+        "kind": "promise-catch",
+        "fingerprint": "d45ebac967b513396f9ec5984e33fda1f15c9c73eebe321d686458981a6358e8"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/openapi-resolver.ts",
+        "line": 552,
+        "kind": "catch",
+        "fingerprint": "33231e966b07cb67f2b93847cc91a7354f78201a0be2606ef93a4ed8c67b002a"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/overture-places/client.ts",
+        "line": 131,
+        "kind": "promise-catch",
+        "fingerprint": "590301cde0f2d4dc4652df8c5fd2891bc0496f33325bc17fef3cd80ac57b8866"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/overture-places/worker.ts",
+        "line": 74,
+        "kind": "catch",
+        "fingerprint": "e16e99eca80b818ecdb6f61d896d1d64f9496911c643092f5b739f895d648243"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/overture-places/worker.ts",
+        "line": 98,
+        "kind": "catch",
+        "fingerprint": "b809229742eef9595d64e9ac70f3c736af21831aa410e85c889133df6b8ce6c2"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/overture-places/worker.ts",
+        "line": 194,
+        "kind": "catch",
+        "fingerprint": "189dff7058deb0cf17e1af3a0a7eca3fcc14e1ae50545a55aca7b62e0d99296a"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/readability-worker.ts",
+        "line": 24,
+        "kind": "catch",
+        "fingerprint": "692b1a14357d61069279ab78f8081789751b3317a8379af030b44715f892c37b"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/tech-dns.ts",
+        "line": 51,
+        "kind": "catch",
+        "fingerprint": "8483633e49c5a1486037a624c68194e0ce57b06c0828ff40b6cc4f67bc474547"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/tech-dns.ts",
+        "line": 73,
+        "kind": "catch",
+        "fingerprint": "e616ede5713150fd30043bd8626a872fb4aab6cfb45c0b6824c00e694e8cafb1"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/tech-dns.ts",
+        "line": 93,
+        "kind": "catch",
+        "fingerprint": "a0cff1f95cc304b31c0dcaab5436c96def18092bdbf9254eff1792ea3f90dddc"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vasp-data.ts",
+        "line": 263,
+        "kind": "catch",
+        "fingerprint": "949d8e668958de65a3d207d97a8205aa79fe70fe34e0a720e5ae066a38d06d91"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vasp-data.ts",
+        "line": 283,
+        "kind": "catch",
+        "fingerprint": "73495560ccc4aa386f693668116cea249e3514088ceca6fe3a86732c6ec9abcd"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vasp-data.ts",
+        "line": 296,
+        "kind": "catch",
+        "fingerprint": "fd28abe4850234a42c32d94c5d29dda61975b3beb013a0518fd7c312e4511ca6"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vasp-data.ts",
+        "line": 315,
+        "kind": "catch",
+        "fingerprint": "5b0310d0e0ada1014b9fb817fed6e1fa12e72afe1c32c842ab625090ff6fe4f6"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vasp-data.ts",
+        "line": 350,
+        "kind": "catch",
+        "fingerprint": "7ae689a8363e7856507e06d61e7d172f6973df949ab2433d71f0c458a4f49428"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vasp-data.ts",
+        "line": 503,
+        "kind": "catch",
+        "fingerprint": "ef830b0648cd6d981972a93c148814721df6a843410b6b0acef89f7ec3e9167d"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vat-providers/uid-ch.ts",
+        "line": 67,
+        "kind": "promise-catch",
+        "fingerprint": "2e43d1426e2f4b75d5668b45138ce76ace7d019eac398e0b14a7b1ef12ddd5f8"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vat-providers/vies.ts",
+        "line": 79,
+        "kind": "promise-catch",
+        "fingerprint": "2e43d1426e2f4b75d5668b45138ce76ace7d019eac398e0b14a7b1ef12ddd5f8"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/vat-providers/vies.ts",
+        "line": 101,
+        "kind": "catch",
+        "fingerprint": "1c34be2bd58b552fc52534bf7eab77ce518dcdb15bc237360ade7df3f20e8717"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/web-provider.ts",
+        "line": 395,
+        "kind": "catch",
+        "fingerprint": "cde53ab7ecdb5698026aff1c10627f3d8b2cdf497f57f7cf87f565739cc8cf57"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/web-provider.ts",
+        "line": 632,
+        "kind": "catch",
+        "fingerprint": "255f07b5c6526a96db042e95388538c72cfbec1b63e6796185f3cf95b9a8a541"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/web-provider.ts",
+        "line": 783,
+        "kind": "catch",
+        "fingerprint": "0c8ee1893d42fe35471a7221e092767f2b1ac1248190789fc889a66c436d52da"
+      },
+      {
+        "file": "apps/api/src/capabilities/lib/web-provider.ts",
+        "line": 906,
+        "kind": "catch",
+        "fingerprint": "27eb707fabd0a6735a84d525deefddebc78a35fd2bf1ab45f8efbdc6f465d0ff"
+      },
+      {
+        "file": "apps/api/src/capabilities/link-extract.ts",
+        "line": 49,
+        "kind": "catch",
+        "fingerprint": "46db8452498c0145849255e24563c43c04b3b750b2914832d77abf3cad3bbc10"
+      },
+      {
+        "file": "apps/api/src/capabilities/linkedin-url-validate.ts",
+        "line": 101,
+        "kind": "catch",
+        "fingerprint": "26c696a4b7f854b97868df8649c4c3dc39a5de38fbf5bc3948f4bd2f530fea4d"
+      },
+      {
+        "file": "apps/api/src/capabilities/linkedin-url-validate.ts",
+        "line": 117,
+        "kind": "catch",
+        "fingerprint": "5fcfa9d9f262baca14174bd984300fdf447ecb0af974a485638ea3dd7629ae84"
+      },
+      {
+        "file": "apps/api/src/capabilities/llm-output-validate.ts",
+        "line": 18,
+        "kind": "catch",
+        "fingerprint": "311421055e5a11384a2aeee0be628be616ec66b2996a746c1f0041e41587ba9a"
+      },
+      {
+        "file": "apps/api/src/capabilities/llm-output-validate.ts",
+        "line": 38,
+        "kind": "catch",
+        "fingerprint": "c67f0a570cf88fc6f38125253de98cd882110e141f33d42f9cb84fddbb388208"
+      },
+      {
+        "file": "apps/api/src/capabilities/llm-output-validate.ts",
+        "line": 48,
+        "kind": "catch",
+        "fingerprint": "9720fa5561b6a7c9b4e171af5f9d071829e1ac2b215bfc0ab1adc5d4fd9dc660"
+      },
+      {
+        "file": "apps/api/src/capabilities/llm-output-validate.ts",
+        "line": 178,
+        "kind": "catch",
+        "fingerprint": "d490fe9e605803bf15bba65867a586b3bd8988e5c4a2618fb7734ac1f5111c3b"
+      },
+      {
+        "file": "apps/api/src/capabilities/log-parse.ts",
+        "line": 45,
+        "kind": "catch",
+        "fingerprint": "3d7d93e4c3123a6a9dca35a56b7318754c9833029184ca8eb9f1d36617d14ddf"
+      },
+      {
+        "file": "apps/api/src/capabilities/meta-extract.ts",
+        "line": 78,
+        "kind": "catch",
+        "fingerprint": "502652664d70d1a1a3597cf57a71e72f2c6f3c60632456c8ed0b058a1c808cf4"
+      },
+      {
+        "file": "apps/api/src/capabilities/meta-extract.ts",
+        "line": 124,
+        "kind": "catch",
+        "fingerprint": "526f78c8f4b4345b7dd021cf944aedad06ace662cf698c658a2774bcbc9be7a0"
+      },
+      {
+        "file": "apps/api/src/capabilities/nl-bag-address.ts",
+        "line": 53,
+        "kind": "promise-catch",
+        "fingerprint": "71e3e20b2bc270d1a0fb936a7c05fe3aead892f125b7c2a0cb17f592e260864e"
+      },
+      {
+        "file": "apps/api/src/capabilities/nl-energy-label.ts",
+        "line": 53,
+        "kind": "promise-catch",
+        "fingerprint": "71e3e20b2bc270d1a0fb936a7c05fe3aead892f125b7c2a0cb17f592e260864e"
+      },
+      {
+        "file": "apps/api/src/capabilities/npm-package-info.ts",
+        "line": 37,
+        "kind": "promise-catch",
+        "fingerprint": "8dbb2cb901ff0cb80df4c36f934dd554f64a3a543602c2f282eff4b1a6554cd4"
+      },
+      {
+        "file": "apps/api/src/capabilities/npm-package-info.ts",
+        "line": 96,
+        "kind": "catch",
+        "fingerprint": "b2b4a5ed5471bc1f38c257680741f4f709a1f7cb3f8d42ddeb8c78fad5ce1446"
+      },
+      {
+        "file": "apps/api/src/capabilities/og-image-check.ts",
+        "line": 76,
+        "kind": "catch",
+        "fingerprint": "d3310b74e0948f9f34f965cce280735b2cfda3fe2e4feb58adc3ab0a7847d9fd"
+      },
+      {
+        "file": "apps/api/src/capabilities/og-image-check.ts",
+        "line": 219,
+        "kind": "catch",
+        "fingerprint": "526f78c8f4b4345b7dd021cf944aedad06ace662cf698c658a2774bcbc9be7a0"
+      },
+      {
+        "file": "apps/api/src/capabilities/og-image-check.ts",
+        "line": 227,
+        "kind": "catch",
+        "fingerprint": "89d5cee021d9526f7cc1d0c9faddeb6704916a59c97f721663eeecad6ea78e77"
+      },
+      {
+        "file": "apps/api/src/capabilities/openapi-validate.ts",
+        "line": 23,
+        "kind": "catch",
+        "fingerprint": "08570200a651824c5a2984f93a1e645b1a6747b3837a39130732870267182b65"
+      },
+      {
+        "file": "apps/api/src/capabilities/package-docs.ts",
+        "line": 152,
+        "kind": "catch",
+        "fingerprint": "a057975c1df7bfe9826089297173ad4f88073a723a23d4f3e145d08314b20f28"
+      },
+      {
+        "file": "apps/api/src/capabilities/package-docs.ts",
+        "line": 207,
+        "kind": "catch",
+        "fingerprint": "fe0021c3b0e3710612dd7cf1e1a02da4219f04a3a810bc667ad7fab5301955e8"
+      },
+      {
+        "file": "apps/api/src/capabilities/package-docs.ts",
+        "line": 257,
+        "kind": "catch",
+        "fingerprint": "442299372a150c465e2d9d5c583bd9f3d2a373148e7b3d5294e74f6ea0e00c4a"
+      },
+      {
+        "file": "apps/api/src/capabilities/page-exists.ts",
+        "line": 167,
+        "kind": "catch",
+        "fingerprint": "47145c827305c35c13c35531270bdbc66a011307f9acbb47cfeb1cfa0bcc27b6"
+      },
+      {
+        "file": "apps/api/src/capabilities/page-exists.ts",
+        "line": 244,
+        "kind": "catch",
+        "fingerprint": "946c720923cda84819557368b847789f4f3ab98fa609aa621db94f056b4bf421"
+      },
+      {
+        "file": "apps/api/src/capabilities/page-exists.ts",
+        "line": 316,
+        "kind": "catch",
+        "fingerprint": "f101d47276a2626b6e2bc0107b3f5a1b9ff099b9090603eb0ddc1d5fa3af03cb"
+      },
+      {
+        "file": "apps/api/src/capabilities/paid-api-preflight.ts",
+        "line": 48,
+        "kind": "catch",
+        "fingerprint": "4678305da11fbba82b8be02f99d8a575784dc58e8af124ed135e91b4b4cf76b0"
+      },
+      {
+        "file": "apps/api/src/capabilities/paid-api-preflight.ts",
+        "line": 226,
+        "kind": "catch",
+        "fingerprint": "72408205a5cd48f529b8f648ca797c61b5a8e6f84b6f2c00ffc425c6411485f4"
+      },
+      {
+        "file": "apps/api/src/capabilities/paid-api-preflight.ts",
+        "line": 264,
+        "kind": "catch",
+        "fingerprint": "b9b73bb85eeb1c90feede370ba8ffc567bc1b719b952e0a06f1f57d457feea75"
+      },
+      {
+        "file": "apps/api/src/capabilities/port-check.ts",
+        "line": 48,
+        "kind": "catch",
+        "fingerprint": "02c2f90eecdaf7470dd2b70d13d30d634cdbdc8397abeaeccdecb8e3ea61a8e6"
+      },
+      {
+        "file": "apps/api/src/capabilities/privacy-policy-analyze.ts",
+        "line": 48,
+        "kind": "catch",
+        "fingerprint": "d6a5b153810e93c7e32accaed80918aa782cf7ab74aa72c74f549f0f7634a741"
+      },
+      {
+        "file": "apps/api/src/capabilities/privacy-policy-analyze.ts",
+        "line": 60,
+        "kind": "catch",
+        "fingerprint": "9321f766b18b8685247c4cef6b5c0f0859e15a05dcae0d45f1d610e06393bd74"
+      },
+      {
+        "file": "apps/api/src/capabilities/privacy-policy-analyze.ts",
+        "line": 78,
+        "kind": "catch",
+        "fingerprint": "b85465469f6ea6e9dc13f436f2a36476b8755c6d9a64b61ea70ae511293e62aa"
+      },
+      {
+        "file": "apps/api/src/capabilities/product-reviews-extract.ts",
+        "line": 32,
+        "kind": "catch",
+        "fingerprint": "204d9f399fec94587285417898f5fa30f2e428964942947793a28d3c06d0b80c"
+      },
+      {
+        "file": "apps/api/src/capabilities/protocol-fees-lookup.ts",
+        "line": 28,
+        "kind": "promise-catch",
+        "fingerprint": "bd38b90f802e6d245bcb1778c7e83c78003bdaf08417470638f44188dda90bf2"
+      },
+      {
+        "file": "apps/api/src/capabilities/redirect-trace.ts",
+        "line": 61,
+        "kind": "catch",
+        "fingerprint": "bcdafa68e1bddc50048bb08beae968fb7c72226740c0352faba6b83c80c2dbf2"
+      },
+      {
+        "file": "apps/api/src/capabilities/redirect-trace.ts",
+        "line": 113,
+        "kind": "catch",
+        "fingerprint": "797ae156df35bd530148e7808107c963428e4a6f92817970417bea3e5c6aa0e2"
+      },
+      {
+        "file": "apps/api/src/capabilities/return-policy-extract.ts",
+        "line": 39,
+        "kind": "catch",
+        "fingerprint": "5a6a64249f77aa9cbb55d89a262fe9f3c5110d66359b2f049f2a5c123fc6d01c"
+      },
+      {
+        "file": "apps/api/src/capabilities/return-policy-extract.ts",
+        "line": 77,
+        "kind": "catch",
+        "fingerprint": "12a3f0ce3e5663b8c6d1f7a27c5babf9adc67efc21e6fa85b308d8a54a942f1c"
+      },
+      {
+        "file": "apps/api/src/capabilities/risk-narrative-generate.ts",
+        "line": 412,
+        "kind": "catch",
+        "fingerprint": "abbef188f0fbe956f0fb5187a317d44e3356ed3a075fafc12a42832e645588fd"
+      },
+      {
+        "file": "apps/api/src/capabilities/salary-benchmark.ts",
+        "line": 40,
+        "kind": "catch",
+        "fingerprint": "07f9a9188ff03f3635cc08c4c77d52a43e8a83aa824fcdf6046cce938f059383"
+      },
+      {
+        "file": "apps/api/src/capabilities/seo-audit.ts",
+        "line": 84,
+        "kind": "catch",
+        "fingerprint": "d19501fdb47ab74f0c21abc0b0ab2c0d80372c54ff65959d970b1e90bfb475a3"
+      },
+      {
+        "file": "apps/api/src/capabilities/seo-audit.ts",
+        "line": 101,
+        "kind": "catch",
+        "fingerprint": "6e2de8144f2f838d56ac4c05ebb4ee28cb9f933eb0f7d7abb10cec8598b0adc8"
+      },
+      {
+        "file": "apps/api/src/capabilities/serp-analyze.ts",
+        "line": 45,
+        "kind": "promise-catch",
+        "fingerprint": "71e3e20b2bc270d1a0fb936a7c05fe3aead892f125b7c2a0cb17f592e260864e"
+      },
+      {
+        "file": "apps/api/src/capabilities/serp-related-questions.ts",
+        "line": 56,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/sitemap-parse.ts",
+        "line": 129,
+        "kind": "catch",
+        "fingerprint": "4eaec7b9bac7ad72037a968ebfcc1e25cee00aa0dd9d2a7781f9672491839c39"
+      },
+      {
+        "file": "apps/api/src/capabilities/social-post-generate.ts",
+        "line": 38,
+        "kind": "catch",
+        "fingerprint": "6dddf12e5f40190903f0b05f0b110926fb8a42b33ad810d6329aac1ab31db059"
+      },
+      {
+        "file": "apps/api/src/capabilities/social-profile-check.ts",
+        "line": 137,
+        "kind": "catch",
+        "fingerprint": "ce058defbd0617e99a87ba3b6f8825fdedf7a3737dec4f2a790c6a610b0f06e5"
+      },
+      {
+        "file": "apps/api/src/capabilities/solana-address-validate.ts",
+        "line": 21,
+        "kind": "catch",
+        "fingerprint": "fb9b685accfaa46c9412b04d3d88c07481e2eda53c048f38bfa3ecc1924a0953"
+      },
+      {
+        "file": "apps/api/src/capabilities/startup-domain-check.ts",
+        "line": 25,
+        "kind": "catch",
+        "fingerprint": "090404590c1759348ba9237b2174fd11c8248326c0334dd1e98c237fb4069964"
+      },
+      {
+        "file": "apps/api/src/capabilities/startup-domain-check.ts",
+        "line": 85,
+        "kind": "catch",
+        "fingerprint": "107165d8797aaa249d39dfbae470be6230a5af79913089839d188fbdc2a29097"
+      },
+      {
+        "file": "apps/api/src/capabilities/startup-domain-check.ts",
+        "line": 100,
+        "kind": "catch",
+        "fingerprint": "5f45c604bb2e1e093d26bdc7d27bc4d03d2e1e57b3e13571067f652ac0dd4d97"
+      },
+      {
+        "file": "apps/api/src/capabilities/swedish-company-data.ts",
+        "line": 207,
+        "kind": "promise-catch",
+        "fingerprint": "0754652176d685a019b6ab2d9fe421d169478d1379463b04d1db894e69bffc9f"
+      },
+      {
+        "file": "apps/api/src/capabilities/ted-procurement.ts",
+        "line": 76,
+        "kind": "promise-catch",
+        "fingerprint": "2e43d1426e2f4b75d5668b45138ce76ace7d019eac398e0b14a7b1ef12ddd5f8"
+      },
+      {
+        "file": "apps/api/src/capabilities/terms-of-service-extract.ts",
+        "line": 47,
+        "kind": "catch",
+        "fingerprint": "d6a5b153810e93c7e32accaed80918aa782cf7ab74aa72c74f549f0f7634a741"
+      },
+      {
+        "file": "apps/api/src/capabilities/terms-of-service-extract.ts",
+        "line": 60,
+        "kind": "catch",
+        "fingerprint": "9321f766b18b8685247c4cef6b5c0f0859e15a05dcae0d45f1d610e06393bd74"
+      },
+      {
+        "file": "apps/api/src/capabilities/terms-of-service-extract.ts",
+        "line": 78,
+        "kind": "catch",
+        "fingerprint": "b85465469f6ea6e9dc13f436f2a36476b8755c6d9a64b61ea70ae511293e62aa"
+      },
+      {
+        "file": "apps/api/src/capabilities/timezone-lookup.ts",
+        "line": 88,
+        "kind": "catch",
+        "fingerprint": "617e493dc960a6f61a3c69c4c9cc3ced7a34e0a92e693d8106b6fd4806816391"
+      },
+      {
+        "file": "apps/api/src/capabilities/tron-address-validate.ts",
+        "line": 21,
+        "kind": "catch",
+        "fingerprint": "9a00c3edc8d0d8d7daf9420e5464659838e4fb19a2a41438e5ccd7741e85adfb"
+      },
+      {
+        "file": "apps/api/src/capabilities/uk-cop-check.ts",
+        "line": 122,
+        "kind": "promise-catch",
+        "fingerprint": "478f714ab27f88a715d8383475ee1337a46ac667432f16607c97686a2b117128"
+      },
+      {
+        "file": "apps/api/src/capabilities/uk-cop-check.ts",
+        "line": 139,
+        "kind": "promise-catch",
+        "fingerprint": "478f714ab27f88a715d8383475ee1337a46ac667432f16607c97686a2b117128"
+      },
+      {
+        "file": "apps/api/src/capabilities/uk-cop-check.ts",
+        "line": 168,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/uptime-check.ts",
+        "line": 54,
+        "kind": "catch",
+        "fingerprint": "6f978c0b1db9ebef88c95363aa972c83d142b5f530680e6cfa5a21de32321010"
+      },
+      {
+        "file": "apps/api/src/capabilities/url-health-check.ts",
+        "line": 61,
+        "kind": "catch",
+        "fingerprint": "e94d8e5a38034b5157f3ff0821e53f6034e728510323c0048164d279d29a19d9"
+      },
+      {
+        "file": "apps/api/src/capabilities/url-to-markdown.ts",
+        "line": 48,
+        "kind": "catch",
+        "fingerprint": "8faa290bc5bc35562d65eb84f7c8eab6c7aefe20f43b652ab2bfb1f14a4565d1"
+      },
+      {
+        "file": "apps/api/src/capabilities/url-to-markdown.ts",
+        "line": 98,
+        "kind": "catch",
+        "fingerprint": "3eb3ffaa87aa99c54dcad7df8bf8b3a0b55f84c4ed33df2902e0b59375403c04"
+      },
+      {
+        "file": "apps/api/src/capabilities/url-to-markdown.ts",
+        "line": 99,
+        "kind": "catch",
+        "fingerprint": "4ca63339db374801504d0d338e9971b4a87c45ba580fb81757dfda9a7a797a9a"
+      },
+      {
+        "file": "apps/api/src/capabilities/url-to-markdown.ts",
+        "line": 143,
+        "kind": "catch",
+        "fingerprint": "dcdf8f2dadbd7ab443d32eb239e8a1207a616a1667139648b33fb6ea7b5bcfda"
+      },
+      {
+        "file": "apps/api/src/capabilities/url-to-markdown.ts",
+        "line": 163,
+        "kind": "catch",
+        "fingerprint": "bf1f94cd281d3fc2768494b9fd37e1912d8a815af29a8577ff0a82d77dc27ab2"
+      },
+      {
+        "file": "apps/api/src/capabilities/us-company-data-cobalt.ts",
+        "line": 89,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/us-sec-filings-extended.ts",
+        "line": 79,
+        "kind": "promise-catch",
+        "fingerprint": "7c1dd2b359c0d1590d85349450c3133eec9153475a5803e8246d199968a2b579"
+      },
+      {
+        "file": "apps/api/src/capabilities/vat-validate.ts",
+        "line": 228,
+        "kind": "catch",
+        "fingerprint": "e1e1cf5b31fd277244bdcb525cdf65b5449a56546f0dcf0ddae4a9d8e51b8799"
+      },
+      {
+        "file": "apps/api/src/capabilities/website-to-company.ts",
+        "line": 88,
+        "kind": "catch",
+        "fingerprint": "c84bced7c1d87704470141f30d854014c3d2714bcdae5f46193dfbe95230e1e7"
+      },
+      {
+        "file": "apps/api/src/capabilities/website-to-company.ts",
+        "line": 101,
+        "kind": "catch",
+        "fingerprint": "d422489eb4b7751d7e98da949822a3705cf67e36bf19648fe4233fd85ba61b78"
+      },
+      {
+        "file": "apps/api/src/capabilities/website-to-company.ts",
+        "line": 123,
+        "kind": "catch",
+        "fingerprint": "ed2893230adac2b5073d7d9fb664a1d4785c5e5a6301c110ca50f3b12acba8a8"
+      },
+      {
+        "file": "apps/api/src/capabilities/website-to-company.ts",
+        "line": 150,
+        "kind": "catch",
+        "fingerprint": "098fec635e6b28ca8d8e973c375de94f73e7923ee943fd6be773e6dee24caae6"
+      },
+      {
+        "file": "apps/api/src/capabilities/website-to-company.ts",
+        "line": 169,
+        "kind": "catch",
+        "fingerprint": "01d37a36b9369c4dfadb71942511e3ea23ca9927db042a24295c287de9e2f398"
+      },
+      {
+        "file": "apps/api/src/capabilities/whois-lookup.ts",
+        "line": 66,
+        "kind": "catch",
+        "fingerprint": "dafd3d21801c30b0fc5d2b01e2577c59ded10f0d0fd21ef2cdf118d1a8681490"
+      },
+      {
+        "file": "apps/api/src/capabilities/xrp-address-validate.ts",
+        "line": 44,
+        "kind": "catch",
+        "fingerprint": "e67f71d79ec3dd1770d6834b707193a11260d1a9f4a020af0a5f4e35ee96e557"
+      },
+      {
+        "file": "apps/api/src/capabilities/youtube-summarize.ts",
+        "line": 47,
+        "kind": "catch",
+        "fingerprint": "d932e86b8fe946dc48e6478971ee9bdb315d3427edb4549a6c3cfc9b73833106"
+      },
+      {
+        "file": "apps/api/src/capabilities/youtube-summarize.ts",
+        "line": 137,
+        "kind": "catch",
+        "fingerprint": "a65d0f37d53a9a3643d563cd6f42fad765d69d202af46aacec51fbadc7af2185"
+      },
+      {
+        "file": "apps/api/src/capabilities/youtube-summarize.ts",
+        "line": 149,
+        "kind": "catch",
+        "fingerprint": "da0d982eec6572e5ef4192786324f36e7c7aed07357bdb719c981ce4fb1680b1"
+      }
+    ]
+  }
+}

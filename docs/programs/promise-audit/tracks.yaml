@@ -44,6 +44,9 @@ tracks:
         the next inventory revision.
     evidence:
       - archive/receipts/2026-11-10-check-upstream-catch-guard.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-fail-before.json
+      - archive/receipts/2026-11-11-test-run-swallowed-failures-wave2a-after.json
+      - archive/receipts/2026-11-11-check-upstream-catch-guard-wave2a.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued
