@@ -402,6 +402,12 @@ jobs:
       # CODE (lints apps/api/src).
       - if: needs.classify.outputs.docs_only == 'false'
         run: npm --workspace=apps/api run lint:no-bare-catch
+      # Promise-audit T1: exact existing catch debt may only shrink. Compare
+      # against the event's trusted base, including merge-queue runs.
+      - name: Prevent new silent capability catches
+        run: npm --workspace=apps/api run lint:upstream-catches -- --base "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'origin/main' }}"
+      - name: Prove the upstream catch guard rejects planted failures
+        run: npm --workspace=apps/api run test:upstream-catches
       # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch
       # or the ToS gate — raw fetch shipped as blocklist side doors ten times.
       # CODE (lints apps/api/src).

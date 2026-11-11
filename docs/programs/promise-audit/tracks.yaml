@@ -1,7 +1,7 @@
 schema_version: 1
 program: promise-audit
 program_status: active
-updated: 2026-11-06
+updated: 2026-11-11
 tracks:
   - id: T1
     title: "T1: Money promises (charge only on success, refunds, caps)"
@@ -9,26 +9,23 @@ tracks:
     gate: none
     depends_on: []
     owner: session
-    next_action: "Owner: orchestrator (the billing path is never given to a Codex
-      lane). Land wave 1 from branch fix/swallowed-upstream-failures-wave1
-      (lib/upstream-result.ts helpers dnsOrEmpty, settleLeg and requireAnyLeg, a
-      degraded marker that outcomeFromOutput treats as unbillable, and the
-      required_signal_fields manifest key), taking rows 1 to 3 of
-      archive/sessions/2026-11-06-swallowed-upstream-failures-audit.md first
-      (vasp-verify, vasp-non-compliant-check, insolvency-check: a negative
-      compliance answer for a failed upstream), then the rest. Then, in this order:
-      (1) the shrinking-baseline lint for empty-value catch handlers under
-      src/capabilities; (2) the perturbation replays (http_503, http_429,
-      network_error, blocked_200, DNS ETIMEOUT) in test-helpers/upstream-replay.ts
-      over every network executor, each a DEC-20260504-A test that fails against the
-      unfixed code; (3) measure past charges: billed calls from the 38 paths since
-      the earliest affected release, matched to provider errors near the call time,
-      with the refund decision per policy and the DEC-20260504-B drain plan;
-      (4) the wallet-rail sweep of every paid tool's debit against its listed price
-      (P-011) and the dry-run price against the charge (P-008). Write each result
-      as a receipt. When the wave-1 handoff exists under
-      handoff/_general/from-code/, set resume_file to it."
-    resume_file: docs/research/2026-11-06-customer-promise-inventory.md
+    next_action: "Owner: orchestrator/Claude for billing-path implementation;
+      Codex may build non-sensitive supporting scaffolding under rule 5. Wave 1
+      landed in PRs 938/939. The catch-handler CI guard and shrinking baseline
+      are now implemented; see the resume file and receipt. Its conservative
+      candidates are not a count of confirmed billing defects, and logging is
+      not proof of an unbillable result. Next: reconcile the remaining audit rows
+      against later repairs (including domain-age PR975 and customs PR999), then
+      finish wave 2 and wave 3 (rows 26, 27, 29, 34) on Claude. Do not assume the
+      proposed degraded billing marker shipped. Remove each fixed catch from
+      the baseline. Add perturbation replays (http_503, http_429, network_error,
+      blocked_200, DNS ETIMEOUT) for every network executor with fail-before
+      evidence. Then measure past billed calls from affected paths since their
+      earliest releases, decide refunds per policy with a DEC-20260504-B drain
+      plan, and sweep wallet debits versus listed and dry-run prices (P-011,
+      P-008). Keep receipts per result. No production financial run or refund
+      was performed by the static-guard batch."
+    resume_file: handoff/_general/from-code/2026-11-11-upstream-catch-guard.md
     exit:
       - Every network executor under apps/api/src/capabilities either throws or
         returns a marker the billing path treats as unbillable under every
@@ -38,7 +35,8 @@ tracks:
         paths and what was refunded or decided; the decision is recorded.
       - P-001, P-002, P-003 and P-061 have a receipt each and move to verified in
         the next inventory revision.
-    evidence: []
+    evidence:
+      - archive/receipts/2026-11-10-check-upstream-catch-guard.json
   - id: T2
     title: "T2: Compliance-answer correctness (reference answers)"
     status: queued
