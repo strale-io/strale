@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { readJsonWithLimit } from "../lib/resource-limits.js";
 import { discardBody } from "../lib/safe-fetch.js";
-import { fetchUnavailable, httpUnavailable } from "../lib/upstream-result.js";
+import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
 
 // SEC XBRL company-concept API — the primary source for US filers' reported
 // financials, free and keyless. Preferred over a commercial aggregator under
@@ -187,7 +187,10 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
 
   for (let i = 0; i < METRICS.length; i += 5) {
     const batch = METRICS.slice(i, i + 5);
-    const settled = await Promise.all(
+    // allSettled, not all: when one metric throws, its siblings still finish
+    // reading (or discarding) their bodies before the call fails, so no
+    // request is left in flight after the error is returned.
+    const results = await Promise.allSettled(
       batch.map(async (metric) => {
         for (const tag of metric.tags) {
           // Only a 404 moves on to the next tag. Any other failure means the
@@ -209,6 +212,17 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
           }
           if (!res.ok) {
             await discardBody(res, "company-fundamentals: concept request failed");
+            // The SEC answers a 403 when it throttles or blocks a client
+            // ("Request Rate Threshold Exceeded"). A "403" in the message
+            // reads to the breaker as expired credentials and opens it for 30
+            // minutes, and the SEC takes no credentials, so the status stays
+            // on `code` and the call is retryable (PR #1018 review, S2).
+            if (res.status === 403) {
+              throw new UpstreamUnavailableError(SEC_CONCEPTS, "the SEC is blocking or rate-limiting requests; retry shortly.", {
+                code: "HTTP 403",
+                retryable: true,
+              });
+            }
             throw httpUnavailable(SEC_CONCEPTS, res.status);
           }
           let body: ConceptResponse | null;
@@ -227,6 +241,10 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
         return { metric, tag: null, body: null, fact: null, unit: null };
       }),
     );
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failed) throw failed.reason;
+    const settled = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+
 
     for (const r of settled) {
       if (r.fact && r.body) {

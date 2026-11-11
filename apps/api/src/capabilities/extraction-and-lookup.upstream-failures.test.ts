@@ -142,6 +142,13 @@ describe("failure: pricing-page-extract does not bill a page that is not a prici
     expect(isUserInputError(err.message)).toBe(true);
   });
 
+  it("files a walled page as the target's fault, not counted against the capability (review S1)", async () => {
+    fetchRenderedHtml.mockResolvedValue(fullPage("We use cookies. Accept all cookies to continue."));
+    extractJsonWithLlm.mockResolvedValue({ page_status: "page_error", plans: [], enterprise_cta: false });
+    const err = await expectUnbilledUpstreamFailure(exec("pricing-page-extract")({ url: PRICING_URL }));
+    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
+  });
+
   it("throws on an empty app shell without asking the model", async () => {
     fetchRenderedHtml.mockResolvedValue('<html><body><div id="root"></div><script>app()</script></body></html>');
     extractJsonWithLlm.mockResolvedValue({ plans: [], enterprise_cta: false });
@@ -166,6 +173,21 @@ describe("negative: pricing-page-extract bills a real page", () => {
     const out = await billed("pricing-page-extract", exec("pricing-page-extract")({ url: PRICING_URL }));
     expect(out.plans).toHaveLength(1);
   });
+
+  it("bills the plans it read even when the model also reports page_error (a banner over prices, review S4)", async () => {
+    fetchRenderedHtml.mockResolvedValue(fullPage("We use cookies. Accept? Starter $29/mo. Pro $99/mo."));
+    extractJsonWithLlm.mockResolvedValue({ page_status: "page_error", plans: [{ name: "Starter", price: "$29/mo" }] });
+    const out = await billed("pricing-page-extract", exec("pricing-page-extract")({ url: PRICING_URL }));
+    expect(out.plans).toHaveLength(1);
+  });
+
+  it("tells the model that visible prices under a banner or overlay are a pricing page (review S4)", async () => {
+    fetchRenderedHtml.mockResolvedValue(fullPage("Starter $29/mo. Pro $99/mo."));
+    extractJsonWithLlm.mockResolvedValue({ page_status: "pricing", plans: [{ name: "Starter", price: "$29/mo" }] });
+    await exec("pricing-page-extract")({ url: PRICING_URL });
+    const { prompt } = extractJsonWithLlm.mock.calls[0][0] as { prompt: string };
+    expect(prompt).toMatch(/cookie banner, consent overlay or popup \(visible prices always mean "pricing"\)/);
+  });
 });
 
 describe("passthrough: pricing-page-extract keeps the fetch layer's own errors", () => {
@@ -178,37 +200,112 @@ describe("passthrough: pricing-page-extract keeps the fetch layer's own errors",
 
 // ─── gdpr-fine-lookup (row 6) ──────────────────────────────────────────────
 
-describe("failure: gdpr-fine-lookup does not bill a tracker page without its fine table", () => {
-  it("throws, counted against the source, when the model reports page_error", async () => {
+const TRACKER_ROOT = "https://www.enforcementtracker.com/";
+
+type TrackerCase = { e: number; c: string; a: string; d: string; f: number | null; p: string; s: string; r: string; t: string };
+const trackerCase = (e: number, p: string, c = "SPAIN"): TrackerCase => ({
+  e,
+  c,
+  a: `${c} data protection authority`,
+  d: "2025-01-01",
+  f: 1000 * e,
+  p,
+  s: "Industry and Commerce",
+  r: "Art. 6 GDPR",
+  t: "Insufficient legal basis for data processing",
+});
+/** 120 cases, newest last by ETid; Acme AB (Sweden) is ETid 3, far outside the 50 newest the page renders. */
+const TRACKER_CASES: TrackerCase[] = [
+  trackerCase(1, "Old Corp", "ITALY"),
+  trackerCase(2, "Nordic Retail AB", "SWEDEN"),
+  trackerCase(3, "Acme AB", "SWEDEN"),
+  ...Array.from({ length: 117 }, (_, i) => trackerCase(i + 4, `Filler Company ${i + 4}`)),
+];
+/** The tracker's front page as rendered: the 50 newest rows as text, every case embedded as JSON. */
+const trackerPage = (cases: TrackerCase[] = TRACKER_CASES) =>
+  `<html><body><main><table>${[...cases].reverse().slice(0, 50).map((c) => `<tr><td>${c.p}</td><td>${c.c}</td></tr>`).join("")}</table>` +
+  `<script type="application/json" id="et-cases" data-purpose="filter-bootstrap">${JSON.stringify(cases)}</script></main></body></html>`;
+const llmPrompt = () => (extractJsonWithLlm.mock.calls[0][0] as { prompt: string }).prompt;
+
+describe("failure: gdpr-fine-lookup does not bill a tracker page without its case data", () => {
+  it("throws, counted against the source, on a page that carries no case data", async () => {
     fetchRenderedHtml.mockResolvedValue(fullPage("Service temporarily down for maintenance. Please come back later."));
-    extractJsonWithLlm.mockResolvedValue({ page_status: "page_error", fines: [], total_fines: 0, total_amount_eur: 0 });
     const err = await expectUnbilledUpstreamFailure(exec("gdpr-fine-lookup")({ company: "Acme" }));
-    expect(err.code).toBe("page_error");
+    expect(err.code).toBe("no_case_data");
     expect(err.message).toContain("enforcementtracker.com");
     // Strale chose this source, so its failure counts against the capability.
     expect(isUserInputError(err.message)).toBe(false);
     expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "provider", counts_against_capability: true });
+    expect(extractJsonWithLlm).not.toHaveBeenCalled();
   });
 
   it("throws UpstreamUnavailableError, not a plain error, on a near-empty render", async () => {
     fetchRenderedHtml.mockResolvedValue("<html><body>Loading…</body></html>");
     const err = await expectUnbilledUpstreamFailure(exec("gdpr-fine-lookup")({ country_code: "SE" }));
-    expect(err.code).toBe("empty");
+    expect(err.code).toBe("no_case_data");
     expect(extractJsonWithLlm).not.toHaveBeenCalled();
+  });
+
+  it("throws on case data that does not parse", async () => {
+    fetchRenderedHtml.mockResolvedValue('<html><body><script type="application/json" id="et-cases">[{"e":1,</script></body></html>');
+    const err = await expectUnbilledUpstreamFailure(exec("gdpr-fine-lookup")({ company: "Acme" }));
+    expect(err.code).toBe("unparseable");
+  });
+});
+
+describe("failure: gdpr-fine-lookup searches the tracker's whole case list (review S4)", () => {
+  it("finds a company outside the 50 newest cases the page renders, from the tracker's front page", async () => {
+    fetchRenderedHtml.mockResolvedValue(trackerPage());
+    extractJsonWithLlm.mockResolvedValue({ page_status: "results", fines: [{ company: "Acme AB", amount_eur: 3000 }], total_fines: 1 });
+    const out = await billed("gdpr-fine-lookup", exec("gdpr-fine-lookup")({ company: "Acme" }));
+    expect(out.fines).toHaveLength(1);
+    // The tracker ignores ?query=, so the executor reads the front page and filters itself.
+    expect(fetchRenderedHtml.mock.calls[0][0]).toBe(TRACKER_ROOT);
+    expect(llmPrompt()).toContain("controller: Acme AB");
+    expect(llmPrompt()).not.toContain("Filler Company");
+  });
+
+  it("filters a country search to that country's cases (statistics.html?C= answers 404)", async () => {
+    fetchRenderedHtml.mockResolvedValue(trackerPage());
+    extractJsonWithLlm.mockResolvedValue({ page_status: "results", fines: [{ company: "Acme AB" }, { company: "Nordic Retail AB" }], total_fines: 2 });
+    await billed("gdpr-fine-lookup", exec("gdpr-fine-lookup")({ country_code: "se" }));
+    expect(fetchRenderedHtml.mock.calls[0][0]).toBe(TRACKER_ROOT);
+    const prompt = llmPrompt();
+    expect(prompt).toContain("The tracker has 2 matching case(s)");
+    // Newest first, as the tracker lists them.
+    expect(prompt.indexOf("controller: Acme AB")).toBeLessThan(prompt.indexOf("controller: Nordic Retail AB"));
+    expect(prompt).not.toContain("Old Corp");
+  });
+
+  it("hands the model at most the 15 newest matches", async () => {
+    fetchRenderedHtml.mockResolvedValue(trackerPage());
+    extractJsonWithLlm.mockResolvedValue({ page_status: "results", fines: [{ company: "Filler Company 120" }], total_fines: 1 });
+    await exec("gdpr-fine-lookup")({ company: "Filler Company" });
+    const prompt = llmPrompt();
+    expect(prompt).toContain("The tracker has 117 matching case(s); the 15 newest are below");
+    expect(prompt).toContain("controller: Filler Company 120 ");
+    expect(prompt).not.toContain("controller: Filler Company 105 ");
+  });
+
+  it("refuses a country code the tracker does not cover, without fetching", async () => {
+    const err = await expectRefusal(exec("gdpr-fine-lookup")({ country_code: "US" }));
+    expect(err.message).toMatch(/^'country_code' must be/);
+    expect(fetchRenderedHtml).not.toHaveBeenCalled();
   });
 });
 
 describe("negative: gdpr-fine-lookup bills the tracker's answers", () => {
-  it("bills a search with no matching fine", async () => {
-    fetchRenderedHtml.mockResolvedValue(fullPage("GDPR Enforcement Tracker. Showing 0 of 2,400 entries."));
-    extractJsonWithLlm.mockResolvedValue({ page_status: "no_results", fines: [], total_fines: 0, total_amount_eur: 0 });
-    const out = await billed("gdpr-fine-lookup", exec("gdpr-fine-lookup")({ company: "Nobody AB" }));
-    expect(out).toMatchObject({ page_status: "no_results", fines: [] });
+  it("bills a search with no matching case, without asking the model", async () => {
+    fetchRenderedHtml.mockResolvedValue(trackerPage());
+    const out = await billed("gdpr-fine-lookup", exec("gdpr-fine-lookup")({ company: "Nobody Holdings" }));
+    expect(out).toEqual({ page_status: "no_results", fines: [], total_fines: 0, total_amount_eur: 0 });
+    expect(extractJsonWithLlm).not.toHaveBeenCalled();
   });
 
   it("bills listed fines", async () => {
-    fetchRenderedHtml.mockResolvedValue(fullPage("Acme fined EUR 50,000 by the IMY under Art. 6."));
-    extractJsonWithLlm.mockResolvedValue({ page_status: "results", fines: [{ company: "Acme", amount_eur: 50000 }], total_fines: 1 });
+    fetchRenderedHtml.mockResolvedValue(trackerPage());
+    extractJsonWithLlm.mockResolvedValue({ page_status: "results", fines: [{ company: "Acme AB", amount_eur: 3000 }], total_fines: 1 });
     const out = await billed("gdpr-fine-lookup", exec("gdpr-fine-lookup")({ company: "Acme" }));
     expect(out.fines).toHaveLength(1);
   });
@@ -237,10 +334,11 @@ function secRoutes(failingTag: string | null, failing: () => Promise<Response>) 
 describe("failure: company-fundamentals does not report a metric the SEC did not answer for as unreported", () => {
   const failures: Array<[string, () => Promise<Response>, boolean]> = [
     ["HTTP 503", async () => status(503), true],
-    ["HTTP 403", async () => status(403), false],
+    // The SEC's throttle page ("Request Rate Threshold Exceeded") is served as a 403.
+    ["HTTP 403 (the SEC's rate-threshold page)", async () => html("<html>Request Rate Threshold Exceeded</html>", 403), true],
     ["a network error", async () => { throw networkError(); }, true],
     ["a timeout", async () => { throw timeout(); }, true],
-    ["an unparseable body", async () => html("<html>Request Rate Threshold Exceeded</html>"), false],
+    ["an unparseable 200 body", async () => html("<html>Service notice</html>"), false],
   ];
 
   for (const [label, failing, retryable] of failures) {
@@ -251,6 +349,38 @@ describe("failure: company-fundamentals does not report a metric the SEC did not
       expect(err.retryable).toBe(retryable);
     }, 20_000);
   }
+
+  it("files an SEC 403 as retryable throttling, not as expired credentials (review S2)", async () => {
+    secRoutes("NetIncomeLoss", async () => html("<html>Request Rate Threshold Exceeded</html>", 403));
+    const err = await expectUnbilledUpstreamFailure(exec("company-fundamentals")({ cik: CIK }));
+    expect(err.code).toBe("HTTP 403");
+    expect(err.message).not.toContain("403");
+    expect(err.message).toContain("the SEC is blocking or rate-limiting requests");
+    // The breaker reads the message: a 403 in it would be auth_expired, opening it for 30 minutes.
+    expect(categorizeFailureReason(err.message)).not.toBe("auth_expired");
+    expect(isRetryableFailure(categorizeFailureReason(err.message))).toBe(true);
+  }, 20_000);
+
+  it("lets every sibling request in the batch finish before failing", async () => {
+    let inFlight = 0;
+    let settledAfterThrow = 0;
+    let thrownAt = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      inFlight++;
+      if (url.includes("/NetIncomeLoss.json")) {
+        inFlight--;
+        thrownAt = Date.now();
+        throw networkError();
+      }
+      await new Promise((r) => setTimeout(r, 30));
+      inFlight--;
+      if (thrownAt) settledAfterThrow++;
+      return concept();
+    });
+    await expectUnbilledUpstreamFailure(exec("company-fundamentals")({ cik: CIK }));
+    expect(inFlight).toBe(0);
+    expect(settledAfterThrow).toBeGreaterThan(0);
+  }, 20_000);
 
   it("throws an outage, not the caller-input refusal, when every concept request fails", async () => {
     fetchMock.mockImplementation(async () => { throw networkError(); });
@@ -308,6 +438,29 @@ describe("failure: country-trade-data does not answer from embedded estimates wh
     fetchMock.mockImplementation(async () => status(503));
     const err = await expectUnbilledUpstreamFailure(exec("country-trade-data")({ country_code: "ZW", year: 2023 }));
     expect(err.message).not.toContain("No trade data");
+  });
+});
+
+describe("failure: country-trade-data checks 'year' before it reaches the World Bank URL (review S3)", () => {
+  it.each([
+    ["before 1960", 1959],
+    ["in the future", new Date().getUTCFullYear() + 1],
+    ["not a whole year", 2023.5],
+    ["a query-string injection", "2023&format=xml"],
+    ["text", "last year"],
+    ["an object", { gte: 2020 }],
+  ])("refuses a year %s, without a request", async (_label, year) => {
+    const err = await expectRefusal(exec("country-trade-data")({ country_code: "SE", year }));
+    expect(err.message).toMatch(/^'year' must be a whole year from 1960 to \d{4}/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a year sent as a string of digits, and sends it encoded", async () => {
+    fetchMock.mockImplementation(async (url: string) => wbValue(url.includes("NE.EXP") ? 300_000_000_000 : 280_000_000_000));
+    await billed("country-trade-data", exec("country-trade-data")({ country_code: "SE", year: "2023" }));
+    expect(fetchMock.mock.calls.map(([url]) => url as string)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/\/country\/SE\/indicator\/NE\.EXP\.GNFS\.CD\?date=2023&format=json$/)]),
+    );
   });
 });
 
@@ -406,6 +559,15 @@ describe("failure: whois-lookup bills only the registry's answer about the domai
   });
 });
 
+describe("failure: whois-lookup reads a fully qualified domain's TLD (review nit)", () => {
+  it("strips the trailing dot of 'example.com.' and asks the .com registry", async () => {
+    const hosts = whoisServers({ data: VERISIGN_RECORD });
+    const out = await billed("whois-lookup", exec("whois-lookup")({ domain: "example.com." }));
+    expect(hosts).toEqual(["whois.verisign-grs.com"]);
+    expect(out.domain).toBe("example.com");
+  });
+});
+
 describe("negative: whois-lookup keeps the registry's answers", () => {
   it("bills a parsed record", async () => {
     whoisServers({ data: VERISIGN_RECORD });
@@ -457,7 +619,8 @@ describe("failure: page-exists never bills exists:null", () => {
   const transport: Array<[string, () => unknown, string, boolean]> = [
     ["a timeout", timeout, "timeout", true],
     ["a network error", () => networkError(), "ECONNRESET", true],
-    ["a DNS failure", () => networkError("ENOTFOUND"), "ENOTFOUND", true],
+    ["a resolver failure that is not NXDOMAIN", () => networkError("EAI_AGAIN"), "EAI_AGAIN", true],
+    ["a refused connection, as a bare errno Error", () => Object.assign(new Error("connect ECONNREFUSED 192.0.2.1:443"), { code: "ECONNREFUSED" }), "ECONNREFUSED", true],
     [
       "a redirect loop",
       () => new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://shop.test/listing/123."),
@@ -473,9 +636,41 @@ describe("failure: page-exists never bills exists:null", () => {
       expect(err.retryable).toBe(retryable);
       expect(err.message).toContain("URL did not answer");
       expect(isUserInputError(err.message)).toBe(true);
+      // The caller's target, not this capability: out of its quality floor (review S1).
+      expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
     });
   }
+
+  it("throws on a 3xx it could not follow, with the status on code and not in the message (review nit)", async () => {
+    safeFetchMock.mockResolvedValue(status(301, ""));
+    const err = await expectUnbilledUpstreamFailure(exec("page-exists")({ url: PAGE }));
+    expect(err.code).toBe("HTTP 301");
+    expect(err.message).not.toMatch(/\b30[18]\b/);
+    expect(categorizeFailureReason(err.message)).not.toBe("permanent_move");
+    expect(isUserInputError(err.message)).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "target", counts_against_capability: false });
+  });
+
+  it("names no other status in a 4xx message (review nit)", async () => {
+    safeFetchMock.mockResolvedValue(status(400, "bad request"));
+    const err = await thrown(exec("page-exists")({ url: PAGE }));
+    expect(err.message).not.toMatch(/\b40[14]\b|\b410\b|gone/i);
+    expect(categorizeFailureReason(err.message)).not.toBe("endpoint_gone");
+  });
 });
+
+describe("failure: page-exists answers a host that does not exist (review B1)", () => {
+  it.each([
+    ["undici's wrapper (code on the cause)", () => networkError("ENOTFOUND")],
+    ["the resolver's own Error (code on the error, as the robots.txt pre-check rethrows it)", () =>
+      Object.assign(new Error("getaddrinfo ENOTFOUND no-such-host.test"), { code: "ENOTFOUND", syscall: "getaddrinfo" })],
+  ])("bills exists:false, reason dns_nxdomain, for %s", async (_label, make) => {
+    safeFetchMock.mockRejectedValue(make());
+    const out = await billed("page-exists", exec("page-exists")({ url: PAGE }));
+    expect(out).toMatchObject({ exists: false, confidence: "high", reason: "dns_nxdomain", status_code: null });
+  });
+});
+
 
 describe("negative: page-exists bills its verdicts", () => {
   it("bills a hard 404 as exists:false", async () => {

@@ -35,8 +35,8 @@ output_schema:
       type: string
       enum: [results, no_results]
       description: >-
-        results = the tracker listed fines; no_results = the tracker's table showed no fine matching
-        the search (fines is then empty).
+        results = the tracker has cases matching the search; no_results = no case in the tracker's
+        whole case list matched (fines is then empty).
     fines:
       type: array
     total_fines:
@@ -75,9 +75,13 @@ limitations:
     workaround: Check the relevant data protection authority’s press releases for recently announced fines.
   - title: Tracker outages fail without a charge
     text: >-
-      When enforcementtracker.com shows no fine table (an error, maintenance or consent page, or an
-      empty render), the call fails with an error and is not billed. An empty `fines` list means the
-      tracker's table showed no fine matching the search.
+      When enforcementtracker.com serves no case data (an error, maintenance or consent page, or a
+      changed layout), the call fails with an error and is not billed. The search runs over the
+      tracker's whole case list and returns up to 15 of the newest matching cases. A company search
+      matches when every word of it appears in a case's controller, authority, country, sector,
+      articles or violation type, so an empty `fines` list means no case matched. A country search
+      takes a two-letter code for a country the tracker covers (the EEA, the UK and the Isle of Man).
+
     category: availability
     severity: info
     workaround: Retry after a short wait.

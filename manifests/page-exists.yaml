@@ -56,6 +56,7 @@ output_schema:
         - soft_404_body_and_redirect
         - redirected_to_generic
         - thin_content
+        - dns_nxdomain
     signals:
       type: array
       description: Every heuristic that fired, independent of the final verdict.
@@ -148,9 +149,13 @@ limitations:
     workaround: For non-English sites, verify the returned title and final_url yourself rather than trusting exists alone.
   - title: Blocked or failing sites cannot be checked
     text: >-
-      When the site refuses automated requests (HTTP 401, 403, 407 or 429), answers with a server
-      error or another error status besides 404 and 410, times out or keeps redirecting, the call
-      fails with an error and is not billed. Sites that block automated requests cannot be checked.
+      A host name that does not exist (DNS NXDOMAIN) is answered: exists false, confidence high,
+      reason dns_nxdomain, billed. When the host cannot be reached (another DNS failure, a refused
+      or dropped connection, a timeout, a redirect loop), when the site refuses automated requests
+      (HTTP 401, 403, 407 or 429, or a robots.txt Disallow for the page), or when it answers with a
+      server error or another error status besides 404 and 410, the call fails with an error and is
+      not billed. Sites that block automated requests cannot be checked.
+
     category: coverage
     severity: info
     workaround: For these domains, fall back to a manual check or a different data source.

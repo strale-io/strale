@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody } from "../lib/safe-fetch.js";
 import { fetchUnavailable, httpUnavailable, UpstreamUnavailableError } from "../lib/upstream-result.js";
+import { inputRefusal } from "../lib/capability-refusal.js";
 
 // ─── Country Trade Data — World Bank API + embedded fallback ────────────────
 
@@ -923,7 +924,7 @@ async function fetchWorldBankIndicator(countryCode: string, indicator: string, y
   let res: Response;
   try {
     res = await fetch(
-      `https://api.worldbank.org/v2/country/${countryCode}/indicator/${indicator}?date=${year}&format=json`,
+      `https://api.worldbank.org/v2/country/${encodeURIComponent(countryCode)}/indicator/${encodeURIComponent(indicator)}?date=${encodeURIComponent(String(year))}&format=json`,
       { signal: AbortSignal.timeout(8000) },
     );
   } catch (err) {
@@ -1001,7 +1002,19 @@ registerCapability("country-trade-data", async (input: CapabilityInput) => {
     );
   }
 
-  const year = (input.year as number) ?? 2023;
+  // The year goes into the World Bank URL, so it is checked, not just cast
+  // (PR #1018 review, S3): a whole year from 1960, the World Bank's first,
+  // to this one. A string of digits is accepted as the number it spells.
+  const rawYear = input.year ?? 2023;
+  const year = typeof rawYear === "string" && /^\s*\d{4}\s*$/.test(rawYear) ? Number(rawYear) : rawYear;
+  if (typeof year !== "number" || !Number.isInteger(year) || year < 1960 || year > new Date().getUTCFullYear()) {
+    throw inputRefusal(
+      `'year' must be a whole year from 1960 to ${new Date().getUTCFullYear()}; ${JSON.stringify(rawYear)} is not.`,
+      "year",
+      "Send 'year' as a four-digit year from 1960 to the current year, such as 2023.",
+    );
+  }
+
 
   // Live aggregate totals from the World Bank. Null when it has no figure
   // for the year, and then the embedded estimates answer; a World Bank

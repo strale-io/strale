@@ -20,14 +20,18 @@ import { targetUnavailable, UpstreamUnavailableError } from "../lib/upstream-res
  * call — every signal is a regex/string match, so behavior is
  * reproducible and free to run at scale.
  *
- * Every answer is `exists` true or false. When the site does not let the
- * check decide (2026-11-06 swallowed-failures audit, row 29), the call
- * throws, unbilled, instead of returning a billed `exists: null`:
- *   - a block (401, 403, 407, 429) is the site refusing Strale: a refusal,
- *     not counted against this capability's health;
- *   - a 5xx, a timeout, a network error or a redirect loop is the caller's
- *     target failing: `targetUnavailable`, worded so the breaker's
- *     USER_INPUT_ERROR_PATTERNS leave this capability's health alone;
+ * Every answer is `exists` true or false. A host name that does not exist
+ * (DNS NXDOMAIN, errno ENOTFOUND) is an answer: no page can exist there, so
+ * it is a billed `exists: false`, reason `dns_nxdomain` (PR #1018 review, B1).
+ * When the site does not let the check decide (2026-11-06 swallowed-failures
+ * audit, row 29), the call throws, unbilled, instead of returning a billed
+ * `exists: null`:
+ *   - a block (401, 403, 407, 429) or a robots.txt Disallow is the site
+ *     refusing Strale: a refusal, not counted against this capability's health;
+ *   - a 5xx, a timeout, a resolver or network error, or a redirect loop is
+ *     the caller's target failing: `targetUnavailable`, worded so the
+ *     breaker's USER_INPUT_ERROR_PATTERNS leave this capability's health
+ *     alone, and marked `targetFault` so the quality floor does too;
  *   - any other non-2xx status is the site's own answer about that URL
  *     ("URL returned HTTP n"), which says nothing about existence.
  */
@@ -56,7 +60,19 @@ const TITLE_404_PATTERN =
 
 const BODY_SCAN_LIMIT = 20_000; // ~20KB — enough to catch phrases near the top of the page without reading megabyte-scale bodies.
 const THIN_CONTENT_BYTES = 512;
-const USER_AGENT = "Strale/1.0 (page-exists; admin@strale.io)";
+
+/**
+ * The resolver said the host name does not exist. safe-fetch's robots.txt
+ * pre-check rethrows the resolver's Error itself (code on the error); a
+ * direct fetch wraps it in undici's `TypeError: fetch failed` (code on the
+ * cause). EAI_AGAIN and other resolver failures are not an answer and stay
+ * a target outage.
+ */
+function isNxdomain(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  const causeCode = (err as { cause?: { code?: unknown } } | null)?.cause?.code;
+  return code === "ENOTFOUND" || causeCode === "ENOTFOUND";
+}
 
 // Same entity decoding as meta-extract.ts / url-to-text.ts apply to titles —
 // keeps title values consistent across capabilities and lets the phrase scan
@@ -157,14 +173,14 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
 
   // safeFetch (not a raw fetch with redirect:"follow") re-validates every
   // redirect hop against validateUrl — closes the SSRF-via-redirect gap
-  // that a plain fetch would leave open on user-supplied URLs.
+  // that a plain fetch would leave open on user-supplied URLs. It also sets
+  // Strale's honest page-read User-Agent, so none is passed here.
   let response: Response;
   try {
     response = await safeFetch(url, {
       method: "GET",
       timeoutMs: timeout,
       headers: {
-        "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
       },
     });
@@ -175,6 +191,10 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     // network weather: they fail the call exactly like the pre-flight
     // validateUrl.
     if (err instanceof Error && err.message.includes("restricted")) throw err;
+    // The host name does not exist: no page can, so that is the answer.
+    if (isNxdomain(err)) {
+      return result({ exists: false, confidence: "high", reason: "dns_nxdomain" });
+    }
     // A timeout, a network error or a redirect loop: the site did not
     // answer, which says nothing about whether the page exists.
     throw targetUnavailable(site, err);
@@ -208,17 +228,23 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     assertNotBlockStatus(url, statusCode);
     // A server error on the caller's own site.
     if (statusCode >= 500) throw targetUnavailable(site, statusCode);
-    // Any other 4xx is the site's own answer about that URL.
+    // Any other 4xx is the site's own answer about that URL. The wording
+    // names no other status: the breaker's fallback categoriser reads a
+    // "404" or "410" anywhere in a message as an endpoint gone.
     if (statusCode >= 400) {
       throw new Error(
-        `URL returned HTTP ${statusCode}. The site answered with an error status that is neither 404 nor 410, so whether the page exists cannot be told.`,
+        `URL returned HTTP ${statusCode}. The site answered with a client error status, which does not say whether the page exists.`,
       );
     }
     // A 1xx, or a 3xx safeFetch did not follow (no usable Location header).
-    throw new UpstreamUnavailableError(site, `URL did not answer with a page (HTTP ${statusCode}).`, {
+    // The status goes on `code`, not in the message, which the breaker's
+    // fallback categoriser would read as a permanent move for a 301 or 308.
+    throw new UpstreamUnavailableError(site, "URL did not answer with a page (a redirect without a usable location, or an informational status).", {
       code: `HTTP ${statusCode}`,
       retryable: false,
+      targetFault: true,
     });
+
   }
 
   // ── Non-HTML 2xx (PDF, image, JSON): the resource exists; the HTML

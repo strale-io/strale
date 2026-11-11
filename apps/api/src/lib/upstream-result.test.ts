@@ -14,8 +14,11 @@ import {
   isDnsNegative,
   quotedLegCodes,
   requireAnyLeg,
+  targetUnavailable,
   UpstreamUnavailableError,
 } from "./upstream-result.js";
+import { foldTrafficRows, type FloorTrafficRow } from "../jobs/quality-floor.js";
+
 import { outcomeFromError } from "./execution-outcome.js";
 import { classifyTransactionFailure, countsAgainstCapability } from "./transaction-failure-taxonomy.js";
 import { isUserInputError } from "./circuit-breaker.js";
@@ -256,5 +259,93 @@ describe("retry policy honours the executor's verdict", () => {
     const fn = vi.fn<() => Promise<string>>().mockRejectedValue(err);
     await expect(withRetry(fn, { maxRetries: 1, baseDelayMs: 1, maxDelayMs: 1 })).rejects.toBe(err);
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("PR #1018 review B1: fetchUnavailable converts a bare errno Error", () => {
+  /** The resolver's own Error, as safe-fetch's robots.txt pre-check rethrows it. */
+  const errno = (code: string) =>
+    Object.assign(new Error(`getaddrinfo ${code} site.test`), { code, syscall: "getaddrinfo", hostname: "site.test" });
+
+  it.each(["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EHOSTUNREACH"])(
+    "%s on the error itself is a retryable network error",
+    (code) => {
+      const err = fetchUnavailable("Example API", errno(code));
+      expect(err).toBeInstanceOf(UpstreamUnavailableError);
+      expect(err).toMatchObject({ code, retryable: true });
+      expect(err.message).toBe(`Upstream unavailable: Example API: network error (${code}); retry shortly.`);
+    },
+  );
+
+  it("leaves Strale's own SSRF refusal (ESSRFBLOCKED) and unknown codes unchanged", () => {
+    const ssrf = Object.assign(new Error("This URL resolves to a restricted address."), { code: "ESSRFBLOCKED" });
+    const other = Object.assign(new Error("something else"), { code: "ENOENT" });
+    expect(fetchUnavailable("Example API", ssrf)).toBe(ssrf);
+    expect(fetchUnavailable("Example API", other)).toBe(other);
+  });
+
+  it("targetUnavailable words an errno failure as the target's and keeps it breaker-exempt", () => {
+    const err = targetUnavailable("website site.test", errno("EAI_AGAIN")) as UpstreamUnavailableError;
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect(err.message).toBe("Upstream unavailable: website site.test: URL did not answer (EAI_AGAIN); retry later.");
+    expect(err).toMatchObject({ code: "EAI_AGAIN", retryable: true, targetFault: true });
+    expect(isUserInputError(err.message)).toBe(true);
+  });
+});
+
+describe("PR #1018 review S1: a target-site failure is unbilled and does not count against the capability", () => {
+  const targetFailures: Array<[string, unknown]> = [
+    ["a 5xx", 503],
+    ["a timeout", new DOMException("The operation was aborted due to timeout", "TimeoutError")],
+    ["a network error", Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } })],
+    ["a resolver errno", Object.assign(new Error("getaddrinfo EAI_AGAIN site.test"), { code: "EAI_AGAIN" })],
+    ["a redirect loop", new Error("Too many redirects (>3) — refusing to follow further.")],
+    ["a body that did not parse", new SyntaxError("Unexpected token <")],
+  ];
+
+  it.each(targetFailures)("targetUnavailable(%s) is fault target, counts false", (_label, failure) => {
+    const err = targetUnavailable("website site.test", failure);
+    expect(err).toBeInstanceOf(UpstreamUnavailableError);
+    expect((err as UpstreamUnavailableError).targetFault).toBe(true);
+    expect(outcomeFromError(err)).toMatchObject({
+      success: false,
+      billable: false,
+      failure_class: "provider_unavailable",
+      fault: "target",
+      counts_against_capability: false,
+    });
+    // Breaker-exempt by wording, as before.
+    expect(isUserInputError(err.message)).toBe(true);
+  });
+
+  it("a provider failure without the marker still counts", () => {
+    const err = httpUnavailable("Example API", 503);
+    expect((err as UpstreamUnavailableError).targetFault).toBe(false);
+    expect(outcomeFromError(err)).toMatchObject({ fault: "provider", counts_against_capability: true });
+  });
+
+  it("the quality floor leaves target failures out of the denominator and counts provider failures", () => {
+    const row = (success: boolean, counts: boolean | null, n: number): FloorTrafficRow => ({
+      slug: "cookie-scan",
+      lifecycle_state: "active",
+      visible: true,
+      x402_enabled: true,
+      source: "fact",
+      status: null,
+      error: null,
+      success,
+      counts,
+      day: "2026-11-10",
+      recent: true,
+      n,
+    });
+    const targetCounts = outcomeFromError(targetUnavailable("website site.test", 503)).counts_against_capability;
+    const providerCounts = outcomeFromError(httpUnavailable("Example API", 503)).counts_against_capability;
+
+    const [target] = foldTrafficRows([row(true, null, 3), row(false, targetCounts, 12)], new Map());
+    expect(target).toMatchObject({ eligibleCalls: 3, completedCalls: 3, distinctFailureDays: 0 });
+
+    const [provider] = foldTrafficRows([row(true, null, 3), row(false, providerCounts, 12)], new Map());
+    expect(provider).toMatchObject({ eligibleCalls: 15, completedCalls: 3, distinctFailureDays: 1 });
   });
 });

@@ -104,7 +104,9 @@ limitations:
       When the page renders as a cookie, consent or login wall, an error or maintenance page, or an
       empty app shell, the call fails with an error and is not billed, rather than returning an
       empty plan list. A real page that publishes no prices returns page_status no_pricing with an
-      empty plan list, and is billed. Whether a page is walled is judged by the model reading it.
+      empty plan list, and is billed. Whether a page is walled is judged by the model reading it;
+      prices visible under a cookie banner or overlay count as a pricing page.
+
     category: coverage
     severity: info
     workaround: Pass a pricing page that loads without a login or consent step.

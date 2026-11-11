@@ -651,7 +651,24 @@ describe("review fix: cookie-scan failures of the caller's own site do not open 
   );
 });
 
+describe("PR #1018 review S1: cookie-scan failures of the caller's own site do not count against the quality floor", () => {
+  it.each(transient.filter(([label]) => label !== "HTTP 429"))(
+    "the site's %s is filed with fault target and counts_against_capability false",
+    async (_label, answer) => {
+      site(answer);
+      const err = await expectUnbilledUpstreamFailure(exec("cookie-scan")({ url: "https://shop.test" }));
+      expect(outcomeFromError(err)).toMatchObject({
+        billable: false,
+        failure_class: "provider_unavailable",
+        fault: "target",
+        counts_against_capability: false,
+      });
+    },
+  );
+});
+
 describe("review fix: startup-domain-check keeps the report when one extension's DNS fails", () => {
+
   const failOnly = (failing: string, code: string) =>
     (async (name: string) => {
       throw dnsError(name === failing ? code : "ENOTFOUND");

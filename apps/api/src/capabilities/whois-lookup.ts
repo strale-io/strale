@@ -70,7 +70,9 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
     throw new Error("'domain' is required. Provide a domain name (e.g. example.com).");
   }
 
-  const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
+  // A fully qualified name's trailing dot ("example.com.") would leave an
+  // empty TLD, so it is stripped with the scheme, path and www.
+  const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "").replace(/\.$/, "");
   const tld = cleaned.split(".").pop() ?? "";
   const server = TLD_SERVERS[tld];
   if (!server) {

@@ -289,7 +289,7 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "For breaking enforcement news, check enforcementtracker.com directly or subscribe to the relevant DPA's press feed" },
   { capabilitySlug: "gdpr-fine-lookup", category: "availability", severity: "info",
     title: "Tracker outages fail without a charge",
-    limitationText: "When enforcementtracker.com shows no fine table (an error, maintenance or consent page, or an empty render), the call fails with an error and is not billed. An empty fines list means the tracker's table showed no fine matching the search.",
+    limitationText: "When enforcementtracker.com serves no case data (an error, maintenance or consent page, or a changed layout), the call fails with an error and is not billed. The search runs over the tracker's whole case list and returns up to 15 of the newest matching cases. A company search matches when every word of it appears in a case's controller, authority, country, sector, articles or violation type, so an empty fines list means no case matched. A country search takes a two-letter code for a country the tracker covers (the EEA, the UK and the Isle of Man).",
     workaround: "Retry after a short wait." },
   { capabilitySlug: "gdpr-fine-lookup", category: "coverage", severity: "info",
     title: "Covers publicly reported fines only, as some national DPAs delay or omit publication",
@@ -409,7 +409,8 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "If results appear incomplete, pass the direct pricing page URL rather than the homepage" },
   { capabilitySlug: "pricing-page-extract", category: "coverage", severity: "info",
     title: "Walled or empty pages fail without a charge",
-    limitationText: "When the page renders as a cookie, consent or login wall, an error or maintenance page, or an empty app shell, the call fails with an error and is not billed, rather than returning an empty plan list. A real page that publishes no prices returns page_status no_pricing with an empty plan list, and is billed. Whether a page is walled is judged by the model reading it.",
+    limitationText: "When the page renders as a cookie, consent or login wall, an error or maintenance page, or an empty app shell, the call fails with an error and is not billed, rather than returning an empty plan list. A real page that publishes no prices returns page_status no_pricing with an empty plan list, and is billed. Whether a page is walled is judged by the model reading it; prices visible under a cookie banner or overlay count as a pricing page.",
+
     workaround: "Pass a pricing page that loads without a login or consent step." },
 
   // ── eu-regulation-search ──
@@ -542,7 +543,8 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "Cross-reference with UN Comtrade or national customs statistics for the most current trade figures" },
   { capabilitySlug: "country-trade-data", category: "availability", severity: "info",
     title: "World Bank outages fail without a charge",
-    limitationText: "Totals come from the World Bank for the requested year. When the World Bank has no figure for that year, the embedded estimates answer instead and data_source is embedded-trade-data. When the World Bank does not answer (an error status, a timeout or an unreadable response), the call fails with an error and is not billed.",
+    limitationText: "Totals come from the World Bank for the requested year. When the World Bank has no figure for that year, the embedded estimates answer instead and data_source is embedded-trade-data. The embedded estimates are 2023 figures, returned under the requested year. When the World Bank does not answer (an error status, a timeout or an unreadable response), the call fails with an error and is not billed.",
+
     workaround: "Retry after a short wait." },
 
   // ── crypto-price ──
