@@ -1,4 +1,6 @@
-Intent: Save the growth-readiness triage and roadmap proposed to Petter on 2026-11-11, so another account can pick it up cold. Proposal only: Petter has not answered it.
+Intent: Save the growth-readiness triage and roadmap proposed to Petter on 2026-11-11, so another account can pick it up cold.
+
+**Approved 2026-11-11.** Petter answered "go with your recommendations" (strale-io/strale#1011). The single list, the roadmap dates and the bar for new list-A items now live in `docs/programs/GROWTH-READINESS.md`, linked from `docs/programs/README.md`; that page is the current version and this file is the proposal as made. Of the stale lines below, the brand-website and revenue-plan lines are corrected in the same PR; the cto-readiness T16 item 3 line was re-checked and is not stale (see the note under it).
 
 ## Resume here
 
@@ -13,6 +15,7 @@ Six program registers hold 59 tracks; 21 done, 38 open. Six decision-queue items
 - brand-website T6 next_action says "Nothing is published"; SWITCH-OVER-READINESS.md says "not ready to switch today". Checked 2026-11-11: https://strale.io answers 200 and strale.dev answers 301 to strale.io with path and query kept.
 - docs/strategy/2026-11-06-revenue-plan.md week 1 lists the x402 settlement-drop alert as a draft (merged as #950) and week 3 lists the strale.dev 301 as pending.
 - cto-readiness T16 blocker item 3 lists the Terms and Privacy rewrites as open; the four stale sentences were approved and corrected under DQ-45 on 2026-11-05. The "charged only on success" claim and Terms at signup remain.
+  - Re-checked 2026-11-11, not corrected: item 3 names three rewrites (Privacy retention wording, the "charged only on success" claim, Terms at signup, from `docs/remediation/PACKAGE-GRAPH.yaml` WP14 `checkin_b`). DQ-45's four sentences (Terms §2 twice, Terms §7, the Privacy Voyage AI row) are none of them, so all three remain open.
 - Not every line was audited. Expect more.
 
 ## Proposed triage
@@ -38,4 +41,4 @@ Proposed bar: a new issue enters list A only if it charges wrongly, gives a wron
 
 Revenue figures are not in this file (Petter, 2026-11-06). The revenue plan is run from Petter's PC Codex lane; this proposal sets the bar and does not replace that plan.
 
-Next authorised action: wait for Petter's yes or changes to the triage; on yes, write the one-page list, correct the stale lines above and record the bar | Owner: Strale master (next account) | Blocker: Petter's answer
+Next authorised action: independent review of PR #1011 in a separate context, then label ready-to-merge | Owner: Strale master | Blocker: none

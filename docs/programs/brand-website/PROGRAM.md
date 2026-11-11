@@ -13,6 +13,8 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
+**11 November 2026 — the site is live.** The switch-over ran on 2026-11-05 at about 22:35 Swedish time (DEC-20261105-A): https://strale.io serves `apps/web`, and strale.dev answers 301 to strale.io with path and query kept (checked 2026-11-11). Where the 24 October paragraph below says nothing is published, that is history. Resume from T6 in [tracks.yaml](tracks.yaml).
+
 **24 October 2026 — adopted, and the build has started.** Petter adopted the site structure, the three-level messaging and Open Flow (DEC-20261024-B) and the positioning (DEC-20261023-B). Open Flow is promoted into `design/tokens/active.json` and the new site is being built in [`apps/web`](../../../apps/web/README.md), in stacked pull requests that stay open for Petter's review: nothing in them publishes the site, and the strale.dev cutover stays founder-reserved (FD-20260901-PUBLIC-DOMAIN). Resume from T6 in [tracks.yaml](tracks.yaml). The paragraphs below are earlier checkpoints.
 
 **23 October 2026 — visual direction changed by the founder.** Petter chose the pink BrandKit Lab direction, `strale-reference-kit-06` (9 September), as the website's visual direction ("yes, I think it's the one that you brought out... we need to elaborate on the design system and build it so that we have a complete design system that works for our website"). It replaces Quiet Material as the visual direction. This is a visual choice, not a positioning change: DEC-20260905-A stands, and the homepage story is being redone from first principles in a separate session.

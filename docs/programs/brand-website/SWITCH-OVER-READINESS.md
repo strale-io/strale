@@ -8,8 +8,11 @@ serves `strale-frontend`. The switch-over itself is Petter's call.
 `strale.dev` 301-redirects every path and query to it, in the same switch-over. Item 11 below
 carries the domain work.
 
-**Verdict: not ready to switch today.** The design and copy are approved; what is missing is
-plumbing. Sign-up, top-up, the execution record, Terms and Privacy (items 1 and 2) merged in
+**Status, checked 2026-11-11: switched over.** The switch-over ran on 2026-11-05 at about 22:35
+Swedish time: https://strale.io serves the new site, and strale.dev answers 301 to strale.io with
+path and query kept. What remains is under "After the switch" at the end of this file; the rest
+of the file is the pre-switch record. The pre-switch verdict was: not ready to switch today; the
+design and copy were approved and what was missing was plumbing. Sign-up, top-up, the execution record, Terms and Privacy (items 1 and 2) merged in
 strale-io/strale#895. `/guides` and the rest of the list are still missing.
 
 ## Must exist before the switch (build work, no decision needed)

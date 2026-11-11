@@ -302,6 +302,7 @@
         "docs/operations/weekly-revenue-checks.md",
         "docs/plan/BASELINE-2026-11-11.md",
         "docs/plan/PLAN.md",
+        "docs/programs/GROWTH-READINESS.md",
         "docs/programs/brand-website/PROGRAM.md",
         "docs/programs/brand-website/SWITCHOVER-REFERENCES.md",
         "docs/programs/brand-website/homepage-brief.json",
@@ -357,7 +358,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "5870cc11e17349b8915f3025585fb4761cf57835baad3a7f3346d20d90e6b622",
+      "sha256": "a562a0381e47504c7a4079d82dd949d031d914a2faab912b4e686f645e11c4d3",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -379,6 +380,7 @@
         "docs/operations/distribution-registry.md",
         "docs/operations/orchestrator-carryover-facts.md",
         "docs/plan/BASELINE-2026-11-11.md",
+        "docs/programs/GROWTH-READINESS.md",
         "docs/programs/brand-website/SWITCH-OVER-READINESS.md",
         "docs/programs/brand-website/SWITCHOVER-REFERENCES.md",
         "docs/programs/brand-website/tracks.yaml",
@@ -516,6 +518,7 @@
         "docs/operations/orchestrator-carryover-facts.md",
         "docs/operations/run-onboarding.md",
         "docs/operations/weekly-revenue-checks.md",
+        "docs/programs/GROWTH-READINESS.md",
         "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md",
         "docs/programs/brand-website/PROGRAM.md",
         "docs/programs/brand-website/PROOF-QUALIFICATION.md",
